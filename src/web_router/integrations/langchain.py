@@ -1,0 +1,227 @@
+"""Search and extract as LangChain tools.
+
+    from langchain.agents import create_agent
+    from web_router import WebRouter
+    from web_router.integrations.langchain import web_router_tools
+
+    router = WebRouter("nimble")
+    agent = create_agent("openai:gpt-4.1", tools=web_router_tools(router, max_results=5))
+
+The router's options -- the provider, ``max_results``, ``search_depth``, domain
+filters -- are fixed when a tool is built, and the model supplies only the
+query or the URLs. That is what keeps a tool the same whichever backend serves
+it: a model free to set ``country`` would fail on the providers that do not map
+it, and the agent's behaviour would depend on who answered.
+
+Each tool answers in LangChain's ``content_and_artifact`` form: the model reads
+a compact JSON rendering, cut to a per-result budget, and the tool message's
+``artifact`` carries the untouched :class:`SearchResponse` or
+:class:`ExtractResponse`, so nothing the backend returned is lost to the caller.
+A backend failure -- a ``ProviderError``, which is also what a URL the model
+got wrong comes back as -- reaches the model as a one-line message it can react
+to rather than ending the run. Every other error is the caller's setup (a
+missing key, an option the provider does not map) and raises, because no
+retry by the model would fix it and a message would hide it.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+from web_router.client import AsyncWebRouter, WebRouter
+from web_router.constants import (
+    EXTRA_LANGCHAIN,
+    INTEGRATION_DOCUMENT_CHARS,
+    INTEGRATION_EXTRACT_MAX_URLS,
+    INTEGRATION_EXTRACT_TOOL_DESCRIPTION,
+    INTEGRATION_EXTRACT_URLS_DESCRIPTION,
+    INTEGRATION_MSG_TOOL_ERROR,
+    INTEGRATION_RESULT_CHARS,
+    INTEGRATION_SEARCH_QUERY_DESCRIPTION,
+    INTEGRATION_SEARCH_TOOL_DESCRIPTION,
+    LANGCHAIN_EXTRACT_TOOL_NAME,
+    LANGCHAIN_SEARCH_TOOL_NAME,
+    MSG_LANGCHAIN_NOT_INSTALLED,
+)
+from web_router.exceptions import ProviderError
+from web_router.integrations._options import extract_provider_for, tool_provider
+from web_router.integrations._render import render_extract, render_search
+from web_router.types import (
+    ExtractFormat,
+    ExtractResponse,
+    Provider,
+    SearchDepth,
+    SearchResponse,
+)
+
+try:
+    from langchain_core.tools import BaseTool, ToolException
+except ImportError as exc:  # pragma: no cover - exercised by the import-without-extras CI job
+    raise ImportError(MSG_LANGCHAIN_NOT_INSTALLED.format(extra=EXTRA_LANGCHAIN)) from exc
+
+
+class SearchInput(BaseModel):
+    """What the model supplies to :class:`WebRouterSearch`."""
+
+    query: str = Field(min_length=1, description=INTEGRATION_SEARCH_QUERY_DESCRIPTION)
+
+
+class ExtractInput(BaseModel):
+    """What the model supplies to :class:`WebRouterExtract`."""
+
+    urls: list[str] = Field(
+        min_length=1, max_length=INTEGRATION_EXTRACT_MAX_URLS, description=INTEGRATION_EXTRACT_URLS_DESCRIPTION
+    )
+
+
+class _WebRouterTool(BaseTool):
+    """The router, the provider and the error handling both tools share."""
+
+    router: WebRouter | None = Field(default=None, exclude=True)
+    """Serves the sync calls. Left unset, the tool builds a default one on first use."""
+
+    async_router: AsyncWebRouter | None = Field(default=None, exclude=True)
+    """Serves the async calls when given; without one they run the sync router on a worker thread."""
+
+    provider: str | None = None
+    """The backend every call goes to; unset, the router's default -- ``auto`` unless it was built with one."""
+
+    response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
+
+    handle_tool_error: bool = True
+
+    def _sync_router(self) -> WebRouter:
+        if self.router is None:
+            self.router = WebRouter()
+        return self.router
+
+    def _failed(self, exc: ProviderError) -> ToolException:
+        return ToolException(INTEGRATION_MSG_TOOL_ERROR.format(tool=self.name, error=exc))
+
+
+class WebRouterSearch(_WebRouterTool):
+    """A web search through web-router, as a LangChain tool.
+
+    Every option but the query is the caller's, set here and sent unchanged on
+    every call, so a provider that cannot serve one raises on the first call
+    rather than the model learning a different tool per backend.
+    """
+
+    name: str = LANGCHAIN_SEARCH_TOOL_NAME
+    description: str = INTEGRATION_SEARCH_TOOL_DESCRIPTION
+    args_schema: type[BaseModel] = SearchInput
+
+    max_results: int | None = None
+    search_depth: SearchDepth | None = None
+    include_domains: list[str] | None = None
+    exclude_domains: list[str] | None = None
+    country: str | None = None
+    locale: str | None = None
+    provider_options: dict[str, Any] | None = None
+    result_chars: int = INTEGRATION_RESULT_CHARS
+    """Characters of each result's text the model reads; the artifact keeps the whole of it."""
+
+    def _options(self) -> dict[str, Any]:
+        return {
+            "provider": self.provider,
+            "max_results": self.max_results,
+            "search_depth": self.search_depth,
+            "include_domains": self.include_domains,
+            "exclude_domains": self.exclude_domains,
+            "country": self.country,
+            "locale": self.locale,
+            "provider_options": self.provider_options,
+        }
+
+    def _run(self, query: str, **_: Any) -> tuple[str, SearchResponse]:
+        try:
+            response = self._sync_router().search(query, **self._options())
+        except ProviderError as exc:
+            raise self._failed(exc) from exc
+        return render_search(response, self.result_chars), response
+
+    async def _arun(self, query: str, **kwargs: Any) -> tuple[str, SearchResponse]:
+        if self.async_router is None:
+            result: tuple[str, SearchResponse] = await super()._arun(query, **kwargs)
+            return result
+        try:
+            response = await self.async_router.search(query, **self._options())
+        except ProviderError as exc:
+            raise self._failed(exc) from exc
+        return render_search(response, self.result_chars), response
+
+
+class WebRouterExtract(_WebRouterTool):
+    """Page contents through web-router, as a LangChain tool.
+
+    A URL that could not be read is named in what the model sees rather than
+    failing the call, as a partly failed extract stays partly successful.
+    """
+
+    name: str = LANGCHAIN_EXTRACT_TOOL_NAME
+    description: str = INTEGRATION_EXTRACT_TOOL_DESCRIPTION
+    args_schema: type[BaseModel] = ExtractInput
+
+    format: ExtractFormat | None = None
+    provider_options: dict[str, Any] | None = None
+    document_chars: int = INTEGRATION_DOCUMENT_CHARS
+    """Characters of each page the model reads; the artifact keeps the whole of it."""
+
+    def _options(self) -> dict[str, Any]:
+        return {"provider": self.provider, "format": self.format, "provider_options": self.provider_options}
+
+    def _run(self, urls: list[str], **_: Any) -> tuple[str, ExtractResponse]:
+        try:
+            response = self._sync_router().extract(urls, **self._options())
+        except ProviderError as exc:
+            raise self._failed(exc) from exc
+        return render_extract(response, self.document_chars), response
+
+    async def _arun(self, urls: list[str], **kwargs: Any) -> tuple[str, ExtractResponse]:
+        if self.async_router is None:
+            result: tuple[str, ExtractResponse] = await super()._arun(urls, **kwargs)
+            return result
+        try:
+            response = await self.async_router.extract(urls, **self._options())
+        except ProviderError as exc:
+            raise self._failed(exc) from exc
+        return render_extract(response, self.document_chars), response
+
+
+def web_router_tools(
+    router: WebRouter | None = None,
+    *,
+    async_router: AsyncWebRouter | None = None,
+    provider: str | Provider | None = None,
+    extract_provider: str | Provider | None = None,
+    **search_options: Any,
+) -> list[BaseTool]:
+    """Both tools on one router: a search and an extract.
+
+    ``search_options`` are :class:`WebRouterSearch`'s -- ``max_results``,
+    ``search_depth`` and the rest. ``extract_provider`` defaults to
+    ``provider`` when that one also extracts, and to the router's default when
+    it does not, since a name that searches is not always one that extracts;
+    when that default cannot extract either, it raises ``ConfigurationError``.
+    Left unset, ``router`` is one default router the two tools share.
+    """
+    router = router if router is not None else WebRouter()
+    search_name = tool_provider(provider)
+    extract_name = extract_provider_for(provider, extract_provider, router, async_router)
+    return [
+        WebRouterSearch(router=router, async_router=async_router, provider=search_name, **search_options),
+        WebRouterExtract(router=router, async_router=async_router, provider=extract_name),
+    ]
+
+
+__all__ = [
+    "ExtractInput",
+    "SearchInput",
+    "WebRouterExtract",
+    "WebRouterSearch",
+    "render_extract",
+    "render_search",
+    "web_router_tools",
+]

@@ -1,0 +1,1147 @@
+"""The providers used when the caller named none, one per method.
+
+Tries providers in order and returns the first answer: the ones you have a
+credential for first, then the keyless tiers. A key in the environment says
+which backend you want, so reaching for an anonymous rate-limited tier while
+one sits configured would be perverse -- but with no key at all the router
+still searches, rather than raising about a credential nobody mentioned.
+
+The order is fixed rather than random. A router that picked a different backend
+each run would return different result counts and content lengths for the same
+query, and a bug reported against it could not be reproduced -- in a package
+whose promise is that a query behaves the same whichever backend serves it, the
+backend is the last thing that should be a coin flip. The chain still delivers
+what a random pick was reaching for: when one anonymous tier is rate-limited,
+the next one answers.
+
+``SearchResponse.provider`` and ``ExtractResponse.provider`` name the backend
+that actually served the call, never ``"auto"``, so a caller can always tell who
+answered.
+
+Every chain routes per request. ``auto`` declares what some member maps -- for
+search every option Nimble does, for extract every format -- and before trying a
+member reads its class, which costs no credential and sends nothing: a member
+that does not map an option the request set, or cannot return the format it
+asks for, is passed over for that request. When none is left the call raises,
+naming why each one was, rather than running under weaker terms than asked.
+
+``chain`` replaces the default order, as a list for every method's ``auto`` or
+keyed by method for one alone -- ``provider_config={"auto": {"chain":
+{"search": ["perplexity", "nimble"]}}}`` on the router.
+
+Research is the exception to the fallback: there is no keyless tier after the
+credentialed ones, because every research backend bills for the run. It is also
+the one method where the choice outlives the call -- a run is a job, so the
+member that accepted it is the one every later poll goes back to.
+
+A browser session outlives the call too, and bills while it does, so ``auto``
+falls through only while no session exists: once a member has opened one, the
+handle is that member's, and nothing ``auto`` does can open a second. Browse
+follows the same rule for a task, and like research keeps each task with the
+member that accepted it.
+"""
+
+from __future__ import annotations
+
+import inspect
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from typing import Any, ClassVar, TypeAlias
+
+from web_router.constants import (
+    AUTO_AGGREGATE_FAILURE,
+    AUTO_APPENDED,
+    AUTO_BROWSE_JOB_SEPARATOR,
+    AUTO_BROWSE_PREFERRED,
+    AUTO_BROWSE_SUPPORTED_PARAMETERS,
+    AUTO_BROWSER_KEYLESS,
+    AUTO_BROWSER_PREFERRED,
+    AUTO_BROWSER_STEALTH_LEVELS,
+    AUTO_CHAIN_BROWSE,
+    AUTO_CHAIN_BROWSER,
+    AUTO_CHAIN_EXTRACT,
+    AUTO_CHAIN_METHODS,
+    AUTO_CHAIN_RESEARCH,
+    AUTO_CHAIN_SEARCH,
+    AUTO_EXTRA,
+    AUTO_EXTRACT_APPENDED,
+    AUTO_EXTRACT_DEFAULT_FORMAT,
+    AUTO_EXTRACT_FORMATS,
+    AUTO_EXTRACT_KEYLESS,
+    AUTO_EXTRACT_PREFERRED,
+    AUTO_KEYLESS,
+    AUTO_PREFERRED,
+    AUTO_RESEARCH_JOB_SEPARATOR,
+    AUTO_RESEARCH_PREFERRED,
+    AUTO_RESEARCH_SUPPORTED_PARAMETERS,
+    AUTO_SUPPORTED_PARAMETERS,
+    BROWSE_ENV_BY_PROVIDER,
+    MSG_AUTO_BROWSE_EXHAUSTED,
+    MSG_AUTO_BROWSE_MISSING,
+    MSG_AUTO_BROWSE_NO_CREDENTIAL,
+    MSG_AUTO_BROWSE_NO_MEMBER,
+    MSG_AUTO_BROWSE_SKIPPED,
+    MSG_AUTO_BROWSE_UNKNOWN_JOB,
+    MSG_AUTO_BROWSE_UNMAPPED,
+    MSG_AUTO_BROWSER_EXHAUSTED,
+    MSG_AUTO_BROWSER_NEEDS,
+    MSG_AUTO_BROWSER_NO_ELIGIBLE,
+    MSG_AUTO_BROWSER_NO_ELIGIBLE_MISSING,
+    MSG_AUTO_BROWSER_NO_PROVIDER_OPTIONS,
+    MSG_AUTO_BROWSER_OWNS_NOTHING,
+    MSG_AUTO_BROWSER_SKIPPED,
+    MSG_AUTO_BROWSER_UNMAPPED,
+    MSG_AUTO_BROWSER_UNSUPPORTED,
+    MSG_AUTO_CHAIN_ONE_NAME,
+    MSG_AUTO_CHAIN_UNKNOWN_METHOD,
+    MSG_AUTO_EXTRACT_NO_MEMBER,
+    MSG_AUTO_RESEARCH_EXHAUSTED,
+    MSG_AUTO_RESEARCH_NO_CAPABLE_BACKEND,
+    MSG_AUTO_RESEARCH_NO_CREDENTIAL,
+    MSG_AUTO_RESEARCH_SKIPPED,
+    MSG_AUTO_RESEARCH_UNKNOWN_JOB,
+    MSG_AUTO_SEARCH_NO_MEMBER,
+    MSG_AUTO_SKIPPED,
+    MSG_AUTO_UNFORMATTED,
+    MSG_AUTO_UNMAPPED,
+    MSG_OPTION_VALUE,
+    PROVIDER_AUTO,
+    RESEARCH_ENV_BY_PROVIDER,
+)
+from web_router.exceptions import (
+    ConfigurationError,
+    MissingParameterError,
+    ProviderError,
+    ProviderNotInstalledError,
+    UnsupportedFormatError,
+    UnsupportedParameterError,
+    WebRouterError,
+)
+from web_router.providers.base import (
+    AsyncBrowserHandle,
+    BrowseJob,
+    BrowseProvider,
+    BrowserHandle,
+    BrowserProvider,
+    ExtractProvider,
+    ResearchJob,
+    ResearchProvider,
+    SearchProvider,
+)
+from web_router.types import (
+    BROWSER_PARAMETERS,
+    EXTRACT_PARAMETERS,
+    BrowseProgress,
+    BrowseRequest,
+    BrowserRequest,
+    BrowserSession,
+    ExtractFormat,
+    ExtractRequest,
+    ExtractResponse,
+    ResearchProgress,
+    ResearchRequest,
+    SearchRequest,
+    SearchResponse,
+    StealthLevel,
+)
+from web_router.types import provider_name as _lookup_name
+
+_Entry: TypeAlias = "str | tuple[str, Mapping[str, Any]]"
+"""One member as a caller writes it: a backend's name, or its name beside the kwargs to build it with."""
+
+_ChainSpec: TypeAlias = "Sequence[_Entry] | Mapping[str, Sequence[_Entry]]"
+"""A ``chain`` argument: the members of every method's chain, or each method's own, keyed by method."""
+
+_RECOVERABLE = (ProviderNotInstalledError, ConfigurationError, ProviderError)
+"""Failures that mean "try the next backend".
+
+A missing extra, a missing credential and a backend that refused the call are
+all things another member of the chain may not suffer from. Anything else --
+notably :class:`UnsupportedParameterError` -- is a bug in this class rather
+than a property of the backend, and propagates.
+"""
+
+
+def _keyed_chain(preferred: tuple[str, ...], configured: set[str]) -> tuple[tuple[str, dict[str, Any]], ...]:
+    """The preferred backends you actually hold credentials for, in order."""
+    return tuple((name, {}) for name in preferred if name in configured)
+
+
+def _normalized(members_config: Mapping[str, Mapping[str, Any]] | None) -> dict[str, dict[str, Any]]:
+    """``members_config`` keyed as chain members are -- an enum or odd casing matched to the member it names."""
+    return {_lookup_name(name): dict(config) for name, config in (members_config or {}).items()}
+
+
+def _default_chain(
+    default_chain: Callable[..., tuple[tuple[str, dict[str, Any]], ...]], in_code: frozenset[str]
+) -> tuple[tuple[str, dict[str, Any]], ...]:
+    """A class's default chain, with the backends keyed in code -- unless its override takes no argument.
+
+    A subclass, or a test, may replace ``default_chain`` with one that takes
+    nothing; that chain is its own choice, and the keys in code cannot widen it.
+    """
+    if in_code and inspect.signature(default_chain).parameters:
+        return default_chain(in_code)
+    return default_chain()
+
+
+def _members_and_chain(
+    chain: _ChainSpec | None,
+    members_config: Mapping[str, Mapping[str, Any]] | None,
+    method: str,
+    default_chain: Callable[..., tuple[tuple[str, dict[str, Any]], ...]],
+) -> tuple[dict[str, dict[str, Any]], tuple[tuple[str, dict[str, Any]], ...]]:
+    """What every ``auto`` resolves at construction: its members' config, and the chain one method tries.
+
+    A backend keyed in ``members_config`` joins the default chain as one keyed in the environment does.
+    """
+    config = _normalized(members_config)
+    in_code = _configured_in(config)
+    return config, _chain_for(chain, method, lambda: _default_chain(default_chain, in_code))
+
+
+def _member_options(
+    members_config: Mapping[str, Mapping[str, Any]], name: str, options: Mapping[str, Any]
+) -> dict[str, Any]:
+    """A member's constructor kwargs: its own config, the chain's ``(name, kwargs)`` laid over it."""
+    return {**members_config.get(name, {}), **options}
+
+
+def _configured_in(members_config: Mapping[str, Mapping[str, Any]]) -> frozenset[str]:
+    """The backends the router was handed a key for in code, as ``provider_config``, beside the environment's."""
+    return frozenset(name for name, config in members_config.items() if config.get("api_key"))
+
+
+def _keyless_after(
+    keyed: tuple[tuple[str, dict[str, Any]], ...], tier: tuple[tuple[str, dict[str, Any]], ...]
+) -> tuple[tuple[str, dict[str, Any]], ...]:
+    """The keyless tier, less any backend already tried with a key.
+
+    A keyless member resolves a key when one is set -- Tavily's and Firecrawl's
+    ``allow_keyless`` both do -- so keeping it after its keyed self would only
+    send the same request, with the same credential, a second time.
+    """
+    tried = {name for name, _ in keyed}
+    return tuple(member for member in tier if member[0] not in tried)
+
+
+def _chain_for(
+    chain: _ChainSpec | None,
+    method: str,
+    default: Callable[[], tuple[tuple[str, dict[str, Any]], ...]],
+) -> tuple[tuple[str, dict[str, Any]], ...]:
+    """The chain one method's ``auto`` tries: what ``chain`` gives that method, else its default.
+
+    Keyed by method as well as listed because the router hands
+    ``provider_config["auto"]`` to the ``auto`` of every method, so a list
+    there is every method's chain -- and a search order naming Brave would
+    leave extract with a backend it does not have. Keyed, it sets the methods
+    it names and leaves the others on their defaults.
+
+    Raises:
+        ConfigurationError: for a key that names no method, or a bare name
+            where a list belongs, which would otherwise be read letter by letter.
+    """
+    listed: Sequence[_Entry] | None
+    if isinstance(chain, Mapping):
+        unknown = set(chain) - AUTO_CHAIN_METHODS
+        if unknown:
+            raise ConfigurationError(
+                MSG_AUTO_CHAIN_UNKNOWN_METHOD.format(names=_quoted(unknown), methods=_quoted(AUTO_CHAIN_METHODS))
+            )
+        listed = chain.get(method)
+    else:
+        listed = chain
+    if listed is None:
+        return default()
+    if isinstance(listed, str):
+        raise ConfigurationError(MSG_AUTO_CHAIN_ONE_NAME.format(name=listed))
+    return tuple(_entry(item) for item in listed)
+
+
+def _entry(item: _Entry) -> tuple[str, dict[str, Any]]:
+    if isinstance(item, str):
+        return _lookup_name(item), {}
+    name, options = item
+    return _lookup_name(name), dict(options)
+
+
+def _nothing_started(exc: WebRouterError) -> bool:
+    """Whether a member's failure proves it left nothing billing, so the next member may be tried.
+
+    Shared by every chain whose members start something that bills until it
+    ends -- a browser session, a browse task. The allowlist is exactly:
+
+    - :class:`ConfigurationError` and :class:`ProviderNotInstalledError`, which
+      fail before any request is sent;
+    - a :class:`ProviderError` whose ``original`` is an ``httpx.HTTPStatusError``
+      with a 4xx status, an answer that refused;
+    - a :class:`ProviderError` whose ``original`` is an ``httpx.ConnectError``
+      or ``httpx.ConnectTimeout``, a request that never reached the backend.
+
+    Everything else raises: a read that timed out, a 5xx from a gateway in
+    front of the backend, a 200 that could not be read. The backend may have
+    acted on any of those, and starting a second one would bill twice.
+    """
+    if isinstance(exc, (ConfigurationError, ProviderNotInstalledError)):
+        return True
+    if not isinstance(exc, ProviderError):
+        return False
+    # Imported here: httpx arrives with an extra, and without it no request
+    # can have been sent to be refused.
+    try:
+        import httpx
+    except ImportError:  # pragma: no cover - httpx ships with every extra
+        return False
+    original = exc.original
+    if isinstance(original, httpx.HTTPStatusError):
+        return bool(original.response.is_client_error)
+    return isinstance(original, (httpx.ConnectError, httpx.ConnectTimeout))
+
+
+def _exhausted(
+    provider: str,
+    failures: dict[str, WebRouterError],
+    template: str = AUTO_AGGREGATE_FAILURE,
+) -> WebRouterError:
+    """Report every backend's own reason, so the cause is not hidden behind "auto"."""
+    # Nothing installed is a setup problem with one fix, not a row of backend
+    # failures to read through. Say so in the form that names it.
+    if failures and all(isinstance(exc, ProviderNotInstalledError) for exc in failures.values()):
+        return ProviderNotInstalledError(provider, AUTO_EXTRA)
+
+    detail = "; ".join(f"{name}: {exc}" for name, exc in failures.items())
+    return ProviderError(provider, template.format(failures=detail))
+
+
+class AutoProvider(SearchProvider):
+    """Searches through the first backend that answers, credentialed ones first.
+
+    Declares every option some member maps, and sends each request only to the
+    members that map every option it sets -- read from their classes, so one
+    passed over is never built or called. With none left it raises before
+    searching anything, naming what each member lacked.
+    """
+
+    name: ClassVar[str] = PROVIDER_AUTO
+    supported_parameters: ClassVar[frozenset[str]] = AUTO_SUPPORTED_PARAMETERS
+
+    def __init__(
+        self,
+        *,
+        chain: _ChainSpec | None = None,
+        members_config: Mapping[str, Mapping[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Args:
+            chain: Backends to try, in order, each a name or ``(name, kwargs)``
+                -- or a mapping from method to such a list, of which this reads
+                its ``"search"`` entry. Defaults to :meth:`default_chain` for
+                the current environment, which a chain given replaces whole,
+                keyless tail included.
+            members_config: The router's ``provider_config``, by backend: each
+                member is built with its entry, the chain's own options laid
+                over it, and a backend given an ``api_key`` there counts as
+                held as well as one whose key is in the environment.
+            **kwargs: Ignored. Accepted so a router configured for several
+                providers can hand this one its config without special-casing.
+        """
+        super().__init__(**kwargs)
+        self._members_config, self._chain = _members_and_chain(
+            chain, members_config, AUTO_CHAIN_SEARCH, self.default_chain
+        )
+        # Keyed by position, not by name: the same provider can appear twice on
+        # different terms -- Tavily keyed, then Tavily keyless.
+        self._members: dict[int, SearchProvider] = {}
+
+    @staticmethod
+    def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
+        """Providers you have a credential for, then the keyless ones, then members added since, with a credential."""
+        from web_router.registry import configured_providers
+
+        configured = set(configured_providers()) | set(in_code)
+        keyed = _keyed_chain(AUTO_PREFERRED, configured)
+        return keyed + _keyless_after(keyed, AUTO_KEYLESS) + _keyed_chain(AUTO_APPENDED, configured)
+
+    @property
+    def members(self) -> tuple[str, ...]:
+        """The backends this instance would try, in order: its ``chain``, or the default it resolved at construction."""
+        return tuple(provider_name for provider_name, _ in self._chain)
+
+    def _member(self, position: int) -> SearchProvider:
+        """Build and cache one member. Imported here so the chain stays lazy."""
+        from web_router.registry import create_provider
+
+        if position not in self._members:
+            provider_name, options = self._chain[position]
+            self._members[position] = create_provider(
+                provider_name, **_member_options(self._members_config, provider_name, options)
+            )
+        return self._members[position]
+
+    def _search(self, request: SearchRequest) -> SearchResponse:
+        failures: dict[str, WebRouterError] = {}
+        for position, provider_name in self._eligible(request):
+            try:
+                return self._member(position).search(request)
+            except _RECOVERABLE as exc:
+                failures[provider_name] = exc
+        raise _exhausted(self.name, failures)
+
+    async def _asearch(self, request: SearchRequest) -> SearchResponse:
+        failures: dict[str, WebRouterError] = {}
+        for position, provider_name in self._eligible(request):
+            try:
+                return await self._member(position).asearch(request)
+            except _RECOVERABLE as exc:
+                failures[provider_name] = exc
+        raise _exhausted(self.name, failures)
+
+    def _eligible(self, request: SearchRequest) -> list[tuple[int, str]]:
+        """The chain members that map every option this request sets, in order.
+
+        A member whose extra is not installed cannot be read, and is kept:
+        trying it fails as a missing extra always has, and the chain moves on.
+
+        Raises:
+            UnsupportedParameterError: if no member maps everything set, naming
+                what each one lacked. Nothing has been searched.
+        """
+        from web_router.registry import get_provider_class
+
+        wanted = request.specified_parameters()
+        eligible: list[tuple[int, str]] = []
+        skipped: list[str] = []
+        unmapped: frozenset[str] = frozenset()
+        widest: frozenset[str] = frozenset()
+        for position, (provider_name, _) in enumerate(self._chain):
+            try:
+                supported = get_provider_class(provider_name).supported_parameters
+            except ProviderNotInstalledError:
+                eligible.append((position, provider_name))
+                continue
+            widest |= supported
+            lacks = wanted - supported
+            if not lacks:
+                eligible.append((position, provider_name))
+                continue
+            skipped.append(
+                MSG_AUTO_SKIPPED.format(name=provider_name, reasons=MSG_AUTO_UNMAPPED.format(names=_quoted(lacks)))
+            )
+            unmapped |= lacks
+
+        if eligible or not skipped:
+            return eligible
+        detail = MSG_AUTO_SEARCH_NO_MEMBER.format(skipped=", ".join(dict.fromkeys(skipped)))
+        # As for browse: name what no member maps at all when there is such a
+        # thing, since that is the option to drop.
+        raise UnsupportedParameterError(self.name, (wanted - widest) or unmapped, detail=detail)
+
+    def close(self) -> None:
+        for member in self._members.values():
+            member.close()
+
+    async def aclose(self) -> None:
+        for member in self._members.values():
+            await member.aclose()
+
+
+class AutoExtractProvider(ExtractProvider):
+    """Extracts through the first backend that answers, credentialed ones first.
+
+    Declares every format some member returns, and sends each request only to
+    the members that return the one it asks for -- the default included, which
+    is pinned before routing -- so a format is never relabelled. With none left
+    it raises before fetching anything, naming what each member returns.
+    """
+
+    name: ClassVar[str] = PROVIDER_AUTO
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
+    supported_formats: ClassVar[frozenset[ExtractFormat]] = AUTO_EXTRACT_FORMATS
+    default_format: ClassVar[ExtractFormat] = AUTO_EXTRACT_DEFAULT_FORMAT
+    # The members each batch as their own API allows, so there is nothing to
+    # split up here: one delegated call carries the whole request.
+    batches_urls: ClassVar[bool] = True
+
+    def __init__(
+        self,
+        *,
+        chain: _ChainSpec | None = None,
+        members_config: Mapping[str, Mapping[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Args:
+            chain: Backends to try, in order, as on :class:`AutoProvider`; keyed
+                by method, this reads the ``"extract"`` entry.
+            **kwargs: Ignored, as on :class:`AutoProvider`.
+        """
+        super().__init__(**kwargs)
+        self._members_config, self._chain = _members_and_chain(
+            chain, members_config, AUTO_CHAIN_EXTRACT, self.default_chain
+        )
+        self._members: dict[int, ExtractProvider] = {}
+
+    @staticmethod
+    def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
+        """Backends you have credentials for, then the keyless ones, then members added since, with credentials."""
+        from web_router.registry import configured_extract_providers
+
+        configured = set(configured_extract_providers()) | set(in_code)
+        keyed = _keyed_chain(AUTO_EXTRACT_PREFERRED, configured)
+        return keyed + _keyless_after(keyed, AUTO_EXTRACT_KEYLESS) + _keyed_chain(AUTO_EXTRACT_APPENDED, configured)
+
+    @property
+    def members(self) -> tuple[str, ...]:
+        """The backends this instance would try, in order, as on :class:`AutoProvider`."""
+        return tuple(provider_name for provider_name, _ in self._chain)
+
+    def _member(self, position: int) -> ExtractProvider:
+        """Build and cache one member. Imported here so the chain stays lazy."""
+        from web_router.registry import create_extract_provider
+
+        if position not in self._members:
+            provider_name, options = self._chain[position]
+            self._members[position] = create_extract_provider(
+                provider_name, **_member_options(self._members_config, provider_name, options)
+            )
+        return self._members[position]
+
+    def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+        delegated = self._delegated(request, urls)
+        failures: dict[str, WebRouterError] = {}
+        for position, provider_name in self._eligible(self.format_of(request)):
+            try:
+                return self._member(position).extract(delegated)
+            except _RECOVERABLE as exc:
+                failures[provider_name] = exc
+        raise _exhausted(self.name, failures)
+
+    async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+        delegated = self._delegated(request, urls)
+        failures: dict[str, WebRouterError] = {}
+        for position, provider_name in self._eligible(self.format_of(request)):
+            try:
+                return await self._member(position).aextract(delegated)
+            except _RECOVERABLE as exc:
+                failures[provider_name] = exc
+        raise _exhausted(self.name, failures)
+
+    def _eligible(self, wanted: ExtractFormat) -> list[tuple[int, str]]:
+        """The chain members that return ``wanted``, in order, read from their classes as search's are.
+
+        Raises:
+            UnsupportedFormatError: if no member returns it, naming what each one
+                returns instead. Nothing has been fetched.
+        """
+        from web_router.registry import get_extract_provider_class
+
+        eligible: list[tuple[int, str]] = []
+        skipped: list[str] = []
+        returned: frozenset[ExtractFormat] = frozenset()
+        for position, (provider_name, _) in enumerate(self._chain):
+            try:
+                formats = get_extract_provider_class(provider_name).supported_formats
+            except ProviderNotInstalledError:
+                eligible.append((position, provider_name))
+                continue
+            returned |= formats
+            if wanted in formats:
+                eligible.append((position, provider_name))
+                continue
+            skipped.append(
+                MSG_AUTO_SKIPPED.format(
+                    name=provider_name, reasons=MSG_AUTO_UNFORMATTED.format(formats=_quoted(formats))
+                )
+            )
+
+        if eligible or not skipped:
+            return eligible
+        detail = MSG_AUTO_EXTRACT_NO_MEMBER.format(skipped=", ".join(dict.fromkeys(skipped)))
+        raise UnsupportedFormatError(self.name, wanted, returned, detail=detail)
+
+    def _delegated(self, request: ExtractRequest, urls: list[str]) -> ExtractRequest:
+        """The request to hand a member, with the format named explicitly.
+
+        The members disagree about their own defaults -- Nimble returns HTML,
+        Tavily markdown -- so letting one fall through would make the shape of
+        the content depend on which backend happened to answer.
+        """
+        return request.model_copy(update={"format": self.format_of(request), "urls": urls})
+
+    def close(self) -> None:
+        for member in self._members.values():
+            member.close()
+
+    async def aclose(self) -> None:
+        for member in self._members.values():
+            await member.aclose()
+
+
+def _no_backend(
+    provider: str,
+    failures: dict[str, WebRouterError],
+    *,
+    preferred: tuple[str, ...] = AUTO_RESEARCH_PREFERRED,
+    env_by_provider: dict[str, tuple[str, ...]] = RESEARCH_ENV_BY_PROVIDER,
+    no_credential: str = MSG_AUTO_RESEARCH_NO_CREDENTIAL,
+    exhausted: str = MSG_AUTO_RESEARCH_EXHAUSTED,
+) -> WebRouterError:
+    """Say why no run started: what each backend reported, or that none was configured.
+
+    An empty chain is not a row of failures -- it is the one setup problem a
+    method with no keyless tier has, and every variable that would fix it is
+    known. Defaults to research's tables; browse passes its own.
+    """
+    if failures:
+        return _exhausted(provider, failures, exhausted)
+
+    env_vars = [env_var for name in preferred for env_var in env_by_provider.get(name, ())]
+    return ConfigurationError(no_credential.format(env_vars=", ".join(env_vars)))
+
+
+class AutoResearchProvider(ResearchProvider):
+    """Researches through the first backend that answers. Every member needs a credential."""
+
+    name: ClassVar[str] = PROVIDER_AUTO
+    supported_parameters: ClassVar[frozenset[str]] = AUTO_RESEARCH_SUPPORTED_PARAMETERS
+
+    def __init__(
+        self,
+        *,
+        chain: _ChainSpec | None = None,
+        members_config: Mapping[str, Mapping[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Args:
+            chain: Backends to try, in order, as on :class:`AutoProvider`; keyed
+                by method, this reads the ``"research"`` entry.
+            **kwargs: Ignored, as on :class:`AutoProvider`.
+        """
+        super().__init__(**kwargs)
+        self._members_config, self._chain = _members_and_chain(
+            chain, members_config, AUTO_CHAIN_RESEARCH, self.default_chain
+        )
+        self._members: dict[int, ResearchProvider] = {}
+        # A run belongs to the backend that accepted it: its id means nothing to
+        # the others, so the member that answered is kept and every later poll
+        # goes back to it rather than re-entering the chain.
+        self._jobs: dict[str, ResearchJob] = {}
+
+    @staticmethod
+    def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
+        """The backends you have credentials for. Nothing follows them: they all bill."""
+        from web_router.registry import configured_research_providers
+
+        return _keyed_chain(AUTO_RESEARCH_PREFERRED, set(configured_research_providers()) | set(in_code))
+
+    def _member(self, position: int) -> ResearchProvider:
+        """Build and cache one member. Imported here so the chain stays lazy."""
+        from web_router.registry import create_research_provider
+
+        if position not in self._members:
+            provider_name, options = self._chain[position]
+            self._members[position] = create_research_provider(
+                provider_name, **_member_options(self._members_config, provider_name, options)
+            )
+        return self._members[position]
+
+    def _start(self, request: ResearchRequest) -> ResearchProgress:
+        eligible = self._eligible(request)
+        failures: dict[str, WebRouterError] = {}
+        for position, provider_name in eligible:
+            try:
+                job = self._member(position).submit(request)
+            except _RECOVERABLE as exc:
+                # A 5xx, a read timeout or an unreadable answer may come after
+                # the backend created the run, so only a failure that proves
+                # nothing started may try the next member -- a run is billed
+                # from the moment it was accepted.
+                if not _nothing_started(exc):
+                    raise
+                failures[provider_name] = exc
+                continue
+            # Registered from the start progress, with no poll first: a poll
+            # that failed here would leave a billed run with no handle to it.
+            return self._took(provider_name, job)
+        raise _no_backend(self.name, failures)
+
+    async def _astart(self, request: ResearchRequest) -> ResearchProgress:
+        eligible = self._eligible(request)
+        failures: dict[str, WebRouterError] = {}
+        for position, provider_name in eligible:
+            try:
+                job = await self._member(position).asubmit(request)
+            except _RECOVERABLE as exc:
+                if not _nothing_started(exc):
+                    raise
+                failures[provider_name] = exc
+                continue
+            return self._took(provider_name, job)
+        raise _no_backend(self.name, failures)
+
+    def _eligible(self, request: ResearchRequest) -> list[tuple[int, str]]:
+        """The chain members that map everything this request asks for.
+
+        `auto` offers a wider surface than some of its members: Nimble and
+        Parallel return structured output and Perplexity does not, and dropping
+        `output_schema` from the shared surface to match the weakest member
+        would cost the other two a capability they have. So a member that
+        cannot honour *this* request is passed over instead -- checked against
+        the class, which costs no credential and starts no billed run.
+
+        Raises:
+            UnsupportedParameterError: if no member maps the options set, which
+                is the honest answer rather than a routing failure: the request
+                cannot be served by anything configured, and the message says
+                which backend would have taken it without that option.
+        """
+        from web_router.registry import get_research_provider_class
+
+        wanted = request.specified_parameters()
+        eligible: list[tuple[int, str]] = []
+        skipped: list[str] = []
+        for position, (provider_name, _) in enumerate(self._chain):
+            supported = get_research_provider_class(provider_name).supported_parameters
+            if wanted <= supported:
+                eligible.append((position, provider_name))
+            else:
+                skipped.append(
+                    MSG_AUTO_RESEARCH_SKIPPED.format(
+                        name=provider_name,
+                        supported=", ".join(sorted(supported)) or "nothing",
+                    )
+                )
+
+        if not eligible and skipped:
+            # Every option may be mapped by some member and yet no single member
+            # map them all; then the whole set is what nothing could take.
+            detail = MSG_AUTO_RESEARCH_NO_CAPABLE_BACKEND.format(skipped=", ".join(skipped))
+            raise UnsupportedParameterError(self.name, (wanted - self._widest()) or wanted, detail=detail)
+        return eligible
+
+    def _widest(self) -> frozenset[str]:
+        """Everything some member of the chain maps, for naming what nothing could."""
+        from web_router.registry import get_research_provider_class
+
+        supported: frozenset[str] = frozenset()
+        for provider_name, _ in self._chain:
+            supported |= get_research_provider_class(provider_name).supported_parameters
+        return supported
+
+    def _took(self, provider_name: str, job: ResearchJob) -> ResearchProgress:
+        """Remember which member owns this run, and hand back a handle that says so.
+
+        Keyed by the member's name beside its own id rather than by the id
+        alone: run ids are issued independently by each backend and mean nothing
+        to the others, so two that collided would otherwise be one entry, and
+        polling the first would answer about the second.
+        """
+        handle = f"{provider_name}{AUTO_RESEARCH_JOB_SEPARATOR}{job.job_id}"
+        self._jobs[handle] = job
+        return job.progress.model_copy(update={"job_id": handle})
+
+    def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
+        return self._as_handle(job_id, self._job(job_id).status())
+
+    async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
+        return self._as_handle(job_id, await self._job(job_id).astatus())
+
+    @staticmethod
+    def _as_handle(job_id: str, progress: ResearchProgress) -> ResearchProgress:
+        """Re-label a member's progress with the handle the caller holds.
+
+        The member answers with its own run id. Handing that back would make the
+        next poll ask about an id this class never stored, so a job would work
+        exactly once.
+        """
+        return progress.model_copy(update={"job_id": job_id})
+
+    def _cancel(self, job_id: str) -> bool:
+        return self._job(job_id).cancel()
+
+    async def _acancel(self, job_id: str) -> bool:
+        return await self._job(job_id).acancel()
+
+    def _job(self, job_id: str) -> ResearchJob:
+        """The member's own job for this id, which is the only thing that can answer for it."""
+        try:
+            return self._jobs[job_id]
+        except KeyError as exc:
+            raise ProviderError(self.name, MSG_AUTO_RESEARCH_UNKNOWN_JOB.format(job_id=job_id)) from exc
+
+    def close(self) -> None:
+        for member in self._members.values():
+            member.close()
+
+    async def aclose(self) -> None:
+        for member in self._members.values():
+            await member.aclose()
+
+
+class AutoBrowserProvider(BrowserProvider):
+    """Opens a session through the first backend that will, credentialed ones first, then ``local``.
+
+    Each member is checked against the request on its class before anything is
+    opened, as ``auto`` research does: ``stealth="low"`` passes over ``local``,
+    which has none, ``idle_timeout`` passes over every backend without an idle
+    limit, and a member is passed over too for a stealth level it lacks, a
+    country it has no proxy in, or an option it serves only beside one the
+    request left unset. The :data:`~web_router.constants.BROWSER_TIMEOUT` default does
+    not count, because it is ours rather than the caller's: counted, it would
+    pass over every backend with no lifetime limit on behalf of an option
+    nobody set. The member still applies it for itself, exactly as it would if
+    the caller had named it.
+
+    ``provider_options`` is refused rather than passed on. It is one backend's
+    own fields, untranslated, so it cannot mean the same thing to whichever
+    member happens to answer -- to ``local`` it is Chrome command-line
+    switches -- and a caller who wrote it for one backend should name it.
+
+    The handle returned is the member's own: it reports that member as its
+    provider, and its release and status go straight to it.
+    """
+
+    name: ClassVar[str] = PROVIDER_AUTO
+    # Everything some backend could honour; whether one in *this* chain can is
+    # decided per request, by eligibility.
+    supported_parameters: ClassVar[frozenset[str]] = BROWSER_PARAMETERS
+    stealth_levels: ClassVar[frozenset[StealthLevel]] = AUTO_BROWSER_STEALTH_LEVELS
+
+    def __init__(
+        self,
+        *,
+        chain: _ChainSpec | None = None,
+        members_config: Mapping[str, Mapping[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Args:
+            chain: Backends to try, in order, as on :class:`AutoProvider`; keyed
+                by method, this reads the ``"browser"`` entry.
+            **kwargs: Ignored, as on :class:`AutoProvider`.
+        """
+        super().__init__(**kwargs)
+        self._members_config, self._chain = _members_and_chain(
+            chain, members_config, AUTO_CHAIN_BROWSER, self.default_chain
+        )
+        self._members: dict[int, BrowserProvider] = {}
+
+    @staticmethod
+    def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
+        """The backends you hold credentials for, in preference order, then ``local``."""
+        from web_router.registry import configured_browser_providers
+
+        return (
+            _keyed_chain(AUTO_BROWSER_PREFERRED, set(configured_browser_providers()) | set(in_code))
+            + AUTO_BROWSER_KEYLESS
+        )
+
+    @property
+    def members(self) -> tuple[str, ...]:
+        """The backends this instance would try, in order: its ``chain``, or the default it resolved at construction."""
+        return tuple(provider_name for provider_name, _ in self._chain)
+
+    def _member(self, position: int) -> BrowserProvider:
+        """Build and cache one member. Imported here so the chain stays lazy."""
+        from web_router.registry import create_browser_provider
+
+        if position not in self._members:
+            provider_name, options = self._chain[position]
+            self._members[position] = create_browser_provider(
+                provider_name, **_member_options(self._members_config, provider_name, options)
+            )
+        return self._members[position]
+
+    def _opened(self, request: BrowserRequest) -> BrowserHandle:
+        failures: dict[str, WebRouterError] = {}
+        for position, provider_name in self._eligible(request):
+            try:
+                # Returned as it is: the first session opened is the only one.
+                return self._member(position).open(request)
+            except _RECOVERABLE as exc:
+                if not _nothing_started(exc):
+                    raise
+                failures[provider_name] = exc
+        raise _exhausted(self.name, failures, MSG_AUTO_BROWSER_EXHAUSTED)
+
+    async def _aopened(self, request: BrowserRequest) -> AsyncBrowserHandle:
+        failures: dict[str, WebRouterError] = {}
+        for position, provider_name in self._eligible(request):
+            try:
+                return await self._member(position).aopen(request)
+            except _RECOVERABLE as exc:
+                if not _nothing_started(exc):
+                    raise
+                failures[provider_name] = exc
+        raise _exhausted(self.name, failures, MSG_AUTO_BROWSER_EXHAUSTED)
+
+    def _eligible(self, request: BrowserRequest) -> list[tuple[int, str]]:
+        """The chain members that can serve every option the caller set, as it was set, in order.
+
+        A member is passed over for an option it does not map, a value of one it
+        cannot serve, or an option it serves only beside one the request left
+        unset -- each read from its class, through the checks its own
+        ``validate`` makes, so nothing is spent finding out.
+
+        Raises:
+            MissingParameterError: if no member qualifies and one of them would
+                but for a partner option left unset -- setting it is the fix.
+            UnsupportedParameterError: for ``provider_options``, and when no
+                member qualifies otherwise. Either message names why each
+                member was passed over.
+        """
+        from web_router.registry import get_browser_provider_class
+
+        if request.provider_options:
+            raise UnsupportedParameterError(
+                self.name, {"provider_options"}, detail=MSG_AUTO_BROWSER_NO_PROVIDER_OPTIONS
+            )
+
+        wanted = request.specified_parameters()
+        eligible: list[tuple[int, str]] = []
+        skipped: list[str] = []
+        unmapped: set[str] = set()
+        refused: dict[str, Any] = {}
+        missing: set[str] = set()
+        for position, (provider_name, _) in enumerate(self._chain):
+            member_cls = get_browser_provider_class(provider_name)
+            lacks = wanted - member_cls.supported_parameters
+            refuses = member_cls.refused_values(request)
+            needs = member_cls.unmet_requirements(request)
+            if not lacks and not refuses and not needs:
+                eligible.append((position, provider_name))
+                continue
+            partners = frozenset().union(*needs.values())
+            reasons = [MSG_AUTO_BROWSER_UNMAPPED.format(names=_quoted(lacks))] if lacks else []
+            if refuses:
+                reasons.append(MSG_AUTO_BROWSER_UNSUPPORTED.format(values=_valued(refuses)))
+            if needs:
+                beside = {option: getattr(request, option) for option in needs}
+                reasons.append(MSG_AUTO_BROWSER_NEEDS.format(names=_quoted(partners), values=_valued(beside)))
+            skipped.append(MSG_AUTO_BROWSER_SKIPPED.format(name=provider_name, reasons=" and ".join(reasons)))
+            unmapped |= lacks
+            refused.update(refuses)
+            if not lacks and not refuses:
+                missing |= partners
+
+        if eligible or not skipped:
+            return eligible
+        if missing:
+            raise MissingParameterError(
+                self.name, missing, detail=MSG_AUTO_BROWSER_NO_ELIGIBLE_MISSING.format(skipped="; ".join(skipped))
+            )
+        raise UnsupportedParameterError(
+            self.name,
+            unmapped | set(refused),
+            values=refused,
+            detail=MSG_AUTO_BROWSER_NO_ELIGIBLE.format(skipped="; ".join(skipped)),
+        )
+
+    def _open(self, request: BrowserRequest) -> BrowserSession:
+        # Unreachable: open() goes through _opened, which returns a member's
+        # handle, and a session unwrapped from it here would have no owner.
+        raise NotImplementedError  # pragma: no cover
+
+    async def _aopen(self, request: BrowserRequest) -> BrowserSession:
+        raise NotImplementedError  # pragma: no cover
+
+    def _release(self, session_id: str) -> None:
+        # Reached only by calling release() on this provider directly, since no
+        # handle it returned points back here.
+        raise ProviderError(self.name, MSG_AUTO_BROWSER_OWNS_NOTHING.format(session_id=session_id))
+
+    async def _arelease(self, session_id: str) -> None:
+        self._release(session_id)
+
+    def close(self) -> None:
+        for member in self._members.values():
+            member.close()
+
+    async def aclose(self) -> None:
+        for member in self._members.values():
+            await member.aclose()
+
+
+def _quoted(names: Iterable[str]) -> str:
+    return ", ".join(repr(name) for name in sorted(names))
+
+
+def _valued(values: Mapping[str, Any]) -> str:
+    return ", ".join(MSG_OPTION_VALUE.format(name=name, value=values[name]) for name in sorted(values))
+
+
+class AutoBrowseProvider(BrowseProvider):
+    """Runs a browse task through the first backend that takes it. Every member needs a credential.
+
+    A member is checked against the request before it is tried -- an option it
+    does not map, ``start_url`` on a backend that refuses one, a parameter it
+    cannot start without -- on the class, which costs no credential and starts
+    no billed task. Among the members that pass, only a failure that proves no
+    task was created moves on to the next; anything else raises, and once one
+    has accepted the task nothing else is started.
+    """
+
+    name: ClassVar[str] = PROVIDER_AUTO
+    supported_parameters: ClassVar[frozenset[str]] = AUTO_BROWSE_SUPPORTED_PARAMETERS
+
+    def __init__(
+        self,
+        *,
+        chain: _ChainSpec | None = None,
+        members_config: Mapping[str, Mapping[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Args:
+            chain: Backends to try, in order, as on :class:`AutoProvider`; keyed
+                by method, this reads the ``"browse"`` entry.
+            **kwargs: Ignored, as on :class:`AutoProvider`.
+        """
+        super().__init__(**kwargs)
+        self._members_config, self._chain = _members_and_chain(
+            chain, members_config, AUTO_CHAIN_BROWSE, self.default_chain
+        )
+        self._members: dict[int, BrowseProvider] = {}
+        # As for research: a task id means nothing to a backend that did not
+        # issue it, so every later poll goes back to the member that took it.
+        self._jobs: dict[str, BrowseJob] = {}
+
+    @staticmethod
+    def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
+        """The backends you have credentials for. Nothing follows them: they all bill."""
+        from web_router.registry import configured_browse_providers
+
+        return _keyed_chain(AUTO_BROWSE_PREFERRED, set(configured_browse_providers()) | set(in_code))
+
+    def _member(self, position: int) -> BrowseProvider:
+        """Build and cache one member. Imported here so the chain stays lazy."""
+        from web_router.registry import create_browse_provider
+
+        if position not in self._members:
+            provider_name, options = self._chain[position]
+            self._members[position] = create_browse_provider(
+                provider_name, **_member_options(self._members_config, provider_name, options)
+            )
+        return self._members[position]
+
+    def _start(self, request: BrowseRequest) -> BrowseProgress:
+        failures: dict[str, WebRouterError] = {}
+        for position, provider_name in self._eligible(request):
+            try:
+                job = self._member(position).submit(request)
+            except _RECOVERABLE as exc:
+                # A 5xx, a read timeout or an unreadable answer may come after
+                # the vendor created the task, so only a failure that proves
+                # nothing started may try the next member.
+                if not _nothing_started(exc):
+                    raise
+                failures[provider_name] = exc
+                continue
+            # Registered from the start progress, with no poll first: a poll
+            # that failed here would leave a billed task with no handle to it.
+            return self._took(provider_name, job)
+        raise self._no_backend(failures)
+
+    async def _astart(self, request: BrowseRequest) -> BrowseProgress:
+        failures: dict[str, WebRouterError] = {}
+        for position, provider_name in self._eligible(request):
+            try:
+                job = await self._member(position).asubmit(request)
+            except _RECOVERABLE as exc:
+                if not _nothing_started(exc):
+                    raise
+                failures[provider_name] = exc
+                continue
+            return self._took(provider_name, job)
+        raise self._no_backend(failures)
+
+    def _no_backend(self, failures: dict[str, WebRouterError]) -> WebRouterError:
+        return _no_backend(
+            self.name,
+            failures,
+            preferred=AUTO_BROWSE_PREFERRED,
+            env_by_provider=BROWSE_ENV_BY_PROVIDER,
+            no_credential=MSG_AUTO_BROWSE_NO_CREDENTIAL,
+            exhausted=MSG_AUTO_BROWSE_EXHAUSTED,
+        )
+
+    def _eligible(self, request: BrowseRequest) -> list[tuple[int, str]]:
+        """The chain members that map everything this request sets and need nothing it left out.
+
+        Raises:
+            MissingParameterError: if no member qualifies and one of them maps
+                everything asked for but cannot start without something unset
+                -- setting it is the fix.
+            UnsupportedParameterError: if no member qualifies otherwise.
+            Either message lists every member and why it was passed over.
+        """
+        from web_router.registry import get_browse_provider_class
+
+        wanted = request.specified_parameters()
+        eligible: list[tuple[int, str]] = []
+        skipped: list[str] = []
+        unmapped: frozenset[str] = frozenset()
+        missing: frozenset[str] = frozenset()
+        widest: frozenset[str] = frozenset()
+        for position, (provider_name, _) in enumerate(self._chain):
+            member_cls = get_browse_provider_class(provider_name)
+            widest |= member_cls.supported_parameters
+            lacks = wanted - member_cls.supported_parameters
+            needs = member_cls.missing_parameters(request)
+            if not lacks and not needs:
+                eligible.append((position, provider_name))
+                continue
+            reasons = [MSG_AUTO_BROWSE_UNMAPPED.format(names=_quoted(lacks))] if lacks else []
+            if needs:
+                reasons.append(MSG_AUTO_BROWSE_MISSING.format(names=_quoted(needs)))
+            skipped.append(MSG_AUTO_BROWSE_SKIPPED.format(name=provider_name, reasons="; ".join(reasons)))
+            unmapped |= lacks
+            if not lacks:
+                missing |= needs
+
+        if eligible or not skipped:
+            return eligible
+        detail = MSG_AUTO_BROWSE_NO_MEMBER.format(skipped=", ".join(skipped))
+        if missing:
+            raise MissingParameterError(self.name, missing, detail=detail)
+        # Name what no member maps at all when there is such a thing: that is the
+        # option to drop. Otherwise each is mapped somewhere, just never together.
+        raise UnsupportedParameterError(self.name, (wanted - widest) or unmapped, detail=detail)
+
+    def _took(self, provider_name: str, job: BrowseJob) -> BrowseProgress:
+        """Remember which member owns this task, under a handle that names it.
+
+        The member's name is part of the handle because task ids are issued per
+        backend, and two that collided would otherwise be one entry.
+        """
+        handle = f"{provider_name}{AUTO_BROWSE_JOB_SEPARATOR}{job.job_id}"
+        self._jobs[handle] = job
+        return job.progress.model_copy(update={"job_id": handle})
+
+    def _fetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
+        return self._job(job_id).status().model_copy(update={"job_id": job_id})
+
+    async def _afetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
+        return (await self._job(job_id).astatus()).model_copy(update={"job_id": job_id})
+
+    def _cancel(self, job_id: str) -> bool:
+        return self._job(job_id).cancel()
+
+    async def _acancel(self, job_id: str) -> bool:
+        return await self._job(job_id).acancel()
+
+    def _job(self, job_id: str) -> BrowseJob:
+        try:
+            return self._jobs[job_id]
+        except KeyError as exc:
+            raise ProviderError(self.name, MSG_AUTO_BROWSE_UNKNOWN_JOB.format(job_id=job_id)) from exc
+
+    def close(self) -> None:
+        for member in self._members.values():
+            member.close()
+
+    async def aclose(self) -> None:
+        for member in self._members.values():
+            await member.aclose()

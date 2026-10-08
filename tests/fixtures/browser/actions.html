@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><title>Page actions</title></head>
+<body>
+<h1>Page actions</h1>
+<form id="f" onsubmit="event.preventDefault(); document.getElementById('out').textContent = 'submitted:' + this.q.value + ':' + this.agree.checked;">
+  <label>Search <input name="q" type="text"></label>
+  <label><input name="agree" type="checkbox"> I agree</label>
+  <button type="submit">Submit</button>
+</form>
+<p id="out">idle</p>
+<button id="counter" onclick="this.dataset.n=(+this.dataset.n||0)+1; document.getElementById('out').textContent='clicked:'+this.dataset.n">Count</button>
+<button id="rerender" onclick="render()">Re-render list</button>
+<a href="next.html">Next page</a>
+<div><div><ul id="list"></ul></div></div>
+<iframe id="frame" title="Inner frame" srcdoc="<button onclick=&quot;this.textContent='Frame clicked'&quot;>Frame button</button>"></iframe>
+<div id="tall" style="height: 3000px">Bottom of the page</div>
+<script>
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('out').textContent = 'pressed:Escape'; });
+let gen = 0;
+function render() {
+  gen++;
+  const ul = document.getElementById('list');
+  ul.replaceChildren(...['Apple', 'Banana'].map(t => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.textContent = 'Buy ' + t;
+    b.onclick = () => { document.getElementById('out').textContent = 'bought:' + t + ':gen' + gen; };
+    li.append(b); return li;
+  }));
+}
+render();
+</script>
+</body></html>

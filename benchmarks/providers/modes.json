@@ -1,0 +1,152 @@
+{
+  "_about": "Vendor search modes the normalized search_depth does not reach, for setups written provider:mode. Each is sent as provider_options, which a search merges last, so it overrides what web-router would send for the same field. Checked against each vendor's docs on 2026-09-30; see PRICING.md for sources. 'verified' is true only when a live call has shown the mode changing what comes back; 'observed' records what the last check saw. Linkup's standard mode was checked live; Exa, Tavily and Parallel modes are unchecked: their accounts were out of credit.",
+  "tavily": {
+    "fast": {
+      "provider_options": {
+        "search_depth": "fast"
+      },
+      "note": "Tavily's own lower-latency tier, 1 credit. Not web-router's fast, which sends advanced.",
+      "verified": false
+    },
+    "ultra-fast": {
+      "provider_options": {
+        "search_depth": "ultra-fast"
+      },
+      "note": "Lowest latency, one summary per URL, 1 credit.",
+      "verified": false
+    }
+  },
+  "exa": {
+    "instant": {
+      "provider_options": {
+        "type": "instant"
+      },
+      "note": "Fastest search type, $4 per 1k.",
+      "verified": false
+    },
+    "fast": {
+      "provider_options": {
+        "type": "fast"
+      },
+      "note": "Low-latency type, $7 per 1k.",
+      "verified": false
+    },
+    "deep-lite": {
+      "provider_options": {
+        "type": "deep-lite"
+      },
+      "note": "Light research with synthesis, ~4s, $12 per 1k.",
+      "verified": false
+    },
+    "deep": {
+      "provider_options": {
+        "type": "deep"
+      },
+      "note": "Multi-step research with synthesis, $12 per 1k.",
+      "verified": false
+    },
+    "highlights": {
+      "provider_options": {
+        "contents": {
+          "highlights": true
+        }
+      },
+      "note": "Highlights instead of the full text web-router asks for; same $1 per 1k pages.",
+      "verified": false
+    }
+  },
+  "perplexity": {
+    "fast": {
+      "provider_options": {
+        "search_type": "fast"
+      },
+      "note": "Lower-latency, lower-cost search, $1 per 1k against $5 for the default web.",
+      "verified": false,
+      "observed": "2026-09-30: sent and accepted, but the response was byte-identical to the default on the one query tried, so its effect is not yet shown."
+    },
+    "context-low": {
+      "provider_options": {
+        "search_context_size": "low"
+      },
+      "note": "Short passages per page; the default is high. No price difference.",
+      "verified": false,
+      "observed": "2026-09-30: sent and accepted, but the response was byte-identical to the default on the one query tried, so its effect is not yet shown."
+    },
+    "context-medium": {
+      "provider_options": {
+        "search_context_size": "medium"
+      },
+      "note": "Balanced passages per page. No price difference.",
+      "verified": false,
+      "observed": "2026-09-30: sent and accepted, but the response was byte-identical to the default on the one query tried, so its effect is not yet shown."
+    }
+  },
+  "brave": {
+    "extra-snippets": {
+      "provider_options": {
+        "extra_snippets": true
+      },
+      "note": "Up to 5 extra excerpts per result, included in the Search plan.",
+      "verified": false,
+      "observed": "2026-09-30: sent and accepted, but the response was byte-identical to the default on the one query tried, so its effect is not yet shown."
+    }
+  },
+  "nimble": {
+    "full-content": {
+      "provider_options": {
+        "full_content": true
+      },
+      "note": "Live-scraped full page per result; with @lite it is lite plus full content, which web-router's depths don't offer. +$1 per 1k URLs.",
+      "verified": true,
+      "observed": "2026-09-30, with @lite: 590 characters of results became 285,145 and the search took 106s instead of 2.7s."
+    }
+  },
+  "you": {
+    "full-page-cache": {
+      "provider_options": {
+        "extraction": {
+          "extraction_mode": "full_page",
+          "extraction_source": "cache"
+        }
+      },
+      "note": "Full pages from You.com's cache only, which it doesn't bill; web-router's deep lets it fetch live.",
+      "verified": false,
+      "observed": "2026-09-30: sent and accepted, but the response was byte-identical to the default on the one query tried, so its effect is not yet shown."
+    }
+  },
+  "linkup": {
+    "standard": {
+      "provider_options": {
+        "depth": "standard"
+      },
+      "note": "Linkup's single agentic pass for queries spanning several topics, $5 per 1k like flash and fast.",
+      "verified": true,
+      "observed": "2026-09-30: against the default fast depth it changed which pages came back on one of three queries (33,936 characters against 34,723) and returned the same pages in the same order on the other two."
+    },
+    "flash": {
+      "provider_options": {
+        "depth": "flash"
+      },
+      "note": "Linkup's lowest-latency depth, $5 per 1k. Same snippet size as fast.",
+      "verified": true,
+      "observed": "2026-09-30: accepted; about 0.4s against 1s for fast, snippets of the same size."
+    },
+    "deep": {
+      "provider_options": {
+        "depth": "deep"
+      },
+      "note": "Several search iterations, 6-16s, billed $50 per 1k in Linkup's docs. Same snippet size as fast.",
+      "verified": true,
+      "observed": "2026-09-30: accepted; 6-16s against 1s for fast, snippets of the same size, and different pages ranked."
+    }
+  },
+  "parallel": {
+    "processor-pro": {
+      "provider_options": {
+        "processor": "pro"
+      },
+      "note": "The legacy v1beta tier selector web-router's endpoint takes. Parallel's current turbo/fast/basic/advanced modes are on /v1 only, which web-router doesn't call yet.",
+      "verified": false
+    }
+  }
+}

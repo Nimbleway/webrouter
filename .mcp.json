@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "web-router": {
+      "command": "uv",
+      "args": ["run", "--all-extras", "web-router-mcp"]
+    }
+  }
+}

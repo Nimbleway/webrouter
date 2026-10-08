@@ -1,0 +1,60 @@
+fail_fast: false
+
+exclude: |
+  (?x)^(
+    .venv/.*|
+    build/.*|
+    dist/.*|
+    uv.lock
+  )$
+
+repos:
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.24.1
+    hooks:
+      - id: validate-pyproject
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Vendored prompts are kept byte-for-byte equal to their upstream so a
+      # reader can diff them; upstream's trailing spaces are part of that.
+      - id: trailing-whitespace
+        types: [text]
+        exclude: ^src/web_router/evals/prompts/
+      - id: end-of-file-fixer
+        types: [text]
+        exclude: ^src/web_router/evals/prompts/
+      - id: check-yaml
+        types: [yaml]
+      - id: check-toml
+        types: [toml]
+      - id: check-ast
+        types: [python]
+      - id: check-merge-conflict
+        types: [text]
+      - id: debug-statements
+        types: [python]
+      - id: detect-private-key
+      - id: no-commit-to-branch
+        args: [--branch, main]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.6
+    hooks:
+      - id: ruff-check
+        args: [--fix, --exit-non-zero-on-fix]
+        types: [python]
+      - id: ruff-format
+        types: [python]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.18.2
+    hooks:
+      - id: mypy
+        files: ^src/
+        args: ["--ignore-missing-imports"]
+        additional_dependencies: [pydantic>=2, "langchain-core>=1.0,<2"]
+
+default_stages: [pre-commit]
+default_install_hook_types: [pre-commit, pre-push]
