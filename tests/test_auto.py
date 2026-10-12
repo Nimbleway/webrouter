@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import inspect
+from types import MappingProxyType
 from typing import Any
 
 import pytest
 
-from web_router import WebRouter
+from web_router import AsyncWebRouter, WebRouter
 from web_router.constants import (
     AUTO_APPENDED,
+    AUTO_CLIENT_OPTION,
+    AUTO_CLIENT_PROVIDERS,
     AUTO_EXTRACT_APPENDED,
     AUTO_EXTRACT_DEFAULT_FORMAT,
     AUTO_EXTRACT_FORMATS,
@@ -29,10 +33,12 @@ from web_router.constants import (
     PROVIDER_EXA_MCP,
     PROVIDER_FIRECRAWL,
     PROVIDER_JINA,
+    PROVIDER_NIMBLE,
     PROVIDER_PARALLEL_MCP,
     PROVIDER_PERPLEXITY,
     PROVIDER_TAVILY,
     PROVIDER_YOU_MCP,
+    RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.exceptions import (
     ConfigurationError,
@@ -41,11 +47,15 @@ from web_router.exceptions import (
     UnsupportedFormatError,
     UnsupportedParameterError,
 )
-from web_router.providers.auto import AutoExtractProvider, AutoProvider
+from web_router.providers.auto import AutoExtractProvider, AutoProvider, AutoResearchProvider
 from web_router.registry import (
     _BUILTIN_PROVIDERS,
+    available_extract_providers,
+    available_providers,
+    available_research_providers,
     get_extract_provider_class,
     get_provider_class,
+    get_research_provider_class,
     register_extract_provider,
     register_provider,
     unregister_extract_provider,
@@ -64,6 +74,7 @@ from web_router.types import (
 )
 
 _EVERY_SEARCH_KEY = [env_var for env_var in ENV_BY_PROVIDER.values() if env_var]
+_EVERY_RESEARCH_KEY = sorted({env_var for env_vars in RESEARCH_ENV_BY_PROVIDER.values() for env_var in env_vars})
 _EVERY_EXTRACT_KEY = sorted({env_var for env_vars in EXTRACT_ENV_BY_PROVIDER.values() for env_var in env_vars})
 
 
@@ -789,6 +800,181 @@ def test_a_key_given_in_code_puts_its_backend_in_auto_s_default_chain(monkeypatc
         assert router.get_provider("auto").members[0] == PROVIDER_PERPLEXITY, "ranked as a key in the env is"
     with WebRouter(provider_config={PROVIDER_PERPLEXITY: {"timeout": 5}}) as router:
         assert PROVIDER_PERPLEXITY not in router.get_provider("auto").members, "config without a key adds nothing"
+
+
+async def test_a_client_given_in_code_puts_nimble_in_auto_s_chain_and_serves_on_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A caller with no service key, only a per-user ``AsyncNimble``: ``auto`` still reaches Nimble on it."""
+    nimble_python = pytest.importorskip("nimble_python", reason="nimble extra not installed")
+    httpx = pytest.importorskip("httpx")
+    for env_var in _EVERY_SEARCH_KEY:
+        monkeypatch.delenv(env_var, raising=False)
+    seen: list[Any] = []
+
+    def handle(request: Any) -> Any:
+        seen.append(request)
+        return httpx.Response(200, json={"results": [{"url": "https://a.com", "title": "A"}]})
+
+    client = nimble_python.AsyncNimble(
+        api_key="end-user-key", http_client=httpx.AsyncClient(transport=httpx.MockTransport(handle))
+    )
+    async with AsyncWebRouter(provider_config={PROVIDER_NIMBLE: {"async_client": client}}) as router:
+        assert router.get_provider("auto").members[0] == PROVIDER_NIMBLE
+        response = await router.search("q")
+
+    assert response.provider == PROVIDER_NIMBLE
+    assert seen[0].headers["authorization"] == "Bearer end-user-key"
+    assert not client.is_closed(), "the router closed its providers, and the caller's client is not one of them"
+
+
+def test_a_client_given_to_a_backend_that_takes_none_adds_nothing_to_auto_s_chain(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only Nimble's classes take ``async_client``; another backend would fail to start on it."""
+    for env_var in _EVERY_SEARCH_KEY:
+        monkeypatch.delenv(env_var, raising=False)
+
+    assert PROVIDER_BRAVE not in AutoProvider(members_config={PROVIDER_BRAVE: {"async_client": object()}}).members
+    assert PROVIDER_NIMBLE in AutoProvider(members_config={PROVIDER_NIMBLE: {"async_client": object()}}).members
+
+
+@pytest.mark.parametrize("auto_class", [AutoProvider, AutoExtractProvider, AutoResearchProvider])
+def test_a_nimble_client_given_in_code_puts_nimble_in_every_method_s_auto(
+    monkeypatch: pytest.MonkeyPatch, auto_class: type[Any]
+) -> None:
+    for env_var in (*_EVERY_SEARCH_KEY, *_EVERY_EXTRACT_KEY, *_EVERY_RESEARCH_KEY):
+        monkeypatch.delenv(env_var, raising=False)
+
+    def members(auto: Any) -> list[str]:
+        return [name for name, _ in auto._chain]
+
+    assert PROVIDER_NIMBLE not in members(auto_class())
+    assert members(auto_class(members_config={PROVIDER_NIMBLE: {"async_client": object()}}))[0] == PROVIDER_NIMBLE
+
+
+def test_the_backends_whose_client_counts_are_exactly_those_whose_classes_take_one() -> None:
+    """A class gaining ``async_client`` without joining the set would have its client ignored by auto."""
+    pytest.importorskip("nimble_python", reason="nimble extra not installed")
+    takes_a_client: set[str] = set()
+    for available, get_class in (
+        (available_providers, get_provider_class),
+        (available_extract_providers, get_extract_provider_class),
+        (available_research_providers, get_research_provider_class),
+    ):
+        for name in available():
+            try:
+                provider_class = get_class(name)
+            except ProviderNotInstalledError:
+                continue
+            if AUTO_CLIENT_OPTION in inspect.signature(provider_class.__init__).parameters:
+                takes_a_client.add(name)
+
+    assert takes_a_client == AUTO_CLIENT_PROVIDERS
+
+
+@pytest.mark.parametrize(
+    "provider_config",
+    [
+        {PROVIDER_NIMBLE: {"async_client": object()}},
+        {"auto": {"members_config": {"NIMBLE": {"async_client": object()}}}},
+        {"auto": {"chain": [(PROVIDER_NIMBLE, {"async_client": object()}), PROVIDER_BRAVE]}},
+        {"auto": {"chain": {"search": [(PROVIDER_NIMBLE, {"async_client": object()}), PROVIDER_BRAVE]}}},
+        {
+            "auto": {
+                "chain": MappingProxyType(
+                    {"search": [(PROVIDER_NIMBLE, MappingProxyType({"async_client": object()})), PROVIDER_BRAVE]}
+                )
+            }
+        },
+    ],
+)
+def test_a_sync_router_refuses_a_client_it_could_never_call_through(provider_config: dict[str, Any]) -> None:
+    """Rather than let auto pass over Nimble unannounced on every call."""
+    with pytest.raises(ConfigurationError, match="AsyncWebRouter"):
+        WebRouter(provider_config=provider_config)
+
+
+def test_a_sync_router_accepts_a_chain_that_hands_no_client() -> None:
+    WebRouter(provider_config={"auto": {"chain": {"search": [PROVIDER_BRAVE, (PROVIDER_NIMBLE, {"timeout": 5})]}}})
+
+
+def _nimble_client(seen: list[Any], response: dict[str, Any]) -> Any:
+    """A caller's ``AsyncNimble`` on a mock transport that records each request and answers ``response``."""
+    nimble_python = pytest.importorskip("nimble_python", reason="nimble extra not installed")
+    httpx = pytest.importorskip("httpx")
+
+    def handle(request: Any) -> Any:
+        seen.append(request)
+        return httpx.Response(200, json=response)
+
+    return nimble_python.AsyncNimble(
+        api_key="end-user-key", http_client=httpx.AsyncClient(transport=httpx.MockTransport(handle))
+    )
+
+
+async def test_extract_auto_serves_on_a_nimble_client_given_in_code(monkeypatch: pytest.MonkeyPatch) -> None:
+    for env_var in _EVERY_EXTRACT_KEY:
+        monkeypatch.delenv(env_var, raising=False)
+    seen: list[Any] = []
+    page = {"status": "success", "url": "https://a.com", "data": {"markdown": "# A"}}
+    client = _nimble_client(seen, page)
+
+    async with AsyncWebRouter(provider_config={PROVIDER_NIMBLE: {"async_client": client}}) as router:
+        response = await router.extract("https://a.com")
+
+    assert response.provider == PROVIDER_NIMBLE
+    assert response.documents[0].content == "# A"
+    assert seen[0].headers["authorization"] == "Bearer end-user-key"
+    assert not client.is_closed()
+
+
+async def test_research_auto_starts_on_a_nimble_client_given_in_code(monkeypatch: pytest.MonkeyPatch) -> None:
+    for env_var in _EVERY_RESEARCH_KEY:
+        monkeypatch.delenv(env_var, raising=False)
+    seen: list[Any] = []
+    run = {
+        "id": "run-1",
+        "web_search_agent_id": "agent-1",
+        "status": "queued",
+        "is_active": True,
+        "effort": "medium",
+        "interaction_id": "interaction-1",
+        "created_at": "2026-01-01T00:00:00Z",
+    }
+    client = _nimble_client(seen, run)
+
+    async with AsyncWebRouter(provider_config={PROVIDER_NIMBLE: {"async_client": client}}) as router:
+        job = await router.submit_research("q")
+
+    assert PROVIDER_NIMBLE in job.job_id
+    assert seen and all(request.headers["authorization"] == "Bearer end-user-key" for request in seen)
+    assert not client.is_closed()
+
+
+@pytest.mark.parametrize("auto_class", [AutoProvider, AutoExtractProvider, AutoResearchProvider])
+def test_auto_refuses_at_construction_a_member_given_a_key_beside_its_client(auto_class: type[Any]) -> None:
+    """Built mid-call, the member's own refusal would only send the call to the next backend."""
+    with pytest.raises(ConfigurationError, match="not both"):
+        auto_class(members_config={PROVIDER_NIMBLE: {"async_client": object(), "api_key": "service-key"}})
+    with pytest.raises(ConfigurationError, match="not both"):
+        auto_class(
+            chain=[(PROVIDER_NIMBLE, {"api_key": "service-key"})],
+            members_config={PROVIDER_NIMBLE: {"async_client": object()}},
+        )
+
+
+def test_auto_leaves_a_key_beside_a_client_to_a_provider_that_is_not_nimble(chain_members: _Recorder) -> None:
+    """A custom provider may take both for its own reasons; the conflict is Nimble's."""
+    _member(chain_members, "custom")
+
+    auto = AutoProvider(chain=["custom"], members_config={"custom": {"async_client": object(), "api_key": "k"}})
+
+    assert auto.members == ("custom",)
+
+
+def test_a_sync_router_still_takes_a_method_keyed_chain_left_to_its_default() -> None:
+    WebRouter(provider_config={"auto": {"chain": {"search": None, "extract": [PROVIDER_JINA]}}})
 
 
 def test_extract_auto_falls_through_a_backend_configured_in_code_that_fails(

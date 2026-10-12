@@ -1430,6 +1430,30 @@ for query in queries:
 A provider you construct is yours: the router uses it, never caches it, and
 `router.close()` leaves it open for you to close.
 
+Already hold an authenticated Nimble client — one per end user, say, with
+your own headers and a connection pool shared across your app? Pass it as
+`async_client` to any of the three Nimble classes, directly or through
+`provider_config`, and the provider calls through it instead of building one
+from a key:
+
+```python
+from nimble_python import AsyncNimble
+
+client = AsyncNimble(api_key=user_key, default_headers={...})
+
+async with AsyncWebRouter(provider_config={Provider.NIMBLE: {"async_client": client}}) as router:
+    await router.search("query")  # auto counts Nimble as configured, no NIMBLE_API_KEY needed
+```
+
+The client stays yours: the provider reads no key, builds no sync client — a
+sync call raises `ConfigurationError`, and so does a synchronous `WebRouter`
+handed one in `provider_config`, rather than letting `auto` pass over Nimble
+unannounced — and never closes it. Its credential is the one used: an
+`api_key` passed beside it raises `ConfigurationError` instead of replacing it.
+Other options passed beside it, such as `timeout`, apply to a copy that shares
+its connection pool, and research keeps the client's own timeouts, clamping
+only the read limit to the run's budget.
+
 ### Which providers can I actually use?
 
 ```python

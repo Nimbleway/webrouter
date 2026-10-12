@@ -1,15 +1,21 @@
 from __future__ import annotations
 
 import os
+import time
 
+import httpx
 import pytest
 
-from web_router.exceptions import UnsupportedFormatError
+from web_router.constants import RESEARCH_HTTP_TIMEOUT
+from web_router.exceptions import ConfigurationError, UnsupportedFormatError
 from web_router.types import ExtractFormat, ExtractRequest, SearchDepth, SearchRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
 
-from web_router.providers.nimble import NimbleExtractProvider, NimbleProvider
+from nimble_python import AsyncNimble
+
+from web_router.providers._utils import research_deadline
+from web_router.providers.nimble import NimbleExtractProvider, NimbleProvider, NimbleResearchProvider
 
 URL = "https://example.com"
 
@@ -215,3 +221,134 @@ def test_live_extract_returns_page_content() -> None:
     assert response.provider == "nimble"
     assert response.documents[0].content
     assert response.documents[0].format == "markdown"
+
+
+# -- A caller's own client ---------------------------------------------------
+
+_PROVIDER_CLASSES = [NimbleProvider, NimbleExtractProvider, NimbleResearchProvider]
+
+
+def _caller_client(seen: list[httpx.Request] | None = None) -> AsyncNimble:
+    """An ``AsyncNimble`` built the way an app holding one per end user builds it."""
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if seen is not None:
+            seen.append(request)
+        return httpx.Response(200, json={"results": [{"url": "https://a.com", "title": "A"}]})
+
+    return AsyncNimble(
+        api_key="end-user-key",
+        default_headers={"X-Custom-Header": "value"},
+        http_client=httpx.AsyncClient(transport=httpx.MockTransport(handle)),
+    )
+
+
+@pytest.mark.parametrize("provider_class", _PROVIDER_CLASSES)
+def test_a_caller_s_client_needs_no_key_and_builds_no_sync_client(
+    monkeypatch: pytest.MonkeyPatch, provider_class: type[NimbleProvider]
+) -> None:
+    monkeypatch.delenv("NIMBLE_API_KEY", raising=False)
+    client = _caller_client()
+
+    provider = provider_class(async_client=client)
+
+    assert provider._async_client is client
+    assert provider._client is None
+
+
+@pytest.mark.parametrize("provider_class", _PROVIDER_CLASSES)
+async def test_closing_the_provider_leaves_the_caller_s_client_open(provider_class: type[NimbleProvider]) -> None:
+    client = _caller_client()
+    provider = provider_class(async_client=client)
+
+    provider.close()
+    await provider.aclose()
+
+    assert not client.is_closed()
+
+
+@pytest.mark.parametrize("provider_class", _PROVIDER_CLASSES)
+async def test_a_provider_still_closes_the_clients_it_built(
+    monkeypatch: pytest.MonkeyPatch, provider_class: type[NimbleProvider]
+) -> None:
+    monkeypatch.setenv("NIMBLE_API_KEY", "test-key")
+    provider = provider_class()
+
+    await provider.aclose()
+
+    assert provider._async_client.is_closed()
+
+
+async def test_a_search_goes_out_on_the_caller_s_client_as_its_end_user() -> None:
+    seen: list[httpx.Request] = []
+    provider = NimbleProvider(async_client=_caller_client(seen))
+
+    response = await provider.asearch(SearchRequest(query="hi"))
+
+    assert [result.url for result in response.results] == ["https://a.com"]
+    assert seen[0].headers["authorization"] == "Bearer end-user-key"
+    assert seen[0].headers["x-custom-header"] == "value"
+
+
+def test_a_sync_call_on_a_provider_given_only_an_async_client_says_so() -> None:
+    provider = NimbleProvider(async_client=_caller_client())
+
+    with pytest.raises(ConfigurationError, match="async_client"):
+        provider.search(SearchRequest(query="hi"))
+
+
+def test_options_given_beside_the_client_are_laid_over_it_on_the_same_connection_pool() -> None:
+    """Never dropped silently, and never by opening a second pool the caller did not ask for."""
+    client = _caller_client()
+
+    provider = NimbleProvider(async_client=client, timeout=5)
+
+    assert provider._async_client.timeout == 5
+    assert provider._async_client._client is client._client
+    assert client.timeout != 5, "the caller's own client is left as it was"
+
+
+@pytest.mark.parametrize(
+    ("client_timeout", "expected"),
+    [
+        (5.0, 5.0),
+        (httpx.Timeout(connect=2.0, read=7.0, write=4.0, pool=3.0), httpx.Timeout(2.0, read=7.0, write=4.0, pool=3.0)),
+        (httpx.Timeout(2.0, read=None), httpx.Timeout(2.0, read=None)),
+        (None, None),
+    ],
+)
+def test_research_keeps_the_caller_s_client_timeout(
+    client_timeout: float | httpx.Timeout | None, expected: float | httpx.Timeout | None
+) -> None:
+    """Each research call sets its timeout per request, which must not replace the caller's own.
+
+    Connect, write and pool stay as the caller set them, and a client with no
+    read limit keeps none rather than taking our 120 seconds.
+    """
+    client = AsyncNimble(api_key="end-user-key", timeout=client_timeout)
+
+    assert NimbleResearchProvider(async_client=client)._abudgeted().timeout == expected
+    assert NimbleResearchProvider(async_client=client, timeout=3)._abudgeted().timeout == 3, "a timeout given wins"
+
+
+def test_the_research_budget_clamps_only_the_read_limit_of_the_caller_s_client() -> None:
+    client = AsyncNimble(api_key="end-user-key", timeout=httpx.Timeout(2.0, read=None))
+
+    with research_deadline(time.monotonic() + 30):
+        timeout = NimbleResearchProvider(async_client=client)._abudgeted().timeout
+
+    assert isinstance(timeout, httpx.Timeout)
+    assert timeout.connect == 2.0
+    assert timeout.read is not None and 0 < timeout.read <= 30
+
+
+@pytest.mark.parametrize("api_key", ["service-key", ""])
+def test_an_api_key_beside_the_caller_s_client_is_refused_rather_than_replacing_its_credential(api_key: str) -> None:
+    with pytest.raises(ConfigurationError, match="not both"):
+        NimbleProvider(async_client=_caller_client(), api_key=api_key)
+
+
+def test_research_on_its_own_clients_keeps_its_default_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NIMBLE_API_KEY", "test-key")
+
+    assert NimbleResearchProvider()._abudgeted().timeout == RESEARCH_HTTP_TIMEOUT

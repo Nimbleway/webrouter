@@ -32,7 +32,7 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import AsyncExitStack, ExitStack, suppress
 from types import TracebackType
@@ -41,19 +41,21 @@ from typing import Any, Generic, TypeVar
 from pydantic import BaseModel
 
 from web_router.constants import (
+    AUTO_CLIENT_OPTION,
     BENCHMARK_EXCLUDED,
     BENCHMARK_TIMEOUT,
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
     EVALS_CONCURRENCY,
     MSG_BENCHMARK_NO_PROVIDERS,
+    MSG_SYNC_ROUTER_ASYNC_CLIENT,
     PROVIDER_AUTO,
     RESEARCH_TIMEOUT,
 )
 from web_router.evals.datasets import Dataset
 from web_router.evals.judge import Judge
 from web_router.evals.types import EvaluationReport
-from web_router.exceptions import BenchmarkTimeoutError, ProviderNotFoundError, WebRouterError
+from web_router.exceptions import BenchmarkTimeoutError, ConfigurationError, ProviderNotFoundError, WebRouterError
 from web_router.providers.base import (
     AsyncBrowserHandle,
     BrowseJob,
@@ -455,6 +457,26 @@ class _BaseRouter(Generic[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
+def _async_client_holders(config: dict[str, dict[str, Any]]) -> set[str]:
+    """Every backend ``config`` hands an ``async_client``: by name, in ``auto``'s ``members_config``, or in its chain.
+
+    A chain is a list of entries or a mapping from method to one, and an entry
+    a bare name or ``(name, kwargs)`` -- only the latter can carry a client.
+    """
+    auto = config.get(PROVIDER_AUTO, {})
+    entries: list[tuple[str, Any]] = [*config.items(), *(auto.get("members_config") or {}).items()]
+    chain = auto.get("chain") or ()
+    for listed in chain.values() if isinstance(chain, Mapping) else (chain,):
+        entries.extend(
+            (item[0], item[1]) for item in listed or () if isinstance(item, (tuple, list)) and len(item) == 2
+        )
+    return {
+        provider_name(name)
+        for name, options in entries
+        if isinstance(options, Mapping) and options.get(AUTO_CLIENT_OPTION)
+    }
+
+
 class WebRouter(_BaseRouter[BrowserHandle]):
     """Synchronous router.
 
@@ -464,6 +486,23 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         >>> response.urls
         >>> router.extract(response.urls[:3], format="markdown")
     """
+
+    def __init__(
+        self,
+        provider: str | Provider = DEFAULT_PROVIDER,
+        *,
+        provider_config: dict[str, dict[str, Any]] | None = None,
+    ) -> None:
+        """
+        Raises:
+            ConfigurationError: for a backend handed an ``async_client``, which
+                this router, calling synchronously, could never use: through
+                ``auto`` the call would quietly go to another backend instead.
+        """
+        super().__init__(provider, provider_config=provider_config)
+        async_only = sorted(_async_client_holders(self._config))
+        if async_only:
+            raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
 
     def search(
         self,

@@ -62,6 +62,8 @@ from web_router.constants import (
     AUTO_CHAIN_METHODS,
     AUTO_CHAIN_RESEARCH,
     AUTO_CHAIN_SEARCH,
+    AUTO_CLIENT_OPTION,
+    AUTO_CLIENT_PROVIDERS,
     AUTO_EXTRA,
     AUTO_EXTRACT_APPENDED,
     AUTO_EXTRACT_DEFAULT_FORMAT,
@@ -93,6 +95,7 @@ from web_router.constants import (
     MSG_AUTO_BROWSER_UNSUPPORTED,
     MSG_AUTO_CHAIN_ONE_NAME,
     MSG_AUTO_CHAIN_UNKNOWN_METHOD,
+    MSG_AUTO_CLIENT_AND_KEY,
     MSG_AUTO_EXTRACT_NO_MEMBER,
     MSG_AUTO_RESEARCH_EXHAUSTED,
     MSG_AUTO_RESEARCH_NO_CAPABLE_BACKEND,
@@ -196,7 +199,32 @@ def _members_and_chain(
     """
     config = _normalized(members_config)
     in_code = _configured_in(config)
-    return config, _chain_for(chain, method, lambda: _default_chain(default_chain, in_code))
+    resolved = _chain_for(chain, method, lambda: _default_chain(default_chain, in_code))
+    _refuse_a_key_beside_a_client(config, resolved)
+    return config, resolved
+
+
+def _refuse_a_key_beside_a_client(
+    members_config: Mapping[str, Mapping[str, Any]], chain: tuple[tuple[str, dict[str, Any]], ...]
+) -> None:
+    """Refuse, at construction, a client-taking member that would be built with an ``api_key`` beside its client.
+
+    Only the backends in ``AUTO_CLIENT_PROVIDERS``, whose key would replace the
+    client's credential; any other provider is left to make what it will of both.
+
+    The member refuses that itself, but only when it is built, mid-call, where
+    the error is one this chain recovers from -- so the call would quietly go
+    to the next backend rather than say why the client went unused.
+
+    Raises:
+        ConfigurationError: naming the backend.
+    """
+    for name, options in chain:
+        if name not in AUTO_CLIENT_PROVIDERS:
+            continue
+        merged = _member_options(members_config, name, options)
+        if merged.get(AUTO_CLIENT_OPTION) is not None and merged.get("api_key") is not None:
+            raise ConfigurationError(MSG_AUTO_CLIENT_AND_KEY.format(name=name))
 
 
 def _member_options(
@@ -207,8 +235,12 @@ def _member_options(
 
 
 def _configured_in(members_config: Mapping[str, Mapping[str, Any]]) -> frozenset[str]:
-    """The backends the router was handed a key for in code, as ``provider_config``, beside the environment's."""
-    return frozenset(name for name, config in members_config.items() if config.get("api_key"))
+    """The backends handed a key or a client in code, as ``provider_config``, beside the environment's."""
+    return frozenset(
+        name
+        for name, config in members_config.items()
+        if config.get("api_key") or (name in AUTO_CLIENT_PROVIDERS and config.get(AUTO_CLIENT_OPTION))
+    )
 
 
 def _keyless_after(
@@ -341,8 +373,9 @@ class AutoProvider(SearchProvider):
                 keyless tail included.
             members_config: The router's ``provider_config``, by backend: each
                 member is built with its entry, the chain's own options laid
-                over it, and a backend given an ``api_key`` there counts as
-                held as well as one whose key is in the environment.
+                over it, and a backend given an ``api_key`` (or Nimble an
+                ``async_client``) there counts as held as well as one whose
+                key is in the environment.
             **kwargs: Ignored. Accepted so a router configured for several
                 providers can hand this one its config without special-casing.
         """
