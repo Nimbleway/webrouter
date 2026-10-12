@@ -9,7 +9,7 @@ Most of this runs offline and needs no credentials.
 
 Run it with::
 
-    make setup   # in your web-router-alpha clone: every extra
+    make setup   # in your webrouter clone: every extra
     python examples/error_handling.py
 """
 

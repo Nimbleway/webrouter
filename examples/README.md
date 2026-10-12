@@ -37,7 +37,7 @@ stops it on the way out. `evaluate_accuracy.py` needs the `evals` extra and
 per question, and two judge calls per answer — so it starts at twenty questions.
 
 ```bash
-make setup   # in your web-router-alpha clone: every extra
+make setup   # in your webrouter clone: every extra
 uv run python examples/main.py
 ```
 

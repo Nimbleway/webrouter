@@ -20,7 +20,7 @@ Run it with::
 
     # [all], not [browser]: opening a vendor session takes httpx, which
     # [browser] -- Playwright alone -- does not bring.
-    make setup   # in your web-router-alpha clone: every extra
+    make setup   # in your webrouter clone: every extra
     uv run --env-file .env python examples/browser_vendor.py
 """
 

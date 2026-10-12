@@ -43,8 +43,8 @@ If they want the library in another project, install this clone there in
 editable mode, so a `git pull` here is the whole update:
 
 ```bash
-uv add --editable "/path/to/web-router-alpha[all]"     # their project uses uv
-pip install -e "/path/to/web-router-alpha[all]"        # any other virtualenv
+uv add --editable "/path/to/webrouter[all]"     # their project uses uv
+pip install -e "/path/to/webrouter[all]"        # any other virtualenv
 ```
 
 ## Add the MCP server
@@ -54,7 +54,7 @@ To use it from **every** project, register it at user scope with the absolute
 path of this clone:
 
 ```bash
-claude mcp add --scope user web-router -- uv run --project /path/to/web-router-alpha --all-extras web-router-mcp
+claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
 ```
 
 `--project` keeps the working directory, so the server reads the `.env` of the

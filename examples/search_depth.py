@@ -10,7 +10,7 @@ way to see that the mapping does something. Runs with no credentials.
 
 Run it with::
 
-    make setup   # in your web-router-alpha clone: every extra
+    make setup   # in your webrouter clone: every extra
     python examples/search_depth.py "what is retrieval augmented generation"
 """
 

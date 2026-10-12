@@ -15,7 +15,7 @@ installed, the error names `uvx playwright install chromium`.
 
 Run it with::
 
-    make setup   # in your web-router-alpha clone: every extra
+    make setup   # in your webrouter clone: every extra
     uv run python examples/browser_session.py
 """
 

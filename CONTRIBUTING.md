@@ -12,8 +12,8 @@ are enforced by review rather than by tooling.
 We use [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
-git clone https://github.com/Nimbleway/web-router-alpha.git
-cd web-router-alpha
+git clone https://github.com/WebContextLayer/webrouter.git
+cd webrouter
 make install
 ```
 

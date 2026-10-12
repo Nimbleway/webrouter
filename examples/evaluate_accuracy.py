@@ -3,7 +3,7 @@
 Needs the ``evals`` extra and ``OPENAI_API_KEY`` for the judge, plus a key for
 each search backend you want scored::
 
-    make setup   # in your web-router-alpha clone: every extra
+    make setup   # in your webrouter clone: every extra
     export OPENAI_API_KEY=... NIMBLE_API_KEY=... TAVILY_API_KEY=...
     python examples/evaluate_accuracy.py --limit 20
     python examples/evaluate_accuracy.py --csv questions.csv --question-column question --answer-column expected

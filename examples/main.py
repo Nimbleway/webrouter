@@ -5,7 +5,7 @@ BRAVE_SEARCH_API_KEY and so on to bring more backends into the tour.
 
 Run it with::
 
-    make setup   # in your web-router-alpha clone: every extra
+    make setup   # in your webrouter clone: every extra
     python examples/main.py
 """
 
@@ -36,7 +36,7 @@ CONFIGURED = [name for name in configured_providers() if name != "auto"]
 # Never empty in practice -- the keyless backends need no credential -- but the
 # tour reads better failing on its own terms than on an IndexError.
 if not CONFIGURED:  # pragma: no cover
-    raise SystemExit("no usable provider: run make setup in your web-router-alpha clone")
+    raise SystemExit("no usable provider: run make setup in your webrouter clone")
 
 FIRST = CONFIGURED[0]
 
