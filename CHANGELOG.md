@@ -6,9 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
-## [0.2.1] - 2026-10-08
+## Alpha snapshot - 2026-10-08
 
-The first alpha release.
+The first alpha snapshot, shared with alpha users. Not a published release:
+the next published version will be above it.
 
 - **Five methods behind one interface:** `search`, `extract`, `research`
   (agentic, minutes rather than seconds), `open_browser` (a browser session you
