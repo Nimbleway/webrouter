@@ -426,6 +426,18 @@ PARALLEL_MCP_SEARCH_TOOL = "web_search"
 
 # --- auto -------------------------------------------------------------------
 
+AUTO_CLIENT_OPTION = "async_client"
+"""The constructor option that hands a member the caller's own SDK client."""
+
+AUTO_CLIENT_PROVIDERS: frozenset[str] = frozenset({PROVIDER_NIMBLE})
+"""The backends whose classes take :data:`AUTO_CLIENT_OPTION`.
+
+A client carries its own credential -- Nimble's, say, authenticated as a
+caller's end user -- so one of these handed a client in ``provider_config``
+joins the default chain as though its key were in the environment. Any other
+backend would only fail to start on it, so a client there counts for nothing.
+"""
+
 AUTO_PREFERRED: tuple[str, ...] = (
     PROVIDER_PERPLEXITY,
     PROVIDER_NIMBLE,
@@ -2038,6 +2050,27 @@ Carrying both is what lets a job be polled by something that did not start it.
 MSG_NIMBLE_RESEARCH_BAD_JOB_ID = (
     "{job_id!r} is not a Nimble research job id: expected an agent id and a run id joined by "
     "{separator!r}, as the id submit() returned is."
+)
+
+MSG_NIMBLE_CLIENT_AND_KEY = (
+    "Pass async_client or api_key to a Nimble provider, not both: the client already carries its "
+    "credential, and a key beside it would replace that credential on every request."
+)
+
+MSG_AUTO_CLIENT_AND_KEY = (
+    "auto would build {name!r} with both async_client and api_key: pass one, not both. The client "
+    "already carries its credential, and a key beside it would replace that credential."
+)
+
+MSG_SYNC_ROUTER_ASYNC_CLIENT = (
+    "WebRouter is synchronous and cannot call through the async_client given for {names}: use "
+    "AsyncWebRouter, or pass api_key instead."
+)
+
+MSG_NIMBLE_ASYNC_CLIENT_ONLY = (
+    "This Nimble provider was given an async_client and builds no sync client of its own, "
+    "so it serves async calls only: call it through AsyncWebRouter or its async methods, "
+    "or construct it with api_key instead of async_client."
 )
 
 # --- Parallel research ------------------------------------------------------

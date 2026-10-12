@@ -5,18 +5,22 @@ Search API ranks the web, the Extract API fetches a page you already have the
 URL of, and the Web Search Agent researches a question over several turns.
 Install with the ``search`` extra, ``[extract]`` or
 ``[research]``. All three read ``NIMBLE_API_KEY`` unless a key is passed
-explicitly.
+explicitly, or use a caller's own ``AsyncNimble`` passed as ``async_client``.
 """
 
 from __future__ import annotations
 
+import math
 from typing import Any, ClassVar
 
+import httpx
 from nimble_python import AsyncNimble, Nimble
 
 from web_router.constants import (
     ENV_NIMBLE_API_KEY,
     MSG_EXTRACT_BAD_STATUS,
+    MSG_NIMBLE_ASYNC_CLIENT_ONLY,
+    MSG_NIMBLE_CLIENT_AND_KEY,
     MSG_NIMBLE_RESEARCH_BAD_JOB_ID,
     NIMBLE_EXTRACT_DEFAULT_FORMAT,
     NIMBLE_EXTRACT_FORMATS,
@@ -34,7 +38,7 @@ from web_router.constants import (
     PROVIDER_NIMBLE,
     RESEARCH_HTTP_TIMEOUT,
 )
-from web_router.exceptions import ProviderError
+from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._utils import (
     best_text,
     build_payload,
@@ -64,7 +68,66 @@ from web_router.types import (
 )
 
 
-class NimbleProvider(SearchProvider):
+class _NimbleClients:
+    """The SDK clients a Nimble provider calls through, built here or handed in by the caller.
+
+    By default a provider builds a sync and an async client from its key and
+    closes both. Given an ``async_client``, it uses that one instead -- one
+    authenticated as the caller's end user, say, with its own headers and a
+    connection pool shared across the caller's app. It builds no sync client,
+    reads no key from the environment and never closes the caller's client.
+    Options passed beside it (``timeout``, ``base_url``, ...) are laid over it
+    with ``copy()``, which shares its connection pool rather than opening one.
+    """
+
+    name: ClassVar[str]
+    options: dict[str, Any]
+    _client: Nimble | None
+    _async_client: AsyncNimble
+    _owns_clients: bool
+
+    def _connect(self, api_key: str | None, async_client: AsyncNimble | None) -> None:
+        client_kwargs = compact({**self.options, "api_key": api_key})
+        if async_client is None:
+            self._client = Nimble(**client_kwargs)
+            self._async_client = AsyncNimble(**client_kwargs)
+            self._owns_clients = True
+        else:
+            self._client = None
+            self._async_client = async_client.copy(**client_kwargs) if client_kwargs else async_client
+            self._owns_clients = False
+
+    @property
+    def _sync_client(self) -> Nimble:
+        """The sync client, or a clear error for a provider handed only an async one."""
+        if self._client is None:
+            raise ConfigurationError(MSG_NIMBLE_ASYNC_CLIENT_ONLY)
+        return self._client
+
+    def close(self) -> None:
+        if self._client is not None:
+            self._client.close()
+
+    async def aclose(self) -> None:
+        if self._owns_clients:
+            await self._async_client.close()
+
+
+def _resolve_key(api_key: str | None, async_client: AsyncNimble | None, provider: str) -> str | None:
+    """The key to build clients from: none when the caller's client carries its own.
+
+    Raises:
+        ConfigurationError: for a key passed beside a client, which would
+            replace the client's credential -- an end user's, say -- with it.
+    """
+    if async_client is None:
+        return resolve_api_key(api_key, env_var=ENV_NIMBLE_API_KEY, provider=provider)
+    if api_key is not None:
+        raise ConfigurationError(MSG_NIMBLE_CLIENT_AND_KEY)
+    return None
+
+
+class NimbleProvider(_NimbleClients, SearchProvider):
     """Routes searches to the Nimble Search API."""
 
     name: ClassVar[str] = PROVIDER_NIMBLE
@@ -76,28 +139,20 @@ class NimbleProvider(SearchProvider):
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float | None = None,
+        async_client: AsyncNimble | None = None,
         **kwargs: Any,
     ) -> None:
-        key = resolve_api_key(api_key, env_var=ENV_NIMBLE_API_KEY, provider=self.name)
+        key = _resolve_key(api_key, async_client, self.name)
         super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
-
-        client_kwargs = compact({**self.options, "api_key": key})
-        self._client = Nimble(**client_kwargs)
-        self._async_client = AsyncNimble(**client_kwargs)
+        self._connect(key, async_client)
 
     def _search(self, request: SearchRequest) -> SearchResponse:
-        raw = self._client.search(**self._build_payload(request))
+        raw = self._sync_client.search(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
         raw = await self._async_client.search(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
-
-    def close(self) -> None:
-        self._client.close()
-
-    async def aclose(self) -> None:
-        await self._async_client.close()
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Nimble ``search()`` keyword arguments."""
@@ -130,7 +185,7 @@ class NimbleProvider(SearchProvider):
         )
 
 
-class NimbleExtractProvider(ExtractProvider):
+class NimbleExtractProvider(_NimbleClients, ExtractProvider):
     """Fetches page contents through the Nimble Extract API."""
 
     name: ClassVar[str] = PROVIDER_NIMBLE
@@ -144,28 +199,20 @@ class NimbleExtractProvider(ExtractProvider):
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float | None = None,
+        async_client: AsyncNimble | None = None,
         **kwargs: Any,
     ) -> None:
-        key = resolve_api_key(api_key, env_var=ENV_NIMBLE_API_KEY, provider=self.name)
+        key = _resolve_key(api_key, async_client, self.name)
         super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
-
-        client_kwargs = compact({**self.options, "api_key": key})
-        self._client = Nimble(**client_kwargs)
-        self._async_client = AsyncNimble(**client_kwargs)
+        self._connect(key, async_client)
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        raw = self._client.extract.run(**self._build_payload(request, urls))
+        raw = self._sync_client.extract.run(**self._build_payload(request, urls))
         return self._to_response(request, urls, model_to_dict(raw))
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         raw = await self._async_client.extract.run(**self._build_payload(request, urls))
         return self._to_response(request, urls, model_to_dict(raw))
-
-    def close(self) -> None:
-        self._client.close()
-
-    async def aclose(self) -> None:
-        await self._async_client.close()
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         """Translate a normalized request into Nimble ``extract.run()`` keyword arguments."""
@@ -206,7 +253,7 @@ class NimbleExtractProvider(ExtractProvider):
         )
 
 
-class NimbleResearchProvider(ResearchProvider):
+class NimbleResearchProvider(_NimbleClients, ResearchProvider):
     """Runs agentic research through the Nimble Web Search Agent."""
 
     name: ClassVar[str] = PROVIDER_NIMBLE
@@ -218,15 +265,41 @@ class NimbleResearchProvider(ResearchProvider):
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float | None = None,
+        async_client: AsyncNimble | None = None,
         **kwargs: Any,
     ) -> None:
-        key = resolve_api_key(api_key, env_var=ENV_NIMBLE_API_KEY, provider=self.name)
+        key = _resolve_key(api_key, async_client, self.name)
         super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
+        self._connect(key, async_client)
+        self._research_timeout = timeout if timeout is not None else self._default_timeout(async_client)
 
-        client_kwargs = compact({**self.options, "api_key": key})
-        self._client = Nimble(**client_kwargs)
-        self._async_client = AsyncNimble(**client_kwargs)
-        self._research_timeout = timeout if timeout is not None else RESEARCH_HTTP_TIMEOUT
+    @staticmethod
+    def _default_timeout(async_client: AsyncNimble | None) -> float | None:
+        """Each request's read limit when no ``timeout`` was passed: the caller's client's own, else ours.
+
+        Every research call sets its timeout per request, which would otherwise
+        replace the one the caller configured on the client they handed in.
+        ``None`` is a caller's client with no read limit, which stays unlimited.
+        """
+        if async_client is None:
+            return RESEARCH_HTTP_TIMEOUT
+        configured = async_client.timeout
+        if isinstance(configured, httpx.Timeout):
+            return configured.read
+        return float(configured) if isinstance(configured, (int, float)) else None
+
+    def _request_timeout(self, client: Nimble | AsyncNimble) -> float | httpx.Timeout | None:
+        """One request's timeout: the read limit clamped to what the caller has left.
+
+        On a caller's client the rest of its ``httpx.Timeout`` -- connect, write,
+        pool -- is kept, so only the read limit the research budget is about
+        changes. A client with no read limit gets one only from that budget.
+        """
+        budget = research_budget(self._research_timeout if self._research_timeout is not None else math.inf)
+        read = None if math.isinf(budget) else budget
+        if self._owns_clients or not isinstance(configured := client.timeout, httpx.Timeout):
+            return read
+        return httpx.Timeout(connect=configured.connect, read=read, write=configured.write, pool=configured.pool)
 
     def _budgeted(self) -> Nimble:
         """The client, with this request clamped to whatever the caller has left.
@@ -235,11 +308,12 @@ class NimbleResearchProvider(ResearchProvider):
         research budget the caller asked for, so a slow run would otherwise
         outlast a short timeout by however much the two disagree.
         """
-        return self._client.with_options(timeout=research_budget(self._research_timeout))
+        client = self._sync_client
+        return client.with_options(timeout=self._request_timeout(client))
 
     def _abudgeted(self) -> AsyncNimble:
         """Async counterpart of :meth:`_budgeted`."""
-        return self._async_client.with_options(timeout=research_budget(self._research_timeout))
+        return self._async_client.with_options(timeout=self._request_timeout(self._async_client))
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
         run = model_to_dict(self._budgeted().agents.run(**self._build_payload(request)))
@@ -261,12 +335,6 @@ class NimbleResearchProvider(ResearchProvider):
 
     # No `_cancel`: a run exposes get, result, list and stream_events and nothing
     # that stops one -- `agents.delete` removes the agent, not the run under it.
-
-    def close(self) -> None:
-        self._client.close()
-
-    async def aclose(self) -> None:
-        await self._async_client.close()
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Nimble ``agents.run()`` keyword arguments."""
