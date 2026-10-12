@@ -16,7 +16,7 @@ tools let the model drive a browser itself: ``browser_open`` hands back an id
 the server minted, and the server holds the session, its CDP URL and its
 connection until ``browser_close``, an idle timeout or shutdown releases it.
 
-    $ make setup   # in your web-router-alpha clone: every extra
+    $ make setup   # in your webrouter clone: every extra
     $ uv run web-router-mcp
 
 At startup the server loads keys from ``WEB_ROUTER_ENV_FILE``, a ``.env`` in its

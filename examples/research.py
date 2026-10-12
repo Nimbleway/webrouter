@@ -11,7 +11,7 @@ this prints what to set and exits.
 
 Run it with::
 
-    make setup   # in your web-router-alpha clone: every extra
+    make setup   # in your webrouter clone: every extra
     uv run --env-file .env python examples/research.py
 """
 

@@ -75,21 +75,21 @@ prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/),
 which fetches the right Python itself.
 
 ```bash
-git clone https://github.com/Nimbleway/web-router-alpha.git
-cd web-router-alpha
+git clone https://github.com/WebContextLayer/webrouter.git
+cd webrouter
 make setup              # every extra: the library, the MCP server, the browser tools and a local Chromium
 cp .env.example .env    # then fill in only the keys you hold; none is required
 ```
 
-Using a coding agent? Tell it *"clone https://github.com/Nimbleway/web-router-alpha
+Using a coding agent? Tell it *"clone https://github.com/WebContextLayer/webrouter
 and set it up"*. [CLAUDE.md](CLAUDE.md) walks it through the rest.
 
 **From your own project**, install the clone in editable mode, so a `git pull`
 in the clone is the whole update:
 
 ```bash
-uv add --editable "/path/to/web-router-alpha[all]"     # a uv project
-pip install -e "/path/to/web-router-alpha[all]"        # any other virtualenv
+uv add --editable "/path/to/webrouter[all]"     # a uv project
+pip install -e "/path/to/webrouter[all]"        # any other virtualenv
 ```
 
 To pick up a new release: `git pull && make setup` in the clone.
@@ -1012,7 +1012,7 @@ Inside the clone, the committed `.mcp.json` already starts it. To add it to
 **any** project, or to every project with `--scope user`:
 
 ```bash
-claude mcp add --scope user web-router -- uv run --project /path/to/web-router-alpha --all-extras web-router-mcp
+claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
 ```
 
 For Claude Desktop, Cursor or another client, the same command as a config block:
@@ -1022,7 +1022,7 @@ For Claude Desktop, Cursor or another client, the same command as a config block
   "mcpServers": {
     "web-router": {
       "command": "uv",
-      "args": ["run", "--project", "/path/to/web-router-alpha", "--all-extras", "web-router-mcp"]
+      "args": ["run", "--project", "/path/to/webrouter", "--all-extras", "web-router-mcp"]
     }
   }
 }
@@ -1054,7 +1054,7 @@ a provider key:
 So either point the server at a `.env` you already have:
 
 ```bash
-claude mcp add --scope user web-router -e WEB_ROUTER_ENV_FILE="$HOME/work/.env" -- uv run --project /path/to/web-router-alpha --all-extras web-router-mcp
+claude mcp add --scope user web-router -e WEB_ROUTER_ENV_FILE="$HOME/work/.env" -- uv run --project /path/to/webrouter --all-extras web-router-mcp
 ```
 
 — for Claude Desktop, the same variable goes in the config block's `"env"`:

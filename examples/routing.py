@@ -6,7 +6,7 @@ web-router has not normalized. Runs with no credentials -- it routes to whatever
 
 Run it with::
 
-    make setup   # in your web-router-alpha clone: every extra
+    make setup   # in your webrouter clone: every extra
     python examples/routing.py
 """
 
@@ -23,7 +23,7 @@ USABLE = [name for name in configured_providers() if name != "auto"]
 
 # Never empty in practice -- the keyless backends need no credential.
 if not USABLE:  # pragma: no cover
-    raise SystemExit("no usable provider: run make setup in your web-router-alpha clone")
+    raise SystemExit("no usable provider: run make setup in your webrouter clone")
 
 
 def _brief(exc: Exception) -> str:

@@ -15,8 +15,8 @@ The default `auto` chain falls back to backends that need no key, so the first
 run needs nothing but a clone and the command:
 
 ```bash
-git clone https://github.com/Nimbleway/web-router-alpha.git
-cd web-router-alpha && make setup
+git clone https://github.com/WebContextLayer/webrouter.git
+cd webrouter && make setup
 uv run web-router-mcp
 ```
 
@@ -25,7 +25,7 @@ no signup — the same keyless tiers the library uses, reached through MCP. Poin
 a client at it:
 
 ```bash
-claude mcp add --scope user web-router -- uv run --project /path/to/web-router-alpha --all-extras web-router-mcp
+claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
 ```
 
 or, for a client configured by file (Claude Desktop, Cursor):
@@ -35,7 +35,7 @@ or, for a client configured by file (Claude Desktop, Cursor):
   "mcpServers": {
     "web-router": {
       "command": "uv",
-      "args": ["run", "--project", "/path/to/web-router-alpha", "--all-extras", "web-router-mcp"]
+      "args": ["run", "--project", "/path/to/webrouter", "--all-extras", "web-router-mcp"]
     }
   }
 }
@@ -75,7 +75,7 @@ server starts keyless.
 So, from Claude Code, either name a file you already have:
 
 ```bash
-claude mcp add --scope user web-router -e WEB_ROUTER_ENV_FILE="$HOME/work/.env" -- uv run --project /path/to/web-router-alpha --all-extras web-router-mcp
+claude mcp add --scope user web-router -e WEB_ROUTER_ENV_FILE="$HOME/work/.env" -- uv run --project /path/to/webrouter --all-extras web-router-mcp
 ```
 
 or put your keys in the user config directory's `.env` (copy
@@ -88,7 +88,7 @@ variable goes in its `env` block:
   "mcpServers": {
     "web-router": {
       "command": "uv",
-      "args": ["run", "--project", "/path/to/web-router-alpha", "--all-extras", "web-router-mcp"],
+      "args": ["run", "--project", "/path/to/webrouter", "--all-extras", "web-router-mcp"],
       "env": {
         "WEB_ROUTER_ENV_FILE": "/Users/you/work/.env"
       }
@@ -537,7 +537,7 @@ from the real environment, set by whoever runs the server.
 project on their machine, a colleague registers it once at user scope:
 
 ```bash
-claude mcp add --scope user web-router -- uv run --project /path/to/web-router-alpha --all-extras web-router-mcp
+claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
 ```
 
 ### Keys for a server started anywhere

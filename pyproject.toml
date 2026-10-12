@@ -128,9 +128,9 @@ all = ["web-router[search,extract,research,browser]"]
 web-router-mcp = "web_router.mcp.server:main"
 
 [project.urls]
-Repository = "https://github.com/Nimbleway/web-router-alpha"
-Issues = "https://github.com/Nimbleway/web-router-alpha/issues"
-Changelog = "https://github.com/Nimbleway/web-router-alpha/blob/main/CHANGELOG.md"
+Repository = "https://github.com/WebContextLayer/webrouter"
+Issues = "https://github.com/WebContextLayer/webrouter/issues"
+Changelog = "https://github.com/WebContextLayer/webrouter/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
