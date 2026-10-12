@@ -1,0 +1,231 @@
+name: CI
+
+# Runs on every push and pull request. No secrets are used anywhere in this
+# workflow: integration tests are deselected, so a fork PR gets the same
+# signal as a branch on this repository.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_FROZEN: "1" # fail if uv.lock is out of date rather than silently resolving
+
+jobs:
+  lint:
+    name: Lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --all-extras --dev
+
+      - name: Ruff lint
+        run: uv run ruff check --output-format=github .
+      - name: Ruff format
+        run: uv run ruff format --check .
+      - name: Mypy
+        run: uv run mypy
+
+  test:
+    name: Tests (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --all-extras --dev
+
+      - name: Unit tests
+        # "not integration" keeps every test that needs a live API key out of CI, and
+        # "not browser" every test that launches a real local Chrome.
+        run: uv run pytest -m "not integration and not browser" --cov --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage.xml
+
+  import-without-extras:
+    name: Imports with no providers installed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install the base package only
+        # A venv, not --system: the runner's Python is externally managed (PEP 668).
+        run: |
+          uv venv /tmp/base
+          uv pip install --python /tmp/base/bin/python .
+
+      - name: Base import must not require any provider SDK
+        # Providers are optional extras and resolve lazily. Importing the
+        # package, listing providers and building a router must all work
+        # without any SDK installed; only reaching for one may fail, and it
+        # must fail with an actionable error rather than an ImportError.
+        run: |
+          /tmp/base/bin/python - <<'PY'
+          import web_router
+          from web_router.providers import SearchProvider  # must not pull in httpx
+
+          assert "tavily" in web_router.available_providers()
+          router = web_router.WebRouter("tavily")  # lazy: no SDK needed yet
+
+          try:
+              router.search("anything")
+          except web_router.ProviderNotInstalledError as exc:
+              print(f"correctly reported: {exc}")
+          else:
+              raise SystemExit("expected ProviderNotInstalledError without the extra installed")
+
+          # The default provider is `auto`, whose members are all optional too.
+          # With nothing installed it must still fail actionably rather than
+          # with an ImportError from inside the chain.
+          try:
+              web_router.WebRouter().search("anything")
+          except web_router.ProviderNotInstalledError as exc:
+              print(f"auto correctly reported: {exc}")
+          else:
+              raise SystemExit("expected auto to report a missing extra")
+
+          # HttpSearchProvider needs httpx, so it must stay deferred here.
+          try:
+              web_router.providers.HttpSearchProvider
+          except (AttributeError, ModuleNotFoundError):
+              print("HttpSearchProvider correctly deferred")
+          else:
+              raise SystemExit("HttpSearchProvider imported httpx into the base package")
+          PY
+
+  hygiene:
+    name: Repo hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --all-extras --dev
+
+      - name: pre-commit
+        env:
+          # A local guard against committing straight to main; meaningless here,
+          # where CI is running against exactly that branch.
+          SKIP: no-commit-to-branch
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Lockfile is in sync with pyproject.toml
+        run: uv lock --check
+
+      - name: requirements files are in sync with uv.lock
+        # The generated header records the output path, so compare pins only.
+        run: |
+          uv export --no-hashes --no-emit-project --all-extras --no-dev -o /tmp/requirements.txt
+          uv export --no-hashes --no-emit-project --all-extras --only-dev -o /tmp/requirements-dev.txt
+          diff -u <(grep -v '^#' requirements.txt) <(grep -v '^#' /tmp/requirements.txt) \
+            || { echo "::error::requirements.txt is stale. Run: make requirements"; exit 1; }
+          diff -u <(grep -v '^#' requirements-dev.txt) <(grep -v '^#' /tmp/requirements-dev.txt) \
+            || { echo "::error::requirements-dev.txt is stale. Run: make requirements"; exit 1; }
+
+      - name: No .env file committed
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "::error::.env is tracked by git. Remove it: git rm --cached .env"
+            exit 1
+          fi
+
+      - name: No credentials in tracked files
+        # Two nets: known vendor key prefixes, and any *_API_KEY / *_TOKEN
+        # assigned a long literal. .env.example is exempt -- its values are
+        # empty by design, which the first check below enforces.
+        run: |
+          found=0
+
+          if git grep -nIE '(tvly-|ydc-|sk-)[A-Za-z0-9_-]{16,}' -- . ':!.github/workflows/*'; then
+            echo "::error::A provider API key appears in a tracked file."
+            found=1
+          fi
+
+          # Constants naming a header, env var or prefix are not credentials --
+          # BRAVE_API_KEY_HEADER = "X-Subscription-Token" is a field name.
+          if git grep -nIE '[A-Z_]*(API_KEY|TOKEN|SECRET)[A-Z_]*[[:space:]]*[=:][[:space:]]*["'"'"']?[A-Za-z0-9_./+-]{16,}' \
+               -- . ':!.github/workflows/*' ':!tests/*' ':!*.md' \
+             | grep -vE '^[^:]+:[0-9]+:(ENV_|[A-Z_]*_(HEADER|PREFIX|NAME|ENV|VAR)[[:space:]]*=)'; then
+            echo "::error::A credential-shaped literal appears in a tracked file."
+            found=1
+          fi
+
+          if grep -qE '^[A-Z_]+=.+' .env.example; then
+            echo "::error::.env.example must ship empty values."
+            found=1
+          fi
+
+          exit $found
+
+  build:
+    name: Build and verify package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - run: uv build
+      - name: Validate package metadata
+        run: uvx twine check --strict dist/*
+
+      - name: Wheel ships the type marker
+        run: |
+          unzip -l dist/*.whl | grep -q 'web_router/py.typed' \
+            || { echo "::error::py.typed missing from the wheel"; exit 1; }
+
+      - name: Installs cleanly from the built wheel
+        run: |
+          uv venv /tmp/fresh
+          uv pip install --python /tmp/fresh/bin/python dist/*.whl
+          /tmp/fresh/bin/python -c "import web_router; print(web_router.__version__)"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  ci-ok:
+    name: CI
+    if: always()
+    needs: [lint, test, import-without-extras, hygiene, build]
+    runs-on: ubuntu-latest
+    steps:
+      # One stable check to mark as required in branch protection.
+      - name: Fail if any job failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "::error::A required job did not succeed: ${{ join(needs.*.result, ' ') }}"
+          exit 1
+
+      - name: All jobs succeeded
+        if: ${{ !(contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+        run: echo "${{ join(needs.*.result, ' ') }}"
