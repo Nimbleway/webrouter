@@ -17,6 +17,7 @@ Runnable scripts, roughly in the order worth reading them.
 | [`custom_provider.py`](custom_provider.py) | Adding your own backend, against Wikipedia's open API | no |
 | [`async_search.py`](async_search.py) | `AsyncWebRouter`, several queries at once | Nimble |
 | [`compare_providers.py`](compare_providers.py) | `benchmark()`: one query across every usable backend, with latency and result counts | no |
+| [`compare_extract_providers.py`](compare_extract_providers.py) | `benchmark_extract()`: one URL across every usable extract backend, with latency and what came back | no |
 | [`evaluate_accuracy.py`](evaluate_accuracy.py) | `evaluate()`: SimpleQA or your CSV through every usable backend, graded by an LLM judge — bills | `OPENAI_API_KEY` + any search key |
 
 ## Running them
