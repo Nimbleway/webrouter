@@ -246,11 +246,11 @@ def _configured_in(members_config: Mapping[str, Mapping[str, Any]]) -> frozenset
 def _keyless_after(
     keyed: tuple[tuple[str, dict[str, Any]], ...], tier: tuple[tuple[str, dict[str, Any]], ...]
 ) -> tuple[tuple[str, dict[str, Any]], ...]:
-    """The keyless tier, less any backend already tried with a key.
+    """The keyless tier, less any backend the chain tries with a key, before or after it.
 
-    A keyless member resolves a key when one is set -- Tavily's and Firecrawl's
-    ``allow_keyless`` both do -- so keeping it after its keyed self would only
-    send the same request, with the same credential, a second time.
+    A keyless member resolves a key when one is set -- Tavily's, Firecrawl's and
+    Keenable's ``allow_keyless`` all do -- so keeping it beside its keyed self
+    would only send the same request, with the same credential, a second time.
     """
     tried = {name for name, _ in keyed}
     return tuple(member for member in tier if member[0] not in tried)
@@ -394,7 +394,8 @@ class AutoProvider(SearchProvider):
 
         configured = set(configured_providers()) | set(in_code)
         keyed = _keyed_chain(AUTO_PREFERRED, configured)
-        return keyed + _keyless_after(keyed, AUTO_KEYLESS) + _keyed_chain(AUTO_APPENDED, configured)
+        appended = _keyed_chain(AUTO_APPENDED, configured)
+        return keyed + _keyless_after(keyed + appended, AUTO_KEYLESS) + appended
 
     @property
     def members(self) -> tuple[str, ...]:
@@ -522,7 +523,8 @@ class AutoExtractProvider(ExtractProvider):
 
         configured = set(configured_extract_providers()) | set(in_code)
         keyed = _keyed_chain(AUTO_EXTRACT_PREFERRED, configured)
-        return keyed + _keyless_after(keyed, AUTO_EXTRACT_KEYLESS) + _keyed_chain(AUTO_EXTRACT_APPENDED, configured)
+        appended = _keyed_chain(AUTO_EXTRACT_APPENDED, configured)
+        return keyed + _keyless_after(keyed + appended, AUTO_EXTRACT_KEYLESS) + appended
 
     @property
     def members(self) -> tuple[str, ...]:
