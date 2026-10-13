@@ -207,7 +207,7 @@ def test_scans_of_the_same_urls_combine_and_others_are_refused(scan: ModuleType,
 
 def test_the_shipped_sets_load_deduplicated_and_sampled_by_seed(scan: ModuleType) -> None:
     whole = scan.load_urls(scan.parse_args(["--limit", "0"]))
-    assert len(whole) == 457 and len({url for url, _ in whole}) == 457
+    assert len(whole) == 456 and len({url for url, _ in whole}) == 456
     assert all(category for _, category in whole)
 
     some = scan.load_urls(scan.parse_args(["--limit", "20", "--seed", "1"]))

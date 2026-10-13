@@ -15,7 +15,7 @@ whether its text is complete is a judgment this scan does not make.
     uv run --all-extras python benchmarks/providers/extract.py --urls mine.csv --url-column url
     uv run --all-extras python benchmarks/providers/extract.py --providers nimble,jina --format html
 
-``--urls`` names a set from ``urls/`` beside this script -- ``general`` (457
+``--urls`` names a set from ``urls/`` beside this script -- ``general`` (456
 URLs: reference sites, dev docs, news, government, PDFs, social, a long
 tail) or ``social-pdf`` (920 URLs stratified into social, PDF and long-tail
 pages) -- or a CSV of your own with a URL column and, optionally, a category
@@ -69,11 +69,11 @@ DEFAULT_OUT = Path(__file__).resolve().parent / "results"
 URLS_DIR = Path(__file__).resolve().parent / "urls"
 URL_SETS: dict[str, dict[str, Any]] = {
     "general": {
-        "file": "general-457.csv",
+        "file": "general-456.csv",
         "title": "the general mix",
         "description": (
-            "457 public URLs: reference sites (Wikipedia in several languages, arXiv, GitHub, MDN, PyPI, SEC), "
-            "news in six languages, government and legal pages, social networks, 61 PDFs and a long tail of small "
+            "456 public URLs: reference sites (Wikipedia in several languages, arXiv, GitHub, MDN, PyPI, SEC), "
+            "news in six languages, government and legal pages, social networks, 60 PDFs and a long tail of small "
             "sites, at most 8 per domain. Sampled from anonymized third-party evaluations of extraction APIs."
         ),
     },
