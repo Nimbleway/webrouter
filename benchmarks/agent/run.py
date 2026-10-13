@@ -255,6 +255,9 @@ MCP_SERVERS: dict[str, McpServer] = {
     "parallel": McpServer("https://search-mcp.parallel.ai/mcp", "PARALLEL_API_KEY", "web_search_preview", "web_fetch"),
     "tavily": McpServer("https://mcp.tavily.com/mcp/", "TAVILY_API_KEY", "tavily_search", "tavily_extract"),
     "nimble": McpServer("https://mcp.nimbleway.com/mcp", "NIMBLE_API_KEY", "nimble_search", "nimble_extract"),
+    # Checked live on 2026-10-13: a call with the key reports usage, a bad key answers 401. It also answers with no
+    # key at all, so a 200 alone would not show the key arrived.
+    "keenable": McpServer("https://api.keenable.ai/mcp", "KEENABLE_API_KEY", "search_web_pages", "fetch_page_content"),
 }
 MCP_SETS: dict[str, tuple[str, ...]] = {"all": ("perplexity", "exa", "parallel", "tavily", "nimble")}
 """Several vendors' servers on one agent, which picks among them -- ``mcp:all``."""

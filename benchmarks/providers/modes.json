@@ -148,5 +148,15 @@
       "note": "The legacy v1beta tier selector web-router's endpoint takes. Parallel's current turbo/fast/basic/advanced modes are on /v1 only, which web-router doesn't call yet.",
       "verified": false
     }
+  },
+  "keenable": {
+    "realtime": {
+      "provider_options": {
+        "mode": "realtime"
+      },
+      "note": "Keenable's fastest search mode, billed as its own SKU (search.realtime); unset, a search runs in pro.",
+      "verified": false,
+      "observed": "2026-10-13: accepted and echoed back as the mode that served the call, about 0.3s; on one query it returned the same five pages with the same content as pro."
+    }
   }
 }

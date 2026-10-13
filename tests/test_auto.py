@@ -33,6 +33,7 @@ from web_router.constants import (
     PROVIDER_EXA_MCP,
     PROVIDER_FIRECRAWL,
     PROVIDER_JINA,
+    PROVIDER_KEENABLE,
     PROVIDER_NIMBLE,
     PROVIDER_PARALLEL_MCP,
     PROVIDER_PERPLEXITY,
@@ -365,6 +366,7 @@ def test_a_keyed_provider_is_preferred_over_an_anonymous_tier(monkeypatch: pytes
         PROVIDER_YOU_MCP,
         PROVIDER_EXA_MCP,
         PROVIDER_PARALLEL_MCP,
+        PROVIDER_KEENABLE,
     ]
 
 
@@ -448,6 +450,7 @@ def test_a_depth_request_skips_the_members_without_depth_for_the_keyless_tier(
         PROVIDER_YOU_MCP,
         PROVIDER_EXA_MCP,
         PROVIDER_PARALLEL_MCP,
+        PROVIDER_KEENABLE,
     )
     assert set(passed_over._members) == {2}, "perplexity and brave were never built"
 
@@ -734,7 +737,7 @@ def test_a_keyed_extract_provider_is_preferred_over_an_anonymous_tier(monkeypatc
 
     chain = [name for name, _ in AutoExtractProvider.default_chain()]
 
-    assert chain == [PROVIDER_TAVILY, PROVIDER_JINA, PROVIDER_FIRECRAWL, PROVIDER_EXA]
+    assert chain == [PROVIDER_TAVILY, PROVIDER_JINA, PROVIDER_FIRECRAWL, PROVIDER_KEENABLE, PROVIDER_EXA]
 
 
 def test_with_no_credentials_the_extract_chain_is_the_keyless_one(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -765,8 +768,8 @@ def test_a_backend_held_with_a_key_is_not_tried_again_as_keyless(monkeypatch: py
     search = [name for name, _ in AutoProvider.default_chain()]
     extract = [name for name, _ in AutoExtractProvider.default_chain()]
 
-    assert search == [PROVIDER_TAVILY, PROVIDER_YOU_MCP, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP]
-    assert extract == [PROVIDER_TAVILY, PROVIDER_FIRECRAWL, PROVIDER_JINA]
+    assert search == [PROVIDER_TAVILY, PROVIDER_YOU_MCP, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP, PROVIDER_KEENABLE]
+    assert extract == [PROVIDER_TAVILY, PROVIDER_FIRECRAWL, PROVIDER_JINA, PROVIDER_KEENABLE]
 
 
 def test_a_backend_s_provider_config_reaches_it_through_auto_and_the_chain_s_options_win(
