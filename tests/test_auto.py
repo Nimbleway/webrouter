@@ -25,6 +25,7 @@ from web_router.constants import (
     ENV_BY_PROVIDER,
     ENV_EXA_API_KEY,
     ENV_FIRECRAWL_API_KEY,
+    ENV_KEENABLE_API_KEY,
     ENV_PERPLEXITY_API_KEY,
     ENV_TAVILY_API_KEY,
     EXTRACT_ENV_BY_PROVIDER,
@@ -33,6 +34,7 @@ from web_router.constants import (
     PROVIDER_EXA_MCP,
     PROVIDER_FIRECRAWL,
     PROVIDER_JINA,
+    PROVIDER_KEENABLE,
     PROVIDER_NIMBLE,
     PROVIDER_PARALLEL_MCP,
     PROVIDER_PERPLEXITY,
@@ -341,8 +343,8 @@ def test_every_search_backend_is_a_member(monkeypatch: pytest.MonkeyPatch) -> No
     chain = [name for name, _ in AutoProvider.default_chain()]
 
     assert chain[:3] == ["perplexity", "nimble", "linkup"]
-    # Tavily is held with a key here, so its keyless entry would only repeat the keyed request.
-    keyless = [name for name, _ in AUTO_KEYLESS if name not in AUTO_PREFERRED]
+    # Tavily and Keenable are held with a key here, so their keyless entries would only repeat the keyed request.
+    keyless = [name for name, _ in AUTO_KEYLESS if name not in {*AUTO_PREFERRED, *AUTO_APPENDED}]
     assert chain == [*AUTO_PREFERRED, *keyless, *AUTO_APPENDED]
     keyed = {name for name, env_var in ENV_BY_PROVIDER.items() if env_var}
     assert set(AUTO_PREFERRED) | set(AUTO_APPENDED) == keyed
@@ -365,6 +367,7 @@ def test_a_keyed_provider_is_preferred_over_an_anonymous_tier(monkeypatch: pytes
         PROVIDER_YOU_MCP,
         PROVIDER_EXA_MCP,
         PROVIDER_PARALLEL_MCP,
+        PROVIDER_KEENABLE,
     ]
 
 
@@ -448,6 +451,7 @@ def test_a_depth_request_skips_the_members_without_depth_for_the_keyless_tier(
         PROVIDER_YOU_MCP,
         PROVIDER_EXA_MCP,
         PROVIDER_PARALLEL_MCP,
+        PROVIDER_KEENABLE,
     )
     assert set(passed_over._members) == {2}, "perplexity and brave were never built"
 
@@ -721,7 +725,8 @@ def test_every_extract_backend_is_a_member(monkeypatch: pytest.MonkeyPatch) -> N
     chain = [name for name, _ in AutoExtractProvider.default_chain()]
 
     assert chain[:5] == ["nimble", "tavily", "firecrawl", "oxylabs", "brightdata"], "the original order is kept"
-    keyless = [name for name, _ in AUTO_EXTRACT_KEYLESS if name not in AUTO_EXTRACT_PREFERRED]
+    held = {*AUTO_EXTRACT_PREFERRED, *AUTO_EXTRACT_APPENDED}
+    keyless = [name for name, _ in AUTO_EXTRACT_KEYLESS if name not in held]
     assert chain == [*AUTO_EXTRACT_PREFERRED, *keyless, *AUTO_EXTRACT_APPENDED]
     keyed = {name for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items() if env_vars}
     assert set(AUTO_EXTRACT_PREFERRED) | set(AUTO_EXTRACT_APPENDED) == keyed
@@ -734,7 +739,7 @@ def test_a_keyed_extract_provider_is_preferred_over_an_anonymous_tier(monkeypatc
 
     chain = [name for name, _ in AutoExtractProvider.default_chain()]
 
-    assert chain == [PROVIDER_TAVILY, PROVIDER_JINA, PROVIDER_FIRECRAWL, PROVIDER_EXA]
+    assert chain == [PROVIDER_TAVILY, PROVIDER_JINA, PROVIDER_FIRECRAWL, PROVIDER_KEENABLE, PROVIDER_EXA]
 
 
 def test_with_no_credentials_the_extract_chain_is_the_keyless_one(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -765,8 +770,22 @@ def test_a_backend_held_with_a_key_is_not_tried_again_as_keyless(monkeypatch: py
     search = [name for name, _ in AutoProvider.default_chain()]
     extract = [name for name, _ in AutoExtractProvider.default_chain()]
 
-    assert search == [PROVIDER_TAVILY, PROVIDER_YOU_MCP, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP]
-    assert extract == [PROVIDER_TAVILY, PROVIDER_FIRECRAWL, PROVIDER_JINA]
+    assert search == [PROVIDER_TAVILY, PROVIDER_YOU_MCP, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP, PROVIDER_KEENABLE]
+    assert extract == [PROVIDER_TAVILY, PROVIDER_FIRECRAWL, PROVIDER_JINA, PROVIDER_KEENABLE]
+
+
+def test_a_backend_appended_with_a_key_leaves_the_keyless_tier(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keenable joined after the keyless tier: held with a key it is tried there, once, never early as "keyless"."""
+    for env_var in (*_EVERY_SEARCH_KEY, *_EVERY_EXTRACT_KEY):
+        monkeypatch.delenv(env_var, raising=False)
+    monkeypatch.setenv(ENV_KEENABLE_API_KEY, "test-key")
+
+    search = [name for name, _ in AutoProvider.default_chain()]
+    extract = [name for name, _ in AutoExtractProvider.default_chain()]
+
+    assert search == [PROVIDER_TAVILY, PROVIDER_YOU_MCP, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP, PROVIDER_KEENABLE]
+    assert extract == [PROVIDER_TAVILY, PROVIDER_JINA, PROVIDER_FIRECRAWL, PROVIDER_KEENABLE]
+    assert dict(AutoProvider.default_chain())[PROVIDER_KEENABLE] == {}, "the keyed entry, not the keyless one"
 
 
 def test_a_backend_s_provider_config_reaches_it_through_auto_and_the_chain_s_options_win(

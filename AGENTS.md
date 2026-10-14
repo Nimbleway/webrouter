@@ -9,12 +9,12 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across five methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup and WebIQ, plus two that need no credential: `you-mcp`, and `auto`, the default, which
+Linkup, WebIQ and Keenable, plus two that need no credential: `you-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
-Firecrawl, Linkup, Oxylabs, Bright Data, the keyless Jina Reader, and `auto`
-again.
+Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, the keyless Jina
+Reader, and `auto` again.
 
 **`research`** — an agentic run: the backend reasons over several turns and
 answers in minutes rather than milliseconds. Nimble, Parallel, Perplexity,
@@ -114,6 +114,7 @@ src/web_router/
     ├── perplexity.py   search + research, via httpx
     ├── linkup.py       search + extract + research, via httpx
     ├── webiq.py        search, via httpx — Microsoft AI's Web Search API
+    ├── keenable.py     search + extract, via httpx — keyless on its /public twins
     ├── firecrawl.py    extract, via httpx
     ├── oxylabs.py      extract, via httpx — HTTP Basic, username + password
     ├── brightdata.py   extract, via httpx — needs a zone beside its token
@@ -800,7 +801,7 @@ plumbing — never the network, and never `OPENAI_API_KEY` or
 Never commit API keys, write them into tests, or paste them into code. Keys come
 from the environment (`NIMBLE_API_KEY`, `TAVILY_API_KEY`, `YOU_API_KEY`,
 `BRAVE_SEARCH_API_KEY`, `EXA_API_KEY`, `PARALLEL_API_KEY`,
-`PERPLEXITY_API_KEY`, `LINKUP_API_KEY`, `WEBIQ_API_KEY`, `FIRECRAWL_API_KEY`, `OXYLABS_USERNAME` +
+`PERPLEXITY_API_KEY`, `LINKUP_API_KEY`, `WEBIQ_API_KEY`, `KEENABLE_API_KEY`, `FIRECRAWL_API_KEY`, `OXYLABS_USERNAME` +
 `OXYLABS_PASSWORD`, `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE`,
 `STEEL_API_KEY`, `BROWSERBASE_API_KEY`, `HYPERBROWSER_API_KEY`,
 `ANCHOR_API_KEY`, `BROWSER_USE_API_KEY`, `SKYVERN_API_KEY`, and the optional
@@ -812,7 +813,7 @@ set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
 `RESEARCH_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
 `auto`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
-Tavily and Firecrawl run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
+Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
 `ANTHROPIC_API_KEY` are the two library keys that are not a provider's: each is
 read only by its judge behind `evaluate()` (the `evals` extra) —
 `OpenAIJudge` and `AnthropicJudge` — so each appears in `.env.example` and in

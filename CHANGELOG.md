@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- Keenable as a search and an extract backend (`keenable`), over its Search and Fetch APIs, reading `KEENABLE_API_KEY`. Search maps `max_results`; extract returns `markdown` and asks for up to 500,000 characters, where Keenable's own default cuts a page at 50,000. With `allow_keyless=True` both run on Keenable's keyless `/public` endpoints, rate-limited per IP. `auto` tries Keenable after the keyless tier when you hold its key, and its keyless tier last of all, so no call that was already being served moves.
+
 ## [0.3.0] - 2026-10-12
 
 ### Added

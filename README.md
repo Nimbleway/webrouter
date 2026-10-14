@@ -219,6 +219,7 @@ and what `response.provider` and `configured_providers()` report back.
 | `Provider.PERPLEXITY` | `perplexity` | [Perplexity](https://docs.perplexity.ai) | direct HTTP | `max_results` |
 | `Provider.LINKUP` | `linkup` | [Linkup](https://www.linkup.so) | direct HTTP | `max_results`, `include_domains`, `exclude_domains` |
 | `Provider.WEBIQ` | `webiq` | [WebIQ](https://api.microsoft.ai) (Microsoft AI Web Search) | direct HTTP | `max_results` |
+| `Provider.KEENABLE` | `keenable` | [Keenable](https://docs.keenable.ai) | direct HTTP; keyless with `allow_keyless=True` (rate-limited per IP) | `max_results` |
 | `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | `max_results`, `search_depth` |
 | `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp) | direct HTTP, **no key** | `max_results` |
 | `Provider.PARALLEL_MCP` | `parallel-mcp` | [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/quickstart) | direct HTTP, **no key** | `max_results` (applied to the response: the tool ignores a count) |
@@ -251,8 +252,9 @@ which ones this environment can use.
 | `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web Scraper](https://oxylabs.io) | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | `markdown`, `html` |
 | `Provider.BRIGHTDATA` | `brightdata` | [Bright Data Web Unlocker](https://brightdata.com) | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | `markdown`, `html` |
 | `Provider.WEBIQ` | `webiq` | [WebIQ Browse](https://api.microsoft.ai) (Microsoft AI) — pages in WebIQ's own index | `WEBIQ_API_KEY` | `markdown`, `text` |
+| `Provider.KEENABLE` | `keenable` | [Keenable Fetch](https://docs.keenable.ai/api-reference/fetch) | `KEENABLE_API_KEY`, or keyless with `allow_keyless=True` (rate-limited per IP) | `markdown` |
 | `Provider.JINA` | `jina` | [Jina Reader](https://jina.ai/reader) | **none** (`JINA_API_KEY` raises the rate limit) | `markdown`, `html`, `text` |
-| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa and WebIQ | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it |
+| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ and Keenable | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it |
 
 Two need more than a key. Oxylabs authenticates with the username and password
 created under Web Scraper API in its dashboard — not the ones you sign in with —
@@ -320,8 +322,8 @@ more to say than a row: see [Session backends](#session-backends) and
 searches, extracts and opens a browser — the Quickstart's first example is exactly that. It tries the backends
 you have a key for first — a credential in the environment says which one you
 want — and falls back to the anonymous tiers when there is none: Tavily keyless,
-then You.com's, Exa's and Parallel's open MCP servers for a search; Tavily keyless,
-Jina Reader, then Firecrawl's keyless tier for an extract; `local` for a browser
+then You.com's, Exa's and Parallel's open MCP servers, then Keenable's keyless tier for a search; Tavily keyless,
+Jina Reader, Firecrawl's keyless tier, then Keenable's for an extract; `local` for a browser
 session. Research and browse have no
 anonymous tier, because every run bills; with no key they raise, naming the
 variables that would fix it. `response.provider` names whichever one served it,
@@ -332,14 +334,15 @@ Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
-| `search` | Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ, Parallel, Exa, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP | — |
-| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless | Linkup, Exa, WebIQ |
+| `search` | Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ, Parallel, Exa, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable |
+| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable |
 | `research` | Nimble, Parallel, Perplexity, Linkup | nothing — every run bills | — |
 
 Search's order follows a provider scan's judged accuracy, best first (run your
 own with [`benchmarks/providers/`](benchmarks/providers/README.md)), and every
 key you hold comes before the free tier — so a key you hold only for research,
-Perplexity's say, serves your plain searches too. For extract, the backends that
+Perplexity's say, serves your plain searches too. Keenable joined after that
+scan, so it comes after the keyless tier until a scan places it. For extract, the backends that
 joined later come after the keyless tier, so holding one more key never moves a
 call that was already being served. Research has no free tier, so Linkup simply
 follows the others there. To choose your own order, pass a `chain`.
@@ -559,7 +562,9 @@ returns `text` and nothing else, asked for as `text: true`. WebIQ is left out
 too: Browse takes `contentFormat: markdown` or `text`, and its `html` is a
 simplified markup rather than the page as fetched, so `html` is refused. It
 reads WebIQ's own index, so a page WebIQ has not crawled comes back as a
-failure.
+failure. Keenable is left out as well: its Fetch API has no format field and
+returns markdown alone, so `html` and `text` are refused. web-router asks it for
+up to 500,000 characters, since it otherwise cuts a page at 50,000.
 
 A backend that cannot produce the format you asked for **raises rather than
 returning a different one under the same name**, because code that pipes
@@ -1631,6 +1636,7 @@ Keys are read from the environment, or passed explicitly through
 | Perplexity | `PERPLEXITY_API_KEY` | search, research |
 | Linkup | `LINKUP_API_KEY` | search, extract, research |
 | WebIQ | `WEBIQ_API_KEY` | search, extract |
+| Keenable | `KEENABLE_API_KEY` *(optional for `auto`, which uses its keyless tier without one)* | search, extract |
 | Firecrawl | `FIRECRAWL_API_KEY` | extract |
 | Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
 | Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |

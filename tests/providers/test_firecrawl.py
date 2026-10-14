@@ -115,10 +115,10 @@ def test_a_key_wins_over_keyless(monkeypatch: pytest.MonkeyPatch) -> None:
     assert provider._client_kwargs["headers"]["Authorization"] == "Bearer test-key"
 
 
-def test_firecrawl_is_the_last_keyless_extract_member() -> None:
+def test_firecrawl_comes_after_the_keyless_extract_members_that_were_there_first() -> None:
     from web_router.constants import AUTO_EXTRACT_KEYLESS
 
-    assert [name for name, _ in AUTO_EXTRACT_KEYLESS] == ["tavily", "jina", "firecrawl"]
+    assert [name for name, _ in AUTO_EXTRACT_KEYLESS] == ["tavily", "jina", "firecrawl", "keenable"]
 
 
 @pytest.mark.integration

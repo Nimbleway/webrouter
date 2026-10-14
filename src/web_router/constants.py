@@ -41,6 +41,7 @@ PROVIDER_PARALLEL = Provider.PARALLEL.value
 PROVIDER_PERPLEXITY = Provider.PERPLEXITY.value
 PROVIDER_LINKUP = Provider.LINKUP.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
+PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_YOU_MCP = Provider.YOU_MCP.value
 PROVIDER_EXA_MCP = Provider.EXA_MCP.value
 PROVIDER_PARALLEL_MCP = Provider.PARALLEL_MCP.value
@@ -98,6 +99,7 @@ ENV_PARALLEL_API_KEY = "PARALLEL_API_KEY"
 ENV_PERPLEXITY_API_KEY = "PERPLEXITY_API_KEY"
 ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
+ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_OXYLABS_USERNAME = "OXYLABS_USERNAME"
 ENV_OXYLABS_PASSWORD = "OXYLABS_PASSWORD"
 ENV_BRIGHTDATA_API_KEY = "BRIGHTDATA_API_TOKEN"
@@ -121,6 +123,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_PERPLEXITY: ENV_PERPLEXITY_API_KEY,
     PROVIDER_LINKUP: ENV_LINKUP_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
+    PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_YOU_MCP: None,
     PROVIDER_EXA_MCP: None,
     PROVIDER_PARALLEL_MCP: None,
@@ -147,6 +150,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_OXYLABS: (ENV_OXYLABS_USERNAME, ENV_OXYLABS_PASSWORD),
     PROVIDER_BRIGHTDATA: (ENV_BRIGHTDATA_API_KEY, ENV_BRIGHTDATA_ZONE),
     PROVIDER_WEBIQ: (ENV_WEBIQ_API_KEY,),
+    PROVIDER_KEENABLE: (ENV_KEENABLE_API_KEY,),
     PROVIDER_JINA: (),
     PROVIDER_AUTO: (),
 }
@@ -464,13 +468,14 @@ Reordering the defaults is a change backed by a provider scan; a caller who
 wants another order passes their own ``chain``.
 """
 
-AUTO_APPENDED: tuple[str, ...] = ()
+AUTO_APPENDED: tuple[str, ...] = (PROVIDER_KEENABLE,)
 """Members added to the chain after the last reordering, tried after the keyless tier, with a credential.
 
-Empty since every backend took its place in :data:`AUTO_PREFERRED` from the
-2026-10-06 scan. A backend that joins later goes here first, so joining changes
-no environment's routing; moving it ahead of the keyless tier is a routing
-change, and so one backed by a provider scan.
+Every backend before the 2026-10-06 scan took its place in
+:data:`AUTO_PREFERRED`; ``keenable`` joined after it (2026-10-13). A backend that
+joins later goes here first, so joining changes no environment's routing; moving
+it ahead of the keyless tier is a routing change, and so one backed by a
+provider scan.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
@@ -478,6 +483,7 @@ AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
     (PROVIDER_YOU_MCP, {}),
     (PROVIDER_EXA_MCP, {}),
     (PROVIDER_PARALLEL_MCP, {}),
+    (PROVIDER_KEENABLE, {"allow_keyless": True}),
 )
 """Tried when no credential is available, in order.
 
@@ -488,6 +494,7 @@ gives what random was reaching for -- if one anonymous tier is rate-limited,
 the next one answers. Exa's and Parallel's MCP servers joined last (2026-10-01),
 so a keyless call reaches them only when Tavily and You.com fail, and none that
 was being served moves. Their order between them is not yet backed by a scan.
+Keenable's ``/public`` endpoint joined after them (2026-10-13) on the same terms.
 """
 
 AUTO_SUPPORTED_PARAMETERS = frozenset(
@@ -531,20 +538,21 @@ AUTO_EXTRACT_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
     (PROVIDER_TAVILY, {"allow_keyless": True}),
     (PROVIDER_JINA, {}),
     (PROVIDER_FIRECRAWL, {"allow_keyless": True}),
+    (PROVIDER_KEENABLE, {"allow_keyless": True}),
 )
 """Tried when no credentials are available, in order. Each verified live keyless.
 
 Firecrawl joined last (2026-10-01, documented at docs.firecrawl.dev/rate-limits),
 so it is reached only when the two before it fail and no call already served
-moves.
+moves. Keenable's ``/public`` fetch joined after it (2026-10-13) on the same terms.
 """
 
-AUTO_EXTRACT_APPENDED: tuple[str, ...] = (PROVIDER_LINKUP, PROVIDER_EXA, PROVIDER_WEBIQ)
+AUTO_EXTRACT_APPENDED: tuple[str, ...] = (PROVIDER_LINKUP, PROVIDER_EXA, PROVIDER_WEBIQ, PROVIDER_KEENABLE)
 """Members added after the chain existed, tried after the keyless tier, as :data:`AUTO_APPENDED` is for search.
 
 ``exa`` returns plain text alone, so it serves only ``format="text"``.
 ``webiq`` reads only pages in WebIQ's own index; one it lacks fails, and the
-chain moves on.
+chain moves on. ``keenable`` returns markdown alone.
 """
 
 AUTO_EXTRACT_FORMATS: frozenset[ExtractFormat] = frozenset({"markdown", "html", "text"})
@@ -2743,7 +2751,15 @@ call naming nothing asks for markdown explicitly rather than leaving the field
 unset.
 """
 
-WEBIQ_BROWSE_MAX_LENGTH = {"maxLength": 500_000}
+EXTRACT_MAX_CHARS = 500_000
+"""The longest page an extract backend that cuts by default is asked for.
+
+WebIQ's ceiling, and sent to Keenable too, so a page past it is cut at the same
+length whichever served it. Keenable documents no ceiling; checked live, a
+Wikipedia article its Fetch cut at 50,072 characters came back whole at 102,092.
+"""
+
+WEBIQ_BROWSE_MAX_LENGTH = {"maxLength": EXTRACT_MAX_CHARS}
 """Sent on every fetch: WebIQ's ceiling, so a page comes back whole.
 
 Unset, Browse cuts the content at 10,000 characters -- a Wikipedia article that
@@ -2834,6 +2850,26 @@ MSG_LINKUP_NO_HTML = (
     "fall back to markdown, so use format='markdown' for it."
 )
 
+
+# --- Keenable ---------------------------------------------------------------
+# Search and fetch (docs.keenable.ai/api-reference). The keyless `/public` twins
+# take the same parameters and answer the same shape; they need an app name in
+# `X-Keenable-Title` instead of a key, and answer 400 without one. All four
+# checked live on 2026-10-13. Fetch's docs say a page Keenable has not indexed
+# fails without `live=true`; live, a never-seen URL came back without it on both
+# paths, so `live` is not sent, and a missing page answers 404.
+
+KEENABLE_BASE_URL = "https://api.keenable.ai"
+KEENABLE_SEARCH_PATH = "/v1/search"
+KEENABLE_SEARCH_PUBLIC_PATH = "/v1/search/public"
+KEENABLE_FETCH_PATH = "/v1/fetch"
+KEENABLE_FETCH_PUBLIC_PATH = "/v1/fetch/public"
+KEENABLE_API_KEY_HEADER = "X-API-Key"
+KEENABLE_TITLE_HEADER = "X-Keenable-Title"
+KEENABLE_TITLE = "web-router"
+"""The app name a keyless call is attributed to; Keenable refuses a keyless call without one."""
+
+KEENABLE_PARAM_NAMES = {"max_results": "max_results"}
 
 # --- Oxylabs ----------------------------------------------------------------
 # Extract only: Oxylabs' Web Scraper API fetches a URL, it does not rank the web.

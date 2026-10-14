@@ -464,6 +464,7 @@ _STUB_PAYLOADS: dict[str, Any] = {
     "jina": lambda urls: {"data": {"url": urls[0], "content": _body(urls[0])}},
     "linkup": lambda urls: {"markdown": _body(urls[0]), "favicon": "https://favicons.linkup.so?domain=example.com"},
     "webiq": lambda urls: {"url": urls[0], "title": "", "content": _body(urls[0]), "traceId": "t"},
+    "keenable": lambda urls: {"url": urls[0], "title": "", "content": _body(urls[0]), "description": ""},
 }
 """The shape each backend really answers with, trimmed to what is mapped.
 
