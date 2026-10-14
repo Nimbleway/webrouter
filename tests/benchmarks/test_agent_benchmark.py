@@ -1984,3 +1984,70 @@ def test_a_sealqa_agent_run_withholds_its_paper_and_passes_an_unrelated_one(
             return await router.search("who", provider="fake")
 
     assert [r.url for r in asyncio.run(go()).results] == ["https://arxiv.org/abs/1706.03762"]
+
+
+def _keenable_mcp(meta: dict[str, Any] | None, *, status: int = 200) -> tuple[httpx.MockTransport, list[httpx.Request]]:
+    """Keenable's MCP server as it answered live: initialize, then a search whose result reports usage in ``meta``."""
+    sent: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        sent.append(request)
+        body = json.loads(request.content)
+        if status != 200:
+            return httpx.Response(status, json={"error": "requires_auth", "message": "Invalid or expired token"})
+        if body["method"] == "initialize":
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": {}}, headers={"mcp-session-id": "s"})
+        if body["method"] == "tools/call":
+            result = {"content": [{"type": "text", "text": "x"}], **({"_meta": meta} if meta else {})}
+            event = f"event: message\ndata: {json.dumps({'jsonrpc': '2.0', 'id': 2, 'result': result})}\n\n"
+            return httpx.Response(200, text=event, headers={"content-type": "text/event-stream"})
+        return httpx.Response(202)
+
+    return httpx.MockTransport(handle), sent
+
+
+async def test_a_keenable_arm_runs_only_once_its_server_reports_the_search_billed(
+    bench: tuple[ModuleType, ModuleType], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, run = bench
+    monkeypatch.setenv("KEENABLE_API_KEY", "k")
+    arm = run.build_arm("mcp:keenable", None, 5, run.CLAUDE)
+    usage = {"keenable/usage": {"sku": "search.pro", "amount": 1, "credits": 1, "paid": False}}
+    transport, sent = _keenable_mcp(usage)
+
+    await run.check_mcp_billing([arm, arm], transport)
+
+    assert [json.loads(r.content)["method"] for r in sent] == ["initialize", "notifications/initialized", "tools/call"]
+    assert all(r.headers["Authorization"] == "Bearer k" for r in sent)
+    assert sent[2].headers["mcp-session-id"] == "s"
+    assert json.loads(sent[2].content)["params"]["name"] == "search_web_pages"
+
+
+async def test_a_keenable_search_that_reports_no_usage_stops_the_run_as_keyless(
+    bench: tuple[ModuleType, ModuleType], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The server also answers with no key: a 200 without usage means the arm would bench the free tier."""
+    _, run = bench
+    monkeypatch.setenv("KEENABLE_API_KEY", "k")
+    arm = run.build_arm("mcp:keenable", None, 5, run.OPENAI)
+
+    with pytest.raises(SystemExit, match="keenable/usage"):
+        await run.check_mcp_billing([arm], _keenable_mcp(None)[0])
+    with pytest.raises(SystemExit, match="refused the key in KEENABLE_API_KEY \\(401\\)"):
+        await run.check_mcp_billing([arm], _keenable_mcp(None, status=401)[0])
+
+
+async def test_only_a_server_that_answers_keyless_is_checked_and_never_under_an_outage(
+    bench: tuple[ModuleType, ModuleType], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, run = bench
+    for server in run.MCP_SERVERS.values():
+        monkeypatch.setenv(server.env_key, "k")
+    transport, sent = _keenable_mcp(None)
+
+    await run.check_mcp_billing([run.build_arm("mcp:all", None, 5, run.CLAUDE)], transport)
+    monkeypatch.setattr(run, "MCP_SERVERS", dict(run.MCP_SERVERS))
+    run.MCP_SERVERS["keenable"] = run.replace(run.MCP_SERVERS["keenable"], token=run.OUTAGE_BEARER)
+    await run.check_mcp_billing([run.build_arm("mcp:keenable", None, 5, run.CLAUDE)], transport)
+
+    assert sent == []

@@ -177,6 +177,13 @@ MSG_UNKNOWN_ARM = (
 )
 MSG_UNKNOWN_MCP = "unknown MCP vendor {name!r}: expected one of {known}"
 MSG_MCP_NO_KEY = "arm {name!r} needs {env} in the environment: the platform calls {url} with it"
+MSG_MCP_REFUSED = "arm {name!r}: {url} refused the key in {env} ({status}): {body}"
+MSG_MCP_UNBILLED = (
+    "arm {name!r}: {url} answered a search without reporting {meta}, so the key in {env} was not used and the arm "
+    "would bench the server's keyless tier"
+)
+MCP_PROTOCOL_VERSION = "2025-06-18"
+MCP_CHECK_QUERY = "who created python"
 MSG_UNKNOWN_PLATFORM = "unknown platform {name!r}: expected " + ", ".join(PLATFORMS) + " or " + BOTH
 MSG_ARM_OFF_PLATFORM = "arm {name!r} runs on {platform}, which this run does not include (--platform)"
 MSG_DUPLICATE_ARM = "arm {name!r} is listed twice"
@@ -240,6 +247,9 @@ class McpServer:
     """The tool that reads a page, where the server has one -- what web-router's extract stands beside."""
     token: str | None = None
     """A bearer token to send instead of the vendor's key: :data:`OUTAGE_BEARER` under ``--outage``, never a key."""
+    usage_meta: str | None = None
+    """Where a server that also answers with no key reports a keyed call's usage, under the result's ``_meta``:
+    :func:`check_mcp_billing` asks for it before a run, since a 200 alone would not show the key was used."""
 
     @property
     def tools(self) -> tuple[str, ...]:
@@ -255,9 +265,15 @@ MCP_SERVERS: dict[str, McpServer] = {
     "parallel": McpServer("https://search-mcp.parallel.ai/mcp", "PARALLEL_API_KEY", "web_search_preview", "web_fetch"),
     "tavily": McpServer("https://mcp.tavily.com/mcp/", "TAVILY_API_KEY", "tavily_search", "tavily_extract"),
     "nimble": McpServer("https://mcp.nimbleway.com/mcp", "NIMBLE_API_KEY", "nimble_search", "nimble_extract"),
-    # Checked live on 2026-10-13: a call with the key reports usage, a bad key answers 401. It also answers with no
-    # key at all, so a 200 alone would not show the key arrived.
-    "keenable": McpServer("https://api.keenable.ai/mcp", "KEENABLE_API_KEY", "search_web_pages", "fetch_page_content"),
+    # Checked live on 2026-10-14: a call with the key reports usage, a bad key answers 401 at initialize, and no key
+    # at all answers too, reporting nothing -- so each run checks the usage arrives (usage_meta).
+    "keenable": McpServer(
+        "https://api.keenable.ai/mcp",
+        "KEENABLE_API_KEY",
+        "search_web_pages",
+        "fetch_page_content",
+        usage_meta="keenable/usage",
+    ),
 }
 MCP_SETS: dict[str, tuple[str, ...]] = {"all": ("perplexity", "exa", "parallel", "tavily", "nimble")}
 """Several vendors' servers on one agent, which picks among them -- ``mcp:all``."""
@@ -514,6 +530,64 @@ def mcp_key(arm: str, server: McpServer) -> str:
     if not key:
         raise SystemExit(MSG_MCP_NO_KEY.format(name=arm, env=server.env_key, url=server.url))
     return key
+
+
+async def check_mcp_billing(arms: Any, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    """Before the first session is paid for: send each server with a :attr:`McpServer.usage_meta` one search with
+    the key its arm will send, and stop the run if it is refused or answers without reporting usage. The platform
+    calls the server itself, so a row never sees that ``_meta``; this is where a key the server ignored shows."""
+    checked: set[str] = set()
+    for arm in arms:
+        for vendor in arm.mcp_vendors:
+            server = MCP_SERVERS[vendor]
+            if vendor in checked or server.usage_meta is None or server.token:
+                continue
+            checked.add(vendor)
+            meta = await _mcp_search_meta(arm.name, server, mcp_key(arm.name, server), transport)
+            if server.usage_meta not in meta:
+                raise SystemExit(
+                    MSG_MCP_UNBILLED.format(name=arm.name, url=server.url, meta=server.usage_meta, env=server.env_key)
+                )
+
+
+async def _mcp_search_meta(
+    arm: str, server: McpServer, key: str, transport: httpx.AsyncBaseTransport | None
+) -> dict[str, Any]:
+    """The ``_meta`` of one search on ``server``, over streamable HTTP: initialize, then call its search tool."""
+    headers = {
+        "Accept": "application/json, text/event-stream",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}",
+    }
+    async with httpx.AsyncClient(timeout=60, transport=transport) as client:
+        hello = {"protocolVersion": MCP_PROTOCOL_VERSION, "capabilities": {}, "clientInfo": {"name": "bench"}}
+        response = await client.post(
+            server.url, headers=headers, json={"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": hello}
+        )
+        if response.status_code != httpx.codes.OK:
+            raise SystemExit(
+                MSG_MCP_REFUSED.format(
+                    name=arm, url=server.url, env=server.env_key, status=response.status_code, body=response.text[:200]
+                )
+            )
+        if session := response.headers.get("mcp-session-id"):
+            headers["mcp-session-id"] = session
+        await client.post(server.url, headers=headers, json={"jsonrpc": "2.0", "method": "notifications/initialized"})
+        call = {"name": server.search, "arguments": {"query": MCP_CHECK_QUERY}}
+        response = await client.post(
+            server.url, headers=headers, json={"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": call}
+        )
+    return (_jsonrpc_body(response).get("result") or {}).get("_meta") or {}
+
+
+def _jsonrpc_body(response: httpx.Response) -> dict[str, Any]:
+    """A JSON-RPC reply sent as JSON or as one server-sent event."""
+    if not response.headers.get("content-type", "").startswith("text/event-stream"):
+        return response.json() if response.content else {}
+    for line in response.text.splitlines():
+        if line.startswith("data:"):
+            return json.loads(line[len("data:") :])
+    return {}
 
 
 def server_order(arm: Arm, row: Row, seed: int) -> list[str]:
@@ -1176,6 +1250,7 @@ async def run(args: argparse.Namespace, arm_specs: list[tuple[str, str, str]]) -
             name: build_arm(name, presets.get(_preset(spec), router), args.max_results, platform, spec, withholds)
             for name, platform, spec in arm_specs
         }
+        await check_mcp_billing(arms.values())
         for arm in arms.values():
             if isinstance(arm.executor, DirectTools):
                 stack.push_async_callback(arm.executor.aclose)
