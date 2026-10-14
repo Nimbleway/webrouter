@@ -2751,7 +2751,15 @@ call naming nothing asks for markdown explicitly rather than leaving the field
 unset.
 """
 
-WEBIQ_BROWSE_MAX_LENGTH = {"maxLength": 500_000}
+EXTRACT_MAX_CHARS = 500_000
+"""The longest page an extract backend that cuts by default is asked for.
+
+WebIQ's ceiling, and sent to Keenable too, so a page past it is cut at the same
+length whichever served it. Keenable documents no ceiling; checked live, a
+Wikipedia article its Fetch cut at 50,072 characters came back whole at 102,092.
+"""
+
+WEBIQ_BROWSE_MAX_LENGTH = {"maxLength": EXTRACT_MAX_CHARS}
 """Sent on every fetch: WebIQ's ceiling, so a page comes back whole.
 
 Unset, Browse cuts the content at 10,000 characters -- a Wikipedia article that
@@ -2862,20 +2870,6 @@ KEENABLE_TITLE = "web-router"
 """The app name a keyless call is attributed to; Keenable refuses a keyless call without one."""
 
 KEENABLE_PARAM_NAMES = {"max_results": "max_results"}
-
-KEENABLE_EXTRACT_FORMATS: dict[ExtractFormat, dict[str, Any]] = {"markdown": {}}
-"""Normalized format -> the fields that ask for it: none, since Fetch has no format field and returns markdown alone."""
-
-KEENABLE_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
-
-KEENABLE_FETCH_MAX_CHARS = {"max_chars": 500_000}
-"""Sent on every fetch, so a page comes back whole, as :data:`WEBIQ_BROWSE_MAX_LENGTH` is for WebIQ.
-
-Unset, Fetch cuts the content at 50,000 characters and appends a truncation
-notice -- a Wikipedia article checked live came back at 50,072 characters, and
-whole at 102,092 with this sent. Keenable documents no ceiling; this one matches
-WebIQ's, so a page past it is cut at the same length whichever served it.
-"""
 
 # --- Oxylabs ----------------------------------------------------------------
 # Extract only: Oxylabs' Web Scraper API fetches a URL, it does not rank the web.

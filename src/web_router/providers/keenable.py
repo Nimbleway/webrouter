@@ -17,11 +17,9 @@ from typing import Any, ClassVar, Literal
 
 from web_router.constants import (
     ENV_KEENABLE_API_KEY,
+    EXTRACT_MAX_CHARS,
     KEENABLE_API_KEY_HEADER,
     KEENABLE_BASE_URL,
-    KEENABLE_EXTRACT_DEFAULT_FORMAT,
-    KEENABLE_EXTRACT_FORMATS,
-    KEENABLE_FETCH_MAX_CHARS,
     KEENABLE_FETCH_PATH,
     KEENABLE_FETCH_PUBLIC_PATH,
     KEENABLE_PARAM_NAMES,
@@ -123,6 +121,12 @@ class KeenableProvider(_KeenableKeyless, HttpSearchProvider):
     def _to_result(hit: dict[str, Any]) -> SearchResult:
         snippet = hit.get("snippet") or ""
         description = hit.get("description") or ""
+        # Documented as ISO 8601, but Fetch already answers with a Unix integer;
+        # one here would fail the whole search, so it stays in extra instead.
+        published = hit.get("published_at")
+        extra = {k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS}
+        if published is not None and not isinstance(published, str):
+            extra["published_at"] = published
         # acquired_at is when Keenable indexed the page, not when it was
         # published, so it stays in extra rather than posing as published_date.
         return SearchResult(
@@ -130,8 +134,8 @@ class KeenableProvider(_KeenableKeyless, HttpSearchProvider):
             title=hit.get("title") or "",
             description=description or as_snippet(snippet),
             content=best_text(snippet, description),
-            published_date=hit.get("published_at"),
-            extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},
+            published_date=published if isinstance(published, str) else None,
+            extra=extra,
         )
 
 
@@ -144,8 +148,9 @@ class KeenableExtractProvider(_KeenableKeyless, HttpExtractProvider):
 
     name: ClassVar[str] = PROVIDER_KEENABLE
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
-    supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(KEENABLE_EXTRACT_FORMATS)
-    default_format: ClassVar[ExtractFormat] = KEENABLE_EXTRACT_DEFAULT_FORMAT
+    supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset({"markdown"})
+    # Fetch has no format field: it returns markdown alone.
+    default_format: ClassVar[ExtractFormat] = "markdown"
 
     base_url: ClassVar[str] = KEENABLE_BASE_URL
     extract_path: ClassVar[str] = KEENABLE_FETCH_PATH
@@ -162,8 +167,8 @@ class KeenableExtractProvider(_KeenableKeyless, HttpExtractProvider):
         return build_payload(
             request,
             url=urls[0],
-            **KEENABLE_EXTRACT_FORMATS[self.format_of(request)],
-            **KEENABLE_FETCH_MAX_CHARS,
+            # Unset, Fetch cuts a page at 50,000 characters and appends a notice.
+            max_chars=EXTRACT_MAX_CHARS,
         )
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:

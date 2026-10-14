@@ -83,6 +83,13 @@ def test_the_snippet_is_the_content_and_nothing_is_invented(provider: KeenablePr
     assert second.published_date is None
 
 
+def test_a_numeric_published_at_stays_in_extra_rather_than_failing_the_search(provider: KeenableProvider) -> None:
+    payload = {"results": [{"url": "u", "snippet": "S", "published_at": 1791654966}]}
+    (result,) = provider._to_response(SearchRequest(query="hi"), payload).results
+
+    assert result.published_date is None and result.extra == {"published_at": 1791654966}
+
+
 def test_a_missing_key_raises_unless_keyless_was_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("KEENABLE_API_KEY", raising=False)
     with pytest.raises(ConfigurationError, match="KEENABLE_API_KEY"):
