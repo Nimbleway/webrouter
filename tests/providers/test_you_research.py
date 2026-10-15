@@ -19,7 +19,6 @@ from typing import Any
 import httpx
 import pytest
 
-from web_router.constants import YOU_RESEARCH_EFFORTS
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.you import YouResearchProvider
 from web_router.types import ResearchEffort, ResearchRequest
@@ -125,14 +124,13 @@ def test_a_run_is_a_background_task_on_the_research_host(provider: YouResearchPr
     assert api.bodies[0] == {"input": QUESTION, "background": True}
 
 
-@pytest.mark.parametrize("effort", ["low", "medium", "high", "max"])
-def test_effort_maps_onto_research_effort(provider: YouResearchProvider, effort: ResearchEffort) -> None:
-    payload = provider._build_payload(ResearchRequest(query="q", effort=effort))
-    assert payload["research_effort"] == YOU_RESEARCH_EFFORTS[effort]
-
-
-def test_the_deepest_effort_stops_at_exhaustive_rather_than_frontier(provider: YouResearchProvider) -> None:
-    assert provider._build_payload(ResearchRequest(query="q", effort="max"))["research_effort"] == "exhaustive"
+@pytest.mark.parametrize(
+    ("effort", "tier"),
+    # `max` stops at exhaustive: frontier is background-only and priced well above it.
+    [("low", "lite"), ("medium", "standard"), ("high", "deep"), ("max", "exhaustive")],
+)
+def test_effort_maps_onto_research_effort(provider: YouResearchProvider, effort: ResearchEffort, tier: str) -> None:
+    assert provider._build_payload(ResearchRequest(query="q", effort=effort))["research_effort"] == tier
 
 
 def test_a_structured_answer_is_refused_rather_than_returned_as_prose(provider: YouResearchProvider) -> None:

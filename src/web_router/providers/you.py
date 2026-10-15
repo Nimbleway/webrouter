@@ -141,14 +141,12 @@ class YouResearchProvider(HttpResearchProvider):
         return self._progress(request, await self._apost(YOU_RESEARCH_PATH, self._build_payload(request)))
 
     def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        return self._progress(request, self._get(self._path(job_id)))
+        path = YOU_RESEARCH_STATUS_PATH.format(task_id=quote(job_id, safe=""))
+        return self._progress(request, self._get(path))
 
     async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        return self._progress(request, await self._aget(self._path(job_id)))
-
-    @staticmethod
-    def _path(job_id: str) -> str:
-        return YOU_RESEARCH_STATUS_PATH.format(task_id=quote(job_id, safe=""))
+        path = YOU_RESEARCH_STATUS_PATH.format(task_id=quote(job_id, safe=""))
+        return self._progress(request, await self._aget(path))
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
         effort = YOU_RESEARCH_EFFORTS[request.effort] if request.effort else None
