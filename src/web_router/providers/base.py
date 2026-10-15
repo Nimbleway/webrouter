@@ -738,9 +738,21 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         synchronous backend serves -- is answered even when the budget is
         already spent: it has been paid for, and throwing the answer away to
         report a timeout would be the one outcome nobody wants.
+
+        A poll that fails once the deadline has passed raises the method's
+        timeout, with the failure as its cause. Every call inside the run is
+        clamped to what the caller has left, so a status request that stalls
+        fails exactly as the deadline arrives; raised as the backend's read
+        timeout, it would lose the job id the caller needs to come back to a
+        run that is still going, and billing.
         """
         for delay in self._poll_delays():
-            progress = self.status()
+            try:
+                progress = self.status()
+            except ProviderError as exc:
+                if _passed(deadline):
+                    raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
+                raise
             if progress.is_terminal:
                 return self._answer(progress)
             time.sleep(self._wait(delay, deadline, timeout))
@@ -749,7 +761,12 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     async def _await_until(self, deadline: float | None, timeout: float | None) -> _ResponseT:
         """Async counterpart of :meth:`_wait_until`."""
         for delay in self._poll_delays():
-            progress = await self.astatus()
+            try:
+                progress = await self.astatus()
+            except ProviderError as exc:
+                if _passed(deadline):
+                    raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
+                raise
             if progress.is_terminal:
                 return self._answer(progress)
             await asyncio.sleep(self._wait(delay, deadline, timeout))
@@ -1641,3 +1658,8 @@ def _translate_state(provider: str, reported: str, states: Mapping[str, _StateT]
 def _deadline_for(timeout: float | None) -> float | None:
     """The monotonic instant a call with this budget runs out, or ``None`` for no budget."""
     return None if timeout is None else time.monotonic() + timeout
+
+
+def _passed(deadline: float | None) -> bool:
+    """Whether a call with this deadline has run out of time. Never, with no deadline."""
+    return deadline is not None and time.monotonic() >= deadline
