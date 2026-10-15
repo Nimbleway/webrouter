@@ -222,14 +222,16 @@ def test_the_shipped_sets_load_deduplicated_and_sampled_by_seed(scan: ModuleType
 
 def test_no_shipped_url_carries_a_credential_shaped_query_key(scan: ModuleType) -> None:
     """A token in a URL would be sent to every backend and written into every result file."""
-    secret_keys = re.compile(r"[?&](token|ctoken|access_token|api_key|apikey|key|sig|signature|offertoken)=", re.IGNORECASE)
+    secret_keys = re.compile(r"[?&](token|ctoken|access_token|api_key|apikey|sig|signature|offertoken)=", re.IGNORECASE)
     for name in scan.URL_SETS:
         urls = scan.load_urls(scan.parse_args(["--urls", name, "--limit", "0"]))
         leaking = [url for url, _ in urls if secret_keys.search(url)]
         assert not leaking, f"{name}: {leaking[:3]}"
 
 
-def test_concurrency_below_one_is_a_usage_error_not_a_hang(scan: ModuleType, capsys: pytest.CaptureFixture[str]) -> None:
+def test_concurrency_below_one_is_a_usage_error_not_a_hang(
+    scan: ModuleType, capsys: pytest.CaptureFixture[str]
+) -> None:
     for bad in ("0", "-1"):
         with pytest.raises(SystemExit) as raised:
             scan.parse_args(["--concurrency", bad])

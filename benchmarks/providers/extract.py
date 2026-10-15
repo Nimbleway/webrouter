@@ -424,7 +424,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--timeout", type=float, default=BENCHMARK_EXTRACT_TIMEOUT, help="seconds for each URL's comparison"
     )
-    parser.add_argument("--concurrency", type=_positive_int, default=DEFAULT_CONCURRENCY, help="URLs at once (at least 1)")
+    parser.add_argument(
+        "--concurrency", type=_positive_int, default=DEFAULT_CONCURRENCY, help="URLs at once (at least 1)"
+    )
     parser.add_argument("--out", type=Path, default=None, help=f"results folder (default: under {DEFAULT_OUT})")
     parser.add_argument(
         "--combine",
