@@ -24,19 +24,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+sys.path.insert(0, str(Path(__file__).parents[1] / "agent"))  # the agent benchmark's report and question sets
+from report import _wilson as wilson  # benchmarks/agent/report.py: one Wilson for every report
+
 from web_router.constants import ROUTE_DECIDER_TIMEOUT, ROUTE_MIN_CONFIDENCE, ROUTE_QUESTIONS
 from web_router.decisions import JevDecider
 from web_router.decisions.route import label_values
 from web_router.exceptions import ProviderError
-
-
-def wilson(hits: int, n: int, z: float = 1.96) -> tuple[float, float]:
-    if n == 0:
-        return (0.0, 0.0)
-    p = hits / n
-    centre = (p + z * z / (2 * n)) / (1 + z * z / n)
-    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
-    return (centre - half, centre + half)
 
 
 def pct(values: list[float], q: float) -> float:
@@ -54,7 +48,6 @@ def main() -> None:
     if Path(args.rows).is_file():
         rows = [json.loads(line) for line in Path(args.rows).read_text().splitlines() if line.strip()]
     else:
-        sys.path.insert(0, str(Path(__file__).parents[1] / "agent"))
         from questions import load_set
 
         rows = load_set(args.rows)
@@ -113,6 +106,13 @@ def main() -> None:
                     f"pred_clear={r['well_scoped']['pred']} ({r['well_scoped']['confidence']:.2f})"
                 )
     labelled = results  # --out keeps every labelled row, scope-only ones included
+    # Every decider call counts here, scope-only rows included: they are calls like any other.
+    calls = len(labelled)
+    latencies = [r["latency_ms"] for r in labelled]
+    fell_back = sum(r["fell_back"] for r in labelled)
+    print(f"decider calls: {calls}  (errors: {sum(r['error'] is not None for r in labelled)})")
+    print(f"fallback rate:     {fell_back}/{calls} = {fell_back / calls:.2f}")
+    print(f"latency ms:        p50 {statistics.median(latencies):.0f}  p95 {pct(latencies, 0.95):.0f}")
     results = [r for r in results if r["tool"]["gold"]]
     if not results:
         _write(args.out, labelled)
@@ -123,10 +123,7 @@ def main() -> None:
     recent_rows = [r for r in results if r["recent"]["gold"]]
     recent_hits = sum(r["recent"]["pred"] == r["recent"]["gold"] for r in recent_rows)
     lo, hi = wilson(tool_hits, n)
-    latencies = [r["latency_ms"] for r in results]
-    fell_back = sum(r["fell_back"] for r in results)
 
-    print(f"rows: {n}  (decider errors: {sum(r['error'] is not None for r in results)})")
     print(f"tool accuracy:     {tool_hits}/{n} = {tool_hits / n:.2f}  95% CI [{lo:.2f}, {hi:.2f}]")
     print(f"always 'search':   {base_hits}/{n} = {base_hits / n:.2f}")
     print(f"recent accuracy:   {_ratio(recent_hits, len(recent_rows))}")
@@ -138,8 +135,6 @@ def main() -> None:
         f"tool, confident (>= {ROUTE_MIN_CONFIDENCE}): "
         f"{sum(r['tool']['pred'] == r['tool']['gold'] for r in confident)}/{len(confident)}"
     )
-    print(f"fallback rate:     {fell_back}/{n} = {fell_back / n:.2f}")
-    print(f"latency ms:        p50 {statistics.median(latencies):.0f}  p95 {pct(latencies, 0.95):.0f}")
     confusion = Counter((r["tool"]["gold"], r["tool"]["pred"]) for r in results)
     print("tool confusion (gold -> pred):")
     for (gold, pred), count in sorted(confusion.items(), key=lambda item: (item[0][0], str(item[0][1]))):

@@ -523,6 +523,10 @@ class WebRouter(_BaseRouter[BrowserHandle]):
                 or for ``decider="jev"`` with no TypeSafe key.
         """
         super().__init__(provider, provider_config=provider_config)
+        async_only = sorted(_async_client_holders(self._config))
+        if async_only:
+            raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
+        # Built after every check that can refuse the router, so a refused build leaves no open client behind.
         if isinstance(decider, str):
             if decider != ROUTE_DECIDER_JEV:
                 raise ConfigurationError(MSG_ROUTE_UNKNOWN_DECIDER.format(name=decider))
@@ -533,9 +537,6 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         else:
             self._owns_decider = False  # a decider handed in may be shared: its owner closes it
         self.decider = decider
-        async_only = sorted(_async_client_holders(self._config))
-        if async_only:
-            raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
 
     def search(
         self,
@@ -958,7 +959,9 @@ class WebRouter(_BaseRouter[BrowserHandle]):
             if unsure and fallback is None:
                 fallback = ROUTE_FALLBACK_LOW_CONFIDENCE
         method, chain, reason = route_from_labels(query, values, chains, urls=found, output_schema=output_schema)
-        requested = "research" if output_schema is not None else values["tool"]
+        # The raw tool label, before an unsure one took its default, so the advice can say where it leaned.
+        tool = labels.get("tool")
+        requested = "research" if output_schema is not None else tool.choice if tool is not None else values["tool"]
         return Route(
             query=query,
             method=method,
@@ -978,13 +981,13 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         # The route's own arguments are defaults: an override of the same name wins, rather than colliding.
         kwargs: dict[str, Any] = {"provider": self._routed_provider(route)}
         if route.method == "extract":
-            return self.extract(route.urls, **{**kwargs, **overrides})
+            return self.extract(**{**kwargs, "urls": route.urls, **overrides})
         if route.method == "research":
-            return self.research(route.query, **{**kwargs, "output_schema": route.output_schema, **overrides})
+            return self.research(**{**kwargs, "query": route.query, "output_schema": route.output_schema, **overrides})
         if route.method == "browse":
             start_url = route.urls[0] if route.urls else None
-            return self.browse(route.query, **{**kwargs, "start_url": start_url, **overrides})
-        return self.search(route.query, **{**kwargs, **overrides})
+            return self.browse(**{**kwargs, "task": route.query, "start_url": start_url, **overrides})
+        return self.search(**{**kwargs, "query": route.query, **overrides})
 
     def _default_chains(self) -> dict[str, tuple[tuple[str, dict[str, Any]], ...]]:
         """Each method's auto chain as this router's own ``auto`` would resolve it, a configured ``chain`` included."""

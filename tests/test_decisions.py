@@ -18,7 +18,7 @@ from web_router.constants import (
     ROUTE_FALLBACK_NO_URL,
 )
 from web_router.decisions import Answer, JevDecider, Route, route_from_labels
-from web_router.decisions.route import label_values
+from web_router.decisions.route import label_values, urls_in
 from web_router.exceptions import ConfigurationError, ProviderError
 
 CHAINS = {"search": (("tavily", {}),), "extract": (("jina", {}),), "research": (), "browse": ()}
@@ -162,7 +162,9 @@ def test_an_unsure_label_reads_as_its_default_marked_unsure() -> None:
 def test_an_override_wins_over_the_routes_own_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
     router = WebRouter(decider=FakeDecider(answers(tool="search")))
     seen: dict[str, Any] = {}
-    monkeypatch.setattr(router, "search", lambda query, **kwargs: seen.update(kwargs))
+    monkeypatch.setattr(
+        router, "search", lambda **kwargs: seen.update({k: v for k, v in kwargs.items() if k != "query"})
+    )
     router.execute(router.classify("who won"), provider="tavily", max_results=3)
     assert seen == {"provider": "tavily", "max_results": 3}
 
@@ -184,3 +186,29 @@ def test_routes_with_other_member_options_get_their_own_provider() -> None:
     tuned = Route(query="q", method="search", chain=(("tavily", {"allow_keyless": True}),))
     assert router._routed_provider(plain) is not router._routed_provider(tuned)
     assert router._routed_provider(plain) is router._routed_provider(plain)
+
+
+def test_an_unsure_tool_label_says_where_the_classifier_leaned() -> None:
+    route = WebRouter(decider=FakeDecider({"tool": Answer(choice="browse", confidence=0.3)})).classify("who won")
+    assert route.method == "search"
+    assert route.advice == "search, low confidence (the classifier leaned browse)"
+
+
+def test_a_missing_tool_label_is_flagged_as_low_confidence() -> None:
+    route = WebRouter(decider=FakeDecider(answers(recent="day"))).classify("who won")
+    assert route.advice == "search, low confidence"
+
+
+def test_a_url_ending_a_sentence_loses_its_punctuation() -> None:
+    assert urls_in("Read https://example.com/page. Then https://example.org/a?b=1, please!") == [
+        "https://example.com/page",
+        "https://example.org/a?b=1",
+    ]
+
+
+def test_an_override_can_replace_the_routes_query(monkeypatch: pytest.MonkeyPatch) -> None:
+    router = WebRouter(decider=FakeDecider(answers(tool="search")))
+    seen: dict[str, Any] = {}
+    monkeypatch.setattr(router, "search", lambda **kwargs: seen.update(kwargs))
+    router.execute(router.classify("who won"), query="who won in 2024")
+    assert seen["query"] == "who won in 2024"

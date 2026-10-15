@@ -25,6 +25,7 @@ from web_router.constants import (
     ROUTE_MIN_CONFIDENCE,
     ROUTE_TOOL_LINE,
     ROUTE_UNSURE,
+    URL_TRAILING_PUNCTUATION,
 )
 
 _URL = re.compile(r"https?://[^\s<>\"')\]]+")
@@ -70,10 +71,9 @@ class Route:
             return ROUTE_ADVICE_NO_URL
         if ROUTE_FALLBACK_NO_BACKEND in self.fallback and wanted != self.method:
             return ROUTE_ADVICE_NO_BACKEND.format(method=self.method, wanted=wanted)
-        if (
-            ROUTE_FALLBACK_LOW_CONFIDENCE in self.fallback
-            and asked is not None
-            and asked.confidence < ROUTE_MIN_CONFIDENCE
+        # A tool label that is missing or below the threshold took its default: say so, and where it leaned.
+        if ROUTE_FALLBACK_LOW_CONFIDENCE in self.fallback and (
+            asked is None or asked.confidence < ROUTE_MIN_CONFIDENCE
         ):
             template = ROUTE_ADVICE_LOW_CONFIDENCE if wanted == self.method else ROUTE_ADVICE_LEANED
             return template.format(method=self.method, wanted=wanted)
@@ -83,7 +83,9 @@ class Route:
 
     def __str__(self) -> str:
         """What an agent reads: each label as a plain instruction, with its confidence."""
-        lines = [ROUTE_TOOL_LINE.format(advice=self.advice, confidence=_conf(self.labels.get("tool")))]
+        tool = self.labels.get("tool")
+        confidence = ROUTE_CONFIDENCE.format(value=tool.confidence) if tool is not None else ""
+        lines = [ROUTE_TOOL_LINE.format(advice=self.advice, confidence=confidence)]
         for name, heading, texts in ROUTE_LABEL_LINES:
             answer = self.labels.get(name)
             if answer is None:
@@ -93,17 +95,14 @@ class Route:
                 default = ROUTE_DEFAULT_LABELS[name]
                 text, conf = texts.get(default, default), ROUTE_UNSURE.format(value=answer.confidence)
             else:
-                text, conf = texts.get(answer.choice, answer.choice), _conf(answer)
+                text, conf = texts.get(answer.choice, answer.choice), ROUTE_CONFIDENCE.format(value=answer.confidence)
             lines.append(ROUTE_LABEL_LINE.format(heading=heading, text=text, confidence=conf))
         return "\n".join(lines)
 
 
-def _conf(answer: Answer | None) -> str:
-    return ROUTE_CONFIDENCE.format(value=answer.confidence) if answer is not None else ""
-
-
 def urls_in(text: str) -> list[str]:
-    return _URL.findall(text)
+    """The URLs in ``text``, without the punctuation that ends a sentence around them."""
+    return [url.rstrip(URL_TRAILING_PUNCTUATION) for url in _URL.findall(text)]
 
 
 def label_values(

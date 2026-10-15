@@ -4150,6 +4150,9 @@ TYPESAFE_DECISION_PATH = "/v1/systemone"
 JEV_MODEL = "jev-1.14.0"
 """Pinned rather than ``jev-latest``: an alias moves, and thresholds are tuned against one version."""
 
+URL_TRAILING_PUNCTUATION = ".,;:!?"
+"""Stripped from a URL found in prose: the end of a sentence, not part of the address."""
+
 ROUTE_DECIDER_JEV = "jev"
 """The one decider by name: ``WebRouter(decider="jev")``."""
 

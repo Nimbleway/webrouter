@@ -1,10 +1,12 @@
 """One OpenAI Agents SDK agent, the same model and prompt in every arm; only the web tools change.
 
-    A       web-router's search, extract, research and browse
-    B       A plus ``classify`` (``router.classify()``, answered by TypeSafe's Jev), and one line asking the agent to
-            call it before fetching. Every classify call is logged with its advice and whether the next tool followed it
-    none    no web tools at all
-    native  OpenAI's built-in ``web_search``
+    A  no web tools at all
+    B  OpenAI's built-in ``web_search``
+    C  web-router's search, extract, research and browse
+    D  C plus ``classify`` (``router.classify()``, answered by TypeSafe's Jev), and one line asking the agent to call
+       it before fetching. Every classify call is logged with its advice and whether the next tool followed it
+
+The letters mean the same arms in ``claude_ab.py``.
 
     uv run --all-extras --group agent-bench python benchmarks/agent/sdk_ab.py --limit 4 --out results/sdk-dry
 
@@ -61,6 +63,8 @@ CLASSIFY_LINE = (
     "enough to act on. Use its advice to choose your tool."
 )
 WEB_TOOLS = ("search", "extract", "research", "browse")
+ANSWER_KEY_GRADE = "answer_key"
+"""The grade of a reply that cites an answer-key page: what the judge said is kept nowhere, it is not correct."""
 MSG_WITHHELD = "this benchmark keeps {urls} from the agent: the page " + WITHHELD_SIGNATURE
 
 RUN: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar("run")
@@ -262,6 +266,8 @@ async def finish_row(out: dict[str, Any], row: dict[str, Any], judge: Judge) -> 
     # built-in search, whose visits are not logged, is held to the same check as web-router's tools.
     cited = sum(WITHHOLDS(url) for url in urls_in(out["answer"] or ""))
     out["answer_key_cited"] = log["answer_key_cited"] + cited
+    if cited and out["grade"] == "correct":
+        out["grade"] = ANSWER_KEY_GRADE  # read off the answer key, not found: never counted as correct
     out["calls"] = log["calls"]
     out["tools"] = [e["tool"] for e in log["sequence"]]
     out["tool_calls"] = sum(t in WEB_TOOLS for t in out["tools"])
@@ -319,7 +325,7 @@ async def main() -> None:
     load_dotenv()
     widen_thread_pool()
     parser = argparse.ArgumentParser()
-    parser.add_argument("--arms", default="A,B")
+    parser.add_argument("--arms", default="C,D")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--seed", type=int, default=0)
@@ -336,17 +342,17 @@ async def main() -> None:
         preflight(router)
     tools = make_tools(router)
     agents = {
-        "A": Agent(name="web-agent", instructions=BASE_PROMPT, model=args.model, tools=[tools[t] for t in WEB_TOOLS]),
-        "B": Agent(
+        "A": Agent(name="web-agent", instructions=BASE_PROMPT, model=args.model, tools=[]),
+        # OpenAI's built-in search takes no block list, so it can reach SealQA's pages; finish_row counts the
+        # answer-key URLs it cites, the only trace its visits leave.
+        "B": Agent(name="web-agent", instructions=BASE_PROMPT, model=args.model, tools=[WebSearchTool()]),
+        "C": Agent(name="web-agent", instructions=BASE_PROMPT, model=args.model, tools=[tools[t] for t in WEB_TOOLS]),
+        "D": Agent(
             name="web-agent",
             instructions=f"{BASE_PROMPT}\n\n{CLASSIFY_LINE}",
             model=args.model,
             tools=[tools[t] for t in (*WEB_TOOLS, "classify")],
         ),
-        "none": Agent(name="web-agent", instructions=BASE_PROMPT, model=args.model, tools=[]),
-        # OpenAI's built-in search takes no block list, so it can reach SealQA's pages; finish_row counts the
-        # answer-key URLs it cites, the only trace its visits leave.
-        "native": Agent(name="web-agent", instructions=BASE_PROMPT, model=args.model, tools=[WebSearchTool()]),
     }
     judge = AnthropicJudge()
     judge.check()
@@ -364,7 +370,7 @@ async def main() -> None:
         follow = f" classify={out['classify_calls']} followed={sum(a['followed'] for a in out['advice'])}"
         print(
             f"  {arm} {row['topic']:<16} r{repeat} {out['grade'] or 'ERROR':<10} {out['latency']:6.1f}s "
-            f"tools={out['tools']}{follow if arm == 'B' else ''} {out['error'] or ''}",
+            f"tools={out['tools']}{follow if arm == 'D' else ''} {out['error'] or ''}",
             flush=True,
         )
 
