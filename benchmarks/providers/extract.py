@@ -398,6 +398,13 @@ async def run(args: argparse.Namespace, setup: dict[str, Any]) -> list[dict[str,
     return rows
 
 
+def _positive_int(text: str) -> int:
+    value = int(text)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, got {value}")
+    return value
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
     parser.add_argument(
@@ -412,7 +419,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--timeout", type=float, default=BENCHMARK_EXTRACT_TIMEOUT, help="seconds for each URL's comparison"
     )
-    parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY, help="URLs at once")
+    parser.add_argument("--concurrency", type=_positive_int, default=DEFAULT_CONCURRENCY, help="URLs at once (at least 1)")
     parser.add_argument("--out", type=Path, default=None, help=f"results folder (default: under {DEFAULT_OUT})")
     parser.add_argument(
         "--combine",

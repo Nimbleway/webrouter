@@ -229,6 +229,14 @@ def test_no_shipped_url_carries_a_credential_shaped_query_key(scan: ModuleType) 
         assert not leaking, f"{name}: {leaking[:3]}"
 
 
+def test_concurrency_below_one_is_a_usage_error_not_a_hang(scan: ModuleType, capsys: pytest.CaptureFixture[str]) -> None:
+    for bad in ("0", "-1"):
+        with pytest.raises(SystemExit) as raised:
+            scan.parse_args(["--concurrency", bad])
+        assert raised.value.code == 2 and "at least 1" in capsys.readouterr().err
+    assert scan.parse_args(["--concurrency", "1"]).concurrency == 1
+
+
 def test_a_shipped_set_and_a_file_of_your_own_each_carry_their_identity(scan: ModuleType, tmp_path: Path) -> None:
     shipped = scan.urls_identity(scan.parse_args([]))
     assert shipped["urls"] == "general" and shipped["urls_title"] == "the general mix"
