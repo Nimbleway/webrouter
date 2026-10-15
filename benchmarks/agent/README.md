@@ -94,8 +94,8 @@ extract today; research and browse join once the routing guide can say when
 each is worth its bill.
 
 `<vendor>` is a key of `MCP_SERVERS` in `run.py`: `perplexity`, `exa`,
-`parallel`, `tavily` and `nimble`, each checked live with its key as a bearer
-token. Each is given its search tool and its page-read tool where it has one
+`parallel`, `tavily`, `nimble` and `keenable`, each checked live with its key as a bearer
+token. `keenable` is not in `mcp:all`, which stays the five vendors earlier runs compared. Each is given its search tool and its page-read tool where it has one
 (Perplexity's server has none); research, crawl and agent tools are left out,
 as web-router's research and browse are. `mcp:perplexity` against
 `web-router:perplexity` is one backend behind two sets of tools. An `mcp:` arm is the vendor as shipped: its server decides what

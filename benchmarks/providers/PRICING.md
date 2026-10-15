@@ -152,6 +152,19 @@ does not cover `deep`; the docs page above is the source for this table.
 "Grounding with Bing" ($14 per 1k) is a different product; its price does not
 apply here.
 
+### Keenable
+
+Metered in credits, one per search or fetch; the first 100,000 requests a
+month are free to every organization ([credits](https://docs.keenable.ai/credits.md)).
+Past that, credit packages are priced per organization in its console, and no
+list price is published. With no key, the `/public` endpoints are free and
+capped at 1,000 requests an hour per IP ([rate limits](https://docs.keenable.ai/rate-limits.md)).
+
+| Mode | Setup | What it returns | Price per 1k | Source |
+|---|---|---|---|---|
+| `mode=pro` (Keenable's default; web-router sends none) | `keenable` | Titles, URLs, a snippet per result | 100k a month free, then not published; $10 per 1k paid per request over x402 | [search](https://docs.keenable.ai/api-reference/search.md), [pay per request](https://docs.keenable.ai/pay-per-request.md) |
+| `mode=realtime` | `keenable:realtime` | The same, faster; billed as its own SKU | same | same |
+
 ### Keyless MCP search
 
 | Backend | Setup | Price | Source |
@@ -174,6 +187,7 @@ You.com's keyless MCP is priced in its own section above.
 | Jina Reader | markdown, keyless | free at 20 requests a minute keyless; with a key, billed by output tokens: 10M free (non-commercial), then $50 per 1B tokens (Standard) or $500 per 11B (Premium), varies by location | [Jina Reader](https://jina.ai/reader) |
 | Parallel | not used for extract in web-router | $1 per 1k results | [pricing](https://parallel.ai/pricing) |
 | WebIQ (Browse) | markdown or text, `maxLength` 500,000 | not published: limited access for select enterprise customers, by request | [Web IQ](https://webiq.microsoft.ai), [SDK docs](https://webiq.microsoft.ai/documentation/sdk) |
+| Keenable | markdown, `max_chars` 500,000 | one credit per fetch, 100k requests a month free, then not published; keyless free at 1,000 an hour per IP | [credits](https://docs.keenable.ai/credits.md), [fetch](https://docs.keenable.ai/api-reference/fetch.md) |
 | Linkup | markdown (default) or html (`includeRawContent`), `mode=standard`, no rendering | $0.001 per call ($1 per 1k); `renderJs` or `mode=pro` $0.005, both $0.01; a `schema` adds $0.001 | [fetch overview](https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md) |
 
 ## Research

@@ -73,6 +73,7 @@ class Provider(str, Enum):
     PERPLEXITY = "perplexity"
     LINKUP = "linkup"
     WEBIQ = "webiq"
+    KEENABLE = "keenable"
     YOU_MCP = "you-mcp"
     EXA_MCP = "exa-mcp"
     PARALLEL_MCP = "parallel-mcp"

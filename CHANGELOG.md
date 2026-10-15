@@ -11,6 +11,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 - `WebRouter.benchmark_extract()` and its async twin: the same URLs fanned out across several extract backends at once, through the public `extract` path, one `ExtractBenchmarkRun` per provider in an `ExtractBenchmarkReport` -- measured facts only, as `benchmark()` reports for search. A backend that fails, cannot return the format, has no credentials or runs out of the comparison's `timeout` (`BENCHMARK_EXTRACT_TIMEOUT`, 120 seconds) is its own row's error, and a call that fetched some URLs and not others is an answered row whose response says which. `BenchmarkRun` and `BenchmarkReport` now share a base with the extract pair; their fields and behaviour are unchanged, except that a row for a backend that could not be built reports a latency of exactly zero on the async router too.
 - `benchmarks/providers/extract.py`: every configured extract backend on the same URLs, tabulated per backend (pages returned with text, empty, failed, timed out, refused, latency, median length) and per category, with a suggested `auto` extract order. Two URL sets ship under `benchmarks/providers/urls/` -- `general` (455 URLs) and `social-pdf` (918 URLs), URL lists from anonymized third-party evaluations of extraction APIs -- and `--urls` takes a CSV of your own. `examples/compare_extract_providers.py` shows the method on one URL.
 
+## [0.4.0] - 2026-10-14
+
+### Added
+
+- Keenable as a search and an extract backend (`keenable`), over its Search and Fetch APIs, reading `KEENABLE_API_KEY`. Search maps `max_results`; extract returns `markdown` and asks for up to 500,000 characters, where Keenable's own default cuts a page at 50,000. With `allow_keyless=True` both run on Keenable's keyless `/public` endpoints, rate-limited per IP. `auto` tries Keenable after the keyless tier when you hold its key, and its keyless tier last of all, so no call that was already being served moves.
+
 ## [0.3.0] - 2026-10-12
 
 ### Added
