@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Fixed
+
+- Jina: an empty `JINA_API_KEY` is treated as no key. It was sent as a bare `Bearer ` header, which httpx rejects, so every Jina call failed and `auto` quietly moved on to the next extract backend.
+
 ## [0.4.0] - 2026-10-14
 
 ### Added
