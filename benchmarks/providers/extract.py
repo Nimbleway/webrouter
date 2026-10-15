@@ -15,9 +15,9 @@ whether its text is complete is a judgment this scan does not make.
     uv run --all-extras python benchmarks/providers/extract.py --urls mine.csv --url-column url
     uv run --all-extras python benchmarks/providers/extract.py --providers nimble,jina --format html
 
-``--urls`` names a set from ``urls/`` beside this script -- ``general`` (456
+``--urls`` names a set from ``urls/`` beside this script -- ``general`` (455
 URLs: reference sites, dev docs, news, government, PDFs, social, a long
-tail) or ``social-pdf`` (920 URLs stratified into social, PDF and long-tail
+tail) or ``social-pdf`` (918 URLs stratified into social, PDF and long-tail
 pages) -- or a CSV of your own with a URL column and, optionally, a category
 column to break the numbers down by. Both shipped sets are URL lists sampled
 from anonymized third-party evaluations of extraction APIs, kept in
@@ -69,20 +69,20 @@ DEFAULT_OUT = Path(__file__).resolve().parent / "results"
 URLS_DIR = Path(__file__).resolve().parent / "urls"
 URL_SETS: dict[str, dict[str, Any]] = {
     "general": {
-        "file": "general-456.csv",
+        "file": "general-455.csv",
         "title": "the general mix",
         "description": (
-            "456 public URLs: reference sites (Wikipedia in several languages, arXiv, GitHub, MDN, PyPI, SEC), "
+            "455 public URLs: reference sites (Wikipedia in several languages, arXiv, GitHub, MDN, PyPI, SEC), "
             "news in six languages, government and legal pages, social networks, 60 PDFs and a long tail of small "
             "sites, at most 8 per domain. Sampled from anonymized third-party evaluations of extraction APIs."
         ),
     },
     "social-pdf": {
-        "file": "social-pdf-920.csv",
+        "file": "social-pdf-918.csv",
         "title": "the social / PDF / long-tail set",
         "description": (
-            "920 public URLs across 578 domains, stratified into social and UGC pages (131), PDF documents (409) "
-            "and a long tail of general pages (380), with a strong non-English share. Sampled from anonymized "
+            "918 public URLs across 578 domains, stratified into social and UGC pages (131), PDF documents (409) "
+            "and a long tail of general pages (378), with a strong non-English share. Sampled from anonymized "
             "third-party evaluations of extraction APIs."
         ),
     },
