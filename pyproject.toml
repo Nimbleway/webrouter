@@ -150,6 +150,8 @@ dev = [
 agent-bench = [
     "anthropic>=1.8,<2",
     "python-dotenv>=1.0",
+    # The decision-gate A/B (benchmarks/agent/sdk_ab.py) runs on the OpenAI Agents SDK.
+    "openai-agents>=0.4",
 ]
 
 [build-system]

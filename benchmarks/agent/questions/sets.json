@@ -1,0 +1,227 @@
+{
+  "_doc": "Named question sets as row ids. written-* rows live in written.jsonl; sealqa-hard:<sha1(question)[:10]> rows are built from the pinned SealQA download (Dataset.sealqa), never copied. \"*\" is every stable Seal-Hard row.",
+  "sets": {
+    "tools": [
+      "written-c01",
+      "written-c02",
+      "written-c03",
+      "written-c04",
+      "written-c05",
+      "sealqa-hard:8174671c64",
+      "sealqa-hard:c900af286f",
+      "sealqa-hard:cf01bfea31",
+      "sealqa-hard:72c82da53f",
+      "sealqa-hard:3783dba0a7",
+      "written-c06",
+      "written-c07",
+      "written-c08",
+      "written-c09",
+      "written-c10",
+      "sealqa-hard:d54308bbd8",
+      "sealqa-hard:5dd79a90d7",
+      "sealqa-hard:08f90431e6",
+      "sealqa-hard:855f4c6feb",
+      "sealqa-hard:235d53444a",
+      "sealqa-hard:768117e8a9",
+      "sealqa-hard:9ada1c1f5c",
+      "sealqa-hard:cfdc5f4497",
+      "sealqa-hard:4aaa15cc63",
+      "sealqa-hard:3c044c11e3",
+      "sealqa-hard:cf01bfea31",
+      "sealqa-hard:cfd8e9dae2"
+    ],
+    "scoped": [
+      "written-u01",
+      "written-u02",
+      "written-u03",
+      "written-u04",
+      "written-u05",
+      "written-u06",
+      "written-u07",
+      "written-u08",
+      "written-u09",
+      "written-u10",
+      "written-u11",
+      "written-u12",
+      "written-u13",
+      "written-u14",
+      "written-u15",
+      "written-u16",
+      "written-u17",
+      "written-u18",
+      "written-u19",
+      "written-u20",
+      "sealqa-hard:9ada1c1f5c",
+      "sealqa-hard:cfd8e9dae2",
+      "sealqa-hard:d54308bbd8",
+      "sealqa-hard:235d53444a",
+      "sealqa-hard:cfdc5f4497",
+      "written-c04",
+      "written-c03",
+      "written-c02",
+      "written-c05",
+      "written-c01",
+      "written-c10",
+      "written-c07",
+      "written-c09",
+      "written-c06",
+      "written-c08",
+      "sealqa-hard:3783dba0a7",
+      "sealqa-hard:cf01bfea31",
+      "sealqa-hard:72c82da53f",
+      "sealqa-hard:8174671c64",
+      "sealqa-hard:c900af286f"
+    ],
+    "seal-hard-stable": "*",
+    "openai-miss": [
+      "sealqa-hard:38efcb3dcd",
+      "sealqa-hard:fa47536537",
+      "sealqa-hard:0653ba1cff",
+      "sealqa-hard:58532ff1c4",
+      "sealqa-hard:d54308bbd8",
+      "sealqa-hard:331a8c41d9",
+      "sealqa-hard:73d60bc544",
+      "sealqa-hard:9ef04ff271",
+      "sealqa-hard:1544d76d3e",
+      "sealqa-hard:12dda6d6a7",
+      "sealqa-hard:5df1de0836",
+      "sealqa-hard:2f4f23043f",
+      "sealqa-hard:855f4c6feb",
+      "sealqa-hard:466cf1fa3b",
+      "sealqa-hard:768117e8a9",
+      "sealqa-hard:0b77067013",
+      "sealqa-hard:373eda4b76",
+      "sealqa-hard:cfdc5f4497",
+      "sealqa-hard:6a998c0392",
+      "sealqa-hard:88a96b268a",
+      "sealqa-hard:131cbc6e46",
+      "sealqa-hard:8993de91a2",
+      "sealqa-hard:7469b944e8",
+      "sealqa-hard:7611c67050",
+      "sealqa-hard:8cfa867f55",
+      "sealqa-hard:97d7db96f9",
+      "sealqa-hard:585d02a454",
+      "sealqa-hard:163e0a6a44",
+      "sealqa-hard:817140957d",
+      "sealqa-hard:61bc39abac",
+      "sealqa-hard:625eaafc97",
+      "sealqa-hard:d45ac73479",
+      "sealqa-hard:cba664b67b",
+      "sealqa-hard:3d49053efe",
+      "sealqa-hard:ee55e13242",
+      "sealqa-hard:6ee4d29f56",
+      "sealqa-hard:d21b1750f6",
+      "sealqa-hard:51c8dbf67a",
+      "sealqa-hard:c8ff673b2e",
+      "sealqa-hard:d837ca019a",
+      "sealqa-hard:736d715230",
+      "sealqa-hard:c0d8ee379b",
+      "sealqa-hard:24d3a20df3",
+      "sealqa-hard:f70e60fe4d",
+      "sealqa-hard:164612c76b",
+      "sealqa-hard:4b32e2762c",
+      "sealqa-hard:e002a05766",
+      "sealqa-hard:3c044c11e3",
+      "sealqa-hard:6c20cd0427",
+      "sealqa-hard:bb26637b68",
+      "sealqa-hard:f8ff526404",
+      "sealqa-hard:cf01bfea31",
+      "sealqa-hard:f47426f9fc",
+      "sealqa-hard:cf7be5febf",
+      "sealqa-hard:75b8ead9f2",
+      "sealqa-hard:728c24ee1d",
+      "sealqa-hard:ba25be7bc1",
+      "sealqa-hard:2ce4947fa7",
+      "sealqa-hard:8d91d4783d",
+      "sealqa-hard:b37d76c227",
+      "sealqa-hard:434a57aed8",
+      "sealqa-hard:387fec214e",
+      "sealqa-hard:cb36099c07",
+      "sealqa-hard:34e61069be",
+      "sealqa-hard:83eba78da1",
+      "sealqa-hard:3825fa8179",
+      "sealqa-hard:bce5fcca24",
+      "sealqa-hard:0f49174872",
+      "sealqa-hard:4c848b1d79",
+      "sealqa-hard:5440c9d69d",
+      "sealqa-hard:67d1d6e1fe",
+      "sealqa-hard:7d9a4afeec",
+      "sealqa-hard:70b37bbb87",
+      "sealqa-hard:193793151e",
+      "sealqa-hard:6731d95bd7",
+      "sealqa-hard:b1f5a78e4b",
+      "sealqa-hard:7848148bad",
+      "sealqa-hard:2ca2837c98",
+      "sealqa-hard:7c5a920f91"
+    ]
+  },
+  "provenance": {
+    "openai-miss": "The Seal-Hard stable rows GPT-6 Luna with OpenAI's built-in web_search got wrong in one screening run, 2026-10-15."
+  },
+  "overrides": {
+    "sealqa-hard:8174671c64": {
+      "topic": "noisy-multihop",
+      "tool_tag": "search"
+    },
+    "sealqa-hard:c900af286f": {
+      "topic": "noisy-multihop",
+      "tool_tag": "search"
+    },
+    "sealqa-hard:cf01bfea31": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:72c82da53f": {
+      "topic": "noisy-multihop",
+      "tool_tag": "search"
+    },
+    "sealqa-hard:3783dba0a7": {
+      "topic": "noisy-multihop",
+      "tool_tag": "search"
+    },
+    "sealqa-hard:d54308bbd8": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:5dd79a90d7": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:08f90431e6": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:855f4c6feb": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:235d53444a": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:768117e8a9": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:9ada1c1f5c": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:cfdc5f4497": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:4aaa15cc63": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:3c044c11e3": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    },
+    "sealqa-hard:cfd8e9dae2": {
+      "topic": "aggregation",
+      "tool_tag": "research"
+    }
+  }
+}

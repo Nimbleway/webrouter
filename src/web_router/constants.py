@@ -4136,3 +4136,147 @@ Looked up along the raised error's MRO, so a new subclass falls back to its
 parent's message. Built from the error's ``detail`` rather than its ``str()``,
 which names the backend's own session id.
 """
+
+
+# --- Decision gate (spike) --------------------------------------------------
+# WebRouter.classify(): one decision-model call labels the query, code turns the
+# labels into a method and an auto chain order. Opt-in through decider=.
+
+ENV_TYPESAFE_API_KEY = "TYPESAFE_API_KEY"
+"""TypeSafe's key, for the Jev decider. A library-level key, like the judge's: no provider table names it."""
+
+TYPESAFE_BASE_URL = "https://api.typesafe.ai"
+TYPESAFE_DECISION_PATH = "/v1/systemone"
+JEV_MODEL = "jev-1.14.0"
+"""Pinned rather than ``jev-latest``: an alias moves, and thresholds are tuned against one version."""
+
+ROUTE_DECIDER_JEV = "jev"
+"""The one decider by name: ``WebRouter(decider="jev")``."""
+
+ROUTE_DECIDER_TIMEOUT = 0.8
+"""Seconds. Past this the route falls back to the default one rather than hold up the call it routes."""
+ROUTE_DECIDER_CONNECT_TIMEOUT = 0.3
+
+ROUTE_MIN_CONFIDENCE = 0.5
+"""Below this a label counts as unsure and its default is used. A starting point, tuned on labelled rows."""
+
+ROUTE_METHODS = ("search", "extract", "research", "browse")
+"""What a route can run. One whose auto chain is empty here downgrades to search."""
+
+ROUTE_QUESTIONS: dict[str, dict[str, Any]] = {
+    "tool": {
+        "type": "choice",
+        "instructions": "Which kind of web call best answers this request?",
+        "criteria": {
+            "search": "A lookup: a fact, a name, a number or a short answer found in search results.",
+            "extract": "Read one specific known page, document or URL the request points to.",
+            "research": "A multi-source investigation or report that needs many searches and synthesis.",
+            "browse": "Act on a website: click, fill a form, log in, or move through several pages.",
+        },
+    },
+    "recent": {
+        "type": "choice",
+        "instructions": (
+            "How old can the sources be and still answer this correctly, counting back from asked_on? "
+            "If two windows fit, pick the longer one."
+        ),
+        "criteria": {
+            "hour": "Live status that changes by the minute: a service outage now, a live score, an event in progress.",
+            "day": (
+                "Today's state: a current price, stock availability, a rate or quote, "
+                "today's or tomorrow's weather, availability for specific dates."
+            ),
+            "week": "Something from the past few days: this week's announcements, posts, meetings or decisions.",
+            "month": (
+                "Recent but not daily: the latest release, funding round or quarterly result, "
+                "current pricing plans, recent discussion."
+            ),
+            "any": (
+                "Answerable from sources of any age: history, definitions, how-to, "
+                "long-standing roles, past events with a known outcome."
+            ),
+        },
+    },
+    "coverage": {
+        "type": "choice",
+        "instructions": "How much evidence does a correct answer need? If unsure, pick the lower value.",
+        "criteria": {
+            "lookup": "One good source settles it. e.g. 'Who is the CEO of Databricks?'",
+            "synthesis": (
+                "A few sources, combined or checked against each other. e.g. 'Which has the longest battery life: "
+                "MacBook Air M4, Dell XPS 13 or ThinkPad X1 Carbon?'"
+            ),
+            "research": (
+                "Many sources, open-ended, or a report. e.g. 'Map the vendors selling web data APIs to AI agents, "
+                "with pricing'."
+            ),
+        },
+    },
+    "well_scoped": {
+        "type": "choice",
+        "instructions": "Is this request clear enough to act on without guessing what it means?",
+        "criteria": {
+            "clear": "It names what it is about, so a search could answer it as written.",
+            "missing_context": (
+                "It refers to something it never names ('it', 'he', 'the one above'), lacks a place or time it "
+                "needs ('opening hours tomorrow'), or a key word has several meanings ('Mercury price today')."
+            ),
+        },
+    },
+}
+"""tool and recent as tuned on 2026-10-13; coverage and well_scoped from the dataset-spec v0 rubric (ties: lookup,
+clear).
+
+A 2026-10-15 rewrite of tool to the rubric's "cheapest tool" rule dropped tool accuracy from 96 to 81 of 100
+(research questions labelled search), so it was reverted.
+"""
+
+ROUTE_DEFAULT_LABELS = {"tool": "search", "recent": "any", "coverage": "lookup", "well_scoped": "clear"}
+"""What an unsure, missing or failed label falls back to."""
+
+MSG_ROUTE_NO_DECIDER = "classify() needs a decider: WebRouter(decider='jev')."
+MSG_ROUTE_UNKNOWN_DECIDER = "Unknown decider {name!r}; known: 'jev'."
+MSG_ROUTE_BAD_ANSWER = "The decider's answer could not be read: {detail}"
+
+ROUTE_FALLBACK_NO_URL = "no_url"
+"""Extract was the pick, but the request names no page: search to find it first."""
+ROUTE_FALLBACK_NO_BACKEND = "no_backend_for_method"
+"""The pick has no backend configured here, so the route downgrades to search."""
+ROUTE_FALLBACK_LOW_CONFIDENCE = "low_confidence"
+"""At least one label was below ROUTE_MIN_CONFIDENCE and took its default."""
+ROUTE_FALLBACK_DECIDER_ERROR = "decider_error"
+"""The decider failed or timed out; every label took its default."""
+
+ROUTE_ADVICE_NO_URL = "search to find the page, then extract it"
+ROUTE_ADVICE_NO_BACKEND = "{method} ({wanted} would fit, but no {wanted} backend is configured here)"
+ROUTE_ADVICE_LOW_CONFIDENCE = "{method}, low confidence"
+ROUTE_ADVICE_LEANED = "{method}, low confidence (the classifier leaned {wanted})"
+ROUTE_ADVICE_DECIDER_ERROR = "{method} (the classifier was unavailable, so this is the default)"
+ROUTE_TOOL_LINE = "Recommended tool: {advice}{confidence}"
+ROUTE_LABEL_LINE = "{heading}: {text}{confidence}"
+ROUTE_CONFIDENCE = " (confidence {value:.2f})"
+ROUTE_UNSURE = " (unsure at {value:.2f}, so the default)"
+"""The lines classify's text is built from: what an agent reads, each label as a plain instruction."""
+
+ROUTE_FRESHNESS_TEXT = {
+    "hour": "use sources from the past hour; ignore older results",
+    "day": "use sources from today or yesterday; ignore older results",
+    "week": "use sources from the past week; ignore older results",
+    "month": "use sources from the past month; ignore older results",
+    "any": "any date is fine",
+}
+ROUTE_SCOPE_TEXT = {
+    "clear": "clear",
+    "missing_context": "missing context: ask the user for it before searching",
+}
+ROUTE_COVERAGE_TEXT = {
+    "lookup": "one good source settles it",
+    "synthesis": "a few sources, combined or checked against each other",
+    "research": "many sources, open-ended, or a report",
+}
+ROUTE_LABEL_LINES = (
+    ("recent", "Freshness", ROUTE_FRESHNESS_TEXT),
+    ("well_scoped", "Request", ROUTE_SCOPE_TEXT),
+    ("coverage", "Evidence needed", ROUTE_COVERAGE_TEXT),
+)
+"""The labels after the tool line, in order: name, heading, and the instruction for each value."""
