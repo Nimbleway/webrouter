@@ -163,7 +163,7 @@ jobs:
         run: |
           found=0
 
-          if git grep -nIE '(tvly-|ydc-|sk-)[A-Za-z0-9_-]{16,}' -- . ':!.github/workflows/*'; then
+          if git grep -nIE '(^|[^A-Za-z0-9])(tvly-|ydc-|sk-)[A-Za-z0-9_-]{16,}' -- . ':!.github/workflows/*'; then
             echo "::error::A provider API key appears in a tracked file."
             found=1
           fi
