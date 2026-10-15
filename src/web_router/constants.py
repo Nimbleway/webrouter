@@ -167,6 +167,7 @@ RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_PARALLEL: (ENV_PARALLEL_API_KEY,),
     PROVIDER_PERPLEXITY: (ENV_PERPLEXITY_API_KEY,),
     PROVIDER_LINKUP: (ENV_LINKUP_API_KEY,),
+    PROVIDER_YOU: (ENV_YOU_API_KEY,),
     PROVIDER_AUTO: (),
 }
 """Which variables each research provider needs, all of them.
@@ -2214,6 +2215,42 @@ LINKUP_RESEARCH_STATES: dict[str, ResearchState] = {
     "failed": "failed",
 }
 
+# --- You.com research -------------------------------------------------------
+# Verified live on 2026-10-16. Research lives on api.you.com, not on the
+# ydc-index.io host search uses: there the same path answers 403. POST with
+# `background` returns a task `queued` under `task_id`; GET reports it under
+# `id` through `running` to `completed`, with the answer in `result.output`.
+# No cancel is offered: POST .../cancel is a 404 and DELETE a 405. The
+# `failed` and `cancelled` statuses, and a failed task's `error`, are from
+# documentation: no live run reached either.
+
+YOU_RESEARCH_BASE_URL = "https://api.you.com"
+YOU_RESEARCH_PATH = "/v1/research"
+YOU_RESEARCH_STATUS_PATH = "/v1/research/{task_id}"
+
+YOU_RESEARCH_BACKGROUND = True
+"""Always sent: without it the request blocks for the whole run, which a research job must not."""
+
+YOU_RESEARCH_EFFORTS: dict[ResearchEffort, str] = {
+    # `research_effort` runs lite, standard, deep and exhaustive against the
+    # four normalized levels one for one, and defaults to standard, so an unset
+    # effort sends nothing. `frontier` sits above exhaustive at well over twice
+    # its price and runs for up to hours, so `max` stops at exhaustive; a caller
+    # who wants frontier asks for it through `provider_options`.
+    "low": "lite",
+    "medium": "standard",
+    "high": "deep",
+    "max": "exhaustive",
+}
+
+YOU_RESEARCH_STATES: dict[str, ResearchState] = {
+    "queued": "queued",
+    "running": "running",
+    "completed": "completed",
+    "failed": "failed",
+    "cancelled": "cancelled",
+}
+
 # --- auto research ----------------------------------------------------------
 
 AUTO_RESEARCH_PREFERRED: tuple[str, ...] = (
@@ -2221,6 +2258,7 @@ AUTO_RESEARCH_PREFERRED: tuple[str, ...] = (
     PROVIDER_PARALLEL,
     PROVIDER_PERPLEXITY,
     PROVIDER_LINKUP,
+    PROVIDER_YOU,
 )
 """Tried in this order, and only those the caller holds a credential for.
 
@@ -2229,8 +2267,8 @@ backend bills for the run, so there is no anonymous tier to fall back on. With
 no key at all, ``auto`` raises and names the variables that would fix it.
 
 The first three are the chain's original members in their original order;
-``linkup`` was appended after them, so an environment that reached one of the
-first three still reaches it first. Reordering the defaults is a change backed
+``linkup`` and then ``you`` were appended after them, so an environment that
+reached an earlier member still reaches it first. Reordering the defaults is a change backed
 by a provider scan; a caller who wants another order passes their own ``chain``.
 
 There is no ``exa``: Exa retired its Research API (every path answers 410

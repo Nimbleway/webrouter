@@ -18,7 +18,7 @@ Reader, and `auto` again.
 
 **`research`** — an agentic run: the backend reasons over several turns and
 answers in minutes rather than milliseconds. Nimble, Parallel, Perplexity,
-Linkup, and `auto`. It has no keyless tier, because every backend bills for the run.
+Linkup, You.com, and `auto`. It has no keyless tier, because every backend bills for the run.
 
 **`open_browser`** — a browser session: not an answer but a handle, carrying a
 CDP URL the caller drives with Playwright, browser-use or Stagehand, and
@@ -101,7 +101,7 @@ src/web_router/
     ├── nimble.py       search + extract + research, via the nimble-python SDK
     ├── tavily.py       search + extract, via the tavily-python SDK
     ├── exa.py          search + extract, via httpx (its research API is retired)
-    ├── you.py          search, via httpx — You.com publishes no Python SDK
+    ├── you.py          search + research, via httpx — You.com publishes no Python SDK
     ├── _mcp.py         the keyless MCP search transport: one JSON-RPC tools/call
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
@@ -357,7 +357,7 @@ falls through as it always has, and a member whose extra is not installed
 cannot be read, so it is kept and fails that way. The MCP server reads search,
 extract and browser `auto` as the chain it would try, so a union never
 advertises an option no reachable member maps. Its research chain passes over
-Perplexity for `output_schema`, which Nimble, Parallel and Linkup map. Its
+Perplexity and You.com for `output_schema`, which Nimble, Parallel and Linkup map. Its
 browser chain does the
 same over every option: `auto(stealth="low")` passes over `local`, and
 `idle_timeout` over every vendor without an idle limit. It checks values as
