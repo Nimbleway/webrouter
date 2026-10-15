@@ -979,7 +979,8 @@ class WebRouter(_BaseRouter[BrowserHandle]):
     ) -> SearchResponse | ExtractResponse | ResearchResponse | BrowseResponse:
         """Run a :class:`Route` with this router's methods, on the route's chain. ``overrides`` go to the method."""
         # The route's own arguments are defaults: an override of the same name wins, rather than colliding.
-        kwargs: dict[str, Any] = {"provider": self._routed_provider(route)}
+        # A provider override is used as given: the route's own auto provider is built only when it will run.
+        kwargs: dict[str, Any] = {} if "provider" in overrides else {"provider": self._routed_provider(route)}
         if route.method == "extract":
             return self.extract(**{**kwargs, "urls": route.urls, **overrides})
         if route.method == "research":

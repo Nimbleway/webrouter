@@ -325,7 +325,7 @@ async def main() -> None:
     load_dotenv()
     widen_thread_pool()
     parser = argparse.ArgumentParser()
-    parser.add_argument("--arms", default="C,D")
+    parser.add_argument("--arms", default="A,B,C,D")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--seed", type=int, default=0)

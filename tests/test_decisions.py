@@ -212,3 +212,10 @@ def test_an_override_can_replace_the_routes_query(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(router, "search", lambda **kwargs: seen.update(kwargs))
     router.execute(router.classify("who won"), query="who won in 2024")
     assert seen["query"] == "who won in 2024"
+
+
+def test_a_provider_override_builds_no_routed_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    router = WebRouter(decider=FakeDecider(answers(tool="search")))
+    monkeypatch.setattr(router, "search", lambda **kwargs: None)
+    monkeypatch.setattr(router, "_routed_provider", lambda route: pytest.fail("built a provider it will not use"))
+    router.execute(router.classify("who won"), provider="tavily")
