@@ -69,7 +69,7 @@ class JinaExtractProvider(HttpExtractProvider):
 
     def _resolve_key(self, api_key: str | None) -> str | None:
         """Unlike every other provider here, a missing key is not an error."""
-        return api_key or os.environ.get(ENV_JINA_API_KEY)
+        return api_key or os.environ.get(ENV_JINA_API_KEY) or None  # an empty variable is no key
 
     def _call_kwargs(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         """Send the format as a header, which is the only place Reader reads it."""
