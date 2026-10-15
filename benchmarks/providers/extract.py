@@ -20,9 +20,8 @@ URLs: reference sites, dev docs, news, government, PDFs, social, a long
 tail) or ``social-pdf`` (918 URLs stratified into social, PDF and long-tail
 pages) -- or a CSV of your own with a URL column and, optionally, a category
 column to break the numbers down by. Both shipped sets are URL lists sampled
-from anonymized third-party evaluations of extraction APIs, kept in
-``Nimbleway/extract-benchmarks``; this scan carries the URLs and categories
-only, no ground truth.
+from public pages; this scan carries the URLs and categories only, no ground
+truth.
 
 Credentials come from the repo's ``.env`` (or the environment): each
 backend's own. ``auto`` is left out, as ``benchmark_extract()`` leaves it
@@ -74,7 +73,7 @@ URL_SETS: dict[str, dict[str, Any]] = {
         "description": (
             "455 public URLs: reference sites (Wikipedia in several languages, arXiv, GitHub, MDN, PyPI, SEC), "
             "news in six languages, government and legal pages, social networks, 60 PDFs and a long tail of small "
-            "sites, at most 8 per domain. Sampled from anonymized third-party evaluations of extraction APIs."
+            "sites, at most 8 per domain. Sampled from public pages."
         ),
     },
     "social-pdf": {
@@ -82,8 +81,7 @@ URL_SETS: dict[str, dict[str, Any]] = {
         "title": "the social / PDF / long-tail set",
         "description": (
             "918 public URLs across 578 domains, stratified into social and UGC pages (131), PDF documents (409) "
-            "and a long tail of general pages (378), with a strong non-English share. Sampled from anonymized "
-            "third-party evaluations of extraction APIs."
+            "and a long tail of general pages (378), with a strong non-English share. Sampled from public pages."
         ),
     },
 }
