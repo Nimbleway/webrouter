@@ -398,6 +398,11 @@ async def run(args: argparse.Namespace, setup: dict[str, Any]) -> list[dict[str,
     return rows
 
 
+def explicit_providers(text: str) -> list[str]:
+    """``--providers`` as a list: trimmed, empty names dropped, repeats kept once in their first position."""
+    return list(dict.fromkeys(p.strip() for p in text.split(",") if p.strip()))
+
+
 def _positive_int(text: str) -> int:
     value = int(text)
     if value < 1:
@@ -476,7 +481,7 @@ def main(argv: list[str] | None = None) -> None:
         _write(args.out, *combine(args.combine))
         return
     providers = (
-        [p.strip() for p in args.providers.split(",") if p.strip()]
+        explicit_providers(args.providers)
         if args.providers
         else [p for p in configured_extract_providers() if p not in BENCHMARK_EXCLUDED]
     )

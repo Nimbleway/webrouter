@@ -237,6 +237,12 @@ def test_concurrency_below_one_is_a_usage_error_not_a_hang(scan: ModuleType, cap
     assert scan.parse_args(["--concurrency", "1"]).concurrency == 1
 
 
+def test_a_repeated_provider_name_is_scanned_and_reported_once(scan: ModuleType) -> None:
+    assert scan.explicit_providers("a,b,a") == ["a", "b"]
+    assert scan.explicit_providers("a, b ,,") == ["a", "b"]
+    assert scan.explicit_providers("a,b") == ["a", "b"]
+
+
 def test_a_shipped_set_and_a_file_of_your_own_each_carry_their_identity(scan: ModuleType, tmp_path: Path) -> None:
     shipped = scan.urls_identity(scan.parse_args([]))
     assert shipped["urls"] == "general" and shipped["urls_title"] == "the general mix"
