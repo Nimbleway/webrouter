@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Fixed
+
+- Bright Data reports a URL its unlocker could not fetch, such as an unresolvable host, in `ExtractResponse.failures` with Bright Data's reason, instead of returning it as an empty document with status 502. A page the target site served, an error page included, is still a document.
+
 ## [0.4.0] - 2026-10-14
 
 ### Added

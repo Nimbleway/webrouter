@@ -73,6 +73,36 @@ def test_brightdata_envelope_is_normalized(provider: BrightDataExtractProvider) 
     assert response.raw == [payload]
 
 
+def test_a_fetch_the_unlocker_could_not_make_is_a_failure(provider: BrightDataExtractProvider) -> None:
+    """The envelope recorded live for an unresolvable host: 200 outside, 502 and an empty body inside."""
+    payload = {
+        "status_code": 502,
+        "headers": {
+            "x-brd-error": "Could not resolve host not-a-real-domain-zzz9.invalid.",
+            "x-brd-error-code": "proxy_error",
+        },
+        "body": "",
+    }
+
+    response = provider._to_response(ExtractRequest(urls=[URL]), [URL], payload)
+
+    assert response.documents == []
+    assert response.failures[0].url == URL
+    assert "Could not resolve host" in response.failures[0].error
+    assert response.raw == [payload]
+
+
+def test_an_error_page_the_target_served_is_still_a_document(provider: BrightDataExtractProvider) -> None:
+    """A 404 the site answered was fetched; its status says what it is."""
+    payload = {"status_code": 404, "headers": {"content-type": "text/html"}, "body": "Not Found"}
+
+    response = provider._to_response(ExtractRequest(urls=[URL]), [URL], payload)
+
+    assert response.failures == []
+    assert response.documents[0].status_code == 404
+    assert response.documents[0].content == "Not Found"
+
+
 @pytest.mark.integration
 @pytest.mark.skipif(
     not (os.getenv("BRIGHTDATA_API_TOKEN") and os.getenv("BRIGHTDATA_ZONE")),

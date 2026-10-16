@@ -2929,6 +2929,15 @@ BRIGHTDATA_EXTRACT_FORMATS: dict[ExtractFormat, dict[str, Any]] = {
 
 BRIGHTDATA_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "html"
 
+BRIGHTDATA_ERROR_HEADER = "x-brd-error"
+"""The envelope header in which the unlocker says why it could not fetch the page.
+
+Seen live on 2026-10-16: an unresolvable host answers 200 with an envelope whose
+``status_code`` is 502, ``body`` is empty, and this header holds the reason. A
+target that answers an error page of its own carries no such header -- that page
+was fetched, and stays a document with the target's status.
+"""
+
 # --- Firecrawl --------------------------------------------------------------
 # Extract only. Verified live keyless on 2026-10-01: the request body and the
 # `success` / `data.<format>` response for markdown and html. The keyed path
