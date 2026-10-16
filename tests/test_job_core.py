@@ -387,3 +387,48 @@ def test_a_poll_that_fails_with_time_left_is_still_the_backends_failure(clock: _
 
     with pytest.raises(ProviderError, match="connection reset"):
         Failing(reports=["BUSY"]).do(_request(), timeout=10.0)
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
+async def test_a_poll_that_fails_for_another_reason_after_the_deadline_is_still_that_failure(
+    clock: _Clock, asynchronous: bool
+) -> None:
+    """Only a request that timed out becomes the method's timeout; a refused key late in the wait stays a failure."""
+
+    class Refusing(StallingChores):
+        def _fetch(self, request: ChoreRequest, job_id: str) -> ChoreProgress:
+            self.polls += 1
+            if self.polls >= self.stall_from_poll:
+                self.clock.now += CALL_TIMEOUT
+                raise PermissionError("401 invalid api key")
+            return self._report(request)
+
+    provider = Refusing(clock, stall_from_poll=2, reports=["BUSY"])
+
+    with pytest.raises(ProviderError, match="invalid api key"):
+        if asynchronous:
+            await provider.ado(_request(), timeout=10.0)
+        else:
+            provider.do(_request(), timeout=10.0)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        TimeoutError("read timed out"),
+        type("ReadTimeout", (type("TimeoutException", (Exception,), {}),), {})("httpx read timeout"),
+        type("APITimeoutError", (Exception,), {})("Request timed out."),
+    ],
+    ids=["builtin", "httpx-shaped", "sdk-shaped"],
+)
+def test_a_timeout_is_recognized_whichever_library_raised_it(clock: _Clock, error: Exception) -> None:
+    class Stalling(StallingChores):
+        def _fetch(self, request: ChoreRequest, job_id: str) -> ChoreProgress:
+            self.polls += 1
+            if self.polls >= self.stall_from_poll:
+                self.clock.now += CALL_TIMEOUT
+                raise error
+            return self._report(request)
+
+    with pytest.raises(ChoreTimeoutError):
+        Stalling(clock, stall_from_poll=2, reports=["BUSY"]).do(_request(), timeout=10.0)

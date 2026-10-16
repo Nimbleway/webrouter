@@ -46,6 +46,7 @@ from web_router.constants import (
     JOB_POLL_INTERVAL,
     JOB_POLL_MAX_INTERVAL,
     JOB_TIMEOUT,
+    JOB_TIMEOUT_ERROR_SUFFIXES,
     MAX_CONCURRENT_EXTRACTS,
     MSG_BROWSE_FAILED,
     MSG_BROWSE_NOT_RESUMABLE,
@@ -739,8 +740,9 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         already spent: it has been paid for, and throwing the answer away to
         report a timeout would be the one outcome nobody wants.
 
-        A poll that fails once the deadline has passed raises the method's
-        timeout, with the failure as its cause. Every call inside the run is
+        A poll whose request timed out once the deadline has passed raises the
+        method's timeout, with the failure as its cause; any other failure, an
+        auth error or an unrecognized status, is raised as it is. Every call inside the run is
         clamped to what the caller has left, so a status request that stalls
         fails exactly as the deadline arrives; raised as the backend's read
         timeout, it would lose the job id the caller needs to come back to a
@@ -750,7 +752,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
             try:
                 progress = self.status()
             except ProviderError as exc:
-                if _passed(deadline):
+                if _passed(deadline) and _timed_out(exc):
                     raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
                 raise
             if progress.is_terminal:
@@ -764,7 +766,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
             try:
                 progress = await self.astatus()
             except ProviderError as exc:
-                if _passed(deadline):
+                if _passed(deadline) and _timed_out(exc):
                     raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
                 raise
             if progress.is_terminal:
@@ -1663,3 +1665,15 @@ def _deadline_for(timeout: float | None) -> float | None:
 def _passed(deadline: float | None) -> bool:
     """Whether a call with this deadline has run out of time. Never, with no deadline."""
     return deadline is not None and time.monotonic() >= deadline
+
+
+def _timed_out(error: ProviderError) -> bool:
+    """Whether a provider's failure was a request that timed out, anywhere down its chain of causes."""
+    seen: set[int] = set()
+    current: BaseException | None = error.original or error.__cause__
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if any(cls.__name__.endswith(JOB_TIMEOUT_ERROR_SUFFIXES) for cls in type(current).__mro__):
+            return True
+        current = current.__cause__ or current.__context__
+    return False

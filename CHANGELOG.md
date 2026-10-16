@@ -8,7 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
-- A research run or browse task whose status request stalled until the caller's `timeout` ran out raised `ProviderError`, which carries no job id, instead of `ResearchTimeoutError` / `BrowseTimeoutError`, so a run that was still going, and billing, could not be come back to. A poll that fails once the deadline has passed now raises the method's timeout error with the job id, the failure as its cause; a poll that fails with time left still raises `ProviderError`.
+- A research run or browse task whose status request stalled until the caller's `timeout` ran out raised `ProviderError`, which carries no job id, instead of `ResearchTimeoutError` / `BrowseTimeoutError`, so a run that was still going, and billing, could not be come back to. A poll whose request timed out once the deadline has passed now raises the method's timeout error with the job id, the failure as its cause. Any other poll failure -- one with time left, or an auth error or unrecognized status after the deadline -- still raises `ProviderError`.
 
 ## [0.4.0] - 2026-10-14
 
