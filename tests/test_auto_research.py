@@ -17,6 +17,7 @@ from web_router.constants import (
     PROVIDER_NIMBLE,
     PROVIDER_PARALLEL,
     PROVIDER_PERPLEXITY,
+    PROVIDER_YOU,
     RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.exceptions import (
@@ -272,15 +273,15 @@ def test_only_the_backends_you_hold_a_key_for_are_tried(monkeypatch: pytest.Monk
     assert AutoResearchProvider.default_chain() == (("nimble", {}),)
 
 
-def test_linkup_joins_the_chain_after_the_original_members(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Appended, so an environment that reached Nimble, Parallel or Perplexity still reaches it first."""
+def test_later_backends_join_the_chain_after_the_original_members(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Linkup, then You.com, appended, so an environment that reached an earlier member still reaches it first."""
     for env_vars in RESEARCH_ENV_BY_PROVIDER.values():
         for env_var in env_vars:
             monkeypatch.setenv(env_var, "test-key")
 
     chain = [name for name, _ in AutoResearchProvider.default_chain()]
 
-    assert chain == [PROVIDER_NIMBLE, PROVIDER_PARALLEL, PROVIDER_PERPLEXITY, PROVIDER_LINKUP]
+    assert chain == [PROVIDER_NIMBLE, PROVIDER_PARALLEL, PROVIDER_PERPLEXITY, PROVIDER_LINKUP, PROVIDER_YOU]
     assert list(AUTO_RESEARCH_PREFERRED) == chain
 
 
@@ -380,7 +381,7 @@ def test_two_backends_issuing_the_same_run_id_stay_separate_runs(chain: _Recorde
 def test_a_member_that_cannot_honour_the_request_is_passed_over(chain: _Recorder) -> None:
     """`auto` offers a wider surface than its weakest member, so it must route around it.
 
-    Perplexity maps no `output_schema`; Nimble and Parallel do. Narrowing the
+    Perplexity and You.com map no `output_schema`; Nimble and Parallel do. Narrowing the
     shared surface to the weakest member would cost the other two a real
     capability, so the member that cannot serve *this* request is skipped
     instead -- before anything bills for a run that was going to be rejected.

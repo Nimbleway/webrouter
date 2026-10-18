@@ -28,7 +28,7 @@ USABLE = [name for name in configured_research_providers() if name != "auto"]
 if not USABLE:
     raise SystemExit(
         "No research backend is configured. Set one of NIMBLE_API_KEY, PARALLEL_API_KEY, "
-        "PERPLEXITY_API_KEY or LINKUP_API_KEY and run this again."
+        "PERPLEXITY_API_KEY, LINKUP_API_KEY or YOU_API_KEY and run this again."
     )
 
 
