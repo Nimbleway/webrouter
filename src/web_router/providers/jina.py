@@ -14,7 +14,6 @@ normalize from.
 
 from __future__ import annotations
 
-import os
 from typing import Any, ClassVar
 
 from web_router.constants import (
@@ -29,6 +28,7 @@ from web_router.constants import (
     JINA_RETURN_FORMAT_HEADER,
     PROVIDER_JINA,
 )
+from web_router.exceptions import ConfigurationError
 from web_router.providers._http import HttpExtractProvider
 from web_router.providers._utils import build_payload
 from web_router.types import (
@@ -53,9 +53,9 @@ class JinaExtractProvider(HttpExtractProvider):
     base_url: ClassVar[str] = JINA_BASE_URL
     extract_path: ClassVar[str] = JINA_EXTRACT_PATH
     # Optional rather than required: Reader is open, and a key only lifts the
-    # rate limit. HttpExtractProvider raises for a missing key when this is set,
-    # so it stays None and the key arrives through `api_key` or not at all.
-    env_api_key: ClassVar[str | None] = None
+    # rate limit. HttpExtractProvider raises for a missing key; `_resolve_key`
+    # below turns that into no key.
+    env_api_key: ClassVar[str | None] = ENV_JINA_API_KEY
     api_key_prefix: ClassVar[str] = JINA_API_KEY_PREFIX
 
     def __init__(self, **kwargs: Any) -> None:
@@ -69,7 +69,10 @@ class JinaExtractProvider(HttpExtractProvider):
 
     def _resolve_key(self, api_key: str | None) -> str | None:
         """Unlike every other provider here, a missing key is not an error."""
-        return api_key or os.environ.get(ENV_JINA_API_KEY) or None  # an empty variable is no key
+        try:
+            return super()._resolve_key(api_key)
+        except ConfigurationError:
+            return None
 
     def _call_kwargs(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         """Send the format as a header, which is the only place Reader reads it."""

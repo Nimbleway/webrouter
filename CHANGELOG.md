@@ -8,7 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
-- Jina: an empty `JINA_API_KEY` is treated as no key. It was sent as a bare `Bearer ` header, which httpx rejects, so every Jina call failed and `auto` quietly moved on to the next extract backend.
+- Jina: an empty `JINA_API_KEY` is treated as no key. It was sent as a bare `Bearer ` header, which httpx rejects, so every Jina call failed and `auto` quietly moved on to the next extract backend. Every provider now strips its API keys and settings, so a whitespace-only value counts as missing, a padded one such as a key with a trailing newline is sent without the padding, and `configured_*_providers()` no longer lists a provider whose only key is blank.
 
 ## [0.4.0] - 2026-10-14
 

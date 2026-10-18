@@ -29,9 +29,10 @@ def test_a_missing_key_is_not_an_error(provider: JinaExtractProvider) -> None:
     assert "Authorization" not in provider._client_kwargs["headers"]
 
 
-def test_an_empty_key_variable_is_no_key(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("value", ["", " ", "\n"])
+def test_an_empty_key_variable_is_no_key(monkeypatch: pytest.MonkeyPatch, value: str) -> None:
     """An empty JINA_API_KEY used to send a bare "Bearer ", which httpx rejects, so every call failed."""
-    monkeypatch.setenv("JINA_API_KEY", "")
+    monkeypatch.setenv("JINA_API_KEY", value)
     built = JinaExtractProvider()
     try:
         assert built.api_key is None
@@ -42,6 +43,15 @@ def test_an_empty_key_variable_is_no_key(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_a_key_is_sent_as_a_bearer_token_when_there_is_one(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("JINA_API_KEY", "test-key")
+    built = JinaExtractProvider()
+    try:
+        assert built._client_kwargs["headers"]["Authorization"] == "Bearer test-key"
+    finally:
+        built.close()
+
+
+def test_a_padded_key_is_sent_stripped(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JINA_API_KEY", "  test-key\n")
     built = JinaExtractProvider()
     try:
         assert built._client_kwargs["headers"]["Authorization"] == "Bearer test-key"
