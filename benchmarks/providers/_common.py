@@ -25,6 +25,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = REPO_ROOT / ".env"
 DEFAULT_OUT = Path(__file__).resolve().parent / "results"
 Z_95 = 1.96
+MIN_GROUP = 10
+"""A group with fewer inputs than this is shown but never names any backend's best: too few to tell them apart."""
 APART = {None: "best", False: "not shown apart", True: "behind"}
 """The recommended order's last column: whether this run tells a backend from the best one."""
 MSG_OUT_NOT_EMPTY = "{path} already exists; pass a new --out folder rather than mixing two runs in one."

@@ -17,6 +17,8 @@ from web_router import BenchmarkTimeoutError, ExtractBenchmarkRun
 from web_router.types import ExtractedDocument, ExtractResponse
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "extract.py"
+SIBLINGS = ("_common", "cli", "extract_report", "urls")
+"""What the scan imports from its folder, under plain names, so they are forgotten once it is."""
 
 
 @pytest.fixture(scope="module")
@@ -31,6 +33,8 @@ def scan() -> Iterator[ModuleType]:
         yield module
     finally:
         sys.path.remove(str(SCRIPT.parent))
+        for name in SIBLINGS:
+            sys.modules.pop(name, None)
 
 
 def _row(

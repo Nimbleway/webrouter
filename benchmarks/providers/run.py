@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
-from _common import APART, DEFAULT_OUT, _p, _pct, _s, _wilson, combine_scans, scan_main
+from _common import APART, DEFAULT_OUT, MIN_GROUP, _p, _pct, _s, _wilson, combine_scans, scan_main
 
 from web_router import AsyncWebRouter
 from web_router.constants import BENCHMARK_EXCLUDED, EVALS_CSV_SET, PROVIDER_AUTO
@@ -67,8 +67,6 @@ MSG_UNKNOWN_MODE = "{setup!r}: no mode {mode!r} for {provider} in modes.json (it
 DEFAULT_LIMIT = 300
 DEFAULT_MAX_RESULTS = 5
 DEFAULT_CONCURRENCY = 8
-MIN_GROUP = 10
-"""A topic or answer type with fewer questions than this is shown but never named any backend's best."""
 MSG_OTHER_QUESTIONS = "{folder} asked different questions from the first scan; only scans of the same questions combine"
 MSG_CANNOT_COMBINE = (
     "{folder} was a different run ({key}: {theirs!r}, not {ours!r}); only scans of the same questions and judge combine"

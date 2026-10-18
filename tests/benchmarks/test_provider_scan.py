@@ -29,6 +29,7 @@ def scan() -> Iterator[ModuleType]:
         yield module
     finally:
         sys.path.remove(str(SCRIPT.parent))
+        sys.modules.pop("_common", None)
 
 
 def _row(provider: str, question: str, grade: str | None, topic: str = "Science", **extra: Any) -> dict[str, Any]:

@@ -15,13 +15,10 @@ whether its text is complete is a judgment this scan does not make.
     uv run --all-extras python benchmarks/providers/extract.py --urls mine.csv --url-column url
     uv run --all-extras python benchmarks/providers/extract.py --providers nimble,jina --format html
 
-``--urls`` names a set from ``urls/`` beside this script -- ``general`` (455
-URLs: reference sites, dev docs, news, government, PDFs, social, a long
-tail) or ``social-pdf`` (911 URLs stratified into social, PDF and long-tail
-pages) -- or a CSV of your own with a URL column and, optionally, a category
-column to break the numbers down by. Both shipped sets are URL lists sampled
-from public pages; this scan carries the URLs and categories only, no ground
-truth.
+``--urls`` names a shipped set from ``urls/`` beside this script -- ``general``
+(455 URLs) or ``social-pdf`` (911), described in ``urls.py`` -- or a CSV of
+your own. Both shipped sets are URL lists sampled from public pages; this
+scan carries the URLs and categories only, no ground truth.
 
 Credentials come from the repo's ``.env`` (or the environment): each
 backend's own. ``auto`` is left out, as ``benchmark_extract()`` leaves it
@@ -42,10 +39,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import csv
-import hashlib
-import json
-import random
 import statistics
 import sys
 from collections import defaultdict
@@ -53,52 +46,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
-from _common import APART, DEFAULT_OUT, _p, _pct, _s, _wilson, combine_scans, scan_main
+import cli
+from _common import MIN_GROUP, _pct, _wilson, combine_scans, scan_main
+from extract_report import markdown
+from extract_report import recommended_order as recommended_order
+from urls import COMBINE_KEYS, MSG_CANNOT_COMBINE, MSG_OTHER_URLS, load_urls, urls_identity
+from urls import URL_SETS as URL_SETS
 
 from web_router import AsyncWebRouter, BenchmarkTimeoutError, ExtractBenchmarkRun
-from web_router.constants import BENCHMARK_EXCLUDED, BENCHMARK_EXTRACT_TIMEOUT, PROVIDER_AUTO
+from web_router.constants import BENCHMARK_EXCLUDED
 from web_router.exceptions import UnsupportedFormatError
 from web_router.registry import configured_extract_providers
 from web_router.types import ExtractFormat
 
-URLS_DIR = Path(__file__).resolve().parent / "urls"
-URL_SETS: dict[str, dict[str, Any]] = {
-    "general": {
-        "file": "general-455.csv",
-        "title": "the general mix",
-        "description": (
-            "455 public URLs: reference sites (Wikipedia in several languages, arXiv, GitHub, MDN, PyPI, SEC), "
-            "news in six languages, government and legal pages, social networks, 60 PDFs and a long tail of small "
-            "sites, at most 8 per domain. Sampled from public pages."
-        ),
-    },
-    "social-pdf": {
-        "file": "social-pdf-911.csv",
-        "title": "the social / PDF / long-tail set",
-        "description": (
-            "911 public URLs across 576 domains, stratified into social and UGC pages (131), PDF documents (407) "
-            "and a long tail of general pages (373), with a strong non-English share. Sampled from public pages."
-        ),
-    },
-}
-"""``--urls``: the shipped sets, each a CSV of ``url,category`` under ``urls/``."""
-DEFAULT_SET = "general"
-DEFAULT_LIMIT = 100
-DEFAULT_CONCURRENCY = 4
-"""URLs in flight at once; each fans out to every backend, and each backend's own extract limits itself."""
-MIN_GROUP = 10
-"""A category with fewer URLs than this is shown but never names any backend's best."""
-FORMATS = ("markdown", "html", "text")
-MSG_NO_URL_COLUMN = "{path} has no {column!r} column; its columns are {columns}. Name the right one with --url-column."
-MSG_NO_URLS = "{path} holds no URLs after --limit {limit} and deduplication."
-MSG_UNKNOWN_SET = "--urls {name!r}: not a shipped set ({known}) and not a file."
-MSG_OTHER_URLS = "{folder} fetched different URLs from the first scan; only scans of the same URLs combine"
-MSG_CANNOT_COMBINE = (
-    "{folder} was a different run ({key}: {theirs!r}, not {ours!r}); only scans of the same URLs, format and "
-    "timeout combine"
-)
-COMBINE_KEYS = ("urls", "urls_sha256", "url_column", "category_column", "limit", "seed", "format", "timeout")
-"""What two scans must share for their rows to sit in one table: the same URLs, sent the same way."""
+# The redundant aliases above re-export what the scan's tests read from this module, its surface.
 TIMED_OUT = BenchmarkTimeoutError.__name__
 REFUSED = UnsupportedFormatError.__name__
 
@@ -172,170 +133,6 @@ def summarize(rows: list[dict[str, Any]], setup: dict[str, Any]) -> dict[str, An
     }
 
 
-def recommended_order(summary: dict[str, Any]) -> list[tuple[str, bool | None]]:
-    """The backends by pages brought back with text, out of every URL asked, each with whether this run shows it behind.
-
-    Ranked on pages with text over every URL, a failure or a timeout counting
-    as a miss, as the search scan ranks on correct answers over every
-    question. ``auto`` is left out if a scan named it: as a chain member it
-    would be a second ``auto`` on the default order. So is a backend that
-    returned nothing at all. A backend is behind only when its 95% interval
-    stops short of the best one's; ``None`` marks the best itself.
-    """
-    overall = summary["overall"]
-    plain = [p for p in summary["setup"]["providers"] if p != PROVIDER_AUTO and overall[p]["returned"]]
-    ranked = sorted(plain, key=lambda p: -(overall[p]["with_text_rate"] or 0.0))
-    if not ranked:
-        return []
-    floor = (overall[ranked[0]]["with_text_ci95"] or (0.0, 0.0))[0]
-    return [(ranked[0], None)] + [(p, (overall[p]["with_text_ci95"] or (0.0, 0.0))[1] < floor) for p in ranked[1:]]
-
-
-def _recommendation(summary: dict[str, Any]) -> list[str]:
-    order = recommended_order(summary)
-    lines = ["## Recommended auto order\n"]
-    if not order:
-        lines.append("No backend in this scan brought a page back, so there is no order to suggest.\n")
-        return lines
-    overall = summary["overall"]
-    lines.append(
-        f"A suggestion from one scan of {summary['setup']['urls_title']}, not the library's default: the backends by "
-        "pages brought back with text out of every URL asked, a failure or a timeout counting as a miss. It says "
-        "which backend returns a page, not whose page is best. A backend is *behind* only when its 95% interval "
-        "stops short of the best one's; the others are not shown apart by this run, and another could order them "
-        "differently.\n"
-    )
-    lines.append(
-        "| Order | Backend | Pages with text of all URLs | 95% CI | Empty | Failed | Timed out | Against the best |"
-    )
-    lines.append("|---|---|---|---|---|---|---|---|")
-    for rank, (p, behind) in enumerate(order, 1):
-        s = overall[p]
-        ci = s["with_text_ci95"] or (0.0, 0.0)
-        lines.append(
-            f"| {rank} | `{p}` | {_p(s['with_text_rate'])} ({s['with_text']}/{s['urls']}) | {_p(ci[0])}-{_p(ci[1])} "
-            f"| {s['empty']} | {s['failed']} | {s['timed_out']} | {APART[behind]} |"
-        )
-    chain = json.dumps({"auto": {"chain": {"extract": [p for p, _ in order]}}})
-    lines.append(
-        "\nIt is opt-in: to try it, give your own router the order. The chain replaces the default one, keyless "
-        "tail included, and each member still needs its credentials; keyed by `extract`, it leaves the other "
-        "methods' chains alone.\n"
-    )
-    lines.append(f"```python\nWebRouter(provider_config={chain})\n```\n")
-    lines.append("The library's default order changes only by a pull request backed by a scan like this one.\n")
-    return lines
-
-
-def _k(value: float | None) -> str:
-    return "n/a" if value is None else f"{value / 1000:.1f}k"
-
-
-def markdown(summary: dict[str, Any]) -> str:
-    setup, overall = summary["setup"], summary["overall"]
-    providers = sorted(setup["providers"], key=lambda p: -(overall[p]["with_text_rate"] or 0))
-    out: list[str] = []
-    w = out.append
-    w(f"# Extract backends on {setup['urls_title']}: pages returned by backend and by category\n")
-    sent = f"`format={setup['format']}`" if setup.get("format") else "no format named (markdown where a backend can)"
-    w(
-        f"{setup.get('asked', setup['limit'])} URLs of {setup['urls_title']} (seed {setup['seed']}), one extract per "
-        f"backend with {sent} and {setup['timeout']:g}s for each URL's comparison. A page is *returned* when the call "
-        "answered with a document, and *with text* when that document had any content; nothing judges the text. "
-        f"Started {setup['started']}.\n"
-    )
-    w("## Overall\n")
-    w(
-        "| Backend | Pages with text | 95% CI | Empty | Failed | Timed out | Refused | p50 latency | p95 latency "
-        "| Median chars |"
-    )
-    w("|---|---|---|---|---|---|---|---|---|---|")
-    for p in providers:
-        s = overall[p]
-        ci = s["with_text_ci95"]
-        w(
-            f"| `{p}` | {_p(s['with_text_rate'])} ({s['with_text']}/{s['urls']}) "
-            f"| {_p(ci[0]) + '-' + _p(ci[1]) if ci else 'n/a'} | {s['empty']} | {s['failed']} | {s['timed_out']} "
-            f"| {s['refused']} | {_s(s['latency_p50'])} | {_s(s['latency_p95'])} | {_k(s['chars_median'])} |"
-        )
-    w("")
-    w(
-        "*Empty* is a document that came back with no text; *failed* a call the backend refused or could not "
-        "complete; *timed out* a call still unanswered when the comparison's timeout ran out; *refused* a format "
-        "the backend cannot return. Latency is over the calls that answered.\n"
-    )
-    out.extend(_recommendation(summary))
-    w("## By category\n")
-    w(
-        f"Pages with text per backend over the URLs in the category; **bold** marks the most pages brought back with "
-        f"text in the row. Rows under {MIN_GROUP} URLs name no best -- too few to tell backends apart.\n"
-    )
-    w("| Category | URLs | " + " | ".join(f"`{p}`" for p in providers) + " |")
-    w("|---|---|" + "---|" * len(providers))
-    for group, entry in summary["by_category"].items():
-        cells = []
-        for p in providers:
-            cell = _p(entry["with_text_rate"].get(p))
-            cells.append(f"**{cell}**" if p in entry["leaders"] else cell)
-        w(f"| {group} | {entry['urls']} | " + " | ".join(cells) + " |")
-    w("")
-    w("## How to read this\n")
-    w(
-        "- **A returned page is not a correct page.** A backend that answers with a bot wall, a cookie banner or a "
-        "login page has returned a document with text; this scan counts it. Judging the text against the page is "
-        "work for a scorer with ground truth, which this scan does not carry.\n"
-        "- **Intervals are wide.** Two backends whose 95% intervals overlap are not shown apart by this run; a "
-        "category row with a few dozen URLs is wider still.\n"
-        "- **Latency is around one call for one URL**, through the public `extract` path, with every backend "
-        "called at once. A backend's own rate limit shows up here as latency or as failures.\n"
-        "- **No cost column.** No backend states a price in its response; read these against `PRICING.md`."
-    )
-    return "\n".join(out) + "\n"
-
-
-def resolve_urls(name: str) -> tuple[Path, dict[str, Any]]:
-    """``--urls`` as the CSV to read and what the report calls it: a shipped set by name, or a file of your own."""
-    if name in URL_SETS:
-        chosen = URL_SETS[name]
-        return URLS_DIR / chosen["file"], {"urls": name, "urls_title": chosen["title"]}
-    path = Path(name)
-    if not path.is_file():
-        raise SystemExit(MSG_UNKNOWN_SET.format(name=name, known=", ".join(URL_SETS)))
-    return path, {"urls": "csv", "urls_title": f"`{path.name}`"}
-
-
-def load_urls(args: argparse.Namespace) -> list[tuple[str, str | None]]:
-    """The URLs to fetch with their categories, deduplicated, sampled by ``--seed`` down to ``--limit``."""
-    path, _ = resolve_urls(args.urls)
-    with path.open(encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
-        columns = reader.fieldnames or []
-        if args.url_column not in columns:
-            raise SystemExit(MSG_NO_URL_COLUMN.format(path=path, column=args.url_column, columns=columns))
-        seen: set[str] = set()
-        rows: list[tuple[str, str | None]] = []
-        for record in reader:
-            url = (record.get(args.url_column) or "").strip()
-            if not url or url in seen:
-                continue
-            seen.add(url)
-            category = (record.get(args.category_column) or "").strip() or None
-            rows.append((url, category))
-    if args.limit is not None and args.limit < len(rows):
-        # The same seed picks the same URLs, so two scans can be combined; a limit past the set is the whole set.
-        rows = sorted(random.Random(args.seed).sample(rows, args.limit), key=rows.index)
-    if not rows:
-        raise SystemExit(MSG_NO_URLS.format(path=path, limit=args.limit))
-    return rows
-
-
-def urls_identity(args: argparse.Namespace) -> dict[str, Any]:
-    """The set's digest and columns, for ``run.json``: two scans combine only on the very same file."""
-    path, named = resolve_urls(args.urls)
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    return {**named, "urls_sha256": digest, "url_column": args.url_column, "category_column": args.category_column}
-
-
 async def run(args: argparse.Namespace, setup: dict[str, Any]) -> list[dict[str, Any]]:
     urls = load_urls(args)
     setup["asked"] = len(urls)
@@ -368,42 +165,9 @@ def explicit_providers(text: str) -> list[str]:
     return list(dict.fromkeys(p.strip() for p in text.split(",") if p.strip()))
 
 
-def _positive_int(text: str) -> int:
-    value = int(text)
-    if value < 1:
-        raise argparse.ArgumentTypeError(f"must be at least 1, got {value}")
-    return value
-
-
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
-    parser.add_argument(
-        "--urls", default=DEFAULT_SET, help=f"a shipped set ({', '.join(URL_SETS)}) or a CSV (default: {DEFAULT_SET})"
-    )
-    parser.add_argument("--url-column", default="url", help="the URL column of --urls")
-    parser.add_argument("--category-column", default="category", help="the column to break results down by")
-    parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help="URLs to sample (0 for the whole set)")
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--providers", default=None, help="comma-separated (default: every configured backend)")
-    parser.add_argument("--format", choices=FORMATS, default=None, help="sent to every backend (default: unset)")
-    parser.add_argument(
-        "--timeout", type=float, default=BENCHMARK_EXTRACT_TIMEOUT, help="seconds for each URL's comparison"
-    )
-    parser.add_argument(
-        "--concurrency", type=_positive_int, default=DEFAULT_CONCURRENCY, help="URLs at once (at least 1)"
-    )
-    parser.add_argument("--out", type=Path, default=None, help=f"results folder (default: under {DEFAULT_OUT})")
-    parser.add_argument(
-        "--combine",
-        type=Path,
-        nargs="+",
-        default=None,
-        help="merge finished scans of the same URLs into --out, fetching nothing",
-    )
-    args = parser.parse_args(argv)
-    if args.limit is not None and args.limit <= 0:
-        args.limit = None
-    return args
+    """The scan's arguments, described on the command line by this module's first paragraph."""
+    return cli.parse_args(argv, description=(__doc__ or "").split("\n\n")[0])
 
 
 def combine(folders: list[Path]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
