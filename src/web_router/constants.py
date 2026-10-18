@@ -645,15 +645,6 @@ A row still unanswered when it runs out is reported as timed out; the others
 are unaffected, and the report is returned either way.
 """
 
-BENCHMARK_EXTRACT_TIMEOUT = 120.0
-"""Seconds an extract comparison may take by default, twice a search's.
-
-A page is fetched live, rendered by some backends and queued by others, and a
-list of URLs is fanned out behind one call, so the slowest row of an extract
-comparison runs well past a search's. The same rule applies when it runs out:
-that row is timed out, the others are unaffected.
-"""
-
 BENCHMARK_EXCLUDED: frozenset[str] = frozenset({PROVIDER_AUTO})
 """Configured backends left out of the default comparison.
 
@@ -2649,10 +2640,6 @@ MSG_BENCHMARK_TIMEOUT = (
 )
 
 MSG_BENCHMARK_NO_PROVIDERS = "benchmark() needs at least one provider to compare; `providers` named none."
-
-MSG_BENCHMARK_EXTRACT_NO_PROVIDERS = (
-    "benchmark_extract() needs at least one provider to compare; `providers` named none."
-)
 
 MSG_EVALS_EMPTY_DATASET = "evaluate() needs at least one question; dataset {name!r} has none."
 
