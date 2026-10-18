@@ -137,7 +137,7 @@ uv run --all-extras python benchmarks/providers/extract.py --providers nimble,ji
 | Set | URLs | What's in it |
 | --- | --- | --- |
 | `general` (the default) | 455 | Reference sites (Wikipedia in several languages, arXiv, GitHub, MDN, PyPI, SEC), news in six languages, government and legal pages, social networks, 60 PDFs and a long tail of small sites; at most 8 URLs per domain. A generic zero-shot shape: a random-looking list, default settings. |
-| `social-pdf` | 918 | 578 domains stratified into social and UGC pages (131), PDF documents (409) and a long tail of general pages (378), with a strong non-English share. Stresses unblocking and file handling rather than clean article extraction. |
+| `social-pdf` | 911 | 576 domains stratified into social and UGC pages (131), PDF documents (407) and a long tail of general pages (373), with a strong non-English share. Stresses unblocking and file handling rather than clean article extraction. |
 
 Both are URL lists sampled from public pages, `url,category` only, under
 [`urls/`](urls/). `--limit` samples

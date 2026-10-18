@@ -217,7 +217,7 @@ def test_the_shipped_sets_load_deduplicated_and_sampled_by_seed(scan: ModuleType
     assert [url for url, _ in some] == [url for url, _ in whole if url in {u for u, _ in some}], "set order kept"
 
     social = scan.load_urls(scan.parse_args(["--urls", "social-pdf", "--limit", "0"]))
-    assert len(social) == 918 and {category for _, category in social} == {"pdf", "social", "other"}
+    assert len(social) == 911 and {category for _, category in social} == {"pdf", "social", "other"}
 
 
 def test_no_shipped_url_carries_a_credential_shaped_query_key(scan: ModuleType) -> None:

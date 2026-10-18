@@ -17,7 +17,7 @@ whether its text is complete is a judgment this scan does not make.
 
 ``--urls`` names a set from ``urls/`` beside this script -- ``general`` (455
 URLs: reference sites, dev docs, news, government, PDFs, social, a long
-tail) or ``social-pdf`` (918 URLs stratified into social, PDF and long-tail
+tail) or ``social-pdf`` (911 URLs stratified into social, PDF and long-tail
 pages) -- or a CSV of your own with a URL column and, optionally, a category
 column to break the numbers down by. Both shipped sets are URL lists sampled
 from public pages; this scan carries the URLs and categories only, no ground
@@ -77,11 +77,11 @@ URL_SETS: dict[str, dict[str, Any]] = {
         ),
     },
     "social-pdf": {
-        "file": "social-pdf-918.csv",
+        "file": "social-pdf-911.csv",
         "title": "the social / PDF / long-tail set",
         "description": (
-            "918 public URLs across 578 domains, stratified into social and UGC pages (131), PDF documents (409) "
-            "and a long tail of general pages (378), with a strong non-English share. Sampled from public pages."
+            "911 public URLs across 576 domains, stratified into social and UGC pages (131), PDF documents (407) "
+            "and a long tail of general pages (373), with a strong non-English share. Sampled from public pages."
         ),
     },
 }
