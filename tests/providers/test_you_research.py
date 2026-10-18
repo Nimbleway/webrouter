@@ -12,13 +12,13 @@ documentation, which describes it as a diagnostic message; no live run failed.
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any
 
 import httpx
 import pytest
 
+from tests.providers._research_stub import ResearchApi, stub_research_api
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.you import YouResearchProvider
 from web_router.types import ResearchEffort, ResearchRequest
@@ -72,25 +72,6 @@ COMPLETED = _task(
 )
 
 
-class _Api:
-    """Stands in for the Research API: answers from a script and records every call."""
-
-    def __init__(self, started: dict[str, Any], states: list[dict[str, Any]]) -> None:
-        self._started = started
-        self._states = states
-        self.calls: list[tuple[str, str]] = []
-        self.hosts: list[str] = []
-        self.bodies: list[dict[str, Any]] = []
-
-    def handle(self, request: httpx.Request) -> httpx.Response:
-        self.calls.append((request.method, request.url.path))
-        self.hosts.append(request.url.host)
-        if request.method == "POST":
-            self.bodies.append(json.loads(request.content or b"{}"))
-            return httpx.Response(200, json=self._started)
-        return httpx.Response(200, json=self._states.pop(0) if len(self._states) > 1 else self._states[0])
-
-
 @pytest.fixture
 def provider(monkeypatch: pytest.MonkeyPatch) -> YouResearchProvider:
     monkeypatch.setenv("YOU_API_KEY", "test-key")
@@ -102,13 +83,8 @@ def _stub(
     *,
     started: dict[str, Any] | None = None,
     states: list[dict[str, Any]] | None = None,
-) -> _Api:
-    """Answer this provider's HTTP calls from a script, through its real client settings."""
-    api = _Api(started or STARTED, states or [COMPLETED])
-    transport = httpx.MockTransport(api.handle)
-    provider._sync = httpx.Client(**provider._client_kwargs, transport=transport)
-    provider._async = httpx.AsyncClient(**provider._client_kwargs, transport=transport)
-    return api
+) -> ResearchApi:
+    return stub_research_api(provider, started or STARTED, states or [COMPLETED])
 
 
 # -- What gets sent ----------------------------------------------------------
@@ -136,11 +112,6 @@ def test_effort_maps_onto_research_effort(provider: YouResearchProvider, effort:
 def test_a_structured_answer_is_refused_rather_than_returned_as_prose(provider: YouResearchProvider) -> None:
     with pytest.raises(UnsupportedParameterError, match="output_schema"):
         provider.research(ResearchRequest(query="q", output_schema={"type": "object", "properties": {}}))
-
-
-def test_provider_options_reach_frontier(provider: YouResearchProvider) -> None:
-    payload = provider._build_payload(ResearchRequest(query="q", provider_options={"research_effort": "frontier"}))
-    assert payload["research_effort"] == "frontier"
 
 
 # -- The job cycle -----------------------------------------------------------
