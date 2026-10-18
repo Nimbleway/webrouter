@@ -36,7 +36,7 @@ import time
 import warnings
 from collections.abc import Awaitable, Callable, Iterator, Mapping
 from types import MappingProxyType, TracebackType
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar
 
 from web_router.constants import (
     BROWSE_TIMEOUT,
@@ -742,19 +742,17 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
 
         A poll whose request timed out once the deadline has passed raises the
         method's timeout, with the failure as its cause; any other failure, an
-        auth error or an unrecognized status, is raised as it is. Every call inside the run is
-        clamped to what the caller has left, so a status request that stalls
-        fails exactly as the deadline arrives; raised as the backend's read
-        timeout, it would lose the job id the caller needs to come back to a
-        run that is still going, and billing.
+        auth error or an unrecognized status, is raised as it is. Every call
+        inside the run is clamped to what the caller has left, so a status
+        request that stalls fails exactly as the deadline arrives; raised as the
+        backend's read timeout, it would lose the job id the caller needs to
+        come back to a run that is still going, and billing.
         """
         for delay in self._poll_delays():
             try:
                 progress = self.status()
             except ProviderError as exc:
-                if _passed(deadline) and _is_timeout(exc):
-                    raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
-                raise
+                self._expire(exc, deadline, timeout)
             if progress.is_terminal:
                 return self._answer(progress)
             time.sleep(self._wait(delay, deadline, timeout))
@@ -766,13 +764,17 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
             try:
                 progress = await self.astatus()
             except ProviderError as exc:
-                if _passed(deadline) and _is_timeout(exc):
-                    raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
-                raise
+                self._expire(exc, deadline, timeout)
             if progress.is_terminal:
                 return self._answer(progress)
             await asyncio.sleep(self._wait(delay, deadline, timeout))
         raise AssertionError  # pragma: no cover -- _poll_delays never ends
+
+    def _expire(self, exc: ProviderError, deadline: float | None, timeout: float | None) -> NoReturn:
+        """Raise the method's timeout for a poll that timed out past the deadline, else ``exc`` as it is."""
+        if _passed(deadline) and _is_timeout(exc):
+            raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
+        raise exc
 
     def _poll_delays(self) -> Iterator[float]:
         """The gap before each poll, backing off to a ceiling and staying there."""
