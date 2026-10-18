@@ -22,6 +22,7 @@ from typing import Any, ClassVar
 from web_router.constants import (
     BRIGHTDATA_API_KEY_PREFIX,
     BRIGHTDATA_BASE_URL,
+    BRIGHTDATA_ERROR_CODE_HEADER,
     BRIGHTDATA_ERROR_HEADER,
     BRIGHTDATA_EXTRACT_DEFAULT_FORMAT,
     BRIGHTDATA_EXTRACT_FORMATS,
@@ -82,9 +83,10 @@ class BrightDataExtractProvider(HttpExtractProvider):
         # failed fetch arrives as an empty body; only this header tells it from
         # a page that really is empty. Header names are case-insensitive.
         headers = {str(k).lower(): v for k, v in (payload.get("headers") or {}).items()}
-        error = headers.get(BRIGHTDATA_ERROR_HEADER)
-        if error:
-            failure = ExtractFailure(url=urls[0], error=str(error))
+        reason, code = headers.get(BRIGHTDATA_ERROR_HEADER), headers.get(BRIGHTDATA_ERROR_CODE_HEADER)
+        if reason or code:
+            error = f"{reason} ({code})" if reason and code else str(reason or code)
+            failure = ExtractFailure(url=urls[0], error=error)
             return ExtractResponse(provider=self.name, failures=[failure], raw=[payload])
 
         document = ExtractedDocument(

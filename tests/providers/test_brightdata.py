@@ -89,6 +89,7 @@ def test_a_fetch_the_unlocker_could_not_make_is_a_failure(provider: BrightDataEx
     assert response.documents == []
     assert response.failures[0].url == URL
     assert "Could not resolve host" in response.failures[0].error
+    assert "proxy_error" in response.failures[0].error, "the code tells a permanent failure from a retryable one"
     assert response.raw == [payload]
 
 
@@ -99,6 +100,15 @@ def test_the_error_header_is_read_whatever_its_case(provider: BrightDataExtractP
 
     assert response.documents == []
     assert response.failures[0].error == "Could not resolve host"
+
+
+def test_an_error_code_alone_is_still_a_failure(provider: BrightDataExtractProvider) -> None:
+    payload = {"status_code": 502, "headers": {"x-brd-error-code": "proxy_error"}, "body": ""}
+
+    response = provider._to_response(ExtractRequest(urls=[URL]), [URL], payload)
+
+    assert response.documents == []
+    assert response.failures[0].error == "proxy_error"
 
 
 def test_an_error_page_the_target_served_is_still_a_document(provider: BrightDataExtractProvider) -> None:

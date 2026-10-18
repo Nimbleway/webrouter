@@ -13,7 +13,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Fixed
 
 - A research run or browse task whose status request stalled until the caller's `timeout` ran out raised `ProviderError`, which carries no job id, instead of `ResearchTimeoutError` / `BrowseTimeoutError`, so a run that was still going, and billing, could not be come back to. A poll whose request timed out once the deadline has passed now raises the method's timeout error with the job id, the failure as its cause. Any other poll failure -- one with time left, or an auth error or unrecognized status after the deadline -- still raises `ProviderError`.
-- Bright Data reports a URL its unlocker could not fetch, such as an unresolvable host, in `ExtractResponse.failures` with Bright Data's reason, instead of returning it as an empty document with status 502. A page the target site served, an error page included, is still a document.
+- Bright Data treats a URL its unlocker could not fetch, such as an unresolvable host, as a failure with Bright Data's reason and error code, instead of returning it as an empty document with status 502. A single-URL `extract()` raises `ProviderError`, and `auto` moves on to the next extract backend; in a multi-URL call the URL is listed in `ExtractResponse.failures` beside the pages that were fetched. A page the target site served, an error page included, is still a document.
 
 ## [0.4.0] - 2026-10-14
 
