@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import sys
+from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -18,12 +20,17 @@ SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "ext
 
 
 @pytest.fixture(scope="module")
-def scan() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("extract_scan", SCRIPT)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def scan() -> Iterator[ModuleType]:
+    # The scan imports what it shares with its neighbour as a sibling, as it does run from its folder.
+    sys.path.insert(0, str(SCRIPT.parent))
+    try:
+        spec = importlib.util.spec_from_file_location("extract_scan", SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        yield module
+    finally:
+        sys.path.remove(str(SCRIPT.parent))
 
 
 def _row(

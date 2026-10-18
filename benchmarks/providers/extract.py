@@ -45,7 +45,6 @@ import asyncio
 import csv
 import hashlib
 import json
-import math
 import random
 import statistics
 import sys
@@ -54,7 +53,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
-from dotenv import load_dotenv
+from _common import APART, DEFAULT_OUT, _p, _pct, _s, _wilson, combine_scans, scan_main
 
 from web_router import AsyncWebRouter, BenchmarkTimeoutError, ExtractBenchmarkRun
 from web_router.constants import BENCHMARK_EXCLUDED, BENCHMARK_EXTRACT_TIMEOUT, PROVIDER_AUTO
@@ -62,9 +61,6 @@ from web_router.exceptions import UnsupportedFormatError
 from web_router.registry import configured_extract_providers
 from web_router.types import ExtractFormat
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ENV_FILE = REPO_ROOT / ".env"
-DEFAULT_OUT = Path(__file__).resolve().parent / "results"
 URLS_DIR = Path(__file__).resolve().parent / "urls"
 URL_SETS: dict[str, dict[str, Any]] = {
     "general": {
@@ -92,40 +88,19 @@ DEFAULT_CONCURRENCY = 4
 """URLs in flight at once; each fans out to every backend, and each backend's own extract limits itself."""
 MIN_GROUP = 10
 """A category with fewer URLs than this is shown but never names any backend's best."""
-Z_95 = 1.96
 FORMATS = ("markdown", "html", "text")
-MSG_OUT_NOT_EMPTY = "{path} already exists; pass a new --out folder rather than mixing two runs in one."
 MSG_NO_URL_COLUMN = "{path} has no {column!r} column; its columns are {columns}. Name the right one with --url-column."
 MSG_NO_URLS = "{path} holds no URLs after --limit {limit} and deduplication."
 MSG_UNKNOWN_SET = "--urls {name!r}: not a shipped set ({known}) and not a file."
 MSG_OTHER_URLS = "{folder} fetched different URLs from the first scan; only scans of the same URLs combine"
-MSG_REPEATED_BACKEND = "{folder} has {providers} again; each backend may appear in only one of the scans combined"
 MSG_CANNOT_COMBINE = (
     "{folder} was a different run ({key}: {theirs!r}, not {ours!r}); only scans of the same URLs, format and "
     "timeout combine"
 )
 COMBINE_KEYS = ("urls", "urls_sha256", "url_column", "category_column", "limit", "seed", "format", "timeout")
 """What two scans must share for their rows to sit in one table: the same URLs, sent the same way."""
-APART = {None: "best", False: "not shown apart", True: "behind"}
-"""The recommended order's last column: whether this run tells a backend from the best one."""
 TIMED_OUT = BenchmarkTimeoutError.__name__
 REFUSED = UnsupportedFormatError.__name__
-
-
-def _wilson(hits: int, n: int) -> tuple[float, float] | None:
-    if n == 0:
-        return None
-    p = hits / n
-    denominator = 1 + Z_95**2 / n
-    centre = (p + Z_95**2 / (2 * n)) / denominator
-    half = Z_95 * math.sqrt(p * (1 - p) / n + Z_95**2 / (4 * n * n)) / denominator
-    return (centre - half, centre + half)
-
-
-def _pct(values: list[float], fraction: float) -> float | None:
-    # Nearest rank, as the search scan computes its p95, so the two read alike.
-    values = sorted(values)
-    return values[max(0, min(len(values) - 1, math.ceil(fraction * len(values)) - 1))] if values else None
 
 
 def row_of(url: str, category: str | None, run: ExtractBenchmarkRun) -> dict[str, Any]:
@@ -250,14 +225,6 @@ def _recommendation(summary: dict[str, Any]) -> list[str]:
     lines.append(f"```python\nWebRouter(provider_config={chain})\n```\n")
     lines.append("The library's default order changes only by a pull request backed by a scan like this one.\n")
     return lines
-
-
-def _p(value: float | None) -> str:
-    return "n/a" if value is None else f"{value:.0%}"
-
-
-def _s(value: float | None) -> str:
-    return "n/a" if value is None else f"{value:.1f}s"
 
 
 def _k(value: float | None) -> str:
@@ -441,51 +408,23 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def combine(folders: list[Path]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Rows and setup of several scans as one -- say, backends added later on the same URLs."""
-    rows: list[dict[str, Any]] = []
-    setup: dict[str, Any] = {}
-    for folder in folders:
-        theirs = json.loads((folder / "run.json").read_text(encoding="utf-8"))
-        if not setup:
-            setup = {**theirs, "providers": [], "combined_from": []}
-        for key in COMBINE_KEYS:
-            if theirs.get(key) != setup.get(key):
-                raise SystemExit(
-                    MSG_CANNOT_COMBINE.format(folder=folder, key=key, theirs=theirs.get(key), ours=setup.get(key))
-                )
-        repeated = [p for p in theirs["providers"] if p in setup["providers"]]
-        if repeated:
-            raise SystemExit(MSG_REPEATED_BACKEND.format(folder=folder, providers=", ".join(repeated)))
-        theirs_rows = [
-            json.loads(line) for line in (folder / "rows.jsonl").read_text(encoding="utf-8").splitlines() if line
-        ]
-        fetched = {r["url"] for r in theirs_rows}
-        if rows and fetched != {r["url"] for r in rows}:
-            raise SystemExit(MSG_OTHER_URLS.format(folder=folder))
-        setup["providers"] += theirs["providers"]
-        setup["combined_from"].append(str(folder))
-        rows += theirs_rows
-    return rows, setup
+    return combine_scans(
+        folders,
+        keys=COMBINE_KEYS,
+        identity=lambda row: row["url"],
+        cannot_combine=MSG_CANNOT_COMBINE,
+        other_rows=MSG_OTHER_URLS,
+    )
 
 
-def main(argv: list[str] | None = None) -> None:
-    # An entry point, like the search scan's: it may read the repo's .env,
-    # and a variable already exported wins. The library itself never does.
-    if ENV_FILE.is_file():
-        load_dotenv(ENV_FILE)
-    args = parse_args(sys.argv[1:] if argv is None else argv)
-    args.out = args.out or DEFAULT_OUT / ("extract-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
-    if (args.out / "rows.jsonl").exists():
-        raise SystemExit(MSG_OUT_NOT_EMPTY.format(path=args.out / "rows.jsonl"))
-    args.out.mkdir(parents=True, exist_ok=True)
-    if args.combine:
-        _write(args.out, *combine(args.combine))
-        return
+def setup_of(args: argparse.Namespace) -> dict[str, Any]:
+    """What this scan was asked to do, for ``run.json``: the set, the backends, what was sent and when it started."""
     providers = (
         explicit_providers(args.providers)
         if args.providers
         else [p for p in configured_extract_providers() if p not in BENCHMARK_EXCLUDED]
     )
-    setup: dict[str, Any] = {
+    return {
         **urls_identity(args),
         "limit": args.limit,
         "seed": args.seed,
@@ -494,18 +433,19 @@ def main(argv: list[str] | None = None) -> None:
         "timeout": args.timeout,
         "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    rows = asyncio.run(run(args, setup))
-    _write(args.out, rows, setup)
 
 
-def _write(out: Path, rows: list[dict[str, Any]], setup: dict[str, Any]) -> None:
-    (out / "run.json").write_text(json.dumps(setup, indent=2), encoding="utf-8")
-    (out / "rows.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
-    summary = summarize(rows, setup)
-    (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    report = markdown(summary)
-    (out / "report.md").write_text(report, encoding="utf-8")
-    print(report)
+def main(argv: list[str] | None = None) -> None:
+    scan_main(
+        argv,
+        parse_args=parse_args,
+        setup_of=setup_of,
+        run=run,
+        combine=combine,
+        summarize=summarize,
+        markdown=markdown,
+        out_prefix="extract-",
+    )
 
 
 if __name__ == "__main__":
