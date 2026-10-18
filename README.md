@@ -282,7 +282,8 @@ it.
 | `Provider.PARALLEL` | `parallel` | [Parallel Task API](https://parallel.ai) | `PARALLEL_API_KEY` | `effort`, `output_schema` | yes |
 | `Provider.PERPLEXITY` | `perplexity` | [Perplexity Agent API](https://docs.perplexity.ai) | `PERPLEXITY_API_KEY` | `effort` | not mapped yet |
 | `Provider.LINKUP` | `linkup` | [Linkup Research](https://docs.linkup.so) | `LINKUP_API_KEY` | `effort`, `output_schema` | yes |
-| `Provider.AUTO` *(default)* | `auto` | — | Nimble, Parallel, Perplexity or Linkup, whichever you hold, in that order | `effort`, `output_schema` | yes |
+| `Provider.YOU` | `you` | [You.com Research API](https://you.com/docs/guides/research) | `YOU_API_KEY` | `effort` | not mapped yet |
+| `Provider.AUTO` *(default)* | `auto` | — | Nimble, Parallel, Perplexity, Linkup or You.com, whichever you hold, in that order | `effort`, `output_schema` | yes |
 
 Nimble is the only backend web-router maps the whole surface for: source
 guidance (`include_domains` / `exclude_domains`) and enrichment inputs
@@ -291,8 +292,8 @@ guidance (`include_domains` / `exclude_domains`) and enrichment inputs
 mapped yet. Ask another backend for either and it says so rather than running
 without it.
 
-Perplexity's structured output is not mapped until a live run has checked it,
-so it does not declare `output_schema` — asking it for one raises
+Perplexity's and You.com's structured output is not mapped until a live run has
+checked it, so neither declares `output_schema` — asking it for one raises
 `UnsupportedParameterError` rather than handing back prose under the name of a
 schema, which is the failure mode that quietly rots an agentic pipeline.
 
@@ -307,6 +308,7 @@ difference matters:
 | `nimble` | **Against the `nimble-python` SDK's generated types**, produced from its OpenAPI spec — stronger than prose docs, weaker than a live call. |
 | `perplexity` | **Live.** On 2026-09-30 the chat endpoint's deep research model answered 403 ("Sonar is now the Agent API"), so research moved to `/v1/responses`: a background run was followed from `queued` through `in_progress` to `completed`, presets `low`, `medium` and `xhigh` were accepted, and a cancel left a run `cancelled`. Its payloads are the ones in the tests. |
 | `linkup` | **Live.** Runs at `effort="low"` (`reasoningDepth` S, $0.25 each) were followed from start to answer, one of them with an `output_schema`, whose result was the schema's object alone; their payloads are the ones in the tests. Efforts above `low` are documentation-derived. Linkup's docs put `max` (XL) at 10 to 20 minutes and `high` (L) at 5 to 10, longer than `research()`'s default 600-second wait: pass a larger `timeout`, or use `submit_research()` and poll, rather than leave a paid run going after the wait gives up. |
+| `you` | **Live.** On 2026-10-16 a background run at `effort="low"` (`lite`) was followed from `queued` through `running` to `completed` on `api.you.com` (the same path on the search host answers 403); an unknown `research_effort` was a 422 naming `lite`, `standard`, `deep`, `exhaustive` and `frontier`. Its payloads are the ones in the tests. You.com offers no cancel, so `cancel()` returns `False`. `max` maps to `exhaustive`: `frontier`, background-only and priced well above it, is reachable as `provider_options={"research_effort": "frontier"}`. Efforts above `low` are documentation-derived. |
 
 Each has an integration test that skips itself until a credential is there.
 
@@ -337,7 +339,7 @@ Every backend you hold a key for is a candidate, in a fixed order:
 | --- | --- | --- | --- |
 | `search` | Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ, Parallel, Exa, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable |
 | `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable |
-| `research` | Nimble, Parallel, Perplexity, Linkup | nothing — every run bills | — |
+| `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
 Search's order follows a provider scan's judged accuracy, best first (run your
 own with [`benchmarks/providers/`](benchmarks/providers/README.md)), and every
@@ -345,8 +347,8 @@ key you hold comes before the free tier — so a key you hold only for research,
 Perplexity's say, serves your plain searches too. Keenable joined after that
 scan, so it comes after the keyless tier until a scan places it. For extract, the backends that
 joined later come after the keyless tier, so holding one more key never moves a
-call that was already being served. Research has no free tier, so Linkup simply
-follows the others there. To choose your own order, pass a `chain`.
+call that was already being served. Research has no free tier, so Linkup and then
+You.com simply follow the others there. To choose your own order, pass a `chain`.
 
 **`auto` routes each request to a member that can serve it.** It accepts every
 option some member maps — the domain, country and locale filters through
@@ -663,17 +665,17 @@ router.research(
 each backend's own vocabulary, which disagree more here than anywhere else in
 the package:
 
-| Effort | Nimble | Parallel | Perplexity | Linkup |
-| --- | --- | --- | --- | --- |
-| `low` | `low` | `lite` | `low` | `S` |
-| `medium` | `medium` | `core` | `medium` | `M` |
-| `high` | `high` | `pro` | `high` | `L` |
-| `max` | `max` | `ultra` | `xhigh` | `XL` |
+| Effort | Nimble | Parallel | Perplexity | Linkup | You.com |
+| --- | --- | --- | --- | --- | --- |
+| `low` | `low` | `lite` | `low` | `S` | `lite` |
+| `medium` | `medium` | `core` | `medium` | `M` | `standard` |
+| `high` | `high` | `pro` | `high` | `L` | `deep` |
+| `max` | `max` | `ultra` | `xhigh` | `XL` | `exhaustive` |
 
 A backend with fewer tiers maps more than one level onto the same setting rather
 than inventing a distinction it does not have. Nimble's `x-high` and `5x-high`, and Parallel's `base`,
 have no normalized level of their own and are reachable through
-`provider_options`.
+`provider_options`, as is You.com's `frontier`.
 
 Parallel is the one backend that *requires* an effort, so leaving it unset sends
 `medium` rather than omitting the field — the same deliberate exception to
@@ -1662,7 +1664,7 @@ Keys are read from the environment, or passed explicitly through
 | Nimble | `NIMBLE_API_KEY` | search, extract, research |
 | Tavily | `TAVILY_API_KEY` | search, extract |
 | Exa | `EXA_API_KEY` | search, extract |
-| You.com | `YOU_API_KEY` | search |
+| You.com | `YOU_API_KEY` | search, research |
 | Brave | `BRAVE_SEARCH_API_KEY` | search |
 | Parallel | `PARALLEL_API_KEY` | search, research |
 | Perplexity | `PERPLEXITY_API_KEY` | search, research |

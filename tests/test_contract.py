@@ -90,6 +90,12 @@ def test_configured_providers_reports_what_the_environment_supports(monkeypatch:
     assert set(configured_providers()) <= set(available_providers())
 
 
+def test_a_whitespace_only_key_is_not_reported_as_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The provider would treat it as missing, so listing it would promise a call that cannot be built."""
+    monkeypatch.setenv("BRAVE_SEARCH_API_KEY", " ")
+    assert "brave" not in configured_providers()
+
+
 def test_a_keyless_provider_needs_no_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     for env_var in ENV_BY_PROVIDER.values():
         if env_var:

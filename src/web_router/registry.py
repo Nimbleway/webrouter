@@ -110,6 +110,7 @@ _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_PARALLEL: ("web_router.providers.parallel", "ParallelResearchProvider", EXTRA_RESEARCH),
     PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityResearchProvider", EXTRA_RESEARCH),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupResearchProvider", EXTRA_RESEARCH),
+    PROVIDER_YOU: ("web_router.providers.you", "YouResearchProvider", EXTRA_RESEARCH),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoResearchProvider", AUTO_EXTRA),
 }
 
@@ -216,6 +217,11 @@ def available_browse_providers() -> list[str]:
     return sorted(set(_BUILTIN_BROWSE_PROVIDERS) | set(_CUSTOM_BROWSE_PROVIDERS))
 
 
+def _is_set(env_var: str) -> bool:
+    """Whether ``env_var`` holds a value, counting whitespace-only as unset, as the providers do."""
+    return bool((os.environ.get(env_var) or "").strip())
+
+
 def configured_providers() -> list[str]:
     """Every builtin search provider you currently have a credential for, plus the keyless ones.
 
@@ -228,7 +234,7 @@ def configured_providers() -> list[str]:
     service -- so treat this as "worth trying", not as a guarantee, and let the
     provider itself raise when a credential is actually missing or bad.
     """
-    return sorted(name for name, env_var in ENV_BY_PROVIDER.items() if env_var is None or os.environ.get(env_var))
+    return sorted(name for name, env_var in ENV_BY_PROVIDER.items() if env_var is None or _is_set(env_var))
 
 
 def configured_extract_providers() -> list[str]:
@@ -239,9 +245,7 @@ def configured_extract_providers() -> list[str]:
     token and zone -- is reported only when it has all of them.
     """
     return sorted(
-        name
-        for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items()
-        if all(os.environ.get(env_var) for env_var in env_vars)
+        name for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
     )
 
 
@@ -254,9 +258,7 @@ def configured_research_providers() -> list[str]:
     ``auto`` -- which will then say which variables would fix it.
     """
     return sorted(
-        name
-        for name, env_vars in RESEARCH_ENV_BY_PROVIDER.items()
-        if all(os.environ.get(env_var) for env_var in env_vars)
+        name for name, env_vars in RESEARCH_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
     )
 
 
@@ -268,9 +270,7 @@ def configured_browser_providers() -> list[str]:
     whether or not a browser is installed for it to launch.
     """
     return sorted(
-        name
-        for name, env_vars in BROWSER_ENV_BY_PROVIDER.items()
-        if all(os.environ.get(env_var) for env_var in env_vars)
+        name for name, env_vars in BROWSER_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
     )
 
 
@@ -282,9 +282,7 @@ def configured_browse_providers() -> list[str]:
     ``auto`` -- which will then say which variables would fix it.
     """
     return sorted(
-        name
-        for name, env_vars in BROWSE_ENV_BY_PROVIDER.items()
-        if all(os.environ.get(env_var) for env_var in env_vars)
+        name for name, env_vars in BROWSE_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
     )
 
 
