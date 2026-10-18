@@ -13,8 +13,8 @@ CONTRIBUTING.md.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, ClassVar
-from urllib.parse import quote
 
 from web_router.constants import (
     ENV_YOU_API_KEY,
@@ -33,13 +33,13 @@ from web_router.constants import (
     YOU_RESULT_SECTIONS,
     YOU_SEARCH_PATH,
 )
-from web_router.providers._http import HttpResearchProvider, HttpSearchProvider
-from web_router.providers._utils import best_text, build_payload, error_detail
+from web_router.providers._http import HttpPolledResearchProvider, HttpSearchProvider
+from web_router.providers._utils import best_text, build_payload
 from web_router.types import (
     Citation,
-    ResearchProgress,
     ResearchRequest,
     ResearchResponse,
+    ResearchState,
     SearchRequest,
     SearchResponse,
     SearchResult,
@@ -110,7 +110,7 @@ class YouProvider(HttpSearchProvider):
         return None
 
 
-class YouResearchProvider(HttpResearchProvider):
+class YouResearchProvider(HttpPolledResearchProvider):
     """Runs agentic research as a background task on the You.com Research API.
 
     ``POST /v1/research`` with ``background`` returns the task ``queued`` under
@@ -134,34 +134,15 @@ class YouResearchProvider(HttpResearchProvider):
     env_api_key: ClassVar[str] = ENV_YOU_API_KEY
     api_key_header: ClassVar[str] = YOU_API_KEY_HEADER
 
-    def _start(self, request: ResearchRequest) -> ResearchProgress:
-        return self._progress(request, self._post(YOU_RESEARCH_PATH, self._build_payload(request)))
-
-    async def _astart(self, request: ResearchRequest) -> ResearchProgress:
-        return self._progress(request, await self._apost(YOU_RESEARCH_PATH, self._build_payload(request)))
-
-    def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        path = YOU_RESEARCH_STATUS_PATH.format(task_id=quote(job_id, safe=""))
-        return self._progress(request, self._get(path))
-
-    async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        path = YOU_RESEARCH_STATUS_PATH.format(task_id=quote(job_id, safe=""))
-        return self._progress(request, await self._aget(path))
+    research_path: ClassVar[str] = YOU_RESEARCH_PATH
+    status_path: ClassVar[str] = YOU_RESEARCH_STATUS_PATH
+    research_states: ClassVar[Mapping[str, ResearchState]] = YOU_RESEARCH_STATES
+    # The start call names the task `task_id`; the status call names it `id`.
+    job_id_fields: ClassVar[tuple[str, ...]] = ("task_id", "id")
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
         effort = YOU_RESEARCH_EFFORTS[request.effort] if request.effort else None
         return build_payload(request, input=request.query, research_effort=effort, background=YOU_RESEARCH_BACKGROUND)
-
-    def _progress(self, request: ResearchRequest, payload: dict[str, Any]) -> ResearchProgress:
-        state = self.state_of(str(payload.get("status")), YOU_RESEARCH_STATES)
-        return ResearchProgress(
-            # The start call names the task `task_id`; the status call names it `id`.
-            job_id=str(payload.get("task_id") or payload.get("id") or ""),
-            state=state,
-            # The status call carries the finished run, so it needs no second fetch.
-            response=self._to_response(request, payload) if state == "completed" else None,
-            detail=error_detail(payload.get("error")),
-        )
 
     def _to_response(self, request: ResearchRequest, payload: dict[str, Any]) -> ResearchResponse:
         output = (payload.get("result") or {}).get("output") or {}

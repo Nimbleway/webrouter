@@ -2226,7 +2226,7 @@ LINKUP_RESEARCH_STATES: dict[str, ResearchState] = {
 
 YOU_RESEARCH_BASE_URL = "https://api.you.com"
 YOU_RESEARCH_PATH = "/v1/research"
-YOU_RESEARCH_STATUS_PATH = "/v1/research/{task_id}"
+YOU_RESEARCH_STATUS_PATH = "/v1/research/{job_id}"
 
 YOU_RESEARCH_BACKGROUND = True
 """Always sent: without it the request blocks for the whole run, which a research job must not."""

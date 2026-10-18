@@ -628,7 +628,9 @@ The same shape as the two below, against `ResearchProvider` or
 1. Implement `_start`/`_astart` — start the run, return a `ResearchProgress`
    carrying the backend's own job id — and `_fetch`/`_afetch`, which report
    where a started run is and attach the answer once `state` is `completed`.
-   Set `name` and `supported_parameters`; declare `output_schema` only if the
+   A backend whose status GET carries the answer subclasses
+   `HttpPolledResearchProvider` instead and declares its paths and status
+   table rather than writing these. Set `name` and `supported_parameters`; declare `output_schema` only if the
    backend really returns structured output, because a backend that does not
    should raise `UnsupportedParameterError` rather than hand back prose under
    the name of a schema.
