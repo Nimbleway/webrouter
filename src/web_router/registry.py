@@ -110,6 +110,7 @@ _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_PARALLEL: ("web_router.providers.parallel", "ParallelResearchProvider", EXTRA_RESEARCH),
     PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityResearchProvider", EXTRA_RESEARCH),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupResearchProvider", EXTRA_RESEARCH),
+    PROVIDER_YOU: ("web_router.providers.you", "YouResearchProvider", EXTRA_RESEARCH),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoResearchProvider", AUTO_EXTRA),
 }
 

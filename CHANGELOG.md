@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- You.com as a research backend (`you`), over its Research API on `api.you.com`, reading the same `YOU_API_KEY` as search. A run is a background task, polled until it finishes; the answer is You.com's markdown and its sources become citations. `effort` maps `low`, `medium`, `high` and `max` onto `lite`, `standard`, `deep` and `exhaustive`; `frontier` is reachable through `provider_options`. `output_schema` is not mapped yet, and You.com offers no cancel. `auto` tries You.com last in the research chain when you hold its key, so no call that was already being served moves. If `YOU_API_KEY` was the only key you held, `research()` through `auto` now starts a billed You.com run instead of raising `ConfigurationError`.
+
 ### Fixed
 
 - Jina: an empty `JINA_API_KEY` is treated as no key. It was sent as a bare `Bearer ` header, which httpx rejects, so every Jina call failed and `auto` quietly moved on to the next extract backend. Every provider now strips its API keys and settings, so a whitespace-only value counts as missing, a padded one such as a key with a trailing newline is sent without the padding, and `configured_*_providers()` no longer lists a provider whose only key is blank.

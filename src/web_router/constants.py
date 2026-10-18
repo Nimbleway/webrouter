@@ -167,6 +167,7 @@ RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_PARALLEL: (ENV_PARALLEL_API_KEY,),
     PROVIDER_PERPLEXITY: (ENV_PERPLEXITY_API_KEY,),
     PROVIDER_LINKUP: (ENV_LINKUP_API_KEY,),
+    PROVIDER_YOU: (ENV_YOU_API_KEY,),
     PROVIDER_AUTO: (),
 }
 """Which variables each research provider needs, all of them.
@@ -2214,6 +2215,8 @@ LINKUP_RESEARCH_STATES: dict[str, ResearchState] = {
     "failed": "failed",
 }
 
+# You.com research's endpoints, efforts and states are in constants_you.py.
+
 # --- auto research ----------------------------------------------------------
 
 AUTO_RESEARCH_PREFERRED: tuple[str, ...] = (
@@ -2221,6 +2224,7 @@ AUTO_RESEARCH_PREFERRED: tuple[str, ...] = (
     PROVIDER_PARALLEL,
     PROVIDER_PERPLEXITY,
     PROVIDER_LINKUP,
+    PROVIDER_YOU,
 )
 """Tried in this order, and only those the caller holds a credential for.
 
@@ -2229,8 +2233,8 @@ backend bills for the run, so there is no anonymous tier to fall back on. With
 no key at all, ``auto`` raises and names the variables that would fix it.
 
 The first three are the chain's original members in their original order;
-``linkup`` was appended after them, so an environment that reached one of the
-first three still reaches it first. Reordering the defaults is a change backed
+``linkup`` and then ``you`` were appended after them, so an environment that
+reached an earlier member still reaches it first. Reordering the defaults is a change backed
 by a provider scan; a caller who wants another order passes their own ``chain``.
 
 There is no ``exa``: Exa retired its Research API (every path answers 410
