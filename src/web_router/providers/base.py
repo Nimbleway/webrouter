@@ -752,7 +752,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
             try:
                 progress = self.status()
             except ProviderError as exc:
-                if _passed(deadline) and _timed_out(exc):
+                if _passed(deadline) and _is_timeout(exc):
                     raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
                 raise
             if progress.is_terminal:
@@ -766,7 +766,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
             try:
                 progress = await self.astatus()
             except ProviderError as exc:
-                if _passed(deadline) and _timed_out(exc):
+                if _passed(deadline) and _is_timeout(exc):
                     raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
                 raise
             if progress.is_terminal:
@@ -1667,7 +1667,7 @@ def _passed(deadline: float | None) -> bool:
     return deadline is not None and time.monotonic() >= deadline
 
 
-def _timed_out(error: ProviderError) -> bool:
+def _is_timeout(error: ProviderError) -> bool:
     """Whether a provider's failure was a request that timed out, anywhere down its chain of causes."""
     seen: set[int] = set()
     current: BaseException | None = error.original or error.__cause__
