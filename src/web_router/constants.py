@@ -42,6 +42,7 @@ PROVIDER_PERPLEXITY = Provider.PERPLEXITY.value
 PROVIDER_LINKUP = Provider.LINKUP.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
+PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
 PROVIDER_YOU_MCP = Provider.YOU_MCP.value
 PROVIDER_EXA_MCP = Provider.EXA_MCP.value
 PROVIDER_PARALLEL_MCP = Provider.PARALLEL_MCP.value
@@ -100,6 +101,7 @@ ENV_PERPLEXITY_API_KEY = "PERPLEXITY_API_KEY"
 ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
+ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
 ENV_OXYLABS_USERNAME = "OXYLABS_USERNAME"
 ENV_OXYLABS_PASSWORD = "OXYLABS_PASSWORD"
 ENV_BRIGHTDATA_API_KEY = "BRIGHTDATA_API_TOKEN"
@@ -124,6 +126,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_LINKUP: ENV_LINKUP_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
+    PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
     PROVIDER_YOU_MCP: None,
     PROVIDER_EXA_MCP: None,
     PROVIDER_PARALLEL_MCP: None,
@@ -151,6 +154,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_BRIGHTDATA: (ENV_BRIGHTDATA_API_KEY, ENV_BRIGHTDATA_ZONE),
     PROVIDER_WEBIQ: (ENV_WEBIQ_API_KEY,),
     PROVIDER_KEENABLE: (ENV_KEENABLE_API_KEY,),
+    PROVIDER_DEEPSEEK: (ENV_DEEPSEEK_API_KEY,),
     PROVIDER_JINA: (),
     PROVIDER_AUTO: (),
 }
@@ -469,11 +473,12 @@ Reordering the defaults is a change backed by a provider scan; a caller who
 wants another order passes their own ``chain``.
 """
 
-AUTO_APPENDED: tuple[str, ...] = (PROVIDER_KEENABLE,)
+AUTO_APPENDED: tuple[str, ...] = (PROVIDER_KEENABLE, PROVIDER_DEEPSEEK)
 """Members added to the chain after the last reordering, tried after the keyless tier, with a credential.
 
 Every backend before the 2026-10-06 scan took its place in
-:data:`AUTO_PREFERRED`; ``keenable`` joined after it (2026-10-13). A backend that
+:data:`AUTO_PREFERRED`; ``keenable`` joined after it (2026-10-13) and
+``deepseek`` after that (2026-10-18), each behind the last. A backend that
 joins later goes here first, so joining changes no environment's routing; moving
 it ahead of the keyless tier is a routing change, and so one backed by a
 provider scan.
@@ -548,12 +553,18 @@ so it is reached only when the two before it fail and no call already served
 moves. Keenable's ``/public`` fetch joined after it (2026-10-13) on the same terms.
 """
 
-AUTO_EXTRACT_APPENDED: tuple[str, ...] = (PROVIDER_LINKUP, PROVIDER_EXA, PROVIDER_WEBIQ, PROVIDER_KEENABLE)
+AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
+    PROVIDER_LINKUP,
+    PROVIDER_EXA,
+    PROVIDER_WEBIQ,
+    PROVIDER_KEENABLE,
+    PROVIDER_DEEPSEEK,
+)
 """Members added after the chain existed, tried after the keyless tier, as :data:`AUTO_APPENDED` is for search.
 
 ``exa`` returns plain text alone, so it serves only ``format="text"``.
 ``webiq`` reads only pages in WebIQ's own index; one it lacks fails, and the
-chain moves on. ``keenable`` returns markdown alone.
+chain moves on. ``keenable`` and ``deepseek`` return markdown alone.
 """
 
 AUTO_EXTRACT_FORMATS: frozenset[ExtractFormat] = frozenset({"markdown", "html", "text"})
@@ -2874,6 +2885,70 @@ KEENABLE_TITLE = "web-router"
 """The app name a keyless call is attributed to; Keenable refuses a keyless call without one."""
 
 KEENABLE_PARAM_NAMES = {"max_results": "max_results"}
+
+# --- DeepSeek ---------------------------------------------------------------
+# Search and Fetch (api-docs.deepseek.com/guides/search), on the same host and
+# bearer key as DeepSeek's model API. Mapped from documentation on 2026-10-18 --
+# no account was available to verify it live. See tests/providers/test_deepseek.py.
+
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+DEEPSEEK_SEARCH_PATH = "/v1/tools/search"
+DEEPSEEK_FETCH_PATH = "/v1/tools/fetch"
+DEEPSEEK_API_KEY_PREFIX = "Bearer "
+
+DEEPSEEK_SEARCH_PARAMETERS = frozenset({"max_results", "include_domains", "exclude_domains", "locale"})
+"""What DeepSeek Search maps.
+
+``max_results`` goes to ``count``; the domain filters and ``locale`` go into
+the query, as operators.
+
+``search_depth`` stays unmapped and raises. DeepSeek has two content tiers: a
+snippet and a 600-800-character summary written for a model, or those plus the
+page body (``need_content``). ``search_depth`` has three levels, and each must
+send a different request (tests/test_contract.py), so two would send the same
+one. ``need_content`` is reachable through ``provider_options``.
+
+``country`` stays unmapped and raises: DeepSeek's ``localization`` takes an IP
+address to localize from, not a country, and inventing an IP for a country is
+not a translation.
+"""
+
+DEEPSEEK_MAX_COUNT = 50
+"""The most results one search returns; a larger ``count`` is out of range.
+
+``max_results`` is an upper bound, so a larger one is sent as this and still holds.
+"""
+
+DEEPSEEK_QUERY_LIMIT = 128
+"""The longest query Search accepts, in Unicode characters, operators included.
+
+A longer one is refused before it is sent, never cut: a query missing its tail,
+or the filters web-router appended to it, would answer a different question.
+"""
+
+DEEPSEEK_INCLUDE_DOMAIN = "site:{domain}"
+DEEPSEEK_INCLUDE_JOINER = " OR "
+DEEPSEEK_EXCLUDE_DOMAIN = "-site:{domain}"
+DEEPSEEK_LANGUAGE = "lang:{language}"
+"""Search filters by domain and language through operators in the query, not through fields.
+
+Several sites are joined with ``OR``, as DeepSeek's own example does
+(``DeepSeek site:github.com OR site:huggingface.co``). ``lang:`` takes bare
+language codes (``lang:zh,en``), so a regional locale sends its language alone.
+"""
+
+DEEPSEEK_FETCH_CONCURRENCY = 5
+"""Fetches an async extract runs at once: DeepSeek allows an account 5 a second, plus a per-domain limit.
+
+Past it, a request answers 429. The limit is per account, so other callers on the
+same key share it, and a 429 can still come back.
+"""
+
+MSG_DEEPSEEK_QUERY_TOO_LONG = (
+    "DeepSeek Search takes a query of at most {limit} characters, and this one would be {length}; "
+    "include_domains, exclude_domains and locale are sent inside the query and count toward it. "
+    "Shorten the query, drop a filter, or use another provider."
+)
 
 # --- Oxylabs ----------------------------------------------------------------
 # Extract only: Oxylabs' Web Scraper API fetches a URL, it does not rank the web.

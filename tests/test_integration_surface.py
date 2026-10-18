@@ -115,6 +115,14 @@ def test_country_is_accepted_as_an_iso_code(provider: str) -> None:
     assert response.results
 
 
+@pytest.mark.parametrize("provider", _providers("locale"))
+def test_locale_is_accepted_as_a_language_code(provider: str) -> None:
+    """The shared surface is a language code; a provider wanting another form must translate."""
+    with WebRouter(provider) as router, billing_aware(provider):
+        response = router.search("coffee", max_results=3, locale="en")
+    assert response.results
+
+
 # --- extract ----------------------------------------------------------------
 
 

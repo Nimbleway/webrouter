@@ -165,6 +165,20 @@ capped at 1,000 requests an hour per IP ([rate limits](https://docs.keenable.ai/
 | `mode=pro` (Keenable's default; web-router sends none) | `keenable` | Titles, URLs, a snippet per result | 100k a month free, then not published; $10 per 1k paid per request over x402 | [search](https://docs.keenable.ai/api-reference/search.md), [pay per request](https://docs.keenable.ai/pay-per-request.md) |
 | `mode=realtime` | `keenable:realtime` | The same, faster; billed as its own SKU | same | same |
 
+### DeepSeek
+
+Per successful request: a search with no results, a failed request and a
+timeout are free, and `count` does not change the price ([search and fetch](https://api-docs.deepseek.com/guides/search)).
+The docs' free period covers only server-side tool calls through DeepSeek's
+harness, Claude Code or Codex, until 2026-11-01 00:00 Beijing time (2026-10-31
+16:00 UTC); web-router makes direct API calls, which it does not name as free. Search and Fetch each allow an account 5
+requests a second.
+
+| Mode | Setup | What it returns | Price per 1k | Source |
+|---|---|---|---|---|
+| default (`need_content` false) | `deepseek` | Titles, URLs, a snippet and a 600-800-character summary per result | $0.75 | [search and fetch](https://api-docs.deepseek.com/guides/search) |
+| `need_content=true` | `deepseek:content` | The same, plus the page body | $0.75 | same |
+
 ### Keyless MCP search
 
 | Backend | Setup | Price | Source |
@@ -188,6 +202,7 @@ You.com's keyless MCP is priced in its own section above.
 | Parallel | not used for extract in web-router | $1 per 1k results | [pricing](https://parallel.ai/pricing) |
 | WebIQ (Browse) | markdown or text, `maxLength` 500,000 | not published: limited access for select enterprise customers, by request | [Web IQ](https://webiq.microsoft.ai), [SDK docs](https://webiq.microsoft.ai/documentation/sdk) |
 | Keenable | markdown, `max_chars` 500,000 | one credit per fetch, 100k requests a month free, then not published; keyless free at 1,000 an hour per IP | [credits](https://docs.keenable.ai/credits.md), [fetch](https://docs.keenable.ai/api-reference/fetch.md) |
+| DeepSeek | markdown | $0.75 per 1k successful fetches | [search and fetch](https://api-docs.deepseek.com/guides/search) |
 | Linkup | markdown (default) or html (`includeRawContent`), `mode=standard`, no rendering | $0.001 per call ($1 per 1k); `renderJs` or `mode=pro` $0.005, both $0.01; a `schema` adds $0.001 | [fetch overview](https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md) |
 
 ## Research

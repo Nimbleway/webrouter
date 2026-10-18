@@ -1,0 +1,289 @@
+"""DeepSeek provider tests.
+
+Mapped from DeepSeek's documentation (api-docs.deepseek.com/guides/search) on
+2026-10-18 -- no account was available to verify it live, so the payloads below
+are the documented example shapes rather than recordings. Unverified: that
+``site:``, ``-site:`` and ``lang:`` filter as documented when web-router appends
+them to a query, that ``OR`` between ``site:`` operators widens rather than
+narrows, how ``OR`` binds beside the ``-site:`` and ``lang:`` after it, that
+``count`` bounds the results, and that Fetch answers 403, 404 and 429 as
+documented. The live tests below are the checks that can fail on each.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+
+import httpx
+import pytest
+
+from web_router.exceptions import ProviderError, UnsupportedFormatError, UnsupportedParameterError
+from web_router.providers.deepseek import DeepSeekExtractProvider, DeepSeekProvider
+from web_router.types import ExtractRequest, SearchRequest
+
+DOCUMENTED = {
+    "results": [
+        {
+            "rerank_score": 2.4,
+            "title": "Example result title",
+            "url": "https://example.com/article",
+            "snippet": "Short display snippet.",
+            "summary": "Longer summary for a model to read. " * 20,
+            "content": "",
+            "site_name": "Example News",
+            "site_icon": "https://example.com/favicon.ico",
+            "date": "2026-06-01T00:00:00+00:00",
+            "authority": 3,
+        },
+        {
+            "rerank_score": 0.9,
+            "title": "Undated page",
+            "url": "https://example.org/page",
+            "snippet": "",
+            "summary": "A summary with no snippet beside it.",
+            "content": "The full page body.",
+            "site_name": None,
+            "site_icon": None,
+            "date": None,
+            "authority": -1,
+        },
+    ]
+}
+
+
+@pytest.fixture
+def provider(monkeypatch: pytest.MonkeyPatch) -> DeepSeekProvider:
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    return DeepSeekProvider()
+
+
+def test_only_the_query_is_sent_when_nothing_else_is_set(provider: DeepSeekProvider) -> None:
+    assert provider._build_payload(SearchRequest(query="hi")) == {"query": "hi"}
+    assert provider.search_path == "/v1/tools/search"
+
+
+def test_max_results_maps_onto_count_within_its_range(provider: DeepSeekProvider) -> None:
+    assert provider._build_payload(SearchRequest(query="hi", max_results=5))["count"] == 5
+    # max_results is an upper bound; 50 is the most DeepSeek accepts, and still within it.
+    assert provider._build_payload(SearchRequest(query="hi", max_results=100))["count"] == 50
+
+
+def test_domain_and_language_filters_become_query_operators(provider: DeepSeekProvider) -> None:
+    request = SearchRequest(
+        query="DeepSeek",
+        include_domains=["github.com", "huggingface.co"],
+        exclude_domains=["example.com"],
+        locale="en",
+    )
+
+    assert provider._build_payload(request) == {
+        "query": "DeepSeek site:github.com OR site:huggingface.co -site:example.com lang:en"
+    }
+
+
+@pytest.mark.parametrize("locale", ["en", "EN", "en-US", "en_us"])
+def test_a_regional_locale_sends_its_language_alone(provider: DeepSeekProvider, locale: str) -> None:
+    assert provider._build_payload(SearchRequest(query="hi", locale=locale)) == {"query": "hi lang:en"}
+
+
+def test_a_fitting_query_goes_out_with_the_key_and_a_longer_one_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    sent: list[httpx.Request] = []
+    provider = DeepSeekProvider(
+        transport=httpx.MockTransport(lambda r: sent.append(r) or httpx.Response(200, json={"results": []}))
+    )
+
+    provider.search(SearchRequest(query="q" * 128))
+    assert sent[0].headers["Authorization"] == "Bearer test-key"
+    with pytest.raises(ProviderError, match="at most 128 characters, and this one would be 129"):
+        provider.search(SearchRequest(query="q" * 129))
+    # The filters count: a query that fits alone does not once one is appended.
+    with pytest.raises(ProviderError, match="would be 131"):
+        provider.search(SearchRequest(query="q" * 120, include_domains=["a.com"]))
+    assert len(sent) == 1, "only the query that fit went out"
+
+
+@pytest.mark.parametrize("option", [{"country": "US"}, {"search_depth": "deep"}])
+def test_an_unmapped_option_is_refused_rather_than_dropped(provider: DeepSeekProvider, option: dict) -> None:
+    with pytest.raises(UnsupportedParameterError, match=next(iter(option))):
+        provider.validate(SearchRequest(query="hi", **option))
+
+
+def test_the_page_body_is_reachable_through_provider_options(provider: DeepSeekProvider) -> None:
+    payload = provider._build_payload(SearchRequest(query="hi", provider_options={"need_content": True}))
+
+    assert payload == {"query": "hi", "need_content": True}
+
+
+def test_results_map_and_nothing_is_invented(provider: DeepSeekProvider) -> None:
+    response = provider._to_response(SearchRequest(query="DeepSeek V4 release"), DOCUMENTED)
+    first, second = response.results
+
+    assert response.provider == "deepseek" and response.raw == DOCUMENTED
+    assert first.description == "Short display snippet."
+    # No page body was asked for, so the model-written summary is the fullest text.
+    assert first.content == DOCUMENTED["results"][0]["summary"]
+    assert first.score == 2.4 and first.published_date == "2026-06-01T00:00:00+00:00"
+    assert first.extra == {
+        "summary": DOCUMENTED["results"][0]["summary"],
+        "site_name": "Example News",
+        "site_icon": "https://example.com/favicon.ico",
+        "authority": 3,
+    }
+    assert second.content == "The full page body."
+    assert second.description == "A summary with no snippet beside it."
+    assert second.published_date is None and second.extra["authority"] == -1
+
+
+def test_a_date_that_is_not_a_string_stays_in_extra_rather_than_failing_the_search(
+    provider: DeepSeekProvider,
+) -> None:
+    payload = {"results": [{"url": "u", "snippet": "S", "date": 1791654966}]}
+    (result,) = provider._to_response(SearchRequest(query="hi"), payload).results
+
+    assert result.published_date is None and result.extra == {"date": 1791654966}
+
+
+def test_an_empty_answer_is_an_empty_response(provider: DeepSeekProvider) -> None:
+    assert provider._to_response(SearchRequest(query="hi"), {"results": []}).results == []
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("DEEPSEEK_API_KEY"), reason="DEEPSEEK_API_KEY not set")
+def test_live_search_returns_results() -> None:
+    from tests.conftest import billing_aware
+    from web_router import WebRouter
+
+    with WebRouter("deepseek") as router, billing_aware("deepseek"):
+        response = router.search("Who created the Python programming language?", max_results=3)
+
+    assert response.provider == "deepseek"
+    assert 0 < len(response.results) <= 3
+    assert all(result.url and result.content for result in response.results)
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("DEEPSEEK_API_KEY"), reason="DEEPSEEK_API_KEY not set")
+def test_live_site_operators_joined_by_or_keep_every_result_on_those_sites() -> None:
+    from tests.conftest import billing_aware
+    from web_router import WebRouter
+
+    sites = ("github.com", "huggingface.co")
+    with WebRouter("deepseek") as router, billing_aware("deepseek"):
+        response = router.search("DeepSeek V3 model weights", max_results=10, include_domains=list(sites))
+
+    assert response.results
+    assert all(any(site in result.url for site in sites) for result in response.results)
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("DEEPSEEK_API_KEY"), reason="DEEPSEEK_API_KEY not set")
+def test_live_lang_operator_changes_the_language_of_the_results() -> None:
+    from tests.conftest import billing_aware
+    from web_router import WebRouter
+
+    with WebRouter("deepseek") as router, billing_aware("deepseek"):
+        response = router.search("coffee brewing methods", max_results=5, locale="zh")
+
+    # An English query answered in English unfiltered; lang:zh should bring back Chinese pages.
+    assert any(
+        any("\u4e00" <= ch <= "\u9fff" for ch in result.title + result.description) for result in response.results
+    )
+
+
+PAGE = "https://en.wikipedia.org/wiki/Python_(programming_language)"
+
+
+@pytest.fixture
+def extractor(monkeypatch: pytest.MonkeyPatch) -> DeepSeekExtractProvider:
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    return DeepSeekExtractProvider()
+
+
+def test_one_url_is_asked_for(extractor: DeepSeekExtractProvider) -> None:
+    assert extractor._build_payload(ExtractRequest(urls=[PAGE]), [PAGE]) == {"url": PAGE}
+    assert extractor.http_method == "POST" and extractor.extract_path == "/v1/tools/fetch"
+
+
+@pytest.mark.parametrize("body_format", ["html", "text"])
+def test_a_format_other_than_markdown_is_refused(extractor: DeepSeekExtractProvider, body_format: str) -> None:
+    with pytest.raises(UnsupportedFormatError):
+        extractor.validate(ExtractRequest(urls=[PAGE], format=body_format))
+
+
+def test_the_page_maps_under_the_url_asked_for(extractor: DeepSeekExtractProvider) -> None:
+    payload = {"title": "Python (programming language)", "content": "# Python\n\nA programming language."}
+    (document,) = extractor._to_response(ExtractRequest(urls=[PAGE]), [PAGE], payload).documents
+
+    assert document.url == PAGE and document.title == "Python (programming language)"
+    assert document.content == payload["content"] and document.format == "markdown"
+    assert document.extra == {}
+
+
+def test_a_refused_or_missing_page_fails_that_url_alone(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    refused, missing = "https://example.com/refused", "https://example.com/missing"
+    limited = "https://example.com/limited"
+    statuses = {refused: 403, missing: 404, limited: 429}
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        status = statuses.get(json.loads(request.content)["url"])
+        if status:
+            error = {"message": "Fetch failed", "type": "invalid_request_error", "param": None, "code": status}
+            return httpx.Response(status, json={"error": error})
+        return httpx.Response(200, json={"title": "Python", "content": "A programming language."})
+
+    extractor = DeepSeekExtractProvider(transport=httpx.MockTransport(handle))
+    response = extractor.extract(ExtractRequest(urls=[PAGE, refused, missing, limited]))
+
+    assert [d.url for d in response.documents] == [PAGE]
+    assert [(f.url, str(statuses[f.url]) in f.error) for f in response.failures] == [
+        (refused, True),
+        (missing, True),
+        (limited, True),
+    ]
+
+
+def test_an_async_extract_runs_no_more_fetches_at_once_than_deepseek_allows(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    in_flight, peak = 0, 0
+
+    async def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal in_flight, peak
+        in_flight += 1
+        peak = max(peak, in_flight)
+        await asyncio.sleep(0.01)
+        in_flight -= 1
+        return httpx.Response(200, json={"title": "", "content": "page"})
+
+    async def run() -> int:
+        extractor = DeepSeekExtractProvider(transport=httpx.MockTransport(handle))
+        try:
+            response = await extractor.aextract(ExtractRequest(urls=[f"https://example.com/{i}" for i in range(12)]))
+        finally:
+            await extractor.aclose()
+        return len(response.documents)
+
+    assert asyncio.run(run()) == 12
+    assert peak == 5, "the base default runs 8 at once; DeepSeek allows 5 a second"
+
+
+def test_an_empty_page_is_a_failure_not_an_empty_document(extractor: DeepSeekExtractProvider) -> None:
+    response = extractor._to_response(ExtractRequest(urls=[PAGE]), [PAGE], {"title": "", "content": ""})
+
+    assert response.documents == [] and [f.url for f in response.failures] == [PAGE]
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("DEEPSEEK_API_KEY"), reason="DEEPSEEK_API_KEY not set")
+def test_live_extract_returns_the_page() -> None:
+    from tests.conftest import billing_aware
+    from web_router import WebRouter
+
+    with WebRouter("deepseek") as router, billing_aware("deepseek"):
+        response = router.extract(PAGE)
+
+    (document,) = response.documents
+    assert document.format == "markdown" and "Python" in document.content

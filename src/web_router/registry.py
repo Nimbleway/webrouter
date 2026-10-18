@@ -34,6 +34,7 @@ from web_router.constants import (
     PROVIDER_BRIGHTDATA,
     PROVIDER_BROWSER_USE,
     PROVIDER_BROWSERBASE,
+    PROVIDER_DEEPSEEK,
     PROVIDER_EXA,
     PROVIDER_EXA_MCP,
     PROVIDER_FIRECRAWL,
@@ -85,6 +86,7 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupProvider", EXTRA_SEARCH),
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQProvider", EXTRA_SEARCH),
     PROVIDER_KEENABLE: ("web_router.providers.keenable", "KeenableProvider", EXTRA_SEARCH),
+    PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekProvider", EXTRA_SEARCH),
     PROVIDER_YOU_MCP: ("web_router.providers.you_mcp", "YouMcpProvider", EXTRA_SEARCH),
     PROVIDER_EXA_MCP: ("web_router.providers.exa_mcp", "ExaMcpProvider", EXTRA_SEARCH),
     PROVIDER_PARALLEL_MCP: ("web_router.providers.parallel_mcp", "ParallelMcpProvider", EXTRA_SEARCH),
@@ -101,6 +103,7 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_BRIGHTDATA: ("web_router.providers.brightdata", "BrightDataExtractProvider", EXTRA_EXTRACT),
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQExtractProvider", EXTRA_EXTRACT),
     PROVIDER_KEENABLE: ("web_router.providers.keenable", "KeenableExtractProvider", EXTRA_EXTRACT),
+    PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekExtractProvider", EXTRA_EXTRACT),
     PROVIDER_JINA: ("web_router.providers.jina", "JinaExtractProvider", EXTRA_EXTRACT),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoExtractProvider", AUTO_EXTRA),
 }

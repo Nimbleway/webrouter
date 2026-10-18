@@ -158,5 +158,14 @@
       "verified": false,
       "observed": "2026-10-13: accepted and echoed back as the mode that served the call, about 0.3s; on one query it returned the same five pages with the same content as pro."
     }
+  },
+  "deepseek": {
+    "content": {
+      "provider_options": {
+        "need_content": true
+      },
+      "note": "Adds each result's page body. Unset, content is the 600-800-character summary. Same price per call.",
+      "verified": false
+    }
   }
 }

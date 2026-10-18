@@ -231,6 +231,9 @@ class ExtractProvider(_BaseProvider):
     batches_urls: ClassVar[bool] = False
     """Whether one call can carry every URL. Most of these APIs take exactly one."""
 
+    max_concurrent_extracts: ClassVar[int] = MAX_CONCURRENT_EXTRACTS
+    """How many calls :meth:`aextract` runs at once; lowered by a backend with a tighter rate limit."""
+
     # -- What subclasses implement -------------------------------------------
 
     @abc.abstractmethod
@@ -266,12 +269,11 @@ class ExtractProvider(_BaseProvider):
     async def aextract(self, request: ExtractRequest) -> ExtractResponse:
         """Async counterpart of :meth:`extract`.
 
-        The calls run concurrently, up to
-        :data:`~web_router.constants.MAX_CONCURRENT_EXTRACTS` at a time.
+        The calls run concurrently, up to :attr:`max_concurrent_extracts` at a time.
         """
         self.validate(request)
         batches = self._batches(request.urls)
-        limit = asyncio.Semaphore(MAX_CONCURRENT_EXTRACTS)
+        limit = asyncio.Semaphore(self.max_concurrent_extracts)
 
         async def _one(urls: list[str]) -> ExtractResponse:
             async with limit:

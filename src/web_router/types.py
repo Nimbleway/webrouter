@@ -74,6 +74,7 @@ class Provider(str, Enum):
     LINKUP = "linkup"
     WEBIQ = "webiq"
     KEENABLE = "keenable"
+    DEEPSEEK = "deepseek"
     YOU_MCP = "you-mcp"
     EXA_MCP = "exa-mcp"
     PARALLEL_MCP = "parallel-mcp"
