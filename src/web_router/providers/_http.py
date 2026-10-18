@@ -25,7 +25,10 @@ alongside the request.
 
 A browse backend, against :class:`HttpBrowseProvider`, implements the job's
 ``_start`` and ``_fetch`` over the request helpers it is given, as a research
-backend does against :class:`HttpResearchProvider`.
+backend does against :class:`HttpResearchProvider`. A research backend whose
+status call carries the finished answer declares its paths and status table
+against :class:`HttpPolledResearchProvider` instead, and is left with building
+the request and reading the answer.
 
 A browser backend, against :class:`HttpBrowserProvider`, builds the body that
 opens a session and reads the session back out of the answer; ending one is a
@@ -36,6 +39,7 @@ from __future__ import annotations
 
 import abc
 import contextlib
+from collections.abc import Mapping
 from typing import Any, ClassVar, Literal
 from urllib.parse import quote
 
@@ -52,7 +56,7 @@ from web_router.constants import (
     RESEARCH_HTTP_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError, ProviderError
-from web_router.providers._utils import compact, job_budget, research_budget, resolve_api_key
+from web_router.providers._utils import compact, error_detail, job_budget, research_budget, resolve_api_key
 from web_router.providers.base import (
     BrowseProvider,
     BrowserProvider,
@@ -66,6 +70,10 @@ from web_router.types import (
     BrowserSession,
     ExtractRequest,
     ExtractResponse,
+    ResearchProgress,
+    ResearchRequest,
+    ResearchResponse,
+    ResearchState,
     SearchRequest,
     SearchResponse,
 )
@@ -284,12 +292,12 @@ class HttpResearchProvider(_HttpProvider, ResearchProvider):
 
     Thinner than its two siblings on purpose. A search or an extract is one
     request with one shape, so those base classes can own the whole call; a
-    research run is two or three requests whose shapes disagree sharply between
-    backends -- one endpoint or two, the result beside the status or behind
-    another GET -- and forcing them through a common template would cost more
-    than it saves for the three backends that exist. What is shared is what is
-    genuinely shared: the client, the credential, redirect handling, HTTP error
-    mapping and a longer default timeout.
+    research run is two or three requests whose shapes disagree between
+    backends -- the result beside the status or behind another GET. What is
+    shared here is what every one of them shares: the client, the credential,
+    redirect handling, HTTP error mapping and a longer default timeout. The
+    common shape, a POST that starts the run and a GET whose answer carries
+    the result, is :class:`HttpPolledResearchProvider`.
     """
 
     def __init__(self, *, timeout: float = RESEARCH_HTTP_TIMEOUT, **kwargs: Any) -> None:
@@ -325,6 +333,61 @@ class HttpResearchProvider(_HttpProvider, ResearchProvider):
         thirty seconds for the two minutes that timeout allows.
         """
         return research_budget(self._research_timeout)
+
+
+class HttpPolledResearchProvider(HttpResearchProvider):
+    """A research backend that starts a run with a POST and reports it, answer included, with a GET.
+
+    The subclass declares where the two calls go, its status table and where
+    its job id sits, and implements :meth:`_build_payload` and
+    :meth:`_to_response`. A backend that reads its answer from a third call
+    implements the job methods itself, against :class:`HttpResearchProvider`.
+    """
+
+    research_path: ClassVar[str]
+
+    status_path: ClassVar[str]
+    """Where a run is reported, with ``{job_id}`` where its id goes."""
+
+    research_states: ClassVar[Mapping[str, ResearchState]]
+
+    job_id_fields: ClassVar[tuple[str, ...]] = ("id",)
+    """Where a run's id may sit, in order: some backends name it one way when starting and another when reporting."""
+
+    @abc.abstractmethod
+    def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
+        """Translate a normalized request into the body that starts a run."""
+
+    @abc.abstractmethod
+    def _to_response(self, request: ResearchRequest, payload: dict[str, Any]) -> ResearchResponse:
+        """Translate a completed run's status payload into a normalized response."""
+
+    def _start(self, request: ResearchRequest) -> ResearchProgress:
+        return self._progress(request, self._post(self.research_path, self._build_payload(request)))
+
+    async def _astart(self, request: ResearchRequest) -> ResearchProgress:
+        return self._progress(request, await self._apost(self.research_path, self._build_payload(request)))
+
+    def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
+        return self._progress(request, self._get(self._status_path(job_id)))
+
+    async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
+        return self._progress(request, await self._aget(self._status_path(job_id)))
+
+    def _status_path(self, job_id: str) -> str:
+        """:attr:`status_path` with the job id in it, quoted so an id cannot point the request elsewhere."""
+        return self.status_path.format(job_id=quote(job_id, safe=""))
+
+    def _progress(self, request: ResearchRequest, payload: dict[str, Any]) -> ResearchProgress:
+        state = self.state_of(str(payload.get("status")), self.research_states)
+        job_id = next((payload[field] for field in self.job_id_fields if payload.get(field)), "")
+        return ResearchProgress(
+            job_id=str(job_id),
+            state=state,
+            # The status call carries the finished run, so it needs no second fetch.
+            response=self._to_response(request, payload) if state == "completed" else None,
+            detail=error_detail(payload.get("error")),
+        )
 
 
 class HttpBrowseProvider(_HttpProvider, BrowseProvider):

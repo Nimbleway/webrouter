@@ -72,9 +72,9 @@ extract = [
     "httpx>=0.27",
 ]
 # Agentic research: a backend reasons over several turns and answers in
-# minutes. Nimble goes through the SDK it already ships; Parallel, Exa and
-# Perplexity publish no Python SDK worth the dependency for the slim use made
-# of them, so httpx again.
+# minutes. Nimble goes through the SDK it already ships; Parallel, Perplexity,
+# Linkup and You.com publish no Python SDK worth the dependency for the slim use
+# made of them, so httpx again.
 research = [
     "nimble-python>=1.5.0,<2",
     "httpx>=0.27",
