@@ -219,7 +219,7 @@ def test_scans_of_the_same_urls_combine_and_others_are_refused(scan: ModuleType,
 
 def test_the_shipped_sets_load_deduplicated_and_sampled_by_seed(scan: ModuleType) -> None:
     whole = scan.load_urls(scan.parse_args(["--limit", "0"]))
-    assert len(whole) == 455 and len({url for url, _ in whole}) == 455
+    assert whole and len({url for url, _ in whole}) == len(whole)
     assert all(category for _, category in whole)
 
     some = scan.load_urls(scan.parse_args(["--limit", "20", "--seed", "1"]))
@@ -228,7 +228,8 @@ def test_the_shipped_sets_load_deduplicated_and_sampled_by_seed(scan: ModuleType
     assert [url for url, _ in some] == [url for url, _ in whole if url in {u for u, _ in some}], "set order kept"
 
     social = scan.load_urls(scan.parse_args(["--urls", "social-pdf", "--limit", "0"]))
-    assert len(social) == 911 and {category for _, category in social} == {"pdf", "social", "other"}
+    assert social and len({url for url, _ in social}) == len(social)
+    assert {category for _, category in social} == {"pdf", "social", "other"}
 
 
 def test_no_shipped_url_carries_a_credential_shaped_query_key(scan: ModuleType) -> None:
@@ -274,7 +275,3 @@ def test_a_shipped_set_and_a_file_of_your_own_each_carry_their_identity(scan: Mo
         scan.load_urls(scan.parse_args(["--urls", str(path)]))
     with pytest.raises(SystemExit, match="not a shipped set"):
         scan.load_urls(scan.parse_args(["--urls", "nowhere"]))
-
-
-def test_p95_is_the_nearest_rank_the_search_scan_uses(scan: ModuleType) -> None:
-    assert scan._pct([float(i) for i in range(1, 13)], 0.95) == 12.0

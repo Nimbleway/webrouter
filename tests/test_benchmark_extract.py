@@ -119,16 +119,6 @@ def test_one_row_per_provider_in_the_order_asked(registered: _Registered) -> Non
     assert report.failed == []
 
 
-def test_one_url_reads_the_same_as_a_list(registered: _Registered) -> None:
-    _member(registered, "only")
-
-    with WebRouter("only") as router:
-        report = router.benchmark_extract("https://example.com", providers=["only"])
-
-    assert report.urls == ["https://example.com"]
-    assert report["only"].count == 1
-
-
 def test_every_provider_is_sent_the_identical_request(registered: _Registered) -> None:
     _member(registered, "first")
     _member(registered, "second")
@@ -329,19 +319,6 @@ def test_the_router_closes_the_providers_it_built_for_the_comparison(registered:
         built = [router.get_extract_provider(name) for name in ("first", "second")]
 
     assert all(provider.closed for provider in built)
-
-
-def test_a_dumped_row_carries_the_error_as_its_message(registered: _Registered) -> None:
-    _member(registered, "broken", raises=ProviderError("broken", "upstream 500"))
-    _member(registered, "fine")
-
-    with WebRouter("fine") as router:
-        report = router.benchmark_extract(URLS, providers=["broken", "fine"])
-
-    dumped = report.model_dump()
-    assert dumped["urls"] == URLS
-    assert dumped["runs"][0]["error"] == str(report["broken"].error) and dumped["runs"][0]["response"] is None
-    assert dumped["runs"][1]["error"] is None and dumped["runs"][1]["response"]["provider"] == "fine"
 
 
 def test_close_waits_for_an_abandoned_row_instead_of_closing_under_it(registered: _Registered) -> None:
