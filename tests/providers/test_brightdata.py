@@ -8,8 +8,10 @@ are available. See CONTRIBUTING.md on verifying against the live API.
 
 from __future__ import annotations
 
+import json
 import os
 
+import httpx
 import pytest
 
 from web_router import WebRouter
@@ -18,6 +20,7 @@ from web_router.providers.brightdata import BrightDataExtractProvider
 from web_router.types import ExtractRequest
 
 URL = "https://example.com"
+UNREACHABLE = "https://not-a-real-domain-zzz9.invalid"
 
 
 @pytest.fixture
@@ -118,6 +121,26 @@ def test_headers_that_are_not_a_mapping_do_not_break_the_document(provider: Brig
 
     assert response.failures == []
     assert response.documents[0].content == "<html></html>"
+
+
+def test_one_unreachable_url_keeps_the_page_that_was_fetched(provider: BrightDataExtractProvider) -> None:
+    """Through the real HTTP call: the failed envelope costs only its own URL."""
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if json.loads(request.content)["url"] == UNREACHABLE:
+            return httpx.Response(
+                200, json={"status_code": 502, "headers": {"x-brd-error": "Could not resolve host"}, "body": ""}
+            )
+        return httpx.Response(200, json={"status_code": 200, "headers": {}, "body": "<html>Example</html>"})
+
+    provider._sync = httpx.Client(**provider._client_kwargs, transport=httpx.MockTransport(handle))
+    try:
+        response = provider.extract(ExtractRequest(urls=[URL, UNREACHABLE]))
+    finally:
+        provider.close()
+
+    assert response.urls == [URL]
+    assert [failure.url for failure in response.failures] == [UNREACHABLE]
 
 
 def test_an_error_page_the_target_served_is_still_a_document(provider: BrightDataExtractProvider) -> None:

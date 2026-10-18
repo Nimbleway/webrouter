@@ -544,27 +544,6 @@ def test_documents_come_back_in_the_order_the_urls_were_asked_for(name: str, cre
     assert response.urls == reversed_urls, f"{name} reordered the documents"
 
 
-def test_brightdata_error_envelope_for_one_url_keeps_the_others(credentialed: None) -> None:
-    """One URL the unlocker could not fetch must not cost the page it did fetch."""
-    provider = _build("brightdata")
-
-    def _extract(request: ExtractRequest, batch: list[str]) -> ExtractResponse:
-        if batch == [TWO_URLS[1]]:
-            payload = {"status_code": 502, "headers": {"x-brd-error": "Could not resolve host"}, "body": ""}
-        else:
-            payload = _STUB_PAYLOADS["brightdata"](batch)
-        return provider._to_response(request, batch, payload)
-
-    provider._extract = _extract  # type: ignore[method-assign]
-    try:
-        response = provider.extract(ExtractRequest(urls=TWO_URLS))
-    finally:
-        provider.close()
-
-    assert response.urls == [TWO_URLS[0]]
-    assert [failure.url for failure in response.failures] == [TWO_URLS[1]]
-
-
 def test_a_batching_backend_answering_out_of_order_is_reordered() -> None:
     """The case the real backends happen not to exercise, so it is pinned here."""
 
