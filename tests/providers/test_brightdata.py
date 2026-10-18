@@ -1,9 +1,9 @@
 """Bright Data provider tests.
 
-The mapping here is derived from Bright Data's documentation, not from a live
-call -- no account was available during development. The integration test below
-is the check that matters; run it once credentials are available. See
-CONTRIBUTING.md on verifying against the live API.
+The envelope shape and the headers of a failed fetch were seen live on
+2026-10-16; the rest of the mapping is derived from Bright Data's documentation.
+The integration test below is the check that matters; run it once credentials
+are available. See CONTRIBUTING.md on verifying against the live API.
 """
 
 from __future__ import annotations
@@ -109,6 +109,15 @@ def test_an_error_code_alone_is_still_a_failure(provider: BrightDataExtractProvi
 
     assert response.documents == []
     assert response.failures[0].error == "proxy_error"
+
+
+def test_headers_that_are_not_a_mapping_do_not_break_the_document(provider: BrightDataExtractProvider) -> None:
+    payload = {"status_code": 200, "headers": [["content-type", "text/html"]], "body": "<html></html>"}
+
+    response = provider._to_response(ExtractRequest(urls=[URL]), [URL], payload)
+
+    assert response.failures == []
+    assert response.documents[0].content == "<html></html>"
 
 
 def test_an_error_page_the_target_served_is_still_a_document(provider: BrightDataExtractProvider) -> None:

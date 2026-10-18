@@ -17,6 +17,7 @@ are reachable through ``provider_options``; mapping one properly is a welcome PR
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, ClassVar
 
 from web_router.constants import (
@@ -80,9 +81,13 @@ class BrightDataExtractProvider(HttpExtractProvider):
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         # The unlocker answers 200 even when it could not reach the page, so a
-        # failed fetch arrives as an empty body; only this header tells it from
-        # a page that really is empty. Header names are case-insensitive.
-        headers = {str(k).lower(): v for k, v in (payload.get("headers") or {}).items()}
+        # failed fetch arrives as an empty body; only its error headers tell it
+        # from a page that really is empty. Either one alone counts, and header
+        # names are case-insensitive.
+        envelope_headers = payload.get("headers")
+        headers = (
+            {str(k).lower(): v for k, v in envelope_headers.items()} if isinstance(envelope_headers, Mapping) else {}
+        )
         reason, code = headers.get(BRIGHTDATA_ERROR_HEADER), headers.get(BRIGHTDATA_ERROR_CODE_HEADER)
         if reason or code:
             error = f"{reason} ({code})" if reason and code else str(reason or code)
