@@ -69,6 +69,8 @@ src/web_router/
 │   ├── run.py          the loop: benchmark per question, judge per row, score
 │   └── prompts/        the SimpleQA grader prompt, vendored verbatim
 ├── constants.py        every endpoint, env var name, timeout and message template
+├── constants_you.py    You.com research's endpoints, efforts and status table,
+│                       kept apart so constants.py stops growing
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── exceptions.py       WebRouterError and subclasses

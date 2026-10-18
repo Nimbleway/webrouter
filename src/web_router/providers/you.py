@@ -24,14 +24,16 @@ from web_router.constants import (
     YOU_EXTRACTION_BY_DEPTH,
     YOU_KNOWLEDGE_ANSWER_TYPE,
     YOU_PARAM_NAMES,
+    YOU_RESULT_SECTIONS,
+    YOU_SEARCH_PATH,
+)
+from web_router.constants_you import (
     YOU_RESEARCH_BACKGROUND,
     YOU_RESEARCH_BASE_URL,
     YOU_RESEARCH_EFFORTS,
     YOU_RESEARCH_PATH,
     YOU_RESEARCH_STATES,
     YOU_RESEARCH_STATUS_PATH,
-    YOU_RESULT_SECTIONS,
-    YOU_SEARCH_PATH,
 )
 from web_router.providers._http import HttpPolledResearchProvider, HttpSearchProvider
 from web_router.providers._utils import best_text, build_payload
