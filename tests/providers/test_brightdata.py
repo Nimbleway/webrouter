@@ -92,6 +92,15 @@ def test_a_fetch_the_unlocker_could_not_make_is_a_failure(provider: BrightDataEx
     assert response.raw == [payload]
 
 
+def test_the_error_header_is_read_whatever_its_case(provider: BrightDataExtractProvider) -> None:
+    payload = {"status_code": 502, "headers": {"X-Brd-Error": "Could not resolve host"}, "body": ""}
+
+    response = provider._to_response(ExtractRequest(urls=[URL]), [URL], payload)
+
+    assert response.documents == []
+    assert response.failures[0].error == "Could not resolve host"
+
+
 def test_an_error_page_the_target_served_is_still_a_document(provider: BrightDataExtractProvider) -> None:
     """A 404 the site answered was fetched; its status says what it is."""
     payload = {"status_code": 404, "headers": {"content-type": "text/html"}, "body": "Not Found"}

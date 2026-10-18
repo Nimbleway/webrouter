@@ -80,8 +80,9 @@ class BrightDataExtractProvider(HttpExtractProvider):
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         # The unlocker answers 200 even when it could not reach the page, so a
         # failed fetch arrives as an empty body; only this header tells it from
-        # a page that really is empty.
-        error = (payload.get("headers") or {}).get(BRIGHTDATA_ERROR_HEADER)
+        # a page that really is empty. Header names are case-insensitive.
+        headers = {str(k).lower(): v for k, v in (payload.get("headers") or {}).items()}
+        error = headers.get(BRIGHTDATA_ERROR_HEADER)
         if error:
             failure = ExtractFailure(url=urls[0], error=str(error))
             return ExtractResponse(provider=self.name, failures=[failure], raw=[payload])
