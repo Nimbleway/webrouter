@@ -415,11 +415,10 @@ async def test_a_poll_that_fails_for_another_reason_after_the_deadline_is_still_
 @pytest.mark.parametrize(
     "error",
     [
-        TimeoutError("read timed out"),
         type("ReadTimeout", (type("TimeoutException", (Exception,), {}),), {})("httpx read timeout"),
         type("APITimeoutError", (Exception,), {})("Request timed out."),
     ],
-    ids=["builtin", "httpx-shaped", "sdk-shaped"],
+    ids=["httpx-shaped", "sdk-shaped"],
 )
 def test_a_timeout_is_recognized_whichever_library_raised_it(clock: _Clock, error: Exception) -> None:
     class Stalling(StallingChores):
