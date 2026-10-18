@@ -33,24 +33,26 @@ from web_router.types import (
 
 
 def resolve_api_key(api_key: str | None, *, env_var: str, provider: str) -> str:
-    """Return the explicit key, else the one in ``env_var``.
+    """Return the explicit key, else the one in ``env_var``, stripped of surrounding whitespace.
 
     Raises:
         ConfigurationError: if neither is available, naming the variable to set.
+            An empty or whitespace-only value counts as missing.
     """
-    key = api_key or os.environ.get(env_var)
+    key = (api_key or "").strip() or (os.environ.get(env_var) or "").strip()
     if not key:
         raise ConfigurationError.missing_api_key(provider, env_var)
     return key
 
 
 def resolve_setting(value: str | None, *, env_var: str, provider: str, setting: str) -> str:
-    """Return the explicit value of a required non-credential setting, else the one in ``env_var``.
+    """Return the explicit value of a required non-credential setting, else the one in ``env_var``, stripped.
 
     Raises:
         ConfigurationError: if neither is available, naming the variable to set.
+            An empty or whitespace-only value counts as missing.
     """
-    resolved = value or os.environ.get(env_var)
+    resolved = (value or "").strip() or (os.environ.get(env_var) or "").strip()
     if not resolved:
         raise ConfigurationError.missing_setting(provider, env_var=env_var, setting=setting)
     return resolved
