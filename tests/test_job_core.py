@@ -343,3 +343,91 @@ async def test_the_async_budget_reaches_the_call_that_starts_the_run() -> None:
 
     assert provider.budgets == [pytest.approx(5, abs=0.5)]
     assert job_budget(CALL_TIMEOUT) == CALL_TIMEOUT, "the budget must not outlive the call that set it"
+
+
+class StallingChores(FakeChores):
+    """A backend whose status call stalls until the caller's budget runs out, as a clamped read timeout does."""
+
+    def __init__(self, clock: _Clock, *, stall_from_poll: int, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.clock = clock
+        self.stall_from_poll = stall_from_poll
+
+    def _fetch(self, request: ChoreRequest, job_id: str) -> ChoreProgress:
+        self.polls += 1
+        if self.polls >= self.stall_from_poll:
+            # The request was clamped to what the caller had left, so it fails as that runs out.
+            self.clock.now += CALL_TIMEOUT
+            raise TimeoutError("read timed out")
+        return self._report(request)
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
+async def test_a_poll_that_stalls_past_the_deadline_is_a_timeout_not_a_failure(
+    clock: _Clock, asynchronous: bool
+) -> None:
+    """The timeout carries the job id, so a run still going -- and billing -- can be come back to."""
+    provider = StallingChores(clock, stall_from_poll=2, reports=["BUSY"])
+
+    with pytest.raises(ChoreTimeoutError, match="outlived 10s") as caught:
+        if asynchronous:
+            await provider.ado(_request(), timeout=10.0)
+        else:
+            provider.do(_request(), timeout=10.0)
+
+    assert caught.value.job_id == "chore-1"
+    assert isinstance(caught.value.__cause__, ProviderError)
+    assert "read timed out" in str(caught.value.__cause__)
+
+
+def test_a_poll_that_fails_with_time_left_is_still_the_backends_failure(clock: _Clock) -> None:
+    class Failing(FakeChores):
+        def _fetch(self, request: ChoreRequest, job_id: str) -> ChoreProgress:
+            raise ConnectionError("connection reset")
+
+    with pytest.raises(ProviderError, match="connection reset"):
+        Failing(reports=["BUSY"]).do(_request(), timeout=10.0)
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
+async def test_a_poll_that_fails_for_another_reason_after_the_deadline_is_still_that_failure(
+    clock: _Clock, asynchronous: bool
+) -> None:
+    """Only a request that timed out becomes the method's timeout; a refused key late in the wait stays a failure."""
+
+    class Refusing(StallingChores):
+        def _fetch(self, request: ChoreRequest, job_id: str) -> ChoreProgress:
+            self.polls += 1
+            if self.polls >= self.stall_from_poll:
+                self.clock.now += CALL_TIMEOUT
+                raise PermissionError("401 invalid api key")
+            return self._report(request)
+
+    provider = Refusing(clock, stall_from_poll=2, reports=["BUSY"])
+
+    with pytest.raises(ProviderError, match="invalid api key"):
+        if asynchronous:
+            await provider.ado(_request(), timeout=10.0)
+        else:
+            provider.do(_request(), timeout=10.0)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        type("ReadTimeout", (type("TimeoutException", (Exception,), {}),), {})("httpx read timeout"),
+        type("APITimeoutError", (Exception,), {})("Request timed out."),
+    ],
+    ids=["httpx-shaped", "sdk-shaped"],
+)
+def test_a_timeout_is_recognized_whichever_library_raised_it(clock: _Clock, error: Exception) -> None:
+    class Stalling(StallingChores):
+        def _fetch(self, request: ChoreRequest, job_id: str) -> ChoreProgress:
+            self.polls += 1
+            if self.polls >= self.stall_from_poll:
+                self.clock.now += CALL_TIMEOUT
+                raise error
+            return self._report(request)
+
+    with pytest.raises(ChoreTimeoutError):
+        Stalling(clock, stall_from_poll=2, reports=["BUSY"]).do(_request(), timeout=10.0)

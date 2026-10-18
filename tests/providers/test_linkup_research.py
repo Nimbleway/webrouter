@@ -23,9 +23,9 @@ import json
 import os
 from typing import Any
 
-import httpx
 import pytest
 
+from tests.providers._research_stub import ResearchApi, stub_research_api
 from web_router.constants import LINKUP_RESEARCH_DEPTHS
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.linkup import LinkupResearchProvider
@@ -73,27 +73,6 @@ COMPLETED = _run(
 )
 
 
-class _Api:
-    """Stands in for the Research API: answers from a script and records every call."""
-
-    def __init__(self, started: dict[str, Any], states: list[dict[str, Any]]) -> None:
-        self._started = started
-        self._states = states
-        self.calls: list[tuple[str, str]] = []
-        self.bodies: list[dict[str, Any]] = []
-        self.headers: list[httpx.Headers] = []
-        self.raw_paths: list[str] = []
-
-    def handle(self, request: httpx.Request) -> httpx.Response:
-        self.calls.append((request.method, request.url.path))
-        self.headers.append(request.headers)
-        self.raw_paths.append(request.url.raw_path.decode())
-        if request.method == "POST":
-            self.bodies.append(json.loads(request.content))
-            return httpx.Response(200, json=self._started)
-        return httpx.Response(200, json=self._states.pop(0) if len(self._states) > 1 else self._states[0])
-
-
 @pytest.fixture
 def provider(monkeypatch: pytest.MonkeyPatch) -> LinkupResearchProvider:
     monkeypatch.setenv("LINKUP_API_KEY", "test-key")
@@ -105,13 +84,8 @@ def _stub(
     *,
     started: dict[str, Any] | None = None,
     states: list[dict[str, Any]] | None = None,
-) -> _Api:
-    """Answer this provider's HTTP calls from a script, through its real client settings."""
-    api = _Api(started or _run("pending"), states or [COMPLETED])
-    transport = httpx.MockTransport(api.handle)
-    provider._sync = httpx.Client(**provider._client_kwargs, transport=transport)
-    provider._async = httpx.AsyncClient(**provider._client_kwargs, transport=transport)
-    return api
+) -> ResearchApi:
+    return stub_research_api(provider, started or _run("pending"), states or [COMPLETED])
 
 
 # -- What gets sent ----------------------------------------------------------

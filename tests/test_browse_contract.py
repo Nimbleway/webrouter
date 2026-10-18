@@ -367,6 +367,23 @@ async def test_the_async_timeout_behaves_identically(clock: _Clock) -> None:
     assert provider.cancelled == []
 
 
+def test_a_status_poll_that_stalls_past_the_deadline_is_a_browse_timeout(clock: _Clock) -> None:
+    """Browse builds its own timeout, so the job id must survive a stalled poll here too."""
+
+    def stall(self: Any, request: BrowseRequest, job_id: str) -> Any:
+        # The request was clamped to what the caller had left, so it fails as that runs out.
+        clock.now += 10.0
+        raise TimeoutError("read timed out")
+
+    provider = _fake(polls_before_done=1000, _fetch=stall)
+
+    with pytest.raises(BrowseTimeoutError) as caught:
+        provider.browse(_request(), timeout=10.0)
+
+    assert caught.value.job_id == "task-1"
+    assert isinstance(caught.value.__cause__, ProviderError)
+
+
 @pytest.mark.parametrize(
     "method",
     [WebRouter.browse, AsyncWebRouter.browse, BrowseProvider.browse, BrowseJob.result, BrowseJob.aresult],
