@@ -176,7 +176,7 @@ requests a second.
 
 | Mode | Setup | What it returns | Price per 1k | Source |
 |---|---|---|---|---|
-| default (`need_content` false) | `deepseek` | Titles, URLs, a snippet and a 600-800-character summary per result | $0.75 | [search and fetch](https://api-docs.deepseek.com/guides/search) |
+| default (`need_content` false) | `deepseek` | Titles, URLs, a snippet and a summary per result (live: 108-4,651 characters, median about 1,800) | $0.75 | [search and fetch](https://api-docs.deepseek.com/guides/search) |
 | `need_content=true` | `deepseek:content` | The same, plus the page body | $0.75 | same |
 
 ### Keyless MCP search

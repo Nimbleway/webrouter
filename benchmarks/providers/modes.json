@@ -164,8 +164,9 @@
       "provider_options": {
         "need_content": true
       },
-      "note": "Adds each result's page body. Unset, content is the 600-800-character summary. Same price per call.",
-      "verified": false
+      "note": "Adds each result's page body. Unset, content is the summary. Same price per call.",
+      "verified": true,
+      "observed": "2026-10-19: content went from empty to the page body (16,850 characters on one result); snippet and summary unchanged."
     }
   }
 }

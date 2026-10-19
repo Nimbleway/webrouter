@@ -2888,8 +2888,8 @@ KEENABLE_PARAM_NAMES = {"max_results": "max_results"}
 
 # --- DeepSeek ---------------------------------------------------------------
 # Search and Fetch (api-docs.deepseek.com/guides/search), on the same host and
-# bearer key as DeepSeek's model API. Mapped from documentation on 2026-10-18 --
-# no account was available to verify it live. See tests/providers/test_deepseek.py.
+# bearer key as DeepSeek's model API. Checked live on 2026-10-19; see
+# tests/providers/test_deepseek.py for what each call showed.
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEEPSEEK_SEARCH_PATH = "/v1/tools/search"
@@ -2903,8 +2903,9 @@ DEEPSEEK_SEARCH_PARAMETERS = frozenset({"max_results", "include_domains", "exclu
 the query, as operators.
 
 ``search_depth`` stays unmapped and raises. DeepSeek has two content tiers: a
-snippet and a 600-800-character summary written for a model, or those plus the
-page body (``need_content``). ``search_depth`` has three levels, and each must
+snippet and a summary written for a model, or those plus the page body
+(``need_content``). DeepSeek documents the summary at 600-800 characters; live,
+40 came back at 108-4,651, median about 1,800. ``search_depth`` has three levels, and each must
 send a different request (tests/test_contract.py), so two would send the same
 one. ``need_content`` is reachable through ``provider_options``.
 

@@ -1,13 +1,17 @@
 """DeepSeek provider tests.
 
-Mapped from DeepSeek's documentation (api-docs.deepseek.com/guides/search) on
-2026-10-18 -- no account was available to verify it live, so the payloads below
-are the documented example shapes rather than recordings. Unverified: that
-``site:``, ``-site:`` and ``lang:`` filter as documented when web-router appends
-them to a query, that ``OR`` between ``site:`` operators widens rather than
-narrows, how ``OR`` binds beside the ``-site:`` and ``lang:`` after it, that
-``count`` bounds the results, and that Fetch answers 403, 404 and 429 as
-documented. The live tests below are the checks that can fail on each.
+Checked against the live API on 2026-10-19. ``site:`` alone keeps every result
+on that site; ``site:a OR site:b`` widens to both (20 results: 17 and 3), in
+either order and with ``-site:`` or ``lang:`` after it; parentheses around the
+pair return nothing, so none are sent. ``-site:wikipedia.org`` removed Wikipedia
+from "coffee". ``lang:zh`` turned an English query with no Chinese results into
+five Chinese ones. ``count`` 3 and 50 return 3 and 50. A 129-character query is
+a 400. A result carries exactly the documented fields, ``content`` empty without
+``need_content``; ``date`` is an RFC 3339 string or null. Summaries ran 108 to
+4,651 characters, not the documented 600 to 800. Fetch answers ``{title,
+content}``, and 404 for a missing page or a metadata address. A zero-balance
+account answers 402 ``insufficient_balance_error`` on both endpoints. The search
+payloads below keep the documented example's values in the live shape.
 """
 
 from __future__ import annotations
