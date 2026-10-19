@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-19
+
 ### Added
 
 - DeepSeek as a search and an extract backend (`deepseek`), reading `DEEPSEEK_API_KEY`. Search maps `max_results`, `include_domains`, `exclude_domains` and `locale`; the filters go inside the query, and a query over DeepSeek's 128-character limit is refused, not cut. `search_depth` and `country` raise. A result's content is DeepSeek's summary unless `need_content` is sent through `provider_options`. Extract returns `markdown`, starting at most 5 fetches a second, DeepSeek's account limit; `ExtractProvider.min_start_interval` lets any backend space its fetches this way. `auto` tries DeepSeek last in both chains, so no existing call changes backend.
