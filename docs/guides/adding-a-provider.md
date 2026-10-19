@@ -2,7 +2,7 @@
 
 This guide walks through adding a new search or extract provider to web-router. Research, browser and browse providers follow the same shape; see [the last section](#research-browser-and-browse-providers).
 
-There is a base class per method, and a provider serves one or both. A vendor that already serves one gets a second class in its existing module rather than a new file — `nimble.py`, `tavily.py`, `exa.py`, `linkup.py` and `webiq.py` each hold a search provider and an extract provider (and `nimble.py` and `linkup.py` a research provider too).
+There is a base class per method, and a provider serves one or both. A vendor that already serves one gets a second class in its existing module rather than a new file — `nimble.py`, `tavily.py`, `exa.py`, `linkup.py`, `webiq.py` and `keenable.py` each hold a search provider and an extract provider, and `nimble.py`, `linkup.py`, `parallel.py`, `perplexity.py` and `you.py` a research provider too.
 
 ## Adding a search provider
 
@@ -10,7 +10,7 @@ There is a base class per method, and a provider serves one or both. A vendor th
 
 Create `src/web_router/providers/<name>.py` with a `SearchProvider` subclass setting `name` and `supported_parameters`. You implement the underscored methods; the base class wraps them with validation and error handling, so never override `search`/`asearch` themselves.
 
-**If the API has no Python SDK — or you only need a couple of its fields — subclass `HttpSearchProvider` instead** (`providers/_http.py`). It owns client construction, auth headers, HTTP error mapping and cleanup, leaving you two methods: `_build_payload` and `_to_response`. Brave, Exa, Parallel, Perplexity, Linkup, WebIQ and You.com are all built this way and are the shortest examples to copy. Subclass `SearchProvider` directly only when wrapping a real SDK, as Nimble and Tavily do.
+**If the API has no Python SDK — or you only need a couple of its fields — subclass `HttpSearchProvider` instead** (`providers/_http.py`). It owns client construction, auth headers, HTTP error mapping and cleanup, leaving you two methods: `_build_payload` and `_to_response`. Brave, Exa, Parallel, Perplexity, Linkup, WebIQ, Keenable and You.com are all built this way and are the shortest examples to copy. Subclass `SearchProvider` directly only when wrapping a real SDK, as Nimble and Tavily do.
 
 `HttpSearchProvider` clients never follow redirects, and a provider sending a credential refuses to. `httpx` replays the auth header to the redirect target even on another host, so if your endpoint redirects, point `base_url` at where it lands rather than turning redirects on.
 
@@ -32,7 +32,7 @@ Wrap SDK failures in `ProviderError` so callers can handle every backend the sam
 
 Add the SDK to the extra for each method the provider serves in `pyproject.toml` — extras are named per method (`search`, `extract`), never per vendor, so a search backend goes in `search` rather than getting one of its own. Register the module in `_BUILTIN_PROVIDERS` in `src/web_router/registry.py`, and add an entry to `ENV_BY_PROVIDER` in `constants.py` naming the variable its credential comes from — or `None` if it needs none. `configured_providers()` reads that table, and `tests/test_contract.py` fails if a provider is missing from it.
 
-A new search backend does not change `auto`'s order on its own. If it should join the `auto` chain, add it to `AUTO_APPENDED` in `constants.py`, which is tried after the keyless tier, so joining moves no call that is already being served. Moving it ahead of the keyless tier (into `AUTO_PREFERRED`) is a routing change, and that PR should cite `benchmarks/providers/RESULTS.md`.
+A new search backend does not change `auto`'s order on its own. If it should join the `auto` chain, add it to `AUTO_APPENDED` in `constants.py`, which is tried after the keyless tier, so joining moves no call that is already being served. Moving it ahead of the keyless tier (into `AUTO_PREFERRED`) is a routing change, and that PR should be backed by a provider scan (`benchmarks/providers/`). Keenable is the latest example: it joined search `auto` through `AUTO_APPENDED`, after the keyless tier, and its keyless `/public` tier went last in `AUTO_KEYLESS`.
 
 ### 6. Add tests and documentation
 
@@ -96,7 +96,7 @@ Before submitting a provider PR:
 - [ ] Endpoint, env var, and parameter mappings in `constants.py`
 - [ ] SDK added to appropriate extra in `pyproject.toml`
 - [ ] Provider registered in `registry.py`
-- [ ] Added to `AUTO_APPENDED` / `AUTO_EXTRACT_APPENDED` only if it should join `auto` (reordering cites `benchmarks/providers/RESULTS.md`)
+- [ ] Added to `AUTO_APPENDED` / `AUTO_EXTRACT_APPENDED` only if it should join `auto` (reordering is backed by a provider scan in `benchmarks/providers/`)
 - [ ] Environment variable(s) added to `ENV_BY_PROVIDER` or `EXTRACT_ENV_BY_PROVIDER` in `constants.py`
 - [ ] Environment variable(s) added to `.env.example`
 - [ ] Tests in `tests/providers/test_<name>.py` covering parameter mapping and response normalization

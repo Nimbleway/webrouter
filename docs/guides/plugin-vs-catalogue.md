@@ -88,12 +88,12 @@ All the items from the [Adding a provider](adding-a-provider.md) checklist, plus
 3. Follow the [Adding a provider](adding-a-provider.md) guide
 4. Submit a PR with live evidence in the description
 5. Address review feedback
-6. Once merged, your provider ships in the next release
+6. Once merged, your provider reaches every clone on its next `git pull && make setup`
 
 ### Characteristics
 
 - **Registered in `registry.py`** — part of the package source
-- **Included in extras** — `pip install 'web-router[search]'` brings it in
+- **Included in extras** — the method's extra brings it in (`uv sync --extra search` in a clone, or `make setup` for every extra)
 - **Named by enum** — `WebRouter(Provider.ACME)` (strings still work)
 - **Configured via environment** — credential variables in the `*_ENV_BY_PROVIDER` tables in `constants.py`, the README and `.env.example`, so `configured_providers()` reports it
 - **Can join `auto`** — appended after the keyless tier, never ahead of existing members without a scan (see [Adding a provider](adding-a-provider.md))
@@ -105,7 +105,7 @@ All the items from the [Adding a provider](adding-a-provider.md) checklist, plus
 | Aspect | Runtime Registration | Catalogue Submission |
 | --- | --- | --- |
 | Visibility | Private to your application | Available to every web-router install |
-| Installation | Manual (you handle dependencies) | Automatic (`pip install 'web-router[search]'`) |
+| Installation | Manual (you handle dependencies) | Automatic (the method's extra, e.g. `uv sync --extra search`) |
 | Reference | String name only | `Provider` enum + string |
 | Configuration | Your choice | Environment variables + `provider_config` |
 | Maintenance | Your responsibility | Maintained with web-router |

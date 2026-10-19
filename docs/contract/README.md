@@ -11,7 +11,7 @@ The contract is defined by:
 3. **The contract tests** listed below
 4. **This page** and the [guides](../guides/adding-a-provider.md)
 
-The code is the source of truth. A longer working draft of the Layer 1 contract, covering all five methods, lives at `docs/spec/layer-1-contract.md`.
+The code is the source of truth. A longer working draft of the Layer 1 contract, covering all five methods, is in review separately (draft PR #16, `docs/spec/layer-1-contract.md`); until it lands, this page and the code are the reference.
 
 This page covers search and extract in detail. Research, browser sessions and browse follow the same rules (unset means unset, unmapped raises, untouched payload in `raw`); their models are in `types.py` and their contract tests are listed below.
 
@@ -147,7 +147,7 @@ Add your provider to them when contributing.
 The contract changes as options are added. Changes follow these principles:
 
 1. **Additive changes are safe**: a new optional field does not break existing code.
-2. **Behavior changes are called out**: a change in what an existing call returns (for example, 0.2.0 made `markdown` the extract default) is listed under "Changed" in `CHANGELOG.md`.
+2. **Behavior changes are called out**: a change in what an existing call returns (for example, making `markdown` the extract default) is listed under "Changed" in `CHANGELOG.md`.
 3. **Consistency across providers**: a new shared option must mean the same thing on every backend that maps it.
 
 ## See also

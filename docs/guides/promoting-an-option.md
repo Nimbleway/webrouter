@@ -60,6 +60,7 @@ class SearchRequest(NormalizedRequest):
     locale: str | None = Field(default=None, description="Language code, e.g. 'en'.")
     start_date: str | None = Field(default=None, description="Only results published on or after this date.")  # new
 
+
 # In client.py, on WebRouter.search and AsyncWebRouter.search
 def search(
     self,
@@ -74,8 +75,8 @@ def search(
     locale: str | None = None,
     start_date: str | None = None,  # new
     provider_options: dict[str, Any] | None = None,
-) -> SearchResponse:
-    ...
+) -> SearchResponse: ...
+
 
 # ...and in _BaseRouter._build_request. If any auto member maps it, add it to
 # AUTO_SUPPORTED_PARAMETERS in constants.py as well.

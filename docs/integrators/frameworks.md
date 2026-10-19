@@ -32,7 +32,7 @@ results = framework.search("query")
 
 ### For frameworks
 
-- **One integration** — works with 12 search backends and 9 extract backends, plus research, browser-session and browse backends
+- **One integration** — works with 13 search backends and 10 extract backends, plus research, browser-session and browse backends
 - **Provider-agnostic** — no conditional logic for each backend
 - **Consistent errors** — all providers raise the same exception hierarchy
 - **Testing flexibility** — mock the router or register fake providers for tests
@@ -186,7 +186,7 @@ tools = web_router_tools(WebRouter(), provider="nimble", max_results=5)
 
 Pass `async_router=AsyncWebRouter()` as well to serve `agent.ainvoke` without a worker thread.
 
-Install with the `langchain` extra: `pip install 'web-router[langchain]'`
+Install with the `langchain` extra: `uv sync --extra langchain` in your clone, or `pip install -e "/path/to/webrouter[langchain]"` from your own project.
 
 ### Claude (Anthropic)
 
@@ -197,7 +197,7 @@ from web_router import AsyncWebRouter
 from web_router.integrations.anthropic import WebRouterTools
 
 tools = WebRouterTools(AsyncWebRouter(), provider="nimble", max_results=5)
-system_prompt = tools.guide()      # static guide: when to use which tool
+system_prompt = tools.guide()  # static guide: when to use which tool
 definitions = tools.definitions()  # web_router_search, web_router_extract
 # for each tool use: result = await tools.acall(name, input)
 ```
@@ -214,13 +214,17 @@ from web_router.integrations.openai import WebRouterTools
 
 tools = WebRouterTools(WebRouter(), provider="nimble", max_results=5)
 instructions = tools.guide()
-definitions = tools.definitions()          # Responses API; chat_definitions() for Chat Completions
+definitions = tools.definitions()  # Responses API; chat_definitions() for Chat Completions
 # for each function call: tools.call(call.name, call.arguments).function_call_output(call.call_id)
 ```
 
 No SDK or extra needed. The definitions are strict, so OpenAI holds the model's arguments to the schema.
 
-All three integrations follow the same rules: the model supplies only the query or the URLs, and the provider and options are fixed when the tools are built. The model reads a compact rendering of each result (text cut to `result_chars`, a page to `document_chars`), while your code keeps the full response. The guide is fixed text; there is no planner or per-query routing in the tools. The Claude and OpenAI modules share their tool logic in `integrations/_tools.py` and differ only in the envelope.
+All three integrations follow the same rules: the model supplies only the query or the URLs, and the provider and options are fixed when the tools are built. The model reads a compact rendering of each result (text cut to `result_chars`, a page to `document_chars`), while your code keeps the full response. The guide is fixed text (`tools.guide()`, or `routing_guide()` from either module without building tools); there is no planner or per-query routing in the tools. The Claude and OpenAI modules share their tool logic in `integrations/_tools.py` and differ only in the envelope.
+
+### MCP
+
+For MCP clients (Claude Code, Claude Desktop, Cursor and others), the self-hosted stdio server `web-router-mcp` (`web_router.mcp.server:main`, also `python -m web_router.mcp`) exposes the methods as tools. It needs the `mcp` extra, plus `browser` for the `browser_*` tools; see [the MCP server guide](../mcp.md).
 
 ## Async support
 

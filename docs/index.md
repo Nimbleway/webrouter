@@ -4,14 +4,14 @@ Technical documentation for web-router: one interface over many web search, extr
 
 ## What is web-router?
 
-web-router puts many backends behind one typed interface: 12 search backends, 9 extract backends, 4 research backends, 5 browser-session backends and 3 hosted browse backends, plus an `auto` provider that chains them. Switch backends with one argument; the call, the options and the response shape stay the same.
+web-router puts many backends behind one typed interface: 13 search backends (10 keyed, 3 keyless hosted MCP endpoints), 10 extract backends, 5 research backends, 5 browser-session backends and 3 hosted browse backends, plus an `auto` provider that chains them. Switch backends with one argument; the call, the options and the response shape stay the same.
 
 ```python
 from web_router import Provider, WebRouter
 
-WebRouter().search("query")                 # auto: no key needed, keyless tiers answer
-WebRouter(Provider.NIMBLE).search("...")    # or name one
-WebRouter(Provider.TAVILY).search("...")    # same call, same result shape
+WebRouter().search("query")  # auto: no key needed, keyless tiers answer
+WebRouter(Provider.NIMBLE).search("...")  # or name one
+WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
 ```
 
 ## Documentation sections
@@ -44,15 +44,23 @@ WebRouter(Provider.TAVILY).search("...")    # same call, same result shape
 
 ## Get started
 
-web-router is not on public PyPI. Releases are published to the internal JFrog PyPI index only; [RELEASING.md](https://github.com/WebContextLayer/webrouter/blob/main/RELEASING.md) shows how to install from it. Extras are named after the methods you call (`search`, `extract`, `research`, `browser`, `all`, plus `mcp`, `evals` and `langchain`).
-
-To work from a checkout, and run an example that needs no credentials:
+web-router (0.4.0) is installed from a clone of this repository, not from a package index. The one prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/). Clone it, set it up, and run an example that needs no credentials:
 
 ```bash
-gh repo clone WebContextLayer/webrouter
+git clone https://github.com/WebContextLayer/webrouter.git
 cd webrouter
-uv run --all-extras python examples/main.py
+make setup              # every extra: the library, the MCP server, the browser tools and a local Chromium
+uv run python examples/main.py
 ```
+
+From your own project, install the clone in editable mode, so a `git pull` in the clone is the whole update:
+
+```bash
+uv add --editable "/path/to/webrouter[all]"     # a uv project
+pip install -e "/path/to/webrouter[all]"        # any other virtualenv
+```
+
+Extras are named after the methods you call (`search`, `extract`, `research`, `browser`, `all`, plus `mcp`, `evals` and `langchain`); `uv sync --extra <name>` in the clone adds one. The [README's Install section](https://github.com/WebContextLayer/webrouter#install) and [CLAUDE.md](https://github.com/WebContextLayer/webrouter/blob/main/CLAUDE.md) cover the rest.
 
 ## Contributing
 
