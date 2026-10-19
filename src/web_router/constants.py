@@ -4295,8 +4295,45 @@ ROUTE_DECIDER_OPENAI = "openai"
 ROUTE_DECIDER_RULES = "rules"
 """Keyword rules, keyless and deterministic: ``WebRouter(decider="rules")``."""
 
-DECISION_SCHEMA_VERSION = "decision-v1"
-"""Bumped with every change to the locked schema, together with tests/fixtures/decisions/decision.schema.json."""
+DECISION_SCHEMA_VERSION = "decision-v2"
+"""Bumped with every change to the locked schema, together with tests/fixtures/decisions/decision.schema.json.
+
+v2 redefined ``confidence`` (the route's labels only, not well_scoped) and added ``decider_status``,
+``route.tool``, ``timeout_s``, ``error`` and ``violations``: a v1 reader, with ``extra="forbid"``, rejects them."""
+
+DECISION_ROUTE_LABELS = ("tool", "recent", "coverage")
+"""The labels a route is built from. A decision's ``confidence`` is the minimum over these: well_scoped changes
+no route, so a shaky well_scoped should not make a route look unsure. classify()'s own low-confidence trigger
+is #11's and still counts all four."""
+
+DECISION_CONFIDENCE_DIGITS = 4
+DECISION_LATENCY_DIGITS = 1
+"""Decimal places a decision record rounds to: confidences and probabilities to 4, latency to 0.1 ms. The
+minimum is taken after rounding, so it matches the labels exactly."""
+
+DECISION_STATUS_ANSWERED = "answered"
+DECISION_STATUS_NOT_ASKED = "not_asked"
+DECISION_STATUS_FAILED = "failed"
+"""What happened to the decider for one route: it answered, it was not asked because a given URL or schema
+settled the method, or it failed and classify took the decider_error fallback."""
+
+DECISION_ERROR_TIMEOUT = "timeout"
+DECISION_ERROR_HTTP = "http_error"
+DECISION_ERROR_INVALID_ANSWER = "invalid_answer"
+DECISION_ERROR_EXCEPTION = "exception"
+
+DECISION_ERROR_KIND_BY_EXCEPTION: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (DECISION_ERROR_TIMEOUT, ("TimeoutError", "TimeoutException", "APITimeoutError")),
+    (DECISION_ERROR_HTTP, ("HTTPError", "APIStatusError", "APIConnectionError", "APIError")),
+    (DECISION_ERROR_INVALID_ANSWER, ("ValueError", "KeyError", "TypeError", "AttributeError")),
+)
+"""A failure's kind, from the class names in its exception's MRO, first match wins. Names rather than classes
+because httpx and openai are optional imports: httpx.ReadTimeout and openai.APITimeoutError are timeouts,
+httpx.HTTPStatusError and openai.APIStatusError HTTP errors, an answer that would not parse an invalid answer.
+Timeouts come first: openai's timeout subclasses its connection error. Anything else is ``exception``."""
+
+DECISION_ERROR_MESSAGE_LIMIT = 200
+"""Characters kept of a failure's message in a decision's ``error``."""
 
 DECISION_PROBABILITY_TOLERANCE = 0.05
 """How far a label's probabilities may sum from 1: models round, and a strict 1.0 would reject honest answers."""
@@ -4324,8 +4361,12 @@ MSG_DECISION_BAD_CHOICE = "{question}={choice!r} is not one of {choices}"
 MSG_DECISION_PROBABILITY_RANGE = "probabilities outside [0, 1]: {names}"
 MSG_DECISION_PROBABILITY_SUM = "probabilities sum to {total:.3f}, not 1"
 MSG_DECISION_CHOICE_NOT_IN_PROBABILITIES = "the choice {choice!r} is missing from probabilities"
-MSG_DECISION_CONFIDENCE_NOT_MIN = "confidence {confidence} is not the minimum over the labels ({minimum})"
-MSG_DECISION_CONFIDENCE_WITHOUT_LABELS = "confidence must be None when there are no labels, and set when there are"
+MSG_DECISION_CONFIDENCE_NOT_MIN = (
+    "confidence {confidence} is not the minimum over tool, recent and coverage ({minimum})"
+)
+MSG_DECISION_LABELS_STATUS = "labels are set exactly when decider_status is 'answered'"
+MSG_DECISION_ERROR_STATUS = "an error is recorded only when decider_status is 'failed'"
+MSG_DECISION_FAILED_FALLBACK = "decider_status 'failed' needs 'decider_error' in route.fallback"
 
 DECISION_CONFORMANCE_QUERIES = (
     "Who is the CEO of Databricks?",
@@ -4370,3 +4411,8 @@ RULES_CONFIDENCE = {"tool": 0.8, "recent": 0.7, "coverage": 0.7, "well_scoped": 
 spread evenly over the other choices, so the distribution sums to 1. Every value clears ROUTE_MIN_CONFIDENCE,
 so a rules route never falls back for low confidence. The patterns match Bench's stand-in rules decider."""
 RULES_VERSION = "rules-v1"
+
+OPENAI_DECIDER_VERSION = "{model}+p{digest}"
+OPENAI_DECIDER_DIGEST_LENGTH = 8
+"""The OpenAI decider's version: its model, and a short sha256 of the prompt templates, ROUTE_QUESTIONS and the
+answer schema. Two prompts on one model are two deciders, and the record must say which answered."""

@@ -12,6 +12,7 @@ trusting the same ROUTE_MIN_CONFIDENCE for both.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from typing import Any
@@ -22,6 +23,7 @@ from web_router.constants import (
     EXTRA_EVALS,
     MSG_DECISION_DECIDER_FAILED,
     MSG_ROUTE_BAD_ANSWER,
+    OPENAI_DECIDER_DIGEST_LENGTH,
     OPENAI_DECIDER_MAX_RETRIES,
     OPENAI_DECIDER_MODEL,
     OPENAI_DECIDER_PROMPT_CRITERION,
@@ -30,7 +32,9 @@ from web_router.constants import (
     OPENAI_DECIDER_SCHEMA_NAME,
     OPENAI_DECIDER_TEMPERATURE,
     OPENAI_DECIDER_TIMEOUT,
+    OPENAI_DECIDER_VERSION,
     ROUTE_DECIDER_OPENAI,
+    ROUTE_QUESTIONS,
 )
 from web_router.decisions.route import Answer
 from web_router.exceptions import ConfigurationError, ProviderError, ProviderNotInstalledError
@@ -55,7 +59,8 @@ class OpenAIDecider:
     ) -> None:
         """
         Args:
-            client: An ``openai.OpenAI`` client to use instead of building one; then no key is read.
+            client: An ``openai.OpenAI`` client to use instead of building one; then no key is read,
+                and ``timeout`` is recorded as the budget but applied only to a client built here.
             base_url: Any endpoint that speaks OpenAI's chat completions, for the client built here.
 
         Raises:
@@ -64,7 +69,8 @@ class OpenAIDecider:
                 here rather than on the first query.
         """
         self.model = model
-        self.version = model
+        self.version = OPENAI_DECIDER_VERSION.format(model=model, digest=prompt_digest())
+        self.timeout_s = timeout
         if client is None:
             try:
                 import openai
@@ -130,6 +136,17 @@ def prompt(state: Any, questions: dict[str, dict[str, Any]]) -> str:
             for choice, text in question["criteria"].items()
         )
     return "\n".join(parts)
+
+
+def prompt_digest(questions: dict[str, dict[str, Any]] = ROUTE_QUESTIONS) -> str:
+    """A short hash of everything that shapes the answer besides the model: the prompt and the answer schema."""
+    shaped = {
+        "prompt": [OPENAI_DECIDER_PROMPT_HEAD, OPENAI_DECIDER_PROMPT_QUESTION, OPENAI_DECIDER_PROMPT_CRITERION],
+        "questions": questions,
+        "schema": {"name": OPENAI_DECIDER_SCHEMA_NAME, "schema": answer_schema(questions)},
+    }
+    encoded = json.dumps(shaped, sort_keys=True).encode()
+    return hashlib.sha256(encoded).hexdigest()[:OPENAI_DECIDER_DIGEST_LENGTH]
 
 
 def answer_schema(questions: dict[str, dict[str, Any]]) -> dict[str, Any]:

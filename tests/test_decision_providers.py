@@ -4,6 +4,7 @@ wrapper, with no network."""
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import types
@@ -16,7 +17,14 @@ import pytest
 
 from web_router import WebRouter
 from web_router.constants import (
+    DECISION_ERROR_EXCEPTION,
+    DECISION_ERROR_HTTP,
+    DECISION_ERROR_INVALID_ANSWER,
+    DECISION_ERROR_TIMEOUT,
     DECISION_SCHEMA_VERSION,
+    DECISION_STATUS_ANSWERED,
+    DECISION_STATUS_FAILED,
+    DECISION_STATUS_NOT_ASKED,
     ROUTE_FALLBACK_DECIDER_ERROR,
     ROUTE_FALLBACK_LOW_CONFIDENCE,
     ROUTE_FALLBACK_NO_BACKEND,
@@ -40,7 +48,14 @@ from web_router.decisions import (
     validate_answers,
     validate_decision,
 )
-from web_router.decisions.schema import SCHEMA_VERSION, FallbackReason, RouteMethod
+from web_router.decisions.openai import prompt_digest
+from web_router.decisions.schema import (
+    SCHEMA_VERSION,
+    DeciderStatus,
+    ErrorKind,
+    FallbackReason,
+    RouteMethod,
+)
 from web_router.exceptions import ConfigurationError, ProviderError, ProviderNotInstalledError
 
 SNAPSHOT = Path(__file__).parent / "fixtures" / "decisions" / "decision.schema.json"
@@ -62,8 +77,9 @@ def valid_labels() -> dict[str, Any]:
 
 def valid_decision(**changes: Any) -> dict[str, Any]:
     record: dict[str, Any] = {
+        "decider_status": "answered",
         "labels": valid_labels(),
-        "route": {"method": "search", "providers": ["tavily", "jina"], "fallback": [], "urls": []},
+        "route": {"method": "search", "tool": "search", "providers": ["tavily", "jina"], "fallback": [], "urls": []},
         "confidence": 0.7,
         "rationale": "Recommended tool: search",
         "decider_id": "jev",
@@ -116,7 +132,8 @@ def test_the_schema_version_constant_and_the_model_agree() -> None:
 def test_the_label_choices_are_exactly_the_route_questions_choices() -> None:
     schema = Decision.model_json_schema()
     for question, spec in ROUTE_QUESTIONS.items():
-        ref = schema["$defs"]["DecisionLabels"]["properties"][question]["$ref"].rsplit("/", 1)[-1]
+        options = schema["$defs"]["DecisionLabels"]["properties"][question]["anyOf"]
+        ref = next(o["$ref"] for o in options if "$ref" in o).rsplit("/", 1)[-1]
         assert schema["$defs"][ref]["properties"]["choice"]["enum"] == list(spec["criteria"])
 
 
@@ -160,14 +177,24 @@ def test_a_missing_label_is_rejected() -> None:
 @pytest.mark.parametrize(
     ("changes", "field"),
     [
-        ({"route": {"method": "crawl", "providers": ["tavily"]}}, "route.method"),
-        ({"route": {"method": "search", "providers": []}}, "route.providers"),
-        ({"route": {"method": "search", "providers": ["tavily"], "fallback": ["timeout"]}}, "route.fallback.0"),
-        ({"route": {"method": "search", "providers": ["tavily"], "mapped_config": "nimble+x"}}, "route.mapped_config"),
+        ({"route": {"method": "crawl", "tool": "search", "providers": ["tavily"]}}, "route.method"),
+        ({"route": {"method": "search", "tool": "scrape", "providers": ["tavily"]}}, "route.tool"),
+        ({"route": {"method": "search", "providers": ["tavily"]}}, "route.tool"),
+        ({"route": {"method": "search", "tool": "search", "providers": []}}, "route.providers"),
+        (
+            {"route": {"method": "search", "tool": "search", "providers": ["tavily"], "fallback": ["timeout"]}},
+            "route.fallback.0",
+        ),
+        (
+            {"route": {"method": "search", "tool": "search", "providers": ["tavily"], "mapped_config": "nimble+x"}},
+            "route.mapped_config",
+        ),
         ({"rationale": ""}, "rationale"),
         ({"decider_id": ""}, "decider_id"),
         ({"latency_ms": -1.0}, "latency_ms"),
-        ({"schema_version": "decision-v0"}, "schema_version"),
+        ({"schema_version": "decision-v1"}, "schema_version"),
+        ({"timeout_s": 0}, "timeout_s"),
+        ({"decider_status": "maybe"}, "decider_status"),
         ({"policy": "v5final"}, "policy"),
         ({"decider_label": "stand-in"}, "decider_label"),
     ],
@@ -183,8 +210,28 @@ def test_confidence_must_be_the_least_sure_label() -> None:
 
 
 def test_no_labels_means_no_confidence_and_not_a_made_up_one() -> None:
-    assert validate_decision(valid_decision(labels=None, confidence=None), "d")[1] == []
-    assert validate_decision(valid_decision(labels=None, confidence=0.0), "d")[1]
+    assert validate_decision(valid_decision(decider_status="not_asked", labels=None, confidence=None), "d")[1] == []
+    assert validate_decision(valid_decision(decider_status="not_asked", labels=None, confidence=0.0), "d")[1]
+
+
+def test_labels_are_set_exactly_when_the_decider_answered() -> None:
+    assert validate_decision(valid_decision(decider_status="not_asked"), "d")[1]
+    assert validate_decision(valid_decision(labels=None, confidence=None), "d")[1]
+
+
+def test_a_failed_decider_needs_the_decider_error_fallback_and_only_it_carries_an_error() -> None:
+    failed = valid_decision(decider_status="failed", labels=None, confidence=None)
+    assert validate_decision(failed, "d")[1]
+    failed["route"] = {**failed["route"], "fallback": ["decider_error"]}
+    assert validate_decision({**failed, "error": {"kind": "timeout", "message": "read timed out"}}, "d")[1] == []
+    assert validate_decision({**failed, "error": {"kind": "gremlins", "message": "x"}}, "d")[1]
+    assert validate_decision(valid_decision(error={"kind": "timeout", "message": "x"}), "d")[1]
+
+
+def test_confidence_leaves_out_well_scoped_which_moves_no_route() -> None:
+    labels = {**valid_labels(), "well_scoped": label("missing_context", 0.1)}
+    assert validate_decision(valid_decision(labels=labels, confidence=0.7), "d")[1] == []
+    assert validate_decision(valid_decision(labels=labels, confidence=0.1), "d")[1]
 
 
 def test_a_violation_names_the_field_value_decider_message_and_type() -> None:
@@ -305,9 +352,12 @@ def test_jev_answers_map_to_a_valid_locked_decision(monkeypatch: pytest.MonkeyPa
     decision = jev.decision(route)
     assert jev.last_violations == []
     assert decision.decider_id == "jev" and decision.decider_version == "jev-1.14.0"
-    assert decision.labels is not None and decision.labels.recent.choice == "month"
+    assert decision.labels is not None and decision.labels.recent is not None
+    assert decision.labels.recent.choice == "month"
     assert decision.confidence == 0.74
     assert decision.route.providers == ["tavily"] and decision.route.fallback == []
+    assert (decision.decider_status, decision.route.tool, decision.timeout_s) == ("answered", "search", 0.8)
+    assert decision.error is None and decision.violations == []
 
 
 def test_a_jev_answer_outside_the_schema_falls_back_and_keeps_the_violation(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -318,6 +368,9 @@ def test_a_jev_answer_outside_the_schema_falls_back_and_keeps_the_violation(monk
     assert len(jev.last_violations) == 4 and jev.violations == jev.last_violations
     decision = jev.decision(route)
     assert decision.labels is None and decision.confidence is None
+    assert decision.decider_status == "failed"
+    assert decision.error is not None and decision.error.kind == "invalid_answer"
+    assert decision.violations == jev.last_violations
 
 
 def test_an_invalid_answer_falls_back_to_the_default_route_and_says_why() -> None:
@@ -363,6 +416,7 @@ def test_a_decision_records_pr11s_route_fallbacks() -> None:
     assert decision.route.fallback == [ROUTE_FALLBACK_NO_URL]
     decision = decider.decision(router(decider).classify("x", urls="https://example.com"))
     assert decision.labels is None and decision.route.urls == ["https://example.com"]
+    assert (decision.decider_status, decision.route.tool, decision.violations) == ("not_asked", "extract", [])
 
 
 def test_a_method_with_no_backend_is_recorded_as_such() -> None:
@@ -422,7 +476,8 @@ def test_the_openai_decider_asks_for_structured_labels_and_reads_them(monkeypatc
     )
     assert "this week's OpenAI announcements" in request["messages"][0]["content"]
     assert seen["built"][0]["api_key"] == "test-key"
-    assert decider.decision(route).decider_version == "gpt-4.1-mini"
+    assert re.fullmatch(r"gpt-4\.1-mini\+p[0-9a-f]{8}", decider.decision(route).decider_version)
+    assert decider.decision(route).timeout_s == 5.0
     decider.close()
     assert seen["closed"] == 1
 
@@ -525,3 +580,143 @@ def test_a_bare_import_of_the_decider_slot_needs_neither_httpx_nor_openai() -> N
     )
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_the_status_and_error_kind_types_match_their_constants() -> None:
+    assert typing.get_args(DeciderStatus) == (
+        DECISION_STATUS_ANSWERED,
+        DECISION_STATUS_NOT_ASKED,
+        DECISION_STATUS_FAILED,
+    )
+    kinds = (DECISION_ERROR_TIMEOUT, DECISION_ERROR_HTTP, DECISION_ERROR_INVALID_ANSWER, DECISION_ERROR_EXCEPTION)
+    assert typing.get_args(ErrorKind) == kinds
+
+
+def jev_raising(handler: Any, monkeypatch: pytest.MonkeyPatch) -> JevDecider:
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    jev = JevDecider()
+    jev._client = httpx.Client(base_url="https://jev.test", transport=httpx.MockTransport(handler))
+    return jev
+
+
+def _timeout(request: httpx.Request) -> httpx.Response:
+    raise httpx.ReadTimeout("read timed out", request=request)
+
+
+@pytest.mark.parametrize(
+    ("handler", "kind"),
+    [
+        (_timeout, "timeout"),
+        (lambda request: httpx.Response(503, text="busy"), "http_error"),
+        (lambda request: httpx.Response(200, json={"answers": []}), "invalid_answer"),
+        (lambda request: httpx.Response(200, text="not json"), "invalid_answer"),
+    ],
+)
+def test_a_failed_decider_records_what_kind_of_failure_it_was(
+    handler: Any, kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    jev = ValidatedDecider(jev_raising(handler, monkeypatch))
+    route = router(jev).classify("who won")
+    assert route.fallback == (ROUTE_FALLBACK_DECIDER_ERROR,)
+    decision = jev.decision(route)
+    assert decision.decider_status == "failed"
+    assert decision.error is not None and decision.error.kind == kind and decision.error.message
+
+
+def test_an_unexpected_exception_is_recorded_as_one() -> None:
+    decider = ValidatedDecider(FakeDecider(error=RuntimeError("vendor bug")))
+    decision = decider.decision(router(decider).classify("who won"))
+    assert decision.error is not None and decision.error.kind == "exception"
+    assert "vendor bug" in decision.error.message
+
+
+def test_a_non_strict_wrapper_routes_on_defaults_for_bad_labels_and_keeps_the_violations() -> None:
+    answers = {**sure_answers(recent="day"), "tool": Answer(choice="scrape", confidence=SURE)}
+    decider = ValidatedDecider(FakeDecider(answers), strict=False)
+    route = router(decider).classify("who won")
+    assert (route.method, route.fallback) == ("search", (ROUTE_FALLBACK_LOW_CONFIDENCE,))
+    assert "tool" not in route.labels and route.labels["recent"].choice == "day"
+    assert [v.field for v in decider.last_violations] == ["tool.choice"]
+    decision = decider.decision(route)
+    assert decision.decider_status == "answered" and decision.error is None
+    assert decision.labels is not None and decision.labels.tool is None
+    assert decision.labels.recent is not None and decision.labels.recent.choice == "day"
+    assert [v.field for v in decision.violations] == ["tool.choice"]
+
+
+def test_a_non_strict_wrapper_given_garbage_routes_on_every_default() -> None:
+    decider = ValidatedDecider(FakeDecider(["search"]), strict=False)
+    route = router(decider).classify("who won")
+    assert route.labels == {} and route.fallback == (ROUTE_FALLBACK_LOW_CONFIDENCE,)
+    decision = decider.decision(route)
+    assert decision.decider_status == "answered" and decision.confidence is None
+    assert [v.type for v in decision.violations] == ["not_a_mapping"]
+
+
+def test_a_strict_wrapper_is_the_default() -> None:
+    assert ValidatedDecider(FakeDecider()).strict is True
+
+
+class GuardError(PermissionError):
+    """What a caller's data policy raises before any call leaves the machine."""
+
+
+def test_a_passthrough_exception_stops_the_run_instead_of_becoming_a_default_route() -> None:
+    decider = ValidatedDecider(FakeDecider(error=GuardError("private data")), passthrough=(PermissionError,))
+    with pytest.raises(GuardError):
+        router(decider).classify("who won")
+    assert decider.last_error is None
+
+
+def test_without_passthrough_the_same_guard_becomes_the_decider_error_fallback() -> None:
+    decider = ValidatedDecider(FakeDecider(error=GuardError("private data")))
+    assert router(decider).classify("who won").fallback == (ROUTE_FALLBACK_DECIDER_ERROR,)
+
+
+def test_the_openai_version_changes_with_the_prompt_or_the_schema() -> None:
+    changed = {**ROUTE_QUESTIONS, "tool": {**ROUTE_QUESTIONS["tool"], "instructions": "Pick a tool."}}
+    assert re.fullmatch(r"[0-9a-f]{8}", prompt_digest())
+    assert prompt_digest(changed) != prompt_digest()
+    assert prompt_digest() == prompt_digest(dict(ROUTE_QUESTIONS))
+
+
+def test_a_decision_record_rounds_confidences_and_latency() -> None:
+    answers = {
+        **sure_answers(),
+        "tool": Answer(choice="search", confidence=0.876543, probabilities={"search": 0.876543, "browse": 0.123457}),
+    }
+    decider = ValidatedDecider(FakeDecider(answers))
+    route = router(decider).classify("who won")
+    route.latency_ms = 12.3456
+    decision = decider.decision(route)
+    assert decision.labels is not None and decision.labels.tool is not None
+    assert decision.labels.tool.confidence == 0.8765 and decision.labels.tool.probabilities["browse"] == 0.1235
+    assert decision.confidence == 0.8765 and decision.latency_ms == 12.3
+
+
+def test_an_unsure_well_scoped_label_still_triggers_pr11s_fallback_but_not_the_records_confidence() -> None:
+    answers = {**sure_answers(), "well_scoped": Answer(choice="clear", confidence=0.2)}
+    decider = ValidatedDecider(FakeDecider(answers))
+    route = router(decider).classify("who won")
+    assert route.fallback == (ROUTE_FALLBACK_LOW_CONFIDENCE,)
+    decision = decider.decision(route)
+    assert decision.confidence == SURE
+    assert decision.labels is not None and decision.labels.well_scoped is not None
+    assert decision.labels.well_scoped.confidence == 0.2
+
+
+def test_the_raw_tool_label_is_kept_when_a_fallback_moves_the_method() -> None:
+    answers = {**sure_answers(), "tool": Answer(choice="browse", confidence=0.3)}
+    decider = ValidatedDecider(FakeDecider(answers))
+    decision = decider.decision(router(decider).classify("who won"))
+    assert (decision.route.method, decision.route.tool) == ("search", "browse")
+
+
+def test_a_decision_for_another_query_carries_no_stale_error() -> None:
+    decider = ValidatedDecider(FakeDecider(error=RuntimeError("down")))
+    wr = router(decider)
+    first = wr.classify("who won")
+    decider.provider = FakeDecider()  # type: ignore[assignment]
+    wr.classify("who lost")
+    decision = decider.decision(first)
+    assert decision.decider_status == "failed" and decision.error is None

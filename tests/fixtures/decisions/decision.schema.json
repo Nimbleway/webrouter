@@ -33,21 +33,76 @@
       "title": "CoverageLabel",
       "type": "object"
     },
+    "DecisionError": {
+      "additionalProperties": false,
+      "description": "Why the decider gave no answer, for a route that took the ``decider_error`` fallback.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "timeout",
+            "http_error",
+            "invalid_answer",
+            "exception"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "message"
+      ],
+      "title": "DecisionError",
+      "type": "object"
+    },
     "DecisionLabels": {
       "additionalProperties": false,
-      "description": "A decider's answer to every one of ROUTE_QUESTIONS: all four, and nothing else.",
+      "description": "A decider's answer to ROUTE_QUESTIONS: every question named, and nothing else.\n\nA decider's raw answer must give all four. In a decision record a label\nis ``None`` when the decider gave none for it, or -- under a non-strict\n:class:`~web_router.decisions.ValidatedDecider` -- gave one that broke the\nschema; the route used that label's default either way.",
       "properties": {
         "coverage": {
-          "$ref": "#/$defs/CoverageLabel"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CoverageLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "recent": {
-          "$ref": "#/$defs/RecentLabel"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecentLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "tool": {
-          "$ref": "#/$defs/ToolLabel"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "well_scoped": {
-          "$ref": "#/$defs/WellScopedLabel"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WellScopedLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -94,6 +149,16 @@
           "title": "Providers",
           "type": "array"
         },
+        "tool": {
+          "enum": [
+            "search",
+            "extract",
+            "research",
+            "browse"
+          ],
+          "title": "Tool",
+          "type": "string"
+        },
         "urls": {
           "items": {
             "type": "string"
@@ -104,6 +169,7 @@
       },
       "required": [
         "method",
+        "tool",
         "providers"
       ],
       "title": "DecisionRoute",
@@ -178,6 +244,41 @@
       "title": "ToolLabel",
       "type": "object"
     },
+    "Violation": {
+      "additionalProperties": false,
+      "description": "One way an answer broke the schema: where, the offending value, which decider, and what is wrong.",
+      "properties": {
+        "decider": {
+          "title": "Decider",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "msg": {
+          "title": "Msg",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "value",
+        "decider",
+        "msg",
+        "type"
+      ],
+      "title": "Violation",
+      "type": "object"
+    },
     "WellScopedLabel": {
       "additionalProperties": false,
       "properties": {
@@ -212,7 +313,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "One routing decision, in the locked shape every decider is compared in.\n\n``labels`` and ``confidence`` are ``None`` when no decider answered: it\nfailed (``route.fallback`` says ``decider_error``), or a given URL or\nschema made asking unnecessary. Otherwise ``confidence`` is the lowest\nlabel confidence, since the route is only as sure as its least sure label.",
+  "description": "One routing decision, in the locked shape every decider is compared in.\n\n``decider_status`` says what happened to the decider: ``answered``,\n``not_asked`` (a given URL or schema settled the method), or ``failed``\n(``route.fallback`` has ``decider_error`` and ``error`` says why, when the\nroute came through :class:`~web_router.decisions.ValidatedDecider`).\n``labels`` is set exactly when it answered.\n\n``confidence`` is the lowest confidence over tool, recent and coverage --\nthe labels a route is built from -- so it is ``None`` when none of them was\ngiven. well_scoped keeps its own label confidence and is left out, because\nit moves no route. Read the vendor note on :class:`Label` before comparing\nconfidences across deciders.\n\nA record built by :meth:`from_route` rounds confidences and probabilities\nto 4 places and ``latency_ms`` to 0.1 ms.",
   "properties": {
     "confidence": {
       "anyOf": [
@@ -225,7 +326,7 @@
           "type": "null"
         }
       ],
-      "description": "The minimum confidence over the four labels.",
+      "description": "The minimum confidence over tool, recent and coverage.",
       "title": "Confidence"
     },
     "decider_id": {
@@ -233,10 +334,30 @@
       "title": "Decider Id",
       "type": "string"
     },
+    "decider_status": {
+      "enum": [
+        "answered",
+        "not_asked",
+        "failed"
+      ],
+      "title": "Decider Status",
+      "type": "string"
+    },
     "decider_version": {
       "minLength": 1,
       "title": "Decider Version",
       "type": "string"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DecisionError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "labels": {
       "anyOf": [
@@ -262,13 +383,35 @@
       "$ref": "#/$defs/DecisionRoute"
     },
     "schema_version": {
-      "const": "decision-v1",
-      "default": "decision-v1",
+      "const": "decision-v2",
+      "default": "decision-v2",
       "title": "Schema Version",
       "type": "string"
+    },
+    "timeout_s": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The decider's time budget, if it has one.",
+      "title": "Timeout S"
+    },
+    "violations": {
+      "items": {
+        "$ref": "#/$defs/Violation"
+      },
+      "title": "Violations",
+      "type": "array"
     }
   },
   "required": [
+    "decider_status",
     "labels",
     "route",
     "confidence",

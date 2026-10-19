@@ -50,6 +50,7 @@ class JevDecider:
         """
         key = resolve_api_key(api_key, env_var=ENV_TYPESAFE_API_KEY, provider=DECIDER_NAME)
         self.model = model
+        self.timeout_s = timeout
         # Built here: an httpx.Client makes no network call until used, and one shared client is thread-safe.
         self._client = httpx.Client(
             base_url=base_url,
