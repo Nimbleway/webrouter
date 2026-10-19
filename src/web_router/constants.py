@@ -4154,7 +4154,7 @@ URL_TRAILING_PUNCTUATION = ".,;:!?"
 """Stripped from a URL found in prose: the end of a sentence, not part of the address."""
 
 ROUTE_DECIDER_JEV = "jev"
-"""The one decider by name: ``WebRouter(decider="jev")``."""
+"""Jev by name: ``WebRouter(decider="jev")``."""
 
 ROUTE_DECIDER_TIMEOUT = 0.8
 """Seconds. Past this the route falls back to the default one rather than hold up the call it routes."""
@@ -4238,7 +4238,7 @@ ROUTE_DEFAULT_LABELS = {"tool": "search", "recent": "any", "coverage": "lookup",
 """What an unsure, missing or failed label falls back to."""
 
 MSG_ROUTE_NO_DECIDER = "classify() needs a decider: WebRouter(decider='jev')."
-MSG_ROUTE_UNKNOWN_DECIDER = "Unknown decider {name!r}; known: 'jev'."
+MSG_ROUTE_UNKNOWN_DECIDER = "Unknown decider {name!r}; known: {available}."
 MSG_ROUTE_BAD_ANSWER = "The decider's answer could not be read: {detail}"
 
 ROUTE_FALLBACK_NO_URL = "no_url"
@@ -4283,3 +4283,90 @@ ROUTE_LABEL_LINES = (
     ("coverage", "Evidence needed", ROUTE_COVERAGE_TEXT),
 )
 """The labels after the tool line, in order: name, heading, and the instruction for each value."""
+
+
+# --- Decision providers (spike) ---------------------------------------------
+# Who answers ROUTE_QUESTIONS for classify() is swappable: Jev, an OpenAI model,
+# keyless rules, or any object with decide() and close(). Every answer can be
+# checked against one locked schema (web_router.decisions.schema).
+
+ROUTE_DECIDER_OPENAI = "openai"
+"""An OpenAI model answers the questions with structured outputs: ``WebRouter(decider="openai")``."""
+ROUTE_DECIDER_RULES = "rules"
+"""Keyword rules, keyless and deterministic: ``WebRouter(decider="rules")``."""
+
+DECISION_SCHEMA_VERSION = "decision-v1"
+"""Bumped with every change to the locked schema, together with tests/fixtures/decisions/decision.schema.json."""
+
+DECISION_PROBABILITY_TOLERANCE = 0.05
+"""How far a label's probabilities may sum from 1: models round, and a strict 1.0 would reject honest answers."""
+
+DECISION_CONFIDENCE_TOLERANCE = 1e-9
+"""Float slack when checking that a decision's confidence is the minimum over its labels."""
+
+DECISION_VIOLATION_VALUE_LIMIT = 120
+DECISION_VIOLATION_MSG_LIMIT = 200
+"""Characters kept of an offending value's repr and of the validator's message in a violation record."""
+
+DECISION_VIOLATION_ROOT = "(root)"
+"""The field a violation names when the whole answer, not one field of it, is wrong."""
+DECISION_VIOLATION_NOT_A_MAPPING = "not_a_mapping"
+DECISION_VIOLATION_DECIDER_ERROR = "decider_error"
+DECISION_VIOLATION_NOT_A_PROVIDER = "not_a_provider"
+"""Violation types: an answer that is not a mapping of labels, a decider that raised, and an object with no
+``name``, ``decide`` or ``close``."""
+
+MSG_DECISION_NOT_A_MAPPING = "The decider answered {kind}, not a mapping of question to answer."
+MSG_DECISION_INVALID = "The decider's answer broke the decision schema ({count} violation(s)); first: {first}"
+MSG_DECISION_DECIDER_FAILED = "The decider failed: {detail}"
+MSG_DECISION_NOT_A_PROVIDER = "{kind} lacks name, decide() or close(), so it is not a DecisionProvider."
+MSG_DECISION_BAD_CHOICE = "{question}={choice!r} is not one of {choices}"
+MSG_DECISION_PROBABILITY_RANGE = "probabilities outside [0, 1]: {names}"
+MSG_DECISION_PROBABILITY_SUM = "probabilities sum to {total:.3f}, not 1"
+MSG_DECISION_CHOICE_NOT_IN_PROBABILITIES = "the choice {choice!r} is missing from probabilities"
+MSG_DECISION_CONFIDENCE_NOT_MIN = "confidence {confidence} is not the minimum over the labels ({minimum})"
+MSG_DECISION_CONFIDENCE_WITHOUT_LABELS = "confidence must be None when there are no labels, and set when there are"
+
+DECISION_CONFORMANCE_QUERIES = (
+    "Who is the CEO of Databricks?",
+    "Summarize https://example.com/pricing for me.",
+    "Compare the battery life of the MacBook Air M4 and the Dell XPS 13.",
+    "opening hours tomorrow",
+)
+"""What :func:`~web_router.decisions.base.conformance_violations` asks a provider by default: one per kind of route."""
+
+OPENAI_DECIDER_MODEL = "gpt-4.1-mini"
+"""Small and fast: the decider runs before every routed call, and the answer is four short labels."""
+
+OPENAI_DECIDER_TIMEOUT = 5.0
+"""Seconds. Longer than ROUTE_DECIDER_TIMEOUT, which is Jev's: a general model over the network rarely answers
+in 0.8s. Past it the route falls back to the default, as for any failed decider."""
+
+OPENAI_DECIDER_MAX_RETRIES = 0
+"""A retry would double the wait a route is meant to save; a failure falls back to the default route instead."""
+
+OPENAI_DECIDER_TEMPERATURE = 0.0
+OPENAI_DECIDER_SCHEMA_NAME = "route_labels"
+"""The ``json_schema.name`` sent with the structured-output request."""
+
+OPENAI_DECIDER_PROMPT_HEAD = (
+    "Label one web request. Request: {query}. asked_on: {asked_on}.\n"
+    "For each question pick exactly one choice and give a probability for every choice; they sum to 1."
+)
+OPENAI_DECIDER_PROMPT_QUESTION = "\n[{name}] {instructions}"
+OPENAI_DECIDER_PROMPT_CRITERION = "- {choice}: {text}"
+"""The prompt is built from ROUTE_QUESTIONS' own instructions and criteria, so it asks what Jev is asked."""
+
+RULES_URL = r"https?://"
+RULES_RESEARCH = r"\b(compare|identify|list|which .* (and|both)|across|report|determine|find the names)\b"
+RULES_RECENT_MONTH = r"\b(latest|current|now|today|this (week|month|year)|headcount|employees|funding|raised)\b"
+RULES_SYNTHESIS = r"\b(compare|among|both|and then|which of|across|or)\b"
+RULES_RESEARCH_LENGTH = 220
+"""Characters. A request longer than this reads as open-ended research rather than a lookup."""
+RULES_MISSING_CONTEXT_WORDS = 2
+"""A request of this many words or fewer is taken to be missing context."""
+RULES_CONFIDENCE = {"tool": 0.8, "recent": 0.7, "coverage": 0.7, "well_scoped": 0.6}
+"""Fixed per label, not measured: what the rules claim for their pick. The rest of each label's probability is
+spread evenly over the other choices, so the distribution sums to 1. Every value clears ROUTE_MIN_CONFIDENCE,
+so a rules route never falls back for low confidence. The patterns match Bench's stand-in rules decider."""
+RULES_VERSION = "rules-v1"

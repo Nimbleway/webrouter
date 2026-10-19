@@ -51,16 +51,15 @@ from web_router.constants import (
     EVALS_CONCURRENCY,
     MSG_BENCHMARK_NO_PROVIDERS,
     MSG_ROUTE_NO_DECIDER,
-    MSG_ROUTE_UNKNOWN_DECIDER,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
     PROVIDER_AUTO,
     RESEARCH_TIMEOUT,
-    ROUTE_DECIDER_JEV,
     ROUTE_DEFAULT_LABELS,
     ROUTE_FALLBACK_DECIDER_ERROR,
     ROUTE_FALLBACK_LOW_CONFIDENCE,
     ROUTE_QUESTIONS,
 )
+from web_router.decisions.registry import create_decider
 from web_router.decisions.route import Answer, Route, label_values, route_from_labels, urls_in
 from web_router.evals.datasets import Dataset
 from web_router.evals.judge import Judge
@@ -513,14 +512,20 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         """
         Args:
             decider: Turns on :meth:`classify`. ``"jev"`` asks TypeSafe's Jev with
-                ``TYPESAFE_API_KEY``; a :class:`~web_router.decisions.JevDecider`
-                instance sets the key, host or model. The query text is sent to it.
+                ``TYPESAFE_API_KEY``; ``"openai"`` an OpenAI model with
+                ``OPENAI_API_KEY``; ``"rules"`` keyword rules, keyless. A name
+                given to :func:`~web_router.decisions.register_decider` works
+                the same way, and any instance with ``decide`` and ``close`` --
+                a configured :class:`~web_router.decisions.JevDecider`, or one
+                wrapped in :class:`~web_router.decisions.ValidatedDecider` -- is
+                used as given. The query text is sent to it.
 
         Raises:
             ConfigurationError: for a backend handed an ``async_client``, which
                 this router, calling synchronously, could never use: through
                 ``auto`` the call would quietly go to another backend instead;
-                or for ``decider="jev"`` with no TypeSafe key.
+                for a decider name nothing is registered under; or for a named
+                decider with no key, such as ``decider="jev"`` with no TypeSafe key.
         """
         super().__init__(provider, provider_config=provider_config)
         async_only = sorted(_async_client_holders(self._config))
@@ -528,11 +533,7 @@ class WebRouter(_BaseRouter[BrowserHandle]):
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
         # Built after every check that can refuse the router, so a refused build leaves no open client behind.
         if isinstance(decider, str):
-            if decider != ROUTE_DECIDER_JEV:
-                raise ConfigurationError(MSG_ROUTE_UNKNOWN_DECIDER.format(name=decider))
-            from web_router.decisions.jev import JevDecider  # needs httpx, which a bare install lacks
-
-            decider = JevDecider()
+            decider = create_decider(decider)  # imported on first use: Jev needs httpx, OpenAI its SDK
             self._owns_decider = True
         else:
             self._owns_decider = False  # a decider handed in may be shared: its owner closes it
