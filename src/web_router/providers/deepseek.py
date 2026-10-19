@@ -21,7 +21,7 @@ from web_router.constants_deepseek import (
     DEEPSEEK_API_KEY_PREFIX,
     DEEPSEEK_BASE_URL,
     DEEPSEEK_EXCLUDE_DOMAIN,
-    DEEPSEEK_FETCH_CONCURRENCY,
+    DEEPSEEK_FETCH_INTERVAL,
     DEEPSEEK_FETCH_PATH,
     DEEPSEEK_INCLUDE_DOMAIN,
     DEEPSEEK_INCLUDE_JOINER,
@@ -127,9 +127,8 @@ class DeepSeekExtractProvider(HttpExtractProvider):
     """Fetches page contents through the DeepSeek Fetch API, as markdown.
 
     A page DeepSeek refuses (403) or cannot read (404) answers with an HTTP
-    error, which the base class records as that URL's failure. An async extract
-    runs at most 5 fetches at once, to stay near DeepSeek's limit of 5 a second
-    per account; a burst of fast pages can still draw a 429.
+    error, which the base class records as that URL's failure. Fetches start at
+    most 5 a second, DeepSeek's per-account limit.
     """
 
     name: ClassVar[str] = PROVIDER_DEEPSEEK
@@ -137,7 +136,7 @@ class DeepSeekExtractProvider(HttpExtractProvider):
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset({"markdown"})
     # Fetch has no format field: it returns markdown alone.
     default_format: ClassVar[ExtractFormat] = "markdown"
-    max_concurrent_extracts: ClassVar[int] = DEEPSEEK_FETCH_CONCURRENCY
+    min_start_interval: ClassVar[float] = DEEPSEEK_FETCH_INTERVAL
 
     base_url: ClassVar[str] = DEEPSEEK_BASE_URL
     extract_path: ClassVar[str] = DEEPSEEK_FETCH_PATH

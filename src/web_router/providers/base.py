@@ -231,8 +231,12 @@ class ExtractProvider(_BaseProvider):
     batches_urls: ClassVar[bool] = False
     """Whether one call can carry every URL. Most of these APIs take exactly one."""
 
-    max_concurrent_extracts: ClassVar[int] = MAX_CONCURRENT_EXTRACTS
-    """How many calls :meth:`aextract` runs at once; lowered by a backend with a tighter rate limit."""
+    min_start_interval: ClassVar[float] = 0.0
+    """Seconds between the starts of two calls of one extract, for a backend limited per second.
+
+    A cap on calls in flight is not enough there: calls that return quickly free
+    their slots early, and more start in a second than the backend allows.
+    """
 
     # -- What subclasses implement -------------------------------------------
 
@@ -255,7 +259,11 @@ class ExtractProvider(_BaseProvider):
         """Validate the request, fetch every URL, and wrap any backend failure."""
         self.validate(request)
         collected = _Collected(self.name, request.urls)
+        next_start = 0.0
         for urls in self._batches(request.urls):
+            if self.min_start_interval:
+                time.sleep(max(0.0, next_start - time.monotonic()))
+                next_start = time.monotonic() + self.min_start_interval
             try:
                 collected.add(urls, self._extract(request, urls))
             except ProviderError as exc:
@@ -269,14 +277,23 @@ class ExtractProvider(_BaseProvider):
     async def aextract(self, request: ExtractRequest) -> ExtractResponse:
         """Async counterpart of :meth:`extract`.
 
-        The calls run concurrently, up to :attr:`max_concurrent_extracts` at a time.
+        The calls run concurrently, up to
+        :data:`~web_router.constants.MAX_CONCURRENT_EXTRACTS` at a time, their
+        starts at least :attr:`min_start_interval` apart.
         """
         self.validate(request)
         batches = self._batches(request.urls)
-        limit = asyncio.Semaphore(self.max_concurrent_extracts)
+        limit = asyncio.Semaphore(MAX_CONCURRENT_EXTRACTS)
+        spacing = asyncio.Lock()
+        next_start = 0.0
 
         async def _one(urls: list[str]) -> ExtractResponse:
+            nonlocal next_start
             async with limit:
+                if self.min_start_interval:
+                    async with spacing:
+                        await asyncio.sleep(max(0.0, next_start - time.monotonic()))
+                        next_start = time.monotonic() + self.min_start_interval
                 return await self._aextract(request, urls)
 
         outcomes = await asyncio.gather(*(_one(urls) for urls in batches), return_exceptions=True)

@@ -58,11 +58,11 @@ Several sites are joined with ``OR``, as DeepSeek's own example does
 language codes (``lang:zh,en``), so a regional locale sends its language alone.
 """
 
-DEEPSEEK_FETCH_CONCURRENCY = 5
-"""Fetches an async extract runs at once: DeepSeek allows an account 5 a second, plus a per-domain limit.
+DEEPSEEK_FETCH_INTERVAL = 0.2
+"""Seconds between fetch starts in one extract: DeepSeek allows an account 5 fetches a second.
 
-Past it, a request answers 429. The limit is per account, so other callers on the
-same key share it, and a 429 can still come back.
+Past it, a fetch answers 429. The limit is per account, and Fetch adds one per
+domain, so other callers on the same key can still draw a 429.
 """
 
 MSG_DEEPSEEK_QUERY_TOO_LONG = (

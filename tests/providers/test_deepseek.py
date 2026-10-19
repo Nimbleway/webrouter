@@ -19,13 +19,15 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
+from typing import Any
 
 import httpx
 import pytest
 
 from web_router.exceptions import ProviderError, UnsupportedFormatError, UnsupportedParameterError
 from web_router.providers.deepseek import DeepSeekExtractProvider, DeepSeekProvider
-from web_router.types import ExtractRequest, SearchRequest
+from web_router.types import ExtractRequest, ExtractResponse, SearchRequest
 
 DOCUMENTED = {
     "results": [
@@ -239,28 +241,53 @@ def test_a_refused_or_missing_page_fails_that_url_alone(monkeypatch: pytest.Monk
     ]
 
 
-def test_an_async_extract_runs_no_more_fetches_at_once_than_deepseek_allows(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
-    in_flight, peak = 0, 0
+def test_fetches_start_no_faster_than_deepseek_allows() -> None:
+    # 5 a second per account: no gap between starts may be shorter than a fifth of a second.
+    assert 5 * DeepSeekExtractProvider.min_start_interval >= 1.0
 
-    async def handle(request: httpx.Request) -> httpx.Response:
-        nonlocal in_flight, peak
-        in_flight += 1
-        peak = max(peak, in_flight)
-        await asyncio.sleep(0.01)
-        in_flight -= 1
+
+def _rate_limited(starts: list[float], window: float) -> Any:
+    """A Fetch that answers fast, and 429 once more than 5 calls started in the trailing ``window``."""
+
+    def answer() -> httpx.Response:
+        now = time.monotonic()
+        starts.append(now)
+        if sum(now - window < t for t in starts) > 5:
+            return httpx.Response(429, json={"error": {"message": "Rate limit reached", "code": "rate_limit_exceeded"}})
         return httpx.Response(200, json={"title": "", "content": "page"})
 
-    async def run() -> int:
-        extractor = DeepSeekExtractProvider(transport=httpx.MockTransport(handle))
-        try:
-            response = await extractor.aextract(ExtractRequest(urls=[f"https://example.com/{i}" for i in range(12)]))
-        finally:
-            await extractor.aclose()
-        return len(response.documents)
+    return answer
 
-    assert asyncio.run(run()) == 12
-    assert peak == 5, "the base default runs 8 at once; DeepSeek allows 5 a second"
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+def test_fast_pages_are_spaced_so_none_draws_a_429(monkeypatch: pytest.MonkeyPatch, path: str) -> None:
+    """The review's repro, scaled ten times faster: unspaced, 25 of 30 fast pages failed."""
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setattr(DeepSeekExtractProvider, "min_start_interval", DeepSeekExtractProvider.min_start_interval / 10)
+    window = 5 * DeepSeekExtractProvider.min_start_interval
+    starts: list[float] = []
+    answer = _rate_limited(starts, window)
+    request = ExtractRequest(urls=[f"https://example.com/{i}" for i in range(30)])
+
+    if path == "sync":
+        extractor = DeepSeekExtractProvider(transport=httpx.MockTransport(lambda _: answer()))
+        response = extractor.extract(request)
+    else:
+
+        async def handle(_: httpx.Request) -> httpx.Response:
+            await asyncio.sleep(window / 10)
+            return answer()
+
+        async def run() -> ExtractResponse:
+            extractor = DeepSeekExtractProvider(transport=httpx.MockTransport(handle))
+            try:
+                return await extractor.aextract(request)
+            finally:
+                await extractor.aclose()
+
+        response = asyncio.run(run())
+
+    assert len(response.documents) == 30 and response.failures == []
 
 
 def test_an_empty_page_is_a_failure_not_an_empty_document(extractor: DeepSeekExtractProvider) -> None:
