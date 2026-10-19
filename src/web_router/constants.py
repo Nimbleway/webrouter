@@ -42,6 +42,7 @@ PROVIDER_PERPLEXITY = Provider.PERPLEXITY.value
 PROVIDER_LINKUP = Provider.LINKUP.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
+PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
 PROVIDER_YOU_MCP = Provider.YOU_MCP.value
 PROVIDER_EXA_MCP = Provider.EXA_MCP.value
 PROVIDER_PARALLEL_MCP = Provider.PARALLEL_MCP.value
@@ -100,6 +101,7 @@ ENV_PERPLEXITY_API_KEY = "PERPLEXITY_API_KEY"
 ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
+ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
 ENV_OXYLABS_USERNAME = "OXYLABS_USERNAME"
 ENV_OXYLABS_PASSWORD = "OXYLABS_PASSWORD"
 ENV_BRIGHTDATA_API_KEY = "BRIGHTDATA_API_TOKEN"
@@ -124,6 +126,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_LINKUP: ENV_LINKUP_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
+    PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
     PROVIDER_YOU_MCP: None,
     PROVIDER_EXA_MCP: None,
     PROVIDER_PARALLEL_MCP: None,
@@ -151,6 +154,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_BRIGHTDATA: (ENV_BRIGHTDATA_API_KEY, ENV_BRIGHTDATA_ZONE),
     PROVIDER_WEBIQ: (ENV_WEBIQ_API_KEY,),
     PROVIDER_KEENABLE: (ENV_KEENABLE_API_KEY,),
+    PROVIDER_DEEPSEEK: (ENV_DEEPSEEK_API_KEY,),
     PROVIDER_JINA: (),
     PROVIDER_AUTO: (),
 }
@@ -469,11 +473,12 @@ Reordering the defaults is a change backed by a provider scan; a caller who
 wants another order passes their own ``chain``.
 """
 
-AUTO_APPENDED: tuple[str, ...] = (PROVIDER_KEENABLE,)
+AUTO_APPENDED: tuple[str, ...] = (PROVIDER_KEENABLE, PROVIDER_DEEPSEEK)
 """Members added to the chain after the last reordering, tried after the keyless tier, with a credential.
 
 Every backend before the 2026-10-06 scan took its place in
-:data:`AUTO_PREFERRED`; ``keenable`` joined after it (2026-10-13). A backend that
+:data:`AUTO_PREFERRED`; ``keenable`` joined after it (2026-10-13) and
+``deepseek`` after that (2026-10-18), each behind the last. A backend that
 joins later goes here first, so joining changes no environment's routing; moving
 it ahead of the keyless tier is a routing change, and so one backed by a
 provider scan.
@@ -548,12 +553,18 @@ so it is reached only when the two before it fail and no call already served
 moves. Keenable's ``/public`` fetch joined after it (2026-10-13) on the same terms.
 """
 
-AUTO_EXTRACT_APPENDED: tuple[str, ...] = (PROVIDER_LINKUP, PROVIDER_EXA, PROVIDER_WEBIQ, PROVIDER_KEENABLE)
+AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
+    PROVIDER_LINKUP,
+    PROVIDER_EXA,
+    PROVIDER_WEBIQ,
+    PROVIDER_KEENABLE,
+    PROVIDER_DEEPSEEK,
+)
 """Members added after the chain existed, tried after the keyless tier, as :data:`AUTO_APPENDED` is for search.
 
 ``exa`` returns plain text alone, so it serves only ``format="text"``.
 ``webiq`` reads only pages in WebIQ's own index; one it lacks fails, and the
-chain moves on. ``keenable`` returns markdown alone.
+chain moves on. ``keenable`` and ``deepseek`` return markdown alone.
 """
 
 AUTO_EXTRACT_FORMATS: frozenset[ExtractFormat] = frozenset({"markdown", "html", "text"})
@@ -2883,6 +2894,8 @@ KEENABLE_TITLE = "web-router"
 """The app name a keyless call is attributed to; Keenable refuses a keyless call without one."""
 
 KEENABLE_PARAM_NAMES = {"max_results": "max_results"}
+
+# DeepSeek's endpoints, limits and query operators are in constants_deepseek.py.
 
 # --- Oxylabs ----------------------------------------------------------------
 # Extract only: Oxylabs' Web Scraper API fetches a URL, it does not rank the web.
