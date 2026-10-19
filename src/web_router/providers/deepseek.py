@@ -16,7 +16,8 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from web_router.constants import (
+from web_router.constants import ENV_DEEPSEEK_API_KEY, MSG_EXTRACT_UNSUCCESSFUL, PROVIDER_DEEPSEEK
+from web_router.constants_deepseek import (
     DEEPSEEK_API_KEY_PREFIX,
     DEEPSEEK_BASE_URL,
     DEEPSEEK_EXCLUDE_DOMAIN,
@@ -29,10 +30,7 @@ from web_router.constants import (
     DEEPSEEK_QUERY_LIMIT,
     DEEPSEEK_SEARCH_PARAMETERS,
     DEEPSEEK_SEARCH_PATH,
-    ENV_DEEPSEEK_API_KEY,
     MSG_DEEPSEEK_QUERY_TOO_LONG,
-    MSG_EXTRACT_UNSUCCESSFUL,
-    PROVIDER_DEEPSEEK,
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider

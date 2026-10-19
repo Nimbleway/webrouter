@@ -71,6 +71,8 @@ src/web_router/
 ├── constants.py        every endpoint, env var name, timeout and message template
 ├── constants_you.py    You.com research's endpoints, efforts and status table,
 │                       kept apart so constants.py stops growing
+├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
+│                       kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── exceptions.py       WebRouterError and subclasses
