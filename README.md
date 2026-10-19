@@ -264,7 +264,8 @@ to set.
 
 > **Oxylabs, Bright Data and Firecrawl are mapped from documentation** — no
 > account for any of them was available, so the endpoint, auth and response
-> shape have not been confirmed against a real response. Their integration tests
+> shape have not been confirmed against a real response (only Bright Data's
+> envelope, and the headers of a fetch it could not make, were seen live). Their integration tests
 > exist and skip themselves until credentials are. Nimble, Tavily, Jina and Linkup
 > were verified live; Exa's extract mapping is from documentation too.
 

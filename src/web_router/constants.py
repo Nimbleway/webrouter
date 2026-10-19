@@ -2916,8 +2916,8 @@ OXYLABS_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "html"
 
 # --- Bright Data ------------------------------------------------------------
 # Extract only: the Web Unlocker fetches a URL through Bright Data's network.
-# Mapped from documentation -- no account was available to verify it live. See
-# tests/providers/test_brightdata.py.
+# Mapped from documentation; only the failed-fetch envelope below has been seen
+# live. See tests/providers/test_brightdata.py.
 
 BRIGHTDATA_BASE_URL = "https://api.brightdata.com"
 BRIGHTDATA_EXTRACT_PATH = "/request"
@@ -2941,6 +2941,21 @@ BRIGHTDATA_EXTRACT_FORMATS: dict[ExtractFormat, dict[str, Any]] = {
 }
 
 BRIGHTDATA_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "html"
+
+BRIGHTDATA_ERROR_HEADER = "x-brd-error"
+"""The envelope header in which the unlocker says why it could not fetch the page.
+
+Seen live on 2026-10-16: an unresolvable host answers 200 with an envelope whose
+``status_code`` is 502, ``body`` is empty, and this header holds the reason. A
+target that answers an error page of its own carries no such header -- that page
+was fetched, and stays a document with the target's status.
+"""
+
+BRIGHTDATA_ERROR_CODE_HEADER = "x-brd-error-code"
+"""The short code beside :data:`BRIGHTDATA_ERROR_HEADER` (``proxy_error`` live).
+
+Read on its own too, so a failure that names only a code is still a failure.
+"""
 
 # --- Firecrawl --------------------------------------------------------------
 # Extract only. Verified live keyless on 2026-10-01: the request body and the
