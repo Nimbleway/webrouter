@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- A swappable decider for the `classify()` spike (opt-in, unchanged unless you pass `decider=`). `WebRouter(decider=...)` now takes `"jev"` as before, `"openai"` (an OpenAI model with structured outputs, reading `OPENAI_API_KEY`, with the `evals` extra), `"rules"` (keyword rules, keyless), a name given to `register_decider()`, or any object with `decide()` and `close()`. `ValidatedDecider` checks every answer against a locked decision schema (`web_router.decisions.schema`, version `decision-v1`): an answer that breaks it, or a decider that raises, takes classify's `decider_error` fallback, and each problem is kept as a `Violation` record rather than dropped. `conformance_violations()` runs the same check on any third-party decider.
+
 ## [0.4.0] - 2026-10-14
 
 ### Added
