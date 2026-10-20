@@ -57,7 +57,7 @@ class Provider(str, Enum):
     Not every name serves every method: ``oxylabs``, ``brightdata``,
     ``firecrawl`` and ``jina`` extract but do not search, and most of the search
     backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``,
-    ``anchor`` and ``local`` open browser sessions and do nothing else, and
+    ``anchor``, ``kernel`` and ``local`` open browser sessions and do nothing else, and
     ``browser-use`` and ``skyvern`` run browse tasks and nothing else.
     :func:`web_router.available_providers`,
     :func:`web_router.available_extract_providers` and their research and
@@ -86,6 +86,7 @@ class Provider(str, Enum):
     BROWSERBASE = "browserbase"
     HYPERBROWSER = "hyperbrowser"
     ANCHOR = "anchor"
+    KERNEL = "kernel"
     SKYVERN = "skyvern"
     LOCAL = "local"
     BROWSER_USE = "browser-use"

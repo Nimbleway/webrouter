@@ -15,6 +15,7 @@ from web_router.constants import (
     BROWSER_ENV_BY_PROVIDER,
     BROWSER_TIMEOUT,
     PROVIDER_ANCHOR,
+    PROVIDER_KERNEL,
     PROVIDER_LOCAL,
     PROVIDER_STEEL,
 )
@@ -96,10 +97,22 @@ def test_the_default_chain_is_the_keyed_backends_in_order_then_local(monkeypatch
         for env_var in env_vars:
             monkeypatch.delenv(env_var, raising=False)
     # Set in the opposite order to the chain, so the order cannot come from the environment.
+    monkeypatch.setenv(BROWSER_ENV_BY_PROVIDER[PROVIDER_KERNEL][0], "kernel-key")
     monkeypatch.setenv(BROWSER_ENV_BY_PROVIDER[PROVIDER_ANCHOR][0], "anchor-key")
     monkeypatch.setenv(BROWSER_ENV_BY_PROVIDER[PROVIDER_STEEL][0], "steel-key")
 
-    assert AutoBrowserProvider.default_chain() == ((PROVIDER_STEEL, {}), (PROVIDER_ANCHOR, {}), (PROVIDER_LOCAL, {}))
+    assert AutoBrowserProvider.default_chain() == (
+        (PROVIDER_STEEL, {}),
+        (PROVIDER_ANCHOR, {}),
+        (PROVIDER_KERNEL, {}),
+        (PROVIDER_LOCAL, {}),
+    )
+
+
+def test_a_lifetime_passes_kernel_over_before_anything_opens() -> None:
+    """Kernel has an idle limit and no lifetime, so `auto(timeout=...)` moves on rather than drop the option."""
+    with pytest.raises(UnsupportedParameterError, match="timeout"):
+        _auto(PROVIDER_KERNEL).open(BrowserRequest(timeout=120))
 
 
 def test_with_no_credential_the_chain_is_local_alone(monkeypatch: pytest.MonkeyPatch) -> None:

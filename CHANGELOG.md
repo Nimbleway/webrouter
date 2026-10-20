@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- Kernel as a browser session backend (`kernel`), over its Browsers API, reading `KERNEL_API_KEY`. It maps `idle_timeout`, `stealth`, `headless`, `viewport`, `profile` and `persist_profile`, each checked against a live session. Kernel has an idle limit and no lifetime, so `timeout` raises and no default lifetime is sent; Kernel's own 60-second idle limit applies unless you set `idle_timeout`. `stealth` also brings Kernel's CAPTCHA solver and stealth proxy, so `solve_captchas` raises, and `proxy_country` raises because Kernel needs a proxy created first; pass an existing one through `provider_options`. `auto` tries Kernel after the other vendors and before `local`, so no existing call changes backend.
+
 ## [0.5.0] - 2026-10-19
 
 ### Added

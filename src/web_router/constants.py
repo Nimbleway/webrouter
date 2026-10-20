@@ -54,6 +54,7 @@ PROVIDER_STEEL = Provider.STEEL.value
 PROVIDER_BROWSERBASE = Provider.BROWSERBASE.value
 PROVIDER_HYPERBROWSER = Provider.HYPERBROWSER.value
 PROVIDER_ANCHOR = Provider.ANCHOR.value
+PROVIDER_KERNEL = Provider.KERNEL.value
 PROVIDER_SKYVERN = Provider.SKYVERN.value
 PROVIDER_BROWSER_USE = Provider.BROWSER_USE.value
 
@@ -112,6 +113,7 @@ ENV_STEEL_API_KEY = "STEEL_API_KEY"
 ENV_BROWSERBASE_API_KEY = "BROWSERBASE_API_KEY"
 ENV_HYPERBROWSER_API_KEY = "HYPERBROWSER_API_KEY"
 ENV_ANCHOR_API_KEY = "ANCHOR_API_KEY"
+ENV_KERNEL_API_KEY = "KERNEL_API_KEY"
 ENV_SKYVERN_API_KEY = "SKYVERN_API_KEY"
 ENV_BROWSER_USE_API_KEY = "BROWSER_USE_API_KEY"
 
@@ -187,6 +189,7 @@ BROWSER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_BROWSERBASE: (ENV_BROWSERBASE_API_KEY,),
     PROVIDER_HYPERBROWSER: (ENV_HYPERBROWSER_API_KEY,),
     PROVIDER_ANCHOR: (ENV_ANCHOR_API_KEY,),
+    PROVIDER_KERNEL: (ENV_KERNEL_API_KEY,),
     PROVIDER_LOCAL: (),
     PROVIDER_AUTO: (),
 }
@@ -1726,6 +1729,8 @@ that ran out of time alike, and Anchor reports no reason beside it, so it reads
 as ``released`` rather than as an ``expired`` nobody reported.
 """
 
+# Kernel's endpoints, field table and session states are in constants_kernel.py.
+
 # --- Browser Use browse -----------------------------------------------------
 # Browser Use Cloud's v2 Tasks API, from its published OpenAPI reference
 # (docs.browser-use.com/cloud/api-v2), not a live call: no account was
@@ -2308,17 +2313,19 @@ AUTO_BROWSER_PREFERRED: tuple[str, ...] = (
     PROVIDER_BROWSERBASE,
     PROVIDER_HYPERBROWSER,
     PROVIDER_ANCHOR,
+    PROVIDER_KERNEL,
 )
 """Tried in this order, and only those the caller holds a credential for.
 
 Ordered by how little a caller who never named the backend would be surprised
-by it. The order rests on each vendor's documentation, not on live calls: no
-account was available for any of the four. Steel maps both lifetimes and keeps
-a session across a reconnect, as ``local`` does. Browserbase solves CAPTCHAs by
-default, and it and Hyperbrowser end a session when its CDP client
-disconnects -- Hyperbrowser also when its last page closes. Anchor comes last
-because it runs headful and records every session by default, which nobody who
-asked for "a browser" expects.
+by it. The order of the first four rests on each vendor's documentation, not on
+live calls: no account was available for any of them. Steel maps both lifetimes
+and keeps a session across a reconnect, as ``local`` does. Browserbase solves
+CAPTCHAs by default, and it and Hyperbrowser end a session when its CDP client
+disconnects -- Hyperbrowser also when its last page closes. Anchor comes after
+them because it runs headful and records every session by default, which nobody
+who asked for "a browser" expects. Kernel joined later, so it comes last and no
+call the others already served moves.
 """
 
 AUTO_BROWSER_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = ((PROVIDER_LOCAL, {}),)
