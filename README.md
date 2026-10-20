@@ -775,15 +775,16 @@ page actions need the `[browser]` extra, which is Playwright.
 | `Provider.BROWSERBASE` | `browserbase` | [Browserbase Sessions](https://docs.browserbase.com) | `BROWSERBASE_API_KEY` | `timeout`, `stealth` (`low`/`high`, via `browserSettings.verified` — `advancedStealth` is deprecated), `solve_captchas`, `proxy_country` | **Documentation only** — no key was available; `stealth`/`solve_captchas`/`proxy_country` await a live run |
 | `Provider.HYPERBROWSER` | `hyperbrowser` | [Hyperbrowser Sessions](https://hyperbrowser.ai/docs) | `HYPERBROWSER_API_KEY` | `timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country` | **Documentation only** — no key was available; `stealth`/`solve_captchas`/`proxy_country` await a live run |
 | `Provider.ANCHOR` | `anchor` | [Anchor Browser](https://docs.anchorbrowser.io) | `ANCHOR_API_KEY` | `timeout`, `idle_timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country` | **Documentation only** — no key was available; `stealth`/`solve_captchas`/`proxy_country` await a live run. Headful and recorded by default, and left that way |
+| `Provider.KERNEL` | `kernel` | [Kernel Browsers](https://kernel.sh/docs) | `KERNEL_API_KEY` | `idle_timeout` (whole seconds, 10 s to 72 h), `stealth` (one tier, which also brings Kernel's CAPTCHA solver and proxy), `headless`, `viewport`, `profile` (an id), `persist_profile`. `timeout`, `solve_captchas` and `proxy_country` raise | **Live**, 2026-10-20: open, drive, status, release, and every mapped option |
 | `Provider.LOCAL` | `local` | Google Chrome or Chromium on this machine | none (`CHROME_PATH` optional) | `headless`, `timeout`, `viewport` | **Live** against Google Chrome on macOS: launch, CDP `/json/version`, release, lifetime expiry, exit cleanup. `headless=False` is not exercised by a test |
 
 `auto` opens through the first vendor you hold a key for, in the order **Steel,
-Browserbase, Hyperbrowser, Anchor**, and then **`local`** — a key in the
+Browserbase, Hyperbrowser, Anchor, Kernel**, and then **`local`** — a key in the
 environment says which backend you want, so `local` is the fallback, never a
 substitute for a vendor you are paying for. Each member is checked against the
 request on its class before anything opens, so a member that does not map an
 option you set is passed over: `idle_timeout` skips Browserbase, Hyperbrowser
-and `local`, and `headless` every vendor. The ten-minute default does not count as an
+and `local`, `timeout` skips Kernel, and `headless` every vendor but Kernel. The ten-minute default does not count as an
 option you set. `provider_options` is refused, because it is one backend's own
 fields and `local` would read it as Chrome switches — name the backend you
 wrote it for. `auto` never opens a second session in one call: it moves on only
@@ -797,7 +798,7 @@ stealth) or `"high"` (its strongest, often plan-gated), and unset leaves the
 backend's own default. A backend without the level you ask for raises
 `UnsupportedParameterError` naming it rather than serving another one, and
 `auto` passes such a member over, as it does one that serves an option only
-beside another you left unset. Hyperbrowser, Browserbase and Anchor map it; Steel does not.
+beside another you left unset. Hyperbrowser, Browserbase, Anchor and Kernel map it; Steel does not.
 
 `provider_options` on a named backend merges beneath the mapped options, and
 setting a field a mapped option also sets — including a `timeout` filled in
@@ -904,6 +905,25 @@ silently disables extra stealth unless its proxy is active, so asking for
 opens rather than opening one with less stealth than asked for.
 `proxy_country` is sent lower-case, as Anchor's guide shows it, and is checked
 against every country its proxy guide lists.
+
+**Kernel.** Its `cdp_url` is the `cdp_ws_url` it returns, which carries a
+session token. Kernel has no lifetime limit, only an idle one: `idle_timeout`
+maps onto `timeout_seconds`, which counts down only while no CDP, WebDriver or
+live-view client is connected, and Kernel deletes the session when it runs
+out — after 60 seconds if you leave it unset, so connect soon after opening.
+`timeout` raises, and the ten-minute default is not sent. Kernel has one
+stealth switch, so `"low"` and `"high"` both send `stealth: true`, and `"off"`
+sends `false`; stealth also turns on Kernel's CAPTCHA solver and its stealth
+proxy, which is why `solve_captchas` raises rather than claiming a separate
+switch. `proxy_country` raises too: a country needs a proxy created first
+through Kernel's Proxies API, and an existing one can be passed as
+`provider_options={"proxy": {"id": ...}}`. `profile` is a Kernel profile's
+id — pass a name as `provider_options={"profile": {"name": ...}}` — and
+`persist_profile` sends `profile.save_changes`, refused without a `profile`.
+Its live view lets whoever opens it drive the session, so it stays in `raw`
+rather than becoming `live_view_url`. A deleted session, whether released or
+idled out, reads as `"released"`: Kernel answers 404 for both and does not say
+which. Every mapping was checked live on 2026-10-20.
 
 **`local`** starts a fresh browser process per session, with a temporary
 profile and its DevTools port pinned to `127.0.0.1`, and stops it and deletes
@@ -1652,6 +1672,7 @@ Keys are read from the environment, or passed explicitly through
 | Browserbase | `BROWSERBASE_API_KEY` | open_browser, browse |
 | Hyperbrowser | `HYPERBROWSER_API_KEY` | open_browser |
 | Anchor | `ANCHOR_API_KEY` | open_browser |
+| Kernel | `KERNEL_API_KEY` | open_browser |
 | Browser Use | `BROWSER_USE_API_KEY` | browse |
 | Skyvern | `SKYVERN_API_KEY` | browse |
 | `local` | *none — keyless* (`CHROME_PATH` optional, the browser to launch) | open_browser |

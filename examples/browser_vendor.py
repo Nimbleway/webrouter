@@ -2,7 +2,7 @@
 
 `browser_session.py` drives `local`; this runs the same actions through `auto`,
 which opens the session on the first vendor you hold a key for -- Steel,
-Browserbase, Hyperbrowser, then Anchor -- and hands back that vendor's own
+Browserbase, Hyperbrowser, Anchor, then Kernel -- and hands back that vendor's own
 handle. Nothing in the driving code changes, because the page actions run over
 the session's CDP URL through Playwright rather than through any vendor's API.
 
@@ -34,7 +34,7 @@ VENDORS = [name for name in configured_browser_providers() if name not in ("auto
 
 def through_the_handle(router: WebRouter) -> None:
     """The handle's own actions: identical to the local example, whoever serves it."""
-    with router.open_browser(timeout=120) as browser:
+    with router.open_browser() as browser:
         print(f"opened {browser.session_id} on {browser.provider}")
         browser.goto("https://example.com")
         print(browser.snapshot().tree)
@@ -46,7 +46,7 @@ def through_your_own_driver(router: WebRouter) -> None:
     """Your own Playwright over the session's CDP URL; the router still owns the release."""
     from playwright.sync_api import sync_playwright
 
-    with router.open_browser(timeout=120) as browser, sync_playwright() as playwright:
+    with router.open_browser() as browser, sync_playwright() as playwright:
         # cdp_url is a credential -- whoever holds it drives the session, and
         # some vendors put the account key in it -- so it is never logged or
         # shown in a repr. Asking for it by name is the one time it appears.

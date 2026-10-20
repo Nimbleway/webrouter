@@ -41,6 +41,7 @@ from web_router.constants import (
     PROVIDER_HYPERBROWSER,
     PROVIDER_JINA,
     PROVIDER_KEENABLE,
+    PROVIDER_KERNEL,
     PROVIDER_LINKUP,
     PROVIDER_LOCAL,
     PROVIDER_NIMBLE,
@@ -126,6 +127,7 @@ _BUILTIN_BROWSER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_BROWSERBASE: ("web_router.providers.browserbase", "BrowserbaseBrowserProvider", EXTRA_ALL),
     PROVIDER_HYPERBROWSER: ("web_router.providers.hyperbrowser", "HyperbrowserBrowserProvider", EXTRA_ALL),
     PROVIDER_ANCHOR: ("web_router.providers.anchor", "AnchorBrowserProvider", EXTRA_ALL),
+    PROVIDER_KERNEL: ("web_router.providers.kernel", "KernelBrowserProvider", EXTRA_ALL),
     PROVIDER_LOCAL: ("web_router.providers.local", "LocalBrowserProvider", EXTRA_ALL),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoBrowserProvider", AUTO_EXTRA),
 }

@@ -24,7 +24,7 @@ Linkup, You.com, and `auto`. It has no keyless tier, because every backend bills
 CDP URL the caller drives with Playwright, browser-use or Stagehand, and
 released when the block holding it ends. The handle can also drive the page
 itself — `goto`, `snapshot`, `click`, `type`, `press`, `screenshot`, `read` —
-installed by [browser]. Steel, Browserbase, Hyperbrowser, Anchor, the keyless
+installed by [browser]. Steel, Browserbase, Hyperbrowser, Anchor, Kernel, the keyless
 `local`, which launches a Chromium on this machine, and `auto`, which tries the
 vendors you hold keys for and then `local`.
 
@@ -128,6 +128,7 @@ src/web_router/
     ├── browserbase.py  browser + browse, via httpx — Sessions and Agents APIs
     ├── hyperbrowser.py browser, via httpx — stops with a PUT
     ├── anchor.py       browser, via httpx — timeouts in whole minutes
+    ├── kernel.py       browser, via httpx — an idle limit and no lifetime
     ├── local.py        browser, keyless — a Chromium subprocess on this machine
     ├── browser_use.py  browse, via httpx — Browser Use Cloud's v2 tasks
     └── skyvern.py      browse, via httpx — tasks on Skyvern Cloud
@@ -811,7 +812,7 @@ from the environment (`NIMBLE_API_KEY`, `TAVILY_API_KEY`, `YOU_API_KEY`,
 `PERPLEXITY_API_KEY`, `LINKUP_API_KEY`, `WEBIQ_API_KEY`, `KEENABLE_API_KEY`, `DEEPSEEK_API_KEY`, `FIRECRAWL_API_KEY`, `OXYLABS_USERNAME` +
 `OXYLABS_PASSWORD`, `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE`,
 `STEEL_API_KEY`, `BROWSERBASE_API_KEY`, `HYPERBROWSER_API_KEY`,
-`ANCHOR_API_KEY`, `BROWSER_USE_API_KEY`, `SKYVERN_API_KEY`, and the optional
+`ANCHOR_API_KEY`, `KERNEL_API_KEY`, `BROWSER_USE_API_KEY`, `SKYVERN_API_KEY`, and the optional
 `JINA_API_KEY`) or from `provider_config` at construction. `.env.example` lists
 every one, beside `CHROME_PATH`, which is a path for `local` rather than a
 secret; `WEB_ROUTER_ENV_FILE`, the path of the `.env` the MCP server loads, is
