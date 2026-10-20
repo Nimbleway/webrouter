@@ -15,6 +15,7 @@ from web_router.constants import (
     BROWSER_ENV_BY_PROVIDER,
     BROWSER_TIMEOUT,
     PROVIDER_ANCHOR,
+    PROVIDER_KERNEL,
     PROVIDER_LOCAL,
     PROVIDER_STEEL,
 )
@@ -96,10 +97,22 @@ def test_the_default_chain_is_the_keyed_backends_in_order_then_local(monkeypatch
         for env_var in env_vars:
             monkeypatch.delenv(env_var, raising=False)
     # Set in the opposite order to the chain, so the order cannot come from the environment.
+    monkeypatch.setenv(BROWSER_ENV_BY_PROVIDER[PROVIDER_KERNEL][0], "kernel-key")
     monkeypatch.setenv(BROWSER_ENV_BY_PROVIDER[PROVIDER_ANCHOR][0], "anchor-key")
     monkeypatch.setenv(BROWSER_ENV_BY_PROVIDER[PROVIDER_STEEL][0], "steel-key")
 
-    assert AutoBrowserProvider.default_chain() == ((PROVIDER_STEEL, {}), (PROVIDER_ANCHOR, {}), (PROVIDER_LOCAL, {}))
+    assert AutoBrowserProvider.default_chain() == (
+        (PROVIDER_STEEL, {}),
+        (PROVIDER_ANCHOR, {}),
+        (PROVIDER_KERNEL, {}),
+        (PROVIDER_LOCAL, {}),
+    )
+
+
+def test_a_lifetime_passes_kernel_over_before_anything_opens() -> None:
+    """Kernel has an idle limit and no lifetime, so `auto(timeout=...)` moves on rather than drop the option."""
+    with pytest.raises(UnsupportedParameterError, match="timeout"):
+        _auto(PROVIDER_KERNEL).open(BrowserRequest(timeout=120))
 
 
 def test_with_no_credential_the_chain_is_local_alone(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -242,6 +255,21 @@ def test_provider_options_are_refused_before_anything_opens(chain: _Ledger) -> N
     with pytest.raises(UnsupportedParameterError, match="Name the backend"):
         _auto("first").open(BrowserRequest(provider_options={"solveCaptcha": True}))
 
+    assert chain.requests == {}
+
+
+@pytest.mark.parametrize(
+    "request_fields",
+    [{"profile": "ctx-1"}, {"profile": "ctx-1", "persist_profile": True}, {"persist_profile": False}],
+)
+def test_a_saved_profile_is_refused_before_anything_opens(chain: _Ledger, request_fields: dict[str, Any]) -> None:
+    """A profile is saved on one backend; a member that maps profiles is no sign it holds this one."""
+    _member(chain, "first")
+
+    with pytest.raises(UnsupportedParameterError, match="Name the backend the profile is saved on") as caught:
+        _auto("first").open(BrowserRequest(**request_fields))
+
+    assert caught.value.parameters == sorted(request_fields)
     assert chain.requests == {}
 
 

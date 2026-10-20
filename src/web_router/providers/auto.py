@@ -88,6 +88,7 @@ from web_router.constants import (
     MSG_AUTO_BROWSER_NEEDS,
     MSG_AUTO_BROWSER_NO_ELIGIBLE,
     MSG_AUTO_BROWSER_NO_ELIGIBLE_MISSING,
+    MSG_AUTO_BROWSER_NO_PROFILE,
     MSG_AUTO_BROWSER_NO_PROVIDER_OPTIONS,
     MSG_AUTO_BROWSER_OWNS_NOTHING,
     MSG_AUTO_BROWSER_SKIPPED,
@@ -833,6 +834,8 @@ class AutoBrowserProvider(BrowserProvider):
     own fields, untranslated, so it cannot mean the same thing to whichever
     member happens to answer -- to ``local`` it is Chrome command-line
     switches -- and a caller who wrote it for one backend should name it.
+    ``profile`` and ``persist_profile`` are refused for the same reason: a
+    profile is saved on one backend, under that backend's own id or name.
 
     The handle returned is the member's own: it reports that member as its
     provider, and its release and status go straight to it.
@@ -923,8 +926,8 @@ class AutoBrowserProvider(BrowserProvider):
         Raises:
             MissingParameterError: if no member qualifies and one of them would
                 but for a partner option left unset -- setting it is the fix.
-            UnsupportedParameterError: for ``provider_options``, and when no
-                member qualifies otherwise. Either message names why each
+            UnsupportedParameterError: for ``provider_options`` and a profile,
+                and when no member qualifies otherwise. Either message names why each
                 member was passed over.
         """
         from web_router.registry import get_browser_provider_class
@@ -933,6 +936,9 @@ class AutoBrowserProvider(BrowserProvider):
             raise UnsupportedParameterError(
                 self.name, {"provider_options"}, detail=MSG_AUTO_BROWSER_NO_PROVIDER_OPTIONS
             )
+        profile_options = {name for name in ("profile", "persist_profile") if getattr(request, name) is not None}
+        if profile_options:
+            raise UnsupportedParameterError(self.name, profile_options, detail=MSG_AUTO_BROWSER_NO_PROFILE)
 
         wanted = request.specified_parameters()
         eligible: list[tuple[int, str]] = []

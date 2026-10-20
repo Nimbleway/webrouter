@@ -244,7 +244,8 @@ class FakeBrowserProvider(BrowserProvider):
     Keeps a ledger of what it opened and released, which is what the contract
     tests assert on. :attr:`already_over` models a session the backend ended on
     its own: releasing it raises, as a real API's 404 would, and asking about it
-    reports ``expired``.
+    reports ``expired``. ``control_url`` is returned on every open, as the
+    vendors that hand one out on open do.
     """
 
     name = "fake"
@@ -253,8 +254,9 @@ class FakeBrowserProvider(BrowserProvider):
 
     states: ClassVar[dict[str, BrowserState]] = {"RUNNING": "running", "GONE": "expired", "BROKEN": "failed"}
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, *, control_url: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self.control_url_on_open = control_url
         self.requests: list[BrowserRequest] = []
         self.released: list[str] = []
         self.already_over: set[str] = set()
@@ -268,6 +270,7 @@ class FakeBrowserProvider(BrowserProvider):
             provider=self.name,
             session_id=session_id,
             cdp_url=FAKE_CDP_URL.format(session_id=session_id),
+            control_url=self.control_url_on_open,
             raw={"connectUrl": FAKE_CDP_URL.format(session_id=session_id)},
         )
 
