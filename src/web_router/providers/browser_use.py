@@ -6,22 +6,21 @@ dependency would not simplify. Install with the ``all`` extra.
 Reads ``BROWSER_USE_API_KEY`` unless a key is passed explicitly.
 
 v2 rather than v4, because v2 takes a start URL, a schema, a step limit and a
-domain list as fields of its own. Slim by design all the same: only
-``start_url`` is mapped, and it has not been confirmed against a live call.
-``structuredOutput``, ``maxSteps``, ``allowedDomains``, the model and the
-session settings are all reachable through ``provider_options``; mapping one
-properly is a welcome PR once a live call shows it honoured -- see
-CONTRIBUTING.md.
+domain list as fields of its own; each is mapped, and each was checked against
+a live task on 2026-10-21. The model and the session settings are reachable
+through ``provider_options``.
 """
 
 from __future__ import annotations
 
+import json
 from typing import Any, ClassVar
 
 from web_router.constants import (
     BROWSER_USE_API_KEY_HEADER,
     BROWSER_USE_BASE_URL,
     BROWSER_USE_FIELDS,
+    BROWSER_USE_SCHEMA_FIELD,
     BROWSER_USE_SESSION_ID_OPTION,
     BROWSER_USE_STEP_FIELDS,
     BROWSER_USE_STOP_BODY,
@@ -47,7 +46,9 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
     """
 
     name: ClassVar[str] = PROVIDER_BROWSER_USE
-    supported_parameters: ClassVar[frozenset[str]] = frozenset({"start_url"})
+    supported_parameters: ClassVar[frozenset[str]] = frozenset(
+        {"start_url", "output_schema", "max_steps", "allowed_domains"}
+    )
 
     base_url: ClassVar[str] = BROWSER_USE_BASE_URL
     env_api_key: ClassVar[str] = ENV_BROWSER_USE_API_KEY
@@ -95,7 +96,13 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
         return BROWSER_USE_STOP_WITH_SESSION_BODY if job_id in self._own_sessions else BROWSER_USE_STOP_BODY
 
     def _build_payload(self, request: BrowseRequest) -> dict[str, Any]:
-        return build_payload(request, BROWSER_USE_FIELDS, task=request.task)
+        schema = request.output_schema
+        return build_payload(
+            request,
+            BROWSER_USE_FIELDS,
+            task=request.task,
+            **({BROWSER_USE_SCHEMA_FIELD: json.dumps(schema)} if schema else {}),
+        )
 
     def _started(self, request: BrowseRequest, created: dict[str, Any]) -> BrowseProgress:
         # The create call answers 202 with the task and session ids and no
@@ -119,15 +126,18 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
         return BrowseProgress(job_id=job_id, state=state, response=response, detail=detail)
 
     def _to_response(self, request: BrowseRequest, status: dict[str, Any], task: dict[str, Any]) -> BrowseResponse:
-        # `output` is always a string -- the schema, when one is sent, travels
-        # stringified and comes back the same way -- so it is prose here, and
-        # `structured` stays unset. The session's live URL is not in either
-        # payload, and nothing but `raw` would carry it if it were.
+        # `output` is always a string: the schema, when one is sent, travels
+        # stringified and its answer comes back the same way. The session's live
+        # URL is not in either payload, and nothing but `raw` would carry it if
+        # it were.
         output = status.get("output")
+        answer = output if isinstance(output, str) and output else None
+        structured = _structured(answer) if request.output_schema else None
         return BrowseResponse(
             provider=self.name,
             task=request.task,
-            answer=output if isinstance(output, str) and output else None,
+            answer=None if structured is not None else answer,
+            structured=structured,
             steps=[self._step(step) for step in task.get("steps") or []],
             request_id=str(status.get("id") or task.get("id") or "") or None,
             raw=[status, task],
@@ -135,12 +145,26 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
 
     @staticmethod
     def _step(step: dict[str, Any]) -> BrowseStep:
-        # `actions` is a list of stringified actions and `action` one string;
-        # joining them would be a format Browser Use never wrote, so the list
-        # stays whole in `extra`. `nextGoal` is the agent's own note on the step.
+        # `actions` is a list of stringified actions and `action` one string, so
+        # only a step that took a single action has one; joining several would
+        # be a format Browser Use never wrote. The list stays whole in `extra`.
+        actions = step.get("actions") or []
         return BrowseStep(
+            action=actions[0] if len(actions) == 1 and isinstance(actions[0], str) else None,
             url=step.get("url") or None,
-            detail=step.get("nextGoal") or None,
+            detail=step.get("memory") or None,
             screenshot_url=step.get("screenshotUrl") or None,
             extra={key: value for key, value in step.items() if key not in BROWSER_USE_STEP_FIELDS},
         )
+
+
+def _structured(output: str | None) -> dict[str, Any] | list[Any] | None:
+    # An answer that is not JSON is left as prose rather than dropped: the agent
+    # was asked for the schema, but only its output says whether it managed.
+    if output is None:
+        return None
+    try:
+        parsed = json.loads(output)
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, (dict, list)) else None

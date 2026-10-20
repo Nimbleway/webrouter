@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- Browser Use now maps `output_schema`, `max_steps` and `allowed_domains`, each checked against a live task on 2026-10-21; they were refused before. The schema is sent as Browser Use's `structuredOutput` and the answer comes back as `structured`; an answer that is not JSON stays in `answer`. `auto` can now serve a browse call that sets any of the three, through Browser Use.
+
+### Fixed
+
+- Browser Use steps now carry a `detail` and an `action`. `detail` came from `nextGoal`, which live tasks always return empty, so it was always `None`; it now reads the step's `memory`. A step that took a single action, which every step in four live tasks did, now has it as `action`. `nextGoal` moves to `extra`.
+
 ## [0.6.0] - 2026-10-20
 
 ### Added

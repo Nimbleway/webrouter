@@ -1,12 +1,12 @@
 """The Browser Use browse provider, over a stubbed v2 Tasks API.
 
-The mapping here is derived from Browser Use's published v2 OpenAPI reference
-(docs.browser-use.com/cloud/api-v2/tasks), not from a live call -- no account
-was available during development. The payloads below are written from the
-``TaskCreatedResponse``, ``TaskStatusView`` and ``TaskView`` schemas rather than
-recorded. The integration test below is the check that matters; run it once
-credentials are available. See CONTRIBUTING.md on verifying against the live
-API.
+The mapping is from Browser Use's published v2 OpenAPI reference
+(docs.browser-use.com/cloud/api-v2/tasks), checked against live tasks on
+2026-10-21: a prose task, ``structuredOutput``, ``maxSteps`` and
+``allowedDomains`` each behaved as mapped here, and every step came back with
+an empty ``nextGoal``, its note in ``memory`` and a single action. The payloads
+below follow the ``TaskCreatedResponse``, ``TaskStatusView`` and ``TaskView``
+schemas in that shape. The integration tests below repeat those checks.
 """
 
 from __future__ import annotations
@@ -18,9 +18,9 @@ from typing import Any
 import httpx
 import pytest
 
-from web_router.exceptions import ProviderError, UnsupportedParameterError
+from web_router.exceptions import ProviderError
 from web_router.providers.browser_use import BrowserUseBrowseProvider
-from web_router.types import BrowseRequest
+from web_router.types import BROWSE_PARAMETERS, BrowseRequest
 
 TASK_ID = "3f1c2b9e-8a4d-4c1e-9b7a-2d5e6f708192"
 SESSION_ID = "b7e2a1c4-5d6f-4a8b-9c0d-1e2f3a4b5c6d"
@@ -35,9 +35,11 @@ STEP = {
     "nextGoal": "Read the title of the top story.",
     "url": "https://news.ycombinator.com/",
     "screenshotUrl": "https://cdn.browser-use.com/screenshots/step-1.png",
-    "actions": ['{"go_to_url": {"url": "https://news.ycombinator.com"}}', '{"done": {"text": "Show HN"}}'],
+    "actions": ['{"go_to_url": {"url": "https://news.ycombinator.com"}}'],
     "duration": 3.2,
 }
+
+SCHEMA = {"type": "object", "properties": {"title": {"type": "string"}}, "required": ["title"]}
 
 
 def _status(status: str, output: str | None = None) -> dict[str, Any]:
@@ -143,15 +145,23 @@ def test_provider_options_pass_through(provider: BrowserUseBrowseProvider) -> No
     assert payload["llm"] == "gpt-4.1"
 
 
-@pytest.mark.parametrize(
-    "option",
-    [{"output_schema": {"type": "object"}}, {"max_steps": 5}, {"allowed_domains": ["example.com"]}],
-)
-def test_options_no_live_call_confirmed_are_refused(provider: BrowserUseBrowseProvider, option: dict[str, Any]) -> None:
-    api = _stub(provider)
-    with pytest.raises(UnsupportedParameterError):
-        provider.submit(BrowseRequest(task="t", **option))
-    assert api.calls == [], "refused before anything was billed"
+def test_the_step_limit_and_domain_list_keep_their_shape(provider: BrowserUseBrowseProvider) -> None:
+    request = BrowseRequest(task="t", max_steps=5, allowed_domains=["example.com", "iana.org"])
+    assert provider._build_payload(request) == {
+        "task": "t",
+        "maxSteps": 5,
+        "allowedDomains": ["example.com", "iana.org"],
+    }
+
+
+def test_the_schema_is_sent_as_a_json_string(provider: BrowserUseBrowseProvider) -> None:
+    """Browser Use's `structuredOutput` is a string field, not an object."""
+    payload = provider._build_payload(BrowseRequest(task="t", output_schema=SCHEMA))
+    assert json.loads(payload["structuredOutput"]) == SCHEMA
+
+
+def test_every_browse_option_is_mapped(provider: BrowserUseBrowseProvider) -> None:
+    assert BrowserUseBrowseProvider.supported_parameters == BROWSE_PARAMETERS
 
 
 def test_the_key_goes_in_browser_uses_own_header(provider: BrowserUseBrowseProvider) -> None:
@@ -191,11 +201,52 @@ def test_a_step_carries_only_what_browser_use_reported(provider: BrowserUseBrows
 
     assert step.url == "https://news.ycombinator.com/"
     assert step.screenshot_url == "https://cdn.browser-use.com/screenshots/step-1.png"
-    assert step.detail == "Read the title of the top story."
-    assert step.action is None, "several stringified actions are not one action"
+    assert step.detail == "On the Hacker News front page."
+    assert step.action == '{"go_to_url": {"url": "https://news.ycombinator.com"}}'
     assert step.extra["actions"] == STEP["actions"]
     assert step.extra["number"] == 1
-    assert step.extra["memory"] == STEP["memory"]
+    assert step.extra["nextGoal"] == STEP["nextGoal"]
+
+
+def test_a_step_with_several_actions_has_no_single_action(provider: BrowserUseBrowseProvider) -> None:
+    actions = ['{"click": {"index": 3}}', '{"done": {"text": "Show HN"}}']
+    _stub(provider, task=_task("finished", "Show HN", steps=[{**STEP, "actions": actions}]))
+
+    (step,) = provider.browse(BrowseRequest(task="t")).steps
+
+    assert step.action is None, "joining them would be a format Browser Use never wrote"
+    assert step.extra["actions"] == actions
+
+
+def test_a_schema_answer_is_structured(provider: BrowserUseBrowseProvider) -> None:
+    output = '{"title": "Example Domain"}'
+    _stub(provider, states=[_status("finished", output)], task=_task("finished", output))
+
+    response = provider.browse(BrowseRequest(task="t", output_schema=SCHEMA))
+
+    assert response.structured == {"title": "Example Domain"}
+    assert response.answer is None
+
+
+def test_a_schema_answer_that_is_not_json_stays_prose(provider: BrowserUseBrowseProvider) -> None:
+    """The agent may fail to produce the schema; its words are kept rather than dropped."""
+    output = "I could not find a title."
+    _stub(provider, states=[_status("finished", output)], task=_task("finished", output))
+
+    response = provider.browse(BrowseRequest(task="t", output_schema=SCHEMA))
+
+    assert response.structured is None
+    assert response.answer == output
+
+
+def test_json_prose_is_not_structured_when_no_schema_was_asked_for(provider: BrowserUseBrowseProvider) -> None:
+    output = '{"title": "Example Domain"}'
+    _stub(provider, states=[_status("finished", output)], task=_task("finished", output))
+
+    response = provider.browse(BrowseRequest(task="t"))
+
+    assert response.structured is None
+    assert response.answer == output
 
 
 def test_a_task_that_reported_no_steps_has_none(provider: BrowserUseBrowseProvider) -> None:
@@ -334,3 +385,26 @@ def test_live_browse_answers_a_simple_task() -> None:
     assert "example" in response.answer.lower()
     assert response.request_id
     assert response.steps
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("BROWSER_USE_API_KEY"), reason="BROWSER_USE_API_KEY not set")
+def test_live_browse_answers_in_the_schema_within_the_step_limit() -> None:
+    from tests.conftest import billing_aware
+    from web_router import WebRouter
+
+    max_steps = 5
+    with WebRouter() as router, billing_aware("browser-use"):
+        response = router.browse(
+            "Report the page's <title> text.",
+            provider="browser-use",
+            start_url="https://example.com",
+            output_schema=SCHEMA,
+            max_steps=max_steps,
+            allowed_domains=["example.com"],
+            timeout=600,
+        )
+
+    assert isinstance(response.structured, dict)
+    assert "example" in str(response.structured.get("title", "")).lower()
+    assert 0 < len(response.steps) <= max_steps
