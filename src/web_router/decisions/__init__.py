@@ -1,7 +1,7 @@
 """Route a query before spending on it: a decision model labels it, code picks the method and chain.
 
 A spike, opt-in through ``WebRouter(decider=...)``: see :meth:`~web_router.WebRouter.classify`.
-The decider is swappable -- ``"jev"``, ``"openai"``, ``"rules"``, a name given
+The decider is swappable -- ``"keywords"``, ``"jev"``, ``"llm"``, a name given
 to :func:`register_decider`, or any :class:`DecisionProvider` instance -- and
 :class:`ValidatedDecider` checks its answers against the locked
 :class:`Decision` schema. Everything past the route types loads on first use,
@@ -11,12 +11,18 @@ so a bare install needs neither ``httpx`` nor ``openai``.
 from importlib import import_module
 from typing import Any
 
-from web_router.decisions.route import Answer, Route, route_from_labels
+from web_router.decisions.route import (
+    Answer,
+    Route,
+    normalized_confidence,
+    normalized_probabilities,
+    route_from_labels,
+)
 
 _LAZY = {
     "JevDecider": "web_router.decisions.jev",
-    "OpenAIDecider": "web_router.decisions.openai",
-    "RulesDecider": "web_router.decisions.rules",
+    "LLMDecider": "web_router.decisions.llm",
+    "KeywordsDecider": "web_router.decisions.keywords",
     "DecisionProvider": "web_router.decisions.base",
     "ValidatedDecider": "web_router.decisions.base",
     "conformance_violations": "web_router.decisions.base",
@@ -33,7 +39,14 @@ _LAZY = {
     "unregister_decider": "web_router.decisions.registry",
 }
 
-__all__ = ["Answer", "Route", "route_from_labels", *_LAZY]
+__all__ = [
+    "Answer",
+    "Route",
+    "normalized_confidence",
+    "normalized_probabilities",
+    "route_from_labels",
+    *_LAZY,
+]
 
 
 def __getattr__(name: str) -> Any:

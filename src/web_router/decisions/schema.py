@@ -1,6 +1,6 @@
 """The locked decision schema: what any decider's answer, and the route built from it, must look like.
 
-One record shape whichever model decided -- Jev, an OpenAI model, keyword rules
+One record shape whichever model decided -- Jev, a chat model, keyword rules
 or a vendor's own -- so a measurement can compare deciders field for field.
 The JSON Schema of :class:`Decision` is committed under
 ``tests/fixtures/decisions/`` and a test fails when the two drift apart: a
@@ -83,11 +83,11 @@ def _choice_enum(schema: dict[str, Any], cls: type[Any]) -> None:
 class Label(_Locked):
     """One question's answer: the pick, how sure the decider is, and its whole distribution, if it gave one.
 
-    What ``confidence`` means depends on the decider, so compare it across
-    deciders with care: Jev reports its own confidence (and may leave
-    ``probabilities`` empty), an OpenAI model's is the probability it gave its
-    own choice -- self-reported, not calibrated -- and the rules' is a fixed
-    constant.
+    The built-in deciders report ``confidence`` on one scale, how far the pick
+    stands above an even guess: Jev reports it itself (and may leave
+    ``probabilities`` empty), the llm decider computes it from the model's own
+    distribution -- self-reported, not calibrated -- and the keyword rules'
+    is a fixed constant, not measured. Compare it across deciders with care.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True, json_schema_extra=_choice_enum)

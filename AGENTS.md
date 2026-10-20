@@ -842,8 +842,8 @@ Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses 
 read only by its judge behind `evaluate()` (the `evals` extra) —
 `OpenAIJudge` and `AnthropicJudge` — so each appears in `.env.example` and in
 no `*_ENV_BY_PROVIDER` table, and no search, extract, research or browser call
-ever touches either. The opt-in `OpenAIDecider` behind `classify()` (the `decider=`
-spike) reads `OPENAI_API_KEY` too, only when a caller asks for it. `benchmarks/agent/` reads both too, for its agents —
+ever touches either. The opt-in `LLMDecider` behind `classify()` (`decider="llm"`, the `decider=`
+spike) reads `OPENAI_API_KEY` too, only when a caller asks for it and passes no `api_key`. `benchmarks/agent/` reads both too, for its agents —
 `ANTHROPIC_API_KEY` for Claude's, `OPENAI_API_KEY` for OpenAI's; the Claude and
 OpenAI tools never read either key, because they are
 definitions the caller's own client sends. `.env` is gitignored — keep it that way.

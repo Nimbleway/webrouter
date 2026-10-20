@@ -4351,7 +4351,13 @@ A 2026-10-15 rewrite of tool to the rubric's "cheapest tool" rule dropped tool a
 ROUTE_DEFAULT_LABELS = {"tool": "search", "recent": "any", "coverage": "lookup", "well_scoped": "clear"}
 """What an unsure, missing or failed label falls back to."""
 
-MSG_ROUTE_NO_DECIDER = "classify() needs a decider: WebRouter(decider='jev')."
+MSG_ROUTE_NO_DECIDER = (
+    "classify() needs a decider: WebRouter(decider='keywords') needs no key; "
+    "'jev' needs TYPESAFE_API_KEY and 'llm' OPENAI_API_KEY."
+)
+MSG_ROUTE_DECIDER_CONFIG_NEEDS_NAME = (
+    "decider_config configures a decider given by name, such as decider='llm'; configure an instance yourself."
+)
 MSG_ROUTE_UNKNOWN_DECIDER = "Unknown decider {name!r}; known: {available}."
 MSG_ROUTE_BAD_ANSWER = "The decider's answer could not be read: {detail}"
 
@@ -4400,14 +4406,15 @@ ROUTE_LABEL_LINES = (
 
 
 # --- Decision providers (spike) ---------------------------------------------
-# Who answers ROUTE_QUESTIONS for classify() is swappable: Jev, an OpenAI model,
-# keyless rules, or any object with decide() and close(). Every answer can be
+# Who answers ROUTE_QUESTIONS for classify() is swappable: Jev, a chat model over
+# an OpenAI-compatible API, keyless keyword rules, or any object with decide() and close(). Every answer can be
 # checked against one locked schema (web_router.decisions.schema).
 
-ROUTE_DECIDER_OPENAI = "openai"
-"""An OpenAI model answers the questions with structured outputs: ``WebRouter(decider="openai")``."""
-ROUTE_DECIDER_RULES = "rules"
-"""Keyword rules, keyless and deterministic: ``WebRouter(decider="rules")``."""
+ROUTE_DECIDER_LLM = "llm"
+"""A chat model answers the questions with structured outputs: ``WebRouter(decider="llm")``. It calls the chat
+completions API, so any OpenAI-compatible endpoint works through ``base_url``."""
+ROUTE_DECIDER_KEYWORDS = "keywords"
+"""Simple keyword rules, keyless and deterministic: ``WebRouter(decider="keywords")``."""
 
 DECISION_SCHEMA_VERSION = "decision-v2"
 """Bumped with every change to the locked schema, together with tests/fixtures/decisions/decision.schema.json.
@@ -4483,50 +4490,55 @@ MSG_DECISION_ERROR_STATUS = "an error is recorded only when decider_status is 'f
 MSG_DECISION_FAILED_FALLBACK = "decider_status 'failed' needs 'decider_error' in route.fallback"
 
 DECISION_CONFORMANCE_QUERIES = (
-    "Who is the CEO of Databricks?",
+    "Who is the CEO of Wikimedia?",
     "Summarize https://example.com/pricing for me.",
     "Compare the battery life of the MacBook Air M4 and the Dell XPS 13.",
     "opening hours tomorrow",
 )
 """What :func:`~web_router.decisions.base.conformance_violations` asks a provider by default: one per kind of route."""
 
-OPENAI_DECIDER_MODEL = "gpt-4.1-mini"
+LLM_DECIDER_MODEL = "gpt-4.1-mini"
 """Small and fast: the decider runs before every routed call, and the answer is four short labels."""
 
-OPENAI_DECIDER_TIMEOUT = 5.0
+LLM_DECIDER_TIMEOUT = 5.0
 """Seconds. Longer than ROUTE_DECIDER_TIMEOUT, which is Jev's: a general model over the network rarely answers
 in 0.8s. Past it the route falls back to the default, as for any failed decider."""
 
-OPENAI_DECIDER_MAX_RETRIES = 0
+LLM_DECIDER_MAX_RETRIES = 0
 """A retry would double the wait a route is meant to save; a failure falls back to the default route instead."""
 
-OPENAI_DECIDER_TEMPERATURE = 0.0
-OPENAI_DECIDER_SCHEMA_NAME = "route_labels"
+LLM_DECIDER_TEMPERATURE = 0.0
+LLM_DECIDER_SCHEMA_NAME = "route_labels"
 """The ``json_schema.name`` sent with the structured-output request."""
 
-OPENAI_DECIDER_PROMPT_HEAD = (
+LLM_DECIDER_PROMPT_HEAD = (
     "Label one web request. Request: {query}. asked_on: {asked_on}.\n"
     "For each question pick exactly one choice and give a probability for every choice; they sum to 1."
 )
-OPENAI_DECIDER_PROMPT_QUESTION = "\n[{name}] {instructions}"
-OPENAI_DECIDER_PROMPT_CRITERION = "- {choice}: {text}"
+LLM_DECIDER_PROMPT_QUESTION = "\n[{name}] {instructions}"
+LLM_DECIDER_PROMPT_CRITERION = "- {choice}: {text}"
 """The prompt is built from ROUTE_QUESTIONS' own instructions and criteria, so it asks what Jev is asked."""
 
-RULES_URL = r"https?://"
-RULES_RESEARCH = r"\b(compare|identify|list|which .* (and|both)|across|report|determine|find the names)\b"
-RULES_RECENT_MONTH = r"\b(latest|current|now|today|this (week|month|year)|headcount|employees|funding|raised)\b"
-RULES_SYNTHESIS = r"\b(compare|among|both|and then|which of|across|or)\b"
-RULES_RESEARCH_LENGTH = 220
+KEYWORDS_URL = r"https?://"
+KEYWORDS_RESEARCH = r"\b(compare|identify|list|which .* (and|both)|across|report|determine|find the names)\b"
+KEYWORDS_RECENT_MONTH = r"\b(latest|current|now|today|this (week|month|year)|headcount|employees|funding|raised)\b"
+KEYWORDS_SYNTHESIS = r"\b(compare|among|both|and then|which of|across|or)\b"
+KEYWORDS_RESEARCH_LENGTH = 220
 """Characters. A request longer than this reads as open-ended research rather than a lookup."""
-RULES_MISSING_CONTEXT_WORDS = 2
+KEYWORDS_MISSING_CONTEXT_WORDS = 2
 """A request of this many words or fewer is taken to be missing context."""
-RULES_CONFIDENCE = {"tool": 0.8, "recent": 0.7, "coverage": 0.7, "well_scoped": 0.6}
-"""Fixed per label, not measured: what the rules claim for their pick. The rest of each label's probability is
-spread evenly over the other choices, so the distribution sums to 1. Every value clears ROUTE_MIN_CONFIDENCE,
-so a rules route never falls back for low confidence. The patterns match Bench's stand-in rules decider."""
-RULES_VERSION = "rules-v1"
+KEYWORDS_CONFIDENCE = {"tool": 0.8, "recent": 0.7, "coverage": 0.7, "well_scoped": 0.6}
+"""Fixed per label, not measured: the normalized confidence the keyword rules report for their pick, on the scale
+Jev reports (see :func:`~web_router.decisions.route.normalized_confidence`). The pick's probability is set to
+match, and the rest of each label's probability is spread evenly over the other choices, so the distribution sums
+to 1."""
+KEYWORDS_PAID_TOOLS = ("research", "browse")
+KEYWORDS_PAID_TOOL_CONFIDENCE = 0.4
+"""Fixed, not measured: the confidence for a research or browse pick, below ROUTE_MIN_CONFIDENCE, so a paid method
+is never picked on keywords alone. classify() records ``low_confidence`` and routes to search unless overridden."""
+KEYWORDS_VERSION = "keywords-v1"
 
-OPENAI_DECIDER_VERSION = "{model}+p{digest}"
-OPENAI_DECIDER_DIGEST_LENGTH = 8
+LLM_DECIDER_VERSION = "{model}+p{digest}"
+LLM_DECIDER_DIGEST_LENGTH = 8
 """The OpenAI decider's version: its model, and a short sha256 of the prompt templates, ROUTE_QUESTIONS and the
 answer schema. Two prompts on one model are two deciders, and the record must say which answered."""

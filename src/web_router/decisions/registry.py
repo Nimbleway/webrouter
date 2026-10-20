@@ -18,8 +18,8 @@ from web_router.constants import (
     EXTRA_SEARCH,
     MSG_ROUTE_UNKNOWN_DECIDER,
     ROUTE_DECIDER_JEV,
-    ROUTE_DECIDER_OPENAI,
-    ROUTE_DECIDER_RULES,
+    ROUTE_DECIDER_KEYWORDS,
+    ROUTE_DECIDER_LLM,
 )
 from web_router.decisions.base import DecisionProvider
 from web_router.exceptions import ConfigurationError, ProviderNotInstalledError
@@ -28,13 +28,13 @@ DeciderFactory = Callable[..., DecisionProvider]
 
 # name -> (module path, class name, extra that supplies what it imports)
 #
-# Jev talks to TypeSafe over httpx, which `search` installs; the OpenAI decider
-# needs the SDK the `evals` extra already ships. The rules need nothing, so
-# their column is never quoted.
+# Jev talks to TypeSafe over httpx, which `search` installs; the llm decider
+# needs the openai SDK the `evals` extra already ships. The keyword rules need
+# nothing, so their column is never quoted.
 _BUILTIN_DECIDERS: dict[str, tuple[str, str, str]] = {
     ROUTE_DECIDER_JEV: ("web_router.decisions.jev", "JevDecider", EXTRA_SEARCH),
-    ROUTE_DECIDER_OPENAI: ("web_router.decisions.openai", "OpenAIDecider", EXTRA_EVALS),
-    ROUTE_DECIDER_RULES: ("web_router.decisions.rules", "RulesDecider", EXTRA_ALL),
+    ROUTE_DECIDER_LLM: ("web_router.decisions.llm", "LLMDecider", EXTRA_EVALS),
+    ROUTE_DECIDER_KEYWORDS: ("web_router.decisions.keywords", "KeywordsDecider", EXTRA_ALL),
 }
 
 _CUSTOM_DECIDERS: dict[str, DeciderFactory] = {}
@@ -80,5 +80,5 @@ def get_decider_factory(name: str) -> DeciderFactory:
 
 
 def create_decider(name: str, **kwargs: Any) -> DecisionProvider:
-    """Build the decider registered under ``name``, passing ``kwargs`` to it."""
+    """Build the decider registered under ``name``, passing ``kwargs`` to it: ``WebRouter``'s ``decider_config``."""
     return get_decider_factory(name)(**kwargs)

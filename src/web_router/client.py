@@ -50,6 +50,7 @@ from web_router.constants import (
     DEFAULT_PROVIDER,
     EVALS_CONCURRENCY,
     MSG_BENCHMARK_NO_PROVIDERS,
+    MSG_ROUTE_DECIDER_CONFIG_NEEDS_NAME,
     MSG_ROUTE_NO_DECIDER,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
     PROVIDER_AUTO,
@@ -67,7 +68,6 @@ from web_router.evals.types import EvaluationReport
 from web_router.exceptions import (
     BenchmarkTimeoutError,
     ConfigurationError,
-    ProviderError,
     ProviderNotFoundError,
     WebRouterError,
 )
@@ -508,32 +508,41 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
         decider: str | Any | None = None,
+        decider_config: dict[str, Any] | None = None,
     ) -> None:
         """
         Args:
-            decider: Turns on :meth:`classify`. ``"jev"`` asks TypeSafe's Jev with
-                ``TYPESAFE_API_KEY``; ``"openai"`` an OpenAI model with
-                ``OPENAI_API_KEY``; ``"rules"`` keyword rules, keyless. A name
+            decider: Turns on :meth:`classify`. ``"keywords"`` uses simple keyword
+                rules, keyless; ``"jev"`` asks TypeSafe's Jev with
+                ``TYPESAFE_API_KEY``; ``"llm"`` a chat model over any
+                OpenAI-compatible API, with ``OPENAI_API_KEY``. A name
                 given to :func:`~web_router.decisions.register_decider` works
                 the same way, and any instance with ``decide`` and ``close`` --
                 a configured :class:`~web_router.decisions.JevDecider`, or one
                 wrapped in :class:`~web_router.decisions.ValidatedDecider` -- is
                 used as given. The query text is sent to it.
+            decider_config: Constructor kwargs for a decider given by name, as
+                ``provider_config`` is for backends: for example
+                ``decider="llm", decider_config={"model": ..., "base_url": ..., "api_key": ...}``.
 
         Raises:
             ConfigurationError: for a backend handed an ``async_client``, which
                 this router, calling synchronously, could never use: through
                 ``auto`` the call would quietly go to another backend instead;
                 for a decider name nothing is registered under; or for a named
-                decider with no key, such as ``decider="jev"`` with no TypeSafe key.
+                decider with no key, such as ``decider="jev"`` with no TypeSafe key;
+                or for ``decider_config`` beside a decider that is not a name.
         """
         super().__init__(provider, provider_config=provider_config)
         async_only = sorted(_async_client_holders(self._config))
         if async_only:
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
         # Built after every check that can refuse the router, so a refused build leaves no open client behind.
+        if decider_config is not None and not isinstance(decider, str):
+            raise ConfigurationError(MSG_ROUTE_DECIDER_CONFIG_NEEDS_NAME)
         if isinstance(decider, str):
-            decider = create_decider(decider)  # imported on first use: Jev needs httpx, OpenAI its SDK
+            # Imported on first use: Jev needs httpx, the llm decider the openai SDK.
+            decider = create_decider(decider, **(decider_config or {}))
             self._owns_decider = True
         else:
             self._owns_decider = False  # a decider handed in may be shared: its owner closes it
@@ -929,8 +938,8 @@ class WebRouter(_BaseRouter[BrowserHandle]):
 
         One call to the decider labels the query; a lookup table turns the
         labels into a route. Passing ``urls`` routes to extract and
-        ``output_schema`` to research without asking. A decider that fails or
-        times out gives today's default -- search on the default chain -- with
+        ``output_schema`` to research without asking. A decider that fails, times
+        out or raises anything else gives today's default -- search on the default chain -- with
         :attr:`Route.fallback` saying why. Nothing is searched: run it with
         :meth:`execute`, or read it and call a method yourself.
 
@@ -951,10 +960,16 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         else:
             state = {"query": query, "asked_on": date.today().isoformat()}
             started = time.perf_counter()
+            # A ValidatedDecider's passthrough types are a caller's policy: they stop the run, not route it.
+            passthrough: tuple[type[BaseException], ...] = tuple(getattr(self.decider, "passthrough", ()) or ())
             try:
                 labels = self.decider.decide(state, ROUTE_QUESTIONS)
-            except ProviderError:
-                fallback = ROUTE_FALLBACK_DECIDER_ERROR
+            except (
+                Exception
+            ) as exc:  # any decider failure, a third-party one's TimeoutError included, takes the default
+                if passthrough and isinstance(exc, passthrough):
+                    raise
+                labels, fallback = {}, ROUTE_FALLBACK_DECIDER_ERROR
             latency_ms = (time.perf_counter() - started) * 1000
             values, unsure = label_values(labels)
             if unsure and fallback is None:

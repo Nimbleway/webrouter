@@ -100,6 +100,34 @@ class Route:
         return "\n".join(lines)
 
 
+def normalized_confidence(probabilities: Mapping[str, float], choice: str) -> float:
+    """How far ``choice`` stands above an even guess: ``(p - 1/n) / (1 - 1/n)``, clamped to [0, 1].
+
+    The scale Jev reports, so one ROUTE_MIN_CONFIDENCE means the same thing for
+    every decider: an even split over ``n`` choices is 0, a certain pick is 1.
+    A distribution with one choice, or none for ``choice``, gives its probability as it is.
+    """
+    p = float(probabilities.get(choice, 0.0))
+    n = len(probabilities)
+    if n < 2:
+        return min(1.0, max(0.0, p))
+    even = 1.0 / n
+    return min(1.0, max(0.0, (p - even) / (1.0 - even)))
+
+
+def normalized_probabilities(probabilities: Mapping[str, float]) -> dict[str, float]:
+    """``probabilities`` scaled to sum to 1, as a model's rounded or self-reported distribution may not.
+
+    Values that cannot be scaled -- a sum of zero or less, or a negative value -- are
+    returned as they came, for the decision schema to report rather than for this to hide.
+    """
+    values = {name: float(value) for name, value in probabilities.items()}
+    total = sum(values.values())
+    if total <= 0.0 or any(value < 0.0 for value in values.values()):
+        return values
+    return {name: value / total for name, value in values.items()}
+
+
 def urls_in(text: str) -> list[str]:
     """The URLs in ``text``, without the punctuation that ends a sentence around them."""
     return [url.rstrip(URL_TRAILING_PUNCTUATION) for url in _URL.findall(text)]

@@ -25,11 +25,14 @@ from web_router.constants import (
     DECISION_STATUS_ANSWERED,
     DECISION_STATUS_FAILED,
     DECISION_STATUS_NOT_ASKED,
+    KEYWORDS_CONFIDENCE,
+    KEYWORDS_PAID_TOOL_CONFIDENCE,
     ROUTE_FALLBACK_DECIDER_ERROR,
     ROUTE_FALLBACK_LOW_CONFIDENCE,
     ROUTE_FALLBACK_NO_BACKEND,
     ROUTE_FALLBACK_NO_URL,
     ROUTE_METHODS,
+    ROUTE_MIN_CONFIDENCE,
     ROUTE_QUESTIONS,
 )
 from web_router.decisions import (
@@ -37,18 +40,20 @@ from web_router.decisions import (
     Decision,
     DecisionProvider,
     JevDecider,
-    OpenAIDecider,
-    RulesDecider,
+    KeywordsDecider,
+    LLMDecider,
     ValidatedDecider,
     available_deciders,
     conformance_violations,
     create_decider,
+    normalized_confidence,
+    normalized_probabilities,
     register_decider,
     unregister_decider,
     validate_answers,
     validate_decision,
 )
-from web_router.decisions.openai import prompt_digest
+from web_router.decisions.llm import prompt_digest
 from web_router.decisions.schema import (
     SCHEMA_VERSION,
     DeciderStatus,
@@ -186,7 +191,7 @@ def test_a_missing_label_is_rejected() -> None:
             "route.fallback.0",
         ),
         (
-            {"route": {"method": "search", "tool": "search", "providers": ["tavily"], "mapped_config": "nimble+x"}},
+            {"route": {"method": "search", "tool": "search", "providers": ["tavily"], "mapped_config": "x"}},
             "route.mapped_config",
         ),
         ({"rationale": ""}, "rationale"),
@@ -195,8 +200,8 @@ def test_a_missing_label_is_rejected() -> None:
         ({"schema_version": "decision-v1"}, "schema_version"),
         ({"timeout_s": 0}, "timeout_s"),
         ({"decider_status": "maybe"}, "decider_status"),
-        ({"policy": "v5final"}, "policy"),
-        ({"decider_label": "stand-in"}, "decider_label"),
+        ({"policy": "p1"}, "policy"),
+        ({"decider_label": "l1"}, "decider_label"),
     ],
 )
 def test_a_bad_decision_field_is_rejected_and_says_where(changes: dict[str, Any], field: str) -> None:
@@ -264,13 +269,13 @@ def test_the_decision_schema_is_locked() -> None:
 
 
 def test_the_builtin_deciders_resolve_by_name() -> None:
-    assert {"jev", "openai", "rules"} <= set(available_deciders())
-    assert isinstance(create_decider("rules"), RulesDecider)
+    assert {"jev", "llm", "keywords"} <= set(available_deciders())
+    assert isinstance(create_decider("keywords"), KeywordsDecider)
 
 
 def test_an_unknown_decider_name_is_refused_and_the_known_ones_listed() -> None:
-    with pytest.raises(ConfigurationError, match="'rules'"):
-        WebRouter(decider="oracle")
+    with pytest.raises(ConfigurationError, match="'keywords'"):
+        WebRouter(decider="nonexistent")
 
 
 def test_a_registered_decider_works_by_name_and_is_closed_by_the_router() -> None:
@@ -293,12 +298,12 @@ def test_a_registered_decider_works_by_name_and_is_closed_by_the_router() -> Non
 
 
 def test_a_registered_name_overrides_a_builtin_of_the_same_name() -> None:
-    register_decider("rules", FakeDecider)
+    register_decider("keywords", FakeDecider)
     try:
-        assert isinstance(create_decider("rules"), FakeDecider)
+        assert isinstance(create_decider("keywords"), FakeDecider)
     finally:
-        unregister_decider("rules")
-    assert isinstance(create_decider("rules"), RulesDecider)
+        unregister_decider("keywords")
+    assert isinstance(create_decider("keywords"), KeywordsDecider)
 
 
 def test_jev_by_name_is_still_built_owned_and_keyed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -348,7 +353,7 @@ def test_jev_answers_map_to_a_valid_locked_decision(monkeypatch: pytest.MonkeyPa
         }
     }
     jev = ValidatedDecider(jev_with_reply(payload, monkeypatch))
-    route = router(jev).classify("latest Databricks funding round")
+    route = router(jev).classify("latest Acme Corp funding round")
     decision = jev.decision(route)
     assert jev.last_violations == []
     assert decision.decider_id == "jev" and decision.decider_version == "jev-1.14.0"
@@ -460,13 +465,15 @@ def model_reply(**choices: str) -> str:
     return json.dumps(reply)
 
 
-def test_the_openai_decider_asks_for_structured_labels_and_reads_them(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_llm_decider_asks_for_structured_labels_and_reads_them(monkeypatch: pytest.MonkeyPatch) -> None:
     module, seen = fake_openai(model_reply(recent="week"))
     monkeypatch.setitem(sys.modules, "openai", module)
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    decider = ValidatedDecider(OpenAIDecider())
+    decider = ValidatedDecider(LLMDecider())
     route = router(decider).classify("this week's OpenAI announcements")
-    assert route.labels["recent"].choice == "week" and route.labels["recent"].confidence == 0.85
+    n = len(ROUTE_QUESTIONS["recent"]["criteria"])
+    assert route.labels["recent"].choice == "week"
+    assert route.labels["recent"].confidence == pytest.approx((0.85 - 1 / n) / (1 - 1 / n))
     assert decider.last_violations == []
     request = seen["requests"][0]
     schema = request["response_format"]["json_schema"]
@@ -482,61 +489,80 @@ def test_the_openai_decider_asks_for_structured_labels_and_reads_them(monkeypatc
     assert seen["closed"] == 1
 
 
-def test_the_openai_decider_reads_its_key_from_the_environment_only(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_llm_decider_reads_its_key_from_the_environment_only(monkeypatch: pytest.MonkeyPatch) -> None:
     module, _ = fake_openai(model_reply())
     monkeypatch.setitem(sys.modules, "openai", module)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     with pytest.raises(ConfigurationError, match="OPENAI_API_KEY"):
-        WebRouter(decider="openai")
+        WebRouter(decider="llm")
 
 
-def test_the_openai_decider_without_its_sdk_names_the_extra(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_llm_decider_takes_its_key_and_endpoint_through_decider_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    module, seen = fake_openai(model_reply())
+    monkeypatch.setitem(sys.modules, "openai", module)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    config = {"model": "local-model", "base_url": "http://localhost:8000/v1", "api_key": " k-1 "}
+    wr = WebRouter(provider_config={"auto": {"chain": {"search": ["tavily"]}}}, decider="llm", decider_config=config)
+    assert isinstance(wr.decider, LLMDecider) and wr.decider.model == "local-model"
+    assert seen["built"][0]["api_key"] == "k-1" and seen["built"][0]["base_url"] == "http://localhost:8000/v1"
+    wr.classify("who won")
+    assert seen["requests"][0]["model"] == "local-model"
+
+
+def test_decider_config_needs_a_decider_given_by_name() -> None:
+    with pytest.raises(ConfigurationError, match="decider_config"):
+        WebRouter(decider=FakeDecider(), decider_config={"model": "m"})
+
+
+def test_the_llm_decider_without_its_sdk_names_the_extra(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "openai", None)
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     with pytest.raises(ProviderNotInstalledError, match="evals"):
-        OpenAIDecider()
+        LLMDecider()
 
 
-def test_a_client_handed_to_the_openai_decider_needs_no_key_and_stays_open(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_client_handed_to_the_llm_decider_needs_no_key_and_stays_open(monkeypatch: pytest.MonkeyPatch) -> None:
     module, seen = fake_openai(model_reply())
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    decider = OpenAIDecider("gpt-4.1", client=module.OpenAI())
+    decider = LLMDecider("gpt-4.1", client=module.OpenAI())
     decider.decide({"query": "q"}, ROUTE_QUESTIONS)
     decider.close()
     assert seen["requests"][0]["model"] == "gpt-4.1" and seen["closed"] == 0
 
 
 @pytest.mark.parametrize("content", ["not json", json.dumps({"tool": {"choice": "search"}}), json.dumps([1])])
-def test_an_unreadable_openai_reply_is_a_provider_error(content: str, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_unreadable_llm_reply_is_a_provider_error(content: str, monkeypatch: pytest.MonkeyPatch) -> None:
     module, _ = fake_openai(content)
-    decider = OpenAIDecider(client=module.OpenAI())
+    decider = LLMDecider(client=module.OpenAI())
     with pytest.raises(ProviderError):
         decider.decide({"query": "q"}, ROUTE_QUESTIONS)
     assert router(decider).classify("who won").fallback == (ROUTE_FALLBACK_DECIDER_ERROR,)
 
 
-def test_an_openai_sdk_failure_is_a_provider_error() -> None:
+def test_an_llm_sdk_failure_is_a_provider_error() -> None:
     def fail(**request: Any) -> Any:
         raise TimeoutError("read timed out")
 
     client = types.SimpleNamespace(chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=fail)))
     with pytest.raises(ProviderError) as caught:
-        OpenAIDecider(client=client).decide({"query": "q"}, ROUTE_QUESTIONS)
+        LLMDecider(client=client).decide({"query": "q"}, ROUTE_QUESTIONS)
     assert isinstance(caught.value.original, TimeoutError)
 
 
 @pytest.mark.parametrize(
     ("query", "tool", "coverage", "well_scoped"),
     [
-        ("Who is the CEO of Databricks?", "search", "lookup", "clear"),
+        ("Who is the CEO of Wikimedia?", "search", "lookup", "clear"),
         ("Summarize the page at https://example.com/pricing", "extract", "lookup", "clear"),
         ("Compare the MacBook Air and the Dell XPS 13", "research", "synthesis", "clear"),
         ("opening hours", "search", "lookup", "missing_context"),
     ],
 )
-def test_the_rules_decider_is_deterministic_and_keyless(query: str, tool: str, coverage: str, well_scoped: str) -> None:
-    answers = RulesDecider().decide({"query": query}, ROUTE_QUESTIONS)
-    assert answers == RulesDecider().decide({"query": query}, ROUTE_QUESTIONS)
+def test_the_keywords_decider_is_deterministic_and_keyless(
+    query: str, tool: str, coverage: str, well_scoped: str
+) -> None:
+    answers = KeywordsDecider().decide({"query": query}, ROUTE_QUESTIONS)
+    assert answers == KeywordsDecider().decide({"query": query}, ROUTE_QUESTIONS)
     assert (answers["tool"].choice, answers["coverage"].choice, answers["well_scoped"].choice) == (
         tool,
         coverage,
@@ -544,8 +570,8 @@ def test_the_rules_decider_is_deterministic_and_keyless(query: str, tool: str, c
     )
 
 
-def test_the_rules_decider_routes_a_url_to_extract_by_name() -> None:
-    route = router("rules").classify("Summarize https://example.com/pricing")
+def test_the_keywords_decider_routes_a_url_to_extract_by_name() -> None:
+    route = router("keywords").classify("Summarize https://example.com/pricing")
     assert route.method == "extract" and route.fallback == ()
 
 
@@ -560,7 +586,7 @@ def test_conformance_reports_a_provider_that_breaks_the_contract() -> None:
 def conforming_providers(monkeypatch: pytest.MonkeyPatch) -> list[DecisionProvider]:
     module, _ = fake_openai(model_reply())
     jev_reply = {"answers": {name: label(next(iter(spec["criteria"]))) for name, spec in ROUTE_QUESTIONS.items()}}
-    return [RulesDecider(), OpenAIDecider(client=module.OpenAI()), jev_with_reply(jev_reply, monkeypatch)]
+    return [KeywordsDecider(), LLMDecider(client=module.OpenAI()), jev_with_reply(jev_reply, monkeypatch)]
 
 
 def test_every_builtin_decider_passes_the_conformance_check(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -575,8 +601,8 @@ def test_a_bare_import_of_the_decider_slot_needs_neither_httpx_nor_openai() -> N
         "import sys; sys.modules['httpx'] = None; sys.modules['openai'] = None\n"
         "from web_router import WebRouter\n"
         "from web_router.decisions import Decision, DecisionProvider, ValidatedDecider, available_deciders\n"
-        "assert 'rules' in available_deciders()\n"
-        "WebRouter(decider='rules').classify('who won')\n"
+        "assert 'keywords' in available_deciders()\n"
+        "WebRouter(decider='keywords').classify('who won')\n"
     )
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
@@ -673,7 +699,7 @@ def test_without_passthrough_the_same_guard_becomes_the_decider_error_fallback()
     assert router(decider).classify("who won").fallback == (ROUTE_FALLBACK_DECIDER_ERROR,)
 
 
-def test_the_openai_version_changes_with_the_prompt_or_the_schema() -> None:
+def test_the_llm_version_changes_with_the_prompt_or_the_schema() -> None:
     changed = {**ROUTE_QUESTIONS, "tool": {**ROUTE_QUESTIONS["tool"], "instructions": "Pick a tool."}}
     assert re.fullmatch(r"[0-9a-f]{8}", prompt_digest())
     assert prompt_digest(changed) != prompt_digest()
@@ -720,3 +746,74 @@ def test_a_decision_for_another_query_carries_no_stale_error() -> None:
     wr.classify("who lost")
     decision = decider.decision(first)
     assert decision.decider_status == "failed" and decision.error is None
+
+
+def test_confidence_is_normalized_over_the_choices() -> None:
+    four = {"search": 0.55, "extract": 0.15, "research": 0.15, "browse": 0.15}
+    assert normalized_confidence(four, "search") == pytest.approx(0.4)
+    assert normalized_confidence({"a": 0.25, "b": 0.25, "c": 0.25, "d": 0.25}, "a") == 0.0
+    assert normalized_confidence({"a": 1.0, "b": 0.0}, "a") == 1.0
+    assert normalized_confidence({"a": 0.1, "b": 0.9}, "a") == 0.0  # clamped, not negative
+    assert normalized_confidence({"a": 0.7}, "a") == 0.7
+
+
+def test_an_llm_pick_at_p_055_over_four_tools_falls_back() -> None:
+    """The same raw probability that would clear 0.5 is about 0.40 once normalized, so the route takes its default."""
+    reply = json.loads(model_reply(tool="research"))
+    reply["tool"]["probabilities"] = {"search": 0.15, "extract": 0.15, "research": 0.55, "browse": 0.15}
+    module, _ = fake_openai(json.dumps(reply))
+    route = router(LLMDecider(client=module.OpenAI())).classify("who won")
+    assert route.labels["tool"].confidence == pytest.approx(0.4)
+    assert route.method == "search" and ROUTE_FALLBACK_LOW_CONFIDENCE in route.fallback
+
+
+def test_llm_probabilities_are_normalized_before_the_sum_check() -> None:
+    """A confident answer whose probabilities drift from 1 is scaled, not rejected as a decider error."""
+    reply = json.loads(model_reply())
+    reply["tool"]["probabilities"] = {"search": 0.9, "extract": 0.2, "research": 0.1, "browse": 0.0}
+    module, _ = fake_openai(json.dumps(reply))
+    decider = ValidatedDecider(LLMDecider(client=module.OpenAI()))
+    route = router(decider).classify("who won")
+    assert decider.last_violations == [] and route.fallback == ()
+    assert sum(route.labels["tool"].probabilities.values()) == pytest.approx(1.0)
+    assert route.labels["tool"].probabilities["search"] == pytest.approx(0.75)
+
+
+def test_normalizing_leaves_a_distribution_it_cannot_scale_for_the_schema_to_report() -> None:
+    assert normalized_probabilities({"a": 0.0, "b": 0.0}) == {"a": 0.0, "b": 0.0}
+    assert normalized_probabilities({"a": -0.2, "b": 1.2}) == {"a": -0.2, "b": 1.2}
+    assert normalized_probabilities({"a": 2.0, "b": 2.0}) == {"a": 0.5, "b": 0.5}
+
+
+def test_a_decider_raising_anything_takes_the_decider_error_fallback() -> None:
+    """A third-party decider's TimeoutError, not a ProviderError, still gives the default route."""
+    route = router(FakeDecider(error=TimeoutError("slow"))).classify("who won")
+    assert route.method == "search" and route.fallback == (ROUTE_FALLBACK_DECIDER_ERROR,)
+    assert route.labels == {}
+
+
+def test_the_keywords_decider_reports_its_fixed_confidences_on_the_normalized_scale() -> None:
+    answers = KeywordsDecider().decide({"query": "Who is the CEO of Wikimedia?"}, ROUTE_QUESTIONS)
+    assert {name: round(answer.confidence, 9) for name, answer in answers.items()} == KEYWORDS_CONFIDENCE
+    assert validate_answers(answers, "keywords")[1] == []
+
+
+@pytest.mark.parametrize("query", ["list of US presidents", "Compare the MacBook Air and the Dell XPS 13"])
+def test_a_keywords_research_pick_falls_back_to_search(query: str) -> None:
+    route = router("keywords").classify(query)
+    assert route.labels["tool"].choice == "research"
+    assert KEYWORDS_PAID_TOOL_CONFIDENCE < ROUTE_MIN_CONFIDENCE
+    assert route.labels["tool"].confidence == pytest.approx(KEYWORDS_PAID_TOOL_CONFIDENCE)
+    assert route.method == "search" and ROUTE_FALLBACK_LOW_CONFIDENCE in route.fallback
+
+
+def test_the_builtin_deciders_are_listed_by_their_new_names() -> None:
+    assert {"jev", "llm", "keywords"} <= set(available_deciders())
+    assert "openai" not in available_deciders() and "rules" not in available_deciders()
+
+
+def test_the_no_decider_error_names_the_keyless_decider_first() -> None:
+    with pytest.raises(ConfigurationError) as caught:
+        WebRouter().classify("who won")
+    message = str(caught.value)
+    assert message.index("keywords") < message.index("jev")
