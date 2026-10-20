@@ -4177,3 +4177,283 @@ Looked up along the raised error's MRO, so a new subclass falls back to its
 parent's message. Built from the error's ``detail`` rather than its ``str()``,
 which names the backend's own session id.
 """
+
+
+# --- Decision gate (spike) --------------------------------------------------
+# WebRouter.classify(): one decision-model call labels the query, code turns the
+# labels into a method and an auto chain order. Opt-in through decider=.
+
+ENV_TYPESAFE_API_KEY = "TYPESAFE_API_KEY"
+"""TypeSafe's key, for the Jev decider. A library-level key, like the judge's: no provider table names it."""
+
+TYPESAFE_BASE_URL = "https://api.typesafe.ai"
+TYPESAFE_DECISION_PATH = "/v1/systemone"
+JEV_MODEL = "jev-1.14.0"
+"""Pinned rather than ``jev-latest``: an alias moves, and thresholds are tuned against one version."""
+
+URL_TRAILING_PUNCTUATION = ".,;:!?"
+"""Stripped from a URL found in prose: the end of a sentence, not part of the address."""
+
+ROUTE_DECIDER_JEV = "jev"
+"""Jev by name: ``WebRouter(decider="jev")``."""
+
+ROUTE_DECIDER_TIMEOUT = 0.8
+"""Seconds. Past this the route falls back to the default one rather than hold up the call it routes."""
+ROUTE_DECIDER_CONNECT_TIMEOUT = 0.3
+
+ROUTE_MIN_CONFIDENCE = 0.5
+"""Below this a label counts as unsure and its default is used. A starting point, tuned on labelled rows."""
+
+ROUTE_METHODS = ("search", "extract", "research", "browse")
+"""What a route can run. One whose auto chain is empty here downgrades to search."""
+
+ROUTE_QUESTIONS: dict[str, dict[str, Any]] = {
+    "tool": {
+        "type": "choice",
+        "instructions": "Which kind of web call best answers this request?",
+        "criteria": {
+            "search": "A lookup: a fact, a name, a number or a short answer found in search results.",
+            "extract": "Read one specific known page, document or URL the request points to.",
+            "research": "A multi-source investigation or report that needs many searches and synthesis.",
+            "browse": "Act on a website: click, fill a form, log in, or move through several pages.",
+        },
+    },
+    "recent": {
+        "type": "choice",
+        "instructions": (
+            "How old can the sources be and still answer this correctly, counting back from asked_on? "
+            "If two windows fit, pick the longer one."
+        ),
+        "criteria": {
+            "hour": "Live status that changes by the minute: a service outage now, a live score, an event in progress.",
+            "day": (
+                "Today's state: a current price, stock availability, a rate or quote, "
+                "today's or tomorrow's weather, availability for specific dates."
+            ),
+            "week": "Something from the past few days: this week's announcements, posts, meetings or decisions.",
+            "month": (
+                "Recent but not daily: the latest release, funding round or quarterly result, "
+                "current pricing plans, recent discussion."
+            ),
+            "any": (
+                "Answerable from sources of any age: history, definitions, how-to, "
+                "long-standing roles, past events with a known outcome."
+            ),
+        },
+    },
+    "coverage": {
+        "type": "choice",
+        "instructions": "How much evidence does a correct answer need? If unsure, pick the lower value.",
+        "criteria": {
+            "lookup": "One good source settles it. e.g. 'Who is the CEO of Databricks?'",
+            "synthesis": (
+                "A few sources, combined or checked against each other. e.g. 'Which has the longest battery life: "
+                "MacBook Air M4, Dell XPS 13 or ThinkPad X1 Carbon?'"
+            ),
+            "research": (
+                "Many sources, open-ended, or a report. e.g. 'Map the vendors selling web data APIs to AI agents, "
+                "with pricing'."
+            ),
+        },
+    },
+    "well_scoped": {
+        "type": "choice",
+        "instructions": "Is this request clear enough to act on without guessing what it means?",
+        "criteria": {
+            "clear": "It names what it is about, so a search could answer it as written.",
+            "missing_context": (
+                "It refers to something it never names ('it', 'he', 'the one above'), lacks a place or time it "
+                "needs ('opening hours tomorrow'), or a key word has several meanings ('Mercury price today')."
+            ),
+        },
+    },
+}
+"""tool and recent as tuned on 2026-10-13; coverage and well_scoped from the dataset-spec v0 rubric (ties: lookup,
+clear).
+
+A 2026-10-15 rewrite of tool to the rubric's "cheapest tool" rule dropped tool accuracy from 96 to 81 of 100
+(research questions labelled search), so it was reverted.
+"""
+
+ROUTE_DEFAULT_LABELS = {"tool": "search", "recent": "any", "coverage": "lookup", "well_scoped": "clear"}
+"""What an unsure, missing or failed label falls back to."""
+
+MSG_ROUTE_NO_DECIDER = "classify() needs a decider: WebRouter(decider='jev')."
+MSG_ROUTE_UNKNOWN_DECIDER = "Unknown decider {name!r}; known: {available}."
+MSG_ROUTE_BAD_ANSWER = "The decider's answer could not be read: {detail}"
+
+ROUTE_FALLBACK_NO_URL = "no_url"
+"""Extract was the pick, but the request names no page: search to find it first."""
+ROUTE_FALLBACK_NO_BACKEND = "no_backend_for_method"
+"""The pick has no backend configured here, so the route downgrades to search."""
+ROUTE_FALLBACK_LOW_CONFIDENCE = "low_confidence"
+"""At least one label was below ROUTE_MIN_CONFIDENCE and took its default."""
+ROUTE_FALLBACK_DECIDER_ERROR = "decider_error"
+"""The decider failed or timed out; every label took its default."""
+
+ROUTE_ADVICE_NO_URL = "search to find the page, then extract it"
+ROUTE_ADVICE_NO_BACKEND = "{method} ({wanted} would fit, but no {wanted} backend is configured here)"
+ROUTE_ADVICE_LOW_CONFIDENCE = "{method}, low confidence"
+ROUTE_ADVICE_LEANED = "{method}, low confidence (the classifier leaned {wanted})"
+ROUTE_ADVICE_DECIDER_ERROR = "{method} (the classifier was unavailable, so this is the default)"
+ROUTE_TOOL_LINE = "Recommended tool: {advice}{confidence}"
+ROUTE_LABEL_LINE = "{heading}: {text}{confidence}"
+ROUTE_CONFIDENCE = " (confidence {value:.2f})"
+ROUTE_UNSURE = " (unsure at {value:.2f}, so the default)"
+"""The lines classify's text is built from: what an agent reads, each label as a plain instruction."""
+
+ROUTE_FRESHNESS_TEXT = {
+    "hour": "use sources from the past hour; ignore older results",
+    "day": "use sources from today or yesterday; ignore older results",
+    "week": "use sources from the past week; ignore older results",
+    "month": "use sources from the past month; ignore older results",
+    "any": "any date is fine",
+}
+ROUTE_SCOPE_TEXT = {
+    "clear": "clear",
+    "missing_context": "missing context: ask the user for it before searching",
+}
+ROUTE_COVERAGE_TEXT = {
+    "lookup": "one good source settles it",
+    "synthesis": "a few sources, combined or checked against each other",
+    "research": "many sources, open-ended, or a report",
+}
+ROUTE_LABEL_LINES = (
+    ("recent", "Freshness", ROUTE_FRESHNESS_TEXT),
+    ("well_scoped", "Request", ROUTE_SCOPE_TEXT),
+    ("coverage", "Evidence needed", ROUTE_COVERAGE_TEXT),
+)
+"""The labels after the tool line, in order: name, heading, and the instruction for each value."""
+
+
+# --- Decision providers (spike) ---------------------------------------------
+# Who answers ROUTE_QUESTIONS for classify() is swappable: Jev, an OpenAI model,
+# keyless rules, or any object with decide() and close(). Every answer can be
+# checked against one locked schema (web_router.decisions.schema).
+
+ROUTE_DECIDER_OPENAI = "openai"
+"""An OpenAI model answers the questions with structured outputs: ``WebRouter(decider="openai")``."""
+ROUTE_DECIDER_RULES = "rules"
+"""Keyword rules, keyless and deterministic: ``WebRouter(decider="rules")``."""
+
+DECISION_SCHEMA_VERSION = "decision-v2"
+"""Bumped with every change to the locked schema, together with tests/fixtures/decisions/decision.schema.json.
+
+v2 redefined ``confidence`` (the route's labels only, not well_scoped) and added ``decider_status``,
+``route.tool``, ``timeout_s``, ``error`` and ``violations``: a v1 reader, with ``extra="forbid"``, rejects them."""
+
+DECISION_ROUTE_LABELS = ("tool", "recent", "coverage")
+"""The labels a route is built from. A decision's ``confidence`` is the minimum over these: well_scoped changes
+no route, so a shaky well_scoped should not make a route look unsure. classify()'s own low-confidence trigger
+is #11's and still counts all four."""
+
+DECISION_CONFIDENCE_DIGITS = 4
+DECISION_LATENCY_DIGITS = 1
+"""Decimal places a decision record rounds to: confidences and probabilities to 4, latency to 0.1 ms. The
+minimum is taken after rounding, so it matches the labels exactly."""
+
+DECISION_STATUS_ANSWERED = "answered"
+DECISION_STATUS_NOT_ASKED = "not_asked"
+DECISION_STATUS_FAILED = "failed"
+"""What happened to the decider for one route: it answered, it was not asked because a given URL or schema
+settled the method, or it failed and classify took the decider_error fallback."""
+
+DECISION_ERROR_TIMEOUT = "timeout"
+DECISION_ERROR_HTTP = "http_error"
+DECISION_ERROR_INVALID_ANSWER = "invalid_answer"
+DECISION_ERROR_EXCEPTION = "exception"
+
+DECISION_ERROR_KIND_BY_EXCEPTION: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (DECISION_ERROR_TIMEOUT, ("TimeoutError", "TimeoutException", "APITimeoutError")),
+    (DECISION_ERROR_HTTP, ("HTTPError", "APIStatusError", "APIConnectionError", "APIError")),
+    (DECISION_ERROR_INVALID_ANSWER, ("ValueError", "KeyError", "TypeError", "AttributeError")),
+)
+"""A failure's kind, from the class names in its exception's MRO, first match wins. Names rather than classes
+because httpx and openai are optional imports: httpx.ReadTimeout and openai.APITimeoutError are timeouts,
+httpx.HTTPStatusError and openai.APIStatusError HTTP errors, an answer that would not parse an invalid answer.
+Timeouts come first: openai's timeout subclasses its connection error. Anything else is ``exception``."""
+
+DECISION_ERROR_MESSAGE_LIMIT = 200
+"""Characters kept of a failure's message in a decision's ``error``."""
+
+DECISION_PROBABILITY_TOLERANCE = 0.05
+"""How far a label's probabilities may sum from 1: models round, and a strict 1.0 would reject honest answers."""
+
+DECISION_CONFIDENCE_TOLERANCE = 1e-9
+"""Float slack when checking that a decision's confidence is the minimum over its labels."""
+
+DECISION_VIOLATION_VALUE_LIMIT = 120
+DECISION_VIOLATION_MSG_LIMIT = 200
+"""Characters kept of an offending value's repr and of the validator's message in a violation record."""
+
+DECISION_VIOLATION_ROOT = "(root)"
+"""The field a violation names when the whole answer, not one field of it, is wrong."""
+DECISION_VIOLATION_NOT_A_MAPPING = "not_a_mapping"
+DECISION_VIOLATION_DECIDER_ERROR = "decider_error"
+DECISION_VIOLATION_NOT_A_PROVIDER = "not_a_provider"
+"""Violation types: an answer that is not a mapping of labels, a decider that raised, and an object with no
+``name``, ``decide`` or ``close``."""
+
+MSG_DECISION_NOT_A_MAPPING = "The decider answered {kind}, not a mapping of question to answer."
+MSG_DECISION_INVALID = "The decider's answer broke the decision schema ({count} violation(s)); first: {first}"
+MSG_DECISION_DECIDER_FAILED = "The decider failed: {detail}"
+MSG_DECISION_NOT_A_PROVIDER = "{kind} lacks name, decide() or close(), so it is not a DecisionProvider."
+MSG_DECISION_BAD_CHOICE = "{question}={choice!r} is not one of {choices}"
+MSG_DECISION_PROBABILITY_RANGE = "probabilities outside [0, 1]: {names}"
+MSG_DECISION_PROBABILITY_SUM = "probabilities sum to {total:.3f}, not 1"
+MSG_DECISION_CHOICE_NOT_IN_PROBABILITIES = "the choice {choice!r} is missing from probabilities"
+MSG_DECISION_CONFIDENCE_NOT_MIN = (
+    "confidence {confidence} is not the minimum over tool, recent and coverage ({minimum})"
+)
+MSG_DECISION_LABELS_STATUS = "labels are set exactly when decider_status is 'answered'"
+MSG_DECISION_ERROR_STATUS = "an error is recorded only when decider_status is 'failed'"
+MSG_DECISION_FAILED_FALLBACK = "decider_status 'failed' needs 'decider_error' in route.fallback"
+
+DECISION_CONFORMANCE_QUERIES = (
+    "Who is the CEO of Databricks?",
+    "Summarize https://example.com/pricing for me.",
+    "Compare the battery life of the MacBook Air M4 and the Dell XPS 13.",
+    "opening hours tomorrow",
+)
+"""What :func:`~web_router.decisions.base.conformance_violations` asks a provider by default: one per kind of route."""
+
+OPENAI_DECIDER_MODEL = "gpt-4.1-mini"
+"""Small and fast: the decider runs before every routed call, and the answer is four short labels."""
+
+OPENAI_DECIDER_TIMEOUT = 5.0
+"""Seconds. Longer than ROUTE_DECIDER_TIMEOUT, which is Jev's: a general model over the network rarely answers
+in 0.8s. Past it the route falls back to the default, as for any failed decider."""
+
+OPENAI_DECIDER_MAX_RETRIES = 0
+"""A retry would double the wait a route is meant to save; a failure falls back to the default route instead."""
+
+OPENAI_DECIDER_TEMPERATURE = 0.0
+OPENAI_DECIDER_SCHEMA_NAME = "route_labels"
+"""The ``json_schema.name`` sent with the structured-output request."""
+
+OPENAI_DECIDER_PROMPT_HEAD = (
+    "Label one web request. Request: {query}. asked_on: {asked_on}.\n"
+    "For each question pick exactly one choice and give a probability for every choice; they sum to 1."
+)
+OPENAI_DECIDER_PROMPT_QUESTION = "\n[{name}] {instructions}"
+OPENAI_DECIDER_PROMPT_CRITERION = "- {choice}: {text}"
+"""The prompt is built from ROUTE_QUESTIONS' own instructions and criteria, so it asks what Jev is asked."""
+
+RULES_URL = r"https?://"
+RULES_RESEARCH = r"\b(compare|identify|list|which .* (and|both)|across|report|determine|find the names)\b"
+RULES_RECENT_MONTH = r"\b(latest|current|now|today|this (week|month|year)|headcount|employees|funding|raised)\b"
+RULES_SYNTHESIS = r"\b(compare|among|both|and then|which of|across|or)\b"
+RULES_RESEARCH_LENGTH = 220
+"""Characters. A request longer than this reads as open-ended research rather than a lookup."""
+RULES_MISSING_CONTEXT_WORDS = 2
+"""A request of this many words or fewer is taken to be missing context."""
+RULES_CONFIDENCE = {"tool": 0.8, "recent": 0.7, "coverage": 0.7, "well_scoped": 0.6}
+"""Fixed per label, not measured: what the rules claim for their pick. The rest of each label's probability is
+spread evenly over the other choices, so the distribution sums to 1. Every value clears ROUTE_MIN_CONFIDENCE,
+so a rules route never falls back for low confidence. The patterns match Bench's stand-in rules decider."""
+RULES_VERSION = "rules-v1"
+
+OPENAI_DECIDER_VERSION = "{model}+p{digest}"
+OPENAI_DECIDER_DIGEST_LENGTH = 8
+"""The OpenAI decider's version: its model, and a short sha256 of the prompt templates, ROUTE_QUESTIONS and the
+answer schema. Two prompts on one model are two deciders, and the record must say which answered."""

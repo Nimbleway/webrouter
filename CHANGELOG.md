@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- `WebRouter.classify()` and `WebRouter.execute()`, an opt-in spike (unchanged unless you pass `decider=`). `classify(query)` asks a decider one set of questions (tool, recent, coverage, well_scoped) and turns the labels into a `Route`: the method and the auto chain to run it on, searching nothing. `execute(route)` runs it. Passing `urls` routes to extract and `output_schema` to research without asking; a decider that fails, or answers below 0.5 confidence, gives today's default, search on the default chain, with `Route.fallback` saying why (`decider_error`, `low_confidence`, `no_url`, `no_backend_for_method`). The decider is swappable: `WebRouter(decider=...)` takes `"jev"` (TypeSafe's Jev, reading `TYPESAFE_API_KEY`), `"openai"` (an OpenAI model with structured outputs, reading `OPENAI_API_KEY`, with the `evals` extra; its version carries a hash of its prompt and schema, `gpt-4.1-mini+p<8 hex>`), `"rules"` (keyword rules, keyless), a name given to `register_decider()`, or any object with `decide()` and `close()`. `ValidatedDecider` checks every answer against a locked decision schema (`web_router.decisions.schema`, version `decision-v2`) and keeps each problem as a `Violation` record rather than dropping it. With `strict=True`, the default, an answer that breaks the schema takes classify's `decider_error` fallback; with `strict=False` only the labels that broke it take their defaults. Exception types named in `passthrough=` propagate instead of becoming a default route. Its `decision(route)` record says whether the decider answered, was not asked or failed, the kind of failure (`timeout`, `http_error`, `invalid_answer`, `exception`), the raw tool label beside the method, the decider's time budget, and a confidence over the labels a route uses (tool, recent, coverage). `conformance_violations()` runs the same check on any third-party decider.
+
 ## [0.5.0] - 2026-10-19
 
 ### Added

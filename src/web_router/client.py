@@ -30,11 +30,13 @@ caller gets.
 from __future__ import annotations
 
 import asyncio
+import json
 import threading
 import time
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import AsyncExitStack, ExitStack, suppress
+from datetime import date
 from types import TracebackType
 from typing import Any, Generic, TypeVar
 
@@ -48,14 +50,27 @@ from web_router.constants import (
     DEFAULT_PROVIDER,
     EVALS_CONCURRENCY,
     MSG_BENCHMARK_NO_PROVIDERS,
+    MSG_ROUTE_NO_DECIDER,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
     PROVIDER_AUTO,
     RESEARCH_TIMEOUT,
+    ROUTE_DEFAULT_LABELS,
+    ROUTE_FALLBACK_DECIDER_ERROR,
+    ROUTE_FALLBACK_LOW_CONFIDENCE,
+    ROUTE_QUESTIONS,
 )
+from web_router.decisions.registry import create_decider
+from web_router.decisions.route import Answer, Route, label_values, route_from_labels, urls_in
 from web_router.evals.datasets import Dataset
 from web_router.evals.judge import Judge
 from web_router.evals.types import EvaluationReport
-from web_router.exceptions import BenchmarkTimeoutError, ConfigurationError, ProviderNotFoundError, WebRouterError
+from web_router.exceptions import (
+    BenchmarkTimeoutError,
+    ConfigurationError,
+    ProviderError,
+    ProviderNotFoundError,
+    WebRouterError,
+)
 from web_router.providers.base import (
     AsyncBrowserHandle,
     BrowseJob,
@@ -492,17 +507,37 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
+        decider: str | Any | None = None,
     ) -> None:
         """
+        Args:
+            decider: Turns on :meth:`classify`. ``"jev"`` asks TypeSafe's Jev with
+                ``TYPESAFE_API_KEY``; ``"openai"`` an OpenAI model with
+                ``OPENAI_API_KEY``; ``"rules"`` keyword rules, keyless. A name
+                given to :func:`~web_router.decisions.register_decider` works
+                the same way, and any instance with ``decide`` and ``close`` --
+                a configured :class:`~web_router.decisions.JevDecider`, or one
+                wrapped in :class:`~web_router.decisions.ValidatedDecider` -- is
+                used as given. The query text is sent to it.
+
         Raises:
             ConfigurationError: for a backend handed an ``async_client``, which
                 this router, calling synchronously, could never use: through
-                ``auto`` the call would quietly go to another backend instead.
+                ``auto`` the call would quietly go to another backend instead;
+                for a decider name nothing is registered under; or for a named
+                decider with no key, such as ``decider="jev"`` with no TypeSafe key.
         """
         super().__init__(provider, provider_config=provider_config)
         async_only = sorted(_async_client_holders(self._config))
         if async_only:
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
+        # Built after every check that can refuse the router, so a refused build leaves no open client behind.
+        if isinstance(decider, str):
+            decider = create_decider(decider)  # imported on first use: Jev needs httpx, OpenAI its SDK
+            self._owns_decider = True
+        else:
+            self._owns_decider = False  # a decider handed in may be shared: its owner closes it
+        self.decider = decider
 
     def search(
         self,
@@ -883,6 +918,118 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         )
         return self._track(self.get_browser_provider(provider).open(request))
 
+    def classify(
+        self,
+        query: str,
+        *,
+        urls: str | list[str] | None = None,
+        output_schema: JsonSchema | None = None,
+    ) -> Route:
+        """Decide what to run for ``query`` before spending on it: the method, and the auto chain to run it on.
+
+        One call to the decider labels the query; a lookup table turns the
+        labels into a route. Passing ``urls`` routes to extract and
+        ``output_schema`` to research without asking. A decider that fails or
+        times out gives today's default -- search on the default chain -- with
+        :attr:`Route.fallback` saying why. Nothing is searched: run it with
+        :meth:`execute`, or read it and call a method yourself.
+
+        This is a baseline for measuring decision-model routing, not a router contract.
+        """
+        if self.decider is None:
+            raise ConfigurationError(MSG_ROUTE_NO_DECIDER)
+        given = [urls] if isinstance(urls, str) else list(urls or [])
+        found = given or urls_in(query)
+        chains = self._default_chains()
+        labels: dict[str, Answer] = {}
+        fallback: str | None = None
+        latency_ms = 0.0
+        if given:
+            values = {**ROUTE_DEFAULT_LABELS, "tool": "extract"}
+        elif output_schema is not None:
+            values = dict(ROUTE_DEFAULT_LABELS)
+        else:
+            state = {"query": query, "asked_on": date.today().isoformat()}
+            started = time.perf_counter()
+            try:
+                labels = self.decider.decide(state, ROUTE_QUESTIONS)
+            except ProviderError:
+                fallback = ROUTE_FALLBACK_DECIDER_ERROR
+            latency_ms = (time.perf_counter() - started) * 1000
+            values, unsure = label_values(labels)
+            if unsure and fallback is None:
+                fallback = ROUTE_FALLBACK_LOW_CONFIDENCE
+        method, chain, reason = route_from_labels(query, values, chains, urls=found, output_schema=output_schema)
+        # The raw tool label, before an unsure one took its default, so the advice can say where it leaned.
+        tool = labels.get("tool")
+        requested = "research" if output_schema is not None else tool.choice if tool is not None else values["tool"]
+        return Route(
+            query=query,
+            method=method,
+            chain=chain,
+            urls=found,
+            output_schema=output_schema,
+            labels=labels,
+            fallback=tuple(r for r in (fallback, reason) if r),
+            requested=requested,
+            latency_ms=latency_ms,
+        )
+
+    def execute(
+        self, route: Route, **overrides: Any
+    ) -> SearchResponse | ExtractResponse | ResearchResponse | BrowseResponse:
+        """Run a :class:`Route` with this router's methods, on the route's chain. ``overrides`` go to the method."""
+        # The route's own arguments are defaults: an override of the same name wins, rather than colliding.
+        # A provider override is used as given: the route's own auto provider is built only when it will run.
+        kwargs: dict[str, Any] = {} if "provider" in overrides else {"provider": self._routed_provider(route)}
+        if route.method == "extract":
+            return self.extract(**{**kwargs, "urls": route.urls, **overrides})
+        if route.method == "research":
+            return self.research(**{**kwargs, "query": route.query, "output_schema": route.output_schema, **overrides})
+        if route.method == "browse":
+            start_url = route.urls[0] if route.urls else None
+            return self.browse(**{**kwargs, "task": route.query, "start_url": start_url, **overrides})
+        return self.search(**{**kwargs, "query": route.query, **overrides})
+
+    def _default_chains(self) -> dict[str, tuple[tuple[str, dict[str, Any]], ...]]:
+        """Each method's auto chain as this router's own ``auto`` would resolve it, a configured ``chain`` included."""
+        from web_router.providers.auto import (
+            AutoBrowseProvider,
+            AutoExtractProvider,
+            AutoProvider,
+            AutoResearchProvider,
+            _members_and_chain,
+        )
+
+        config = self._config_for(PROVIDER_AUTO)
+        defaults = {
+            "search": AutoProvider.default_chain,
+            "extract": AutoExtractProvider.default_chain,
+            "research": AutoResearchProvider.default_chain,
+            "browse": AutoBrowseProvider.default_chain,
+        }
+        return {
+            method: _members_and_chain(config.get("chain"), config["members_config"], method, default)[1]
+            for method, default in defaults.items()
+        }
+
+    def _routed_provider(self, route: Route) -> SearchProvider | ExtractProvider | ResearchProvider | BrowseProvider:
+        """An auto provider on the route's chain, cached so close() owns it and config keys reach it."""
+        # The members' options belong to the key too: the same names with other settings are another provider.
+        key = f"{PROVIDER_AUTO}:{json.dumps([list(e) for e in route.chain], sort_keys=True, default=repr)}"
+        config = {**self._config_for(PROVIDER_AUTO), "chain": {route.method: [list(e) for e in route.chain]}}
+        table: dict[str, tuple[dict[str, Any], Any]] = {
+            "extract": (self._extract_instances, create_extract_provider),
+            "research": (self._research_instances, create_research_provider),
+            "browse": (self._browse_instances, create_browse_provider),
+        }
+        cache, factory = table.get(route.method, (self._instances, create_provider))
+        with self._providers_lock:
+            if key not in cache:
+                cache[key] = factory(PROVIDER_AUTO, **config)
+            routed: SearchProvider | ExtractProvider | ResearchProvider | BrowseProvider = cache[key]
+            return routed
+
     def close(self) -> None:
         """Release every browser session still open, then close every provider this router built.
 
@@ -906,6 +1053,8 @@ class WebRouter(_BaseRouter[BrowserHandle]):
                 stack.callback(instance.close)
             for handle in self._open_handles():
                 stack.callback(self._release_tracked, handle)
+            if self._owns_decider and self.decider is not None:
+                stack.callback(self.decider.close)
 
     def _release_tracked(self, handle: BrowserHandle) -> None:
         handle.release()
