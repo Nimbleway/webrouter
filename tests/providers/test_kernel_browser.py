@@ -24,7 +24,7 @@ import pytest
 
 from tests.providers._browser_live import astate_after_release, state_after_release
 from web_router import AsyncWebRouter, WebRouter
-from web_router.constants import KERNEL_BASE_URL
+from web_router.constants_kernel import KERNEL_BASE_URL
 from web_router.exceptions import (
     ConfigurationError,
     MissingParameterError,

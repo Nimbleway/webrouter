@@ -24,8 +24,8 @@ from typing import Any, ClassVar
 import httpx
 from pydantic import SecretStr
 
-from web_router.constants import (
-    ENV_KERNEL_API_KEY,
+from web_router.constants import ENV_KERNEL_API_KEY, PROVIDER_KERNEL
+from web_router.constants_kernel import (
     KERNEL_API_KEY_PREFIX,
     KERNEL_BASE_URL,
     KERNEL_FIELDS,
@@ -34,7 +34,6 @@ from web_router.constants import (
     KERNEL_SESSION_ID_FIELD,
     KERNEL_SESSION_PATH,
     KERNEL_STEALTH,
-    PROVIDER_KERNEL,
 )
 from web_router.providers._http import HttpBrowserProvider, ReleaseMethod
 from web_router.providers._utils import build_browser_payload

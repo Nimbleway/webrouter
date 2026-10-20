@@ -73,6 +73,8 @@ src/web_router/
 │                       kept apart so constants.py stops growing
 ├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
 │                       kept apart for the same reason
+├── constants_kernel.py Kernel's endpoints, field table and session states,
+│                       kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── exceptions.py       WebRouterError and subclasses
