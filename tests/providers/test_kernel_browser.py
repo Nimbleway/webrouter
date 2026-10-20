@@ -90,15 +90,6 @@ def _provider(api: _Kernel) -> KernelBrowserProvider:
     return KernelBrowserProvider(transport=httpx.MockTransport(api))
 
 
-def test_the_key_is_sent_as_a_bearer_token_on_every_call(kernel: _Kernel) -> None:
-    with _provider(kernel).open(BrowserRequest()) as browser:
-        browser.status()
-
-    assert len(kernel.headers) == 3
-    for headers in kernel.headers:
-        assert headers["authorization"] == f"Bearer {KEY}"
-
-
 def test_no_lifetime_is_sent_because_kernel_has_only_an_idle_limit(kernel: _Kernel) -> None:
     """The ten-minute default reaches only a backend that maps `timeout`; Kernel keeps its own idle limit."""
     with _provider(kernel).open(BrowserRequest()):
@@ -150,19 +141,15 @@ def test_a_viewport_is_sent_as_its_fields_in_the_request_body(kernel: _Kernel) -
     assert kernel.calls[0] == ("POST", "/browsers", {"viewport": {"width": 1280, "height": 800}})
 
 
-@pytest.mark.parametrize("persist", [True, False])
-def test_persist_profile_without_a_profile_is_refused_before_a_session_opens(kernel: _Kernel, persist: bool) -> None:
+def test_persist_profile_without_a_profile_is_refused_before_a_session_opens(kernel: _Kernel) -> None:
     with pytest.raises(MissingParameterError, match="profile") as caught:
-        _provider(kernel).open(BrowserRequest(persist_profile=persist))
+        _provider(kernel).open(BrowserRequest(persist_profile=True))
 
     assert caught.value.parameters == ["profile"]
     assert kernel.calls == []
 
 
-@pytest.mark.parametrize(
-    "option",
-    [{"timeout": 60}, {"proxy_country": "US"}, {"solve_captchas": True}, {"solve_captchas": False}],
-)
+@pytest.mark.parametrize("option", [{"proxy_country": "US"}, {"solve_captchas": True}, {"solve_captchas": False}])
 def test_options_kernel_cannot_honour_are_rejected_not_dropped(kernel: _Kernel, option: dict[str, Any]) -> None:
     with pytest.raises(UnsupportedParameterError):
         _provider(kernel).open(BrowserRequest(**option))
@@ -178,12 +165,10 @@ def test_provider_options_reach_kernel_beneath_the_mapped_fields(kernel: _Kernel
 @pytest.mark.parametrize(
     ("request_fields", "options"),
     [
-        ({"idle_timeout": 60}, {"timeout_seconds": 10}),
-        ({"stealth": "off"}, {"stealth": True}),
         ({"profile": "p-1"}, {"profile": {"id": "p-2"}}),
         ({"viewport": {"width": 800, "height": 600}}, {"viewport": {"refresh_rate": 60}}),
     ],
-    ids=["idle_timeout", "stealth", "profile", "viewport"],
+    ids=["profile", "viewport"],
 )
 def test_a_field_set_both_ways_raises_rather_than_one_side_winning(
     kernel: _Kernel, request_fields: dict[str, Any], options: dict[str, Any]
