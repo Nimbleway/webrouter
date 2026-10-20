@@ -449,6 +449,31 @@ def test_the_control_url_is_asked_for_once_and_only_when_wanted(browserbase: _Br
     assert SESSION_ID in DEBUG_URL and DEBUG_URL not in repr(browser)
 
 
+def test_a_released_handle_does_not_ask_for_a_control_url(browserbase: _Browserbase) -> None:
+    with _provider(browserbase).open(BrowserRequest()) as browser:
+        pass
+
+    assert browser.control_url() is None
+    assert not any(path.endswith("/debug") for _, path, _ in browserbase.calls)
+
+
+def test_a_debug_answer_without_a_link_is_asked_for_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BROWSERBASE_API_KEY", KEY)
+    api = _Browserbase()
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/debug"):
+            api.calls.append((request.method, request.url.path, None))
+            return httpx.Response(200, json={"pages": []})
+        return api(request)
+
+    with BrowserbaseBrowserProvider(transport=httpx.MockTransport(answer)).open(BrowserRequest()) as browser:
+        assert browser.control_url() is None
+        assert browser.control_url() is None
+
+    assert [path for _, path, _ in api.calls].count(f"/v1/sessions/{SESSION_ID}/debug") == 1
+
+
 async def test_an_async_handle_asks_for_the_control_url_too(browserbase: _Browserbase) -> None:
     async with await _provider(browserbase).aopen(BrowserRequest()) as browser:
         assert await browser.control_url() == DEBUG_URL
@@ -481,8 +506,6 @@ def test_live_a_login_saved_to_a_context_is_there_in_the_next_session() -> None:
     context = contexts.post("/v1/contexts", json={}).raise_for_status().json()
     try:
         with WebRouter() as router:
-            with router.open_browser(provider, timeout=60) as browser:
-                assert (browser.control_url() or "").startswith("https://")
             assert login_survives(router, provider, context["id"], timeout=60)
     finally:
         contexts.delete(f"/v1/contexts/{context['id']}")

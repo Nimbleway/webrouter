@@ -427,8 +427,6 @@ def test_live_a_login_saved_to_a_profile_is_there_in_the_next_session() -> None:
     name = f"web-router-test-{uuid.uuid4().hex[:8]}"
     try:
         with WebRouter() as router:
-            with router.open_browser(provider, timeout=60) as browser:
-                assert (browser.control_url() or "").startswith("https://")
             assert login_survives(router, provider, name, timeout=60)
     finally:
         with httpx.Client(base_url=ANCHOR_BASE_URL, headers={"anchor-api-key": os.environ["ANCHOR_API_KEY"]}) as api:

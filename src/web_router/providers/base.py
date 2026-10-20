@@ -1363,6 +1363,7 @@ class _Handle:
         self._session = session
         self._released = False
         self._asked_control_url: str | None = None
+        self._control_url_asked = False
 
     @property
     def session(self) -> BrowserSession:
@@ -1397,6 +1398,11 @@ class _Handle:
         if self._session.control_url is not None:
             return self._session.control_url.get_secret_value()
         return self._asked_control_url
+
+    def _must_ask_control_url(self) -> bool:
+        # Asked once, answer or no answer; and never for a session already released,
+        # which has no page left to drive.
+        return self._session.control_url is None and not self._control_url_asked and not self._released
 
     @property
     def released(self) -> bool:
@@ -1571,15 +1577,17 @@ class BrowserHandle(_Handle):
         stands in the way. Do not log it. A backend that returns the page on
         open answers from memory; Browserbase hands it out only on request, so
         the first call asks once and later calls reuse the answer. ``None``
-        when the backend offers no such page.
+        when the backend offers no such page, and on a released handle that
+        never asked: the session has no page left to drive.
 
         A login typed there is kept for a later session only when the session
         was opened with ``profile=`` and ``persist_profile=True``, and saved
         when it is released.
         """
-        if (known := self._known_control_url()) is None:
-            known = self._asked_control_url = self._provider.control_url(self.session_id)
-        return known
+        if self._must_ask_control_url():
+            self._asked_control_url = self._provider.control_url(self.session_id)
+            self._control_url_asked = True
+        return self._known_control_url()
 
     def __enter__(self) -> BrowserHandle:
         return self
@@ -1699,9 +1707,10 @@ class AsyncBrowserHandle(_Handle):
 
     async def control_url(self) -> str | None:
         """A page where a person can drive this session, as :meth:`BrowserHandle.control_url` returns it."""
-        if (known := self._known_control_url()) is None:
-            known = self._asked_control_url = await self._provider.acontrol_url(self.session_id)
-        return known
+        if self._must_ask_control_url():
+            self._asked_control_url = await self._provider.acontrol_url(self.session_id)
+            self._control_url_asked = True
+        return self._known_control_url()
 
     async def __aenter__(self) -> AsyncBrowserHandle:
         return self

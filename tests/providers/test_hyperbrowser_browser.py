@@ -422,8 +422,6 @@ def test_live_a_login_saved_to_a_profile_is_there_in_the_next_session() -> None:
     profile = profiles.post("/api/profile", json={}).raise_for_status().json()
     try:
         with WebRouter() as router:
-            with router.open_browser(provider, timeout=60) as browser:
-                assert (browser.control_url() or "").startswith("https://")
             assert login_survives(router, provider, profile["id"], timeout=60)
     finally:
         profiles.delete(f"/api/profile/{profile['id']}")

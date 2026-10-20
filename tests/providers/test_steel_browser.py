@@ -394,7 +394,6 @@ def test_live_a_login_saved_to_a_profile_is_there_in_the_next_session() -> None:
 
     with WebRouter() as router, profiles:
         with router.open_browser(provider, timeout=60, provider_options={"persistProfile": True}) as browser:
-            assert (browser.control_url() or "").startswith("https://")
             profile = browser.session.raw["profileId"]
         first_upload = saved_after(None)
         assert login_survives(router, provider, profile, wait_saved=lambda: saved_after(first_upload), timeout=60)

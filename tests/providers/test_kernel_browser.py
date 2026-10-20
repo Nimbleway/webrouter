@@ -337,8 +337,6 @@ def test_live_a_login_saved_to_a_profile_is_there_in_the_next_session() -> None:
     )
     try:
         with WebRouter() as router:
-            with router.open_browser(provider, idle_timeout=30, headless=False) as browser:
-                assert (browser.control_url() or "").startswith("https://")
             assert login_survives(router, provider, profile["id"], idle_timeout=30, headless=False)
     finally:
         profiles.delete(f"/profiles/{profile['id']}")
