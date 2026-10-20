@@ -45,6 +45,7 @@ from typing import Any, ClassVar, Literal
 from urllib.parse import quote
 
 import httpx
+from pydantic import SecretStr
 
 from web_router.constants import (
     BROWSE_HTTP_TIMEOUT,
@@ -525,6 +526,12 @@ class HttpBrowserProvider(_HttpProvider, BrowserProvider):
                 with contextlib.suppress(Exception):
                     await self._arelease(orphan)
             raise
+
+    @staticmethod
+    def _secret_field(payload: Mapping[str, Any], field: str) -> SecretStr | None:
+        """``payload[field]`` as a secret when it is a non-empty string, else ``None`` -- an empty link is no link."""
+        value = payload.get(field)
+        return SecretStr(value) if isinstance(value, str) and value else None
 
     def _orphan_id(self, payload: dict[str, Any]) -> str | None:
         session_id = payload.get(self.session_id_field)

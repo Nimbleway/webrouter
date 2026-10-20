@@ -149,12 +149,13 @@ class BrowserbaseBrowserProvider(HttpBrowserProvider):
     async def _afetch(self, session_id: str) -> BrowserState:
         return self._state(await self._aget(self._session_path(session_id)))
 
-    def _control_url(self, session_id: str) -> str | None:
-        return self._get(self._session_path(session_id, BROWSERBASE_DEBUG_PATH)).get(BROWSERBASE_CONTROL_URL_FIELD)
+    def _control_url(self, session_id: str) -> SecretStr | None:
+        payload = self._get(self._session_path(session_id, BROWSERBASE_DEBUG_PATH))
+        return self._secret_field(payload, BROWSERBASE_CONTROL_URL_FIELD)
 
-    async def _acontrol_url(self, session_id: str) -> str | None:
+    async def _acontrol_url(self, session_id: str) -> SecretStr | None:
         payload = await self._aget(self._session_path(session_id, BROWSERBASE_DEBUG_PATH))
-        return payload.get(BROWSERBASE_CONTROL_URL_FIELD)
+        return self._secret_field(payload, BROWSERBASE_CONTROL_URL_FIELD)
 
     def _state(self, payload: dict[str, Any]) -> BrowserState:
         return self.state_of(payload["status"], BROWSERBASE_SESSION_STATES)

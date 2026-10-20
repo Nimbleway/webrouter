@@ -457,6 +457,19 @@ def test_a_released_handle_does_not_ask_for_a_control_url(browserbase: _Browserb
     assert not any(path.endswith("/debug") for _, path, _ in browserbase.calls)
 
 
+def test_an_empty_link_in_the_debug_answer_is_no_link(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BROWSERBASE_API_KEY", KEY)
+    api = _Browserbase()
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/debug"):
+            return httpx.Response(200, json={**DEBUG, "debuggerFullscreenUrl": ""})
+        return api(request)
+
+    with BrowserbaseBrowserProvider(transport=httpx.MockTransport(answer)).open(BrowserRequest()) as browser:
+        assert browser.control_url() is None
+
+
 def test_a_debug_answer_without_a_link_is_asked_for_once(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("BROWSERBASE_API_KEY", KEY)
     api = _Browserbase()

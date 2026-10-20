@@ -98,12 +98,11 @@ class AnchorBrowserProvider(HttpBrowserProvider):
         # Anchor reports no expiry, so `expires_at` stays unset. Its live view is
         # interactive unless the session was opened read-only, so it is the
         # control URL, never `live_view_url`.
-        control_url = data.get(ANCHOR_CONTROL_URL_FIELD)
         return BrowserSession(
             provider=self.name,
             session_id=data["id"],
             cdp_url=SecretStr(data["cdp_url"]),
-            control_url=SecretStr(control_url) if control_url else None,
+            control_url=self._secret_field(data, ANCHOR_CONTROL_URL_FIELD),
             raw=payload,
         )
 

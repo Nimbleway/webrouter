@@ -38,6 +38,8 @@ from collections.abc import Awaitable, Callable, Iterator, Mapping
 from types import MappingProxyType, TracebackType
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar
 
+from pydantic import SecretStr
+
 from web_router.constants import (
     BROWSE_TIMEOUT,
     BROWSER_TIMEOUT,
@@ -115,6 +117,14 @@ if TYPE_CHECKING:
     from playwright.async_api import Page as AsyncPlaywrightPage
 
 _ResultT = TypeVar("_ResultT")
+
+
+class _Unasked(enum.Enum):
+    UNASKED = "unasked"
+
+
+_UNASKED = _Unasked.UNASKED
+"""A handle's control URL before the backend was asked for it: not the ``None`` of a backend that has none."""
 _StateT = TypeVar("_StateT", bound=str)
 _RequestT = TypeVar("_RequestT", bound=NormalizedRequest)
 _ResponseT = TypeVar("_ResponseT")
@@ -1127,7 +1137,7 @@ class BrowserProvider(_BaseProvider):
         """Async counterpart of :meth:`_fetch`."""
         return self._fetch(session_id)
 
-    def _control_url(self, session_id: str) -> str | None:
+    def _control_url(self, session_id: str) -> SecretStr | None:
         """Ask the backend for a page where a person can drive the session, when it hands one out only on request.
 
         The default asks nothing, which is right for a backend that offers no
@@ -1136,7 +1146,7 @@ class BrowserProvider(_BaseProvider):
         """
         return None
 
-    async def _acontrol_url(self, session_id: str) -> str | None:
+    async def _acontrol_url(self, session_id: str) -> SecretStr | None:
         """Async counterpart of :meth:`_control_url`."""
         return self._control_url(session_id)
 
@@ -1189,11 +1199,11 @@ class BrowserProvider(_BaseProvider):
         """Async counterpart of :meth:`status`."""
         return await self._aguarded(self._afetch(session_id))
 
-    def control_url(self, session_id: str) -> str | None:
+    def control_url(self, session_id: str) -> SecretStr | None:
         """Ask the backend for a page where a person can drive the session, wrapping any failure."""
         return self._guarded(lambda: self._control_url(session_id))
 
-    async def acontrol_url(self, session_id: str) -> str | None:
+    async def acontrol_url(self, session_id: str) -> SecretStr | None:
         """Async counterpart of :meth:`control_url`."""
         return await self._aguarded(self._acontrol_url(session_id))
 
@@ -1362,8 +1372,7 @@ class _Handle:
         self._provider = provider
         self._session = session
         self._released = False
-        self._asked_control_url: str | None = None
-        self._control_url_asked = False
+        self._asked_control_url: SecretStr | _Unasked | None = _UNASKED
 
     @property
     def session(self) -> BrowserSession:
@@ -1395,14 +1404,13 @@ class _Handle:
         return self._session.live_view_url
 
     def _known_control_url(self) -> str | None:
-        if self._session.control_url is not None:
-            return self._session.control_url.get_secret_value()
-        return self._asked_control_url
+        known = self._session.control_url or self._asked_control_url
+        return known.get_secret_value() if isinstance(known, SecretStr) else None
 
     def _must_ask_control_url(self) -> bool:
         # Asked once, answer or no answer; and never for a session already released,
         # which has no page left to drive.
-        return self._session.control_url is None and not self._control_url_asked and not self._released
+        return self._session.control_url is None and self._asked_control_url is _UNASKED and not self._released
 
     @property
     def released(self) -> bool:
@@ -1586,7 +1594,6 @@ class BrowserHandle(_Handle):
         """
         if self._must_ask_control_url():
             self._asked_control_url = self._provider.control_url(self.session_id)
-            self._control_url_asked = True
         return self._known_control_url()
 
     def __enter__(self) -> BrowserHandle:
@@ -1709,7 +1716,6 @@ class AsyncBrowserHandle(_Handle):
         """A page where a person can drive this session, as :meth:`BrowserHandle.control_url` returns it."""
         if self._must_ask_control_url():
             self._asked_control_url = await self._provider.acontrol_url(self.session_id)
-            self._control_url_asked = True
         return self._known_control_url()
 
     async def __aenter__(self) -> AsyncBrowserHandle:

@@ -74,12 +74,11 @@ class KernelBrowserProvider(HttpBrowserProvider):
         # Kernel reports no expiry, only its idle limit, so `expires_at` stays
         # unset. Its live view is interactive, so it is the control URL, never
         # `live_view_url`.
-        control_url = payload.get(KERNEL_CONTROL_URL_FIELD)
         return BrowserSession(
             provider=self.name,
             session_id=payload["session_id"],
             cdp_url=SecretStr(payload["cdp_ws_url"]),
-            control_url=SecretStr(control_url) if control_url else None,
+            control_url=self._secret_field(payload, KERNEL_CONTROL_URL_FIELD),
             raw=payload,
         )
 

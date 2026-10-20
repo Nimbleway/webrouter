@@ -89,12 +89,11 @@ class HyperbrowserBrowserProvider(HttpBrowserProvider):
         # to protect it as a secret whether or not the session was opened
         # view-only. No expiry is reported, so `expires_at` stays unset rather
         # than being worked out from the timeout.
-        control_url = payload.get(HYPERBROWSER_CONTROL_URL_FIELD)
         return BrowserSession(
             provider=self.name,
             session_id=payload["id"],
             cdp_url=SecretStr(payload[HYPERBROWSER_CDP_URL_FIELD]),
-            control_url=SecretStr(control_url) if control_url else None,
+            control_url=self._secret_field(payload, HYPERBROWSER_CONTROL_URL_FIELD),
             raw=payload,
         )
 

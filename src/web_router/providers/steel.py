@@ -94,13 +94,12 @@ class SteelBrowserProvider(HttpBrowserProvider):
         # `sessionViewerUrl` sends a visitor without a Steel login to sign in,
         # so it is safe to show; `debugUrl` opens the browser to anyone who
         # holds it, so it is the control URL, kept secret.
-        control_url = payload.get(STEEL_CONTROL_URL_FIELD)
         return BrowserSession(
             provider=self.name,
             session_id=session_id,
             cdp_url=SecretStr(self._connect_url(session_id)),
             live_view_url=payload.get(STEEL_LIVE_VIEW_URL_FIELD),
-            control_url=SecretStr(control_url) if control_url else None,
+            control_url=self._secret_field(payload, STEEL_CONTROL_URL_FIELD),
             raw=payload,
         )
 
