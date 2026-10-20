@@ -142,6 +142,14 @@ def test_headless_viewport_and_profile_land_where_kernel_reads_them(kernel: _Ker
     }
 
 
+def test_a_viewport_is_sent_as_its_fields_in_the_request_body(kernel: _Kernel) -> None:
+    """Through a real open, so the body is JSON-encoded: a `Viewport` model would not be."""
+    with _provider(kernel).open(BrowserRequest(viewport={"width": 1280, "height": 800})):
+        pass
+
+    assert kernel.calls[0] == ("POST", "/browsers", {"viewport": {"width": 1280, "height": 800}})
+
+
 @pytest.mark.parametrize("persist", [True, False])
 def test_persist_profile_without_a_profile_is_refused_before_a_session_opens(kernel: _Kernel, persist: bool) -> None:
     with pytest.raises(MissingParameterError, match="profile") as caught:
