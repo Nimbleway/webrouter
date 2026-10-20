@@ -320,6 +320,7 @@ def test_live_session_starts_from_a_profile_by_its_id() -> None:
             ) as browser,
         ):
             assert browser.session.raw["profile"]["id"] == profile["id"]
+            # Sent nested as `profile.save_changes`, answered flat: Kernel echoes it top-level.
             assert browser.session.raw["profile_save_changes"] is True
     finally:
         profiles.delete(f"/profiles/{profile['id']}")
