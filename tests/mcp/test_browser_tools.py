@@ -36,7 +36,6 @@ from typing import Any, get_args
 
 import anyio
 import pytest
-from pydantic import SecretStr
 
 from tests.conftest import FAKE_CDP_URL, FakeBrowserProvider
 from tests.mcp.test_navigation import FakePlaywrightPage
@@ -87,7 +86,6 @@ from web_router.providers.base import AsyncBrowserHandle
 from web_router.registry import register_browser_provider, unregister_browser_provider
 from web_router.types import (
     BrowserRequest,
-    BrowserSession,
     ExtractedDocument,
     PageSnapshot,
     PageState,
@@ -307,19 +305,12 @@ async def test_no_tool_output_ever_carries_the_cdp_url_or_the_backend_session_id
 
 
 async def test_a_control_url_the_backend_returned_on_open_never_reaches_the_model(
-    session: WebRouterTools, fake_pages: dict[str, FakePage], monkeypatch: pytest.MonkeyPatch
+    fake_browser_provider: Any, fake_pages: dict[str, FakePage], clock: Clock
 ) -> None:
     # Steel's shape: nothing in it reads as a session URL, so only the literal match catches it.
     control_url = "https://api.steel.dev/v1/sessions/control-token-0123456789/player"
-    plain_open = FakeBrowserProvider._open
-
-    def open_with_control(self: FakeBrowserProvider, request: Any) -> BrowserSession:
-        return plain_open(self, request).model_copy(update={"control_url": SecretStr(control_url)})
-
-    async def aopen_with_control(self: FakeBrowserProvider, request: Any) -> BrowserSession:
-        return open_with_control(self, request)
-
-    monkeypatch.setattr(FakeBrowserProvider, "_aopen", aopen_with_control)
+    router = AsyncWebRouter("fake", provider_config={"fake": {"control_url": control_url}})
+    session = WebRouterTools(router, browsers=BrowserSessions(clock=clock))
     opened = await call_tool(session, MCP_TOOL_BROWSER_OPEN, {})
     target = {"session_id": json.loads(opened.content[0].text)["session_id"]}
     page = _page(session, fake_pages, target["session_id"])
