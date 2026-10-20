@@ -53,6 +53,13 @@ refresh rate for the size. ``profile`` is the profile's id: Kernel answers
 ``provider_options`` as ``profile.name``.
 """
 
+KERNEL_CONTROL_URL_FIELD = "browser_live_view_url"
+"""Kernel's live view, set for a session that is not headless.
+
+Interactive: its ``readOnly=true`` is a query parameter whoever holds the URL
+can take off again, so it is never treated as safe to show.
+"""
+
 KERNEL_SESSION_GONE_STATES: dict[str, BrowserState] = {
     "not_found": "released",
 }

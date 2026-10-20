@@ -22,7 +22,7 @@ from typing import Any
 import httpx
 import pytest
 
-from tests.providers._browser_live import astate_after_release, state_after_release
+from tests.providers._browser_live import astate_after_release, login_survives, state_after_release
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants_kernel import KERNEL_BASE_URL
 from web_router.exceptions import (
@@ -180,17 +180,19 @@ def test_a_field_set_both_ways_raises_rather_than_one_side_winning(
     assert kernel.calls == []
 
 
-def test_the_session_is_normalized_with_the_cdp_url_secret_and_no_live_view(kernel: _Kernel) -> None:
+def test_the_session_is_normalized_with_its_live_view_as_the_secret_control_url(kernel: _Kernel) -> None:
     with _provider(kernel).open(BrowserRequest()) as browser:
         session = browser.session
         assert browser.cdp_url == CDP_URL
+        assert browser.control_url() == LIVE_VIEW_URL
+        assert "live-token" not in session.model_dump_json()
         assert "session-token" not in repr(browser)
         assert "session-token" not in repr(session)
         assert "session-token" not in session.model_dump_json()
 
     assert session.provider == "kernel"
     assert session.session_id == SESSION_ID
-    assert session.live_view_url is None, "Kernel's live view is interactive, so it stays in raw"
+    assert session.live_view_url is None, "Kernel's live view is interactive, so it is never shown"
     assert session.expires_at is None, "Kernel reports no expiry, and one is not worked out for it"
     assert session.raw == OPENED
     assert LIVE_VIEW_URL not in session.model_dump_json()
@@ -317,6 +319,25 @@ def test_live_session_starts_from_a_profile_by_its_id() -> None:
             assert browser.session.raw["profile"]["id"] == profile["id"]
             # Sent nested as `profile.save_changes`, answered flat: Kernel echoes it top-level.
             assert browser.session.raw["profile_save_changes"] is True
+    finally:
+        profiles.delete(f"/profiles/{profile['id']}")
+        profiles.close()
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("KERNEL_API_KEY"), reason="KERNEL_API_KEY not set")
+def test_live_a_login_saved_to_a_profile_is_there_in_the_next_session() -> None:
+    """Kernel offers a control URL only for a session with a window, so these are opened headful."""
+    provider = KernelBrowserProvider()
+    profiles = httpx.Client(
+        base_url=KERNEL_BASE_URL, headers={"Authorization": f"Bearer {os.environ['KERNEL_API_KEY']}"}
+    )
+    profile = (
+        profiles.post("/profiles", json={"name": f"web-router-test-{uuid.uuid4().hex[:8]}"}).raise_for_status().json()
+    )
+    try:
+        with WebRouter() as router:
+            assert login_survives(router, provider, profile["id"], idle_timeout=30, headless=False)
     finally:
         profiles.delete(f"/profiles/{profile['id']}")
         profiles.close()

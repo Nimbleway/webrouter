@@ -8,7 +8,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- Logging in once and reusing the login on vendor browser sessions. `profile` and `persist_profile` are now mapped on Browserbase (a context), Steel, Hyperbrowser and Anchor (a profile name), as they already were on Kernel, so a session opened on a profile with `persist_profile=True` saves its cookies and storage when released, and the next session on that profile starts logged in. The handle's new `control_url()` returns a page where a person can see and drive the session to log in: Browserbase's live view, fetched on first call, and the interactive live view each other vendor returns on open. It is a credential like `cdp_url`, kept as a `SecretStr` on the new `BrowserSession.control_url` and out of `repr` and serialization; `live_view_url` stays for pages that grant no control. All of it was checked live on 2026-10-20 on all five vendors. `persist_profile` without a `profile` raises. `auto` refuses `profile` and `persist_profile`, since a profile is saved on one backend; name that backend. The MCP server's `browser_open` still takes no profile, and never shows a control URL.
 - Kernel as a browser session backend (`kernel`), over its Browsers API, reading `KERNEL_API_KEY`. It maps `idle_timeout`, `stealth`, `headless`, `viewport`, `profile` and `persist_profile`, each checked against a live session. Kernel has an idle limit and no lifetime, so `timeout` raises and no default lifetime is sent; Kernel's own 60-second idle limit applies unless you set `idle_timeout`. `stealth` also brings Kernel's CAPTCHA solver and stealth proxy, so `solve_captchas` raises, and `proxy_country` raises because Kernel needs a proxy created first; pass an existing one through `provider_options`. `auto` tries Kernel after the other vendors and before `local`, so no existing call changes backend.
+
+### Changed
+
+- Steel's `debugUrl`, Hyperbrowser's `liveUrl` and Anchor's `live_view_url`, which were only in `raw`, are now returned by `control_url()`. Each grants control of the browser, so none of them becomes `live_view_url`, which is unchanged.
 
 ## [0.5.0] - 2026-10-19
 

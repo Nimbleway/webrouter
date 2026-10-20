@@ -40,13 +40,16 @@ from __future__ import annotations
 import abc
 import contextlib
 from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Any, ClassVar, Literal
 from urllib.parse import quote
 
 import httpx
+from pydantic import SecretStr
 
 from web_router.constants import (
     BROWSE_HTTP_TIMEOUT,
+    BROWSER_PERSIST_PROFILE_REQUIRES,
     BROWSER_SESSION_ID_FIELD,
     DEFAULT_HTTP_TIMEOUT,
     FOLLOW_REDIRECTS,
@@ -465,6 +468,15 @@ class HttpBrowserProvider(_HttpProvider, BrowserProvider):
 
     open_path: ClassVar[str]
 
+    co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
+        BROWSER_PERSIST_PROFILE_REQUIRES
+    )
+    """Saving a profile means nothing without one to save to, on every vendor that maps profiles.
+
+    A subclass with partners of its own merges them over this, as Anchor does;
+    one that maps no profiles sets it empty, which the contract tests require.
+    """
+
     release_path: ClassVar[str]
     """Where a session is ended, with ``{session_id}`` where its id goes."""
 
@@ -514,6 +526,12 @@ class HttpBrowserProvider(_HttpProvider, BrowserProvider):
                 with contextlib.suppress(Exception):
                     await self._arelease(orphan)
             raise
+
+    @staticmethod
+    def _secret_field(payload: Mapping[str, Any], field: str) -> SecretStr | None:
+        """``payload[field]`` as a secret when it is a non-empty string, else ``None`` -- an empty link is no link."""
+        value = payload.get(field)
+        return SecretStr(value) if isinstance(value, str) and value else None
 
     def _orphan_id(self, payload: dict[str, Any]) -> str | None:
         session_id = payload.get(self.session_id_field)
