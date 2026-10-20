@@ -40,6 +40,7 @@ from __future__ import annotations
 import abc
 import contextlib
 from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Any, ClassVar, Literal
 from urllib.parse import quote
 
@@ -47,6 +48,7 @@ import httpx
 
 from web_router.constants import (
     BROWSE_HTTP_TIMEOUT,
+    BROWSER_PERSIST_PROFILE_REQUIRES,
     BROWSER_SESSION_ID_FIELD,
     DEFAULT_HTTP_TIMEOUT,
     FOLLOW_REDIRECTS,
@@ -464,6 +466,15 @@ class HttpBrowserProvider(_HttpProvider, BrowserProvider):
     """
 
     open_path: ClassVar[str]
+
+    co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
+        BROWSER_PERSIST_PROFILE_REQUIRES
+    )
+    """Saving a profile means nothing without one to save to, on every vendor that maps profiles.
+
+    A subclass with partners of its own merges them over this, as Anchor does;
+    one that maps no profiles sets it empty, which the contract tests require.
+    """
 
     release_path: ClassVar[str]
     """Where a session is ended, with ``{session_id}`` where its id goes."""

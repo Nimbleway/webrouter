@@ -17,14 +17,12 @@ is reachable through ``provider_options`` as ``proxy.id``.
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
-from types import MappingProxyType
 from typing import Any, ClassVar
 
 import httpx
 from pydantic import SecretStr
 
-from web_router.constants import BROWSER_PERSIST_PROFILE_REQUIRES, ENV_KERNEL_API_KEY, PROVIDER_KERNEL
+from web_router.constants import ENV_KERNEL_API_KEY, PROVIDER_KERNEL
 from web_router.constants_kernel import (
     KERNEL_API_KEY_PREFIX,
     KERNEL_BASE_URL,
@@ -60,9 +58,6 @@ class KernelBrowserProvider(HttpBrowserProvider):
         {"idle_timeout", "stealth", "headless", "viewport", "profile", "persist_profile"}
     )
     stealth_levels: ClassVar[frozenset[StealthLevel]] = frozenset(KERNEL_STEALTH)
-    co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
-        BROWSER_PERSIST_PROFILE_REQUIRES
-    )
 
     base_url: ClassVar[str] = KERNEL_BASE_URL
     open_path: ClassVar[str] = KERNEL_OPEN_PATH

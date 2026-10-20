@@ -46,7 +46,6 @@ from web_router.constants import (
     ANCHOR_SESSION_PATH,
     ANCHOR_SESSION_STATES,
     ANCHOR_STEALTH,
-    BROWSER_PERSIST_PROFILE_REQUIRES,
     ENV_ANCHOR_API_KEY,
     PROVIDER_ANCHOR,
 )
@@ -78,7 +77,7 @@ class AnchorBrowserProvider(HttpBrowserProvider):
     co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
         {
             "stealth": {"low": frozenset({"proxy_country"}), "high": frozenset({"proxy_country"})},
-            **BROWSER_PERSIST_PROFILE_REQUIRES,
+            **HttpBrowserProvider.co_requirements,
         }
     )
     """Anchor turns extra stealth off on its own unless the proxy is active; asking for it without a

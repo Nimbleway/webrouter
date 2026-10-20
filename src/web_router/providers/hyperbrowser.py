@@ -22,15 +22,12 @@ see CONTRIBUTING.md.
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
-from types import MappingProxyType
 from typing import Any, ClassVar
 
 import httpx
 from pydantic import SecretStr
 
 from web_router.constants import (
-    BROWSER_PERSIST_PROFILE_REQUIRES,
     ENV_HYPERBROWSER_API_KEY,
     HYPERBROWSER_API_KEY_HEADER,
     HYPERBROWSER_BASE_URL,
@@ -70,9 +67,6 @@ class HyperbrowserBrowserProvider(HttpBrowserProvider):
     )
     stealth_levels: ClassVar[frozenset[StealthLevel]] = frozenset(HYPERBROWSER_STEALTH)
     proxy_countries: ClassVar[frozenset[str] | None] = HYPERBROWSER_PROXY_COUNTRIES
-    co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
-        BROWSER_PERSIST_PROFILE_REQUIRES
-    )
 
     base_url: ClassVar[str] = HYPERBROWSER_BASE_URL
     open_path: ClassVar[str] = HYPERBROWSER_OPEN_PATH

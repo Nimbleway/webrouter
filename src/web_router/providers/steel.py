@@ -33,15 +33,12 @@ properly is a welcome PR -- see CONTRIBUTING.md.
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
-from types import MappingProxyType
 from typing import Any, ClassVar
 from urllib.parse import urlencode
 
 from pydantic import SecretStr
 
 from web_router.constants import (
-    BROWSER_PERSIST_PROFILE_REQUIRES,
     ENV_STEEL_API_KEY,
     PROVIDER_STEEL,
     STEEL_API_KEY_HEADER,
@@ -74,9 +71,6 @@ class SteelBrowserProvider(HttpBrowserProvider):
     name: ClassVar[str] = PROVIDER_STEEL
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
         {"timeout", "idle_timeout", "solve_captchas", "proxy_country", "profile", "persist_profile"}
-    )
-    co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
-        BROWSER_PERSIST_PROFILE_REQUIRES
     )
     # Steel's proxy countries are not enumerated in its reference ("over 200
     # countries via their two-letter Alpha-2 codes"), so any code is sent and

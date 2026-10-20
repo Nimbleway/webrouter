@@ -47,16 +47,13 @@ one properly is a welcome PR -- see CONTRIBUTING.md.
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
 from datetime import datetime
-from types import MappingProxyType
 from typing import Any, ClassVar
 
 import httpx
 from pydantic import SecretStr, TypeAdapter, ValidationError
 
 from web_router.constants import (
-    BROWSER_PERSIST_PROFILE_REQUIRES,
     BROWSERBASE_API_KEY_HEADER,
     BROWSERBASE_BASE_URL,
     BROWSERBASE_BROWSE_RUN_PATH,
@@ -119,9 +116,6 @@ class BrowserbaseBrowserProvider(HttpBrowserProvider):
     )
     stealth_levels: ClassVar[frozenset[StealthLevel]] = frozenset(BROWSERBASE_STEALTH)
     proxy_countries: ClassVar[frozenset[str] | None] = None
-    co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
-        BROWSER_PERSIST_PROFILE_REQUIRES
-    )
 
     base_url: ClassVar[str] = BROWSERBASE_BASE_URL
     open_path: ClassVar[str] = BROWSERBASE_OPEN_PATH
