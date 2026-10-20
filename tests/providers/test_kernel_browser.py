@@ -139,11 +139,13 @@ def test_a_viewport_is_sent_as_its_fields_in_the_request_body(kernel: _Kernel) -
         pass
 
     assert kernel.calls[0] == ("POST", "/browsers", {"viewport": {"width": 1280, "height": 800}})
+    assert kernel.headers[0]["authorization"] == f"Bearer {KEY}"
 
 
-def test_persist_profile_without_a_profile_is_refused_before_a_session_opens(kernel: _Kernel) -> None:
+@pytest.mark.parametrize("persist", [True, False])
+def test_persist_profile_without_a_profile_is_refused_before_a_session_opens(kernel: _Kernel, persist: bool) -> None:
     with pytest.raises(MissingParameterError, match="profile") as caught:
-        _provider(kernel).open(BrowserRequest(persist_profile=True))
+        _provider(kernel).open(BrowserRequest(persist_profile=persist))
 
     assert caught.value.parameters == ["profile"]
     assert kernel.calls == []
