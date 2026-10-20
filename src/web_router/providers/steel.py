@@ -23,20 +23,25 @@ Steel's reference documents is ``stealthConfig``, whose keys
 tune CAPTCHA auto-solving and fingerprint behaviour that Steel already applies
 to every session by default -- there is no on/off or tiered switch to map a
 ``StealthLevel`` onto (same configuration page, 2026-09-24). Mapping it would
-mean inventing a level Steel does not expose. Steel's profiles and dimensions
-remain reachable through ``provider_options``; mapping one properly is a
-welcome PR -- see CONTRIBUTING.md.
+mean inventing a level Steel does not expose. ``profile`` and
+``persist_profile`` map onto ``profileId`` and ``persistProfile``, and
+``debugUrl`` is the session's control URL -- checked live on 2026-10-20.
+Steel's dimensions remain reachable through ``provider_options``; mapping them
+properly is a welcome PR -- see CONTRIBUTING.md.
 """
 
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Any, ClassVar
 from urllib.parse import urlencode
 
 from pydantic import SecretStr
 
 from web_router.constants import (
+    BROWSER_PERSIST_PROFILE_REQUIRES,
     ENV_STEEL_API_KEY,
     PROVIDER_STEEL,
     STEEL_API_KEY_HEADER,
@@ -44,7 +49,9 @@ from web_router.constants import (
     STEEL_CONNECT_KEY_PARAM,
     STEEL_CONNECT_SESSION_PARAM,
     STEEL_CONNECT_URL,
+    STEEL_CONTROL_URL_FIELD,
     STEEL_FIELDS,
+    STEEL_LIVE_VIEW_URL_FIELD,
     STEEL_MS_PER_SECOND,
     STEEL_OPEN_PATH,
     STEEL_RELEASE_PATH,
@@ -66,7 +73,10 @@ class SteelBrowserProvider(HttpBrowserProvider):
 
     name: ClassVar[str] = PROVIDER_STEEL
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
-        {"timeout", "idle_timeout", "solve_captchas", "proxy_country"}
+        {"timeout", "idle_timeout", "solve_captchas", "proxy_country", "profile", "persist_profile"}
+    )
+    co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
+        BROWSER_PERSIST_PROFILE_REQUIRES
     )
     # Steel's proxy countries are not enumerated in its reference ("over 200
     # countries via their two-letter Alpha-2 codes"), so any code is sent and
@@ -87,13 +97,16 @@ class SteelBrowserProvider(HttpBrowserProvider):
         session_id = payload["id"]
         # Steel reports no expiry, only the timeout it applied, so `expires_at`
         # stays unset rather than being worked out from a clock that is not its.
-        # `debugUrl` stays in `raw` alone: it grants control of the browser, and
-        # `live_view_url` is meant to be safe to show.
+        # `sessionViewerUrl` sends a visitor without a Steel login to sign in,
+        # so it is safe to show; `debugUrl` opens the browser to anyone who
+        # holds it, so it is the control URL, kept secret.
+        control_url = payload.get(STEEL_CONTROL_URL_FIELD)
         return BrowserSession(
             provider=self.name,
             session_id=session_id,
             cdp_url=SecretStr(self._connect_url(session_id)),
-            live_view_url=payload.get("sessionViewerUrl"),
+            live_view_url=payload.get(STEEL_LIVE_VIEW_URL_FIELD),
+            control_url=SecretStr(control_url) if control_url else None,
             raw=payload,
         )
 

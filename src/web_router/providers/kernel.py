@@ -24,10 +24,11 @@ from typing import Any, ClassVar
 import httpx
 from pydantic import SecretStr
 
-from web_router.constants import ENV_KERNEL_API_KEY, PROVIDER_KERNEL
+from web_router.constants import BROWSER_PERSIST_PROFILE_REQUIRES, ENV_KERNEL_API_KEY, PROVIDER_KERNEL
 from web_router.constants_kernel import (
     KERNEL_API_KEY_PREFIX,
     KERNEL_BASE_URL,
+    KERNEL_CONTROL_URL_FIELD,
     KERNEL_FIELDS,
     KERNEL_OPEN_PATH,
     KERNEL_SESSION_GONE_STATES,
@@ -60,9 +61,8 @@ class KernelBrowserProvider(HttpBrowserProvider):
     )
     stealth_levels: ClassVar[frozenset[StealthLevel]] = frozenset(KERNEL_STEALTH)
     co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
-        {"persist_profile": {True: frozenset({"profile"}), False: frozenset({"profile"})}}
+        BROWSER_PERSIST_PROFILE_REQUIRES
     )
-    """Saving changes is a setting of the profile the session starts from, so it means nothing without one."""
 
     base_url: ClassVar[str] = KERNEL_BASE_URL
     open_path: ClassVar[str] = KERNEL_OPEN_PATH
@@ -77,13 +77,14 @@ class KernelBrowserProvider(HttpBrowserProvider):
 
     def _to_session(self, request: BrowserRequest, payload: dict[str, Any]) -> BrowserSession:
         # Kernel reports no expiry, only its idle limit, so `expires_at` stays
-        # unset. `browser_live_view_url` stays in `raw` alone: it is interactive
-        # unless `readOnly=true` is added to it, which whoever holds the URL can
-        # take off again, and `live_view_url` is meant to be safe to show.
+        # unset. Its live view is interactive, so it is the control URL, never
+        # `live_view_url`.
+        control_url = payload.get(KERNEL_CONTROL_URL_FIELD)
         return BrowserSession(
             provider=self.name,
             session_id=payload["session_id"],
             cdp_url=SecretStr(payload["cdp_ws_url"]),
+            control_url=SecretStr(control_url) if control_url else None,
             raw=payload,
         )
 

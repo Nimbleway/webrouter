@@ -36,6 +36,7 @@ from typing import Any, get_args
 
 import anyio
 import pytest
+from pydantic import SecretStr
 
 from tests.conftest import FAKE_CDP_URL, FakeBrowserProvider
 from tests.mcp.test_navigation import FakePlaywrightPage
@@ -84,7 +85,15 @@ from web_router.mcp.server import call_tool, list_tools, serve
 from web_router.mcp.tools import WebRouterTools
 from web_router.providers.base import AsyncBrowserHandle
 from web_router.registry import register_browser_provider, unregister_browser_provider
-from web_router.types import BrowserRequest, ExtractedDocument, PageSnapshot, PageState, Screenshot, StealthLevel
+from web_router.types import (
+    BrowserRequest,
+    BrowserSession,
+    ExtractedDocument,
+    PageSnapshot,
+    PageState,
+    Screenshot,
+    StealthLevel,
+)
 
 SECRET = "SEKRIT-cdp-0123456789"
 """The account key the fake provider's CDP URL carries."""
@@ -294,6 +303,32 @@ async def test_no_tool_output_ever_carries_the_cdp_url_or_the_backend_session_id
     assert page.cdp_url not in transcript
     assert page.vendor_id not in transcript and "session-9" not in transcript
     assert "wss://" not in transcript
+    assert MCP_REDACTED in transcript
+
+
+async def test_a_control_url_the_backend_returned_on_open_never_reaches_the_model(
+    session: WebRouterTools, fake_pages: dict[str, FakePage], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Steel's shape: nothing in it reads as a session URL, so only the literal match catches it.
+    control_url = "https://api.steel.dev/v1/sessions/control-token-0123456789/player"
+    plain_open = FakeBrowserProvider._open
+
+    def open_with_control(self: FakeBrowserProvider, request: Any) -> BrowserSession:
+        return plain_open(self, request).model_copy(update={"control_url": SecretStr(control_url)})
+
+    async def aopen_with_control(self: FakeBrowserProvider, request: Any) -> BrowserSession:
+        return open_with_control(self, request)
+
+    monkeypatch.setattr(FakeBrowserProvider, "_aopen", aopen_with_control)
+    opened = await call_tool(session, MCP_TOOL_BROWSER_OPEN, {})
+    target = {"session_id": json.loads(opened.content[0].text)["session_id"]}
+    page = _page(session, fake_pages, target["session_id"])
+    page.fail["goto"] = NavigationError("fake", page.vendor_id, "goto", f"redirected to {control_url}")
+
+    failed = await call_tool(session, MCP_TOOL_BROWSER_GOTO, {**target, "url": "https://example.test/"})
+
+    transcript = "\n".join(_texts(opened) + _texts(failed))
+    assert "control-token" not in transcript
     assert MCP_REDACTED in transcript
 
 

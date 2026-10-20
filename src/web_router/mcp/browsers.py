@@ -343,7 +343,10 @@ class BrowserSessions:
 
     def _remember_secrets(self, handle: AsyncBrowserHandle) -> None:
         cdp_url = handle.cdp_url
-        candidates = [cdp_url, urlsplit(cdp_url).query, handle.session_id, handle.live_view_url or ""]
+        # The control URL is read from the session, never asked for: the server
+        # does not fetch one, but a backend that returns it on open puts it here.
+        control_url = handle.session.control_url.get_secret_value() if handle.session.control_url else ""
+        candidates = [cdp_url, urlsplit(cdp_url).query, handle.session_id, handle.live_view_url or "", control_url]
         self._secrets.update(value for value in candidates if len(value) >= MCP_BROWSER_SECRET_MIN_CHARS)
 
     def _translated(self, exc: BrowserActionError, tool: str, session_id: str) -> BrowserToolError:

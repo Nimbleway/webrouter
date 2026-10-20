@@ -258,6 +258,21 @@ def test_provider_options_are_refused_before_anything_opens(chain: _Ledger) -> N
     assert chain.requests == {}
 
 
+@pytest.mark.parametrize(
+    "request_fields",
+    [{"profile": "ctx-1"}, {"profile": "ctx-1", "persist_profile": True}, {"persist_profile": False}],
+)
+def test_a_saved_profile_is_refused_before_anything_opens(chain: _Ledger, request_fields: dict[str, Any]) -> None:
+    """A profile is saved on one backend; a member that maps profiles is no sign it holds this one."""
+    _member(chain, "first")
+
+    with pytest.raises(UnsupportedParameterError, match="Name the backend the profile is saved on") as caught:
+        _auto("first").open(BrowserRequest(**request_fields))
+
+    assert caught.value.parameters == sorted(request_fields)
+    assert chain.requests == {}
+
+
 async def test_async_the_default_timeout_does_not_count_as_a_caller_option(chain: _Ledger) -> None:
     _member(chain, "idle-only", supported=frozenset({"idle_timeout"}))
     _member(chain, "lifetime", supported=frozenset({"timeout"}))

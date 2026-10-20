@@ -16,19 +16,26 @@ verifying against the live service. The spec types a session's ``status`` as a b
 status table is built from the values its examples and webhook events show.
 The integration tests below are the checks that matter; run them once a key is
 available. See CONTRIBUTING.md on verifying against the live API.
+
+``profile``, ``persist_profile`` and the control URL were checked live on
+2026-10-20, by ``test_live_a_login_saved_to_a_profile_is_there_in_the_next_session``:
+a cookie and a localStorage entry set in a session that saved to the profile were
+there in the next session opened on it.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import uuid
 from typing import Any
 
 import httpx
 import pytest
 
-from tests.providers._browser_live import astate_after_release, state_after_release
+from tests.providers._browser_live import astate_after_release, login_survives, state_after_release
 from web_router import AsyncWebRouter, WebRouter
+from web_router.constants import ANCHOR_BASE_URL
 from web_router.exceptions import (
     ConfigurationError,
     MissingParameterError,
@@ -169,8 +176,6 @@ def test_a_timeout_set_both_ways_raises_rather_than_one_side_winning(
 @pytest.mark.parametrize(
     "option",
     [
-        {"profile": "p-1"},
-        {"persist_profile": True},
         {"viewport": {"width": 800, "height": 600}},
         {"headless": True},
     ],
@@ -264,17 +269,18 @@ def test_provider_options_setting_any_of_the_new_produced_fields_raises(
     assert anchor.calls == [], "refused before a session is opened and billed"
 
 
-def test_the_session_is_normalized_with_the_cdp_url_secret_and_no_control_url(anchor: _Anchor) -> None:
+def test_the_session_is_normalized_with_its_live_view_as_the_secret_control_url(anchor: _Anchor) -> None:
     with _provider(anchor).open(BrowserRequest()) as browser:
         session = browser.session
         assert browser.cdp_url == CDP_URL
+        assert browser.control_url() == OPENED["data"]["live_view_url"]
         assert KEY not in repr(browser)
         assert KEY not in repr(session)
         assert KEY not in session.model_dump_json()
 
     assert session.provider == "anchor"
     assert session.session_id == SESSION_ID
-    assert session.live_view_url is None, "Anchor's live view is interactive by default, so it stays in raw"
+    assert session.live_view_url is None, "Anchor's live view is interactive by default, so it is never shown"
     assert session.expires_at is None, "Anchor reports no expiry, and one is not worked out for it"
     assert session.raw == OPENED
     assert OPENED["data"]["live_view_url"] not in session.model_dump_json()
@@ -399,3 +405,31 @@ def test_live_session_serves_stealth_solve_captchas_and_proxy_country() -> None:
         assert browser.released
 
         assert state_after_release(provider, browser.session_id) == "released"
+
+
+def test_a_profile_is_sent_by_name_with_whether_to_save_it(anchor: _Anchor) -> None:
+    payload = _provider(anchor)._build_payload(BrowserRequest(timeout=60, profile="work", persist_profile=True))
+    assert payload["browser"] == {"profile": {"name": "work", "persist": True}}
+
+
+@pytest.mark.parametrize("persist", [True, False])
+def test_persist_profile_without_a_profile_is_refused_before_a_session_opens(anchor: _Anchor, persist: bool) -> None:
+    with pytest.raises(MissingParameterError, match="profile"):
+        _provider(anchor).open(BrowserRequest(persist_profile=persist))
+    assert anchor.calls == []
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("ANCHOR_API_KEY"), reason="ANCHOR_API_KEY not set")
+def test_live_a_login_saved_to_a_profile_is_there_in_the_next_session() -> None:
+    """Anchor creates a profile the first time a session saves to its name; it is deleted afterwards."""
+    provider = AnchorBrowserProvider()
+    name = f"web-router-test-{uuid.uuid4().hex[:8]}"
+    try:
+        with WebRouter() as router:
+            with router.open_browser(provider, timeout=60) as browser:
+                assert (browser.control_url() or "").startswith("https://")
+            assert login_survives(router, provider, name, timeout=60)
+    finally:
+        with httpx.Client(base_url=ANCHOR_BASE_URL, headers={"anchor-api-key": os.environ["ANCHOR_API_KEY"]}) as api:
+            api.delete(f"/v1/profiles/{name}")

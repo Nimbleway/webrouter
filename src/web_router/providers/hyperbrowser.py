@@ -12,24 +12,30 @@ https://hyperbrowser.ai/docs/sessions/parameters, read 2026-09-24 --
 **unverified against a live call**. The live test
 ``test_live_session_opens_with_stealth_captchas_and_a_proxy_country`` is the
 check that confirms them. Hyperbrowser has no idle timeout to map
-``idle_timeout`` onto. Its profiles and screen size are reachable through
-``provider_options``; mapping one properly is a welcome PR -- see
-CONTRIBUTING.md.
+``idle_timeout`` onto. ``profile`` and ``persist_profile`` map onto
+``profile.id`` and ``profile.persistChanges``, and ``liveUrl`` is the
+session's control URL -- checked live on 2026-10-20. Its screen size is
+reachable through ``provider_options``; mapping it properly is a welcome PR --
+see CONTRIBUTING.md.
 """
 
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Any, ClassVar
 
 import httpx
 from pydantic import SecretStr
 
 from web_router.constants import (
+    BROWSER_PERSIST_PROFILE_REQUIRES,
     ENV_HYPERBROWSER_API_KEY,
     HYPERBROWSER_API_KEY_HEADER,
     HYPERBROWSER_BASE_URL,
     HYPERBROWSER_CDP_URL_FIELD,
+    HYPERBROWSER_CONTROL_URL_FIELD,
     HYPERBROWSER_FIELDS,
     HYPERBROWSER_OPEN_PATH,
     HYPERBROWSER_PROXY_COUNTRIES,
@@ -60,10 +66,13 @@ class HyperbrowserBrowserProvider(HttpBrowserProvider):
 
     name: ClassVar[str] = PROVIDER_HYPERBROWSER
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
-        {"timeout", "stealth", "solve_captchas", "proxy_country"}
+        {"timeout", "stealth", "solve_captchas", "proxy_country", "profile", "persist_profile"}
     )
     stealth_levels: ClassVar[frozenset[StealthLevel]] = frozenset(HYPERBROWSER_STEALTH)
     proxy_countries: ClassVar[frozenset[str] | None] = HYPERBROWSER_PROXY_COUNTRIES
+    co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
+        BROWSER_PERSIST_PROFILE_REQUIRES
+    )
 
     base_url: ClassVar[str] = HYPERBROWSER_BASE_URL
     open_path: ClassVar[str] = HYPERBROWSER_OPEN_PATH
@@ -82,14 +91,16 @@ class HyperbrowserBrowserProvider(HttpBrowserProvider):
     def _to_session(self, request: BrowserRequest, payload: dict[str, Any]) -> BrowserSession:
         # `wsEndpoint` is connected to as it comes, and carries a session token
         # in its query string, so it goes nowhere but the secret `cdp_url`.
-        # `liveUrl` stays in `raw` alone: Hyperbrowser says to protect it as a
-        # secret whether or not the session was opened view-only, and
-        # `live_view_url` is meant to be safe to show. No expiry is reported, so `expires_at`
-        # stays unset rather than being worked out from the timeout.
+        # `liveUrl` is the control URL, never `live_view_url`: Hyperbrowser says
+        # to protect it as a secret whether or not the session was opened
+        # view-only. No expiry is reported, so `expires_at` stays unset rather
+        # than being worked out from the timeout.
+        control_url = payload.get(HYPERBROWSER_CONTROL_URL_FIELD)
         return BrowserSession(
             provider=self.name,
             session_id=payload["id"],
             cdp_url=SecretStr(payload[HYPERBROWSER_CDP_URL_FIELD]),
+            control_url=SecretStr(control_url) if control_url else None,
             raw=payload,
         )
 

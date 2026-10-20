@@ -32,8 +32,12 @@ https://docs.browserbase.com/platform/identity/overview) and proxies
   ``proxy_countries`` is left ``None`` and Browserbase is left to refuse a code
   it has no proxy in.
 
-Still reachable only through ``provider_options``: ``idle_timeout``
-(Browserbase documents no idle limit), contexts, viewport and keep-alive.
+``profile`` and ``persist_profile`` map onto a context,
+``browserSettings.context.id`` and ``.persist``, and the session's live view
+is fetched from ``GET /v1/sessions/{id}/debug`` when the handle's
+``control_url()`` asks -- all three checked live on 2026-10-20. Still
+reachable only through ``provider_options``: viewport and keep-alive;
+``idle_timeout`` is refused, as Browserbase documents no idle limit.
 The browse provider maps only the task: the Agents API has no start URL, and
 its ``resultSchema``, ``agentId``, ``variables`` and ``browserSettings`` go
 through ``provider_options`` until a live call shows what they return. Mapping
@@ -43,19 +47,24 @@ one properly is a welcome PR -- see CONTRIBUTING.md.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from datetime import datetime
+from types import MappingProxyType
 from typing import Any, ClassVar
 
 import httpx
 from pydantic import SecretStr, TypeAdapter, ValidationError
 
 from web_router.constants import (
+    BROWSER_PERSIST_PROFILE_REQUIRES,
     BROWSERBASE_API_KEY_HEADER,
     BROWSERBASE_BASE_URL,
     BROWSERBASE_BROWSE_RUN_PATH,
     BROWSERBASE_BROWSE_START_PATH,
     BROWSERBASE_BROWSE_STATES,
     BROWSERBASE_BROWSE_STOP_PATH,
+    BROWSERBASE_CONTROL_URL_FIELD,
+    BROWSERBASE_DEBUG_PATH,
     BROWSERBASE_FIELDS,
     BROWSERBASE_OPEN_PATH,
     BROWSERBASE_RELEASE_BODY,
@@ -106,10 +115,13 @@ class BrowserbaseBrowserProvider(HttpBrowserProvider):
 
     name: ClassVar[str] = PROVIDER_BROWSERBASE
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
-        {"timeout", "stealth", "solve_captchas", "proxy_country"}
+        {"timeout", "stealth", "solve_captchas", "proxy_country", "profile", "persist_profile"}
     )
     stealth_levels: ClassVar[frozenset[StealthLevel]] = frozenset(BROWSERBASE_STEALTH)
     proxy_countries: ClassVar[frozenset[str] | None] = None
+    co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
+        BROWSER_PERSIST_PROFILE_REQUIRES
+    )
 
     base_url: ClassVar[str] = BROWSERBASE_BASE_URL
     open_path: ClassVar[str] = BROWSERBASE_OPEN_PATH
@@ -125,9 +137,10 @@ class BrowserbaseBrowserProvider(HttpBrowserProvider):
         return build_browser_payload(request, BROWSERBASE_FIELDS, _seconds)
 
     def _to_session(self, request: BrowserRequest, payload: dict[str, Any]) -> BrowserSession:
-        # The live view is a second call, `GET /v1/sessions/{id}/debug`, and is
-        # not made on every open for a URL most callers never look at, so
-        # `live_view_url` stays unset. `signingKey` stays in `raw` alone.
+        # The live view is a second call, made only when the handle's
+        # `control_url()` asks for it, not on every open for a URL most callers
+        # never look at. It is interactive, so it is never `live_view_url`.
+        # `signingKey` stays in `raw` alone.
         return BrowserSession(
             provider=self.name,
             session_id=payload["id"],
@@ -141,6 +154,13 @@ class BrowserbaseBrowserProvider(HttpBrowserProvider):
 
     async def _afetch(self, session_id: str) -> BrowserState:
         return self._state(await self._aget(self._session_path(session_id)))
+
+    def _control_url(self, session_id: str) -> str | None:
+        return self._get(self._session_path(session_id, BROWSERBASE_DEBUG_PATH)).get(BROWSERBASE_CONTROL_URL_FIELD)
+
+    async def _acontrol_url(self, session_id: str) -> str | None:
+        payload = await self._aget(self._session_path(session_id, BROWSERBASE_DEBUG_PATH))
+        return payload.get(BROWSERBASE_CONTROL_URL_FIELD)
 
     def _state(self, payload: dict[str, Any]) -> BrowserState:
         return self.state_of(payload["status"], BROWSERBASE_SESSION_STATES)

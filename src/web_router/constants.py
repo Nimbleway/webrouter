@@ -1066,6 +1066,16 @@ whole task.
 # A browser session is not a call either: it is a resource the caller holds and
 # drives, billed for as long as it stays open.
 
+BROWSER_PERSIST_PROFILE_REQUIRES: dict[str, dict[Any, frozenset[str]]] = {
+    "persist_profile": {True: frozenset({"profile"}), False: frozenset({"profile"})}
+}
+"""The co-requirement every backend that maps profiles declares: saving changes means nothing without a profile.
+
+Steel would create a new profile for ``persistProfile`` alone, but
+``persist_profile`` saves back to the ``profile`` the session started from, so
+a request without one is refused rather than served as something else.
+"""
+
 BROWSER_TIMEOUT = 600.0
 """Seconds a session may live when the caller sets no ``timeout`` of their own.
 
@@ -1179,8 +1189,14 @@ STEEL_FIELDS: dict[str, BrowserFieldRow] = {
     "idle_timeout": ("inactivityTimeout",),
     "solve_captchas": ("solveCaptcha",),
     "proxy_country": BrowserField({("useProxy", "geolocation", "country"): REQUEST_VALUE}, case="upper"),
+    "profile": ("profileId",),
+    "persist_profile": ("persistProfile",),
 }
 """Normalized option -> where it goes in Steel's body.
+
+``profile`` and ``persist_profile`` were checked live on 2026-10-20: a cookie
+and a localStorage entry set in a session opened with ``persistProfile`` were
+there in the next session opened on the returned ``profileId``.
 
 ``solve_captchas`` and ``proxy_country`` are doc-derived and unverified
 against a live call -- see ``providers/steel.py``'s module docstring.
@@ -1189,6 +1205,12 @@ against a live call -- see ``providers/steel.py``'s module docstring.
 boolean to turn the proxy on beside it, so a single path does both.
 ``stealth`` is deliberately absent: see the same docstring for why.
 """
+
+STEEL_LIVE_VIEW_URL_FIELD = "sessionViewerUrl"
+"""Steel's dashboard page for the session. A visitor without a Steel login is sent to sign in -- checked 2026-10-20."""
+
+STEEL_CONTROL_URL_FIELD = "debugUrl"
+"""Steel's interactive player for the session, which needs no login: whoever holds it drives the browser."""
 
 STEEL_MS_PER_SECOND = 1000
 """Steel takes both of its timeouts in milliseconds; ours are seconds."""
@@ -1250,8 +1272,22 @@ BROWSERBASE_FIELDS: dict[str, BrowserFieldRow] = {
         {("proxies",): [{"type": "browserbase", "geolocation": {"country": REQUEST_VALUE}}]},
         case="upper",
     ),
+    "profile": ("browserSettings", "context", "id"),
+    "persist_profile": ("browserSettings", "context", "persist"),
 }
-"""Normalized option -> where it goes in Browserbase's body. Unverified -- see the module docstring."""
+"""Normalized option -> where it goes in Browserbase's body.
+
+``profile`` is a context id and ``persist_profile`` its ``persist`` flag, both
+checked live on 2026-10-20: a cookie and a localStorage entry set in a session
+opened with ``persist`` were there in the next session opened on the context.
+The other rows are unverified -- see the module docstring.
+"""
+
+BROWSERBASE_DEBUG_PATH = "/v1/sessions/{session_id}/debug"
+"""Answers a running session's live-view links. Checked live on 2026-10-20."""
+
+BROWSERBASE_CONTROL_URL_FIELD = "debuggerFullscreenUrl"
+"""The debug answer's link to the session's page alone, without Chrome's DevTools around it."""
 
 BROWSERBASE_RELEASE_BODY: dict[str, str] = {"status": "REQUEST_RELEASE"}
 """Ends a session: Browserbase has no release call, only an update asking for one."""
@@ -1489,8 +1525,22 @@ HYPERBROWSER_FIELDS: dict[str, BrowserFieldRow] = {
     "solve_captchas": ("solveCaptchas",),
     "stealth": HYPERBROWSER_STEALTH,
     "proxy_country": BrowserField({("useProxy",): True, ("proxyCountry",): REQUEST_VALUE}, case="upper"),
+    "profile": ("profile", "id"),
+    "persist_profile": ("profile", "persistChanges"),
 }
-"""Normalized option -> where it goes in Hyperbrowser's body."""
+"""Normalized option -> where it goes in Hyperbrowser's body.
+
+``profile`` and ``persist_profile`` were checked live on 2026-10-20: a cookie
+and a localStorage entry set in a session opened with ``persistChanges`` were
+there in the next session opened on the profile.
+"""
+
+HYPERBROWSER_CONTROL_URL_FIELD = "liveUrl"
+"""Hyperbrowser's live view, interactive unless the session was opened with ``viewOnlyLiveView``.
+
+Its token is the credential: Hyperbrowser says anyone holding the URL can view,
+and potentially interact with, the session.
+"""
 
 HYPERBROWSER_SECONDS_PER_MINUTE = 60
 """Hyperbrowser takes its lifetime as ``timeoutMinutes``, a whole number of minutes; ours is seconds."""
@@ -1704,13 +1754,23 @@ ANCHOR_FIELDS: dict[str, BrowserFieldRow] = {
         {("session", "proxy", "active"): True, ("session", "proxy", "country_code"): REQUEST_VALUE},
         case="lower",
     ),
+    "profile": ("browser", "profile", "name"),
+    "persist_profile": ("browser", "profile", "persist"),
 }
 """Normalized option -> where it goes in Anchor's body.
+
+``profile`` is a name, not an id: Anchor keys profiles by the name chosen for
+them. With ``persist``, a name Anchor does not have yet is created when the
+session ends -- checked live on 2026-10-20, where a cookie and a localStorage
+entry set in such a session were there in the next one opened on the name.
 
 ``timeout`` and ``idle_timeout`` nest under ``session.timeout``. Anchor's proxy
 guide shows an optional ``type`` field (example: ``"anchor_residential"``) but
 does not require one, so it is left unset -- ``provider_options`` reaches it.
 """
+
+ANCHOR_CONTROL_URL_FIELD = "live_view_url"
+"""Anchor's live view, interactive unless the session was opened with ``session.live_view.read_only``."""
 
 ANCHOR_SESSION_STATES: dict[str, BrowserState] = {
     "running": "running",
@@ -2366,6 +2426,12 @@ MSG_AUTO_BROWSER_UNSUPPORTED = "does not support {values}"
 
 MSG_AUTO_BROWSER_NEEDS = "needs {names} beside {values}"
 """A member reason: an option it serves only beside partners the request left unset."""
+
+MSG_AUTO_BROWSER_NO_PROFILE = (
+    "`auto` does not pass a saved profile on: its id or name belongs to one backend, and another member "
+    "would refuse it, or -- Anchor, which keys profiles by name -- start a new, empty one under it. "
+    "Name the backend the profile is saved on."
+)
 
 MSG_AUTO_BROWSER_NO_PROVIDER_OPTIONS = (
     "`auto` does not pass provider_options on: they are one backend's own fields, untranslated, and "

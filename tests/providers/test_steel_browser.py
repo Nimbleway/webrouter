@@ -14,22 +14,33 @@ fingerprint behaviour Steel already applies to every session by default, with
 no on/off or tiered switch to map a ``StealthLevel`` onto (same configuration
 page, 2026-09-24). The recorded payloads below are hand-written from that
 documentation. See CONTRIBUTING.md on verifying against the live API.
+
+``profile``, ``persist_profile`` and the control URL were checked live on
+2026-10-20, by ``test_live_a_login_saved_to_a_profile_is_there_in_the_next_session``:
+a cookie and a localStorage entry set in a session that saved to the profile were
+there in the next session opened on it.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import time
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
 
-from tests.providers._browser_live import astate_after_release, state_after_release
+from tests.providers._browser_live import astate_after_release, login_survives, state_after_release
 from web_router import AsyncWebRouter, WebRouter
-from web_router.constants import BROWSER_TIMEOUT
-from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
+from web_router.constants import BROWSER_TIMEOUT, STEEL_BASE_URL
+from web_router.exceptions import (
+    ConfigurationError,
+    MissingParameterError,
+    ProviderError,
+    UnsupportedParameterError,
+)
 from web_router.providers.steel import SteelBrowserProvider
 from web_router.types import BrowserRequest
 
@@ -143,8 +154,6 @@ def test_provider_options_reach_steel_untranslated(steel: _Steel) -> None:
     "option",
     [
         {"stealth": "low"},
-        {"profile": "p-1"},
-        {"persist_profile": True},
         {"viewport": {"width": 800, "height": 600}},
         {"headless": True},
     ],
@@ -219,16 +228,18 @@ def test_the_cdp_url_is_steels_connect_endpoint_not_the_reported_websocket(steel
         assert KEY not in repr(browser.session)
 
 
-def test_the_session_is_normalized_without_the_control_url(steel: _Steel) -> None:
+def test_the_session_is_normalized_with_the_debug_url_as_its_secret_control_url(steel: _Steel) -> None:
     with _provider(steel).open(BrowserRequest()) as browser:
         session = browser.session
+        assert browser.control_url() == OPENED["debugUrl"]
 
     assert session.provider == "steel"
     assert session.session_id == SESSION_ID
     assert session.live_view_url == OPENED["sessionViewerUrl"]
     assert session.expires_at is None, "Steel reports no expiry, and one is not worked out for it"
     assert session.raw == OPENED
-    assert OPENED["debugUrl"] not in session.model_dump_json(), "debugUrl grants control, so it stays in raw"
+    assert OPENED["debugUrl"] not in session.model_dump_json(), "debugUrl grants control, so it is secret"
+    assert OPENED["debugUrl"] not in repr(session)
 
 
 def test_a_session_is_opened_then_released_by_its_id(steel: _Steel) -> None:
@@ -344,3 +355,46 @@ async def test_live_async_session_opens_and_releases() -> None:
         assert browser.released
 
         assert await astate_after_release(provider, browser.session_id) == "released"
+
+
+def test_a_profile_is_sent_by_id_with_whether_to_save_it(steel: _Steel) -> None:
+    payload = _provider(steel)._build_payload(BrowserRequest(profile="p-1", persist_profile=False))
+    assert payload == {"profileId": "p-1", "persistProfile": False}
+
+
+@pytest.mark.parametrize("persist", [True, False])
+def test_persist_profile_without_a_profile_is_refused_before_a_session_opens(steel: _Steel, persist: bool) -> None:
+    """Steel would make a new profile for ``persistProfile`` alone; ``persist_profile`` saves to the one named."""
+    with pytest.raises(MissingParameterError, match="profile"):
+        _provider(steel).open(BrowserRequest(persist_profile=persist))
+    assert steel.calls == []
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("STEEL_API_KEY"), reason="STEEL_API_KEY not set")
+def test_live_a_login_saved_to_a_profile_is_there_in_the_next_session() -> None:
+    """Steel creates a profile from a session opened with ``persistProfile`` alone, and gives its id back.
+
+    A profile uploads after its session ends, and Steel answers 409 to a session
+    opened on one before it reports ``READY``. Steel's API documents no way to
+    delete one; an unused profile is deleted by Steel after 30 days.
+    """
+    provider = SteelBrowserProvider()
+    profiles = httpx.Client(base_url=STEEL_BASE_URL, headers={"steel-api-key": os.environ["STEEL_API_KEY"]})
+
+    def saved_after(updated_at: str | None) -> str:
+        """Wait for the profile to be ``READY`` with an upload newer than ``updated_at``; return its time."""
+        deadline = time.monotonic() + 60
+        while True:
+            reported = profiles.get(f"/v1/profiles/{profile}").raise_for_status().json()
+            if reported["status"] == "READY" and reported["updatedAt"] != updated_at:
+                return str(reported["updatedAt"])
+            assert time.monotonic() < deadline, "the profile never finished uploading"
+            time.sleep(1)
+
+    with WebRouter() as router, profiles:
+        with router.open_browser(provider, timeout=60, provider_options={"persistProfile": True}) as browser:
+            assert (browser.control_url() or "").startswith("https://")
+            profile = browser.session.raw["profileId"]
+        first_upload = saved_after(None)
+        assert login_survives(router, provider, profile, wait_saved=lambda: saved_after(first_upload), timeout=60)

@@ -18,6 +18,11 @@ marks that field "Deprecated: use `verified` instead" and still lists
 ``browserSettings.verified`` as the same boolean, Scale-plan-gated toggle --
 so ``verified`` is what is mapped, not the deprecated field. The live integration test below
 is the check that confirms them; see CONTRIBUTING.md on verifying against the live API.
+
+``profile``, ``persist_profile`` and the control URL were checked live on
+2026-10-20, by ``test_live_a_login_saved_to_a_context_is_there_in_the_next_session``:
+a cookie and a localStorage entry set in a session that saved to the context were
+there in the next session opened on it.
 """
 
 from __future__ import annotations
@@ -30,9 +35,15 @@ from typing import Any
 import httpx
 import pytest
 
-from tests.providers._browser_live import astate_after_release, state_after_release
+from tests.providers._browser_live import astate_after_release, login_survives, state_after_release
 from web_router import AsyncWebRouter, WebRouter
-from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
+from web_router.constants import BROWSERBASE_BASE_URL
+from web_router.exceptions import (
+    ConfigurationError,
+    MissingParameterError,
+    ProviderError,
+    UnsupportedParameterError,
+)
 from web_router.providers.browserbase import BrowserbaseBrowserProvider
 from web_router.types import BrowserRequest
 
@@ -52,6 +63,15 @@ SESSION: dict[str, Any] = {
     "proxyBytes": 0,
     "keepAlive": False,
     "region": "us-west-2",
+}
+DEBUG_URL = (
+    f"https://www.browserbase.com/devtools-fullscreen/inspector.html?wss=connect.browserbase.com/debug/{SESSION_ID}"
+)
+DEBUG: dict[str, Any] = {
+    "debuggerFullscreenUrl": DEBUG_URL,
+    "debuggerUrl": DEBUG_URL.replace("-fullscreen", ""),
+    "wsUrl": f"wss://connect.browserbase.com/debug/{SESSION_ID}",
+    "pages": [],
 }
 OPENED: dict[str, Any] = {
     **SESSION,
@@ -76,6 +96,8 @@ class _Browserbase:
         self.headers.append(request.headers)
         if request.url.path == "/v1/sessions":
             return httpx.Response(201, json=OPENED)
+        if request.url.path.endswith("/debug"):
+            return httpx.Response(200, json=DEBUG)
         if request.method == "POST":
             return httpx.Response(self.release_status, json={**SESSION, "status": "COMPLETED"})
         return httpx.Response(200, json={**SESSION, "status": self.status})
@@ -138,8 +160,6 @@ def test_provider_options_reach_browserbase_untranslated(browserbase: _Browserba
     "option",
     [
         {"idle_timeout": 30},
-        {"profile": "ctx-1"},
-        {"persist_profile": True},
         {"viewport": {"width": 800, "height": 600}},
         {"headless": True},
     ],
@@ -241,7 +261,8 @@ def test_the_session_is_normalized_with_browserbases_own_expiry(browserbase: _Br
     assert session.provider == "browserbase"
     assert session.session_id == SESSION_ID
     assert session.expires_at == datetime(2026, 9, 23, 10, 10, tzinfo=timezone.utc)
-    assert session.live_view_url is None, "the live view is a second request, which open does not make"
+    assert session.live_view_url is None, "Browserbase's live view grants control, so it is never shown"
+    assert session.control_url is None, "the live view is a second request, which open does not make"
     assert session.raw == OPENED
 
 
@@ -401,3 +422,68 @@ async def test_live_async_session_opens_and_releases() -> None:
         assert browser.released
 
         assert await astate_after_release(provider, browser.session_id) == "released"
+
+
+def test_a_profile_is_a_context_sent_with_whether_to_persist_it(browserbase: _Browserbase) -> None:
+    payload = _provider(browserbase)._build_payload(
+        BrowserRequest(profile="ctx-1", persist_profile=True, stealth="low")
+    )
+    assert payload == {"browserSettings": {"verified": False, "context": {"id": "ctx-1", "persist": True}}}
+
+
+@pytest.mark.parametrize("persist", [True, False])
+def test_persist_profile_without_a_profile_is_refused_before_a_session_opens(
+    browserbase: _Browserbase, persist: bool
+) -> None:
+    with pytest.raises(MissingParameterError, match="profile"):
+        _provider(browserbase).open(BrowserRequest(persist_profile=persist))
+    assert browserbase.calls == []
+
+
+def test_the_control_url_is_asked_for_once_and_only_when_wanted(browserbase: _Browserbase) -> None:
+    with _provider(browserbase).open(BrowserRequest()) as browser:
+        assert browser.control_url() == DEBUG_URL
+        assert browser.control_url() == DEBUG_URL
+
+    assert [path for _, path, _ in browserbase.calls].count(f"/v1/sessions/{SESSION_ID}/debug") == 1
+    assert SESSION_ID in DEBUG_URL and DEBUG_URL not in repr(browser)
+
+
+async def test_an_async_handle_asks_for_the_control_url_too(browserbase: _Browserbase) -> None:
+    async with await _provider(browserbase).aopen(BrowserRequest()) as browser:
+        assert await browser.control_url() == DEBUG_URL
+
+    assert ("GET", f"/v1/sessions/{SESSION_ID}/debug", None) in browserbase.calls
+
+
+def test_a_failed_control_url_request_is_a_provider_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BROWSERBASE_API_KEY", KEY)
+    api = _Browserbase()
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/debug"):
+            return httpx.Response(404, json={"error": "session not running"})
+        return api(request)
+
+    with (
+        BrowserbaseBrowserProvider(transport=httpx.MockTransport(answer)).open(BrowserRequest()) as browser,
+        pytest.raises(ProviderError, match="HTTP 404"),
+    ):
+        browser.control_url()
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("BROWSERBASE_API_KEY"), reason="BROWSERBASE_API_KEY not set")
+def test_live_a_login_saved_to_a_context_is_there_in_the_next_session() -> None:
+    """Creates a throwaway context through Browserbase's Contexts API, and deletes it afterwards."""
+    provider = BrowserbaseBrowserProvider()
+    contexts = httpx.Client(base_url=BROWSERBASE_BASE_URL, headers={"X-BB-API-Key": os.environ["BROWSERBASE_API_KEY"]})
+    context = contexts.post("/v1/contexts", json={}).raise_for_status().json()
+    try:
+        with WebRouter() as router:
+            with router.open_browser(provider, timeout=60) as browser:
+                assert (browser.control_url() or "").startswith("https://")
+            assert login_survives(router, provider, context["id"], timeout=60)
+    finally:
+        contexts.delete(f"/v1/contexts/{context['id']}")
+        contexts.close()

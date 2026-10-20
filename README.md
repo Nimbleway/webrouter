@@ -771,11 +771,11 @@ page actions need the `[browser]` extra, which is Playwright.
 | Pass | Name | Provider | Credentials | Options mapped | Verified how |
 | --- | --- | --- | --- | --- | --- |
 | `Provider.AUTO` *(default)* | `auto` | — | whatever its chain holds; none for `local` | every option some member maps, routed per request; `provider_options` is refused | Falls through only when a member refuses to open (no key, a 4xx, no connection); anything that may have opened a session is raised |
-| `Provider.STEEL` | `steel` | [Steel Sessions](https://docs.steel.dev) | `STEEL_API_KEY` | `timeout`, `idle_timeout`, `solve_captchas`, `proxy_country` (no enumerated country list; `stealth` not mapped — Steel has no on/off or tiered stealth field) | **Documentation only** — no key was available; `solve_captchas`/`proxy_country` await a live run |
-| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Sessions](https://docs.browserbase.com) | `BROWSERBASE_API_KEY` | `timeout`, `stealth` (`low`/`high`, via `browserSettings.verified` — `advancedStealth` is deprecated), `solve_captchas`, `proxy_country` | **Documentation only** — no key was available; `stealth`/`solve_captchas`/`proxy_country` await a live run |
-| `Provider.HYPERBROWSER` | `hyperbrowser` | [Hyperbrowser Sessions](https://hyperbrowser.ai/docs) | `HYPERBROWSER_API_KEY` | `timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country` | **Documentation only** — no key was available; `stealth`/`solve_captchas`/`proxy_country` await a live run |
-| `Provider.ANCHOR` | `anchor` | [Anchor Browser](https://docs.anchorbrowser.io) | `ANCHOR_API_KEY` | `timeout`, `idle_timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country` | **Documentation only** — no key was available; `stealth`/`solve_captchas`/`proxy_country` await a live run. Headful and recorded by default, and left that way |
-| `Provider.KERNEL` | `kernel` | [Kernel Browsers](https://kernel.sh/docs) | `KERNEL_API_KEY` | `idle_timeout` (whole seconds, 10 s to 72 h), `stealth` (one tier, which also brings Kernel's CAPTCHA solver and proxy), `headless`, `viewport`, `profile` (an id), `persist_profile`. `timeout`, `solve_captchas` and `proxy_country` raise | **Live**, 2026-10-20: open, drive, status, release, and every mapped option |
+| `Provider.STEEL` | `steel` | [Steel Sessions](https://docs.steel.dev) | `STEEL_API_KEY` | `timeout`, `idle_timeout`, `solve_captchas`, `proxy_country` (no enumerated country list; `stealth` not mapped — Steel has no on/off or tiered stealth field), `profile` (an id), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `solve_captchas`/`proxy_country` are plan-gated and await a live run |
+| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Sessions](https://docs.browserbase.com) | `BROWSERBASE_API_KEY` | `timeout`, `stealth` (`low`/`high`, via `browserSettings.verified` — `advancedStealth` is deprecated), `solve_captchas`, `proxy_country`, `profile` (a context id), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `stealth`/`solve_captchas`/`proxy_country` are plan-gated and await a live run |
+| `Provider.HYPERBROWSER` | `hyperbrowser` | [Hyperbrowser Sessions](https://hyperbrowser.ai/docs) | `HYPERBROWSER_API_KEY` | `timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country`, `profile` (an id), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `stealth`/`solve_captchas`/`proxy_country` are plan-gated and await a live run |
+| `Provider.ANCHOR` | `anchor` | [Anchor Browser](https://docs.anchorbrowser.io) | `ANCHOR_API_KEY` | `timeout`, `idle_timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country`, `profile` (a name), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `stealth`/`solve_captchas`/`proxy_country` await a live run. Headful and recorded by default, and left that way |
+| `Provider.KERNEL` | `kernel` | [Kernel Browsers](https://kernel.sh/docs) | `KERNEL_API_KEY` | `idle_timeout` (whole seconds, 10 s to 72 h), `stealth` (one tier, which also brings Kernel's CAPTCHA solver and proxy), `headless`, `viewport`, `profile` (an id), `persist_profile`. `timeout`, `solve_captchas` and `proxy_country` raise | **Live**, 2026-10-20: open, drive, status, release, `control_url()`, and every mapped option |
 | `Provider.LOCAL` | `local` | Google Chrome or Chromium on this machine | none (`CHROME_PATH` optional) | `headless`, `timeout`, `viewport` | **Live** against Google Chrome on macOS: launch, CDP `/json/version`, release, lifetime expiry, exit cleanup. `headless=False` is not exercised by a test |
 
 `auto` opens through the first vendor you hold a key for, in the order **Steel,
@@ -787,7 +787,8 @@ option you set is passed over: `idle_timeout` skips Browserbase, Hyperbrowser
 and `local`, `timeout` skips Kernel, and `headless` every vendor but Kernel. The ten-minute default does not count as an
 option you set. `provider_options` is refused, because it is one backend's own
 fields and `local` would read it as Chrome switches — name the backend you
-wrote it for. `auto` never opens a second session in one call: it moves on only
+wrote it for. `profile` and `persist_profile` are refused for the same reason:
+a profile is saved on one backend. `auto` never opens a second session in one call: it moves on only
 after a failure that proves nothing opened, and a read timeout, a 5xx or an
 unreadable answer, which may have left a session billing, is raised instead.
 The handle it returns is the member's own, so `browser.provider` names the
@@ -804,6 +805,55 @@ beside another you left unset. Hyperbrowser, Browserbase, Anchor and Kernel map 
 setting a field a mapped option also sets — including a `timeout` filled in
 from the default — raises `ConfigurationError` rather than one side silently
 winning.
+
+### Logging in once, and reusing the login
+
+A site behind a login needs a person to log in once. `control_url()` hands back
+a page where that person sees the session and can type into it; with `profile`
+and `persist_profile=True`, what they leave behind — cookies, local storage —
+is saved when the session is released, and a later session opened on the same
+`profile` starts logged in:
+
+```python
+from web_router import WebRouter
+
+with WebRouter("browserbase") as router:
+    with router.open_browser(profile="<context id>", persist_profile=True) as browser:
+        print("Log in here:", browser.control_url())
+        input("Press Enter once you are logged in. ")
+    # Released: the login is saved to the profile. Give it a few seconds.
+
+    with router.open_browser(profile="<context id>") as browser:
+        browser.goto("https://example.com/account")  # already logged in
+```
+
+`control_url()` is a credential, like `cdp_url`: whoever opens it drives the
+browser, and on Steel, Kernel, Hyperbrowser and Anchor no account login stands
+in the way. Give it only to the person logging in, and do not log it. It is
+`None` on a backend that offers no such page. `live_view_url` stays for pages
+that show a session without granting control — today Steel's dashboard page,
+which asks for a Steel login. Browserbase hands out its page only on request,
+so `control_url()` asks for it the first time it is called; every other
+backend returned it on open. On an `AsyncBrowserHandle`, `await
+browser.control_url()`.
+
+| Backend | `profile` is | `control_url()` is | Make a profile |
+| --- | --- | --- | --- |
+| `browserbase` | a context id | `debuggerFullscreenUrl`, fetched on first call | `POST /v1/contexts` |
+| `steel` | a profile id | `debugUrl` | open a session with `provider_options={"persistProfile": True}` and read `raw["profileId"]` |
+| `hyperbrowser` | a profile id | `liveUrl` | `POST /api/profile` |
+| `anchor` | a name you choose | its `live_view_url` | none: the first session that saves to a name creates it |
+| `kernel` | a profile id | `browser_live_view_url`, for a session with `headless=False` | `POST /profiles` |
+| `local` | — | `None`: open it with `headless=False` and the window is on your screen | — |
+
+web-router takes a profile you already have; making, listing and deleting them
+stays with each vendor's own API or dashboard. `persist_profile` without a
+`profile` raises, rather than making a new one where the vendor would (Steel).
+Each backend saves as the session ends, not at the release call, so wait a few
+seconds before opening on the profile again; Steel answers 409 until its upload
+reports `READY`. Two sessions writing to one profile at once overwrite each
+other. Every row was checked live on 2026-10-20: a cookie and a localStorage
+entry set in one session were there in the next.
 
 ### Driving the page
 
@@ -867,7 +917,10 @@ against `local`, sync and async, with no key.
 Steel's own connection scheme. It keeps a session across a reconnect, as
 `local` does. Proxies, stealth, CAPTCHA solving, profiles, viewport and
 headless are reachable through `provider_options` until a live call confirms a
-mapping for them.
+mapping for them. `profile` and `persist_profile` map onto `profileId` and
+`persistProfile`. `live_view_url` is its `sessionViewerUrl`, a dashboard page
+that asks for a Steel login; its `debugUrl` needs none, so it is
+`control_url()`.
 
 **Browserbase.** Its `cdp_url` is the `connectUrl` it returns, which is enough
 on its own to drive the session. It solves CAPTCHAs unless
@@ -875,9 +928,11 @@ on its own to drive the session. It solves CAPTCHAs unless
 it ends a session when its CDP client disconnects, unless `keepAlive` is set;
 and it has no idle timeout, so `idle_timeout` is refused. It reports a session
 that ended because its client disconnected the same way as one that was
-released, so `status()` says `"released"` for both. Its live view takes a
-second request, so `live_view_url` stays `None`; `expires_at` is the
-`expiresAt` it reports.
+released, so `status()` says `"released"` for both. `profile` is a context id,
+sent with `persist_profile` as `browserSettings.context`. Its live view lets
+whoever opens it drive the session and takes a second request, so
+`live_view_url` stays `None` and `control_url()` makes that request when first
+called; `expires_at` is the `expiresAt` it reports.
 
 **Hyperbrowser.** Its `cdp_url` is the `wsEndpoint` it reports, which carries a
 session token. It takes its lifetime in whole minutes, so `timeout` is rounded
@@ -885,7 +940,8 @@ up, and it has no idle timeout, so `idle_timeout` raises. A session ends when
 its CDP client disconnects and when every page in it is closed; Hyperbrowser
 keeps one alive across a disconnect only with `keepAlive=true` on the connect
 URL, which web-router does not add. Its `liveUrl` lets whoever opens it drive
-the session, so it stays in `raw` rather than becoming `live_view_url`.
+the session, so it is `control_url()`, never `live_view_url`. `profile` and
+`persist_profile` map onto `profile.id` and `profile.persistChanges`.
 `stealth="off"` sends `useStealth: false` and `useUltraStealth: false`,
 `"low"` sends `useStealth: true`, `"high"` sends `useUltraStealth: true`
 (enterprise-only on Hyperbrowser's own plans). `solve_captchas` maps onto
@@ -904,7 +960,10 @@ silently disables extra stealth unless its proxy is active, so asking for
 `stealth="low"` or `"high"` without `proxy_country` raises before a session
 opens rather than opening one with less stealth than asked for.
 `proxy_country` is sent lower-case, as Anchor's guide shows it, and is checked
-against every country its proxy guide lists.
+against every country its proxy guide lists. `profile` is a profile's name,
+sent with `persist_profile` under `browser.profile`. Its live view is
+interactive unless the session was opened read-only, so it is `control_url()`,
+never `live_view_url`.
 
 **Kernel.** Its `cdp_url` is the `cdp_ws_url` it returns, which carries a
 session token. Kernel has no lifetime limit, only an idle one: `idle_timeout`
@@ -920,8 +979,9 @@ through Kernel's Proxies API, and an existing one can be passed as
 `provider_options={"proxy": {"id": ...}}`. `profile` is a Kernel profile's
 id — pass a name as `provider_options={"profile": {"name": ...}}` — and
 `persist_profile` sends `profile.save_changes`, refused without a `profile`.
-Its live view lets whoever opens it drive the session, so it stays in `raw`
-rather than becoming `live_view_url`. A deleted session, whether released or
+Its live view lets whoever opens it drive the session, so it is
+`control_url()`, never `live_view_url`; Kernel offers one only for a session
+with `headless=False`. A deleted session, whether released or
 idled out, reads as `"released"`: Kernel answers 404 for both and does not say
 which. Every mapping was checked live on 2026-10-20.
 
