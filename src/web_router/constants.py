@@ -4355,11 +4355,9 @@ MSG_ROUTE_NO_DECIDER = (
     "classify() needs a decider: WebRouter(decider='keywords') needs no key; "
     "'jev' needs TYPESAFE_API_KEY and 'llm' OPENAI_API_KEY."
 )
-MSG_ROUTE_DECIDER_CONFIG_NEEDS_NAME = (
-    "decider_config configures a decider given by name, such as decider='llm'; configure an instance yourself."
-)
 MSG_ROUTE_UNKNOWN_DECIDER = "Unknown decider {name!r}; known: {available}."
 MSG_ROUTE_BAD_ANSWER = "The decider's answer could not be read: {detail}"
+MSG_ROUTE_BAD_PROBABILITIES = "probabilities that cannot be scaled to sum to 1: {probabilities}"
 
 ROUTE_FALLBACK_NO_URL = "no_url"
 """Extract was the pick, but the request names no page: search to find it first."""
@@ -4407,8 +4405,7 @@ ROUTE_LABEL_LINES = (
 
 # --- Decision providers (spike) ---------------------------------------------
 # Who answers ROUTE_QUESTIONS for classify() is swappable: Jev, a chat model over
-# an OpenAI-compatible API, keyless keyword rules, or any object with decide() and close(). Every answer can be
-# checked against one locked schema (web_router.decisions.schema).
+# an OpenAI-compatible API, keyless keyword rules, or any object with decide() and close().
 
 ROUTE_DECIDER_LLM = "llm"
 """A chat model answers the questions with structured outputs: ``WebRouter(decider="llm")``. It calls the chat
@@ -4416,86 +4413,7 @@ completions API, so any OpenAI-compatible endpoint works through ``base_url``.""
 ROUTE_DECIDER_KEYWORDS = "keywords"
 """Simple keyword rules, keyless and deterministic: ``WebRouter(decider="keywords")``."""
 
-DECISION_SCHEMA_VERSION = "decision-v2"
-"""Bumped with every change to the locked schema, together with tests/fixtures/decisions/decision.schema.json.
-
-v2 redefined ``confidence`` (the route's labels only, not well_scoped) and added ``decider_status``,
-``route.tool``, ``timeout_s``, ``error`` and ``violations``: a v1 reader, with ``extra="forbid"``, rejects them."""
-
-DECISION_ROUTE_LABELS = ("tool", "recent", "coverage")
-"""The labels a route is built from. A decision's ``confidence`` is the minimum over these: well_scoped changes
-no route, so a shaky well_scoped should not make a route look unsure. classify()'s own low-confidence trigger
-is #11's and still counts all four."""
-
-DECISION_CONFIDENCE_DIGITS = 4
-DECISION_LATENCY_DIGITS = 1
-"""Decimal places a decision record rounds to: confidences and probabilities to 4, latency to 0.1 ms. The
-minimum is taken after rounding, so it matches the labels exactly."""
-
-DECISION_STATUS_ANSWERED = "answered"
-DECISION_STATUS_NOT_ASKED = "not_asked"
-DECISION_STATUS_FAILED = "failed"
-"""What happened to the decider for one route: it answered, it was not asked because a given URL or schema
-settled the method, or it failed and classify took the decider_error fallback."""
-
-DECISION_ERROR_TIMEOUT = "timeout"
-DECISION_ERROR_HTTP = "http_error"
-DECISION_ERROR_INVALID_ANSWER = "invalid_answer"
-DECISION_ERROR_EXCEPTION = "exception"
-
-DECISION_ERROR_KIND_BY_EXCEPTION: tuple[tuple[str, tuple[str, ...]], ...] = (
-    (DECISION_ERROR_TIMEOUT, ("TimeoutError", "TimeoutException", "APITimeoutError")),
-    (DECISION_ERROR_HTTP, ("HTTPError", "APIStatusError", "APIConnectionError", "APIError")),
-    (DECISION_ERROR_INVALID_ANSWER, ("ValueError", "KeyError", "TypeError", "AttributeError")),
-)
-"""A failure's kind, from the class names in its exception's MRO, first match wins. Names rather than classes
-because httpx and openai are optional imports: httpx.ReadTimeout and openai.APITimeoutError are timeouts,
-httpx.HTTPStatusError and openai.APIStatusError HTTP errors, an answer that would not parse an invalid answer.
-Timeouts come first: openai's timeout subclasses its connection error. Anything else is ``exception``."""
-
-DECISION_ERROR_MESSAGE_LIMIT = 200
-"""Characters kept of a failure's message in a decision's ``error``."""
-
-DECISION_PROBABILITY_TOLERANCE = 0.05
-"""How far a label's probabilities may sum from 1: models round, and a strict 1.0 would reject honest answers."""
-
-DECISION_CONFIDENCE_TOLERANCE = 1e-9
-"""Float slack when checking that a decision's confidence is the minimum over its labels."""
-
-DECISION_VIOLATION_VALUE_LIMIT = 120
-DECISION_VIOLATION_MSG_LIMIT = 200
-"""Characters kept of an offending value's repr and of the validator's message in a violation record."""
-
-DECISION_VIOLATION_ROOT = "(root)"
-"""The field a violation names when the whole answer, not one field of it, is wrong."""
-DECISION_VIOLATION_NOT_A_MAPPING = "not_a_mapping"
-DECISION_VIOLATION_DECIDER_ERROR = "decider_error"
-DECISION_VIOLATION_NOT_A_PROVIDER = "not_a_provider"
-"""Violation types: an answer that is not a mapping of labels, a decider that raised, and an object with no
-``name``, ``decide`` or ``close``."""
-
-MSG_DECISION_NOT_A_MAPPING = "The decider answered {kind}, not a mapping of question to answer."
-MSG_DECISION_INVALID = "The decider's answer broke the decision schema ({count} violation(s)); first: {first}"
 MSG_DECISION_DECIDER_FAILED = "The decider failed: {detail}"
-MSG_DECISION_NOT_A_PROVIDER = "{kind} lacks name, decide() or close(), so it is not a DecisionProvider."
-MSG_DECISION_BAD_CHOICE = "{question}={choice!r} is not one of {choices}"
-MSG_DECISION_PROBABILITY_RANGE = "probabilities outside [0, 1]: {names}"
-MSG_DECISION_PROBABILITY_SUM = "probabilities sum to {total:.3f}, not 1"
-MSG_DECISION_CHOICE_NOT_IN_PROBABILITIES = "the choice {choice!r} is missing from probabilities"
-MSG_DECISION_CONFIDENCE_NOT_MIN = (
-    "confidence {confidence} is not the minimum over tool, recent and coverage ({minimum})"
-)
-MSG_DECISION_LABELS_STATUS = "labels are set exactly when decider_status is 'answered'"
-MSG_DECISION_ERROR_STATUS = "an error is recorded only when decider_status is 'failed'"
-MSG_DECISION_FAILED_FALLBACK = "decider_status 'failed' needs 'decider_error' in route.fallback"
-
-DECISION_CONFORMANCE_QUERIES = (
-    "Who is the CEO of Wikimedia?",
-    "Summarize https://example.com/pricing for me.",
-    "Compare the battery life of the MacBook Air M4 and the Dell XPS 13.",
-    "opening hours tomorrow",
-)
-"""What :func:`~web_router.decisions.base.conformance_violations` asks a provider by default: one per kind of route."""
 
 LLM_DECIDER_MODEL = "gpt-4.1-mini"
 """Small and fast: the decider runs before every routed call, and the answer is four short labels."""
@@ -4528,14 +4446,14 @@ KEYWORDS_RESEARCH_LENGTH = 220
 KEYWORDS_MISSING_CONTEXT_WORDS = 2
 """A request of this many words or fewer is taken to be missing context."""
 KEYWORDS_CONFIDENCE = {"tool": 0.8, "recent": 0.7, "coverage": 0.7, "well_scoped": 0.6}
-"""Fixed per label, not measured: the normalized confidence the keyword rules report for their pick, on the scale
-Jev reports (see :func:`~web_router.decisions.route.normalized_confidence`). The pick's probability is set to
-match, and the rest of each label's probability is spread evenly over the other choices, so the distribution sums
-to 1."""
+"""Fixed per label, not measured: the probability the keyword rules give their pick. The rest of each label's
+probability is spread evenly over the other choices, so the distribution sums to 1. The reported confidence is
+its normalized one (see :func:`~web_router.decisions.route.normalized_confidence`), the scale Jev reports."""
 KEYWORDS_PAID_TOOLS = ("research", "browse")
 KEYWORDS_PAID_TOOL_CONFIDENCE = 0.4
-"""Fixed, not measured: the confidence for a research or browse pick, below ROUTE_MIN_CONFIDENCE, so a paid method
-is never picked on keywords alone. classify() records ``low_confidence`` and routes to search unless overridden."""
+"""Fixed, not measured: the probability for a research or browse pick, low enough that its normalized confidence
+is below ROUTE_MIN_CONFIDENCE, so a paid method is never picked on keywords alone. classify() records
+``low_confidence`` and routes to search unless overridden."""
 KEYWORDS_VERSION = "keywords-v1"
 
 LLM_DECIDER_VERSION = "{model}+p{digest}"

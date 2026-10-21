@@ -115,19 +115,6 @@ def normalized_confidence(probabilities: Mapping[str, float], choice: str) -> fl
     return min(1.0, max(0.0, (p - even) / (1.0 - even)))
 
 
-def normalized_probabilities(probabilities: Mapping[str, float]) -> dict[str, float]:
-    """``probabilities`` scaled to sum to 1, as a model's rounded or self-reported distribution may not.
-
-    Values that cannot be scaled -- a sum of zero or less, or a negative value -- are
-    returned as they came, for the decision schema to report rather than for this to hide.
-    """
-    values = {name: float(value) for name, value in probabilities.items()}
-    total = sum(values.values())
-    if total <= 0.0 or any(value < 0.0 for value in values.values()):
-        return values
-    return {name: value / total for name, value in values.items()}
-
-
 def urls_in(text: str) -> list[str]:
     """The URLs in ``text``, without the punctuation that ends a sentence around them."""
     return [url.rstrip(URL_TRAILING_PUNCTUATION) for url in _URL.findall(text)]

@@ -34,7 +34,7 @@ DeciderFactory = Callable[..., DecisionProvider]
 _BUILTIN_DECIDERS: dict[str, tuple[str, str, str]] = {
     ROUTE_DECIDER_JEV: ("web_router.decisions.jev", "JevDecider", EXTRA_SEARCH),
     ROUTE_DECIDER_LLM: ("web_router.decisions.llm", "LLMDecider", EXTRA_EVALS),
-    ROUTE_DECIDER_KEYWORDS: ("web_router.decisions.keywords", "KeywordsDecider", EXTRA_ALL),
+    ROUTE_DECIDER_KEYWORDS: ("web_router.decisions.rules", "KeywordsDecider", EXTRA_ALL),
 }
 
 _CUSTOM_DECIDERS: dict[str, DeciderFactory] = {}

@@ -6,8 +6,8 @@ extra and is imported only when this decider is built, so the rest of the
 package never needs it. The key is ``api_key=``, else ``OPENAI_API_KEY``; pass
 ``client`` to use a client you configured yourself instead.
 
-Each answer's probabilities are scaled to sum to 1 before anything checks
-them, and its ``confidence`` is the normalized one Jev reports
+Each answer's probabilities are scaled to sum to 1 before they are checked,
+and its ``confidence`` is the normalized one Jev reports
 (:func:`~web_router.decisions.route.normalized_confidence`), so one
 ROUTE_MIN_CONFIDENCE means the same thing for both.
 
@@ -38,10 +38,11 @@ from web_router.constants import (
     LLM_DECIDER_VERSION,
     MSG_DECISION_DECIDER_FAILED,
     MSG_ROUTE_BAD_ANSWER,
+    MSG_ROUTE_BAD_PROBABILITIES,
     ROUTE_DECIDER_LLM,
     ROUTE_QUESTIONS,
 )
-from web_router.decisions.route import Answer, normalized_confidence, normalized_probabilities
+from web_router.decisions.route import Answer, normalized_confidence
 from web_router.exceptions import ProviderError, ProviderNotInstalledError
 from web_router.providers._utils import resolve_api_key
 
@@ -119,8 +120,8 @@ class LLMDecider:
             answers: dict[str, Answer] = {}
             for name, answer in payload.items():
                 choice = str(answer["choice"])
-                # Scaled before the schema's sum check: a confident answer whose rounding drifts is still an answer.
-                probabilities = normalized_probabilities(answer["probabilities"])
+                # Scaled before it is checked: a confident answer whose rounding drifts is still an answer.
+                probabilities = _scaled(answer["probabilities"])
                 if choice not in probabilities:  # a choice missing from its own distribution cannot be read
                     raise KeyError(choice)
                 answers[name] = Answer(
@@ -135,6 +136,20 @@ class LLMDecider:
     def close(self) -> None:
         if self._owns_client:
             self._client.close()
+
+
+def _scaled(probabilities: Any) -> dict[str, float]:
+    """``probabilities`` scaled to sum to 1, as a model's rounded distribution may not.
+
+    Raises:
+        ValueError: for a distribution that cannot be scaled -- a negative value, or a sum of zero -- so the
+            answer is a decider error rather than a route on numbers nobody can read.
+    """
+    values = {str(name): float(value) for name, value in probabilities.items()}
+    total = sum(values.values())
+    if total <= 0.0 or any(value < 0.0 for value in values.values()):
+        raise ValueError(MSG_ROUTE_BAD_PROBABILITIES.format(probabilities=values))
+    return {name: value / total for name, value in values.items()}
 
 
 def prompt(state: Any, questions: dict[str, dict[str, Any]]) -> str:
@@ -163,9 +178,8 @@ def prompt_digest(questions: dict[str, dict[str, Any]] = ROUTE_QUESTIONS) -> str
 def answer_schema(questions: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """The JSON Schema the model must answer in: per question, one choice and a probability for every choice.
 
-    Built from the questions rather than from the locked schema's own JSON
-    Schema: strict structured outputs need every key spelled out, and a
-    probability map keyed by choice is open-ended there.
+    Built from the questions: strict structured outputs need every key spelled
+    out, so each choice gets its own probability field.
     """
     properties = {
         name: {
