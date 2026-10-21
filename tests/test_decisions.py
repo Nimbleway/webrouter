@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from typing import Any
@@ -239,3 +240,58 @@ def test_settings_with_a_decider_name_still_build() -> None:
     router = WebRouter(decider="llm", decider_config={"api_key": "x"})
     assert router.decider.name == "llm"
     router.close()
+
+
+class StubApi:
+    """One backend's API behind its real client: records each request and answers from a path table."""
+
+    def __init__(self, replies: dict[tuple[str, str], tuple[int, Any]]) -> None:
+        self.replies = replies
+        self.requests: list[httpx.Request] = []
+
+    def handle(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        status, body = self.replies[(request.method, request.url.path)]
+        return httpx.Response(status, json=body)
+
+    def bodies(self) -> list[Any]:
+        return [json.loads(r.content) for r in self.requests if r.content]
+
+
+def test_execute_runs_each_method_on_the_routes_chain(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PARALLEL_API_KEY", "test-key")
+    monkeypatch.setenv("BROWSER_USE_API_KEY", "test-key")
+    page = {"code": 200, "data": {"title": "Pricing", "url": "https://example.com/pricing", "content": "Plans"}}
+    jina = StubApi({("POST", "/"): (200, page)})
+    run = {"run_id": "r1", "status": "completed", "is_active": False}
+    result = {"run": run, "output": {"type": "json", "content": {"capital": "Paris"}, "basis": []}}
+    parallel = StubApi({("POST", "/v1/tasks/runs"): (200, run), ("GET", "/v1/tasks/runs/r1/result"): (200, result)})
+    task = {"id": "t1", "sessionId": "s1", "status": "finished", "output": "Show HN", "isSuccess": True, "steps": []}
+    browser_use = StubApi(
+        {
+            ("POST", "/api/v2/tasks"): (202, {"id": "t1", "sessionId": "s1"}),
+            ("GET", "/api/v2/tasks/t1/status"): (200, task),
+            ("GET", "/api/v2/tasks/t1"): (200, task),
+        }
+    )
+    chain = {
+        "search": [["jina", {}]],
+        "extract": [["jina", {"transport": httpx.MockTransport(jina.handle)}]],
+        "research": [["parallel", {"transport": httpx.MockTransport(parallel.handle)}]],
+        "browse": [["browser-use", {"transport": httpx.MockTransport(browser_use.handle)}]],
+    }
+    decider = FakeDecider(answers(tool="browse"))
+    router = WebRouter(provider_config={"auto": {"chain": chain}}, decider=decider)
+    schema = {"type": "object", "properties": {"capital": {"type": "string"}}, "required": ["capital"]}
+
+    extracted = router.execute(router.classify("summarize it", urls="https://example.com/pricing"))
+    assert extracted.documents[0].content == "Plans"
+    assert jina.bodies() == [{"url": "https://example.com/pricing"}]
+
+    researched = router.execute(router.classify("capital of France", output_schema=schema))
+    assert researched.structured == {"capital": "Paris"}
+    assert parallel.bodies()[0]["task_spec"]["output_schema"]["json_schema"] == schema
+
+    browsed = router.execute(router.classify("find the top story on https://news.ycombinator.com"))
+    assert browsed.answer == "Show HN"
+    assert browser_use.bodies()[0]["startUrl"] == "https://news.ycombinator.com"
