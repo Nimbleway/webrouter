@@ -238,7 +238,15 @@ def test_a_client_handed_to_the_llm_decider_needs_no_key_and_stays_open(monkeypa
     assert seen["requests"][0]["model"] == "gpt-4.1" and seen["closed"] == 0
 
 
-@pytest.mark.parametrize("content", ["not json", json.dumps({"tool": {"choice": "search"}}), json.dumps([1])])
+@pytest.mark.parametrize(
+    "content",
+    [
+        "not json",
+        json.dumps({"tool": {"choice": "search"}}),
+        json.dumps([1]),
+        json.dumps({k: v for k, v in json.loads(model_reply()).items() if k != "well_scoped"}),
+    ],
+)
 def test_an_unreadable_llm_reply_is_a_provider_error(content: str, monkeypatch: pytest.MonkeyPatch) -> None:
     module, _ = fake_openai(content)
     decider = LLMDecider(client=module.OpenAI())

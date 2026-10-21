@@ -118,6 +118,8 @@ class LLMDecider:
             raise ProviderError(self.name, MSG_DECISION_DECIDER_FAILED.format(detail=exc), original=exc) from exc
         try:
             payload = json.loads(content)
+            if missing := set(questions) - set(payload):  # a reply that skips a question is not an unsure one
+                raise KeyError(sorted(missing))
             answers: dict[str, Answer] = {}
             for name, answer in payload.items():
                 choice = str(answer["choice"])
