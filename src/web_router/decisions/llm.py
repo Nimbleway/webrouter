@@ -125,7 +125,8 @@ class LLMDecider:
                 choice = str(answer["choice"])
                 # Scaled before it is checked: a confident answer whose rounding drifts is still an answer.
                 probabilities = _scaled(answer["probabilities"])
-                if choice not in probabilities:  # a choice missing from its own distribution cannot be read
+                criteria = questions[name]["criteria"]
+                if choice not in criteria or set(probabilities) != set(criteria):  # only the question's choices
                     raise KeyError(choice)
                 answers[name] = Answer(
                     choice=choice,
