@@ -50,6 +50,7 @@ from web_router.constants import (
     DEFAULT_PROVIDER,
     EVALS_CONCURRENCY,
     MSG_BENCHMARK_NO_PROVIDERS,
+    MSG_ROUTE_DECIDER_CONFIG_UNUSED,
     MSG_ROUTE_NO_DECIDER,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
     PROVIDER_AUTO,
@@ -522,18 +523,22 @@ class WebRouter(_BaseRouter[BrowserHandle]):
             decider_config: Constructor kwargs for a decider given by name, as
                 ``provider_config`` is for backends: for example
                 ``decider="llm", decider_config={"model": ..., "base_url": ..., "api_key": ...}``.
+                With a decider instance, or no decider, it raises ConfigurationError rather than being ignored.
 
         Raises:
             ConfigurationError: for a backend handed an ``async_client``, which
                 this router, calling synchronously, could never use: through
                 ``auto`` the call would quietly go to another backend instead;
                 for a decider name nothing is registered under; or for a named
-                decider with no key, such as ``decider="jev"`` with no TypeSafe key.
+                decider with no key, such as ``decider="jev"`` with no TypeSafe key;
+                or for ``decider_config`` with a decider that is not a name.
         """
         super().__init__(provider, provider_config=provider_config)
         async_only = sorted(_async_client_holders(self._config))
         if async_only:
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
+        if decider_config and not isinstance(decider, str):
+            raise ConfigurationError(MSG_ROUTE_DECIDER_CONFIG_UNUSED)
         # Built after every check that can refuse the router, so a refused build leaves no open client behind.
         if isinstance(decider, str):
             # Imported on first use: Jev needs httpx, the llm decider the openai SDK.

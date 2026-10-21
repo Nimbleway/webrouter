@@ -225,3 +225,17 @@ def test_a_tool_label_below_the_threshold_still_records_low_confidence() -> None
     labels = {**answers(recent="any", coverage="lookup", well_scoped="clear"), "tool": Answer("search", 0.3)}
     route = WebRouter(decider=FakeDecider(labels)).classify("who won")
     assert route.fallback == (ROUTE_FALLBACK_LOW_CONFIDENCE,)
+
+
+def test_settings_with_a_ready_made_decider_raise() -> None:
+    with pytest.raises(ConfigurationError):
+        WebRouter(decider=FakeDecider(), decider_config={"api_key": "x"})
+    with pytest.raises(ConfigurationError):
+        WebRouter(decider_config={"api_key": "x"})
+
+
+def test_settings_with_a_decider_name_still_build() -> None:
+    pytest.importorskip("openai")
+    router = WebRouter(decider="llm", decider_config={"api_key": "x"})
+    assert router.decider.name == "llm"
+    router.close()
