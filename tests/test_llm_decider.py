@@ -84,7 +84,6 @@ def test_the_llm_decider_asks_for_structured_labels_and_reads_them(monkeypatch: 
     assert "this week's OpenAI announcements" in request["messages"][0]["content"]
     assert seen["built"][0]["api_key"] == "test-key"
     assert re.fullmatch(r"gpt-4\.1-mini\+p[0-9a-f]{8}", decider.version)
-    assert decider.timeout_s == 5.0
     decider.close()
     assert seen["closed"] == 1
 

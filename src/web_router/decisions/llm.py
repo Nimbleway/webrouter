@@ -69,7 +69,7 @@ class LLMDecider:
             model: The chat model to ask.
             api_key: The endpoint's key, for the client built here; else ``OPENAI_API_KEY``.
             client: An ``openai.OpenAI`` client to use instead of building one; then no key is read,
-                and ``timeout`` is recorded as the budget but applied only to a client built here.
+                and ``timeout`` is not applied.
             base_url: Any endpoint that speaks OpenAI's chat completions, for the client built here.
 
         Raises:
@@ -79,7 +79,6 @@ class LLMDecider:
         """
         self.model = model
         self.version = LLM_DECIDER_VERSION.format(model=model, digest=prompt_digest())
-        self.timeout_s = timeout
         if client is None:
             try:
                 import openai

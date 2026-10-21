@@ -63,7 +63,7 @@ def test_the_route_follows_a_configured_auto_chain() -> None:
     router = WebRouter(
         provider_config={"auto": {"chain": {"search": ["tavily"]}}}, decider=FakeDecider(answers(tool="search"))
     )
-    assert router.classify("who won").providers == ["tavily"]
+    assert router.classify("who won").chain == (("tavily", {}),)
 
 
 def test_a_reply_of_the_wrong_shape_is_a_provider_error(monkeypatch: pytest.MonkeyPatch) -> None:

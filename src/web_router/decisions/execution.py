@@ -120,25 +120,9 @@ def execute(router: WebRouter, route: Route, **overrides: Any) -> Response:
 
 def _default_chains(router: WebRouter) -> dict[str, tuple[ChainEntry, ...]]:
     """Each method's auto chain as the router's own ``auto`` would resolve it, a configured ``chain`` included."""
-    from web_router.providers.auto import (
-        AutoBrowseProvider,
-        AutoExtractProvider,
-        AutoProvider,
-        AutoResearchProvider,
-        _members_and_chain,
-    )
+    from web_router.providers.auto import resolve_default_chains
 
-    config = router._config_for(PROVIDER_AUTO)
-    defaults = {
-        ROUTE_METHOD_SEARCH: AutoProvider.default_chain,
-        ROUTE_METHOD_EXTRACT: AutoExtractProvider.default_chain,
-        ROUTE_METHOD_RESEARCH: AutoResearchProvider.default_chain,
-        ROUTE_METHOD_BROWSE: AutoBrowseProvider.default_chain,
-    }
-    return {
-        method: _members_and_chain(config.get("chain"), config["members_config"], method, default)[1]
-        for method, default in defaults.items()
-    }
+    return resolve_default_chains(router._config_for(PROVIDER_AUTO))
 
 
 def _routed_provider(

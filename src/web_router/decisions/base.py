@@ -20,9 +20,8 @@ class DecisionProvider(Protocol):
 
     When ``decide`` cannot answer -- it raises anything --
     :meth:`~web_router.WebRouter.classify` takes the default route and records
-    ``decider_error``. Two optional attributes describe the provider:
-    ``version``, naming the model or rules behind the answers, and
-    ``timeout_s``, the time budget.
+    ``decider_error``. An optional attribute describes the provider:
+    ``version``, naming the model or rules behind the answers.
     """
 
     name: str

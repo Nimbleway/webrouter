@@ -64,10 +64,6 @@ class Route:
     latency_ms: float = 0.0
 
     @property
-    def providers(self) -> list[str]:
-        return [name for name, _ in self.chain]
-
-    @property
     def advice(self) -> str:
         """One coherent recommendation, for an agent to act on: never two tools that contradict each other."""
         asked = self.labels.get(ROUTE_LABEL_TOOL)

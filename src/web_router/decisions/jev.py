@@ -29,8 +29,6 @@ from web_router.decisions.route import Answer
 from web_router.exceptions import ProviderError
 from web_router.providers._utils import resolve_api_key
 
-DECIDER_NAME = ROUTE_DECIDER_JEV
-
 
 class JevDecider:
     """Asks Jev a set of choice questions about one state in a single call.
@@ -39,7 +37,7 @@ class JevDecider:
     gateway's TypeSafe-compatible route, or a local open model.
     """
 
-    name = DECIDER_NAME
+    name = ROUTE_DECIDER_JEV
 
     def __init__(
         self,
@@ -54,9 +52,8 @@ class JevDecider:
             ConfigurationError: if no key is passed and ``TYPESAFE_API_KEY`` is unset,
                 here rather than on the first query.
         """
-        key = resolve_api_key(api_key, env_var=ENV_TYPESAFE_API_KEY, provider=DECIDER_NAME)
+        key = resolve_api_key(api_key, env_var=ENV_TYPESAFE_API_KEY, provider=ROUTE_DECIDER_JEV)
         self.model = model
-        self.timeout_s = timeout
         # Built here: an httpx.Client makes no network call until used, and one shared client is thread-safe.
         self._client = httpx.Client(
             base_url=base_url,
