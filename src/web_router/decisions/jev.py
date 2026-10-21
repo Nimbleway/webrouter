@@ -18,6 +18,10 @@ from web_router.constants_decisions import (
     ROUTE_DECIDER_CONNECT_TIMEOUT,
     ROUTE_DECIDER_JEV,
     ROUTE_DECIDER_TIMEOUT,
+    TYPESAFE_ACCEPT,
+    TYPESAFE_ACCEPT_HEADER,
+    TYPESAFE_AUTH,
+    TYPESAFE_AUTH_HEADER,
     TYPESAFE_BASE_URL,
     TYPESAFE_DECISION_PATH,
 )
@@ -57,7 +61,7 @@ class JevDecider:
         self._client = httpx.Client(
             base_url=base_url,
             timeout=httpx.Timeout(timeout, connect=min(timeout, ROUTE_DECIDER_CONNECT_TIMEOUT)),
-            headers={"Accept": "application/json", "Authorization": f"Bearer {key}"},
+            headers={TYPESAFE_ACCEPT_HEADER: TYPESAFE_ACCEPT, TYPESAFE_AUTH_HEADER: TYPESAFE_AUTH.format(key=key)},
             follow_redirects=FOLLOW_REDIRECTS,
         )
 

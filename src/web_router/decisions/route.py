@@ -21,7 +21,11 @@ from web_router.constants_decisions import (
     ROUTE_FALLBACK_NO_URL,
     ROUTE_LABEL_LINE,
     ROUTE_LABEL_LINES,
+    ROUTE_LABEL_TOOL,
     ROUTE_LOW_CONFIDENCE_EXEMPT_LABELS,
+    ROUTE_METHOD_EXTRACT,
+    ROUTE_METHOD_RESEARCH,
+    ROUTE_METHOD_SEARCH,
     ROUTE_METHODS,
     ROUTE_MIN_CONFIDENCE,
     ROUTE_TOOL_LINE,
@@ -66,7 +70,7 @@ class Route:
     @property
     def advice(self) -> str:
         """One coherent recommendation, for an agent to act on: never two tools that contradict each other."""
-        asked = self.labels.get("tool")
+        asked = self.labels.get(ROUTE_LABEL_TOOL)
         wanted = self.requested or (asked.choice if asked is not None else self.method)
         if ROUTE_FALLBACK_NO_URL in self.fallback:
             return ROUTE_ADVICE_NO_URL
@@ -84,7 +88,7 @@ class Route:
 
     def __str__(self) -> str:
         """What an agent reads: each label as a plain instruction, with its confidence."""
-        tool = self.labels.get("tool")
+        tool = self.labels.get(ROUTE_LABEL_TOOL)
         confidence = ROUTE_CONFIDENCE.format(value=tool.confidence) if tool is not None else ""
         lines = [ROUTE_TOOL_LINE.format(advice=self.advice, confidence=confidence)]
         for name, heading, texts in ROUTE_LABEL_LINES:
@@ -154,11 +158,11 @@ def route_from_labels(
     """
     fallback: str | None = None
     if output_schema is not None:
-        method = "research"
+        method = ROUTE_METHOD_RESEARCH
     else:
-        method = values["tool"]
-        if method == "extract" and not urls:
-            method, fallback = "search", ROUTE_FALLBACK_NO_URL
+        method = values[ROUTE_LABEL_TOOL]
+        if method == ROUTE_METHOD_EXTRACT and not urls:
+            method, fallback = ROUTE_METHOD_SEARCH, ROUTE_FALLBACK_NO_URL
     if method not in ROUTE_METHODS or not chains.get(method):
-        method, fallback = "search", fallback or ROUTE_FALLBACK_NO_BACKEND
+        method, fallback = ROUTE_METHOD_SEARCH, fallback or ROUTE_FALLBACK_NO_BACKEND
     return method, tuple(chains[method]), fallback

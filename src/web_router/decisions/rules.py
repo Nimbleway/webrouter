@@ -25,7 +25,21 @@ from web_router.constants_decisions import (
     KEYWORDS_SYNTHESIS,
     KEYWORDS_URL,
     KEYWORDS_VERSION,
+    ROUTE_COVERAGE_LOOKUP,
+    ROUTE_COVERAGE_RESEARCH,
+    ROUTE_COVERAGE_SYNTHESIS,
     ROUTE_DECIDER_KEYWORDS,
+    ROUTE_LABEL_COVERAGE,
+    ROUTE_LABEL_RECENT,
+    ROUTE_LABEL_TOOL,
+    ROUTE_LABEL_WELL_SCOPED,
+    ROUTE_METHOD_EXTRACT,
+    ROUTE_METHOD_RESEARCH,
+    ROUTE_METHOD_SEARCH,
+    ROUTE_RECENT_ANY,
+    ROUTE_RECENT_MONTH,
+    ROUTE_SCOPE_CLEAR,
+    ROUTE_SCOPE_MISSING_CONTEXT,
 )
 from web_router.decisions.route import Answer, normalized_confidence
 
@@ -45,10 +59,10 @@ class KeywordsDecider:
         """Label ``state["query"]``; only the questions asked that the rules know are answered."""
         query = str(state["query"]).lower()
         picks = {
-            "tool": _tool(query),
-            "recent": "month" if _RECENT_MONTH.search(query) else "any",
-            "coverage": _coverage(query),
-            "well_scoped": "missing_context" if len(query.split()) <= KEYWORDS_MISSING_CONTEXT_WORDS else "clear",
+            ROUTE_LABEL_TOOL: _tool(query),
+            ROUTE_LABEL_RECENT: ROUTE_RECENT_MONTH if _RECENT_MONTH.search(query) else ROUTE_RECENT_ANY,
+            ROUTE_LABEL_COVERAGE: _coverage(query),
+            ROUTE_LABEL_WELL_SCOPED: _scope(query),
         }
         return {
             name: _answer(choice, list(questions[name]["criteria"]), _probability(name, choice))
@@ -62,18 +76,22 @@ class KeywordsDecider:
 
 def _tool(query: str) -> str:
     if _URL.search(query):
-        return "extract"
-    return "research" if _RESEARCH.search(query) else "search"
+        return ROUTE_METHOD_EXTRACT
+    return ROUTE_METHOD_RESEARCH if _RESEARCH.search(query) else ROUTE_METHOD_SEARCH
 
 
 def _coverage(query: str) -> str:
     if len(query) > KEYWORDS_RESEARCH_LENGTH:
-        return "research"
-    return "synthesis" if _SYNTHESIS.search(query) else "lookup"
+        return ROUTE_COVERAGE_RESEARCH
+    return ROUTE_COVERAGE_SYNTHESIS if _SYNTHESIS.search(query) else ROUTE_COVERAGE_LOOKUP
+
+
+def _scope(query: str) -> str:
+    return ROUTE_SCOPE_MISSING_CONTEXT if len(query.split()) <= KEYWORDS_MISSING_CONTEXT_WORDS else ROUTE_SCOPE_CLEAR
 
 
 def _probability(name: str, choice: str) -> float:
-    if name == "tool" and choice in KEYWORDS_PAID_TOOLS:
+    if name == ROUTE_LABEL_TOOL and choice in KEYWORDS_PAID_TOOLS:
         return KEYWORDS_PAID_TOOL_CONFIDENCE
     return KEYWORDS_CONFIDENCE[name]
 

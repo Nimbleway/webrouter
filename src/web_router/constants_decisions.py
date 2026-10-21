@@ -17,6 +17,11 @@ ENV_TYPESAFE_API_KEY = "TYPESAFE_API_KEY"
 
 TYPESAFE_BASE_URL = "https://api.typesafe.ai"
 TYPESAFE_DECISION_PATH = "/v1/systemone"
+TYPESAFE_ACCEPT_HEADER = "Accept"
+TYPESAFE_ACCEPT = "application/json"
+TYPESAFE_AUTH_HEADER = "Authorization"
+TYPESAFE_AUTH = "Bearer {key}"
+"""The headers every Jev request carries: JSON back, and the key as a bearer token."""
 JEV_MODEL = "jev-1.14.0"
 """Pinned rather than ``jev-latest``: an alias moves, and thresholds are tuned against one version."""
 
@@ -33,8 +38,27 @@ ROUTE_DECIDER_CONNECT_TIMEOUT = 0.3
 ROUTE_MIN_CONFIDENCE = 0.5
 """Below this a label counts as unsure and its default is used. A starting point, not measured."""
 
-ROUTE_METHODS = ("search", "extract", "research", "browse")
+ROUTE_METHOD_SEARCH = "search"
+ROUTE_METHOD_EXTRACT = "extract"
+ROUTE_METHOD_RESEARCH = "research"
+ROUTE_METHOD_BROWSE = "browse"
+ROUTE_METHODS = (ROUTE_METHOD_SEARCH, ROUTE_METHOD_EXTRACT, ROUTE_METHOD_RESEARCH, ROUTE_METHOD_BROWSE)
 """What a route can run. One whose auto chain is empty here downgrades to search."""
+
+ROUTE_LABEL_TOOL = "tool"
+ROUTE_LABEL_RECENT = "recent"
+ROUTE_LABEL_COVERAGE = "coverage"
+ROUTE_LABEL_WELL_SCOPED = "well_scoped"
+"""The label names: one per question in ROUTE_QUESTIONS."""
+
+ROUTE_RECENT_MONTH = "month"
+ROUTE_RECENT_ANY = "any"
+ROUTE_COVERAGE_LOOKUP = "lookup"
+ROUTE_COVERAGE_SYNTHESIS = "synthesis"
+ROUTE_COVERAGE_RESEARCH = "research"
+ROUTE_SCOPE_CLEAR = "clear"
+ROUTE_SCOPE_MISSING_CONTEXT = "missing_context"
+"""The label values the decision logic picks or reads by name."""
 
 ROUTE_QUESTIONS: dict[str, dict[str, Any]] = {
     "tool": {
