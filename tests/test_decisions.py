@@ -219,3 +219,9 @@ def test_a_provider_override_builds_no_routed_provider(monkeypatch: pytest.Monke
     monkeypatch.setattr(router, "search", lambda **kwargs: None)
     monkeypatch.setattr(router, "_routed_provider", lambda route: pytest.fail("built a provider it will not use"))
     router.execute(router.classify("who won"), provider="tavily")
+
+
+def test_a_tool_label_below_the_threshold_still_records_low_confidence() -> None:
+    labels = {**answers(recent="any", coverage="lookup", well_scoped="clear"), "tool": Answer("search", 0.3)}
+    route = WebRouter(decider=FakeDecider(labels)).classify("who won")
+    assert route.fallback == (ROUTE_FALLBACK_LOW_CONFIDENCE,)

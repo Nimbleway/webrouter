@@ -4351,6 +4351,10 @@ A 2026-10-15 rewrite of tool to the rubric's "cheapest tool" rule dropped tool a
 ROUTE_DEFAULT_LABELS = {"tool": "search", "recent": "any", "coverage": "lookup", "well_scoped": "clear"}
 """What an unsure, missing or failed label falls back to."""
 
+ROUTE_LOW_CONFIDENCE_EXEMPT_LABELS = ("well_scoped",)
+"""Labels whose unsure answer takes its default without recording low_confidence: they never change the method or
+chain."""
+
 MSG_ROUTE_NO_DECIDER = (
     "classify() needs a decider: WebRouter(decider='keywords') needs no key; "
     "'jev' needs TYPESAFE_API_KEY and 'llm' OPENAI_API_KEY."
@@ -4364,7 +4368,7 @@ ROUTE_FALLBACK_NO_URL = "no_url"
 ROUTE_FALLBACK_NO_BACKEND = "no_backend_for_method"
 """The pick has no backend configured here, so the route downgrades to search."""
 ROUTE_FALLBACK_LOW_CONFIDENCE = "low_confidence"
-"""At least one label was below ROUTE_MIN_CONFIDENCE and took its default."""
+"""At least one label that can move the route was below ROUTE_MIN_CONFIDENCE and took its default."""
 ROUTE_FALLBACK_DECIDER_ERROR = "decider_error"
 """The decider failed or timed out; every label took its default."""
 

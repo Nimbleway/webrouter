@@ -290,9 +290,9 @@ def test_the_keywords_decider_is_deterministic_and_keyless(
 def test_the_keywords_decider_routes_a_url_to_extract_by_name() -> None:
     route = router("keywords").classify("Summarize https://example.com/pricing")
     assert route.method == "extract" and route.labels["tool"].confidence >= ROUTE_MIN_CONFIDENCE
-    # well_scoped's fixed 0.6 over two choices normalizes to 0.2, so that one label takes its default ("clear").
+    # well_scoped's fixed 0.6 over two choices normalizes to 0.2: it takes its default ("clear") but moves no route.
     assert route.labels["well_scoped"].confidence == pytest.approx(0.2)
-    assert route.fallback == (ROUTE_FALLBACK_LOW_CONFIDENCE,)
+    assert route.fallback == ()
 
 
 def test_a_bare_import_of_the_decider_slot_needs_neither_httpx_nor_openai() -> None:

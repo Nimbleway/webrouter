@@ -21,6 +21,7 @@ from web_router.constants import (
     ROUTE_FALLBACK_NO_URL,
     ROUTE_LABEL_LINE,
     ROUTE_LABEL_LINES,
+    ROUTE_LOW_CONFIDENCE_EXEMPT_LABELS,
     ROUTE_METHODS,
     ROUTE_MIN_CONFIDENCE,
     ROUTE_TOOL_LINE,
@@ -123,14 +124,17 @@ def urls_in(text: str) -> list[str]:
 def label_values(
     labels: Mapping[str, Answer], min_confidence: float = ROUTE_MIN_CONFIDENCE
 ) -> tuple[dict[str, str], bool]:
-    """Each label's value, its default where the model was unsure; and whether any default was used."""
+    """Each label's value, its default where the model was unsure; and whether a default moved the route.
+
+    A label in ROUTE_LOW_CONFIDENCE_EXEMPT_LABELS still takes its default when unsure, but does not count as unsure.
+    """
     values = dict(ROUTE_DEFAULT_LABELS)
     unsure = False
     for name in values:
         answer = labels.get(name)
         if answer is not None and answer.confidence >= min_confidence:
             values[name] = answer.choice
-        else:
+        elif name not in ROUTE_LOW_CONFIDENCE_EXEMPT_LABELS:
             unsure = True
     return values, unsure
 
