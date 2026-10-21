@@ -12,8 +12,8 @@ and its ``confidence`` is the normalized one Jev reports
 ROUTE_MIN_CONFIDENCE means the same thing for both.
 
 A model's probabilities are its own report, not calibrated the way a
-dedicated classifier's are: compare it with Jev on labelled rows before
-trusting the same ROUTE_MIN_CONFIDENCE for both.
+dedicated classifier's are: the same ROUTE_MIN_CONFIDENCE for both is a
+starting point, not measured.
 """
 
 from __future__ import annotations

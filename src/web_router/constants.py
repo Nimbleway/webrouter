@@ -4275,7 +4275,7 @@ ROUTE_DECIDER_TIMEOUT = 0.8
 ROUTE_DECIDER_CONNECT_TIMEOUT = 0.3
 
 ROUTE_MIN_CONFIDENCE = 0.5
-"""Below this a label counts as unsure and its default is used. A starting point, tuned on labelled rows."""
+"""Below this a label counts as unsure and its default is used. A starting point, not measured."""
 
 ROUTE_METHODS = ("search", "extract", "research", "browse")
 """What a route can run. One whose auto chain is empty here downgrades to search."""
@@ -4318,7 +4318,7 @@ ROUTE_QUESTIONS: dict[str, dict[str, Any]] = {
         "type": "choice",
         "instructions": "How much evidence does a correct answer need? If unsure, pick the lower value.",
         "criteria": {
-            "lookup": "One good source settles it. e.g. 'Who is the CEO of Databricks?'",
+            "lookup": "One good source settles it. e.g. 'Who is the CEO of Example Corp?'",
             "synthesis": (
                 "A few sources, combined or checked against each other. e.g. 'Which has the longest battery life: "
                 "MacBook Air M4, Dell XPS 13 or ThinkPad X1 Carbon?'"
@@ -4341,12 +4341,7 @@ ROUTE_QUESTIONS: dict[str, dict[str, Any]] = {
         },
     },
 }
-"""tool and recent as tuned on 2026-10-13; coverage and well_scoped from the dataset-spec v0 rubric (ties: lookup,
-clear).
-
-A 2026-10-15 rewrite of tool to the rubric's "cheapest tool" rule dropped tool accuracy from 96 to 81 of 100
-(research questions labelled search), so it was reverted.
-"""
+"""The labels' criteria. Ties resolve to lookup (coverage) and clear (well_scoped)."""
 
 ROUTE_DEFAULT_LABELS = {"tool": "search", "recent": "any", "coverage": "lookup", "well_scoped": "clear"}
 """What an unsure, missing or failed label falls back to."""
