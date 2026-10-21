@@ -7,11 +7,13 @@ from typing import Any
 import httpx
 
 from web_router.constants import (
-    ENV_TYPESAFE_API_KEY,
     FOLLOW_REDIRECTS,
     HTTP_ERROR_BODY_LIMIT,
-    JEV_MODEL,
     MSG_HTTP_ERROR,
+)
+from web_router.constants_decisions import (
+    ENV_TYPESAFE_API_KEY,
+    JEV_MODEL,
     MSG_ROUTE_BAD_ANSWER,
     ROUTE_DECIDER_CONNECT_TIMEOUT,
     ROUTE_DECIDER_JEV,

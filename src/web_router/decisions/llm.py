@@ -18,7 +18,6 @@ starting point, not measured.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from typing import Any
@@ -27,12 +26,10 @@ from web_router.constants import (
     ENV_OPENAI_API_KEY,
     EVALS_FIXED_TEMPERATURE_MODELS,
     EXTRA_EVALS,
-    LLM_DECIDER_DIGEST_LENGTH,
+)
+from web_router.constants_decisions import (
     LLM_DECIDER_MAX_RETRIES,
     LLM_DECIDER_MODEL,
-    LLM_DECIDER_PROMPT_CRITERION,
-    LLM_DECIDER_PROMPT_HEAD,
-    LLM_DECIDER_PROMPT_QUESTION,
     LLM_DECIDER_SCHEMA_NAME,
     LLM_DECIDER_TEMPERATURE,
     LLM_DECIDER_TIMEOUT,
@@ -41,8 +38,8 @@ from web_router.constants import (
     MSG_ROUTE_BAD_ANSWER,
     MSG_ROUTE_BAD_PROBABILITIES,
     ROUTE_DECIDER_LLM,
-    ROUTE_QUESTIONS,
 )
+from web_router.decisions.llm_prompt import answer_schema, prompt, prompt_digest
 from web_router.decisions.route import Answer, normalized_confidence
 from web_router.exceptions import ProviderError, ProviderNotInstalledError
 from web_router.providers._utils import resolve_api_key
@@ -154,52 +151,3 @@ def _scaled(probabilities: Any) -> dict[str, float]:
     if not math.isfinite(total) or total <= 0.0 or any(value < 0.0 for value in values.values()):
         raise ValueError(MSG_ROUTE_BAD_PROBABILITIES.format(probabilities=values))
     return {name: value / total for name, value in values.items()}
-
-
-def prompt(state: Any, questions: dict[str, dict[str, Any]]) -> str:
-    """The one user message: the request, then each question's own instructions and criteria."""
-    parts = [LLM_DECIDER_PROMPT_HEAD.format(query=json.dumps(state["query"]), asked_on=state.get("asked_on"))]
-    for name, question in questions.items():
-        parts.append(LLM_DECIDER_PROMPT_QUESTION.format(name=name, instructions=question["instructions"]))
-        parts.extend(
-            LLM_DECIDER_PROMPT_CRITERION.format(choice=choice, text=text)
-            for choice, text in question["criteria"].items()
-        )
-    return "\n".join(parts)
-
-
-def prompt_digest(questions: dict[str, dict[str, Any]] = ROUTE_QUESTIONS) -> str:
-    """A short hash of everything that shapes the answer besides the model: the prompt and the answer schema."""
-    shaped = {
-        "prompt": [LLM_DECIDER_PROMPT_HEAD, LLM_DECIDER_PROMPT_QUESTION, LLM_DECIDER_PROMPT_CRITERION],
-        "questions": questions,
-        "schema": {"name": LLM_DECIDER_SCHEMA_NAME, "schema": answer_schema(questions)},
-    }
-    encoded = json.dumps(shaped, sort_keys=True).encode()
-    return hashlib.sha256(encoded).hexdigest()[:LLM_DECIDER_DIGEST_LENGTH]
-
-
-def answer_schema(questions: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    """The JSON Schema the model must answer in: per question, one choice and a probability for every choice.
-
-    Built from the questions: strict structured outputs need every key spelled
-    out, so each choice gets its own probability field.
-    """
-    properties = {
-        name: {
-            "type": "object",
-            "additionalProperties": False,
-            "required": ["choice", "probabilities"],
-            "properties": {
-                "choice": {"type": "string", "enum": list(question["criteria"])},
-                "probabilities": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": list(question["criteria"]),
-                    "properties": {choice: {"type": "number"} for choice in question["criteria"]},
-                },
-            },
-        }
-        for name, question in questions.items()
-    }
-    return {"type": "object", "additionalProperties": False, "required": list(questions), "properties": properties}

@@ -9,11 +9,12 @@ import httpx
 import pytest
 
 from web_router import WebRouter
-from web_router.constants import (
+from web_router.constants_decisions import (
     ROUTE_FALLBACK_DECIDER_ERROR,
     ROUTE_FALLBACK_LOW_CONFIDENCE,
 )
 from web_router.decisions import Answer, JevDecider, Route
+from web_router.decisions.execution import _routed_provider
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers.jina import JinaExtractProvider
 
@@ -83,8 +84,8 @@ def test_routes_with_other_member_options_get_their_own_provider() -> None:
     router = WebRouter(decider=FakeDecider())
     plain = Route(query="q", method="search", chain=(("tavily", {}),))
     tuned = Route(query="q", method="search", chain=(("tavily", {"allow_keyless": True}),))
-    assert router._routed_provider(plain) is not router._routed_provider(tuned)
-    assert router._routed_provider(plain) is router._routed_provider(plain)
+    assert _routed_provider(router, plain) is not _routed_provider(router, tuned)
+    assert _routed_provider(router, plain) is _routed_provider(router, plain)
 
 
 def test_an_unsure_tool_label_says_where_the_classifier_leaned() -> None:

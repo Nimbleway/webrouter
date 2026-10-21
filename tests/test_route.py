@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from web_router.constants import (
+from web_router.constants_decisions import (
     ROUTE_ADVICE_NO_URL,
     ROUTE_FALLBACK_NO_BACKEND,
     ROUTE_FALLBACK_NO_URL,

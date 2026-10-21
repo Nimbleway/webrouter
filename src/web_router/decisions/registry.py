@@ -16,6 +16,8 @@ from web_router.constants import (
     EXTRA_ALL,
     EXTRA_EVALS,
     EXTRA_SEARCH,
+)
+from web_router.constants_decisions import (
     MSG_ROUTE_UNKNOWN_DECIDER,
     ROUTE_DECIDER_JEV,
     ROUTE_DECIDER_KEYWORDS,

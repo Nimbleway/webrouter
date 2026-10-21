@@ -12,7 +12,7 @@ import httpx
 import pytest
 
 from web_router import WebRouter
-from web_router.constants import (
+from web_router.constants_decisions import (
     KEYWORDS_CONFIDENCE,
     KEYWORDS_PAID_TOOL_CONFIDENCE,
     ROUTE_FALLBACK_DECIDER_ERROR,

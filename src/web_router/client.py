@@ -30,13 +30,11 @@ caller gets.
 from __future__ import annotations
 
 import asyncio
-import json
 import threading
 import time
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import AsyncExitStack, ExitStack, suppress
-from datetime import date
 from types import TracebackType
 from typing import Any, Generic, TypeVar
 
@@ -50,27 +48,18 @@ from web_router.constants import (
     DEFAULT_PROVIDER,
     EVALS_CONCURRENCY,
     MSG_BENCHMARK_NO_PROVIDERS,
-    MSG_ROUTE_DECIDER_CONFIG_UNUSED,
-    MSG_ROUTE_NO_DECIDER,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
     PROVIDER_AUTO,
     RESEARCH_TIMEOUT,
-    ROUTE_DEFAULT_LABELS,
-    ROUTE_FALLBACK_DECIDER_ERROR,
-    ROUTE_FALLBACK_LOW_CONFIDENCE,
-    ROUTE_QUESTIONS,
 )
+from web_router.constants_decisions import MSG_ROUTE_DECIDER_CONFIG_UNUSED
+from web_router.decisions import execution
 from web_router.decisions.registry import create_decider
-from web_router.decisions.route import Answer, Route, label_values, route_from_labels, urls_in
+from web_router.decisions.route import Route
 from web_router.evals.datasets import Dataset
 from web_router.evals.judge import Judge
 from web_router.evals.types import EvaluationReport
-from web_router.exceptions import (
-    BenchmarkTimeoutError,
-    ConfigurationError,
-    ProviderNotFoundError,
-    WebRouterError,
-)
+from web_router.exceptions import BenchmarkTimeoutError, ConfigurationError, ProviderNotFoundError, WebRouterError
 from web_router.providers.base import (
     AsyncBrowserHandle,
     BrowseJob,
@@ -945,106 +934,13 @@ class WebRouter(_BaseRouter[BrowserHandle]):
 
         This is a baseline for measuring decision-model routing, not a router contract.
         """
-        if self.decider is None:
-            raise ConfigurationError(MSG_ROUTE_NO_DECIDER)
-        given = [urls] if isinstance(urls, str) else list(urls or [])
-        found = given or urls_in(query)
-        chains = self._default_chains()
-        labels: dict[str, Answer] = {}
-        fallback: str | None = None
-        latency_ms = 0.0
-        if given:
-            values = {**ROUTE_DEFAULT_LABELS, "tool": "extract"}
-        elif output_schema is not None:
-            values = dict(ROUTE_DEFAULT_LABELS)
-        else:
-            state = {"query": query, "asked_on": date.today().isoformat()}
-            started = time.perf_counter()
-            # A wrapping decider's passthrough= types are a caller's policy: they stop the run, not route it.
-            passthrough: tuple[type[BaseException], ...] = tuple(getattr(self.decider, "passthrough", ()) or ())
-            try:
-                labels = self.decider.decide(state, ROUTE_QUESTIONS)
-                values, unsure = label_values(labels)  # inside, so a malformed result is a decider error too
-            except (
-                Exception
-            ) as exc:  # any decider failure, a third-party one's TimeoutError included, takes the default
-                if passthrough and isinstance(exc, passthrough):
-                    raise
-                labels, fallback = {}, ROUTE_FALLBACK_DECIDER_ERROR
-                values, unsure = label_values(labels)
-            latency_ms = (time.perf_counter() - started) * 1000
-            if unsure and fallback is None:
-                fallback = ROUTE_FALLBACK_LOW_CONFIDENCE
-        method, chain, reason = route_from_labels(query, values, chains, urls=found, output_schema=output_schema)
-        # The raw tool label, before an unsure one took its default, so the advice can say where it leaned.
-        tool = labels.get("tool")
-        requested = "research" if output_schema is not None else tool.choice if tool is not None else values["tool"]
-        return Route(
-            query=query,
-            method=method,
-            chain=chain,
-            urls=found,
-            output_schema=output_schema,
-            labels=labels,
-            fallback=tuple(r for r in (fallback, reason) if r),
-            requested=requested,
-            latency_ms=latency_ms,
-        )
+        return execution.classify(self, query, urls=urls, output_schema=output_schema)
 
     def execute(
         self, route: Route, **overrides: Any
     ) -> SearchResponse | ExtractResponse | ResearchResponse | BrowseResponse:
         """Run a :class:`Route` with this router's methods, on the route's chain. ``overrides`` go to the method."""
-        # The route's own arguments are defaults: an override of the same name wins, rather than colliding.
-        # A provider override is used as given: the route's own auto provider is built only when it will run.
-        kwargs: dict[str, Any] = {} if "provider" in overrides else {"provider": self._routed_provider(route)}
-        if route.method == "extract":
-            return self.extract(**{**kwargs, "urls": route.urls, **overrides})
-        if route.method == "research":
-            return self.research(**{**kwargs, "query": route.query, "output_schema": route.output_schema, **overrides})
-        if route.method == "browse":
-            start_url = route.urls[0] if route.urls else None
-            return self.browse(**{**kwargs, "task": route.query, "start_url": start_url, **overrides})
-        return self.search(**{**kwargs, "query": route.query, **overrides})
-
-    def _default_chains(self) -> dict[str, tuple[tuple[str, dict[str, Any]], ...]]:
-        """Each method's auto chain as this router's own ``auto`` would resolve it, a configured ``chain`` included."""
-        from web_router.providers.auto import (
-            AutoBrowseProvider,
-            AutoExtractProvider,
-            AutoProvider,
-            AutoResearchProvider,
-            _members_and_chain,
-        )
-
-        config = self._config_for(PROVIDER_AUTO)
-        defaults = {
-            "search": AutoProvider.default_chain,
-            "extract": AutoExtractProvider.default_chain,
-            "research": AutoResearchProvider.default_chain,
-            "browse": AutoBrowseProvider.default_chain,
-        }
-        return {
-            method: _members_and_chain(config.get("chain"), config["members_config"], method, default)[1]
-            for method, default in defaults.items()
-        }
-
-    def _routed_provider(self, route: Route) -> SearchProvider | ExtractProvider | ResearchProvider | BrowseProvider:
-        """An auto provider on the route's chain, cached so close() owns it and config keys reach it."""
-        # The members' options belong to the key too: the same names with other settings are another provider.
-        key = f"{PROVIDER_AUTO}:{json.dumps([list(e) for e in route.chain], sort_keys=True, default=repr)}"
-        config = {**self._config_for(PROVIDER_AUTO), "chain": {route.method: [list(e) for e in route.chain]}}
-        table: dict[str, tuple[dict[str, Any], Any]] = {
-            "extract": (self._extract_instances, create_extract_provider),
-            "research": (self._research_instances, create_research_provider),
-            "browse": (self._browse_instances, create_browse_provider),
-        }
-        cache, factory = table.get(route.method, (self._instances, create_provider))
-        with self._providers_lock:
-            if key not in cache:
-                cache[key] = factory(PROVIDER_AUTO, **config)
-            routed: SearchProvider | ExtractProvider | ResearchProvider | BrowseProvider = cache[key]
-            return routed
+        return execution.execute(self, route, **overrides)
 
     def close(self) -> None:
         """Release every browser session still open, then close every provider this router built.

@@ -13,6 +13,8 @@ import pytest
 from web_router import WebRouter
 from web_router.constants import (
     EVALS_FIXED_TEMPERATURE_MODELS,
+)
+from web_router.constants_decisions import (
     ROUTE_FALLBACK_DECIDER_ERROR,
     ROUTE_FALLBACK_LOW_CONFIDENCE,
     ROUTE_QUESTIONS,
@@ -20,7 +22,7 @@ from web_router.constants import (
 from web_router.decisions import (
     LLMDecider,
 )
-from web_router.decisions.llm import prompt_digest
+from web_router.decisions.llm_prompt import prompt_digest
 from web_router.exceptions import ConfigurationError, ProviderError, ProviderNotInstalledError
 
 
