@@ -351,6 +351,12 @@ def test_a_decider_raising_anything_takes_the_decider_error_fallback() -> None:
     assert route.labels == {}
 
 
+@pytest.mark.parametrize("answers", [[1], {"tool": "search"}])
+def test_a_malformed_decider_result_takes_the_decider_error_fallback(answers: Any) -> None:
+    route = router(FakeDecider(answers)).classify("who won")
+    assert route.method == "search" and route.fallback == (ROUTE_FALLBACK_DECIDER_ERROR,)
+
+
 def test_the_keywords_decider_reports_its_fixed_confidences_on_the_normalized_scale() -> None:
     answers = KeywordsDecider().decide({"query": "Who is the CEO of Wikimedia?"}, ROUTE_QUESTIONS)
     for name, answer in answers.items():

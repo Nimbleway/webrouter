@@ -959,14 +959,15 @@ class WebRouter(_BaseRouter[BrowserHandle]):
             passthrough: tuple[type[BaseException], ...] = tuple(getattr(self.decider, "passthrough", ()) or ())
             try:
                 labels = self.decider.decide(state, ROUTE_QUESTIONS)
+                values, unsure = label_values(labels)  # inside, so a malformed result is a decider error too
             except (
                 Exception
             ) as exc:  # any decider failure, a third-party one's TimeoutError included, takes the default
                 if passthrough and isinstance(exc, passthrough):
                     raise
                 labels, fallback = {}, ROUTE_FALLBACK_DECIDER_ERROR
+                values, unsure = label_values(labels)
             latency_ms = (time.perf_counter() - started) * 1000
-            values, unsure = label_values(labels)
             if unsure and fallback is None:
                 fallback = ROUTE_FALLBACK_LOW_CONFIDENCE
         method, chain, reason = route_from_labels(query, values, chains, urls=found, output_schema=output_schema)
