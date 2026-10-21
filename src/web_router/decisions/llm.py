@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from typing import Any
 
 from web_router.constants import (
@@ -142,12 +143,12 @@ def _scaled(probabilities: Any) -> dict[str, float]:
     """``probabilities`` scaled to sum to 1, as a model's rounded distribution may not.
 
     Raises:
-        ValueError: for a distribution that cannot be scaled -- a negative value, or a sum of zero -- so the
-            answer is a decider error rather than a route on numbers nobody can read.
+        ValueError: for a distribution that cannot be scaled -- a negative value, or a sum that is zero or not
+            finite -- so the answer is a decider error rather than a route on numbers nobody can read.
     """
     values = {str(name): float(value) for name, value in probabilities.items()}
     total = sum(values.values())
-    if total <= 0.0 or any(value < 0.0 for value in values.values()):
+    if not math.isfinite(total) or total <= 0.0 or any(value < 0.0 for value in values.values()):
         raise ValueError(MSG_ROUTE_BAD_PROBABILITIES.format(probabilities=values))
     return {name: value / total for name, value in values.items()}
 

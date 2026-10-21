@@ -371,7 +371,15 @@ def test_the_no_decider_error_names_the_keyless_decider_first() -> None:
     assert message.index("keywords") < message.index("jev")
 
 
-@pytest.mark.parametrize("probabilities", [{"search": 0.0, "extract": 0.0}, {"search": 1.2, "extract": -0.2}])
+@pytest.mark.parametrize(
+    "probabilities",
+    [
+        {"search": 0.0, "extract": 0.0},
+        {"search": 1.2, "extract": -0.2},
+        {"search": float("nan")},
+        {"search": 1e308, "extract": 1e308},
+    ],
+)
 def test_an_llm_distribution_that_cannot_be_scaled_is_a_decider_error(probabilities: dict[str, float]) -> None:
     reply = json.loads(model_reply())
     reply["tool"]["probabilities"] = {**dict.fromkeys(ROUTE_QUESTIONS["tool"]["criteria"], 0.0), **probabilities}
