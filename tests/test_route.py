@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import pytest
+
 from web_router.constants_decisions import (
     ROUTE_ADVICE_NO_URL,
     ROUTE_FALLBACK_NO_BACKEND,
     ROUTE_FALLBACK_NO_URL,
 )
 from web_router.decisions import Answer, Route, route_from_labels
-from web_router.decisions.route import urls_in
+from web_router.decisions.route import normalized_confidence, urls_in
 
 CHAINS = {"search": (("tavily", {}),), "extract": (("jina", {}),), "research": (), "browse": ()}
 SURE = 0.9
@@ -66,3 +68,12 @@ def test_a_url_ending_a_sentence_loses_its_punctuation() -> None:
         "https://example.com/page",
         "https://example.org/a?b=1",
     ]
+
+
+def test_confidence_is_normalized_over_the_choices() -> None:
+    four = {"search": 0.55, "extract": 0.15, "research": 0.15, "browse": 0.15}
+    assert normalized_confidence(four, "search") == pytest.approx(0.4)
+    assert normalized_confidence({"a": 0.25, "b": 0.25, "c": 0.25, "d": 0.25}, "a") == 0.0
+    assert normalized_confidence({"a": 1.0, "b": 0.0}, "a") == 1.0
+    assert normalized_confidence({"a": 0.1, "b": 0.9}, "a") == 0.0  # clamped, not negative
+    assert normalized_confidence({"a": 0.7}, "a") == 0.7
