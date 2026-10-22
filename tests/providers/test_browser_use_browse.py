@@ -160,6 +160,12 @@ def test_the_schema_is_sent_as_a_json_string(provider: BrowserUseBrowseProvider)
     assert json.loads(payload["structuredOutput"]) == SCHEMA
 
 
+def test_an_empty_schema_is_still_a_schema(provider: BrowserUseBrowseProvider) -> None:
+    """`{}` is a valid schema that accepts any JSON; only an unset one sends nothing."""
+    assert provider._build_payload(BrowseRequest(task="t", output_schema={}))["structuredOutput"] == "{}"
+    assert "structuredOutput" not in provider._build_payload(BrowseRequest(task="t"))
+
+
 def test_every_browse_option_reaches_the_wire(provider: BrowserUseBrowseProvider) -> None:
     """Through a real submit, so an option dropped from the supported set or the field map fails here."""
     api = _stub(provider)
@@ -423,3 +429,13 @@ def test_live_browse_answers_in_the_schema_within_the_step_limit() -> None:
     assert isinstance(response.structured, dict)
     assert "example" in str(response.structured.get("title", "")).lower()
     assert 0 < len(response.steps) <= max_steps
+
+
+def test_an_empty_schema_answer_is_structured(provider: BrowserUseBrowseProvider) -> None:
+    output = '{"title": "Example Domain"}'
+    _stub(provider, states=[_status("finished", output)], task=_task("finished", output))
+
+    response = provider.browse(BrowseRequest(task="t", output_schema={}))
+
+    assert response.structured == {"title": "Example Domain"}
+    assert response.answer is None

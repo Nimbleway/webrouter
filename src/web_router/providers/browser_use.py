@@ -101,7 +101,7 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
             request,
             BROWSER_USE_FIELDS,
             task=request.task,
-            **({BROWSER_USE_SCHEMA_FIELD: json.dumps(schema)} if schema else {}),
+            **({BROWSER_USE_SCHEMA_FIELD: json.dumps(schema)} if schema is not None else {}),
         )
 
     def _started(self, request: BrowseRequest, created: dict[str, Any]) -> BrowseProgress:
@@ -132,7 +132,7 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
         # it were.
         output = status.get("output")
         answer = output if isinstance(output, str) and output else None
-        structured = _structured(answer) if request.output_schema else None
+        structured = _structured(answer) if request.output_schema is not None else None
         return BrowseResponse(
             provider=self.name,
             task=request.task,
