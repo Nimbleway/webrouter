@@ -179,6 +179,39 @@ def test_a_caller_bug_in_a_member_propagates_rather_than_being_raced_around(memb
         provider.close()
 
 
+def test_every_member_validates_the_request_before_anything_is_fetched(members: _Recorder) -> None:
+    """A member that refuses an option says so first, so a faster member's document cannot hide it."""
+    _member(members, "fast")
+    Strict = _member(members, "strict", delay=0.5)
+    Strict.supported_parameters = frozenset()
+
+    provider = _race("fast", "strict")
+    try:
+        with pytest.raises(UnsupportedParameterError, match="format"):
+            provider.extract(ExtractRequest(urls=[URL], format="markdown"))
+    finally:
+        provider.close()
+
+    assert members.started == [], "nothing was fetched, so nothing was paid for"
+
+
+def test_calls_are_handed_back_in_the_order_they_finished_not_the_order_they_were_waited_on() -> None:
+    """``wait()`` returns a set; the race records completion order itself, so the first document really is first."""
+    from web_router.providers.max import _Race
+
+    race = _Race()
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        race.add("late", pool.submit(lambda: time.sleep(0.05) or "late"))
+        race.add("early", pool.submit(lambda: "early"))
+        time.sleep(0.2)  # both finished before anyone asked
+        first = race.next()
+        second = race.next()
+
+    assert first is not None and first[0] == "early"
+    assert second is not None and second[0] == "late"
+    assert race.next() is None, "nothing left running"
+
+
 def test_the_format_is_pinned_and_a_member_that_cannot_return_it_is_left_out(members: _Recorder) -> None:
     _member(members, "text-only", formats=frozenset({"text"}))
     _member(members, "markdown", formats=frozenset({"markdown"}))
@@ -311,7 +344,7 @@ def test_two_races_at_once_share_one_instance_of_each_member(members: _Recorder)
     assert built == ["counted"]
 
 
-@pytest.mark.parametrize("hedge", [-1, "soon", True])
+@pytest.mark.parametrize("hedge", [-1, "soon", True, float("inf"), float("nan")])
 def test_a_hedge_that_is_not_a_non_negative_number_is_refused(hedge: Any) -> None:
     with pytest.raises(ConfigurationError, match="hedge"):
         MaxExtractProvider(chain=[("jina", {})], hedge=hedge)
@@ -336,6 +369,38 @@ def test_close_waits_for_a_loser_still_running_rather_than_closing_under_it(memb
     provider.close()
 
     assert "slow" in members.finished, "close() waited for it"
+
+
+def test_close_waits_for_a_race_still_running_on_another_thread(members: _Recorder) -> None:
+    """Not a snapshot of losers: a call in flight when close() starts is waited for too."""
+    _member(members, "slow", delay=0.3)
+    provider = _race("slow")
+    outcome: list[ExtractResponse] = []
+
+    racer = threading.Thread(target=lambda: outcome.append(provider.extract(REQUEST)))
+    racer.start()
+    time.sleep(0.05)  # the race has submitted its call and is waiting on it
+    provider.close()
+
+    assert "slow" in members.finished, "close() returned only once the live call had finished"
+    racer.join()
+    assert outcome[0].provider == "slow"
+
+
+def test_many_quick_races_never_hang_on_a_call_that_finished_before_it_was_registered(members: _Recorder) -> None:
+    """A done callback registered on a finished future runs inline; it must not need a lock the caller holds."""
+    _member(members, "instant")
+    provider = _race("instant")
+    done = threading.Event()
+
+    def run() -> None:
+        for _ in range(50):
+            provider.extract(REQUEST)
+        done.set()
+
+    threading.Thread(target=run, daemon=True).start()
+    assert done.wait(timeout=10), "a race deadlocked"
+    provider.close()
 
 
 async def test_the_async_race_cancels_the_losers(members: _Recorder) -> None:

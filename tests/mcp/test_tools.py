@@ -98,6 +98,19 @@ def test_provider_enum_offers_only_configured_backends(tools: WebRouterTools, no
     assert PROVIDER_TAVILY not in search.input_schema["properties"]["provider"]["enum"]
 
 
+def test_the_extract_schema_reads_max_as_the_members_it_would_race(no_keys: None) -> None:
+    """``max`` declares every option as ``auto`` does, so it is read as its chain, never as its own class."""
+    from web_router.mcp.tools import _serving
+    from web_router.providers.max import MaxExtractProvider
+
+    router = AsyncWebRouter(PROVIDER_MAX)
+    serving = _serving(MCP_TOOL_EXTRACT, [PROVIDER_MAX], router)
+
+    assert serving, "the keyless members are what max would race"
+    assert MaxExtractProvider not in serving
+    assert all(cls.name in router.get_extract_provider(PROVIDER_MAX).members for cls in serving)  # type: ignore[attr-defined]
+
+
 def test_the_extract_tool_says_what_max_costs(tools: WebRouterTools) -> None:
     description = _tool(tools, MCP_TOOL_EXTRACT).description
     assert "provider='max'" in description and "one fetch per backend" in description

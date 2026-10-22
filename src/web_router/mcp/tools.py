@@ -94,6 +94,7 @@ from web_router.constants import (
     MCP_TOOL_SEARCH,
     MCP_TOOL_WAITS,
     PROVIDER_AUTO,
+    PROVIDER_MAX,
     RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.exceptions import (
@@ -120,6 +121,7 @@ from web_router.mcp.shaping import (
 )
 from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider
 from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, _BaseProvider
+from web_router.providers.max import MaxExtractProvider
 from web_router.registry import (
     configured_browse_providers,
     configured_browser_providers,
@@ -190,11 +192,21 @@ def _browser_chain(router: AsyncWebRouter) -> tuple[str, ...]:
     return provider.members if isinstance(provider, AutoBrowserProvider) else ()
 
 
+def _max_chain(router: AsyncWebRouter) -> tuple[str, ...]:
+    """The members the router's own ``max`` would race, read as :func:`_extract_chain` reads ``auto``'s."""
+    provider = router.get_extract_provider(PROVIDER_MAX)
+    return provider.members if isinstance(provider, MaxExtractProvider) else ()
+
+
 _CHAIN_OF: dict[str, Callable[[AsyncWebRouter], tuple[str, ...]]] = {
     MCP_TOOL_SEARCH: _search_chain,
     MCP_TOOL_EXTRACT: _extract_chain,
     MCP_TOOL_BROWSER_OPEN: _browser_chain,
 }
+"""How ``auto`` is read, per tool it serves."""
+
+_MAX_CHAIN_OF: dict[str, Callable[[AsyncWebRouter], tuple[str, ...]]] = {MCP_TOOL_EXTRACT: _max_chain}
+"""How ``max`` is read: it serves extract alone, and declares every option as ``auto`` does."""
 """The tools whose ``auto`` declares what some member serves, routing each request to a member that serves it.
 
 Its own declaration says nothing about what can be served here -- search
@@ -682,6 +694,8 @@ def _serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[ty
     for provider in providers:
         if provider == PROVIDER_AUTO and tool in _CHAIN_OF:
             names.extend(_CHAIN_OF[tool](router))
+        elif provider == PROVIDER_MAX and tool in _MAX_CHAIN_OF:
+            names.extend(_MAX_CHAIN_OF[tool](router))
         else:
             names.append(provider)
     classes: list[type[_BaseProvider]] = []
