@@ -122,6 +122,19 @@ def test_the_keywords_decider_is_deterministic_and_keyless(
     )
 
 
+@pytest.mark.parametrize(
+    ("query", "recent"),
+    [
+        ("What is the BTC price today?", "day"),
+        ("Is the API down now?", "day"),
+        ("What did OpenAI announce this week?", "week"),
+        ("Latest Python release", "month"),
+    ],
+)
+def test_the_keywords_decider_maps_today_and_now_to_day_and_this_week_to_week(query: str, recent: str) -> None:
+    assert WebRouter(decider="keywords").classify(query).labels["recent"].choice == recent
+
+
 def test_the_keywords_decider_routes_a_url_to_extract_by_name() -> None:
     route = router("keywords").classify("Summarize https://example.com/pricing")
     assert route.method == "extract" and route.labels["tool"].confidence >= ROUTE_MIN_CONFIDENCE

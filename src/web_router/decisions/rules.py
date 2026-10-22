@@ -19,7 +19,9 @@ from web_router.constants_decisions import (
     KEYWORDS_MISSING_CONTEXT_WORDS,
     KEYWORDS_PAID_TOOL_CONFIDENCE,
     KEYWORDS_PAID_TOOLS,
+    KEYWORDS_RECENT_DAY,
     KEYWORDS_RECENT_MONTH,
+    KEYWORDS_RECENT_WEEK,
     KEYWORDS_RESEARCH,
     KEYWORDS_RESEARCH_LENGTH,
     KEYWORDS_SYNTHESIS,
@@ -37,7 +39,9 @@ from web_router.constants_decisions import (
     ROUTE_METHOD_RESEARCH,
     ROUTE_METHOD_SEARCH,
     ROUTE_RECENT_ANY,
+    ROUTE_RECENT_DAY,
     ROUTE_RECENT_MONTH,
+    ROUTE_RECENT_WEEK,
     ROUTE_SCOPE_CLEAR,
     ROUTE_SCOPE_MISSING_CONTEXT,
 )
@@ -45,6 +49,8 @@ from web_router.decisions.route import Answer, normalized_confidence
 
 _URL = re.compile(KEYWORDS_URL)
 _RESEARCH = re.compile(KEYWORDS_RESEARCH)
+_RECENT_DAY = re.compile(KEYWORDS_RECENT_DAY)
+_RECENT_WEEK = re.compile(KEYWORDS_RECENT_WEEK)
 _RECENT_MONTH = re.compile(KEYWORDS_RECENT_MONTH)
 _SYNTHESIS = re.compile(KEYWORDS_SYNTHESIS)
 
@@ -60,7 +66,7 @@ class KeywordsDecider:
         query = str(state["query"]).lower()
         picks = {
             ROUTE_LABEL_TOOL: _tool(query),
-            ROUTE_LABEL_RECENT: ROUTE_RECENT_MONTH if _RECENT_MONTH.search(query) else ROUTE_RECENT_ANY,
+            ROUTE_LABEL_RECENT: _recent(query),
             ROUTE_LABEL_COVERAGE: _coverage(query),
             ROUTE_LABEL_WELL_SCOPED: _scope(query),
         }
@@ -78,6 +84,14 @@ def _tool(query: str) -> str:
     if _URL.search(query):
         return ROUTE_METHOD_EXTRACT
     return ROUTE_METHOD_RESEARCH if _RESEARCH.search(query) else ROUTE_METHOD_SEARCH
+
+
+def _recent(query: str) -> str:
+    if _RECENT_DAY.search(query):
+        return ROUTE_RECENT_DAY
+    if _RECENT_WEEK.search(query):
+        return ROUTE_RECENT_WEEK
+    return ROUTE_RECENT_MONTH if _RECENT_MONTH.search(query) else ROUTE_RECENT_ANY
 
 
 def _coverage(query: str) -> str:
