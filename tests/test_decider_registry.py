@@ -169,7 +169,7 @@ def test_jev_decider_reads_a_reply_and_wraps_http_errors(monkeypatch: pytest.Mon
     [
         ("Who is the CEO of Wikimedia?", "search", "lookup", "clear"),
         ("Summarize the page at https://example.com/pricing", "extract", "lookup", "clear"),
-        ("Compare the MacBook Air and the Dell XPS 13", "research", "synthesis", "clear"),
+        ("Compare the Example Book 14 and the Sample Pro 13", "research", "synthesis", "clear"),
         ("opening hours", "search", "lookup", "missing_context"),
     ],
 )

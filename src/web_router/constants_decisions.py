@@ -23,7 +23,7 @@ TYPESAFE_AUTH_HEADER = "Authorization"
 TYPESAFE_AUTH = "Bearer {key}"
 """The headers every Jev request carries: JSON back, and the key as a bearer token."""
 JEV_MODEL = "jev-1.14.0"
-"""Pinned rather than ``jev-latest``: an alias moves, and thresholds are tuned against one version."""
+"""Pinned rather than ``jev-latest``: an alias moves. The thresholds are a starting point, not measured."""
 
 URL_TRAILING_PUNCTUATION = ".,;:!?"
 """Stripped from a URL found in prose: the end of a sentence, not part of the address."""
@@ -101,7 +101,7 @@ ROUTE_QUESTIONS: dict[str, dict[str, Any]] = {
             "lookup": "One good source settles it. e.g. 'Who is the CEO of Example Corp?'",
             "synthesis": (
                 "A few sources, combined or checked against each other. e.g. 'Which has the longest battery life: "
-                "MacBook Air M4, Dell XPS 13 or ThinkPad X1 Carbon?'"
+                "Example Book 14, Sample Pro 13 or Demo Slim X1?'"
             ),
             "research": (
                 "Many sources, open-ended, or a report. e.g. 'Map the vendors selling web data APIs to AI agents, "
