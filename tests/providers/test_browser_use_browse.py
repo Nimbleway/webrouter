@@ -20,7 +20,7 @@ import pytest
 
 from web_router.exceptions import ProviderError
 from web_router.providers.browser_use import BrowserUseBrowseProvider
-from web_router.types import BrowseRequest
+from web_router.types import BROWSE_PARAMETERS, BrowseRequest
 
 TASK_ID = "3f1c2b9e-8a4d-4c1e-9b7a-2d5e6f708192"
 SESSION_ID = "b7e2a1c4-5d6f-4a8b-9c0d-1e2f3a4b5c6d"
@@ -169,15 +169,15 @@ def test_an_empty_schema_is_still_a_schema(provider: BrowserUseBrowseProvider) -
 def test_every_browse_option_reaches_the_wire(provider: BrowserUseBrowseProvider) -> None:
     """Through a real submit, so an option dropped from the supported set or the field map fails here."""
     api = _stub(provider)
-    provider.submit(
-        BrowseRequest(
-            task="t",
-            start_url="https://example.com",
-            output_schema=SCHEMA,
-            max_steps=5,
-            allowed_domains=["example.com"],
-        )
+    request = BrowseRequest(
+        task="t",
+        start_url="https://example.com",
+        output_schema=SCHEMA,
+        max_steps=5,
+        allowed_domains=["example.com"],
     )
+    assert request.model_fields_set >= BROWSE_PARAMETERS, "a new browse option needs setting and checking here"
+    provider.submit(request)
     (body,) = api.bodies
     assert body["startUrl"] == "https://example.com"
     assert json.loads(body["structuredOutput"]) == SCHEMA
