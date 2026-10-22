@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import pytest
@@ -270,6 +271,46 @@ def test_with_a_hedge_a_first_member_that_fails_early_does_not_hold_the_rest(mem
     assert elapsed < 1.0, "a failure before the hedge runs out starts the rest at once"
 
 
+def test_with_a_hedge_a_first_member_that_cannot_be_built_does_not_hold_the_rest(
+    members: _Recorder, monkeypatch: Any
+) -> None:
+    """A member with no key fails at construction, before the hedge even starts; the rest must still run."""
+    monkeypatch.delenv("EXA_API_KEY", raising=False)
+    _member(members, "second")
+
+    provider = MaxExtractProvider(chain=[("exa", {}), ("second", {})], hedge=5.0)
+    try:
+        started = time.perf_counter()
+        response = provider.extract(REQUEST)
+        elapsed = time.perf_counter() - started
+    finally:
+        provider.close()
+
+    assert response.provider == "second"
+    assert elapsed < 1.0
+
+
+def test_two_races_at_once_share_one_instance_of_each_member(members: _Recorder) -> None:
+    """Members are built on the caller's thread, so concurrent races never build -- and leak -- a second one."""
+    built: list[str] = []
+
+    class Counted(_member(members, "counted", delay=0.05)):  # type: ignore[misc, valid-type]
+        def __init__(self, **kwargs: Any) -> None:
+            built.append("counted")
+            super().__init__(**kwargs)
+
+    register_extract_provider("counted", Counted)
+    provider = _race("counted")
+    try:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            responses = list(pool.map(lambda _: provider.extract(REQUEST), range(4)))
+    finally:
+        provider.close()
+
+    assert all(response.provider == "counted" for response in responses)
+    assert built == ["counted"]
+
+
 @pytest.mark.parametrize("hedge", [-1, "soon", True])
 def test_a_hedge_that_is_not_a_non_negative_number_is_refused(hedge: Any) -> None:
     with pytest.raises(ConfigurationError, match="hedge"):
@@ -376,3 +417,26 @@ def test_the_router_hands_max_the_members_config_as_it_does_auto(members: _Recor
     assert response.provider == "configured"
     assert seen["api_key"] == "k-123"
     assert router.get_extract_provider().hedge == 0.2  # type: ignore[attr-defined]
+
+
+def test_a_sync_router_refuses_an_async_client_in_max_s_chain() -> None:
+    """Through max the call would quietly lose that member, as it would through auto; say so at construction instead."""
+    with pytest.raises(ConfigurationError, match="nimble"):
+        WebRouter(PROVIDER_MAX, provider_config={PROVIDER_MAX: {"chain": [("nimble", {"async_client": object()})]}})
+
+
+@pytest.mark.integration
+def test_live_max_races_the_keyless_tier_with_no_key_at_all(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Needs no credential: with none, the race is between the keyless backends."""
+    from web_router.constants import EXTRACT_ENV_BY_PROVIDER
+
+    for env_vars in EXTRACT_ENV_BY_PROVIDER.values():
+        for env_var in env_vars:
+            monkeypatch.delenv(env_var, raising=False)
+
+    with WebRouter(PROVIDER_MAX) as router:
+        members = router.get_extract_provider().members  # type: ignore[attr-defined]
+        response = router.extract("https://example.com", format="markdown")
+
+    assert response.provider in members and response.provider != PROVIDER_MAX
+    assert response.documents[0].content

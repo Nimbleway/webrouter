@@ -82,16 +82,32 @@ class MaxExtractProvider(AutoExtractProvider):
         failures: dict[str, WebRouterError] = {}
 
         def start(members: list[tuple[int, str]]) -> None:
+            # Built here, on the caller's thread, never on the pool's: two
+            # races on one instance would otherwise build the same member
+            # twice and leak the client the second overwrote. A member that
+            # cannot be built -- no key, no extra -- is its own loss.
             for position, provider_name in members:
-                running[pool.submit(self._call, position, delegated)] = provider_name
+                try:
+                    member = self._member(position)
+                except _RECOVERABLE as exc:
+                    failures[provider_name] = exc
+                    continue
+                running[pool.submit(member.extract, delegated)] = provider_name
 
         # Not a `with` block: leaving one joins every thread, which would hold
         # the winner until the slowest loser answered.
         try:
             start(first)
-            while running:
-                timeout = self.hedge if rest else None
-                done, _ = wait(set(running), timeout=timeout, return_when=FIRST_COMPLETED)
+            while True:
+                if not running:
+                    # Everyone started so far has lost; the hedged rest, if
+                    # any, get their turn before this is a defeat.
+                    if not rest:
+                        raise _exhausted(self.name, failures, MAX_AGGREGATE_FAILURE)
+                    start(rest)
+                    rest = []
+                    continue
+                done, _ = wait(set(running), timeout=self.hedge if rest else None, return_when=FIRST_COMPLETED)
                 for future in done:
                     provider_name = running.pop(future)
                     try:
@@ -102,7 +118,6 @@ class MaxExtractProvider(AutoExtractProvider):
                 # way the rest start now.
                 start(rest)
                 rest = []
-            raise _exhausted(self.name, failures, MAX_AGGREGATE_FAILURE)
         finally:
             pool.shutdown(wait=False)
             self._straggle(running)
@@ -115,13 +130,25 @@ class MaxExtractProvider(AutoExtractProvider):
 
         def start(members: list[tuple[int, str]]) -> None:
             for position, provider_name in members:
-                running[asyncio.create_task(self._acall(position, delegated))] = provider_name
+                try:
+                    member = self._member(position)
+                except _RECOVERABLE as exc:
+                    failures[provider_name] = exc
+                    continue
+                running[asyncio.create_task(member.aextract(delegated))] = provider_name
 
         try:
             start(first)
-            while running:
-                timeout = self.hedge if rest else None
-                done, _ = await asyncio.wait(set(running), timeout=timeout, return_when=FIRST_COMPLETED)
+            while True:
+                if not running:
+                    if not rest:
+                        raise _exhausted(self.name, failures, MAX_AGGREGATE_FAILURE)
+                    start(rest)
+                    rest = []
+                    continue
+                done, _ = await asyncio.wait(
+                    set(running), timeout=self.hedge if rest else None, return_when=FIRST_COMPLETED
+                )
                 for task in done:
                     provider_name = running.pop(task)
                     try:
@@ -130,20 +157,12 @@ class MaxExtractProvider(AutoExtractProvider):
                         failures[provider_name] = exc
                 start(rest)
                 rest = []
-            raise _exhausted(self.name, failures, MAX_AGGREGATE_FAILURE)
         finally:
             # A loser's call is cancelled rather than left running: on the
             # event loop that costs nothing, and its answer has no reader.
             for task in running:
                 task.cancel()
             await asyncio.gather(*running, return_exceptions=True)
-
-    def _call(self, position: int, request: ExtractRequest) -> ExtractResponse:
-        """One member's call, built here so a member that cannot be built fails as its own row."""
-        return self._member(position).extract(request)
-
-    async def _acall(self, position: int, request: ExtractRequest) -> ExtractResponse:
-        return await self._member(position).aextract(request)
 
     def _split(self, eligible: list[tuple[int, str]]) -> tuple[list[tuple[int, str]], list[tuple[int, str]]]:
         """Who starts now and who waits for the hedge: everyone at once without one."""

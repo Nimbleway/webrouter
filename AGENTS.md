@@ -859,7 +859,7 @@ not a secret either and comes from the real environment only, since no file can
 set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
 `RESEARCH_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
-`auto`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
+`auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
 Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
 `ANTHROPIC_API_KEY` are the two library keys that are not a provider's: each is
 read only by its judge behind `evaluate()` (the `evals` extra) —
@@ -916,7 +916,7 @@ a library that reads dotfiles behind its caller's back surprises whoever
 embeds it.
 
 If `web-router://capabilities` reports only the keyless backends (`auto`,
-`you-mcp`, `exa-mcp`, `parallel-mcp`, `jina`, `local`) on a machine that should have keys, the keys are
+`max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina`, `local`) on a machine that should have keys, the keys are
 not reaching the server, not missing from the account: read its `env` object —
 every place the server looked, what it found there, the file it used and the
 variables it loaded, by name — and check that the file holds them and that the

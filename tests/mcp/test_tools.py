@@ -98,6 +98,11 @@ def test_provider_enum_offers_only_configured_backends(tools: WebRouterTools, no
     assert PROVIDER_TAVILY not in search.input_schema["properties"]["provider"]["enum"]
 
 
+def test_the_extract_tool_says_what_max_costs(tools: WebRouterTools) -> None:
+    description = _tool(tools, MCP_TOOL_EXTRACT).description
+    assert "provider='max'" in description and "one fetch per backend" in description
+
+
 def test_a_key_appears_in_the_enum_for_every_method_it_serves(
     tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
