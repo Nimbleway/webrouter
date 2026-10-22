@@ -249,9 +249,12 @@ def test_a_schema_answer_is_structured(provider: BrowserUseBrowseProvider) -> No
     assert response.answer is None
 
 
-def test_a_schema_answer_that_is_not_json_stays_prose(provider: BrowserUseBrowseProvider) -> None:
-    """The agent may fail to produce the schema; its words are kept rather than dropped."""
-    output = "I could not find a title."
+@pytest.mark.parametrize("output", ["I could not find a title.", "42", '"Paris"'])
+def test_a_schema_answer_that_is_not_json_stays_prose(provider: BrowserUseBrowseProvider, output: str) -> None:
+    """The agent may fail to produce the schema; its words are kept rather than dropped.
+
+    A bare JSON value is not an object or a list, so it stays in `answer` as JSON text.
+    """
     _stub(provider, states=[_status("finished", output)], task=_task("finished", output))
 
     response = provider.browse(BrowseRequest(task="t", output_schema=SCHEMA))
