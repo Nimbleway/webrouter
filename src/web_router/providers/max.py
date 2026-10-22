@@ -25,7 +25,7 @@ import math
 import queue
 import threading
 from collections.abc import Mapping
-from concurrent.futures import Future, ThreadPoolExecutor, wait
+from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, ClassVar
 
 from web_router.constants import MAX_AGGREGATE_FAILURE, MSG_MAX_BAD_HEDGE, PROVIDER_MAX
@@ -75,14 +75,33 @@ class MaxExtractProvider(AutoExtractProvider):
         if hedge is not None and not _is_seconds(hedge):
             raise ConfigurationError(MSG_MAX_BAD_HEDGE.format(hedge=hedge))
         self.hedge: float | None = float(hedge) if hedge else None
-        # Every call a sync race has submitted and not yet seen finish, the
-        # winner's included until it does. The sync router cannot cancel a
-        # thread, so close() waits for all of them rather than shutting a
-        # member's client under a live request.
+        # What close() must wait for: every sync race that has started and
+        # not returned, and every call one submitted that has not finished --
+        # the winner's included until it does, and a loser's long after. The
+        # sync router cannot cancel a thread, so close() waits for all of it
+        # rather than shutting a member's client under a live request. One
+        # condition guards both, and the members cache: two callers on their
+        # own threads must not build the same member twice.
+        self._quiet = threading.Condition()
+        self._active = 0
         self._inflight: set[Future[ExtractResponse]] = set()
-        self._inflight_lock = threading.Lock()
+
+    def _member(self, position: int) -> ExtractProvider:
+        """Build and cache one member, once, however many threads ask at the same time."""
+        with self._quiet:
+            return super()._member(position)
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+        with self._quiet:
+            self._active += 1
+        try:
+            return self._race(request, urls)
+        finally:
+            with self._quiet:
+                self._active -= 1
+                self._quiet.notify_all()
+
+    def _race(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         delegated = self._delegated(request, urls)
         failures: dict[str, WebRouterError] = {}
         first, rest = self._runners(delegated, failures)
@@ -185,7 +204,7 @@ class MaxExtractProvider(AutoExtractProvider):
     ) -> None:
         for provider_name, member in runners:
             future = pool.submit(member.extract, delegated)
-            with self._inflight_lock:
+            with self._quiet:
                 self._inflight.add(future)
             # Registered outside the lock: a call already finished runs its
             # callback here and now, and the callback takes the lock itself.
@@ -193,21 +212,19 @@ class MaxExtractProvider(AutoExtractProvider):
             race.add(provider_name, future)
 
     def _forget(self, future: Future[ExtractResponse]) -> None:
-        with self._inflight_lock:
+        with self._quiet:
             self._inflight.discard(future)
+            self._quiet.notify_all()
 
     def close(self) -> None:
-        """Wait for every call a race submitted and has not seen finish, then close the members.
+        """Wait until no race is running and no call it submitted is still in flight, then close the members.
 
-        Not a snapshot: a race on another thread may submit more while this
-        waits, so it waits until nothing is in flight at all.
+        Not a snapshot: a race on another thread may be between starting and
+        its first submission, or submit more while this waits, so this waits
+        for quiet -- no active race and nothing in flight at once.
         """
-        while True:
-            with self._inflight_lock:
-                inflight = set(self._inflight)
-            if not inflight:
-                break
-            wait(inflight)
+        with self._quiet:
+            self._quiet.wait_for(lambda: self._active == 0 and not self._inflight)
         super().close()
 
 
