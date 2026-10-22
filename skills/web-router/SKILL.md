@@ -10,7 +10,7 @@ description: >
 
 # web-router
 
-One typed interface over many web backends, five methods. The tools describe
+One typed interface over many web backends, six methods. The tools describe
 *your* install: their `provider` enums list only backends this machine holds
 keys for, and `search`/`extract` work with no key at all. Read the
 `web-router://capabilities` resource once to learn what is configured before
@@ -25,6 +25,11 @@ Work up this ladder and stop at the first rung that serves the task:
 2. **`extract`** — read pages you already have URLs for, about a second.
    Prefer `search` + `extract` over anything below: two cheap calls that you
    compose beat one expensive call you wait on.
+   **`run_template`** sits beside it: when `templates` lists a saved
+   extraction for the site and item at hand, one run returns the page's
+   fields as a record, about a second, one billed fetch. Read `template`
+   first — its `input_schema` says exactly what `params` to pass, a URL for
+   some templates and an id or a search term for others.
 3. **`research`** — an agentic run that searches, reads and cross-checks over
    many turns. **Minutes, and it bills.** Use only when the question genuinely
    needs synthesis across many sources that iterative `search`/`extract`

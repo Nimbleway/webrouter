@@ -8,8 +8,10 @@ rules every change here follows.
 ## What this is
 
 `web-router` puts one typed interface in front of many web APIs: `search`,
-`extract`, `research`, `open_browser` (a browser session) and `browse` (a
-hosted browser agent). Each call behaves the same whichever backend serves it.
+`extract`, `run_template` (a backend's saved Extract Template, with
+`templates` and `template` to find one), `research`, `open_browser` (a browser
+session) and `browse` (a hosted browser agent). Each call behaves the same
+whichever backend serves it.
 It ships a Python library and an MCP server. [README.md](README.md) is the full
 reference.
 

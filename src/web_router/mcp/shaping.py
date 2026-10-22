@@ -57,9 +57,12 @@ from web_router.types import (
     BrowseProgress,
     BrowseResponse,
     ExtractResponse,
+    ExtractTemplate,
     ResearchProgress,
     ResearchResponse,
     SearchResponse,
+    TemplatePage,
+    TemplateResponse,
 )
 
 _URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s\"'<>]+")
@@ -206,6 +209,79 @@ def shape_extract(response: ExtractResponse, handle: str, *, budget: int) -> dic
         "failures": [{"url": failure.url, "error": failure.error} for failure in response.failures],
     }
     return _fit(payload, documents, ("content",), handle=handle, budget=budget)
+
+
+def shape_templates(page: TemplatePage, handle: str, *, budget: int) -> dict[str, Any]:
+    """One page of a template catalogue, cut to fit: names and what each extracts, never the schemas.
+
+    A catalogue runs to thousands, so each row is the few words a model picks
+    a template by; ``template`` returns the schemas for the one it picked.
+    """
+    templates = [_template_row(template) for template in page.templates]
+    payload: dict[str, Any] = {
+        "provider": page.provider,
+        "template_count": len(page.templates),
+        "total": page.total,
+        "offset": page.offset,
+        "limit": page.limit,
+        "templates": templates,
+    }
+    return _fit(payload, templates, ("description",), handle=handle, budget=budget)
+
+
+def shape_template(template: ExtractTemplate, handle: str, *, budget: int) -> dict[str, Any]:
+    """One template with its schemas, cut to fit.
+
+    The schemas are left whole: a run has to match ``input_schema`` exactly,
+    and a cut schema would send the model guessing at the inputs it dropped.
+    """
+    row = {
+        **_template_row(template),
+        "version": template.version,
+        "input_schema": template.input_schema,
+        "output_schema": template.output_schema,
+    }
+    payload: dict[str, Any] = {"provider": template.provider, "template": row}
+    return _fit(payload, [row], ("description",), handle=handle, budget=budget)
+
+
+def shape_template_run(response: TemplateResponse, handle: str, *, budget: int) -> dict[str, Any]:
+    """A template run, cut to fit. The record is left whole, as a research run's ``structured`` is.
+
+    The record is what the caller asked for, shaped by the template's own
+    schema; the page beside it, when one was asked for, is the one thing
+    long enough to cut.
+    """
+    page = (
+        {
+            "url": response.document.url,
+            "format": response.document.format,
+            "status_code": response.document.status_code,
+            "content": response.document.content,
+        }
+        if response.document is not None
+        else None
+    )
+    payload: dict[str, Any] = {
+        "provider": response.provider,
+        "template": response.template,
+        "params": response.params,
+        "url": response.url,
+        "status_code": response.status_code,
+        "data": response.data,
+        "document": page,
+    }
+    return _fit(payload, [page] if page is not None else [], ("content",), handle=handle, budget=budget)
+
+
+def _template_row(template: ExtractTemplate) -> dict[str, Any]:
+    return {
+        "name": template.name,
+        "description": template.description,
+        "domain": template.domain,
+        "entity_type": template.entity_type,
+        "published": template.published,
+    }
 
 
 def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> dict[str, Any]:

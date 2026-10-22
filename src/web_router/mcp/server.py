@@ -1,4 +1,4 @@
-"""The MCP server itself: seventeen tools, one resource, over stdio.
+"""The MCP server itself: twenty tools, one resource, over stdio.
 
 Built on the SDK's low-level :class:`~mcp.server.Server` rather than FastMCP,
 because the input schemas are not knowable until the server starts: the

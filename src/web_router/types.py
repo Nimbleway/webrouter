@@ -4,7 +4,8 @@ Every provider maps its own payload onto these types, so swapping Nimble for
 Tavily or You.com does not change the shape of what callers get back. Anything a
 provider returns that has no home here is preserved verbatim under
 ``SearchResult.extra`` / ``SearchResponse.raw`` for a search, and under
-``ExtractedDocument.extra`` / ``ExtractResponse.raw`` for an extract.
+``ExtractedDocument.extra`` / ``ExtractResponse.raw`` for an extract, and under
+``TemplateResponse.extra`` / ``TemplateResponse.raw`` for an Extract Template run.
 
 A browser session is the exception to "a call returns an answer": it returns a
 :class:`BrowserSession` describing a browser the caller then drives itself.
@@ -388,6 +389,139 @@ class ExtractResponse(BaseModel):
     def urls(self) -> list[str]:
         """Every document URL, in the order they were asked for."""
         return [document.url for document in self.documents]
+
+
+class TemplateRequest(NormalizedRequest):
+    """A normalized Extract Template run.
+
+    A template is a reusable extraction a backend holds for one kind of page --
+    a retailer's product page, a job board's listing -- that turns the page
+    into a record shaped by the template's own output schema. Its inputs are
+    the template's, not ours: :attr:`params` is whatever its ``input_schema``
+    names, a URL for some templates and an id, a slug or a search term for
+    others, so nothing here presumes a URL.
+
+    :attr:`format` left as ``None`` means no page content beside the record,
+    which is what every backend returns when asked for nothing: unlike an
+    extract there is no default format to pin, because the record is the
+    answer and the page is an extra.
+    """
+
+    always_sent: ClassVar[frozenset[str]] = frozenset({"template", "params", "provider_options"})
+
+    template: Annotated[str, Field(min_length=1, description="The template's name, as the backend knows it.")]
+    params: dict[str, Any] = Field(
+        default_factory=dict,
+        description="The template's inputs, named by its input_schema -- a URL, an id, a search term.",
+    )
+    format: ExtractFormat | None = Field(
+        default=None,
+        description="A representation of the page to return beside the record. Unset returns the record alone.",
+    )
+
+
+TEMPLATE_ALWAYS_SENT = TemplateRequest.always_sent
+"""Fields every template provider handles itself: the template, its inputs, and the untranslated passthrough."""
+
+TEMPLATE_PARAMETERS: frozenset[str] = TemplateRequest.normalized_parameters()
+"""Every optional parameter a template provider may declare support for."""
+
+
+class ExtractTemplate(BaseModel):
+    """One Extract Template a backend holds, as the backend describes it.
+
+    What a caller needs to run it is :attr:`input_schema`, and what comes back
+    is shaped by :attr:`output_schema`. Both are ``None`` for a template that
+    has no published version yet, which cannot be run.
+    """
+
+    # Unknown keys are a provider bug: anything unmapped belongs in `extra`.
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str
+    name: str = Field(description="The stable name a run names the template by.")
+    description: str = Field(default="", description="What the template extracts, when the backend says.")
+    domain: str | None = Field(default=None, description="The site the template reads, when the backend says.")
+    entity_type: str | None = Field(default=None, description="The kind of page it reads, in the backend's words.")
+    input_schema: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "JSON Schema of the inputs a run passes as `params`. None for a template with no published version."
+        ),
+    )
+    output_schema: dict[str, Any] | None = Field(
+        default=None,
+        description="JSON Schema of the record a run returns. None for a template with no published version.",
+    )
+    version: int | None = Field(default=None, description="The published version's number, when there is one.")
+    published: bool = Field(default=False, description="Whether a version is published, so the template can be run.")
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    extra: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Provider-specific fields with no normalized equivalent.",
+    )
+    raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched description of it.")
+
+
+class TemplatePage(BaseModel):
+    """One page of a backend's Extract Templates, tagged with the provider that served it.
+
+    Backends page their catalogues, so this carries where in the catalogue the
+    page sits beside the templates on it; :attr:`total` is the backend's count
+    of the whole catalogue, when it reports one.
+    """
+
+    # Unknown keys are a provider bug: the untouched payload belongs in `raw`.
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str
+    templates: list[ExtractTemplate] = Field(default_factory=list)
+    total: int | None = Field(default=None, description="How many templates the backend holds, when it says.")
+    offset: int | None = Field(default=None, description="How many templates precede this page, when it says.")
+    limit: int | None = Field(default=None, description="The page size the backend applied, when it says.")
+    raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
+
+    def __len__(self) -> int:
+        return len(self.templates)
+
+    @property
+    def names(self) -> list[str]:
+        """Every template name on the page, in the backend's order."""
+        return [template.name for template in self.templates]
+
+
+class TemplateResponse(BaseModel):
+    """The result of one Extract Template run, tagged with the provider that served it.
+
+    :attr:`data` is the record the template parsed, shaped by its
+    ``output_schema``; :attr:`document` is the page it was parsed from, only
+    when a :attr:`~TemplateRequest.format` asked for it. A run the backend
+    could not complete -- a page it could not fetch, a template that failed on
+    it -- raises rather than coming back with an empty record.
+    """
+
+    # Unknown keys are a provider bug: the untouched payload belongs in `raw`.
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str
+    template: str
+    params: dict[str, Any] = Field(default_factory=dict, description="The inputs the run was given, as sent.")
+    data: dict[str, Any] = Field(
+        default_factory=dict, description="The record, shaped by the template's output_schema."
+    )
+    url: str | None = Field(default=None, description="The page the backend resolved the inputs to, when it says.")
+    document: ExtractedDocument | None = Field(
+        default=None,
+        description="The page the record came from, in the format asked for; None when none was.",
+    )
+    status_code: int | None = Field(default=None, description="The fetched page's HTTP status, when reported.")
+    request_id: str | None = Field(default=None, description="The provider's id for the request.")
+    extra: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Provider-specific fields with no normalized equivalent -- pagination hints, say.",
+    )
+    raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
 
 
 ResearchEffort = Literal["low", "medium", "high", "max"]

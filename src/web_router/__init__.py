@@ -8,6 +8,13 @@ change rather than a rewrite.
     >>> response = router.search("what is retrieval augmented generation", max_results=5)
     >>> pages = router.extract(response.urls[:3], format="markdown")
 
+:meth:`~web_router.WebRouter.run_template` runs a backend's Extract Template --
+a saved, site-specific extraction that turns one page into a record -- with
+:meth:`~web_router.WebRouter.templates` and :meth:`~web_router.WebRouter.template`
+to find one and read the inputs it takes:
+
+    >>> record = router.run_template("books_toscrape_pdp", {"url": "https://books.toscrape.com/..."}).data
+
 A third method, :meth:`~web_router.WebRouter.research`, runs an agentic backend
 over several turns and answers in minutes rather than milliseconds:
 
@@ -60,6 +67,7 @@ from web_router.providers.base import (
     ResearchJob,
     ResearchProvider,
     SearchProvider,
+    TemplateProvider,
 )
 from web_router.registry import (
     available_browse_providers,
@@ -67,21 +75,25 @@ from web_router.registry import (
     available_extract_providers,
     available_providers,
     available_research_providers,
+    available_template_providers,
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
     configured_providers,
     configured_research_providers,
+    configured_template_providers,
     register_browse_provider,
     register_browser_provider,
     register_extract_provider,
     register_provider,
     register_research_provider,
+    register_template_provider,
     unregister_browse_provider,
     unregister_browser_provider,
     unregister_extract_provider,
     unregister_provider,
     unregister_research_provider,
+    unregister_template_provider,
 )
 from web_router.types import (
     BROWSE_PARAMETERS,
@@ -89,6 +101,7 @@ from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
+    TEMPLATE_PARAMETERS,
     BenchmarkReport,
     BenchmarkRun,
     BrowseOutcome,
@@ -105,6 +118,7 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
+    ExtractTemplate,
     PageFormat,
     PageLoadState,
     PageSnapshot,
@@ -122,6 +136,9 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
     StealthLevel,
+    TemplatePage,
+    TemplateRequest,
+    TemplateResponse,
     Viewport,
 )
 
@@ -132,6 +149,7 @@ __all__ = [
     "EXTRACT_PARAMETERS",
     "NORMALIZED_PARAMETERS",
     "RESEARCH_PARAMETERS",
+    "TEMPLATE_PARAMETERS",
     "AsyncBrowserHandle",
     "AsyncWebRouter",
     "BenchmarkReport",
@@ -160,6 +178,7 @@ __all__ = [
     "ExtractProvider",
     "ExtractRequest",
     "ExtractResponse",
+    "ExtractTemplate",
     "ExtractedDocument",
     "MissingParameterError",
     "NavigationError",
@@ -189,6 +208,10 @@ __all__ = [
     "SearchResult",
     "StaleElementError",
     "StealthLevel",
+    "TemplatePage",
+    "TemplateProvider",
+    "TemplateRequest",
+    "TemplateResponse",
     "UnsupportedFormatError",
     "UnsupportedParameterError",
     "Viewport",
@@ -200,19 +223,23 @@ __all__ = [
     "available_extract_providers",
     "available_providers",
     "available_research_providers",
+    "available_template_providers",
     "configured_browse_providers",
     "configured_browser_providers",
     "configured_extract_providers",
     "configured_providers",
     "configured_research_providers",
+    "configured_template_providers",
     "register_browse_provider",
     "register_browser_provider",
     "register_extract_provider",
     "register_provider",
     "register_research_provider",
+    "register_template_provider",
     "unregister_browse_provider",
     "unregister_browser_provider",
     "unregister_extract_provider",
     "unregister_provider",
     "unregister_research_provider",
+    "unregister_template_provider",
 ]
