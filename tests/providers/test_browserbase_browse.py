@@ -3,13 +3,13 @@
 The mapping here is derived from Browserbase's Agents API reference -- Run an
 Agent, Get a Run and Stop a Run -- and the recorded payloads below are
 hand-written from that reference's ``AgentRun`` schema, with one correction
-from a live run on 2026-09-30: with no ``resultSchema``, the ``result`` came
-back as an object carrying the answer as its ``summary``, not as prose. Only the task is mapped. The API has no
+from a live run on 2026-09-30, and confirmed by another on 2026-10-21: with no
+``resultSchema``, the ``result`` came back as an object carrying the answer as
+its ``summary``, not as prose. Only the task is mapped. The API has no
 start URL, so ``start_url`` is refused. ``output_schema`` is refused too until a
 live call confirms ``resultSchema``; a schema sent through ``provider_options``
-comes back as an object ``result``, which is ``structured``. The
-integration test below is the check that matters; run it once a key is
-available. See CONTRIBUTING.md on verifying against the live API.
+comes back as an object ``result``, which is ``structured``; no live run has
+checked that yet. See CONTRIBUTING.md on verifying against the live API.
 """
 
 from __future__ import annotations
