@@ -209,3 +209,20 @@ def test_a_deciders_passthrough_types_stop_the_run_instead_of_becoming_a_default
     assert router(FakeDecider(error=GuardError("private data"))).classify("who won").fallback == (
         ROUTE_FALLBACK_DECIDER_ERROR,
     )
+
+
+@pytest.mark.parametrize("passthrough", [TimeoutError, (TimeoutError,)])
+def test_a_single_passthrough_class_works_like_a_one_item_tuple(passthrough: Any) -> None:
+    decider = FakeDecider()
+    decider.passthrough = passthrough  # type: ignore[attr-defined]
+    assert router(decider).classify("who won").method == "search"
+    decider.error = TimeoutError("caller's deadline")
+    with pytest.raises(TimeoutError):
+        router(decider).classify("who won")
+
+
+def test_a_passthrough_that_is_not_an_exception_class_raises_when_the_router_is_built() -> None:
+    decider = FakeDecider()
+    decider.passthrough = "TimeoutError"  # type: ignore[attr-defined]
+    with pytest.raises(ConfigurationError, match="passthrough"):
+        router(decider)

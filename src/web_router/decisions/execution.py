@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_decisions import (
+    MSG_ROUTE_BAD_PASSTHROUGH,
     MSG_ROUTE_NO_DECIDER,
     ROUTE_DEFAULT_LABELS,
     ROUTE_FALLBACK_DECIDER_ERROR,
@@ -55,7 +56,9 @@ def classify(
     given = [urls] if isinstance(urls, str) else list(urls or [])
     found = given or urls_in(query)
     chains = _default_chains(router)
-    labels, values, fallback, latency = _labels(router.decider, query, given=bool(given), output_schema=output_schema)
+    labels, values, fallback, latency = _labels(
+        router.decider, query, given=bool(given), output_schema=output_schema, passthrough=router._decider_passthrough
+    )
     method, chain, reason = route_from_labels(query, values, chains, urls=found, output_schema=output_schema)
     # The raw tool label, before an unsure one took its default, so the advice can say where it leaned.
     tool = labels.get(ROUTE_LABEL_TOOL)
@@ -75,8 +78,31 @@ def classify(
     )
 
 
+def passthrough_types(decider: Any) -> tuple[type[BaseException], ...]:
+    """A decider's passthrough= types, normalized once: a single exception class becomes a one-item tuple.
+
+    Raises:
+        ConfigurationError: for anything that is not an exception class or a tuple of them.
+    """
+    value: Any = getattr(decider, "passthrough", ()) or ()
+    if _is_exception_class(value):
+        return (value,)
+    if isinstance(value, tuple) and all(_is_exception_class(item) for item in value):
+        return value
+    raise ConfigurationError(MSG_ROUTE_BAD_PASSTHROUGH.format(value=value))
+
+
+def _is_exception_class(value: Any) -> bool:
+    return isinstance(value, type) and issubclass(value, BaseException)
+
+
 def _labels(
-    decider: Any, query: str, *, given: bool, output_schema: JsonSchema | None
+    decider: Any,
+    query: str,
+    *,
+    given: bool,
+    output_schema: JsonSchema | None,
+    passthrough: tuple[type[BaseException], ...],
 ) -> tuple[dict[str, Answer], dict[str, str], str | None, float]:
     """The decider's labels, each label's value, the fallback reason if any, and the decider's latency in ms."""
     if given:
@@ -87,7 +113,6 @@ def _labels(
     fallback: str | None = None
     started = time.perf_counter()
     # A wrapping decider's passthrough= types are a caller's policy: they stop the run, not route it.
-    passthrough: tuple[type[BaseException], ...] = tuple(getattr(decider, "passthrough", ()) or ())
     try:
         labels = decider.decide(state, ROUTE_QUESTIONS)
         values, unsure = label_values(labels)  # inside, so a malformed result is a decider error too

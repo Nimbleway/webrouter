@@ -520,7 +520,8 @@ class WebRouter(_BaseRouter[BrowserHandle]):
                 ``auto`` the call would quietly go to another backend instead;
                 for a decider name nothing is registered under; or for a named
                 decider with no key, such as ``decider="jev"`` with no TypeSafe key;
-                or for ``decider_config`` with a decider that is not a name.
+                or for ``decider_config`` with a decider that is not a name;
+                or for a decider whose ``passthrough`` is not an exception class or a tuple of them.
         """
         super().__init__(provider, provider_config=provider_config)
         async_only = sorted(_async_client_holders(self._config))
@@ -535,6 +536,12 @@ class WebRouter(_BaseRouter[BrowserHandle]):
             self._owns_decider = True
         else:
             self._owns_decider = False  # a decider handed in may be shared: its owner closes it
+        try:
+            self._decider_passthrough = execution.passthrough_types(decider)
+        except ConfigurationError:
+            if self._owns_decider and decider is not None:
+                decider.close()
+            raise
         self.decider = decider
 
     def search(

@@ -140,6 +140,7 @@ MSG_ROUTE_UNKNOWN_DECIDER = "Unknown decider {name!r}; known: {available}."
 MSG_ROUTE_DECIDER_CONFIG_UNUSED = (
     "decider_config is for a decider given by name; configure a decider instance yourself before passing it."
 )
+MSG_ROUTE_BAD_PASSTHROUGH = "A decider's passthrough must be an exception class or a tuple of them, not {value!r}."
 MSG_ROUTE_BAD_ANSWER = "The decider's answer could not be read: {detail}"
 MSG_ROUTE_BAD_PROBABILITIES = "probabilities that cannot be scaled to sum to 1: {probabilities}"
 
