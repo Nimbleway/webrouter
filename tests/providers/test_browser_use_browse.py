@@ -20,7 +20,7 @@ import pytest
 
 from web_router.exceptions import ProviderError
 from web_router.providers.browser_use import BrowserUseBrowseProvider
-from web_router.types import BROWSE_PARAMETERS, BrowseRequest
+from web_router.types import BrowseRequest
 
 TASK_ID = "3f1c2b9e-8a4d-4c1e-9b7a-2d5e6f708192"
 SESSION_ID = "b7e2a1c4-5d6f-4a8b-9c0d-1e2f3a4b5c6d"
@@ -160,8 +160,23 @@ def test_the_schema_is_sent_as_a_json_string(provider: BrowserUseBrowseProvider)
     assert json.loads(payload["structuredOutput"]) == SCHEMA
 
 
-def test_every_browse_option_is_mapped(provider: BrowserUseBrowseProvider) -> None:
-    assert BrowserUseBrowseProvider.supported_parameters == BROWSE_PARAMETERS
+def test_every_browse_option_reaches_the_wire(provider: BrowserUseBrowseProvider) -> None:
+    """Through a real submit, so an option dropped from the supported set or the field map fails here."""
+    api = _stub(provider)
+    provider.submit(
+        BrowseRequest(
+            task="t",
+            start_url="https://example.com",
+            output_schema=SCHEMA,
+            max_steps=5,
+            allowed_domains=["example.com"],
+        )
+    )
+    (body,) = api.bodies
+    assert body["startUrl"] == "https://example.com"
+    assert json.loads(body["structuredOutput"]) == SCHEMA
+    assert body["maxSteps"] == 5
+    assert body["allowedDomains"] == ["example.com"]
 
 
 def test_the_key_goes_in_browser_uses_own_header(provider: BrowserUseBrowseProvider) -> None:
