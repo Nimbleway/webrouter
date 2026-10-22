@@ -839,8 +839,11 @@ class AutoTemplateProvider(TemplateProvider):
     Every member needs a credential, so the chain is the backends you hold a
     key for and nothing after them. A template's name is the backend's own,
     so a run, a listing and a description all go to the first member that
-    serves the call; a member that fails falls through as a search member
-    does, because a refused run bills nothing.
+    serves the call. A listing or a description that fails falls through as
+    a search does, since neither bills; a run falls through only on a
+    failure that proves nothing was fetched, because a page the first member
+    fetched and then failed to parse is already paid for, and a second
+    member would fetch it again.
     """
 
     name: ClassVar[str] = PROVIDER_AUTO
@@ -895,6 +898,11 @@ class AutoTemplateProvider(TemplateProvider):
             try:
                 return self._member(position).run(request)
             except _RECOVERABLE as exc:
+                # A parse that failed, a 5xx or a read timeout may come after
+                # the page was fetched and billed, so only a failure that
+                # proves nothing was may try the next member.
+                if not _nothing_started(exc):
+                    raise
                 failures[provider_name] = exc
         raise self._no_backend(failures)
 
@@ -904,6 +912,8 @@ class AutoTemplateProvider(TemplateProvider):
             try:
                 return await self._member(position).arun(request)
             except _RECOVERABLE as exc:
+                if not _nothing_started(exc):
+                    raise
                 failures[provider_name] = exc
         raise self._no_backend(failures)
 
@@ -961,7 +971,9 @@ class AutoTemplateProvider(TemplateProvider):
         eligible: list[tuple[int, str]] = []
         skipped: list[str] = []
         unmapped: frozenset[str] = frozenset()
-        returned: frozenset[ExtractFormat] = frozenset()
+        # The formats of the members that map every option: when one such
+        # member exists and none returns the format, the format is the problem.
+        returned_by_mapping: frozenset[ExtractFormat] | None = None
         for position, (provider_name, _) in enumerate(self._chain):
             try:
                 member_cls = get_template_provider_class(provider_name)
@@ -969,12 +981,12 @@ class AutoTemplateProvider(TemplateProvider):
                 eligible.append((position, provider_name))
                 continue
             lacks = wanted - member_cls.supported_parameters
-            returned |= member_cls.supported_formats
             if lacks:
                 reasons = MSG_AUTO_UNMAPPED.format(names=_quoted(lacks))
                 unmapped |= lacks
             elif request.format is not None and request.format not in member_cls.supported_formats:
                 reasons = MSG_AUTO_UNFORMATTED.format(formats=_quoted(member_cls.supported_formats))
+                returned_by_mapping = (returned_by_mapping or frozenset()) | member_cls.supported_formats
             else:
                 eligible.append((position, provider_name))
                 continue
@@ -983,11 +995,9 @@ class AutoTemplateProvider(TemplateProvider):
         if eligible or not skipped:
             return eligible
         detail = MSG_AUTO_TEMPLATE_NO_CAPABLE_BACKEND.format(skipped=", ".join(dict.fromkeys(skipped)))
-        # A member is skipped for an option or for the format; with no format
-        # asked for, the only way every member was skipped is an option.
-        if unmapped or request.format is None:
-            raise UnsupportedParameterError(self.name, unmapped or wanted, detail=detail)
-        raise UnsupportedFormatError(self.name, request.format, returned, detail=detail)
+        if returned_by_mapping is not None and request.format is not None:
+            raise UnsupportedFormatError(self.name, request.format, returned_by_mapping, detail=detail)
+        raise UnsupportedParameterError(self.name, unmapped or wanted, detail=detail)
 
     def _no_backend(self, failures: dict[str, WebRouterError]) -> WebRouterError:
         return _no_backend(

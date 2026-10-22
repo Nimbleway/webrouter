@@ -41,9 +41,12 @@ from web_router.constants import (
     NIMBLE_RESEARCH_USE_CASE_ENRICHMENT,
     NIMBLE_RESEARCH_USE_CASE_RESEARCH,
     NIMBLE_TEMPLATE_ERROR_FIELD,
+    NIMBLE_TEMPLATE_ERROR_SHAPE,
     NIMBLE_TEMPLATE_PARSING_ERROR_STATUS,
     NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS,
     NIMBLE_TEMPLATE_RECORD_FIELD,
+    NIMBLE_TEMPLATE_RECORD_SHAPE,
+    NIMBLE_TEMPLATE_STATUS_FIELD,
     NIMBLE_TEMPLATE_SUCCESS_STATUS,
     PROVIDER_NIMBLE,
     RESEARCH_HTTP_TIMEOUT,
@@ -378,12 +381,17 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
         """
         if not isinstance(parsing, dict) or not parsing:
             raise ProviderError(self.name, MSG_TEMPLATE_NO_RECORD.format(template=request.template))
-        reported = parsing.get("status")
-        if reported == NIMBLE_TEMPLATE_PARSING_ERROR_STATUS and NIMBLE_TEMPLATE_ERROR_FIELD in parsing:
+        # A wrapper is exactly the SDK's two fields and nothing else: a record
+        # whose own schema names `status` and `entities` beside other fields is
+        # still the record, and unwrapping it would lose the others.
+        reported = parsing.get(NIMBLE_TEMPLATE_STATUS_FIELD)
+        if set(parsing) == NIMBLE_TEMPLATE_ERROR_SHAPE and reported == NIMBLE_TEMPLATE_PARSING_ERROR_STATUS:
             error = parsing[NIMBLE_TEMPLATE_ERROR_FIELD]
             raise ProviderError(self.name, MSG_TEMPLATE_PARSING_FAILED.format(template=request.template, error=error))
-        if reported == NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS and isinstance(
-            parsing.get(NIMBLE_TEMPLATE_RECORD_FIELD), dict
+        if (
+            set(parsing) == NIMBLE_TEMPLATE_RECORD_SHAPE
+            and reported == NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS
+            and isinstance(parsing[NIMBLE_TEMPLATE_RECORD_FIELD], dict)
         ):
             return dict(parsing[NIMBLE_TEMPLATE_RECORD_FIELD])
         return dict(parsing)

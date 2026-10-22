@@ -33,6 +33,7 @@ from web_router.constants import (
     ENV_BY_PROVIDER,
     ENV_MCP_ENV_FILE,
     EXTRACT_ENV_BY_PROVIDER,
+    MCP_ARG_FORMAT,
     MCP_ARG_HANDLE,
     MCP_ARG_MAX_CHARS,
     MCP_ARG_PATH,
@@ -127,8 +128,8 @@ from web_router.mcp.shaping import (
     shape_template_run,
     shape_templates,
 )
-from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider
-from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, _BaseProvider
+from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider, AutoTemplateProvider
+from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
 from web_router.registry import (
     configured_browse_providers,
     configured_browser_providers,
@@ -150,6 +151,7 @@ from web_router.types import (
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
     TEMPLATE_PARAMETERS,
+    ExtractFormat,
     ExtractResponse,
     PageState,
     StealthLevel,
@@ -216,9 +218,18 @@ def _browser_chain(router: AsyncWebRouter) -> tuple[str, ...]:
     return provider.members if isinstance(provider, AutoBrowserProvider) else ()
 
 
+def _template_chain(router: AsyncWebRouter) -> tuple[str, ...]:
+    """The members the router's own template ``auto`` would try, read as :func:`_browser_chain` reads its own."""
+    provider = router.get_template_provider(PROVIDER_AUTO)
+    return provider.members if isinstance(provider, AutoTemplateProvider) else ()
+
+
 _CHAIN_OF: dict[str, Callable[[AsyncWebRouter], tuple[str, ...]]] = {
     MCP_TOOL_SEARCH: _search_chain,
     MCP_TOOL_EXTRACT: _extract_chain,
+    MCP_TOOL_TEMPLATES: _template_chain,
+    MCP_TOOL_TEMPLATE: _template_chain,
+    MCP_TOOL_RUN_TEMPLATE: _template_chain,
     MCP_TOOL_BROWSER_OPEN: _browser_chain,
 }
 """The tools whose ``auto`` declares what some member serves, routing each request to a member that serves it.
@@ -709,6 +720,8 @@ class WebRouterTools:
             properties = {name: spec for name, spec in properties.items() if name not in _OPTIONS[tool] - mapped}
             if MCP_ARG_STEALTH in properties and tool == MCP_TOOL_BROWSER_OPEN:
                 _offer_levels(properties, serving)
+            if MCP_ARG_FORMAT in properties and tool == MCP_TOOL_RUN_TEMPLATE:
+                _offer_formats(properties, serving)
         if providers:
             properties[MCP_ARG_PROVIDER] = {
                 "type": "string",
@@ -756,6 +769,22 @@ def _offer_levels(properties: dict[str, Any], serving: list[type[_BaseProvider]]
         properties[MCP_ARG_STEALTH] = {**properties[MCP_ARG_STEALTH], "enum": levels}
     else:
         del properties[MCP_ARG_STEALTH]
+
+
+def _offer_formats(properties: dict[str, Any], serving: list[type[_BaseProvider]]) -> None:
+    """Narrow a template run's ``format`` to the page formats some backend serving here returns.
+
+    Every template backend maps the option; what differs is which formats it
+    can return beside the record. A format none of them returns would be
+    refused on every route, so it is not offered, and with none at all the
+    option goes too -- as :func:`_offer_levels` narrows ``stealth``.
+    """
+    served = frozenset().union(*(cls.supported_formats for cls in serving if issubclass(cls, TemplateProvider)))
+    formats = [body_format for body_format in get_args(ExtractFormat) if body_format in served]
+    if formats:
+        properties[MCP_ARG_FORMAT] = {**properties[MCP_ARG_FORMAT], "enum": formats}
+    else:
+        del properties[MCP_ARG_FORMAT]
 
 
 def _lower(kwargs: dict[str, Any], name: str, limit: float, lowered: list[str]) -> None:

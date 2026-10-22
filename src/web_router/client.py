@@ -384,21 +384,6 @@ class _BaseRouter(Generic[_HandleT]):
         )
 
     @staticmethod
-    def _build_template_request(
-        template: str,
-        params: Mapping[str, Any] | None,
-        *,
-        format: ExtractFormat | None,
-        provider_options: dict[str, Any] | None,
-    ) -> TemplateRequest:
-        return TemplateRequest(
-            template=template,
-            params=dict(params or {}),
-            format=format,
-            provider_options=provider_options or {},
-        )
-
-    @staticmethod
     def _build_research_request(
         query: str,
         *,
@@ -783,7 +768,9 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         A run the backend could not complete raises rather than coming back
         with an empty record.
         """
-        request = self._build_template_request(template, params, format=format, provider_options=provider_options)
+        request = TemplateRequest(
+            template=template, params=dict(params or {}), format=format, provider_options=provider_options or {}
+        )
         return self.get_template_provider(provider).run(request)
 
     def research(
@@ -1175,7 +1162,9 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle]):
         As on the sync router: ``params`` are the template's own inputs, and
         ``format`` asks for the page beside the record.
         """
-        request = self._build_template_request(template, params, format=format, provider_options=provider_options)
+        request = TemplateRequest(
+            template=template, params=dict(params or {}), format=format, provider_options=provider_options or {}
+        )
         return await self.get_template_provider(provider).arun(request)
 
     async def research(

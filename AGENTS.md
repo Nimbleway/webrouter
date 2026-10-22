@@ -610,7 +610,14 @@ backend pages it -- `limit` and `offset` unset are not sent -- never the whole
 catalogue, which runs to thousands. The MCP `templates` tool shapes a row to
 the words a model picks a template by and leaves the schemas to `template`,
 whose schemas are never cut: a cut `input_schema` sends the model guessing at
-the inputs it dropped.
+the inputs it dropped. A schema or a record that does not fit the budget even
+on its own is left out whole, with a note naming the `fetch_raw` handle that
+holds it (`MCP_MSG_OVERSIZED`), never inlined over the budget. `auto` falls
+through to the next member on a listing or a description, which bill
+nothing, but on a run only when `_nothing_started` proves no page was
+fetched: a parse failure, a 5xx or a read timeout may follow a billed fetch,
+and a second member would fetch again. The `run_template` tool offers
+`format` only in the values some member of the chain returns.
 
 **An extract call that partly fails stays partly successful.** `ExtractProvider`
 fans URLs out across calls for backends that take one at a time, records each

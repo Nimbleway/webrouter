@@ -20,6 +20,8 @@ from web_router.mcp.shaping import (
     shape_browse,
     shape_extract,
     shape_search,
+    shape_template,
+    shape_template_run,
     truncate,
 )
 from web_router.types import (
@@ -27,8 +29,10 @@ from web_router.types import (
     BrowseStep,
     ExtractedDocument,
     ExtractResponse,
+    ExtractTemplate,
     SearchResponse,
     SearchResult,
+    TemplateResponse,
 )
 
 _PROSE = "alpha beta gamma delta " * 200
@@ -294,3 +298,60 @@ def test_a_devtools_endpoint_written_without_a_scheme_is_redacted(text: str) -> 
     cleaned, count = redact(text)
 
     assert count == 1 and "/devtools/" not in cleaned and MCP_REDACTED in cleaned
+
+
+_BIG_SCHEMA = {"type": "object", "properties": {f"field_{index}": {"type": "string"} for index in range(400)}}
+
+
+def test_a_schema_that_fits_is_never_shortened() -> None:
+    template = ExtractTemplate(provider="fake", name="t", input_schema=_BIG_SCHEMA, output_schema=_BIG_SCHEMA)
+
+    shaped = shape_template(template, "template-0001", budget=100_000)
+
+    assert shaped["template"]["input_schema"] == _BIG_SCHEMA
+    assert shaped["template"]["output_schema"] == _BIG_SCHEMA
+    assert shaped["truncated"] is False
+
+
+def test_a_schema_that_cannot_fit_is_left_out_whole_with_a_pointer_to_the_handle() -> None:
+    """A cut schema would send the model guessing at the inputs it dropped, so it goes whole or not at all."""
+    template = ExtractTemplate(provider="fake", name="t", input_schema={"type": "object"}, output_schema=_BIG_SCHEMA)
+
+    shaped = shape_template(template, "template-0001", budget=2_000)
+
+    assert len(render(shaped)) <= 2_000
+    assert shaped["template"]["output_schema"] is None, "the oversized one goes"
+    assert shaped["template"]["input_schema"] == {"type": "object"}, "the one that fits stays"
+    assert shaped["truncated"] is True
+    assert "output_schema" in shaped["note"] and "template-0001" in shaped["note"]
+
+
+def test_a_record_that_cannot_fit_is_left_out_whole_with_a_pointer_to_the_handle() -> None:
+    response = TemplateResponse(
+        provider="fake",
+        template="t",
+        data={f"field_{index}": _PROSE for index in range(10)},
+        document=ExtractedDocument(url="https://example.com", content=_PROSE, format="markdown"),
+    )
+
+    shaped = shape_template_run(response, "run_template-0001", budget=3_000)
+
+    assert len(render(shaped)) <= 3_000
+    assert shaped["data"] is None
+    assert MCP_TRUNCATION_MARKER in shaped["document"]["content"], "the page was cut first, as text is"
+    assert shaped["truncated"] is True
+    assert "data" in shaped["note"] and "run_template-0001" in shaped["note"]
+
+
+def test_a_record_that_fits_once_the_page_is_cut_is_kept() -> None:
+    response = TemplateResponse(
+        provider="fake",
+        template="t",
+        data={"title": "Widget", "price": "9.99"},
+        document=ExtractedDocument(url="https://example.com", content=_PROSE, format="markdown"),
+    )
+
+    shaped = shape_template_run(response, "run_template-0001", budget=1_500)
+
+    assert shaped["data"] == {"title": "Widget", "price": "9.99"}
+    assert len(render(shaped)) <= 1_500

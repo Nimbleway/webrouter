@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
+import httpx
 import pytest
 
-from web_router.constants import AUTO_TEMPLATE_PREFERRED, ENV_NIMBLE_API_KEY, TEMPLATE_ENV_BY_PROVIDER
+from web_router.constants import ENV_NIMBLE_API_KEY, TEMPLATE_ENV_BY_PROVIDER
 from web_router.exceptions import (
     ConfigurationError,
     ProviderError,
@@ -44,12 +46,6 @@ def two_fakes() -> Any:
     unregister_template_provider("second")
 
 
-def test_every_preferred_member_needs_a_credential() -> None:
-    """No keyless tier: a run fetches on the backend's account."""
-    for name in AUTO_TEMPLATE_PREFERRED:
-        assert TEMPLATE_ENV_BY_PROVIDER[name], f"{name} is in the chain with no credential to be keyed on"
-
-
 def test_the_default_chain_is_the_backends_you_hold_a_key_for(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
     assert AutoTemplateProvider().members == ()
 
@@ -76,11 +72,19 @@ def test_a_listing_and_a_description_go_to_the_first_member_that_answers(two_fak
     assert provider.run(REQUEST).provider == "first"
 
 
-def test_a_member_that_fails_falls_through_to_the_next(two_fakes: Any) -> None:
-    """A refused run bills nothing, so the chain moves on as a search chain does."""
+def _refused(provider: str, status: int) -> ProviderError:
+    """A backend's answer that refused the run before fetching anything, as httpx reports it."""
+    request = httpx.Request("POST", "https://api.example/run")
+    response = httpx.Response(status, request=request)
+    original = httpx.HTTPStatusError(f"HTTP {status}", request=request, response=response)
+    return ProviderError(provider, f"HTTP {status}", original=original)
+
+
+def test_a_member_that_refused_the_run_falls_through_to_the_next(two_fakes: Any) -> None:
+    """A 4xx proves nothing was fetched, so nothing was billed, and the chain moves on."""
 
     def _run(self: Any, request: TemplateRequest) -> Any:
-        raise ProviderError("first", "HTTP 503")
+        raise _refused("first", 422)
 
     two_fakes[0]._run = _run
     provider = AutoTemplateProvider(chain=["first", "second"])
@@ -88,16 +92,44 @@ def test_a_member_that_fails_falls_through_to_the_next(two_fakes: Any) -> None:
     assert provider.run(REQUEST).provider == "second"
 
 
-def test_every_member_failing_reports_each_ones_reason(two_fakes: Any) -> None:
+@pytest.mark.parametrize(
+    "failure",
+    [ProviderError("first", "template failed to parse the page"), _refused("first", 503)],
+    ids=["parse-failure", "5xx"],
+)
+def test_a_failure_that_may_follow_a_billed_fetch_is_raised_not_retried(two_fakes: Any, failure: ProviderError) -> None:
+    """The first member may have fetched the page already; a second member would fetch, and bill, again."""
+
     def _run(self: Any, request: TemplateRequest) -> Any:
-        raise ProviderError(self.name, f"{self.name} refused")
+        raise failure
+
+    two_fakes[0]._run = _run
+    provider = AutoTemplateProvider(chain=["first", "second"])
+
+    with pytest.raises(ProviderError, match=re.escape(str(failure))):
+        provider.run(REQUEST)
+    assert 1 not in provider._members, "the second member was never built"
+
+
+def test_a_listing_that_fails_falls_through_because_it_bills_nothing(two_fakes: Any) -> None:
+    def _list(self: Any, **kwargs: Any) -> Any:
+        raise ProviderError("first", "HTTP 503")
+
+    two_fakes[0]._list = _list
+
+    assert AutoTemplateProvider(chain=["first", "second"]).templates().provider == "second"
+
+
+def test_every_member_refusing_reports_each_ones_reason(two_fakes: Any) -> None:
+    def _run(self: Any, request: TemplateRequest) -> Any:
+        raise _refused(self.name, 401)
 
     two_fakes[0]._run = _run
     two_fakes[1]._run = _run
     with pytest.raises(ProviderError) as caught:
         AutoTemplateProvider(chain=["first", "second"]).run(REQUEST)
 
-    assert "first refused" in str(caught.value) and "second refused" in str(caught.value)
+    assert "[first] HTTP 401" in str(caught.value) and "[second] HTTP 401" in str(caught.value)
 
 
 def test_a_member_that_cannot_return_the_format_is_passed_over_before_being_built(two_fakes: Any) -> None:
@@ -122,6 +154,22 @@ def test_with_no_member_returning_the_format_the_call_raises_before_anything_run
     assert provider._members == {}
 
 
+def test_a_member_that_maps_the_options_but_not_the_format_makes_it_a_format_error(two_fakes: Any) -> None:
+    """Mixed chain: one member lacks the option, the other maps it but returns another format.
+
+    The caller is told the format is unavailable, not to drop an option a
+    configured backend does map.
+    """
+    two_fakes[0].supported_parameters = frozenset()
+    two_fakes[1].supported_formats = frozenset({"html"})
+    provider = AutoTemplateProvider(chain=["first", "second"])
+
+    with pytest.raises(UnsupportedFormatError, match="markdown") as caught:
+        provider.run(REQUEST.model_copy(update={"format": "markdown"}))
+
+    assert caught.value.supported == ["html"], "what the members that map the options do return"
+
+
 def test_with_no_member_mapping_an_option_the_call_raises_naming_it(two_fakes: Any) -> None:
     two_fakes[0].supported_parameters = frozenset()
     two_fakes[1].supported_parameters = frozenset()
@@ -141,7 +189,7 @@ def test_a_chain_keyed_by_method_reads_its_own_entry(two_fakes: Any) -> None:
 
 async def test_the_async_path_follows_the_same_chain(two_fakes: Any) -> None:
     async def _arun(self: Any, request: TemplateRequest) -> Any:
-        raise ProviderError("first", "HTTP 503")
+        raise _refused("first", 404)
 
     two_fakes[0]._arun = _arun
     provider = AutoTemplateProvider(chain=["first", "second"])

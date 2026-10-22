@@ -163,6 +163,17 @@ def test_a_record_whose_own_field_is_called_status_is_not_mistaken_for_a_report(
     assert response.data == record
 
 
+def test_a_record_with_a_status_and_entities_beside_other_fields_is_kept_whole(
+    provider: NimbleTemplateProvider,
+) -> None:
+    """A wrapper is exactly the SDK's two fields; a record whose schema names both and more is a record."""
+    record = {"status": "success", "entities": {"brand": "Acme"}, "title": "Widget"}
+
+    response = provider._to_response(TemplateRequest(template=TEMPLATE), _run_payload(record))
+
+    assert response.data == record
+
+
 @pytest.mark.parametrize("parsing", [None, {}])
 def test_a_fetched_page_with_no_record_raises(provider: NimbleTemplateProvider, parsing: Any) -> None:
     with pytest.raises(ProviderError, match="without a record"):

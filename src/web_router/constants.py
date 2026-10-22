@@ -326,8 +326,13 @@ third shape the SDK's ``DataParsing`` union allows. The other two wrap it: a
 beside an ``error``. All three are read; only the last is a failure.
 """
 
+NIMBLE_TEMPLATE_STATUS_FIELD = "status"
 NIMBLE_TEMPLATE_RECORD_FIELD = "entities"
 NIMBLE_TEMPLATE_ERROR_FIELD = "error"
+
+NIMBLE_TEMPLATE_RECORD_SHAPE: frozenset[str] = frozenset({NIMBLE_TEMPLATE_STATUS_FIELD, NIMBLE_TEMPLATE_RECORD_FIELD})
+NIMBLE_TEMPLATE_ERROR_SHAPE: frozenset[str] = frozenset({NIMBLE_TEMPLATE_STATUS_FIELD, NIMBLE_TEMPLATE_ERROR_FIELD})
+"""The exact keys of the SDK's two wrapped shapes; a dict with any other key beside them is a bare record."""
 
 # --- You.com ----------------------------------------------------------------
 # You.com publishes no Python SDK, so the wire details are ours to maintain.
@@ -2796,6 +2801,11 @@ so a bad credential would look like a page with no text.
 """
 
 MSG_EXTRACT_NO_DOCUMENT = "the backend answered without a document for it"
+"""Stands in when a backend reports neither a document nor a reason.
+
+Not a case any provider here should reach: it means a payload was shaped in a
+way its mapping did not expect. Saying so beats returning an empty response.
+"""
 
 MSG_TEMPLATE_BAD_STATUS = "the backend fetched nothing for template {template!r} and reported status {status!r}"
 
@@ -2806,11 +2816,6 @@ MSG_TEMPLATE_NO_RECORD = "the backend fetched the page but answered without a re
 
 Not a case Nimble reaches: a run either parses, or says in ``data.parsing``
 that it failed. Saying so beats returning an empty record as the answer.
-"""
-"""Stands in when a backend reports neither a document nor a reason.
-
-Not a case any provider here should reach: it means a payload was shaped in a
-way its mapping did not expect. Saying so beats returning an empty response.
 """
 
 MSG_REDIRECTS_WITH_CREDENTIAL = (
@@ -3872,6 +3877,7 @@ MCP_LOAD_ENV_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_ARG_SESSION_ID = "session_id"
+MCP_ARG_FORMAT = "format"
 MCP_ARG_REF = "ref"
 MCP_ARG_SELECTOR = "selector"
 MCP_ARG_MAX_CHARS = "max_chars"
@@ -4300,6 +4306,12 @@ MCP_MSG_TRUNCATED = (
 )
 
 MCP_MSG_DROPPED = " {dropped} of {total} items did not fit and were left out."
+
+MCP_MSG_OVERSIZED = (
+    "{field} is {size} characters and cannot be cut without changing what it means, so it was left out "
+    "to fit a context window. Call fetch_raw with handle {handle!r} for the backend's untouched payload."
+)
+"""A field that is never shortened -- a schema, a record -- did not fit even on its own."""
 
 MCP_MSG_RESEARCH_PENDING = (
     "The run did not finish in the {wait:g}s this tool waits, and is still going. Poll "

@@ -162,6 +162,28 @@ def test_search_reads_the_auto_chain_the_router_was_given(no_keys: None) -> None
     assert {"include_domains", "country", "locale"} <= offered
 
 
+def test_run_template_reads_the_auto_chain_the_router_was_given(no_keys: None) -> None:
+    """`format` is offered only when some member the chain would try returns a page; `auto` alone says nothing."""
+    from tests.conftest import FakeTemplateProvider
+    from web_router.registry import register_template_provider, unregister_template_provider
+
+    class NoPageTemplateProvider(FakeTemplateProvider):
+        name = "nopage"
+        supported_formats = frozenset()
+
+    register_template_provider("nopage", NoPageTemplateProvider)
+    try:
+        pageless = AsyncWebRouter(provider_config={"auto": {"chain": {"template": ["nopage"]}}})
+        offered = set(_tool(WebRouterTools(pageless), MCP_TOOL_RUN_TEMPLATE).input_schema["properties"])
+        assert "format" not in offered
+
+        paged = AsyncWebRouter(provider_config={"auto": {"chain": {"template": [("nimble", {"api_key": "x"})]}}})
+        offered = set(_tool(WebRouterTools(paged), MCP_TOOL_RUN_TEMPLATE).input_schema["properties"])
+        assert "format" in offered
+    finally:
+        unregister_template_provider("nopage")
+
+
 def test_browser_open_reads_the_auto_chain_the_router_was_given(no_keys: None) -> None:
     # A `chain` in provider_config is what open_browser tries, so it is what the
     # schema offers -- not the keyless default the environment would have chosen.
