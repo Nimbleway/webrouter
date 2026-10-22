@@ -162,8 +162,8 @@ def _structured(output: str | None) -> dict[str, Any] | list[Any] | None:
     # An answer that is not JSON is left as prose rather than dropped: the agent
     # was asked for the schema, but only its output says whether it managed.
     # A bare JSON value (a `{"type": "string"}` schema's `"Paris"`) does not fit
-    # `structured` either and stays in `answer` as JSON text, quotes included,
-    # as it does on Browserbase and Parallel.
+    # `structured` either and stays in `answer` as the JSON text Browser Use
+    # returned, quotes included.
     if output is None:
         return None
     try:
