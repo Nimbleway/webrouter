@@ -257,6 +257,7 @@ which ones this environment can use.
 | `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Fetch](https://api-docs.deepseek.com/guides/search) | `DEEPSEEK_API_KEY` | `markdown` |
 | `Provider.JINA` | `jina` | [Jina Reader](https://jina.ai/reader) | **none** (`JINA_API_KEY` raises the rate limit) | `markdown`, `html`, `text` |
 | `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable and DeepSeek | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it |
+| `Provider.MAX` | `max` | — | the same members as `auto`, **all at once**; the first document back wins, and every fetch started is paid for -- see [The fastest answer any backend can give](#the-fastest-answer-any-backend-can-give-max) | as `auto` |
 
 Two need more than a key. Oxylabs authenticates with the username and password
 created under Web Scraper API in its dashboard — not the ones you sign in with —
@@ -614,6 +615,47 @@ asked of each provider.
 single entry from a backend that took every URL at once, one per URL that came
 back from a backend that did not. A call that failed outright is in `failures`
 instead — there was no payload to keep.
+
+### The fastest answer any backend can give: `max`
+
+`auto` tries its backends one after another and stops at the first that works.
+`max` sends the same request to **every backend at once** and returns the first
+document that comes back:
+
+```python
+response = WebRouter(Provider.MAX).extract(url, format="markdown")
+response.provider  # whoever answered first -- never 'max'
+```
+
+It is for the caller who wants the fastest working extract and is willing to
+pay for it: every fetch `max` starts is billed by its backend, so a call costs
+up to one extract per configured backend. That is why it is never the default
+and has to be named. The members are exactly the ones `auto` would try, in the
+same order, chosen the same way -- `chain` in `provider_config` picks others
+-- and `format` routes the same way, to the members that can return it.
+
+Only a document wins. A backend that refused the fetch, could not be built or
+answered with nothing is that backend's loss, not the call's, and when every
+backend loses the error names each one's reason. What a slower backend would
+have returned is never judged: the first document is the answer, which is the
+"never invent data" rule applied to a race. On the sync router the losers
+finish on their own threads and `close()` waits for them before shutting their
+clients; on the async router they are cancelled.
+
+**`hedge` keeps the cost down.** With a hedge, the first member runs alone for
+that many seconds and the rest start only if it has not answered by then:
+
+```python
+router = WebRouter(Provider.MAX, provider_config={"max": {"hedge": 0.8}})
+```
+
+A page the first backend returns within the hedge costs one fetch; only the
+slow ones pay for the race. A first member that fails before the hedge runs
+out starts the rest at once. Unset, every member starts together.
+
+`max` is left out of `benchmark()`'s default set as `auto` is: a row for it
+would repeat one of the others under a name that says nothing about who
+answered.
 
 ## Researching a question
 

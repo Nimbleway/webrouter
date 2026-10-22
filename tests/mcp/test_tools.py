@@ -42,6 +42,7 @@ from web_router.constants import (
     PROVIDER_HYPERBROWSER,
     PROVIDER_JINA,
     PROVIDER_LINKUP,
+    PROVIDER_MAX,
     PROVIDER_PARALLEL_MCP,
     PROVIDER_TAVILY,
     PROVIDER_YOU_MCP,
@@ -93,7 +94,7 @@ def test_provider_enum_offers_only_configured_backends(tools: WebRouterTools, no
         PROVIDER_PARALLEL_MCP,
         PROVIDER_YOU_MCP,
     ]
-    assert extract.input_schema["properties"]["provider"]["enum"] == [PROVIDER_AUTO, PROVIDER_JINA]
+    assert extract.input_schema["properties"]["provider"]["enum"] == [PROVIDER_AUTO, PROVIDER_JINA, PROVIDER_MAX]
     assert PROVIDER_TAVILY not in search.input_schema["properties"]["provider"]["enum"]
 
 

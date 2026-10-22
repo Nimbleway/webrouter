@@ -61,7 +61,9 @@ class Provider(str, Enum):
     ``browser-use`` and ``skyvern`` run browse tasks and nothing else.
     :func:`web_router.available_providers`,
     :func:`web_router.available_extract_providers` and their research and
-    browser counterparts list each method's own set.
+    browser counterparts list each method's own set. ``auto`` serves every
+    method by trying its backends in turn; ``max`` serves extract alone, by
+    trying every backend at once and returning the first document back.
     """
 
     NIMBLE = "nimble"
@@ -91,6 +93,7 @@ class Provider(str, Enum):
     LOCAL = "local"
     BROWSER_USE = "browser-use"
     AUTO = "auto"
+    MAX = "max"
 
     # A str-mixin enum otherwise renders as "Provider.NIMBLE" in f-strings and
     # str(), which would reach users through error messages and `raw` payloads.

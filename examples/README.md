@@ -6,6 +6,7 @@ Runnable scripts, roughly in the order worth reading them.
 | --- | --- | --- |
 | [`basic_search.py`](basic_search.py) | The whole API: search, read normalized results | Nimble |
 | [`extract.py`](extract.py) | `extract()`: page contents, formats, partial failure | no |
+| [`extract_max.py`](extract_max.py) | `max`: every extract backend at once, the first document wins, and a `hedge` that keeps most calls to one fetch | no |
 | [`research.py`](research.py) | `research()`: prose, a schema, enrichment, and a job you can put down | any research key |
 | [`browser_session.py`](browser_session.py) | `open_browser()` on `local`: goto, snapshot, click, type, screenshot, read — sync and async | no |
 | [`browser_vendor.py`](browser_vendor.py) | The same session through `auto` on a cloud vendor, and your own Playwright over `cdp_url` | any browser key |

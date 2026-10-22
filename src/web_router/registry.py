@@ -44,6 +44,7 @@ from web_router.constants import (
     PROVIDER_KERNEL,
     PROVIDER_LINKUP,
     PROVIDER_LOCAL,
+    PROVIDER_MAX,
     PROVIDER_NIMBLE,
     PROVIDER_OXYLABS,
     PROVIDER_PARALLEL,
@@ -107,6 +108,7 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekExtractProvider", EXTRA_EXTRACT),
     PROVIDER_JINA: ("web_router.providers.jina", "JinaExtractProvider", EXTRA_EXTRACT),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoExtractProvider", AUTO_EXTRA),
+    PROVIDER_MAX: ("web_router.providers.max", "MaxExtractProvider", AUTO_EXTRA),
 }
 
 _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {

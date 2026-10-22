@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- `max`, an extract provider that sends the request to every backend `auto` would try, all at once, and returns the first document back -- `WebRouter(Provider.MAX).extract(url)`, with `response.provider` naming the backend that answered. Every fetch it starts is billed by its backend, so it costs up to one extract per configured backend and is never the default. Only a document wins: a backend that refused, could not be built or returned nothing is its own loss, and when every one loses the error names each reason. `provider_config={"max": {"hedge": 0.8}}` runs the first member alone for that long and starts the rest only if it has not answered, so most calls stay at one fetch; a first member that fails early starts the rest at once. The members and `chain` config are `auto`'s, `format` routes the same way, and the sync router's `close()` waits for a race's losers before shutting their clients while the async router cancels them. `max` joins `auto` in `BENCHMARK_EXCLUDED`, and the MCP `extract` tool offers it under `provider` with its cost in the description.
+
 ## [0.6.0] - 2026-10-20
 
 ### Added

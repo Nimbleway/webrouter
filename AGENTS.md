@@ -14,7 +14,9 @@ tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
 Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, the keyless Jina
-Reader, and `auto` again.
+Reader, `auto` again, and `max`, which sends the request to every member
+`auto` would try at once and returns the first document back -- the fastest
+answer any backend can give, at one fetch per member, so never the default.
 
 **`research`** — an agentic run: the backend reasons over several turns and
 answers in minutes rather than milliseconds. Nimble, Parallel, Perplexity,
@@ -112,6 +114,8 @@ src/web_router/
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
     ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel.py
+    ├── max.py          extract's parallel chain: auto's members all at once,
+    │                   the first document wins, with an optional hedge
     ├── auto.py         the default for every method: keyed backends, then keyless
     │                   (research and browse have no keyless tier, so their
     │                   chains end there; a browser chain ends with `local`)
@@ -380,6 +384,25 @@ an option outside the member's `supported_parameters` (Browserbase refuses
 `start_url`) and a required one the request left unset, through
 `missing_parameters`; with no member left it raises `MissingParameterError` or
 `UnsupportedParameterError` naming why each was skipped.
+
+**`max` is `auto`'s members raced, and nothing more.** It subclasses
+`AutoExtractProvider` for its chain, its format routing and its member
+construction, so the two can never disagree about who is tried; it differs
+only in starting every eligible member at once and returning the first
+`ExtractResponse` that came back. Only a document wins: a `_RECOVERABLE`
+failure is that member's loss and the race goes on, any other
+`WebRouterError` propagates, and with no winner `_exhausted` names each
+member's reason under `MAX_AGGREGATE_FAILURE`. It never judges the responses
+it did not return -- the first document is the answer, which is "never invent
+data" applied to a race. `hedge` is the one knob: the first eligible member
+runs alone for that many seconds, the rest start when it runs out or when
+that member fails, whichever comes first. The whole URL list is one race, so
+every document comes from the winner. The sync router cannot cancel a loser,
+so `close()` waits for the race's stragglers before closing the members; the
+async router cancels them. `max` and `auto` are `DELEGATING_PROVIDERS`: the
+router hands both every other backend's `provider_config` entry, and
+`benchmark()` excludes both. `max` is not a member of `auto` and `auto` is not
+a member of `max`.
 
 **Every backend of a method is a member of its `auto`, in a fixed order.**
 Search's keyed members (`AUTO_PREFERRED`) follow a provider scan's judged

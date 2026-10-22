@@ -51,6 +51,10 @@ Work up this ladder and stop at the first rung that serves the task:
   CAPTCHA solving, which only billed cloud vendors serve.
 - Leave `provider` unset (`auto`) unless you have a reason: it prefers the
   backends configured here and falls back to the keyless tier.
+- `extract` with `provider="max"` reads the page through every configured
+  backend at once and returns the first answer -- the fastest read possible,
+  at one fetch per backend. Use it only when the user has asked for speed
+  over cost, never by default.
 
 ## What the tools will and will not do
 

@@ -449,7 +449,7 @@ With nothing configured at all the enums read:
 
 ```
 search   ["auto", "you-mcp"]     # keyless
-extract  ["auto", "jina"]        # keyless
+extract  ["auto", "jina", "max"] # keyless; max races whatever auto would try
 research ["auto"]                # every research backend bills, so nothing here can run
 ```
 
