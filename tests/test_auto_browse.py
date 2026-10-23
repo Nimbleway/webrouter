@@ -190,7 +190,7 @@ def test_a_member_missing_a_required_parameter_is_passed_over(chain: _Recorder) 
 
 
 def test_output_schema_no_member_maps_raises_naming_why_each_was_skipped(chain: _Recorder) -> None:
-    """No vendor maps `output_schema` yet, so `auto` must say so rather than return prose under a schema."""
+    """With no member mapping `output_schema`, `auto` must say so rather than return prose under a schema."""
     _member(chain, "url")
     _member(chain, "bare", supported=frozenset())
 

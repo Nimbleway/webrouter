@@ -1046,9 +1046,9 @@ API over httpx, which `[all]` installs.
 | Pass | Name | Provider | Credentials | Options mapped | Verified how |
 | --- | --- | --- | --- | --- | --- |
 | `Provider.AUTO` *(default)* | `auto` | — | Browser Use, Skyvern or Browserbase, whichever you hold | whatever the member it routes to maps | Routes around a member before any task starts; with no member left it raises, naming why each was skipped |
-| `Provider.BROWSER_USE` | `browser-use` | [Browser Use Cloud API v2](https://docs.browser-use.com/cloud/api-v2-overview) | `BROWSER_USE_API_KEY` | `start_url` | **Documentation only** — no key was available. Answers in prose; `output_schema`, `max_steps` and `allowed_domains` are refused until a live call confirms them |
+| `Provider.BROWSER_USE` | `browser-use` | [Browser Use Cloud API v2](https://docs.browser-use.com/cloud/api-v2-overview) | `BROWSER_USE_API_KEY` | `start_url`, `output_schema`, `max_steps`, `allowed_domains` | **Live**, 2026-10-21: a prose task, and each mapped option |
 | `Provider.SKYVERN` | `skyvern` | [Skyvern run-task API](https://skyvern.com/docs/sdk-reference/tasks/run-task) | `SKYVERN_API_KEY` | `start_url` (optional) | **Documentation only** — no key was available. `output_schema`, `max_steps` and `allowed_domains` are refused; most answers are only in `raw` (see below) |
-| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Agents](https://docs.browserbase.com/platform/agents/overview) | `BROWSERBASE_API_KEY` | none beyond the task | **Documentation only** — no key was available. `start_url` is refused; a schema goes through `provider_options` |
+| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Agents](https://docs.browserbase.com/platform/agents/overview) | `BROWSERBASE_API_KEY` | none beyond the task | **Live**, 2026-09-30 and 2026-10-21: a prose task. `start_url` is refused; a schema goes through `provider_options` as `resultSchema`, which awaits a live run |
 
 `auto` tries **Browser Use, Skyvern, then Browserbase**, only those you hold a
 key for, and nothing after them. Browser Use comes first because it answers in
@@ -1065,10 +1065,17 @@ the task.
 ### Browse backend notes
 
 **Browser Use** runs each task in a session it creates for it, and cancelling a
-task stops that session too. Its steps carry the page, the screenshot and the
-agent's next goal; the stringified actions, its memory and the step number are
-in each step's `extra`. A finished task is `complete` even when Browser Use's
-self-reported `isSuccess` is `false`, which stays in `raw`.
+task stops that session too. Its steps carry the page, the screenshot, the
+agent's note on the step (its `memory`) and, for a step that took one action,
+that action as Browser Use wrote it; the full list of stringified actions, the
+step number and the always-empty `nextGoal` are in each step's `extra`.
+`output_schema` is sent as Browser Use's `structuredOutput`, and its answer
+comes back as `structured`; an answer that is not JSON stays in `answer`
+rather than being dropped. `allowed_domains` blocks navigation elsewhere, but
+the agent may still answer from what it already knows, so check
+`steps` when it matters where an answer came from. A finished task is
+`complete` even when Browser Use's self-reported `isSuccess` is `false`, which
+stays in `raw`.
 
 **Skyvern** answers in an object whose keys its agent chose unless a
 `data_extraction_schema` is sent, and that is not mapped yet, so most Skyvern
