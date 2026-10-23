@@ -264,6 +264,7 @@ def test_fast_pages_are_spaced_so_none_draws_a_429(monkeypatch: pytest.MonkeyPat
     """The review's repro, scaled ten times faster: unspaced, 25 of 30 fast pages failed."""
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
     monkeypatch.setattr(DeepSeekExtractProvider, "min_start_interval", DeepSeekExtractProvider.min_start_interval / 10)
+    # The 0.9 is slack for timer jitter, so a start that wakes a hair early does not count six in the window.
     window = 5 * DeepSeekExtractProvider.min_start_interval * 0.9
     starts: list[float] = []
     answer = _rate_limited(starts, window)
