@@ -221,13 +221,15 @@ def shape_templates(page: TemplatePage, handle: str, *, budget: int) -> dict[str
     templates = [_template_row(template) for template in page.templates]
     payload: dict[str, Any] = {
         "provider": page.provider,
-        "template_count": len(page.templates),
         "total": page.total,
         "offset": page.offset,
         "limit": page.limit,
         "templates": templates,
     }
-    return _fit(payload, templates, ("description",), handle=handle, budget=budget)
+    fitted = _fit(payload, templates, ("description",), handle=handle, budget=budget)
+    # Counted after the fit, which may have dropped rows: the count is of what is shown.
+    fitted["template_count"] = len(templates)
+    return fitted
 
 
 def shape_template(template: ExtractTemplate, handle: str, *, budget: int) -> dict[str, Any]:
@@ -267,10 +269,11 @@ def shape_template_run(response: TemplateResponse, handle: str, *, budget: int) 
         if response.document is not None
         else None
     )
+    # The inputs are not echoed: the caller sent them, and unbounded they
+    # could fill the budget on their own.
     payload: dict[str, Any] = {
         "provider": response.provider,
         "template": response.template,
-        "params": response.params,
         "url": response.url,
         "status_code": response.status_code,
         "data": response.data,
@@ -283,24 +286,31 @@ def shape_template_run(response: TemplateResponse, handle: str, *, budget: int) 
 def _bounded(
     payload: dict[str, Any], fields: tuple[tuple[dict[str, Any], str], ...], *, handle: str, budget: int
 ) -> dict[str, Any]:
-    """Leave out, in order, each untrimmable field until the payload fits, saying so each time.
+    """Leave out, largest first, each untrimmable field until the payload fits, saying so each time.
 
     For a field that must stay whole to mean anything -- a schema, a record --
     the choice is between inlining it over the budget and leaving it out with
     a pointer to the raw payload; the second keeps a single result from
-    filling a context window.
+    filling a context window. The largest goes first so the smaller ones
+    stay whenever dropping it is enough.
     """
-    for container, key in fields:
+    by_size = sorted(fields, key=lambda field: _size(field[0].get(field[1])), reverse=True)
+    for container, key in by_size:
         if len(render(payload)) <= budget:
             break
         value = container.get(key)
         if value is None:
             continue
-        note = MCP_MSG_OVERSIZED.format(field=key, size=len(render(value)), handle=handle)
+        note = MCP_MSG_OVERSIZED.format(field=key, size=_size(value), handle=handle)
         container[key] = None
         payload["truncated"] = True
         payload["note"] = f"{payload['note']} {note}" if payload.get("note") else note
     return payload
+
+
+def _size(value: Any) -> int:
+    """How many characters a field takes once serialized as the tool returns it; nothing for an absent one."""
+    return 0 if value is None else len(json.dumps(value, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str))
 
 
 def _template_row(template: ExtractTemplate) -> dict[str, Any]:
