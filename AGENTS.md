@@ -871,7 +871,7 @@ spike) reads `OPENAI_API_KEY` too, only when a caller asks for it and passes no 
 OpenAI tools never read either key, because they are
 definitions the caller's own client sends. `.env` is gitignored — keep it that way.
 
-**The library never loads `.env` itself.** Only four entry points do:
+**The library never loads `.env` itself.** Only these entry points do:
 `tests/conftest.py`, for the live tests, `benchmarks/agent/run.py`,
 `benchmarks/providers/run.py` and `benchmarks/providers/extract.py`, scripts
 run from the repo, and the MCP server —
