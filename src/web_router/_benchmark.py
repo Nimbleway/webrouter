@@ -20,14 +20,7 @@ from typing import Any, TypeVar
 from web_router.constants import MSG_BENCHMARK_ROW_FAILED
 from web_router.exceptions import BenchmarkTimeoutError, ProviderError, WebRouterError
 from web_router.providers.base import ExtractProvider, SearchProvider
-from web_router.types import (
-    BenchmarkRun,
-    ExtractBenchmarkRun,
-    ExtractResponse,
-    Provider,
-    SearchResponse,
-    provider_name,
-)
+from web_router.types import BenchmarkRun, ExtractBenchmarkRun, ExtractResponse, Provider, SearchResponse, provider_name
 
 _MemberT = TypeVar("_MemberT", bound="SearchProvider | ExtractProvider")
 _AnswerT = TypeVar("_AnswerT", bound="SearchResponse | ExtractResponse")
@@ -106,22 +99,6 @@ def _unexpected(name: str, exc: Exception) -> ProviderError:
     return ProviderError(name, MSG_BENCHMARK_ROW_FAILED.format(error=exc), original=exc)
 
 
-def search_row(name: str, started: float | None, outcome: SearchResponse | WebRouterError) -> BenchmarkRun:
-    """A row from its own start: the call's latency, not the comparison's; none for a row that never started."""
-    latency = 0.0 if started is None else time.perf_counter() - started
-    if isinstance(outcome, WebRouterError):
-        return BenchmarkRun(provider=name, error=outcome, latency=latency)
-    return BenchmarkRun(provider=name, response=outcome, latency=latency)
-
-
-def extract_row(name: str, started: float | None, outcome: ExtractResponse | WebRouterError) -> ExtractBenchmarkRun:
-    """The extract twin of :func:`search_row`."""
-    latency = 0.0 if started is None else time.perf_counter() - started
-    if isinstance(outcome, WebRouterError):
-        return ExtractBenchmarkRun(provider=name, error=outcome, latency=latency)
-    return ExtractBenchmarkRun(provider=name, response=outcome, latency=latency)
-
-
 def fan_out(
     members: list[tuple[str, _MemberT | WebRouterError]],
     call: Callable[[_MemberT], _AnswerT],
@@ -133,7 +110,8 @@ def fan_out(
     """Every member's row at once, each timed around its own ``call``, the whole bounded by ``timeout``.
 
     ``row_of`` builds the method's own row from a name, when its call
-    started, and what it got or raised. A row still unanswered at the
+    started, and what it got or raised -- ``BenchmarkRun.of`` or
+    ``ExtractBenchmarkRun.of``. A row still unanswered at the
     deadline is reported as timed out and its call left to finish on its
     thread, tracked in ``stragglers`` until it does.
     """

@@ -401,3 +401,28 @@ def test_two_threads_asking_for_one_provider_build_it_once(registered: _Register
         first, second = pool.map(lambda _: router.get_provider("slowinit"), range(2))
 
     assert first is second and len(built) == 1, "the loser of the race would be a client nobody closes"
+
+
+def test_a_report_serializes_what_names_the_comparison_before_its_rows() -> None:
+    """The order callers saw before the two reports shared anything: `query` then `runs`, `urls` then `runs`."""
+    from web_router.types import ExtractBenchmarkReport
+
+    assert list(BenchmarkReport(query="q").model_dump()) == ["query", "runs"]
+    assert list(ExtractBenchmarkReport(urls=["https://a.test"]).model_dump()) == ["urls", "runs"]
+    assert list(BenchmarkReport.model_fields) == ["query", "runs"]
+
+
+def test_types_imports_nothing_of_ours() -> None:
+    """The import graph is types <- constants <- exceptions <- everything else; the rows live here to keep it so."""
+    import ast
+    import inspect
+
+    import web_router.types as types_module
+
+    tree = ast.parse(inspect.getsource(types_module))
+    ours = [
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("web_router")
+    ]
+    assert ours == []

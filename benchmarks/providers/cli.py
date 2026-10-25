@@ -8,7 +8,7 @@ from pathlib import Path
 from _common import DEFAULT_OUT
 from urls import URL_SETS
 
-from web_router.benchmark_types import BENCHMARK_EXTRACT_TIMEOUT
+from web_router.constants import BENCHMARK_EXTRACT_TIMEOUT
 
 DEFAULT_SET = "general"
 DEFAULT_LIMIT = 100
