@@ -80,7 +80,9 @@ def load_urls(args: argparse.Namespace) -> list[tuple[str, str | None]]:
             rows.append((url, category))
     if args.limit is not None and args.limit < len(rows):
         # The same seed picks the same URLs, so two scans can be combined; a limit past the set is the whole set.
-        rows = sorted(random.Random(args.seed).sample(rows, args.limit), key=rows.index)
+        # Sampled as positions and read back in order, which keeps the set's order without a lookup per row.
+        chosen = sorted(random.Random(args.seed).sample(range(len(rows)), args.limit))
+        rows = [rows[index] for index in chosen]
     if not rows:
         raise SystemExit(MSG_NO_URLS.format(path=path, limit=args.limit))
     return rows

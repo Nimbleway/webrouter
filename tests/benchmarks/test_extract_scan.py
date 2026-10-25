@@ -374,3 +374,20 @@ def test_a_finished_scan_writes_every_file_once_from_the_rows_it_ran(scan: Modul
     assert json.loads((out / "run.json").read_text())["asked"] == 1, "run.json is written again with what run added"
     assert len((out / "rows.jsonl").read_text().splitlines()) == 1, "the sink's rows are not written twice"
     assert (out / "report.md").exists() and (out / "summary.json").exists()
+
+
+def test_sampling_keeps_the_sets_order_and_is_cheap_for_a_large_set(scan: ModuleType, tmp_path: Path) -> None:
+    """The sample used to be re-sorted with `rows.index`, O(limit x n); 50k rows at --limit 10000 is now instant."""
+    import time
+
+    path = tmp_path / "big.csv"
+    path.write_text("url,category\n" + "".join(f"https://u{i}.test,c\n" for i in range(50_000)), encoding="utf-8")
+    args = scan.parse_args(["--urls", str(path), "--limit", "10000", "--seed", "3"])
+
+    started = time.perf_counter()
+    sample = scan.load_urls(args)
+    assert time.perf_counter() - started < 2.0
+
+    positions = [int(url[len("https://u") : -len(".test")]) for url, _ in sample]
+    assert len(sample) == 10_000 and positions == sorted(positions), "the set's order is kept"
+    assert sample == scan.load_urls(args), "the same seed picks the same URLs"
