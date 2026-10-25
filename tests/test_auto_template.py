@@ -81,6 +81,50 @@ def _refused(provider: str, status: int) -> ProviderError:
     return ProviderError(provider, f"HTTP {status}", original=original)
 
 
+def _sdk_error(provider: str, kind: str, status: int = 0) -> ProviderError:
+    """A failure as a Nimble SDK-backed member reports it: not an httpx error, but the SDK's own."""
+    nimble_python = pytest.importorskip("nimble_python", reason="nimble extra not installed")
+    request = httpx.Request("POST", "https://api.example/run")
+    if kind == "status":
+        original: Exception = nimble_python.APIStatusError(
+            f"HTTP {status}", response=httpx.Response(status, request=request), body=None
+        )
+    elif kind == "connection":
+        original = nimble_python.APIConnectionError(request=request)
+    else:
+        original = nimble_python.APITimeoutError(request=request)
+    return ProviderError(provider, f"sdk {kind} {status}", original=original)
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [_sdk_error("first", "status", 404), _sdk_error("first", "connection")],
+    ids=["sdk-4xx", "sdk-connection-error"],
+)
+def test_the_sdk_s_own_refusal_or_unreached_backend_falls_through_too(two_fakes: Any, failure: ProviderError) -> None:
+    """A Nimble member raises the SDK's errors, not httpx's; a 4xx or a connection error is still proof."""
+    _register("first", run_raises=failure)
+    provider = AutoTemplateProvider(chain=["first", "second"])
+
+    assert provider.run(REQUEST).provider == "second"
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [_sdk_error("first", "status", 500), _sdk_error("first", "timeout")],
+    ids=["sdk-5xx", "sdk-timeout"],
+)
+def test_the_sdk_s_5xx_or_timeout_may_follow_a_billed_fetch_and_is_raised(
+    two_fakes: Any, failure: ProviderError
+) -> None:
+    _register("first", run_raises=failure)
+    provider = AutoTemplateProvider(chain=["first", "second"])
+
+    with pytest.raises(ProviderError, match=re.escape(str(failure))):
+        provider.run(REQUEST)
+    assert 1 not in provider._members
+
+
 def test_a_member_that_refused_the_run_falls_through_to_the_next(two_fakes: Any) -> None:
     """A 4xx proves nothing was fetched, so nothing was billed, and the chain moves on."""
     _register("first", run_raises=_refused("first", 422))

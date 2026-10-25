@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from http import HTTPStatus
 from typing import Any, TypeAlias
 
 from web_router.constants import (
@@ -197,7 +198,10 @@ def _nothing_started(exc: WebRouterError) -> bool:
     - a :class:`ProviderError` whose ``original`` is an ``httpx.HTTPStatusError``
       with a 4xx status, an answer that refused;
     - a :class:`ProviderError` whose ``original`` is an ``httpx.ConnectError``
-      or ``httpx.ConnectTimeout``, a request that never reached the backend.
+      or ``httpx.ConnectTimeout``, a request that never reached the backend;
+    - the same two, as the ``nimble-python`` SDK reports them: an
+      ``APIStatusError`` with a 4xx status, or an ``APIConnectionError`` that
+      is not its ``APITimeoutError``.
 
     Everything else raises: a read that timed out, a 5xx from a gateway in
     front of the backend, a 200 that could not be read. The backend may have
@@ -216,7 +220,26 @@ def _nothing_started(exc: WebRouterError) -> bool:
     original = exc.original
     if isinstance(original, httpx.HTTPStatusError):
         return bool(original.response.is_client_error)
-    return isinstance(original, (httpx.ConnectError, httpx.ConnectTimeout))
+    if isinstance(original, (httpx.ConnectError, httpx.ConnectTimeout)):
+        return True
+    return _sdk_refused(original)
+
+
+def _sdk_refused(original: BaseException | None) -> bool:
+    """The same two shapes as the ``nimble-python`` SDK reports them, which are not httpx errors.
+
+    Its ``APIStatusError`` carries the status; a 4xx is an answer that
+    refused. Its ``APIConnectionError`` is a request that never reached the
+    backend -- except its ``APITimeoutError`` subclass, which covers a read
+    that timed out after the request was accepted, and so proves nothing.
+    """
+    try:
+        from nimble_python import APIConnectionError, APIStatusError, APITimeoutError
+    except ImportError:
+        return False
+    if isinstance(original, APIStatusError):
+        return HTTPStatus.BAD_REQUEST <= original.status_code < HTTPStatus.INTERNAL_SERVER_ERROR
+    return isinstance(original, APIConnectionError) and not isinstance(original, APITimeoutError)
 
 
 def _exhausted(
