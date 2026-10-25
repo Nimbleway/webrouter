@@ -1,0 +1,44 @@
+{
+  "provider": "nimble",
+  "method": "extract",
+  "class": "web_router.providers.nimble.NimbleExtractProvider",
+  "transport": {
+    "kind": "sdk",
+    "packages": [
+      "nimble_python"
+    ]
+  },
+  "credentials": [
+    "NIMBLE_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.formats": [
+      "markdown"
+    ],
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "already in always_sent"
+      },
+      "html": {
+        "body.formats": [
+          "html"
+        ]
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "html",
+  "batches_urls": false,
+  "source": "TODO",
+  "verified": {
+    "format": "TODO"
+  },
+  "vendor_options": "TODO"
+}

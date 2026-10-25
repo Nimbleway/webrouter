@@ -1,0 +1,43 @@
+{
+  "provider": "parallel",
+  "method": "search",
+  "class": "web_router.providers.parallel.ParallelProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.parallel.ai",
+    "paths": {
+      "search_path": "/v1beta/search"
+    },
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "PARALLEL_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.objective": "probe query",
+    "body.search_queries": [
+      "probe query"
+    ]
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.max_results": 3
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "search_depth"
+  ],
+  "source": "TODO",
+  "verified": {
+    "max_results": "TODO"
+  },
+  "vendor_options": "TODO"
+}

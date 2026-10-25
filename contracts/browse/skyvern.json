@@ -1,0 +1,36 @@
+{
+  "provider": "skyvern",
+  "method": "browse",
+  "class": "web_router.providers.skyvern.SkyvernBrowseProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.skyvern.com",
+    "paths": {},
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "SKYVERN_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.prompt": "probe task"
+  },
+  "options": {
+    "start_url": {
+      "sample": {
+        "body.url": "https://example.com"
+      }
+    }
+  },
+  "not_mapped": [
+    "allowed_domains",
+    "max_steps",
+    "output_schema"
+  ],
+  "source": "TODO",
+  "verified": {
+    "start_url": "TODO"
+  },
+  "vendor_options": "TODO"
+}

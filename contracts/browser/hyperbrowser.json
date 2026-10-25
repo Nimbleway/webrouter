@@ -1,0 +1,91 @@
+{
+  "provider": "hyperbrowser",
+  "method": "browser",
+  "class": "web_router.providers.hyperbrowser.HyperbrowserBrowserProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.hyperbrowser.ai",
+    "paths": {
+      "open_path": "/api/session",
+      "release_path": "/api/session/{session_id}/stop"
+    },
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "HYPERBROWSER_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body": {}
+  },
+  "options": {
+    "proxy_country": {
+      "sample": {
+        "body": "<removed>",
+        "body.proxyCountry": "US",
+        "body.useProxy": true
+      }
+    },
+    "stealth": {
+      "off": {
+        "body": "<removed>",
+        "body.useStealth": false,
+        "body.useUltraStealth": false
+      },
+      "low": {
+        "body": "<removed>",
+        "body.useStealth": true
+      },
+      "high": {
+        "body": "<removed>",
+        "body.useUltraStealth": true
+      }
+    },
+    "solve_captchas": {
+      "true": {
+        "body": "<removed>",
+        "body.solveCaptchas": true
+      },
+      "false": {
+        "body": "<removed>",
+        "body.solveCaptchas": false
+      }
+    },
+    "profile": {
+      "sample": {
+        "body": "<removed>",
+        "body.profile.id": "profile-id"
+      }
+    },
+    "persist_profile": {
+      "true": {
+        "body.profile.persistChanges": true
+      },
+      "false": {
+        "body.profile.persistChanges": false
+      }
+    },
+    "timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.timeoutMinutes": 5
+      }
+    }
+  },
+  "not_mapped": [
+    "headless",
+    "idle_timeout",
+    "viewport"
+  ],
+  "source": "TODO",
+  "verified": {
+    "proxy_country": "TODO",
+    "stealth": "TODO",
+    "solve_captchas": "TODO",
+    "profile": "TODO",
+    "persist_profile": "TODO",
+    "timeout": "TODO"
+  },
+  "vendor_options": "TODO"
+}

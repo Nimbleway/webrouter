@@ -1,0 +1,46 @@
+{
+  "provider": "brightdata",
+  "method": "extract",
+  "class": "web_router.providers.brightdata.BrightDataExtractProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.brightdata.com",
+    "paths": {
+      "extract_path": "/request"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "BRIGHTDATA_API_TOKEN",
+    "BRIGHTDATA_ZONE"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.data_format": "markdown",
+    "body.format": "json",
+    "body.url": "https://example.com",
+    "body.zone": "contract-probe-zone"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "already in always_sent"
+      },
+      "html": {
+        "body.data_format": "<removed>"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "html",
+  "batches_urls": false,
+  "source": "TODO",
+  "verified": {
+    "format": "TODO"
+  },
+  "vendor_options": "TODO"
+}

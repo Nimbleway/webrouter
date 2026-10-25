@@ -166,7 +166,7 @@ path = "src/web_router/_version.py"
 packages = ["src/web_router"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/web_router", "tests", "README.md", "CHANGELOG.md"]
+include = ["src/web_router", "tests", "scripts", "contracts", "README.md", "CHANGELOG.md"]
 
 [tool.uv]
 managed = true
@@ -181,7 +181,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "TID", "RUF"]
 ignore = ["B008"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["web_router"]
+known-first-party = ["web_router", "scripts"]
 
 [tool.mypy]
 python_version = "3.10"

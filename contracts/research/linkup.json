@@ -1,0 +1,53 @@
+{
+  "provider": "linkup",
+  "method": "research",
+  "class": "web_router.providers.linkup.LinkupResearchProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.linkup.so",
+    "paths": {},
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "LINKUP_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.outputType": "sourcedAnswer",
+    "body.q": "probe query"
+  },
+  "options": {
+    "output_schema": {
+      "sample": {
+        "body.outputType": "structured",
+        "body.structuredOutputSchema": "{\"type\": \"object\", \"properties\": {\"answer\": {\"type\": \"string\"}}}"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.reasoningDepth": "S"
+      },
+      "medium": {
+        "body.reasoningDepth": "M"
+      },
+      "high": {
+        "body.reasoningDepth": "L"
+      },
+      "max": {
+        "body.reasoningDepth": "XL"
+      }
+    }
+  },
+  "not_mapped": [
+    "exclude_domains",
+    "include_domains",
+    "records"
+  ],
+  "source": "TODO",
+  "verified": {
+    "output_schema": "TODO",
+    "effort": "TODO"
+  },
+  "vendor_options": "TODO"
+}

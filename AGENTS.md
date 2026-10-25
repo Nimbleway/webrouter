@@ -740,7 +740,8 @@ The same shape as the two below, against `ResearchProvider` or
 4. Add `tests/providers/test_<name>_research.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the README support table and `CHANGELOG.md`.
+5. Run `make contracts` and fill in the new contract's `source`, `verified` and
+   `vendor_options` (see "Provider contracts" below). Update the README support table and `CHANGELOG.md`.
 
 ## Adding a browser provider
 
@@ -775,7 +776,8 @@ The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
    open-release sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test that opens, asks and releases, and
    asks the backend afterwards through `tests/providers/_browser_live.py`.
-5. Update the README support table and `CHANGELOG.md`.
+5. Run `make contracts` and fill in the new contract's `source`, `verified` and
+   `vendor_options` (see "Provider contracts" below). Update the README support table and `CHANGELOG.md`.
 
 ## Adding a browse provider
 
@@ -815,7 +817,8 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>_browse.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the README support table and `CHANGELOG.md`.
+5. Run `make contracts` and fill in the new contract's `source`, `verified` and
+   `vendor_options` (see "Provider contracts" below). Update the README support table and `CHANGELOG.md`.
 
 ## Adding a search provider
 
@@ -838,7 +841,8 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>.py` covering parameter mapping and response
    normalization against a recorded payload, plus one `@pytest.mark.integration`
    live test that skips without credentials.
-5. Update the README support table and `CHANGELOG.md`.
+5. Run `make contracts` and fill in the new contract's `source`, `verified` and
+   `vendor_options` (see "Provider contracts" below). Update the README support table and `CHANGELOG.md`.
 
 ## Adding an extract provider
 
@@ -863,7 +867,28 @@ searches gets a second class in its existing module rather than a new one.
 4. Add `tests/providers/test_<name>.py` and the live checks in
    `tests/test_integration_surface.py`, which run only against providers that
    declare the format under test.
-5. Update the README support tables and `CHANGELOG.md`.
+5. Run `make contracts` and fill in the new contract's `source`, `verified` and
+   `vendor_options` (see "Provider contracts" below). Update the README support tables and `CHANGELOG.md`.
+
+## Provider contracts
+
+`contracts/<method>/<provider>.json` records what each provider sends its
+vendor: the endpoint, the credentials, what is always sent, and for every
+option and value the exact wire fields it sets, or that it is refused.
+`make contracts` generates that half by running each provider's own payload
+code, so never edit it by hand. Three fields are written by a person and kept
+across regenerations:
+
+- `source` — where the vendor documents the API.
+- `verified` — per mapped option, `live: <the test that calls it>` or
+  `docs: <the page it was mapped from>`.
+- `vendor_options` — every option the vendor's reference lists that no mapping
+  sends, as `passthrough` (reachable through `provider_options`) or
+  `not_supported`, each with a note.
+
+`tests/test_provider_contracts.py` fails when `contracts/` differs from the
+code, when a provider was added or removed without regenerating, and when a
+contract outside its `PENDING` list still holds a `TODO`. `PENDING` only shrinks.
 
 ## Testing
 

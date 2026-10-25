@@ -1,0 +1,56 @@
+{
+  "provider": "linkup",
+  "method": "search",
+  "class": "web_router.providers.linkup.LinkupProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.linkup.so",
+    "paths": {
+      "search_path": "/v1/search"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "LINKUP_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.depth": "fast",
+    "body.outputType": "searchResults",
+    "body.q": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.maxResults": 3
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.includeDomains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.excludeDomains": [
+          "example.org"
+        ]
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "locale",
+    "search_depth"
+  ],
+  "source": "TODO",
+  "verified": {
+    "max_results": "TODO",
+    "include_domains": "TODO",
+    "exclude_domains": "TODO"
+  },
+  "vendor_options": "TODO"
+}

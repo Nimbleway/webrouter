@@ -1,0 +1,42 @@
+{
+  "provider": "linkup",
+  "method": "extract",
+  "class": "web_router.providers.linkup.LinkupExtractProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.linkup.so",
+    "paths": {
+      "extract_path": "/v1/fetch"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "LINKUP_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "already in always_sent"
+      },
+      "html": {
+        "body.includeRawContent": true
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": "TODO",
+  "verified": {
+    "format": "TODO"
+  },
+  "vendor_options": "TODO"
+}

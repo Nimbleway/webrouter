@@ -1,0 +1,72 @@
+{
+  "provider": "nimble",
+  "method": "search",
+  "class": "web_router.providers.nimble.NimbleProvider",
+  "transport": {
+    "kind": "sdk",
+    "packages": [
+      "nimble_python"
+    ]
+  },
+  "credentials": [
+    "NIMBLE_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.max_results": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "body.search_depth": "lite"
+      },
+      "fast": {
+        "body.search_depth": "standard"
+      },
+      "deep": {
+        "body.full_content": true,
+        "body.search_depth": "standard"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.include_domains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.exclude_domains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.country": "US"
+      }
+    },
+    "locale": {
+      "sample": {
+        "body.locale": "en"
+      }
+    }
+  },
+  "not_mapped": [],
+  "source": "TODO",
+  "verified": {
+    "max_results": "TODO",
+    "search_depth": "TODO",
+    "include_domains": "TODO",
+    "exclude_domains": "TODO",
+    "country": "TODO",
+    "locale": "TODO"
+  },
+  "vendor_options": "TODO"
+}

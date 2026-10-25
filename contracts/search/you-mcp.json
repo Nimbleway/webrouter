@@ -1,0 +1,49 @@
+{
+  "provider": "you-mcp",
+  "method": "search",
+  "class": "web_router.providers.you_mcp.YouMcpProvider",
+  "transport": {
+    "kind": "mcp",
+    "url": "https://api.you.com",
+    "tool": "you-search"
+  },
+  "credentials": [],
+  "keyless": "always",
+  "always_sent": {
+    "body.id": 1,
+    "body.jsonrpc": "2.0",
+    "body.method": "tools/call",
+    "body.params.arguments.query": "probe query",
+    "body.params.name": "you-search"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.params.arguments.count": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "body.params.arguments.extraction": "none"
+      },
+      "fast": {
+        "body.params.arguments.extraction": "highlights"
+      },
+      "deep": {
+        "body.params.arguments.extraction": "full_page"
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale"
+  ],
+  "source": "TODO",
+  "verified": {
+    "max_results": "TODO",
+    "search_depth": "TODO"
+  },
+  "vendor_options": "TODO"
+}

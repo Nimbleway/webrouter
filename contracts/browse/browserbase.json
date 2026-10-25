@@ -1,0 +1,29 @@
+{
+  "provider": "browserbase",
+  "method": "browse",
+  "class": "web_router.providers.browserbase.BrowserbaseBrowseProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.browserbase.com",
+    "paths": {},
+    "auth_header": "X-BB-API-Key"
+  },
+  "credentials": [
+    "BROWSERBASE_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.task": "probe task"
+  },
+  "options": {},
+  "not_mapped": [
+    "allowed_domains",
+    "max_steps",
+    "output_schema",
+    "start_url"
+  ],
+  "source": "TODO",
+  "verified": {},
+  "vendor_options": "TODO"
+}

@@ -1,0 +1,44 @@
+{
+  "provider": "webiq",
+  "method": "extract",
+  "class": "web_router.providers.webiq.WebIQExtractProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.microsoft.ai",
+    "paths": {
+      "extract_path": "/v3/browse"
+    },
+    "auth_header": "x-apikey"
+  },
+  "credentials": [
+    "WEBIQ_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.contentFormat": "markdown",
+    "body.maxLength": 500000,
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "already in always_sent"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "body.contentFormat": "text"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": "TODO",
+  "verified": {
+    "format": "TODO"
+  },
+  "vendor_options": "TODO"
+}

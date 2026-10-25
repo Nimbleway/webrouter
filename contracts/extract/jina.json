@@ -1,0 +1,41 @@
+{
+  "provider": "jina",
+  "method": "extract",
+  "class": "web_router.providers.jina.JinaExtractProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://r.jina.ai",
+    "paths": {
+      "extract_path": "/"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [],
+  "keyless": "always",
+  "always_sent": {
+    "body.url": "https://example.com",
+    "headers.X-Return-Format": "markdown"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "already in always_sent"
+      },
+      "html": {
+        "headers.X-Return-Format": "html"
+      },
+      "text": {
+        "headers.X-Return-Format": "text"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": "TODO",
+  "verified": {
+    "format": "TODO"
+  },
+  "vendor_options": "TODO"
+}

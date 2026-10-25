@@ -1,0 +1,81 @@
+{
+  "provider": "steel",
+  "method": "browser",
+  "class": "web_router.providers.steel.SteelBrowserProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.steel.dev",
+    "paths": {
+      "open_path": "/v1/sessions",
+      "release_path": "/v1/sessions/{session_id}/release"
+    },
+    "auth_header": "steel-api-key"
+  },
+  "credentials": [
+    "STEEL_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body": {}
+  },
+  "options": {
+    "proxy_country": {
+      "sample": {
+        "body": "<removed>",
+        "body.useProxy.geolocation.country": "US"
+      }
+    },
+    "solve_captchas": {
+      "true": {
+        "body": "<removed>",
+        "body.solveCaptcha": true
+      },
+      "false": {
+        "body": "<removed>",
+        "body.solveCaptcha": false
+      }
+    },
+    "profile": {
+      "sample": {
+        "body": "<removed>",
+        "body.profileId": "profile-id"
+      }
+    },
+    "persist_profile": {
+      "true": {
+        "body.persistProfile": true
+      },
+      "false": {
+        "body.persistProfile": false
+      }
+    },
+    "timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.timeout": 300000
+      }
+    },
+    "idle_timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.inactivityTimeout": 60000
+      }
+    }
+  },
+  "not_mapped": [
+    "headless",
+    "stealth",
+    "viewport"
+  ],
+  "source": "TODO",
+  "verified": {
+    "proxy_country": "TODO",
+    "solve_captchas": "TODO",
+    "profile": "TODO",
+    "persist_profile": "TODO",
+    "timeout": "TODO",
+    "idle_timeout": "TODO"
+  },
+  "vendor_options": "TODO"
+}

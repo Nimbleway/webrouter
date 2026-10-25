@@ -1,0 +1,52 @@
+{
+  "provider": "browser-use",
+  "method": "browse",
+  "class": "web_router.providers.browser_use.BrowserUseBrowseProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.browser-use.com",
+    "paths": {},
+    "auth_header": "X-Browser-Use-API-Key"
+  },
+  "credentials": [
+    "BROWSER_USE_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.task": "probe task"
+  },
+  "options": {
+    "start_url": {
+      "sample": {
+        "body.startUrl": "https://example.com"
+      }
+    },
+    "output_schema": {
+      "sample": {
+        "body.structuredOutput": "{\"type\": \"object\", \"properties\": {\"answer\": {\"type\": \"string\"}}}"
+      }
+    },
+    "max_steps": {
+      "sample": {
+        "body.maxSteps": 10
+      }
+    },
+    "allowed_domains": {
+      "sample": {
+        "body.allowedDomains": [
+          "example.com"
+        ]
+      }
+    }
+  },
+  "not_mapped": [],
+  "source": "TODO",
+  "verified": {
+    "start_url": "TODO",
+    "output_schema": "TODO",
+    "max_steps": "TODO",
+    "allowed_domains": "TODO"
+  },
+  "vendor_options": "TODO"
+}

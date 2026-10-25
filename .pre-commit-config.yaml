@@ -56,5 +56,16 @@ repos:
         args: ["--ignore-missing-imports"]
         additional_dependencies: [pydantic>=2, "langchain-core>=1.0,<2"]
 
+  # Rewrites contracts/ when a provider changes, so the diff is in front of you
+  # before CI fails on it. tests/test_provider_contracts.py is the real check.
+  - repo: local
+    hooks:
+      - id: contracts
+        name: provider contracts
+        entry: uv run python -m scripts.contracts
+        language: system
+        pass_filenames: false
+        files: ^(src/web_router/(providers/|constants.*\.py|registry\.py|types\.py)|scripts/contracts\.py|contracts/)
+
 default_stages: [pre-commit]
 default_install_hook_types: [pre-commit, pre-push]

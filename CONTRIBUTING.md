@@ -165,6 +165,13 @@ Where no account is available, say so in the test module's docstring the way
 do, so the next person knows the mapping is documentation-derived rather than
 verified.
 
+### Its contract
+
+Every provider has a contract in `contracts/<method>/<provider>.json`. Run
+`make contracts` to generate it, then fill in the three fields only a person can:
+`source`, `verified` and `vendor_options`. AGENTS.md's "Provider contracts"
+section says what each holds; CI fails while any of them reads `TODO`.
+
 ### A research, browser, or browse provider
 
 The same shape again. The step-by-step recipes live in
@@ -214,7 +221,9 @@ To add one:
    normalized set directly, because it already maps all of it.)
 3. Add a unit test for the mapping, and extend the provider's parametrized
    rejection test so the option is no longer listed as unmapped.
-4. Update the README support table and `CHANGELOG.md`.
+4. Run `make contracts`, and move the option out of the contract's
+   `vendor_options` — the test fails while a mapped field is still listed there.
+5. Update the README support table and `CHANGELOG.md`.
 
 Watch for options that mean the same thing but take a different form. Tavily's
 `country`, for instance, wants a lowercase country name and rejects the ISO

@@ -1,0 +1,47 @@
+{
+  "provider": "firecrawl",
+  "method": "extract",
+  "class": "web_router.providers.firecrawl.FirecrawlExtractProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.firecrawl.dev",
+    "paths": {
+      "extract_path": "/v2/scrape"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "FIRECRAWL_API_KEY"
+  ],
+  "keyless": "through auto, allow_keyless=True",
+  "always_sent": {
+    "body.formats": [
+      "markdown"
+    ],
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "already in always_sent"
+      },
+      "html": {
+        "body.formats": [
+          "html"
+        ]
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": "TODO",
+  "verified": {
+    "format": "TODO"
+  },
+  "vendor_options": "TODO"
+}

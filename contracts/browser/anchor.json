@@ -1,0 +1,94 @@
+{
+  "provider": "anchor",
+  "method": "browser",
+  "class": "web_router.providers.anchor.AnchorBrowserProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.anchorbrowser.io",
+    "paths": {
+      "open_path": "/v1/sessions",
+      "release_path": "/v1/sessions/{session_id}"
+    },
+    "auth_header": "anchor-api-key"
+  },
+  "credentials": [
+    "ANCHOR_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body": {}
+  },
+  "options": {
+    "proxy_country": {
+      "sample": {
+        "body": "<removed>",
+        "body.session.proxy.active": true,
+        "body.session.proxy.country_code": "us"
+      }
+    },
+    "stealth": {
+      "off": {
+        "body": "<removed>",
+        "body.browser.extra_stealth.active": false
+      },
+      "low": {
+        "refused": "MissingParameterError"
+      },
+      "high": {
+        "refused": "MissingParameterError"
+      }
+    },
+    "solve_captchas": {
+      "true": {
+        "body": "<removed>",
+        "body.browser.captcha_solver.active": true
+      },
+      "false": {
+        "body": "<removed>",
+        "body.browser.captcha_solver.active": false
+      }
+    },
+    "profile": {
+      "sample": {
+        "body": "<removed>",
+        "body.browser.profile.name": "profile-id"
+      }
+    },
+    "persist_profile": {
+      "true": {
+        "body.browser.profile.persist": true
+      },
+      "false": {
+        "body.browser.profile.persist": false
+      }
+    },
+    "timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.session.timeout.max_duration": 5
+      }
+    },
+    "idle_timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.session.timeout.idle_timeout": 1
+      }
+    }
+  },
+  "not_mapped": [
+    "headless",
+    "viewport"
+  ],
+  "source": "TODO",
+  "verified": {
+    "proxy_country": "TODO",
+    "stealth": "TODO",
+    "solve_captchas": "TODO",
+    "profile": "TODO",
+    "persist_profile": "TODO",
+    "timeout": "TODO",
+    "idle_timeout": "TODO"
+  },
+  "vendor_options": "TODO"
+}

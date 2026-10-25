@@ -1,0 +1,48 @@
+{
+  "provider": "perplexity",
+  "method": "research",
+  "class": "web_router.providers.perplexity.PerplexityResearchProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.perplexity.ai",
+    "paths": {},
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "PERPLEXITY_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.background": true,
+    "body.input": "probe query",
+    "body.preset": "medium"
+  },
+  "options": {
+    "effort": {
+      "low": {
+        "body.preset": "low"
+      },
+      "medium": {
+        "unchanged": "already in always_sent"
+      },
+      "high": {
+        "body.preset": "high"
+      },
+      "max": {
+        "body.preset": "xhigh"
+      }
+    }
+  },
+  "not_mapped": [
+    "exclude_domains",
+    "include_domains",
+    "output_schema",
+    "records"
+  ],
+  "source": "TODO",
+  "verified": {
+    "effort": "TODO"
+  },
+  "vendor_options": "TODO"
+}

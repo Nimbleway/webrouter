@@ -1,0 +1,45 @@
+{
+  "provider": "exa",
+  "method": "extract",
+  "class": "web_router.providers.exa.ExaExtractProvider",
+  "transport": {
+    "kind": "http",
+    "method": "POST",
+    "base_url": "https://api.exa.ai",
+    "paths": {
+      "extract_path": "/contents"
+    },
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "EXA_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.text": true,
+    "body.urls": [
+      "https://example.com"
+    ]
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "refused": "UnsupportedFormatError"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "unchanged": "already in always_sent"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "text",
+  "batches_urls": true,
+  "source": "TODO",
+  "verified": {
+    "format": "TODO"
+  },
+  "vendor_options": "TODO"
+}
