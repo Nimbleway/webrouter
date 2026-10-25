@@ -31,7 +31,8 @@ return it is that row's refusal, never a substitution.
 Writes into ``--out``: ``run.json`` (the setup) before the first call,
 ``rows.jsonl`` (one line per URL and backend) as each URL finishes, and
 ``report.md`` with ``summary.json``, the same numbers for charts, at the end
--- so a scan that dies keeps the rows it paid for. ``--combine`` merges
+-- so a scan that dies keeps the rows it paid for, and ``--combine`` on its
+folder alone reports them against the URLs asked. ``--combine`` also merges
 finished scans of the same URLs -- backends added later -- into one report
 without fetching again. Nothing is estimated, and there is no cost column,
 because no backend here states one.
@@ -137,6 +138,8 @@ def summarize(rows: list[dict[str, Any]], setup: dict[str, Any]) -> dict[str, An
     providers = setup["providers"]
     return {
         "setup": setup,
+        # The URLs the rows cover: every one asked for a finished scan, fewer for one that died.
+        "fetched": len({r["url"] for r in rows}),
         "overall": {p: _score([r for r in rows if r["provider"] == p]) for p in providers},
         "by_category": _breakdown(rows, providers),
     }

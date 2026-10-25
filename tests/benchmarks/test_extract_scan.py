@@ -158,6 +158,18 @@ def test_the_report_names_the_set_the_format_and_the_urls_fetched_not_the_limit(
     )
 
 
+def test_a_scan_that_stopped_early_reports_the_urls_it_reached_against_the_asked(extract_scan: ModuleType) -> None:
+    rows = [extract_row("nimble", f"u{i}", 100) for i in range(2)]
+    partial = extract_scan.summarize(rows, {**EXTRACT_SETUP, "providers": ["nimble"], "asked": 5})
+    assert partial["fetched"] == 2
+    report = extract_scan.markdown(partial)
+    assert report.splitlines()[2].startswith("2 URLs of the general mix")
+    assert "**2 of the 5 URLs asked.**" in report
+
+    whole = extract_scan.summarize(rows, {**EXTRACT_SETUP, "providers": ["nimble"], "asked": 2})
+    assert "URLs asked" not in extract_scan.markdown(whole)
+
+
 def test_a_repeated_provider_name_is_scanned_and_reported_once(extract_scan: ModuleType) -> None:
     assert extract_scan.explicit_providers("a,b,a") == ["a", "b"]
     assert extract_scan.explicit_providers("a, b ,,") == ["a", "b"]

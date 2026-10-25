@@ -37,7 +37,11 @@ Rows = list[dict[str, Any]]
 Setup = dict[str, Any]
 """What a scan was asked to do, as ``run.json`` holds it."""
 Sink = Callable[[Rows], None]
-"""Where a scan hands each input's rows the moment it has them, so a scan that dies keeps what it paid for."""
+"""Where a scan hands each input's rows the moment it has them, so a scan that dies keeps what it paid for.
+
+The setup is written again with each batch, so what ``run`` added to it is
+on disk with the rows.
+"""
 
 
 def _wilson(hits: int, n: int) -> tuple[float, float] | None:
@@ -118,11 +122,14 @@ def scan_main(
     """A scan's entry point: parse, then fetch or combine, then score and write, into a fresh ``--out`` folder.
 
     A scan is an hour of paid calls, so nothing waits for the end: ``run.json``
-    is written before the first call and every input's rows are appended to
-    ``rows.jsonl`` as ``run`` hands them to the sink. A scan that dies -- a
-    dropped connection, Ctrl-C, one stray exception -- leaves both behind for
-    ``--combine`` to build on; ``run.json`` is written again at the end with
-    whatever ``run`` added to the setup.
+    is written before the first call, every input's rows are appended to
+    ``rows.jsonl`` as ``run`` hands them to the sink, and ``run.json`` is
+    written again with each batch, so what ``run`` added to the setup -- the
+    inputs asked, the judge -- is on disk with the first rows. A scan that
+    dies -- a dropped connection, Ctrl-C, one stray exception -- leaves both
+    behind: ``--combine`` on that folder alone reports the rows it fetched,
+    measured against the inputs asked. It cannot be merged with a finished
+    scan, whose rows cover other inputs.
     """
     # An entry point, like the agent benchmark's: it may read the repo's .env,
     # and a variable already exported wins. The library itself never does.
@@ -143,6 +150,7 @@ def scan_main(
         def sink(rows: Rows) -> None:
             sink_file.write("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
             sink_file.flush()
+            write_setup(args.out, setup)
 
         rows = asyncio.run(run(args, setup, sink))
     write_scan(args.out, rows, setup, summarize=summarize, markdown=markdown)

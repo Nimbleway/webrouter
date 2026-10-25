@@ -163,8 +163,12 @@ of what came back, then a recommended `auto` extract order -- ranked on pages
 brought back with text out of every URL, a failure counting as a miss, and
 opt-in as the search one is -- then the same rate by category, the best backend
 in each row marked; `summary.json`, the same numbers; `rows.jsonl`, one line
-per URL and backend; and `run.json`. `--combine` merges scans of the same URL
-file, format and timeout, backends added later, and refuses anything else.
+per URL and backend, appended as each URL finishes; and `run.json`, written
+before the first call and again with each URL. `--combine` merges scans of the
+same URL file, format and timeout, backends added later, and refuses anything
+else. A scan that died keeps the rows it fetched: `--combine` on its folder
+alone reports them, saying how many of the URLs asked they cover, and it
+cannot be merged with a finished scan, whose rows cover other URLs.
 
 Read it as a measure of who returns a page, not whose page is best. Intervals
 are as wide as the search scan's -- at 100 URLs a backend's rate is known to

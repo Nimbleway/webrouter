@@ -109,6 +109,7 @@ def test_a_scan_that_dies_leaves_run_json_and_the_rows_it_paid_for(
     out = tmp_path / "scan"
 
     async def dying_run(args: Any, setup: dict[str, Any], sink: Any) -> list[dict[str, Any]]:
+        setup["asked"] = 3
         sink([extract_row("nimble", "u0", 100)])
         sink([extract_row("nimble", "u1", None)])
         raise RuntimeError("connection dropped")
@@ -126,9 +127,14 @@ def test_a_scan_that_dies_leaves_run_json_and_the_rows_it_paid_for(
 
     setup = json.loads((out / "run.json").read_text())
     assert setup["providers"] == ["nimble"], "run.json was written before the first call"
+    assert setup["asked"] == 3, "what run added to the setup is on disk with the first rows"
     lines = [json.loads(line) for line in (out / "rows.jsonl").read_text().splitlines()]
     assert [(r["url"], r["returned"]) for r in lines] == [("u0", True), ("u1", False)]
     assert not (out / "report.md").exists(), "the report needs every row; the rows do not need the report"
+
+    # --combine on the folder alone reports what it fetched, as a share of the URLs asked.
+    report = extract_scan.markdown(extract_scan.summarize(*extract_scan.combine([out])))
+    assert "**2 of the 3 URLs asked.**" in report
 
 
 def test_a_finished_scan_writes_every_file_once_from_the_rows_it_ran(extract_scan: ModuleType, tmp_path: Path) -> None:

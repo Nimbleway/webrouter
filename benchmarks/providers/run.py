@@ -293,6 +293,15 @@ def markdown(summary: dict[str, Any]) -> str:
         f"`{setup['judge']}` with the SimpleQA grader. Accuracy is comparable only with runs graded by the same judge. "
         f"Started {setup['started']}.\n"
     )
+    asked = setup.get("asked")
+    unfinished = [p for p in providers if asked and overall[p]["questions"] < asked]
+    if unfinished:
+        # A scan that died: a depth's rows reach the file together, so a backend has every question or none.
+        w(
+            "**The scan stopped early:** "
+            + ", ".join(f"`{p}` has rows for {overall[p]['questions']}" for p in unfinished)
+            + f" of the {asked} questions asked. Their numbers are over what the scan reached, not the set.\n"
+        )
     w("## Overall\n")
     w("| Backend | Accuracy | 95% CI | Acc. when attempted | Failed | p50 latency | p95 latency |")
     w("|---|---|---|---|---|---|---|")

@@ -52,6 +52,16 @@ def _row(provider: str, question: str, grade: str | None, topic: str = "Science"
 SETUP = {"limit": 12, "seed": 0, "max_results": 5, "judge": "openai:gpt-4o", "started": "2026-09-30T00:00:00+00:00"}
 
 
+def test_a_backend_whose_depth_never_finished_is_named_in_the_report(scan: ModuleType) -> None:
+    """A scan that died between depths: the first depth's backends have every question, the next have none."""
+    rows = [_row("nimble", f"q{i}", "correct") for i in range(12)]
+    summary = scan.summarize(rows, {**SETUP, "providers": ["nimble", "tavily@deep"], "asked": 12})
+    report = scan.markdown(summary)
+
+    assert "**The scan stopped early:** `tavily@deep` has rows for 0 of the 12 questions asked." in report
+    assert "stopped early" not in scan.markdown(scan.summarize(rows, {**SETUP, "providers": ["nimble"], "asked": 12}))
+
+
 def test_a_failed_search_is_left_out_of_accuracy_and_the_best_backend_per_topic_is_named(scan: ModuleType) -> None:
     rows = [_row("nimble", f"q{i}", "correct") for i in range(12)]
     rows += [_row("brave", f"q{i}", "correct" if i < 6 else "incorrect") for i in range(11)]

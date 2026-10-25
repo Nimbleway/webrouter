@@ -33,20 +33,27 @@ def markdown(summary: dict[str, Any]) -> str:
     """The report: the overall table, the suggested order, the category table and how to read them."""
     setup, overall = summary["setup"], summary["overall"]
     providers = sorted(setup["providers"], key=lambda p: -(overall[p]["with_text_rate"] or 0))
-    lines = _header(setup) + _overall_table(overall, providers) + _recommendation(summary)
+    lines = _header(setup, summary["fetched"]) + _overall_table(overall, providers) + _recommendation(summary)
     lines += _category_table(summary["by_category"], providers) + _how_to_read()
     return "\n".join(lines) + "\n"
 
 
-def _header(setup: dict[str, Any]) -> list[str]:
+def _header(setup: dict[str, Any], fetched: int) -> list[str]:
     sent = f"`format={setup['format']}`" if setup.get("format") else "no format named (markdown where a backend can)"
-    return [
+    lines = [
         f"# Extract backends on {setup['urls_title']}: pages returned by backend and by category\n",
-        f"{setup.get('asked', setup['limit'])} URLs of {setup['urls_title']} (seed {setup['seed']}), one extract per "
-        f"backend with {sent} and {setup['timeout']:g}s for each URL's comparison. A page is *returned* when the call "
-        "answered with a document, and *with text* when that document had any content; nothing judges the text. "
+        f"{fetched} URLs of {setup['urls_title']} (seed {setup['seed']}), one extract per backend with {sent} and "
+        f"{setup['timeout']:g}s for each URL's comparison. A page is *returned* when the call answered with a "
+        "document, and *with text* when that document had any content; nothing judges the text. "
         f"Started {setup['started']}.\n",
     ]
+    asked = setup.get("asked")
+    if asked and fetched < asked:
+        lines.append(
+            f"**{fetched} of the {asked} URLs asked.** The scan stopped before the rest, so every rate here is over "
+            "the URLs it reached, not the set.\n"
+        )
+    return lines
 
 
 def _overall_table(overall: dict[str, Any], providers: list[str]) -> list[str]:
