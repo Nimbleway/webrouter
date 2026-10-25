@@ -1981,6 +1981,7 @@ MSG_AUTO_BROWSE_EXHAUSTED = "no backend in the chain started the task: {failures
 MSG_AUTO_BROWSE_UNMAPPED = "does not map {names}"
 
 MSG_AUTO_BROWSE_MISSING = "cannot start without {names}"
+MSG_AUTO_BROWSE_REFUSES = "will not run {values}"
 
 MSG_AUTO_BROWSE_SKIPPED = "{name} ({reasons})"
 
@@ -2433,6 +2434,8 @@ something ``auto`` does not have. Reported before any run starts, so nothing is 
 call that was never going to be served."""
 
 MSG_AUTO_RESEARCH_SKIPPED = "{name} (maps only {supported})"
+MSG_AUTO_RESEARCH_NEEDS = "{name} (cannot start without {names})"
+MSG_AUTO_RESEARCH_REFUSES = "{name} (will not run {values})"
 
 MSG_AUTO_RESEARCH_UNKNOWN_JOB = (
     "Run {job_id!r} was not started here. `auto` follows a run through the backend that accepted "

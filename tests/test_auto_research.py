@@ -22,6 +22,7 @@ from web_router.constants import (
 )
 from web_router.exceptions import (
     ConfigurationError,
+    MissingParameterError,
     ProviderError,
     ProviderNotInstalledError,
     UnsupportedParameterError,
@@ -457,3 +458,36 @@ def test_live_auto_research_answers_through_a_configured_backend() -> None:
     assert response.provider != "auto", "the response must name the backend that answered"
     assert response.provider in RESEARCH_ENV_BY_PROVIDER
     assert response.answer or response.structured
+
+
+def test_a_member_with_unmet_conditions_is_passed_over_before_any_run_starts(chain: _Recorder) -> None:
+    """A member's own conditions are checked on its class, as browse and browser sessions already were."""
+    picky = _member(chain, "picky")
+    picky.refused_values = classmethod(  # type: ignore[attr-defined]
+        lambda cls, request: {"effort": request.effort} if request.effort == "low" else {}
+    )
+    _member(chain, "easy")
+
+    provider = AutoResearchProvider(chain=(("picky", {}), ("easy", {})))
+    try:
+        provider.research(ResearchRequest(query="q", effort="low"))
+    finally:
+        provider.close()
+
+    assert chain.called == ["easy"]
+
+
+def test_a_condition_every_member_has_is_raised_naming_what_to_set(chain: _Recorder) -> None:
+    needy = _member(chain, "needy")
+    needy.missing_parameters = classmethod(  # type: ignore[attr-defined]
+        lambda cls, request: frozenset({"output_schema"}) if request.effort == "max" else frozenset()
+    )
+
+    provider = AutoResearchProvider(chain=(("needy", {}),))
+    try:
+        with pytest.raises(MissingParameterError, match="output_schema"):
+            provider.research(ResearchRequest(query="q", effort="max"))
+    finally:
+        provider.close()
+
+    assert chain.called == []
