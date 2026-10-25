@@ -48,8 +48,11 @@ from web_router.constants import (
     DEFAULT_PROVIDER,
     DELEGATING_PROVIDERS,
     EVALS_CONCURRENCY,
+    MAX_INHERITS_FROM_AUTO,
     MSG_BENCHMARK_NO_PROVIDERS,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
+    PROVIDER_AUTO,
+    PROVIDER_MAX,
     RESEARCH_TIMEOUT,
 )
 from web_router.evals.datasets import Dataset
@@ -180,9 +183,16 @@ class _BaseRouter(Generic[_HandleT]):
 
         Each of those builds its own members, so it is handed the config they
         would get by name -- a key passed in code reaches Nimble the same way
-        through ``auto`` or ``max`` as through ``provider="nimble"``.
+        through ``auto`` or ``max`` as through ``provider="nimble"``. ``max``
+        races the members ``auto`` would try, so a ``chain`` or
+        ``members_config`` set under ``auto`` is its own unless it sets one.
         """
         config = dict(self._config.get(key, {}))
+        if key == PROVIDER_MAX:
+            shared = self._config.get(PROVIDER_AUTO, {})
+            for entry in MAX_INHERITS_FROM_AUTO:
+                if entry in shared and entry not in config:
+                    config[entry] = shared[entry]
         if key in DELEGATING_PROVIDERS:
             siblings: dict[str, dict[str, Any]] = {name: c for name, c in self._config.items() if name != key}
             # An explicit members_config is laid over the sibling entries, member by member, never in place of them.

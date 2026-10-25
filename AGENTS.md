@@ -387,7 +387,9 @@ an option outside the member's `supported_parameters` (Browserbase refuses
 
 **`max` is `auto`'s members raced, and nothing more.** It subclasses
 `AutoExtractProvider` for its chain, its format routing and its member
-construction, so the two can never disagree about who is tried; it differs
+construction, and the router hands it the `chain` and `members_config` set
+under `auto` unless its own entry sets them (`MAX_INHERITS_FROM_AUTO`), so
+the two can never disagree about who is tried; it differs
 only in starting every eligible member at once and returning the first
 `ExtractResponse` that came back. Only a document wins: a `_RECOVERABLE`
 failure is that member's loss and the race goes on, any other

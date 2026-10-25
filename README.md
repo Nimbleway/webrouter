@@ -631,8 +631,10 @@ It is for the caller who wants the fastest working extract and is willing to
 pay for it: every fetch `max` starts is billed by its backend, so a call costs
 up to one extract per configured backend. That is why it is never the default
 and has to be named. The members are exactly the ones `auto` would try, in the
-same order, chosen the same way -- `chain` in `provider_config` picks others
--- and `format` routes the same way, to the members that can return it.
+same order, chosen the same way: a `chain` set under `"auto"` in
+`provider_config` narrows `max` too, so a paid backend taken out of one is out
+of both, and `max` races a different list only when its own `"max"` entry
+names one. `format` routes the same way, to the members that can return it.
 
 Only a document wins. A backend that refused the fetch, could not be built or
 answered with nothing is that backend's loss, not the call's, and when every

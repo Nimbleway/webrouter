@@ -70,6 +70,14 @@ Each builds its members itself, so the router hands it every other backend's
 Nimble the same way through ``auto`` or ``max`` as through ``provider="nimble"``.
 """
 
+MAX_INHERITS_FROM_AUTO: tuple[str, ...] = ("chain", "members_config")
+"""The ``provider_config["auto"]`` entries ``max`` reads when its own entry does not set them.
+
+``max`` races the members ``auto`` would try, so a chain narrowed under ``auto``
+-- a paid backend taken out -- narrows ``max`` too; ``max`` names its own under
+``"max"`` only to race a different list.
+"""
+
 DEFAULT_PROVIDER = PROVIDER_AUTO
 """Used when the caller names no provider anywhere.
 
