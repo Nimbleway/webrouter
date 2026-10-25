@@ -112,20 +112,23 @@ class ParallelResearchProvider(HttpResearchProvider):
     supported_parameters: ClassVar[frozenset[str]] = frozenset({"effort", "output_schema"})
 
     base_url: ClassVar[str] = PARALLEL_BASE_URL
+    run_path: ClassVar[str] = PARALLEL_TASK_RUN_PATH
+    status_path: ClassVar[str] = PARALLEL_TASK_STATUS_PATH
+    result_path: ClassVar[str] = PARALLEL_TASK_RESULT_PATH
     env_api_key: ClassVar[str | None] = ENV_PARALLEL_API_KEY
     api_key_header: ClassVar[str] = PARALLEL_API_KEY_HEADER
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
-        return self._read(request, self._post(PARALLEL_TASK_RUN_PATH, self._build_payload(request)))
+        return self._read(request, self._post(self.run_path, self._build_payload(request)))
 
     async def _astart(self, request: ResearchRequest) -> ResearchProgress:
-        return await self._aread(request, await self._apost(PARALLEL_TASK_RUN_PATH, self._build_payload(request)))
+        return await self._aread(request, await self._apost(self.run_path, self._build_payload(request)))
 
     def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        return self._read(request, self._get(PARALLEL_TASK_STATUS_PATH.format(run_id=job_id)))
+        return self._read(request, self._get(self.status_path.format(run_id=job_id)))
 
     async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        return await self._aread(request, await self._aget(PARALLEL_TASK_STATUS_PATH.format(run_id=job_id)))
+        return await self._aread(request, await self._aget(self.status_path.format(run_id=job_id)))
 
     def _read(self, request: ResearchRequest, run: dict[str, Any]) -> ResearchProgress:
         """Fetch the answer of a run that has one, from whichever call reported it.
@@ -136,13 +139,13 @@ class ParallelResearchProvider(HttpResearchProvider):
         """
         if self._state(run) != "completed":
             return self._progress(run)
-        result = self._get(PARALLEL_TASK_RESULT_PATH.format(run_id=run.get("run_id")))
+        result = self._get(self.result_path.format(run_id=run.get("run_id")))
         return self._progress(run, self._to_response(request, run, result))
 
     async def _aread(self, request: ResearchRequest, run: dict[str, Any]) -> ResearchProgress:
         if self._state(run) != "completed":
             return self._progress(run)
-        result = await self._aget(PARALLEL_TASK_RESULT_PATH.format(run_id=run.get("run_id")))
+        result = await self._aget(self.result_path.format(run_id=run.get("run_id")))
         return self._progress(run, self._to_response(request, run, result))
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:

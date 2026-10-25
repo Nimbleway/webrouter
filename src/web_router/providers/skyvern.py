@@ -55,31 +55,34 @@ class SkyvernBrowseProvider(HttpBrowseProvider):
     supported_parameters: ClassVar[frozenset[str]] = frozenset(SKYVERN_BROWSE_FIELDS)
 
     base_url: ClassVar[str] = SKYVERN_BASE_URL
+    start_path: ClassVar[str] = SKYVERN_RUN_TASK_PATH
+    run_path: ClassVar[str] = SKYVERN_RUN_PATH
+    cancel_path: ClassVar[str] = SKYVERN_CANCEL_PATH
     env_api_key: ClassVar[str] = ENV_SKYVERN_API_KEY
     api_key_header: ClassVar[str] = SKYVERN_API_KEY_HEADER
 
     def _start(self, request: BrowseRequest) -> BrowseProgress:
-        return self._progress(request, self._post(SKYVERN_RUN_TASK_PATH, self._build_payload(request)))
+        return self._progress(request, self._post(self.start_path, self._build_payload(request)))
 
     async def _astart(self, request: BrowseRequest) -> BrowseProgress:
-        return self._progress(request, await self._apost(SKYVERN_RUN_TASK_PATH, self._build_payload(request)))
+        return self._progress(request, await self._apost(self.start_path, self._build_payload(request)))
 
     def _fetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
-        return self._progress(request, self._get(self._task_path(SKYVERN_RUN_PATH, job_id)))
+        return self._progress(request, self._get(self._task_path(self.run_path, job_id)))
 
     async def _afetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
-        return self._progress(request, await self._aget(self._task_path(SKYVERN_RUN_PATH, job_id)))
+        return self._progress(request, await self._aget(self._task_path(self.run_path, job_id)))
 
     def _cancel(self, job_id: str) -> bool:
         # Answered with an untyped body, so success is the status alone. A run
         # that already finished is a 200 no-op too, so True means Skyvern
         # accepted the request, not that a running task stopped; the job reads
         # the run's own status afterwards for that.
-        self._call("POST", self._task_path(SKYVERN_CANCEL_PATH, job_id))
+        self._call("POST", self._task_path(self.cancel_path, job_id))
         return True
 
     async def _acancel(self, job_id: str) -> bool:
-        await self._acall("POST", self._task_path(SKYVERN_CANCEL_PATH, job_id))
+        await self._acall("POST", self._task_path(self.cancel_path, job_id))
         return True
 
     def _build_payload(self, request: BrowseRequest) -> dict[str, Any]:

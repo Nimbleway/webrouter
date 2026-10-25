@@ -120,6 +120,7 @@ class BrowserbaseBrowserProvider(HttpBrowserProvider):
     base_url: ClassVar[str] = BROWSERBASE_BASE_URL
     open_path: ClassVar[str] = BROWSERBASE_OPEN_PATH
     release_path: ClassVar[str] = BROWSERBASE_SESSION_PATH
+    debug_path: ClassVar[str] = BROWSERBASE_DEBUG_PATH
     release_method: ClassVar[ReleaseMethod] = "POST"
     # Browserbase has no release call: a session is ended by updating it with a
     # status that asks for one, so the body is what does the work.
@@ -150,11 +151,11 @@ class BrowserbaseBrowserProvider(HttpBrowserProvider):
         return self._state(await self._aget(self._session_path(session_id)))
 
     def _control_url(self, session_id: str) -> SecretStr | None:
-        payload = self._get(self._session_path(session_id, BROWSERBASE_DEBUG_PATH))
+        payload = self._get(self._session_path(session_id, self.debug_path))
         return self._secret_field(payload, BROWSERBASE_CONTROL_URL_FIELD)
 
     async def _acontrol_url(self, session_id: str) -> SecretStr | None:
-        payload = await self._aget(self._session_path(session_id, BROWSERBASE_DEBUG_PATH))
+        payload = await self._aget(self._session_path(session_id, self.debug_path))
         return self._secret_field(payload, BROWSERBASE_CONTROL_URL_FIELD)
 
     def _state(self, payload: dict[str, Any]) -> BrowserState:
@@ -181,24 +182,27 @@ class BrowserbaseBrowseProvider(HttpBrowseProvider):
     supported_parameters: ClassVar[frozenset[str]] = frozenset()
 
     base_url: ClassVar[str] = BROWSERBASE_BASE_URL
+    start_path: ClassVar[str] = BROWSERBASE_BROWSE_START_PATH
+    run_path: ClassVar[str] = BROWSERBASE_BROWSE_RUN_PATH
+    stop_path: ClassVar[str] = BROWSERBASE_BROWSE_STOP_PATH
     env_api_key: ClassVar[str] = ENV_BROWSERBASE_API_KEY
     api_key_header: ClassVar[str] = BROWSERBASE_API_KEY_HEADER
 
     def _start(self, request: BrowseRequest) -> BrowseProgress:
-        return self._progress(request, self._post(BROWSERBASE_BROWSE_START_PATH, self._build_payload(request)))
+        return self._progress(request, self._post(self.start_path, self._build_payload(request)))
 
     async def _astart(self, request: BrowseRequest) -> BrowseProgress:
-        return self._progress(request, await self._apost(BROWSERBASE_BROWSE_START_PATH, self._build_payload(request)))
+        return self._progress(request, await self._apost(self.start_path, self._build_payload(request)))
 
     def _fetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
-        return self._progress(request, self._get(self._task_path(BROWSERBASE_BROWSE_RUN_PATH, job_id)))
+        return self._progress(request, self._get(self._task_path(self.run_path, job_id)))
 
     async def _afetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
-        return self._progress(request, await self._aget(self._task_path(BROWSERBASE_BROWSE_RUN_PATH, job_id)))
+        return self._progress(request, await self._aget(self._task_path(self.run_path, job_id)))
 
     def _cancel(self, job_id: str) -> bool:
         try:
-            self._call("POST", self._task_path(BROWSERBASE_BROWSE_STOP_PATH, job_id))
+            self._call("POST", self._task_path(self.stop_path, job_id))
         except ProviderError as exc:
             if _already_finished(exc):
                 return False
@@ -207,7 +211,7 @@ class BrowserbaseBrowseProvider(HttpBrowseProvider):
 
     async def _acancel(self, job_id: str) -> bool:
         try:
-            await self._acall("POST", self._task_path(BROWSERBASE_BROWSE_STOP_PATH, job_id))
+            await self._acall("POST", self._task_path(self.stop_path, job_id))
         except ProviderError as exc:
             if _already_finished(exc):
                 return False
