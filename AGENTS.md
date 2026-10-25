@@ -139,7 +139,8 @@ src/web_router/
     ├── browser_use.py  browse, via httpx — Browser Use Cloud's v2 tasks
     └── skyvern.py      browse, via httpx — tasks on Skyvern Cloud
 tests/                  mirrors src/; tests/providers/ holds per-provider tests,
-                        tests/mcp/ the server. test_contract.py,
+                        tests/mcp/ the server, tests/max_extract/ the race
+                        (its conftest holds the fake members). test_contract.py,
                         test_extract_contract.py, test_research_contract.py,
                         test_browse_contract.py and test_browser_contract.py
                         guard the five shared contracts; test_job_core.py the
