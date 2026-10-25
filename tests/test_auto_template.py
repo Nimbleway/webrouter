@@ -15,7 +15,7 @@ from web_router.exceptions import (
     UnsupportedFormatError,
     UnsupportedParameterError,
 )
-from web_router.providers.auto import AutoTemplateProvider
+from web_router.providers.auto_template import AutoTemplateProvider
 from web_router.registry import register_template_provider, unregister_template_provider
 from web_router.types import TemplateRequest
 

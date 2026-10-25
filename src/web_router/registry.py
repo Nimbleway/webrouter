@@ -114,7 +114,7 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
 # A template run is the Extract API's, so the class ships with the extract extra.
 _BUILTIN_TEMPLATE_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_NIMBLE: ("web_router.providers.nimble", "NimbleTemplateProvider", EXTRA_EXTRACT),
-    PROVIDER_AUTO: ("web_router.providers.auto", "AutoTemplateProvider", AUTO_EXTRA),
+    PROVIDER_AUTO: ("web_router.providers.auto_template", "AutoTemplateProvider", AUTO_EXTRA),
 }
 
 _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {

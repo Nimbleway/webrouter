@@ -123,9 +123,13 @@ src/web_router/
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
     ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel.py
-    ├── auto.py         the default for every method: keyed backends, then keyless
-    │                   (research, browse and templates have no keyless tier, so
-    │                   their chains end there; a browser chain ends with `local`)
+    ├── _chain.py       what every auto chain is made of: resolving the members,
+    │                   the caller's `chain`, what a member's failure means
+    ├── auto.py         the default for search, extract, research, browser and
+    │                   browse: keyed backends, then keyless (research and browse
+    │                   have no keyless tier, so their chains end there; a browser
+    │                   chain ends with `local`)
+    ├── auto_template.py the template chain: keyed backends and nothing after
     ├── brave.py        search, via httpx
     ├── parallel.py     search + research, via httpx
     ├── perplexity.py   search + research, via httpx

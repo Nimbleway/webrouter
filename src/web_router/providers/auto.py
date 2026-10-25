@@ -46,12 +46,10 @@ member that accepted it.
 
 from __future__ import annotations
 
-import inspect
-from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
-from typing import Any, ClassVar, TypeAlias
+from collections.abc import Collection, Mapping
+from typing import Any, ClassVar
 
 from web_router.constants import (
-    AUTO_AGGREGATE_FAILURE,
     AUTO_APPENDED,
     AUTO_BROWSE_JOB_SEPARATOR,
     AUTO_BROWSE_PREFERRED,
@@ -62,13 +60,8 @@ from web_router.constants import (
     AUTO_CHAIN_BROWSE,
     AUTO_CHAIN_BROWSER,
     AUTO_CHAIN_EXTRACT,
-    AUTO_CHAIN_METHODS,
     AUTO_CHAIN_RESEARCH,
     AUTO_CHAIN_SEARCH,
-    AUTO_CHAIN_TEMPLATE,
-    AUTO_CLIENT_OPTION,
-    AUTO_CLIENT_PROVIDERS,
-    AUTO_EXTRA,
     AUTO_EXTRACT_APPENDED,
     AUTO_EXTRACT_DEFAULT_FORMAT,
     AUTO_EXTRACT_FORMATS,
@@ -80,9 +73,6 @@ from web_router.constants import (
     AUTO_RESEARCH_PREFERRED,
     AUTO_RESEARCH_SUPPORTED_PARAMETERS,
     AUTO_SUPPORTED_PARAMETERS,
-    AUTO_TEMPLATE_FORMATS,
-    AUTO_TEMPLATE_PREFERRED,
-    AUTO_TEMPLATE_SUPPORTED_PARAMETERS,
     BROWSE_ENV_BY_PROVIDER,
     MSG_AUTO_BROWSE_EXHAUSTED,
     MSG_AUTO_BROWSE_MISSING,
@@ -101,36 +91,36 @@ from web_router.constants import (
     MSG_AUTO_BROWSER_SKIPPED,
     MSG_AUTO_BROWSER_UNMAPPED,
     MSG_AUTO_BROWSER_UNSUPPORTED,
-    MSG_AUTO_CHAIN_ONE_NAME,
-    MSG_AUTO_CHAIN_UNKNOWN_METHOD,
-    MSG_AUTO_CLIENT_AND_KEY,
     MSG_AUTO_EXTRACT_NO_MEMBER,
-    MSG_AUTO_RESEARCH_EXHAUSTED,
     MSG_AUTO_RESEARCH_NO_CAPABLE_BACKEND,
-    MSG_AUTO_RESEARCH_NO_CREDENTIAL,
     MSG_AUTO_RESEARCH_SKIPPED,
     MSG_AUTO_RESEARCH_UNKNOWN_JOB,
     MSG_AUTO_SEARCH_NO_MEMBER,
     MSG_AUTO_SKIPPED,
-    MSG_AUTO_TEMPLATE_EXHAUSTED,
-    MSG_AUTO_TEMPLATE_NO_CAPABLE_BACKEND,
-    MSG_AUTO_TEMPLATE_NO_CREDENTIAL,
-    MSG_AUTO_TEMPLATE_SKIPPED,
     MSG_AUTO_UNFORMATTED,
     MSG_AUTO_UNMAPPED,
-    MSG_OPTION_VALUE,
     PROVIDER_AUTO,
-    RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
 )
 from web_router.exceptions import (
-    ConfigurationError,
     MissingParameterError,
     ProviderError,
     ProviderNotInstalledError,
     UnsupportedFormatError,
     UnsupportedParameterError,
     WebRouterError,
+)
+from web_router.providers._chain import (
+    _RECOVERABLE,
+    _ChainSpec,
+    _exhausted,
+    _keyed_chain,
+    _keyless_after,
+    _member_options,
+    _members_and_chain,
+    _no_backend,
+    _nothing_started,
+    _quoted,
+    _valued,
 )
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -142,7 +132,6 @@ from web_router.providers.base import (
     ResearchJob,
     ResearchProvider,
     SearchProvider,
-    TemplateProvider,
 )
 from web_router.types import (
     BROWSER_PARAMETERS,
@@ -154,213 +143,12 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
-    ExtractTemplate,
     ResearchProgress,
     ResearchRequest,
     SearchRequest,
     SearchResponse,
     StealthLevel,
-    TemplatePage,
-    TemplateRequest,
-    TemplateResponse,
 )
-from web_router.types import provider_name as _lookup_name
-
-_Entry: TypeAlias = "str | tuple[str, Mapping[str, Any]]"
-"""One member as a caller writes it: a backend's name, or its name beside the kwargs to build it with."""
-
-_ChainSpec: TypeAlias = "Sequence[_Entry] | Mapping[str, Sequence[_Entry]]"
-"""A ``chain`` argument: the members of every method's chain, or each method's own, keyed by method."""
-
-_RECOVERABLE = (ProviderNotInstalledError, ConfigurationError, ProviderError)
-"""Failures that mean "try the next backend".
-
-A missing extra, a missing credential and a backend that refused the call are
-all things another member of the chain may not suffer from. Anything else --
-notably :class:`UnsupportedParameterError` -- is a bug in this class rather
-than a property of the backend, and propagates.
-"""
-
-
-def _keyed_chain(preferred: tuple[str, ...], configured: set[str]) -> tuple[tuple[str, dict[str, Any]], ...]:
-    """The preferred backends you actually hold credentials for, in order."""
-    return tuple((name, {}) for name in preferred if name in configured)
-
-
-def _normalized(members_config: Mapping[str, Mapping[str, Any]] | None) -> dict[str, dict[str, Any]]:
-    """``members_config`` keyed as chain members are -- an enum or odd casing matched to the member it names."""
-    return {_lookup_name(name): dict(config) for name, config in (members_config or {}).items()}
-
-
-def _default_chain(
-    default_chain: Callable[..., tuple[tuple[str, dict[str, Any]], ...]], in_code: frozenset[str]
-) -> tuple[tuple[str, dict[str, Any]], ...]:
-    """A class's default chain, with the backends keyed in code -- unless its override takes no argument.
-
-    A subclass, or a test, may replace ``default_chain`` with one that takes
-    nothing; that chain is its own choice, and the keys in code cannot widen it.
-    """
-    if in_code and inspect.signature(default_chain).parameters:
-        return default_chain(in_code)
-    return default_chain()
-
-
-def _members_and_chain(
-    chain: _ChainSpec | None,
-    members_config: Mapping[str, Mapping[str, Any]] | None,
-    method: str,
-    default_chain: Callable[..., tuple[tuple[str, dict[str, Any]], ...]],
-) -> tuple[dict[str, dict[str, Any]], tuple[tuple[str, dict[str, Any]], ...]]:
-    """What every ``auto`` resolves at construction: its members' config, and the chain one method tries.
-
-    A backend keyed in ``members_config`` joins the default chain as one keyed in the environment does.
-    """
-    config = _normalized(members_config)
-    in_code = _configured_in(config)
-    resolved = _chain_for(chain, method, lambda: _default_chain(default_chain, in_code))
-    _refuse_a_key_beside_a_client(config, resolved)
-    return config, resolved
-
-
-def _refuse_a_key_beside_a_client(
-    members_config: Mapping[str, Mapping[str, Any]], chain: tuple[tuple[str, dict[str, Any]], ...]
-) -> None:
-    """Refuse, at construction, a client-taking member that would be built with an ``api_key`` beside its client.
-
-    Only the backends in ``AUTO_CLIENT_PROVIDERS``, whose key would replace the
-    client's credential; any other provider is left to make what it will of both.
-
-    The member refuses that itself, but only when it is built, mid-call, where
-    the error is one this chain recovers from -- so the call would quietly go
-    to the next backend rather than say why the client went unused.
-
-    Raises:
-        ConfigurationError: naming the backend.
-    """
-    for name, options in chain:
-        if name not in AUTO_CLIENT_PROVIDERS:
-            continue
-        merged = _member_options(members_config, name, options)
-        if merged.get(AUTO_CLIENT_OPTION) is not None and merged.get("api_key") is not None:
-            raise ConfigurationError(MSG_AUTO_CLIENT_AND_KEY.format(name=name))
-
-
-def _member_options(
-    members_config: Mapping[str, Mapping[str, Any]], name: str, options: Mapping[str, Any]
-) -> dict[str, Any]:
-    """A member's constructor kwargs: its own config, the chain's ``(name, kwargs)`` laid over it."""
-    return {**members_config.get(name, {}), **options}
-
-
-def _configured_in(members_config: Mapping[str, Mapping[str, Any]]) -> frozenset[str]:
-    """The backends handed a key or a client in code, as ``provider_config``, beside the environment's."""
-    return frozenset(
-        name
-        for name, config in members_config.items()
-        if config.get("api_key") or (name in AUTO_CLIENT_PROVIDERS and config.get(AUTO_CLIENT_OPTION))
-    )
-
-
-def _keyless_after(
-    keyed: tuple[tuple[str, dict[str, Any]], ...], tier: tuple[tuple[str, dict[str, Any]], ...]
-) -> tuple[tuple[str, dict[str, Any]], ...]:
-    """The keyless tier, less any backend the chain tries with a key, before or after it.
-
-    A keyless member resolves a key when one is set -- Tavily's, Firecrawl's and
-    Keenable's ``allow_keyless`` all do -- so keeping it beside its keyed self
-    would only send the same request, with the same credential, a second time.
-    """
-    tried = {name for name, _ in keyed}
-    return tuple(member for member in tier if member[0] not in tried)
-
-
-def _chain_for(
-    chain: _ChainSpec | None,
-    method: str,
-    default: Callable[[], tuple[tuple[str, dict[str, Any]], ...]],
-) -> tuple[tuple[str, dict[str, Any]], ...]:
-    """The chain one method's ``auto`` tries: what ``chain`` gives that method, else its default.
-
-    Keyed by method as well as listed because the router hands
-    ``provider_config["auto"]`` to the ``auto`` of every method, so a list
-    there is every method's chain -- and a search order naming Brave would
-    leave extract with a backend it does not have. Keyed, it sets the methods
-    it names and leaves the others on their defaults.
-
-    Raises:
-        ConfigurationError: for a key that names no method, or a bare name
-            where a list belongs, which would otherwise be read letter by letter.
-    """
-    listed: Sequence[_Entry] | None
-    if isinstance(chain, Mapping):
-        unknown = set(chain) - AUTO_CHAIN_METHODS
-        if unknown:
-            raise ConfigurationError(
-                MSG_AUTO_CHAIN_UNKNOWN_METHOD.format(names=_quoted(unknown), methods=_quoted(AUTO_CHAIN_METHODS))
-            )
-        listed = chain.get(method)
-    else:
-        listed = chain
-    if listed is None:
-        return default()
-    if isinstance(listed, str):
-        raise ConfigurationError(MSG_AUTO_CHAIN_ONE_NAME.format(name=listed))
-    return tuple(_entry(item) for item in listed)
-
-
-def _entry(item: _Entry) -> tuple[str, dict[str, Any]]:
-    if isinstance(item, str):
-        return _lookup_name(item), {}
-    name, options = item
-    return _lookup_name(name), dict(options)
-
-
-def _nothing_started(exc: WebRouterError) -> bool:
-    """Whether a member's failure proves it left nothing billing, so the next member may be tried.
-
-    Shared by every chain whose members start something that bills until it
-    ends -- a browser session, a browse task. The allowlist is exactly:
-
-    - :class:`ConfigurationError` and :class:`ProviderNotInstalledError`, which
-      fail before any request is sent;
-    - a :class:`ProviderError` whose ``original`` is an ``httpx.HTTPStatusError``
-      with a 4xx status, an answer that refused;
-    - a :class:`ProviderError` whose ``original`` is an ``httpx.ConnectError``
-      or ``httpx.ConnectTimeout``, a request that never reached the backend.
-
-    Everything else raises: a read that timed out, a 5xx from a gateway in
-    front of the backend, a 200 that could not be read. The backend may have
-    acted on any of those, and starting a second one would bill twice.
-    """
-    if isinstance(exc, (ConfigurationError, ProviderNotInstalledError)):
-        return True
-    if not isinstance(exc, ProviderError):
-        return False
-    # Imported here: httpx arrives with an extra, and without it no request
-    # can have been sent to be refused.
-    try:
-        import httpx
-    except ImportError:  # pragma: no cover - httpx ships with every extra
-        return False
-    original = exc.original
-    if isinstance(original, httpx.HTTPStatusError):
-        return bool(original.response.is_client_error)
-    return isinstance(original, (httpx.ConnectError, httpx.ConnectTimeout))
-
-
-def _exhausted(
-    provider: str,
-    failures: dict[str, WebRouterError],
-    template: str = AUTO_AGGREGATE_FAILURE,
-) -> WebRouterError:
-    """Report every backend's own reason, so the cause is not hidden behind "auto"."""
-    # Nothing installed is a setup problem with one fix, not a row of backend
-    # failures to read through. Say so in the form that names it.
-    if failures and all(isinstance(exc, ProviderNotInstalledError) for exc in failures.values()):
-        return ProviderNotInstalledError(provider, AUTO_EXTRA)
-
-    detail = "; ".join(f"{name}: {exc}" for name, exc in failures.items())
-    return ProviderError(provider, template.format(failures=detail))
 
 
 class AutoProvider(SearchProvider):
@@ -631,28 +419,6 @@ class AutoExtractProvider(ExtractProvider):
             await member.aclose()
 
 
-def _no_backend(
-    provider: str,
-    failures: dict[str, WebRouterError],
-    *,
-    preferred: tuple[str, ...] = AUTO_RESEARCH_PREFERRED,
-    env_by_provider: dict[str, tuple[str, ...]] = RESEARCH_ENV_BY_PROVIDER,
-    no_credential: str = MSG_AUTO_RESEARCH_NO_CREDENTIAL,
-    exhausted: str = MSG_AUTO_RESEARCH_EXHAUSTED,
-) -> WebRouterError:
-    """Say why no run started: what each backend reported, or that none was configured.
-
-    An empty chain is not a row of failures -- it is the one setup problem a
-    method with no keyless tier has, and every variable that would fix it is
-    known. Defaults to research's tables; browse passes its own.
-    """
-    if failures:
-        return _exhausted(provider, failures, exhausted)
-
-    env_vars = [env_var for name in preferred for env_var in env_by_provider.get(name, ())]
-    return ConfigurationError(no_credential.format(env_vars=", ".join(env_vars)))
-
-
 class AutoResearchProvider(ResearchProvider):
     """Researches through the first backend that answers. Every member needs a credential."""
 
@@ -823,191 +589,6 @@ class AutoResearchProvider(ResearchProvider):
             return self._jobs[job_id]
         except KeyError as exc:
             raise ProviderError(self.name, MSG_AUTO_RESEARCH_UNKNOWN_JOB.format(job_id=job_id)) from exc
-
-    def close(self) -> None:
-        for member in self._members.values():
-            member.close()
-
-    async def aclose(self) -> None:
-        for member in self._members.values():
-            await member.aclose()
-
-
-class AutoTemplateProvider(TemplateProvider):
-    """Runs, lists and describes Extract Templates through the first backend that answers.
-
-    Every member needs a credential, so the chain is the backends you hold a
-    key for and nothing after them. A template's name is the backend's own,
-    so a run, a listing and a description all go to the first member that
-    serves the call. A listing or a description that fails falls through as
-    a search does, since neither bills; a run falls through only on a
-    failure that proves nothing was fetched, because a page the first member
-    fetched and then failed to parse is already paid for, and a second
-    member would fetch it again.
-    """
-
-    name: ClassVar[str] = PROVIDER_AUTO
-    supported_parameters: ClassVar[frozenset[str]] = AUTO_TEMPLATE_SUPPORTED_PARAMETERS
-    supported_formats: ClassVar[frozenset[ExtractFormat]] = AUTO_TEMPLATE_FORMATS
-
-    def __init__(
-        self,
-        *,
-        chain: _ChainSpec | None = None,
-        members_config: Mapping[str, Mapping[str, Any]] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """
-        Args:
-            chain: Backends to try, in order, as on :class:`AutoProvider`; keyed
-                by method, this reads the ``"template"`` entry.
-            **kwargs: Ignored, as on :class:`AutoProvider`.
-        """
-        super().__init__(**kwargs)
-        self._members_config, self._chain = _members_and_chain(
-            chain, members_config, AUTO_CHAIN_TEMPLATE, self.default_chain
-        )
-        self._members: dict[int, TemplateProvider] = {}
-
-    @staticmethod
-    def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
-        """The backends you have credentials for. Nothing follows them: a run bills a fetch."""
-        from web_router.registry import configured_template_providers
-
-        return _keyed_chain(AUTO_TEMPLATE_PREFERRED, set(configured_template_providers()) | set(in_code))
-
-    @property
-    def members(self) -> tuple[str, ...]:
-        """The backends this instance would try, in order, as on :class:`AutoProvider`."""
-        return tuple(provider_name for provider_name, _ in self._chain)
-
-    def _member(self, position: int) -> TemplateProvider:
-        """Build and cache one member. Imported here so the chain stays lazy."""
-        from web_router.registry import create_template_provider
-
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_template_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
-
-    def _run(self, request: TemplateRequest) -> TemplateResponse:
-        failures: dict[str, WebRouterError] = {}
-        for position, provider_name in self._eligible(request):
-            try:
-                return self._member(position).run(request)
-            except _RECOVERABLE as exc:
-                # A parse that failed, a 5xx or a read timeout may come after
-                # the page was fetched and billed, so only a failure that
-                # proves nothing was may try the next member.
-                if not _nothing_started(exc):
-                    raise
-                failures[provider_name] = exc
-        raise self._no_backend(failures)
-
-    async def _arun(self, request: TemplateRequest) -> TemplateResponse:
-        failures: dict[str, WebRouterError] = {}
-        for position, provider_name in self._eligible(request):
-            try:
-                return await self._member(position).arun(request)
-            except _RECOVERABLE as exc:
-                if not _nothing_started(exc):
-                    raise
-                failures[provider_name] = exc
-        raise self._no_backend(failures)
-
-    def _list(self, *, limit: int | None, offset: int | None) -> TemplatePage:
-        failures: dict[str, WebRouterError] = {}
-        for position, (provider_name, _) in enumerate(self._chain):
-            try:
-                return self._member(position).templates(limit=limit, offset=offset)
-            except _RECOVERABLE as exc:
-                failures[provider_name] = exc
-        raise self._no_backend(failures)
-
-    async def _alist(self, *, limit: int | None, offset: int | None) -> TemplatePage:
-        failures: dict[str, WebRouterError] = {}
-        for position, (provider_name, _) in enumerate(self._chain):
-            try:
-                return await self._member(position).atemplates(limit=limit, offset=offset)
-            except _RECOVERABLE as exc:
-                failures[provider_name] = exc
-        raise self._no_backend(failures)
-
-    def _get(self, name: str) -> ExtractTemplate:
-        failures: dict[str, WebRouterError] = {}
-        for position, (provider_name, _) in enumerate(self._chain):
-            try:
-                return self._member(position).template(name)
-            except _RECOVERABLE as exc:
-                failures[provider_name] = exc
-        raise self._no_backend(failures)
-
-    async def _aget(self, name: str) -> ExtractTemplate:
-        failures: dict[str, WebRouterError] = {}
-        for position, (provider_name, _) in enumerate(self._chain):
-            try:
-                return await self._member(position).atemplate(name)
-            except _RECOVERABLE as exc:
-                failures[provider_name] = exc
-        raise self._no_backend(failures)
-
-    def _eligible(self, request: TemplateRequest) -> list[tuple[int, str]]:
-        """The chain members that map every option this request sets and return the format it asks for.
-
-        Read from their classes, as the search and extract chains read theirs,
-        so a member passed over is never built or called.
-
-        Raises:
-            UnsupportedParameterError: if no member maps an option the request
-                sets, naming what each one lacked. Nothing has been run.
-            UnsupportedFormatError: if every member that maps the options
-                cannot return the page format asked for.
-        """
-        from web_router.registry import get_template_provider_class
-
-        wanted = request.specified_parameters()
-        eligible: list[tuple[int, str]] = []
-        skipped: list[str] = []
-        unmapped: frozenset[str] = frozenset()
-        # The formats of the members that map every option: when one such
-        # member exists and none returns the format, the format is the problem.
-        returned_by_mapping: frozenset[ExtractFormat] | None = None
-        for position, (provider_name, _) in enumerate(self._chain):
-            try:
-                member_cls = get_template_provider_class(provider_name)
-            except ProviderNotInstalledError:
-                eligible.append((position, provider_name))
-                continue
-            lacks = wanted - member_cls.supported_parameters
-            if lacks:
-                reasons = MSG_AUTO_UNMAPPED.format(names=_quoted(lacks))
-                unmapped |= lacks
-            elif request.format is not None and request.format not in member_cls.supported_formats:
-                reasons = MSG_AUTO_UNFORMATTED.format(formats=_quoted(member_cls.supported_formats))
-                returned_by_mapping = (returned_by_mapping or frozenset()) | member_cls.supported_formats
-            else:
-                eligible.append((position, provider_name))
-                continue
-            skipped.append(MSG_AUTO_TEMPLATE_SKIPPED.format(name=provider_name, reasons=reasons))
-
-        if eligible or not skipped:
-            return eligible
-        detail = MSG_AUTO_TEMPLATE_NO_CAPABLE_BACKEND.format(skipped=", ".join(dict.fromkeys(skipped)))
-        if returned_by_mapping is not None and request.format is not None:
-            raise UnsupportedFormatError(self.name, request.format, returned_by_mapping, detail=detail)
-        raise UnsupportedParameterError(self.name, unmapped or wanted, detail=detail)
-
-    def _no_backend(self, failures: dict[str, WebRouterError]) -> WebRouterError:
-        return _no_backend(
-            self.name,
-            failures,
-            preferred=AUTO_TEMPLATE_PREFERRED,
-            env_by_provider=TEMPLATE_ENV_BY_PROVIDER,
-            no_credential=MSG_AUTO_TEMPLATE_NO_CREDENTIAL,
-            exhausted=MSG_AUTO_TEMPLATE_EXHAUSTED,
-        )
 
     def close(self) -> None:
         for member in self._members.values():
@@ -1205,14 +786,6 @@ class AutoBrowserProvider(BrowserProvider):
     async def aclose(self) -> None:
         for member in self._members.values():
             await member.aclose()
-
-
-def _quoted(names: Iterable[str]) -> str:
-    return ", ".join(repr(name) for name in sorted(names))
-
-
-def _valued(values: Mapping[str, Any]) -> str:
-    return ", ".join(MSG_OPTION_VALUE.format(name=name, value=values[name]) for name in sorted(values))
 
 
 class AutoBrowseProvider(BrowseProvider):
