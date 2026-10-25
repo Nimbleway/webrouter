@@ -26,6 +26,7 @@ from web_router.constants import (
     MSG_NIMBLE_RESEARCH_BAD_JOB_ID,
     MSG_TEMPLATE_BAD_STATUS,
     MSG_TEMPLATE_NO_RECORD,
+    MSG_TEMPLATE_PAGE_FAILED,
     MSG_TEMPLATE_PARSING_FAILED,
     NIMBLE_EXTRACT_DEFAULT_FORMAT,
     NIMBLE_EXTRACT_FORMATS,
@@ -42,6 +43,7 @@ from web_router.constants import (
     NIMBLE_RESEARCH_USE_CASE_RESEARCH,
     NIMBLE_TEMPLATE_ERROR_FIELD,
     NIMBLE_TEMPLATE_ERROR_SHAPE,
+    NIMBLE_TEMPLATE_FAILED_STATUS_FLOOR,
     NIMBLE_TEMPLATE_PARSING_ERROR_STATUS,
     NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS,
     NIMBLE_TEMPLATE_RECORD_FIELD,
@@ -342,6 +344,14 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
         # `status` says so, and a record cannot have been parsed from nothing.
         if status != NIMBLE_TEMPLATE_SUCCESS_STATUS:
             detail = MSG_TEMPLATE_BAD_STATUS.format(template=request.template, status=status)
+            raise ProviderError(self.name, "; ".join([detail, *(payload.get("warnings") or [])]))
+
+        # The envelope says `success` whenever the fetch completed, a 404 page
+        # included, and the template then parses the error page. What it
+        # parsed is not the record the template promises.
+        status_code = _as_int(payload.get("status_code"))
+        if status_code is not None and status_code >= NIMBLE_TEMPLATE_FAILED_STATUS_FLOOR:
+            detail = MSG_TEMPLATE_PAGE_FAILED.format(template=request.template, status=status_code)
             raise ProviderError(self.name, "; ".join([detail, *(payload.get("warnings") or [])]))
 
         record = self._record(request, data.get("parsing"))

@@ -2811,6 +2811,18 @@ MSG_TEMPLATE_BAD_STATUS = "the backend fetched nothing for template {template!r}
 
 MSG_TEMPLATE_PARSING_FAILED = "the backend fetched the page but template {template!r} failed to parse it: {error}"
 
+MSG_TEMPLATE_PAGE_FAILED = "the site answered template {template!r} with HTTP {status}, so there is no page to parse"
+"""A fetch the site refused: the envelope says ``success`` and the page body is an error page.
+
+Verified on a recorded response: a run on a page that does not exist comes
+back ``status: success`` with ``status_code: 404`` and a "record" whose
+title is the error page's. A record parsed from an error page is not the
+record the template promises, so the run is a failure.
+"""
+
+NIMBLE_TEMPLATE_FAILED_STATUS_FLOOR = 400
+"""The first HTTP status that means the site did not serve the page; everything from here up is a failed run."""
+
 MSG_TEMPLATE_NO_RECORD = "the backend fetched the page but answered without a record for template {template!r}"
 """Stands in when a fetched page carries no parsed record and no reason.
 

@@ -180,6 +180,29 @@ def test_a_fetched_page_with_no_record_raises(provider: NimbleTemplateProvider, 
         provider._to_response(TemplateRequest(template=TEMPLATE), _run_payload(parsing))
 
 
+@pytest.mark.parametrize("status_code", [404.0, 403, 500.0, 503])
+def test_an_error_page_the_site_served_is_a_failed_run_not_a_record(
+    provider: NimbleTemplateProvider, status_code: float
+) -> None:
+    """A recorded response for a missing page: `success`, `status_code: 404`, and a "record" titled "404 Error"."""
+    payload = _run_payload({"title": "404 Error"}, status_code=status_code)
+
+    with pytest.raises(ProviderError, match=f"HTTP {int(status_code)}") as caught:
+        provider._to_response(TemplateRequest(template=TEMPLATE), payload)
+
+    assert TEMPLATE in str(caught.value)
+
+
+def test_a_page_the_site_served_with_a_success_status_is_still_a_record(provider: NimbleTemplateProvider) -> None:
+    """The control for the test above: the same payload at 200 returns its record."""
+    payload = _run_payload({"title": "404 Error"}, status_code=200.0)
+
+    response = provider._to_response(TemplateRequest(template=TEMPLATE), payload)
+
+    assert response.data == {"title": "404 Error"}
+    assert response.status_code == 200
+
+
 def test_a_status_other_than_success_raises_with_the_warnings(provider: NimbleTemplateProvider) -> None:
     """Nimble answers 200 and refuses in `status`, which would otherwise look like an empty record."""
     payload = _run_payload(None, status="blocked", warnings=["challenge not solved"])
