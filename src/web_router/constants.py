@@ -1341,9 +1341,10 @@ BROWSERBASE_SESSION_STATES: dict[str, BrowserState] = {
 """Browserbase's session ``status`` -> the normalized state."""
 
 # --- Browserbase browse -----------------------------------------------------
-# From Browserbase's Agents API reference, not a live call: no account was
-# available. See tests/providers/test_browserbase_browse.py. The base URL, key
-# header and env var are the session provider's above.
+# From Browserbase's Agents API reference, checked against live prose runs on
+# 2026-09-30 and 2026-10-21; ``resultSchema`` has not had one. See
+# tests/providers/test_browserbase_browse.py. The base URL, key header and env
+# var are the session provider's above.
 
 BROWSERBASE_BROWSE_START_PATH = "/v1/agents/runs"
 """Starts a run. With no ``agentId`` it also creates a new Agent in the account for that run."""
@@ -1832,8 +1833,9 @@ as ``released`` rather than as an ``expired`` nobody reported.
 
 # --- Browser Use browse -----------------------------------------------------
 # Browser Use Cloud's v2 Tasks API, from its published OpenAPI reference
-# (docs.browser-use.com/cloud/api-v2), not a live call: no account was
-# available. See tests/providers/test_browser_use_browse.py.
+# (docs.browser-use.com/cloud/api-v2) and checked against live tasks on
+# 2026-10-21: a prose task, ``structuredOutput``, ``maxSteps`` and
+# ``allowedDomains``. See tests/providers/test_browser_use_browse.py.
 
 BROWSER_USE_BASE_URL = "https://api.browser-use.com"
 BROWSER_USE_TASKS_PATH = "/api/v2/tasks"
@@ -1846,8 +1848,24 @@ BROWSER_USE_TASK_STATUS_PATH = "/api/v2/tasks/{job_id}/status"
 BROWSER_USE_API_KEY_HEADER = "X-Browser-Use-API-Key"
 """Sent bare, with no ``Bearer`` prefix."""
 
-BROWSER_USE_FIELDS: dict[str, str] = {"start_url": "startUrl"}
-"""Normalized option -> Browser Use's field name."""
+BROWSER_USE_FIELDS: dict[str, str] = {
+    "start_url": "startUrl",
+    "max_steps": "maxSteps",
+    "allowed_domains": "allowedDomains",
+}
+"""Normalized option -> Browser Use's field name.
+
+Verified live on 2026-10-21: ``maxSteps=2`` stopped a task that needed more at
+two steps, and ``allowedDomains=["example.com"]`` left every navigation to
+another host on ``about:blank``.
+"""
+
+BROWSER_USE_SCHEMA_FIELD = "structuredOutput"
+"""Where ``output_schema`` goes, as a JSON string rather than an object.
+
+Verified live on 2026-10-21: the task's ``output`` came back as a JSON string
+conforming to the schema sent.
+"""
 
 BROWSER_USE_SESSION_ID_OPTION = "sessionId"
 """The create-task field, reachable through ``provider_options``, that runs a task in a session the caller owns."""
@@ -1876,8 +1894,12 @@ BROWSER_USE_TASK_STATES: dict[str, JobState] = {
 own verdict on itself, and the API says nothing about the run stopping early.
 """
 
-BROWSER_USE_STEP_FIELDS: frozenset[str] = frozenset({"url", "screenshotUrl", "nextGoal"})
-"""The fields of a reported step mapped onto :class:`~web_router.BrowseStep`; the rest go in ``extra``."""
+BROWSER_USE_STEP_FIELDS: frozenset[str] = frozenset({"url", "screenshotUrl", "memory"})
+"""The fields of a reported step mapped onto :class:`~web_router.BrowseStep`; the rest go in ``extra``.
+
+``memory`` is the step's note rather than ``nextGoal``, which every step of four
+live tasks on 2026-10-21 returned empty.
+"""
 
 # --- Skyvern browse ----------------------------------------------------------
 # From Skyvern's published OpenAPI spec (skyvern.com/docs/api-reference/openapi.json)
