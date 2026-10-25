@@ -29,11 +29,11 @@ URL_SETS: dict[str, dict[str, Any]] = {
         ),
     },
     "social-pdf": {
-        "file": "social-pdf-911.csv",
+        "file": "social-pdf-908.csv",
         "title": "the social / PDF / long-tail set",
         "description": (
-            "911 public URLs across 576 domains, stratified into social and UGC pages (131), PDF documents (407) "
-            "and a long tail of general pages (373), with a strong non-English share. Sampled from public pages."
+            "908 public URLs across 575 domains, stratified into social and UGC pages (131), PDF documents (407) "
+            "and a long tail of general pages (370), with a strong non-English share. Sampled from public pages."
         ),
     },
 }

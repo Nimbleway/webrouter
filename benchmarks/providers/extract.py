@@ -16,7 +16,7 @@ whether its text is complete is a judgment this scan does not make.
     uv run --all-extras python benchmarks/providers/extract.py --providers nimble,jina --format html
 
 ``--urls`` names a shipped set from ``urls/`` beside this script -- ``general``
-(455 URLs) or ``social-pdf`` (911), described in ``urls.py`` -- or a CSV of
+(455 URLs) or ``social-pdf`` (908), described in ``urls.py`` -- or a CSV of
 your own. Both shipped sets are URL lists sampled from public pages; this
 scan carries the URLs and categories only, no ground truth.
 
