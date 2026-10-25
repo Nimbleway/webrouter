@@ -1,93 +1,26 @@
-"""The extract scan's rows, report and merging of scans -- the tables it builds, not the pages it fetches."""
+"""The extract scan's rows and report -- the tables it builds from measured rows, not the pages it fetches."""
 
 from __future__ import annotations
 
-import asyncio
-import importlib.util
-import json
-import re
-import sys
-from collections.abc import Iterator
-from pathlib import Path
 from types import ModuleType
-from typing import Any
 
-import pytest
-
+from tests.benchmarks.conftest import EXTRACT_SETUP, extract_row
 from web_router import BenchmarkTimeoutError, ExtractBenchmarkRun, ProviderError
 from web_router.types import ExtractedDocument, ExtractResponse
 
-SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "extract.py"
-SIBLINGS = ("_common", "cli", "extract_report", "urls")
-"""What the scan imports from its folder, under plain names, so they are forgotten once it is."""
 
-
-@pytest.fixture(scope="module")
-def scan() -> Iterator[ModuleType]:
-    # The scan imports what it shares with its neighbour as a sibling, as it does run from its folder.
-    sys.path.insert(0, str(SCRIPT.parent))
-    try:
-        spec = importlib.util.spec_from_file_location("extract_scan", SCRIPT)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        yield module
-    finally:
-        sys.path.remove(str(SCRIPT.parent))
-        for name in SIBLINGS:
-            sys.modules.pop(name, None)
-
-
-def _row(
-    provider: str,
-    url: str,
-    chars: int | None,
-    category: str = "News / Media",
-    error_type: str | None = "ProviderError",
-) -> dict[str, Any]:
-    """A measured row: ``chars`` is the text that came back, ``None`` a call that did not answer."""
-    returned = chars is not None
-    return {
-        "url": url,
-        "category": category,
-        "provider": provider,
-        "returned": returned,
-        "with_text": bool(chars),
-        "chars": chars or 0,
-        "format": "markdown" if returned else None,
-        "status_code": 200 if returned else None,
-        "latency": 1.0,
-        "error": None if returned else "HTTP 500",
-        "error_type": None if returned else error_type,
-    }
-
-
-SETUP = {
-    "urls": "general",
-    "urls_title": "the general mix",
-    "urls_sha256": "abc",
-    "url_column": "url",
-    "category_column": "category",
-    "limit": 12,
-    "seed": 0,
-    "format": None,
-    "timeout": 120.0,
-    "started": "2026-10-13T00:00:00+00:00",
-}
-
-
-def test_a_row_records_what_came_back_and_nothing_it_did_not(scan: ModuleType) -> None:
+def test_a_row_records_what_came_back_and_nothing_it_did_not(extract_scan: ModuleType) -> None:
     document = ExtractedDocument(url="https://a.test", content="hello", format="markdown", status_code=200)
     answered = ExtractBenchmarkRun(
         provider="nimble", latency=0.5, response=ExtractResponse(provider="nimble", documents=[document])
     )
-    row = scan.row_of("https://a.test", "News / Media", answered)
+    row = extract_scan.row_of("https://a.test", "News / Media", answered)
     assert row["returned"] and row["with_text"] and row["chars"] == 5
     assert row["format"] == "markdown" and row["status_code"] == 200 and row["latency"] == 0.5
     assert row["error"] is None and row["error_type"] is None
 
     empty = ExtractedDocument(url="https://a.test", content="", format="markdown")
-    row = scan.row_of(
+    row = extract_scan.row_of(
         "https://a.test",
         None,
         ExtractBenchmarkRun(provider="jina", latency=0.1, response=ExtractResponse(provider="jina", documents=[empty])),
@@ -95,7 +28,7 @@ def test_a_row_records_what_came_back_and_nothing_it_did_not(scan: ModuleType) -
     assert row["returned"] and not row["with_text"] and row["chars"] == 0 and row["status_code"] is None
 
     blank = ExtractedDocument(url="https://a.test", content="\n\n  \t", format="markdown")
-    row = scan.row_of(
+    row = extract_scan.row_of(
         "https://a.test",
         None,
         ExtractBenchmarkRun(provider="jina", latency=0.1, response=ExtractResponse(provider="jina", documents=[blank])),
@@ -103,17 +36,17 @@ def test_a_row_records_what_came_back_and_nothing_it_did_not(scan: ModuleType) -
     assert row["returned"] and not row["with_text"] and row["chars"] == 0, "whitespace is not text"
 
     failed = ExtractBenchmarkRun(provider="exa", latency=2.0, error=BenchmarkTimeoutError("exa", 2.0))
-    row = scan.row_of("https://a.test", None, failed)
+    row = extract_scan.row_of("https://a.test", None, failed)
     assert not row["returned"] and row["chars"] == 0 and row["format"] is None
     assert row["error_type"] == "BenchmarkTimeoutError" and "exa" in row["error"]
 
 
-def test_empty_failed_timed_out_refused_and_not_configured_are_counted_apart(scan: ModuleType) -> None:
-    rows = [_row("nimble", f"u{i}", 100) for i in range(7)] + [_row("nimble", "u7", 0)]
-    rows += [_row("nimble", "u8", None), _row("nimble", "u9", None, error_type="BenchmarkTimeoutError")]
-    rows += [_row("nimble", "u10", None, error_type="UnsupportedFormatError")]
-    rows += [_row("nimble", "u11", None, error_type="ConfigurationError")]
-    summary = scan.summarize(rows, {**SETUP, "providers": ["nimble"]})
+def test_empty_failed_timed_out_refused_and_not_configured_are_counted_apart(extract_scan: ModuleType) -> None:
+    rows = [extract_row("nimble", f"u{i}", 100) for i in range(7)] + [extract_row("nimble", "u7", 0)]
+    rows += [extract_row("nimble", "u8", None), extract_row("nimble", "u9", None, error_type="BenchmarkTimeoutError")]
+    rows += [extract_row("nimble", "u10", None, error_type="UnsupportedFormatError")]
+    rows += [extract_row("nimble", "u11", None, error_type="ConfigurationError")]
+    summary = extract_scan.summarize(rows, {**EXTRACT_SETUP, "providers": ["nimble"]})
     score = summary["overall"]["nimble"]
 
     assert score["urls"] == 12 and score["returned"] == 8 and score["with_text"] == 7
@@ -121,10 +54,10 @@ def test_empty_failed_timed_out_refused_and_not_configured_are_counted_apart(sca
     assert score["empty"] == 1 and score["failed"] == 1 and score["timed_out"] == 1 and score["refused"] == 1
     assert score["not_configured"] == 1, "a backend never built made no call: not a failed one"
     assert score["latency_p50"] == 1.0 and score["chars_median"] == 100
-    assert "| Not configured |" in scan.markdown(summary)
+    assert "| Not configured |" in extract_scan.markdown(summary)
 
 
-def test_a_backend_with_no_key_reads_as_not_configured_not_as_unreliable(scan: ModuleType) -> None:
+def test_a_backend_with_no_key_reads_as_not_configured_not_as_unreliable(extract_scan: ModuleType) -> None:
     """`--providers oxylabs` without its password used to report 100 failed calls, none of which was made."""
     from web_router.exceptions import ConfigurationError, ProviderNotInstalledError
 
@@ -132,67 +65,67 @@ def test_a_backend_with_no_key_reads_as_not_configured_not_as_unreliable(scan: M
         ExtractBenchmarkRun(provider="oxylabs", latency=0.0, error=ConfigurationError("no OXYLABS_PASSWORD")),
         ExtractBenchmarkRun(provider="oxylabs", latency=0.0, error=ProviderNotInstalledError("oxylabs", "extract")),
     ]
-    rows = [scan.row_of(f"u{i}", None, run) for i, run in enumerate(never_built)]
-    score = scan.summarize(rows, {**SETUP, "providers": ["oxylabs"]})["overall"]["oxylabs"]
+    rows = [extract_scan.row_of(f"u{i}", None, run) for i, run in enumerate(never_built)]
+    score = extract_scan.summarize(rows, {**EXTRACT_SETUP, "providers": ["oxylabs"]})["overall"]["oxylabs"]
 
     assert score["not_configured"] == 2 and score["failed"] == 0
 
 
-def test_a_call_that_answered_with_no_document_is_empty_not_failed(scan: ModuleType) -> None:
+def test_a_call_that_answered_with_no_document_is_empty_not_failed(extract_scan: ModuleType) -> None:
     """The public path never answers with no document, but a row that did is a call that answered, with nothing."""
     answered_with_nothing = ExtractBenchmarkRun(
         provider="odd", latency=0.3, response=ExtractResponse.model_construct(provider="odd", documents=[])
     )
-    row = scan.row_of("u0", None, answered_with_nothing)
+    row = extract_scan.row_of("u0", None, answered_with_nothing)
     assert row["returned"] and not row["with_text"] and row["error"] is None
 
-    score = scan.summarize([row], {**SETUP, "providers": ["odd"]})["overall"]["odd"]
+    score = extract_scan.summarize([row], {**EXTRACT_SETUP, "providers": ["odd"]})["overall"]["odd"]
     assert score["empty"] == 1 and score["failed"] == 0
 
 
 def test_the_best_backend_per_category_is_named_on_pages_with_text_not_on_the_few_it_served(
-    scan: ModuleType,
+    extract_scan: ModuleType,
 ) -> None:
     """A backend that failed most of a category cannot lead it by returning text on the rest."""
-    rows = [_row("flaky", "u0", 100)] + [_row("flaky", f"u{i}", None) for i in range(1, 12)]
-    rows += [_row("steady", f"u{i}", 100 if i < 10 else 0) for i in range(12)]
-    summary = scan.summarize(rows, {**SETUP, "providers": ["flaky", "steady"]})
+    rows = [extract_row("flaky", "u0", 100)] + [extract_row("flaky", f"u{i}", None) for i in range(1, 12)]
+    rows += [extract_row("steady", f"u{i}", 100 if i < 10 else 0) for i in range(12)]
+    summary = extract_scan.summarize(rows, {**EXTRACT_SETUP, "providers": ["flaky", "steady"]})
 
     group = summary["by_category"]["News / Media"]
     assert group["urls"] == 12
     assert group["with_text_rate"] == {"flaky": 1 / 12, "steady": 10 / 12}
     assert group["leaders"] == ["steady"]
-    assert "**83%**" in scan.markdown(summary)
+    assert "**83%**" in extract_scan.markdown(summary)
 
 
-def test_a_category_too_small_to_tell_backends_apart_names_no_best(scan: ModuleType) -> None:
-    rows = [_row("nimble", "u0", 100, category="pdf"), _row("jina", "u0", None, category="pdf")]
-    summary = scan.summarize(rows, {**SETUP, "providers": ["nimble", "jina"]})
+def test_a_category_too_small_to_tell_backends_apart_names_no_best(extract_scan: ModuleType) -> None:
+    rows = [extract_row("nimble", "u0", 100, category="pdf"), extract_row("jina", "u0", None, category="pdf")]
+    summary = extract_scan.summarize(rows, {**EXTRACT_SETUP, "providers": ["nimble", "jina"]})
 
     assert summary["by_category"]["pdf"]["leaders"] == []
 
 
-def test_a_url_with_no_category_is_grouped_as_uncategorized(scan: ModuleType) -> None:
-    rows = [_row("nimble", "u0", 100, category=None)]  # type: ignore[arg-type]
-    summary = scan.summarize(rows, {**SETUP, "providers": ["nimble"]})
+def test_a_url_with_no_category_is_grouped_as_uncategorized(extract_scan: ModuleType) -> None:
+    rows = [extract_row("nimble", "u0", 100, category=None)]  # type: ignore[arg-type]
+    summary = extract_scan.summarize(rows, {**EXTRACT_SETUP, "providers": ["nimble"]})
 
     assert list(summary["by_category"]) == ["uncategorized"]
 
 
 def test_the_recommended_auto_order_ranks_on_pages_with_text_and_says_which_the_run_tells_apart(
-    scan: ModuleType,
+    extract_scan: ModuleType,
 ) -> None:
     """A suggestion, opt-in: backends by pages with text over every URL, `auto` and a silent backend left out."""
     counts = {"best": 40, "close": 38, "far": 20, "auto": 40, "silent": 0}
     rows = []
     for provider, hits in counts.items():
         for i in range(40):
-            rows.append(_row(provider, f"u{i}", 100 if i < hits else (None if provider == "silent" else 0)))
-    summary = scan.summarize(rows, {**SETUP, "providers": list(counts)})
+            rows.append(extract_row(provider, f"u{i}", 100 if i < hits else (None if provider == "silent" else 0)))
+    summary = extract_scan.summarize(rows, {**EXTRACT_SETUP, "providers": list(counts)})
 
-    assert scan.recommended_order(summary) == [("best", None), ("close", False), ("far", True)]
+    assert extract_scan.recommended_order(summary) == [("best", None), ("close", False), ("far", True)]
 
-    report = scan.markdown(summary)
+    report = extract_scan.markdown(summary)
     section = report.split("## Recommended auto order")[1].split("\n## ")[0]
     assert "| 1 | `best` |" in section and "| best |" in section
     assert "| 2 | `close` |" in section and "not shown apart" in section
@@ -203,201 +136,42 @@ def test_the_recommended_auto_order_ranks_on_pages_with_text_and_says_which_the_
     assert report.index("## Overall") < report.index("## Recommended auto order") < report.index("## By category")
 
 
-def test_a_scan_where_nothing_came_back_suggests_no_order(scan: ModuleType) -> None:
-    summary = scan.summarize([_row("nimble", "u0", None)], {**SETUP, "providers": ["nimble"]})
+def test_a_scan_where_nothing_came_back_suggests_no_order(extract_scan: ModuleType) -> None:
+    summary = extract_scan.summarize([extract_row("nimble", "u0", None)], {**EXTRACT_SETUP, "providers": ["nimble"]})
 
-    assert scan.recommended_order(summary) == []
-    assert "no order to suggest" in scan.markdown(summary)
+    assert extract_scan.recommended_order(summary) == []
+    assert "no order to suggest" in extract_scan.markdown(summary)
 
 
-def test_the_report_names_the_set_the_format_and_the_urls_fetched_not_the_limit(scan: ModuleType) -> None:
-    rows = [_row("nimble", f"u{i}", 100) for i in range(12)]
-    summary = scan.summarize(rows, {**SETUP, "providers": ["nimble"], "limit": 100, "asked": 12, "format": "html"})
-    report = scan.markdown(summary)
+def test_the_report_names_the_set_the_format_and_the_urls_fetched_not_the_limit(extract_scan: ModuleType) -> None:
+    rows = [extract_row("nimble", f"u{i}", 100) for i in range(12)]
+    summary = extract_scan.summarize(
+        rows, {**EXTRACT_SETUP, "providers": ["nimble"], "limit": 100, "asked": 12, "format": "html"}
+    )
+    report = extract_scan.markdown(summary)
 
     assert report.splitlines()[0].startswith("# Extract backends on the general mix")
     assert report.splitlines()[2].startswith("12 URLs of the general mix")
     assert "`format=html`" in report
-    assert "no format named" in scan.markdown(scan.summarize(rows, {**SETUP, "providers": ["nimble"]}))
+    assert "no format named" in extract_scan.markdown(
+        extract_scan.summarize(rows, {**EXTRACT_SETUP, "providers": ["nimble"]})
+    )
 
 
-def _scan(folder: Path, providers: list[str], **setup: Any) -> Path:
-    folder.mkdir()
-    (folder / "run.json").write_text(json.dumps({**SETUP, "providers": providers, **setup}))
-    (folder / "rows.jsonl").write_text("".join(json.dumps(_row(p, "u0", 100)) + "\n" for p in providers))
-    return folder
+def test_a_repeated_provider_name_is_scanned_and_reported_once(extract_scan: ModuleType) -> None:
+    assert extract_scan.explicit_providers("a,b,a") == ["a", "b"]
+    assert extract_scan.explicit_providers("a, b ,,") == ["a", "b"]
+    assert extract_scan.explicit_providers("a,b") == ["a", "b"]
 
 
-def test_scans_of_the_same_urls_combine_and_others_are_refused(scan: ModuleType, tmp_path: Path) -> None:
-    first = _scan(tmp_path / "a", ["nimble", "jina"])
-    later = _scan(tmp_path / "b", ["exa"])
-    rows, setup = scan.combine([first, later])
-
-    assert setup["providers"] == ["nimble", "jina", "exa"] and len(rows) == 3
-
-    other_format = _scan(tmp_path / "c", ["tavily"], format="html")
-    with pytest.raises(SystemExit, match="format"):
-        scan.combine([first, other_format])
-    other_file = _scan(tmp_path / "d", ["tavily"], urls_sha256="def")
-    with pytest.raises(SystemExit, match="urls_sha256"):
-        scan.combine([first, other_file])
-    again = _scan(tmp_path / "e", ["nimble"])
-    with pytest.raises(SystemExit, match="nimble again"):
-        scan.combine([first, again])
-
-    other_urls = tmp_path / "f"
-    other_urls.mkdir()
-    (other_urls / "run.json").write_text(json.dumps({**SETUP, "providers": ["tavily"]}))
-    (other_urls / "rows.jsonl").write_text(json.dumps(_row("tavily", "elsewhere", 100)) + "\n")
-    with pytest.raises(SystemExit, match="different URLs"):
-        scan.combine([first, other_urls])
-
-
-def test_the_shipped_sets_load_deduplicated_and_sampled_by_seed(scan: ModuleType) -> None:
-    whole = scan.load_urls(scan.parse_args(["--limit", "0"]))
-    assert whole and len({url for url, _ in whole}) == len(whole)
-    assert all(category for _, category in whole)
-
-    some = scan.load_urls(scan.parse_args(["--limit", "20", "--seed", "1"]))
-    assert len(some) == 20 and some == scan.load_urls(scan.parse_args(["--limit", "20", "--seed", "1"]))
-    assert some != scan.load_urls(scan.parse_args(["--limit", "20", "--seed", "2"]))
-    assert [url for url, _ in some] == [url for url, _ in whole if url in {u for u, _ in some}], "set order kept"
-
-    social = scan.load_urls(scan.parse_args(["--urls", "social-pdf", "--limit", "0"]))
-    assert social and len({url for url, _ in social}) == len(social)
-    assert {category for _, category in social} == {"pdf", "social", "other"}
-
-
-def test_no_shipped_url_carries_a_credential_shaped_query_key(scan: ModuleType) -> None:
-    """A token in a URL would be sent to every backend and written into every result file."""
-    secret_keys = re.compile(r"[?&](token|ctoken|access_token|api_key|apikey|sig|signature|offertoken)=", re.IGNORECASE)
-    for name in scan.URL_SETS:
-        urls = scan.load_urls(scan.parse_args(["--urls", name, "--limit", "0"]))
-        leaking = [url for url, _ in urls if secret_keys.search(url)]
-        assert not leaking, f"{name}: {leaking[:3]}"
-
-
-def test_concurrency_below_one_is_a_usage_error_not_a_hang(
-    scan: ModuleType, capsys: pytest.CaptureFixture[str]
-) -> None:
-    for bad in ("0", "-1"):
-        with pytest.raises(SystemExit) as raised:
-            scan.parse_args(["--concurrency", bad])
-        assert raised.value.code == 2 and "at least 1" in capsys.readouterr().err
-    assert scan.parse_args(["--concurrency", "1"]).concurrency == 1
-
-
-def test_a_repeated_provider_name_is_scanned_and_reported_once(scan: ModuleType) -> None:
-    assert scan.explicit_providers("a,b,a") == ["a", "b"]
-    assert scan.explicit_providers("a, b ,,") == ["a", "b"]
-    assert scan.explicit_providers("a,b") == ["a", "b"]
-
-
-def test_provider_names_are_spelled_as_the_rows_label_them(scan: ModuleType) -> None:
+def test_provider_names_are_spelled_as_the_rows_label_them(extract_scan: ModuleType) -> None:
     """`--providers Nimble,Jina` used to score every backend 0/0: the rows say `nimble`, the setup said `Nimble`."""
-    assert scan.explicit_providers("Nimble,JINA,nimble") == ["nimble", "jina"]
+    assert extract_scan.explicit_providers("Nimble,JINA,nimble") == ["nimble", "jina"]
 
     rows = [
-        scan.row_of("u0", None, ExtractBenchmarkRun(provider="nimble", latency=0.1, error=ProviderError("nimble", "x")))
-    ]
-    summary = scan.summarize(rows, {**SETUP, "providers": scan.explicit_providers("Nimble")})
-    assert summary["overall"]["nimble"]["urls"] == 1
-
-
-def test_a_shipped_set_and_a_file_of_your_own_each_carry_their_identity(scan: ModuleType, tmp_path: Path) -> None:
-    shipped = scan.urls_identity(scan.parse_args([]))
-    assert shipped["urls"] == "general" and shipped["urls_title"] == "the general mix"
-    assert len(shipped["urls_sha256"]) == 64 and shipped["url_column"] == "url"
-
-    path = tmp_path / "mine.csv"
-    path.write_text("link,kind\nhttps://a.test,blog\nhttps://a.test,blog\nhttps://b.test,\n", encoding="utf-8")
-    args = scan.parse_args(["--urls", str(path), "--url-column", "link", "--category-column", "kind"])
-    assert scan.load_urls(args) == [("https://a.test", "blog"), ("https://b.test", None)]
-    mine = scan.urls_identity(args)
-    assert (
-        mine["urls"] == "csv" and mine["urls_title"] == "`mine.csv`" and mine["urls_sha256"] != shipped["urls_sha256"]
-    )
-
-    with pytest.raises(SystemExit, match="--url-column"):
-        scan.load_urls(scan.parse_args(["--urls", str(path)]))
-    with pytest.raises(SystemExit, match="not a shipped set"):
-        scan.load_urls(scan.parse_args(["--urls", "nowhere"]))
-
-
-def test_a_scan_that_dies_leaves_run_json_and_the_rows_it_paid_for(
-    scan: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Nothing waits for the end: the setup is written first and each URL's rows the moment they exist."""
-    out = tmp_path / "scan"
-
-    async def dying_run(args: Any, setup: dict[str, Any], sink: Any) -> list[dict[str, Any]]:
-        sink([_row("nimble", "u0", 100)])
-        sink([_row("nimble", "u1", None)])
-        raise RuntimeError("connection dropped")
-
-    with pytest.raises(RuntimeError, match="connection dropped"):
-        scan.scan_main(
-            ["--out", str(out), "--providers", "nimble"],
-            parse_args=scan.parse_args,
-            setup_of=scan.setup_of,
-            run=dying_run,
-            combine=scan.combine,
-            summarize=scan.summarize,
-            markdown=scan.markdown,
+        extract_scan.row_of(
+            "u0", None, ExtractBenchmarkRun(provider="nimble", latency=0.1, error=ProviderError("nimble", "x"))
         )
-
-    setup = json.loads((out / "run.json").read_text())
-    assert setup["providers"] == ["nimble"], "run.json was written before the first call"
-    lines = [json.loads(line) for line in (out / "rows.jsonl").read_text().splitlines()]
-    assert [(r["url"], r["returned"]) for r in lines] == [("u0", True), ("u1", False)]
-    assert not (out / "report.md").exists(), "the report needs every row; the rows do not need the report"
-
-
-def test_a_finished_scan_writes_every_file_once_from_the_rows_it_ran(scan: ModuleType, tmp_path: Path) -> None:
-    out = tmp_path / "scan"
-
-    async def quick_run(args: Any, setup: dict[str, Any], sink: Any) -> list[dict[str, Any]]:
-        rows = [_row("nimble", "u0", 100)]
-        sink(rows)
-        setup["asked"] = 1
-        return rows
-
-    scan.scan_main(
-        ["--out", str(out), "--providers", "nimble"],
-        parse_args=scan.parse_args,
-        setup_of=scan.setup_of,
-        run=quick_run,
-        combine=scan.combine,
-        summarize=scan.summarize,
-        markdown=scan.markdown,
-    )
-
-    assert json.loads((out / "run.json").read_text())["asked"] == 1, "run.json is written again with what run added"
-    assert len((out / "rows.jsonl").read_text().splitlines()) == 1, "the sink's rows are not written twice"
-    assert (out / "report.md").exists() and (out / "summary.json").exists()
-
-
-def test_the_real_run_hands_each_urls_rows_to_the_sink(scan: ModuleType, tmp_path: Path) -> None:
-    """The scan itself, not a stand-in: on a registered backend, each URL's rows reach the sink as its own batch."""
-    from tests.conftest import FakeExtractProvider
-    from web_router.registry import register_extract_provider, unregister_extract_provider
-
-    class Scanned(FakeExtractProvider):  # type: ignore[misc, valid-type]
-        name = "scanned"
-
-    path = tmp_path / "two.csv"
-    path.write_text("url,category\nhttps://a.test,blog\nhttps://b.test,news\n", encoding="utf-8")
-    args = scan.parse_args(["--urls", str(path), "--providers", "scanned", "--limit", "0"])
-    setup = scan.setup_of(args)
-    saved: list[list[dict[str, Any]]] = []
-    register_extract_provider("scanned", Scanned)
-    try:
-        rows = asyncio.run(scan.run(args, setup, saved.append))
-    finally:
-        unregister_extract_provider("scanned")
-
-    batches = sorted([(r["url"], r["category"], r["provider"], r["returned"]) for r in batch] for batch in saved)
-    assert batches == [[("https://a.test", "blog", "scanned", True)], [("https://b.test", "news", "scanned", True)]]
-    by_url = lambda r: r["url"]  # noqa: E731
-    assert sorted(rows, key=by_url) == sorted((r for batch in saved for r in batch), key=by_url)
-    assert setup["asked"] == 2
+    ]
+    summary = extract_scan.summarize(rows, {**EXTRACT_SETUP, "providers": extract_scan.explicit_providers("Nimble")})
+    assert summary["overall"]["nimble"]["urls"] == 1
