@@ -397,7 +397,11 @@ it did not return -- the first document is the answer, which is "never invent
 data" applied to a race. `hedge` is the one knob: the first eligible member
 runs alone for that many seconds, the rest start when it runs out or when
 that member fails, whichever comes first. The whole URL list is one race, so
-every document comes from the winner. The sync router cannot cancel a loser,
+every document comes from the winner -- and a member whose answer has
+`failures` fetched part of the list, so `_Losses` holds it while another
+member can still answer and returns the one with the fewest failures only
+when none can; a partial answer also starts the hedged rest, as a failure
+does. The sync router cannot cancel a loser,
 so `close()` waits for the race's stragglers before closing the members; the
 async router cancels them. `max` and `auto` are `DELEGATING_PROVIDERS`: the
 router hands both every other backend's `provider_config` entry, and

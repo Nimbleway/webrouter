@@ -16,6 +16,13 @@ Only a document wins. A backend that refused the fetch, could not be built, or
 answered with nothing is a failure like any other, and when every member fails
 the error names each one's reason, as ``auto``'s does. What a slower backend
 would have returned is never judged: the first document is the answer.
+
+With several URLs, "first" means the first *complete* answer. A member that
+fetched some of the URLs and failed the rest is held, not returned, while
+another member can still answer -- most backends take one URL per request, so
+the member that fetched less is usually the faster one, and a partial answer
+would otherwise be the common case. It is returned when no one else can do
+better, as the whole answer the call would have had anyway.
 """
 
 from __future__ import annotations
@@ -24,7 +31,7 @@ import asyncio
 import math
 import queue
 import threading
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, ClassVar
 
@@ -103,8 +110,8 @@ class MaxExtractProvider(AutoExtractProvider):
 
     def _race(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         delegated = self._delegated(request, urls)
-        failures: dict[str, WebRouterError] = {}
-        first, rest = self._runners(delegated, failures)
+        losses = _Losses(self.name)
+        first, rest = self._runners(delegated, losses.failures)
         # Not a `with` block: leaving one joins every thread, which would hold
         # the winner until the slowest loser answered.
         pool = ThreadPoolExecutor(max_workers=max(1, len(first) + len(rest)))
@@ -113,51 +120,44 @@ class MaxExtractProvider(AutoExtractProvider):
             self._start(pool, race, first, delegated)
             while True:
                 if race.running == 0 and not rest:
-                    raise _exhausted(self.name, failures, MAX_AGGREGATE_FAILURE)
+                    return losses.settle()
                 # With the rest still waiting, the hedge bounds this wait; the
                 # last one running is waited for however long it takes.
                 finished = race.next(timeout=self.hedge if rest else None) if race.running else None
                 if finished is None:
                     # The hedge ran out, or everyone started so far has lost:
                     # the rest get their turn.
-                    self._start(pool, race, rest, delegated)
-                    rest = []
+                    rest = self._start(pool, race, rest, delegated)
                     continue
                 provider_name, future = finished
-                try:
-                    return future.result()
-                except _RECOVERABLE as exc:
-                    failures[provider_name] = exc
-                if rest:
-                    # The member the hedge covered failed: no point waiting it out.
-                    self._start(pool, race, rest, delegated)
-                    rest = []
+                complete = losses.record(provider_name, future.result)
+                if complete is not None:
+                    return complete
+                # The member the hedge covered failed, or answered in part:
+                # no point waiting it out.
+                rest = self._start(pool, race, rest, delegated)
         finally:
             pool.shutdown(wait=False)
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         delegated = self._delegated(request, urls)
-        failures: dict[str, WebRouterError] = {}
-        first, rest = self._runners(delegated, failures)
+        losses = _Losses(self.name)
+        first, rest = self._runners(delegated, losses.failures)
         race = _AsyncRace()
         try:
             race.start(first, delegated)
             while True:
                 if race.running == 0 and not rest:
-                    raise _exhausted(self.name, failures, MAX_AGGREGATE_FAILURE)
+                    return losses.settle()
                 finished = await race.next(timeout=self.hedge if rest else None) if race.running else None
                 if finished is None:
-                    race.start(rest, delegated)
-                    rest = []
+                    rest = race.start(rest, delegated)
                     continue
                 provider_name, task = finished
-                try:
-                    return task.result()
-                except _RECOVERABLE as exc:
-                    failures[provider_name] = exc
-                if rest:
-                    race.start(rest, delegated)
-                    rest = []
+                complete = losses.record(provider_name, task.result)
+                if complete is not None:
+                    return complete
+                rest = race.start(rest, delegated)
         finally:
             # A loser's call is cancelled rather than left running: on the
             # event loop that costs nothing, and its answer has no reader.
@@ -201,7 +201,8 @@ class MaxExtractProvider(AutoExtractProvider):
         race: _Race,
         runners: list[_Runner],
         delegated: ExtractRequest,
-    ) -> None:
+    ) -> list[_Runner]:
+        """Submit every runner's call; returns the empty list of runners left to start."""
         for provider_name, member in runners:
             future = pool.submit(member.extract, delegated)
             with self._quiet:
@@ -210,6 +211,7 @@ class MaxExtractProvider(AutoExtractProvider):
             # callback here and now, and the callback takes the lock itself.
             future.add_done_callback(self._forget)
             race.add(provider_name, future)
+        return []
 
     def _forget(self, future: Future[ExtractResponse]) -> None:
         with self._quiet:
@@ -226,6 +228,49 @@ class MaxExtractProvider(AutoExtractProvider):
         with self._quiet:
             self._quiet.wait_for(lambda: self._active == 0 and not self._inflight)
         super().close()
+
+
+class _Losses:
+    """What one race has seen that did not win: each loser's reason, and the best partial answer so far.
+
+    A member that answered with ``failures`` fetched some of the URLs and not
+    the rest. It is not judged on what it fetched, only on how much: it is
+    held while another member can still answer, and the one with the fewest
+    failures is what the call returns when none can.
+    """
+
+    def __init__(self, provider: str) -> None:
+        self.provider = provider
+        self.failures: dict[str, WebRouterError] = {}
+        self.partial: ExtractResponse | None = None
+
+    def record(self, provider_name: str, result: Callable[[], ExtractResponse]) -> ExtractResponse | None:
+        """The complete answer ``result`` gives, or ``None`` once a failure is recorded or a partial answer held.
+
+        Raises:
+            WebRouterError: any the call raised that the race does not recover
+                from -- a caller's mistake, which no other member's answer may hide.
+        """
+        try:
+            response = result()
+        except _RECOVERABLE as exc:
+            self.failures[provider_name] = exc
+            return None
+        if not response.failures:
+            return response
+        if self.partial is None or len(response.failures) < len(self.partial.failures):
+            self.partial = response
+        return None
+
+    def settle(self) -> ExtractResponse:
+        """Once no member can answer any more: the partial answer held, else the error naming each loss.
+
+        Raises:
+            ProviderError: under :data:`MAX_AGGREGATE_FAILURE`, when nothing came back at all.
+        """
+        if self.partial is not None:
+            return self.partial
+        raise _exhausted(self.provider, self.failures, MAX_AGGREGATE_FAILURE)
 
 
 class _Race:
@@ -264,12 +309,14 @@ class _AsyncRace:
         self._tasks: dict[asyncio.Task[ExtractResponse], str] = {}
         self.running = 0
 
-    def start(self, runners: list[_Runner], delegated: ExtractRequest) -> None:
+    def start(self, runners: list[_Runner], delegated: ExtractRequest) -> list[_Runner]:
+        """Start every runner's call; returns the empty list of runners left to start."""
         for provider_name, member in runners:
             task = asyncio.create_task(member.aextract(delegated))
             self._tasks[task] = provider_name
             self.running += 1
             task.add_done_callback(self._finished_one)
+        return []
 
     def _finished_one(self, task: asyncio.Task[ExtractResponse]) -> None:
         self._finished.put_nowait((self._tasks.pop(task), task))

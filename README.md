@@ -638,9 +638,12 @@ Only a document wins. A backend that refused the fetch, could not be built or
 answered with nothing is that backend's loss, not the call's, and when every
 backend loses the error names each one's reason. What a slower backend would
 have returned is never judged: the first document is the answer, which is the
-"never invent data" rule applied to a race. On the sync router the losers
-finish on their own threads and `close()` waits for them before shutting their
-clients; on the async router they are cancelled.
+"never invent data" rule applied to a race. With several URLs it is the first
+*complete* answer: a backend that fetched part of the list and failed the rest
+is held while another can still answer, and returned, `failures` and all, only
+when none can do better. On the sync router the losers finish on their own
+threads and `close()` waits for them before shutting their clients; on the
+async router they are cancelled.
 
 **`hedge` keeps the cost down.** With a hedge, the first member runs alone for
 that many seconds and the rest start only if it has not answered by then:

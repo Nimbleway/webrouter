@@ -25,10 +25,11 @@ from web_router.registry import (
     register_extract_provider,
     unregister_extract_provider,
 )
-from web_router.types import ExtractedDocument, ExtractFormat, ExtractRequest, ExtractResponse
+from web_router.types import ExtractedDocument, ExtractFailure, ExtractFormat, ExtractRequest, ExtractResponse
 
 URL = "https://example.com"
 REQUEST = ExtractRequest(urls=[URL])
+URLS = [URL, "https://example.org", "https://example.net"]
 
 
 class _Recorder:
@@ -58,27 +59,39 @@ def _member(
     *,
     delay: float = 0.0,
     raises: Exception | None = None,
+    serves: int | None = None,
     formats: frozenset[ExtractFormat] = frozenset({"markdown", "html", "text"}),
 ) -> type:
-    """A fake member that answers after ``delay`` seconds, or raises ``raises`` after them."""
+    """A fake member that takes the whole URL list in one call and answers it after ``delay`` seconds.
+
+    It raises ``raises`` instead when given one, and with ``serves`` it returns
+    a document for that many URLs and a failure for each of the rest -- a
+    partial answer, as a backend that fetched some of the list gives.
+    """
     from tests.conftest import FakeExtractProvider
 
     class Member(FakeExtractProvider):  # type: ignore[misc, valid-type]
         name = member_name
         supported_formats = formats
         default_format = sorted(formats)[0]
+        batches_urls = True
+
+        def _answer(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+            recorder.note(recorder.finished, member_name)
+            if raises is not None:
+                raise raises
+            served = urls if serves is None else urls[:serves]
+            return ExtractResponse(
+                provider=member_name,
+                documents=[ExtractedDocument(url=url, content="hi", format=self.format_of(request)) for url in served],
+                failures=[ExtractFailure(url=url, error="HTTP 404") for url in urls[len(served) :]],
+                raw=[{"from": member_name}],
+            )
 
         def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
             recorder.note(recorder.started, member_name)
             time.sleep(delay)
-            recorder.note(recorder.finished, member_name)
-            if raises is not None:
-                raise raises
-            return ExtractResponse(
-                provider=member_name,
-                documents=[ExtractedDocument(url=url, content="hi", format=self.format_of(request)) for url in urls],
-                raw=[{"from": member_name}],
-            )
+            return self._answer(request, urls)
 
         async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
             recorder.note(recorder.started, member_name)
@@ -87,14 +100,7 @@ def _member(
             except asyncio.CancelledError:
                 recorder.note(recorder.cancelled, member_name)
                 raise
-            recorder.note(recorder.finished, member_name)
-            if raises is not None:
-                raise raises
-            return ExtractResponse(
-                provider=member_name,
-                documents=[ExtractedDocument(url=url, content="hi", format=self.format_of(request)) for url in urls],
-                raw=[{"from": member_name}],
-            )
+            return self._answer(request, urls)
 
     register_extract_provider(member_name, Member)
     recorder.registered.append(member_name)
@@ -252,6 +258,65 @@ def test_several_urls_are_one_race_and_the_winner_serves_them_all(members: _Reco
 
     assert response.provider == "fast", "one race for the whole list: every document comes from the winner"
     assert response.urls == [URL, "https://example.org"]
+
+
+def test_a_partial_answer_is_held_while_a_slower_member_may_still_answer_in_full(members: _Recorder) -> None:
+    """Most backends take one URL per request, so the member that fetched less is usually the faster one."""
+    _member(members, "partial", serves=1)
+    _member(members, "complete", delay=0.2)
+
+    provider = _race("partial", "complete")
+    try:
+        response = provider.extract(ExtractRequest(urls=URLS))
+    finally:
+        provider.close()
+
+    assert response.provider == "complete", "a fast partial answer does not beat a complete one"
+    assert response.urls == URLS and response.failures == []
+
+
+def test_a_partial_answer_is_returned_once_no_member_can_do_better(members: _Recorder) -> None:
+    _member(members, "partial", serves=1)
+    _member(members, "broken", raises=ProviderError("broken", "HTTP 403"))
+
+    provider = _race("partial", "broken")
+    try:
+        response = provider.extract(ExtractRequest(urls=URLS))
+    finally:
+        provider.close()
+
+    assert response.provider == "partial"
+    assert response.urls == URLS[:1] and [failure.url for failure in response.failures] == URLS[1:]
+
+
+def test_of_two_partial_answers_the_one_with_fewer_failures_is_returned(members: _Recorder) -> None:
+    _member(members, "one", serves=1)
+    _member(members, "two", serves=2, delay=0.1)
+
+    provider = _race("one", "two")
+    try:
+        response = provider.extract(ExtractRequest(urls=URLS))
+    finally:
+        provider.close()
+
+    assert response.provider == "two"
+    assert response.urls == URLS[:2]
+
+
+def test_with_a_hedge_a_partial_first_answer_starts_the_rest_at_once(members: _Recorder) -> None:
+    _member(members, "first", serves=1)
+    _member(members, "second", delay=0.05)
+
+    provider = _race("first", "second", hedge=2.0)
+    try:
+        started = time.perf_counter()
+        response = provider.extract(ExtractRequest(urls=URLS))
+        elapsed = time.perf_counter() - started
+    finally:
+        provider.close()
+
+    assert response.provider == "second"
+    assert elapsed < 1.0, "a partial answer within the hedge starts the rest as a failure does"
 
 
 # -- The hedge ---------------------------------------------------------------
@@ -443,6 +508,20 @@ async def test_the_async_race_cancels_the_losers(members: _Recorder) -> None:
 
     assert response.provider == "fast"
     assert members.cancelled == ["slow"]
+
+
+async def test_the_async_race_holds_a_partial_answer_too(members: _Recorder) -> None:
+    _member(members, "partial", serves=1)
+    _member(members, "complete", delay=0.2)
+
+    provider = _race("partial", "complete")
+    try:
+        response = await provider.aextract(ExtractRequest(urls=URLS))
+    finally:
+        await provider.aclose()
+
+    assert response.provider == "complete"
+    assert response.urls == URLS and response.failures == []
 
 
 async def test_the_async_hedge_works_the_same_way(members: _Recorder) -> None:
