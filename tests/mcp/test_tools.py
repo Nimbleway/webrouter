@@ -111,6 +111,17 @@ def test_the_extract_schema_reads_max_as_the_members_it_would_race(no_keys: None
     assert all(cls.name in router.get_extract_provider(PROVIDER_MAX).members for cls in serving)  # type: ignore[attr-defined]
 
 
+def test_a_router_whose_default_is_max_still_lists_every_tool(no_keys: None) -> None:
+    """``max`` is extract's alone: as the default it serves no search or browser, and breaks neither schema."""
+    session = WebRouterTools(AsyncWebRouter(PROVIDER_MAX))
+
+    names = {tool.name for tool in list_tools(session).tools}
+
+    assert {MCP_TOOL_SEARCH, MCP_TOOL_BROWSER_OPEN, MCP_TOOL_EXTRACT} <= names
+    assert _tool(session, MCP_TOOL_SEARCH).input_schema["properties"]
+    assert _tool(session, MCP_TOOL_BROWSER_OPEN).input_schema["properties"]
+
+
 def test_a_method_with_only_delegating_providers_configured_is_not_usable(monkeypatch: pytest.MonkeyPatch) -> None:
     """``max`` needs no key of its own any more than ``auto`` does, so neither counts as a backend that can run."""
     from web_router.mcp import tools as module

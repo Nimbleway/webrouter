@@ -686,7 +686,11 @@ def _serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[ty
     names: list[str] = []
     for provider in providers:
         if provider in DELEGATING_PROVIDERS and tool in _CHAIN_OF:
-            names.extend(_CHAIN_OF[tool](router, provider))
+            # Not every delegating name is every method's: ``max`` is extract's alone.
+            try:
+                names.extend(_CHAIN_OF[tool](router, provider))
+            except (ProviderNotFoundError, ProviderNotInstalledError):
+                continue
         else:
             names.append(provider)
     classes: list[type[_BaseProvider]] = []
