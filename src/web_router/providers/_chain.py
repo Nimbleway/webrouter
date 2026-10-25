@@ -238,7 +238,8 @@ def _sdk_refused(original: BaseException | None) -> bool:
     except ImportError:
         return False
     if isinstance(original, APIStatusError):
-        return HTTPStatus.BAD_REQUEST <= original.status_code < HTTPStatus.INTERNAL_SERVER_ERROR
+        # bool(): the SDK is typed, but a mypy run without it installed sees Any here.
+        return bool(HTTPStatus.BAD_REQUEST <= original.status_code < HTTPStatus.INTERNAL_SERVER_ERROR)
     return isinstance(original, APIConnectionError) and not isinstance(original, APITimeoutError)
 
 
