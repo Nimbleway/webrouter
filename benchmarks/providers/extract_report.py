@@ -52,9 +52,9 @@ def _header(setup: dict[str, Any]) -> list[str]:
 def _overall_table(overall: dict[str, Any], providers: list[str]) -> list[str]:
     lines = [
         "## Overall\n",
-        "| Backend | Pages with text | 95% CI | Empty | Failed | Timed out | Refused | p50 latency | p95 latency "
-        "| Median chars |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| Backend | Pages with text | 95% CI | Empty | Failed | Timed out | Refused | Not configured "
+        "| p50 latency | p95 latency | Median chars |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for p in providers:
         s = overall[p]
@@ -62,13 +62,16 @@ def _overall_table(overall: dict[str, Any], providers: list[str]) -> list[str]:
         lines.append(
             f"| `{p}` | {_p(s['with_text_rate'])} ({s['with_text']}/{s['urls']}) "
             f"| {_p(ci[0]) + '-' + _p(ci[1]) if ci else 'n/a'} | {s['empty']} | {s['failed']} | {s['timed_out']} "
-            f"| {s['refused']} | {_s(s['latency_p50'])} | {_s(s['latency_p95'])} | {_k(s['chars_median'])} |"
+            f"| {s['refused']} | {s.get('not_configured', 0)} | {_s(s['latency_p50'])} | {_s(s['latency_p95'])} "
+            f"| {_k(s['chars_median'])} |"
         )
     lines.append("")
     lines.append(
-        "*Empty* is a document that came back with no text; *failed* a call the backend refused or could not "
-        "complete; *timed out* a call still unanswered when the comparison's timeout ran out; *refused* a format "
-        "the backend cannot return. Latency is over the calls that answered.\n"
+        "*Empty* is a call that answered with no text -- an empty document, or none; *failed* a call the backend "
+        "refused or could not complete; *timed out* a call still unanswered when the comparison's timeout ran out; "
+        "*refused* a format the backend cannot return; *not configured* a backend that was never built here -- no "
+        "key or no extra -- so no call was made and nothing is known about it. Latency is over the calls that "
+        "answered.\n"
     )
     return lines
 

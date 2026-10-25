@@ -57,21 +57,24 @@ from urls import URL_SETS as URL_SETS
 
 from web_router import AsyncWebRouter, BenchmarkTimeoutError, ExtractBenchmarkRun
 from web_router.constants import BENCHMARK_EXCLUDED
-from web_router.exceptions import UnsupportedFormatError
+from web_router.exceptions import ConfigurationError, ProviderNotInstalledError, UnsupportedFormatError
 from web_router.registry import configured_extract_providers
 from web_router.types import ExtractFormat
 
 # The redundant aliases above re-export what the scan's tests read from this module, its surface.
 TIMED_OUT = BenchmarkTimeoutError.__name__
 REFUSED = UnsupportedFormatError.__name__
+NOT_CONFIGURED = (ConfigurationError.__name__, ProviderNotInstalledError.__name__)
+"""A backend that was never built -- no key, no extra -- made no call, so it is neither failed nor unreliable."""
 
 
 def row_of(url: str, category: str | None, run: ExtractBenchmarkRun) -> dict[str, Any]:
     """One URL on one backend, as measured: what came back, how long it took, or what stopped it.
 
-    A document with no text is ``returned`` but not ``with_text``: the backend
-    answered, and what it answered with is the fact recorded. One URL per
-    fan-out, so a call that answered carries exactly the one document.
+    ``returned`` is a call that answered, whatever it answered with; a
+    document with no text, or no document at all, is ``returned`` but not
+    ``with_text``, and the fact recorded is what the backend said. One URL
+    per fan-out, so a call that answered carries at most the one document.
     """
     document = run.response.documents[0] if run.ok and run.response is not None and run.response.documents else None
     chars = len(document.content) if document is not None else 0
@@ -79,7 +82,7 @@ def row_of(url: str, category: str | None, run: ExtractBenchmarkRun) -> dict[str
         "url": url,
         "category": category,
         "provider": run.provider,
-        "returned": document is not None,
+        "returned": run.ok,
         "with_text": chars > 0,
         "chars": chars,
         "format": document.format if document is not None else None,
@@ -101,9 +104,12 @@ def _score(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "with_text_rate": len(with_text) / len(rows) if rows else None,
         "with_text_ci95": _wilson(len(with_text), len(rows)),
         "empty": len(returned) - len(with_text),
-        "failed": sum(1 for r in rows if not r["returned"] and r["error_type"] not in (TIMED_OUT, REFUSED)),
+        "failed": sum(
+            1 for r in rows if not r["returned"] and r["error_type"] not in (TIMED_OUT, REFUSED, *NOT_CONFIGURED)
+        ),
         "timed_out": sum(1 for r in rows if r["error_type"] == TIMED_OUT),
         "refused": sum(1 for r in rows if r["error_type"] == REFUSED),
+        "not_configured": sum(1 for r in rows if r["error_type"] in NOT_CONFIGURED),
         "latency_p50": statistics.median(latencies) if latencies else None,
         "latency_p95": _pct(latencies, 0.95),
         "chars_median": statistics.median([r["chars"] for r in with_text]) if with_text else None,

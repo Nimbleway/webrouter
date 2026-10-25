@@ -99,19 +99,46 @@ def test_a_row_records_what_came_back_and_nothing_it_did_not(scan: ModuleType) -
     assert row["error_type"] == "BenchmarkTimeoutError" and "exa" in row["error"]
 
 
-def test_empty_failed_timed_out_and_refused_are_counted_apart_and_only_text_counts_as_a_page(
-    scan: ModuleType,
-) -> None:
-    rows = [_row("nimble", f"u{i}", 100) for i in range(8)] + [_row("nimble", "u8", 0)]
-    rows += [_row("nimble", "u9", None), _row("nimble", "u10", None, error_type="BenchmarkTimeoutError")]
-    rows += [_row("nimble", "u11", None, error_type="UnsupportedFormatError")]
+def test_empty_failed_timed_out_refused_and_not_configured_are_counted_apart(scan: ModuleType) -> None:
+    rows = [_row("nimble", f"u{i}", 100) for i in range(7)] + [_row("nimble", "u7", 0)]
+    rows += [_row("nimble", "u8", None), _row("nimble", "u9", None, error_type="BenchmarkTimeoutError")]
+    rows += [_row("nimble", "u10", None, error_type="UnsupportedFormatError")]
+    rows += [_row("nimble", "u11", None, error_type="ConfigurationError")]
     summary = scan.summarize(rows, {**SETUP, "providers": ["nimble"]})
     score = summary["overall"]["nimble"]
 
-    assert score["urls"] == 12 and score["returned"] == 9 and score["with_text"] == 8
-    assert score["with_text_rate"] == 8 / 12
+    assert score["urls"] == 12 and score["returned"] == 8 and score["with_text"] == 7
+    assert score["with_text_rate"] == 7 / 12
     assert score["empty"] == 1 and score["failed"] == 1 and score["timed_out"] == 1 and score["refused"] == 1
+    assert score["not_configured"] == 1, "a backend never built made no call: not a failed one"
     assert score["latency_p50"] == 1.0 and score["chars_median"] == 100
+    assert "| Not configured |" in scan.markdown(summary)
+
+
+def test_a_backend_with_no_key_reads_as_not_configured_not_as_unreliable(scan: ModuleType) -> None:
+    """`--providers oxylabs` without its password used to report 100 failed calls, none of which was made."""
+    from web_router.exceptions import ConfigurationError, ProviderNotInstalledError
+
+    never_built = [
+        ExtractBenchmarkRun(provider="oxylabs", latency=0.0, error=ConfigurationError("no OXYLABS_PASSWORD")),
+        ExtractBenchmarkRun(provider="oxylabs", latency=0.0, error=ProviderNotInstalledError("oxylabs", "extract")),
+    ]
+    rows = [scan.row_of(f"u{i}", None, run) for i, run in enumerate(never_built)]
+    score = scan.summarize(rows, {**SETUP, "providers": ["oxylabs"]})["overall"]["oxylabs"]
+
+    assert score["not_configured"] == 2 and score["failed"] == 0
+
+
+def test_a_call_that_answered_with_no_document_is_empty_not_failed(scan: ModuleType) -> None:
+    """The public path never answers with no document, but a row that did is a call that answered, with nothing."""
+    answered_with_nothing = ExtractBenchmarkRun(
+        provider="odd", latency=0.3, response=ExtractResponse.model_construct(provider="odd", documents=[])
+    )
+    row = scan.row_of("u0", None, answered_with_nothing)
+    assert row["returned"] and not row["with_text"] and row["error"] is None
+
+    score = scan.summarize([row], {**SETUP, "providers": ["odd"]})["overall"]["odd"]
+    assert score["empty"] == 1 and score["failed"] == 0
 
 
 def test_the_best_backend_per_category_is_named_on_pages_with_text_not_on_the_few_it_served(
