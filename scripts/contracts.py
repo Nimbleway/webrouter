@@ -31,6 +31,7 @@ from web_router.constants import (
     ENV_BY_PROVIDER,
     EXTRACT_ENV_BY_PROVIDER,
     RESEARCH_ENV_BY_PROVIDER,
+    TEMPLATE_ENV_BY_PROVIDER,
 )
 from web_router.exceptions import WebRouterError
 from web_router.types import (
@@ -39,6 +40,7 @@ from web_router.types import (
     ExtractRequest,
     ResearchRequest,
     SearchRequest,
+    TemplateRequest,
     Viewport,
 )
 
@@ -120,6 +122,14 @@ METHODS: dict[str, _Method] = {
         registry.get_browser_provider_class,
         lambda **kw: BrowserRequest(**kw),
         BROWSER_ENV_BY_PROVIDER,
+        (),
+    ),
+    "template": _Method(
+        TemplateRequest,
+        registry.available_template_providers,
+        registry.get_template_provider_class,
+        lambda **kw: TemplateRequest(template="probe-template", inputs={"url": "https://example.com"}, **kw),
+        TEMPLATE_ENV_BY_PROVIDER,
         (),
     ),
     "browse": _Method(
