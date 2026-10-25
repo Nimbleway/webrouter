@@ -1,4 +1,4 @@
-"""The seventeen tools, and the session state they share.
+"""The twenty tools, and the session state they share.
 
 Everything here is a thin projection of :class:`~web_router.AsyncWebRouter`:
 each tool's arguments are the library's own keyword names, passed through
@@ -34,6 +34,7 @@ from web_router.constants import (
     ENV_BY_PROVIDER,
     ENV_MCP_ENV_FILE,
     EXTRACT_ENV_BY_PROVIDER,
+    MCP_ARG_FORMAT,
     MCP_ARG_HANDLE,
     MCP_ARG_MAX_CHARS,
     MCP_ARG_PATH,
@@ -50,6 +51,8 @@ from web_router.constants import (
     MCP_BROWSER_SNAPSHOT_MAX_CHARS,
     MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT,
     MCP_BROWSER_TOOLS,
+    MCP_METHOD_BROWSER,
+    MCP_METHOD_TEMPLATE,
     MCP_MSG_BROWSE_PENDING,
     MCP_MSG_BROWSER_ALREADY_ENDED,
     MCP_MSG_BROWSER_LOWERED,
@@ -92,9 +95,13 @@ from web_router.constants import (
     MCP_TOOL_REQUIRED,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
+    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
+    MCP_TOOL_TEMPLATE,
+    MCP_TOOL_TEMPLATES,
     MCP_TOOL_WAITS,
     RESEARCH_ENV_BY_PROVIDER,
+    TEMPLATE_ENV_BY_PROVIDER,
 )
 from web_router.exceptions import (
     BrowseTimeoutError,
@@ -117,20 +124,25 @@ from web_router.mcp.shaping import (
     shape_progress,
     shape_research,
     shape_search,
+    shape_template,
+    shape_template_run,
+    shape_templates,
 )
 from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider
-from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, _BaseProvider
+from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
 from web_router.registry import (
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
     configured_providers,
     configured_research_providers,
+    configured_template_providers,
     get_browse_provider_class,
     get_browser_provider_class,
     get_extract_provider_class,
     get_provider_class,
     get_research_provider_class,
+    get_template_provider_class,
 )
 from web_router.types import (
     BROWSE_PARAMETERS,
@@ -138,6 +150,8 @@ from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
+    TEMPLATE_PARAMETERS,
+    ExtractFormat,
     ExtractResponse,
     PageState,
     StealthLevel,
@@ -146,20 +160,34 @@ from web_router.types import (
 _CONFIGURED: dict[str, Callable[[], list[str]]] = {
     MCP_TOOL_SEARCH: configured_providers,
     MCP_TOOL_EXTRACT: configured_extract_providers,
+    MCP_TOOL_TEMPLATES: configured_template_providers,
+    MCP_TOOL_TEMPLATE: configured_template_providers,
+    MCP_TOOL_RUN_TEMPLATE: configured_template_providers,
     MCP_TOOL_RESEARCH: configured_research_providers,
     MCP_TOOL_BROWSE: configured_browse_providers,
     MCP_TOOL_BROWSER_OPEN: configured_browser_providers,
 }
 """Which registry answers "what can this install actually serve?" for each tool.
 
-Only the five tools that start a call appear: the two ``*_status`` tools,
+Only the eight tools that reach a backend appear: the two ``*_status`` tools,
 ``fetch_raw`` and the browser actions work on what an earlier call left behind
-and never pick a provider.
+and never pick a provider. The three template tools share one registry.
 """
+
+_METHOD_OF: dict[str, str] = {
+    MCP_TOOL_TEMPLATES: MCP_METHOD_TEMPLATE,
+    MCP_TOOL_TEMPLATE: MCP_METHOD_TEMPLATE,
+    MCP_TOOL_RUN_TEMPLATE: MCP_METHOD_TEMPLATE,
+    MCP_TOOL_BROWSER_OPEN: MCP_METHOD_BROWSER,
+}
+"""The tools whose method the capabilities resource keys under another name; every other tool is its method's."""
 
 _CLASS_OF: dict[str, Callable[[str], type[_BaseProvider]]] = {
     MCP_TOOL_SEARCH: get_provider_class,
     MCP_TOOL_EXTRACT: get_extract_provider_class,
+    MCP_TOOL_TEMPLATES: get_template_provider_class,
+    MCP_TOOL_TEMPLATE: get_template_provider_class,
+    MCP_TOOL_RUN_TEMPLATE: get_template_provider_class,
     MCP_TOOL_RESEARCH: get_research_provider_class,
     MCP_TOOL_BROWSE: get_browse_provider_class,
     MCP_TOOL_BROWSER_OPEN: get_browser_provider_class,
@@ -211,6 +239,10 @@ machine holds a Nimble key, and extract's ``max`` declares every option as
 _OPTIONS: dict[str, frozenset[str]] = {
     MCP_TOOL_SEARCH: NORMALIZED_PARAMETERS,
     MCP_TOOL_EXTRACT: EXTRACT_PARAMETERS,
+    # Listing and describing take no option a backend may decline.
+    MCP_TOOL_TEMPLATES: frozenset(),
+    MCP_TOOL_TEMPLATE: frozenset(),
+    MCP_TOOL_RUN_TEMPLATE: TEMPLATE_PARAMETERS,
     MCP_TOOL_RESEARCH: RESEARCH_PARAMETERS,
     MCP_TOOL_BROWSE: BROWSE_PARAMETERS,
     MCP_TOOL_BROWSER_OPEN: BROWSER_PARAMETERS,
@@ -220,6 +252,9 @@ _OPTIONS: dict[str, frozenset[str]] = {
 _ENV_TABLE: dict[str, dict[str, Any]] = {
     MCP_TOOL_SEARCH: ENV_BY_PROVIDER,
     MCP_TOOL_EXTRACT: EXTRACT_ENV_BY_PROVIDER,
+    MCP_TOOL_TEMPLATES: TEMPLATE_ENV_BY_PROVIDER,
+    MCP_TOOL_TEMPLATE: TEMPLATE_ENV_BY_PROVIDER,
+    MCP_TOOL_RUN_TEMPLATE: TEMPLATE_ENV_BY_PROVIDER,
     MCP_TOOL_RESEARCH: RESEARCH_ENV_BY_PROVIDER,
     MCP_TOOL_BROWSE: BROWSE_ENV_BY_PROVIDER,
     MCP_TOOL_BROWSER_OPEN: BROWSER_ENV_BY_PROVIDER,
@@ -275,6 +310,9 @@ class WebRouterTools:
         self._handlers: dict[str, _Handler] = {
             MCP_TOOL_SEARCH: self._search,
             MCP_TOOL_EXTRACT: self._extract,
+            MCP_TOOL_TEMPLATES: self._templates,
+            MCP_TOOL_TEMPLATE: self._template,
+            MCP_TOOL_RUN_TEMPLATE: self._run_template,
             MCP_TOOL_RESEARCH: self._research,
             MCP_TOOL_RESEARCH_STATUS: self._research_status,
             MCP_TOOL_BROWSE: self._browse,
@@ -374,6 +412,21 @@ class WebRouterTools:
         response = await self.router.extract(**self._kwargs(MCP_TOOL_EXTRACT, arguments))
         record = self.store.add(MCP_TOOL_EXTRACT, raw=response.raw)
         return shape_extract(response, record.handle, budget=max_response_chars())
+
+    async def _templates(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        page = await self.router.templates(**self._kwargs(MCP_TOOL_TEMPLATES, arguments))
+        record = self.store.add(MCP_TOOL_TEMPLATES, raw=page.raw)
+        return shape_templates(page, record.handle, budget=max_response_chars())
+
+    async def _template(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        template = await self.router.template(**self._kwargs(MCP_TOOL_TEMPLATE, arguments))
+        record = self.store.add(MCP_TOOL_TEMPLATE, raw=template.raw)
+        return shape_template(template, record.handle, budget=max_response_chars())
+
+    async def _run_template(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        response = await self.router.run_template(**self._kwargs(MCP_TOOL_RUN_TEMPLATE, arguments))
+        record = self.store.add(MCP_TOOL_RUN_TEMPLATE, raw=response.raw)
+        return shape_template_run(response, record.handle, budget=max_response_chars())
 
     async def _research(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         job = await self.router.submit_research(**self._kwargs(MCP_TOOL_RESEARCH, arguments))
@@ -663,6 +716,8 @@ class WebRouterTools:
             properties = {name: spec for name, spec in properties.items() if name not in _OPTIONS[tool] - mapped}
             if MCP_ARG_STEALTH in properties and tool == MCP_TOOL_BROWSER_OPEN:
                 _offer_levels(properties, serving)
+            if MCP_ARG_FORMAT in properties and tool == MCP_TOOL_RUN_TEMPLATE:
+                _offer_formats(properties, serving)
         if providers:
             properties[MCP_ARG_PROVIDER] = {
                 "type": "string",
@@ -672,7 +727,8 @@ class WebRouterTools:
         return {
             "type": "object",
             "properties": properties,
-            "required": list(MCP_TOOL_REQUIRED[tool]),
+            # A required `provider` is listed only when there is one to offer; with none the tool is dead anyway.
+            "required": [name for name in MCP_TOOL_REQUIRED[tool] if name in properties],
             "additionalProperties": False,
         }
 
@@ -716,6 +772,22 @@ def _offer_levels(properties: dict[str, Any], serving: list[type[_BaseProvider]]
         del properties[MCP_ARG_STEALTH]
 
 
+def _offer_formats(properties: dict[str, Any], serving: list[type[_BaseProvider]]) -> None:
+    """Narrow a template run's ``format`` to the page formats some backend serving here returns.
+
+    Every template backend maps the option; what differs is which formats it
+    can return beside the record. A format none of them returns would be
+    refused on every route, so it is not offered, and with none at all the
+    option goes too -- as :func:`_offer_levels` narrows ``stealth``.
+    """
+    served = frozenset().union(*(cls.supported_formats for cls in serving if issubclass(cls, TemplateProvider)))
+    formats = [body_format for body_format in get_args(ExtractFormat) if body_format in served]
+    if formats:
+        properties[MCP_ARG_FORMAT] = {**properties[MCP_ARG_FORMAT], "enum": formats}
+    else:
+        del properties[MCP_ARG_FORMAT]
+
+
 def _lower(kwargs: dict[str, Any], name: str, limit: float, lowered: list[str]) -> None:
     """Lower ``kwargs[name]`` to ``limit`` when it is a number past it, and say so in ``lowered``.
 
@@ -736,9 +808,10 @@ def _configured() -> dict[str, list[str]]:
     return {
         MCP_TOOL_SEARCH: configured_providers(),
         MCP_TOOL_EXTRACT: configured_extract_providers(),
+        MCP_METHOD_TEMPLATE: configured_template_providers(),
         MCP_TOOL_RESEARCH: configured_research_providers(),
         MCP_TOOL_BROWSE: configured_browse_providers(),
-        "browser": configured_browser_providers(),
+        MCP_METHOD_BROWSER: configured_browser_providers(),
     }
 
 
@@ -746,6 +819,11 @@ def _unlock() -> dict[str, dict[str, list[str]]]:
     """Per method, the backends no key has reached yet and the variables that would add each -- names only."""
     unlock: dict[str, dict[str, list[str]]] = {}
     for tool, table in _ENV_TABLE.items():
+        # Keyed as the resource's own lists are, once per method: the three
+        # template tools share one, and the browser tools' is "browser".
+        method = _METHOD_OF.get(tool, tool)
+        if method in unlock:
+            continue
         configured = set(_CONFIGURED[tool]())
         missing = {
             provider: [name for name in ((env,) if isinstance(env, str) else env) if not os.environ.get(name)]
@@ -753,8 +831,7 @@ def _unlock() -> dict[str, dict[str, list[str]]]:
             if env and provider not in configured
         }
         if missing:
-            # Keyed as the resource's own lists are: the browser tools' method is "browser".
-            unlock["browser" if tool == MCP_TOOL_BROWSER_OPEN else tool] = missing
+            unlock[method] = missing
     return unlock
 
 

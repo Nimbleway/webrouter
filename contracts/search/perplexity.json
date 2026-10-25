@@ -1,0 +1,87 @@
+{
+  "provider": "perplexity",
+  "method": "search",
+  "class": "web_router.providers.perplexity.PerplexityProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.perplexity.ai",
+    "paths": {
+      "search_path": "/search"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "PERPLEXITY_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.max_results": 3
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "search_depth"
+  ],
+  "source": [
+    "https://docs.perplexity.ai/api-reference/search-post"
+  ],
+  "verified": {
+    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound"
+  },
+  "vendor_options": {
+    "country": {
+      "status": "passthrough",
+      "note": "ISO 3166-1 alpha-2, the form the shared country option uses; not mapped yet."
+    },
+    "search_domain_filter": {
+      "status": "passthrough",
+      "note": "Up to 20 domains, included, or excluded with a '-' prefix; a candidate for the shared domain filters."
+    },
+    "search_language_filter": {
+      "status": "passthrough",
+      "note": "ISO 639-1 codes; a candidate for the shared locale option."
+    },
+    "search_type": {
+      "status": "passthrough",
+      "note": "web | fast | people."
+    },
+    "max_tokens": {
+      "status": "passthrough",
+      "note": "Content token budget across all results."
+    },
+    "max_tokens_per_page": {
+      "status": "passthrough",
+      "note": "Content token budget per result."
+    },
+    "search_recency_filter": {
+      "status": "passthrough",
+      "note": "hour | day | week | month | year."
+    },
+    "search_after_date_filter": {
+      "status": "passthrough",
+      "note": "MM/DD/YYYY."
+    },
+    "search_before_date_filter": {
+      "status": "passthrough",
+      "note": "MM/DD/YYYY."
+    },
+    "last_updated_after_filter": {
+      "status": "passthrough",
+      "note": "MM/DD/YYYY."
+    },
+    "last_updated_before_filter": {
+      "status": "passthrough",
+      "note": "MM/DD/YYYY."
+    }
+  }
+}

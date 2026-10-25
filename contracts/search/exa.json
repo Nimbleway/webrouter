@@ -1,0 +1,124 @@
+{
+  "provider": "exa",
+  "method": "search",
+  "class": "web_router.providers.exa.ExaProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.exa.ai",
+    "paths": {
+      "search_path": "/search"
+    },
+    "method": "POST",
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "EXA_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.contents.text": true,
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.numResults": 3
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "search_depth"
+  ],
+  "source": [
+    "https://exa.ai/docs/reference/search"
+  ],
+  "verified": {
+    "max_results": "docs: https://exa.ai/docs/reference/search"
+  },
+  "vendor_options": {
+    "includeDomains": {
+      "status": "passthrough",
+      "note": "Same meaning as the shared include_domains; not mapped yet."
+    },
+    "excludeDomains": {
+      "status": "passthrough",
+      "note": "Same meaning as the shared exclude_domains; not mapped yet."
+    },
+    "userLocation": {
+      "status": "passthrough",
+      "note": "Two-letter ISO country code or a {country, latitude, longitude} object; a candidate for the shared country option."
+    },
+    "type": {
+      "status": "passthrough",
+      "note": "auto | lite | deep-lite | deep; a candidate for search_depth."
+    },
+    "additionalQueries": {
+      "status": "passthrough",
+      "note": "1-10 extra queries; deep types only."
+    },
+    "category": {
+      "status": "passthrough",
+      "note": "company | publication | news | personal site | financial report | people."
+    },
+    "startPublishedDate": {
+      "status": "passthrough",
+      "note": "ISO 8601."
+    },
+    "endPublishedDate": {
+      "status": "passthrough",
+      "note": "ISO 8601."
+    },
+    "moderation": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "compliance": {
+      "status": "passthrough",
+      "note": "hipaa."
+    },
+    "outputSchema": {
+      "status": "passthrough",
+      "note": "Synthesized output; it stays in raw."
+    },
+    "objective": {
+      "status": "passthrough",
+      "note": "Up to 4096 characters describing what to rank first."
+    },
+    "userIdentifier": {
+      "status": "passthrough",
+      "note": "1-64 characters."
+    },
+    "systemPrompt": {
+      "status": "passthrough",
+      "note": "Extra guidance for the output."
+    },
+    "stream": {
+      "status": "not_supported",
+      "note": "Streams server-sent events with outputSchema; the provider reads one JSON body."
+    },
+    "startCrawlDate": {
+      "status": "passthrough",
+      "note": "Deprecated; ignored by Exa."
+    },
+    "endCrawlDate": {
+      "status": "passthrough",
+      "note": "Deprecated; ignored by Exa."
+    },
+    "includeText": {
+      "status": "passthrough",
+      "note": "Deprecated."
+    },
+    "excludeText": {
+      "status": "passthrough",
+      "note": "Deprecated."
+    },
+    "context": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of contents.highlights or contents.text."
+    }
+  }
+}

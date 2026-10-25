@@ -18,7 +18,7 @@ from concurrent.futures import Future
 
 from web_router.constants import MAX_AGGREGATE_FAILURE
 from web_router.exceptions import WebRouterError
-from web_router.providers.auto import _RECOVERABLE, _exhausted
+from web_router.providers._chain import _RECOVERABLE, _exhausted
 from web_router.providers.base import ExtractProvider
 from web_router.types import ExtractRequest, ExtractResponse
 

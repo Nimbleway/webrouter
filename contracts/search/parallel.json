@@ -1,0 +1,83 @@
+{
+  "provider": "parallel",
+  "method": "search",
+  "class": "web_router.providers.parallel.ParallelProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.parallel.ai",
+    "paths": {
+      "search_path": "/v1beta/search"
+    },
+    "method": "POST",
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "PARALLEL_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.objective": "probe query",
+    "body.search_queries": [
+      "probe query"
+    ]
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.max_results": 3
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "search_depth"
+  ],
+  "source": [
+    "https://docs.parallel.ai/search/search-migration-guide",
+    "parallel-web (before 1.0) Parallel.beta.search"
+  ],
+  "verified": {
+    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound"
+  },
+  "vendor_options": {
+    "mode": {
+      "status": "passthrough",
+      "note": "fast | one-shot | agentic."
+    },
+    "excerpts": {
+      "status": "passthrough",
+      "note": "Object with max_chars_per_result and max_chars_total."
+    },
+    "source_policy": {
+      "status": "passthrough",
+      "note": "include_domains, exclude_domains and after_date; a candidate for the shared domain filters."
+    },
+    "fetch_policy": {
+      "status": "passthrough",
+      "note": "Controls live fetching versus indexed content."
+    },
+    "location": {
+      "status": "passthrough",
+      "note": "ISO 3166-1 alpha-2 code; a candidate for the shared country option."
+    },
+    "client_model": {
+      "status": "passthrough",
+      "note": "The model consuming the results."
+    },
+    "session_id": {
+      "status": "passthrough",
+      "note": "Groups related search and extract calls."
+    },
+    "max_chars_per_result": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of excerpts.max_chars_per_result."
+    },
+    "processor": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of mode."
+    }
+  }
+}

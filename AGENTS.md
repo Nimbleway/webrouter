@@ -6,7 +6,7 @@ Guidance for AI coding agents working in this repository. Humans: see
 ## What this project is
 
 `web-router` is a Python package that puts one typed interface in front of many
-web APIs, across five methods.
+web APIs, across six methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
 Linkup, WebIQ, Keenable and DeepSeek, plus two that need no credential: `you-mcp`, and `auto`, the default, which
@@ -17,6 +17,17 @@ Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, the keyless 
 Reader, `auto` again, and `max`, which sends the request to every member
 `auto` would try at once and returns the first document back -- the fastest
 answer any backend can give, at one fetch per member, so never the default.
+
+**`run_template`** — a vendor's template: a saved, site-specific extraction
+(Nimble's Extract Templates, Oxylabs' sources, Bright Data's scrapers, Apify's
+actors), run on one page and answering with a record shaped by the template's
+own output schema rather than page text. Its inputs are the template's own --
+a URL for some, an id, a slug or a search term for others -- which is why it
+is a method and not an option on `extract`. `templates` lists one page of the
+vendor's catalogue and `template` describes one, schemas and all; the three
+share one registry. Nimble only so far. No keyless tier and no `auto`: a run
+fetches and parses on the backend's account, and a template's name belongs to
+one vendor, so `provider` is required.
 
 **`research`** — an agentic run: the backend reasons over several turns and
 answers in minutes rather than milliseconds. Nimble, Parallel, Perplexity,
@@ -37,10 +48,10 @@ the job handle. Browser Use, Skyvern, Browserbase, and `auto`. Like research, it
 has no keyless tier, because every task bills.
 
 A name does not imply every method. `brave` searches and cannot extract,
-`oxylabs` extracts and cannot search, `nimble` searches, extracts and researches
-through three classes, and `browserbase` both opens sessions and runs browse
-tasks through two. Each method has its own registry, and asking one for
-another's backend reports it as unknown.
+`oxylabs` extracts and cannot search, `nimble` searches, extracts, runs
+templates and researches through four classes, and `browserbase` both opens
+sessions and runs browse tasks through two. Each method has its own registry,
+and asking one for another's backend reports it as unknown.
 
 It is pre-1.0 and in alpha: shared with alpha users from this repository, not
 published to PyPI. Assume every change is read by people outside the team.
@@ -54,12 +65,14 @@ defeat the point, even when they pass tests.
 ```
 src/web_router/
 ├── types.py            SearchRequest/Response/Result, ExtractRequest/Response/Document,
+│                       TemplateRequest/Response + Template/TemplatePage,
 │                       ResearchRequest/Response/Progress + Citation,
 │                       BrowserRequest/Session/State + Viewport,
 │                       BrowseRequest/Response/Progress + BrowseStep
 │                       — the normalized contract, one request model per method
 ├── client.py           WebRouter, AsyncWebRouter — the public facade
-│                       (search, extract, research + submit_research,
+│                       (search, extract, templates + template + run_template,
+│                        research + submit_research,
 │                        browse + submit_browse, open_browser, benchmark, a
 │                        fan-out over search, and evaluate, accuracy on top of it)
 ├── evals/              accuracy: a question set, judged — installed by [evals]
@@ -94,8 +107,8 @@ src/web_router/
 │   └── openai.py       WebRouterTools (OpenAI function tools, Responses and
 │                       Chat Completions, + local executor) — no SDK, no extra
 └── providers/
-    ├── base.py         SearchProvider / ExtractProvider / ResearchProvider /
-    │                   BrowseProvider / BrowserProvider ABCs over a shared
+    ├── base.py         SearchProvider / ExtractProvider / TemplateProvider /
+    │                   ResearchProvider / BrowseProvider / BrowserProvider ABCs over a shared
     │                   base; the generic JobProvider / Job core that
     │                   ResearchProvider / ResearchJob and BrowseProvider /
     │                   BrowseJob specialize; BrowserHandle / AsyncBrowserHandle
@@ -106,7 +119,9 @@ src/web_router/
     │                   coercion, body selection, the job budget
     ├── _page.py        the page actions both browser handles delegate to,
     │                   once over CDP through Playwright; snapshot refs
-    ├── nimble.py       search + extract + research, via the nimble-python SDK
+    ├── nimble.py       search + extract + research, via the nimble-python SDK;
+    │                   the shared clients and constructor of the four Nimble classes
+    ├── nimble_template.py  Nimble's templates, on nimble.py's clients
     ├── tavily.py       search + extract, via the tavily-python SDK
     ├── exa.py          search + extract, via httpx (its research API is retired)
     ├── you.py          search + research, via httpx — You.com publishes no Python SDK
@@ -118,9 +133,12 @@ src/web_router/
     │                   the first document wins, with an optional hedge
     ├── _race.py        max's bookkeeping: the calls of one race, sync or async,
     │                   handed back in the order they finished
-    ├── auto.py         the default for every method: keyed backends, then keyless
-    │                   (research and browse have no keyless tier, so their
-    │                   chains end there; a browser chain ends with `local`)
+    ├── _chain.py       what every auto chain is made of: resolving the members,
+    │                   the caller's `chain`, what a member's failure means
+    ├── auto.py         the default for search, extract, research, browser and
+    │                   browse: keyed backends, then keyless (research and browse
+    │                   have no keyless tier, so their chains end there; a browser
+    │                   chain ends with `local`)
     ├── brave.py        search, via httpx
     ├── parallel.py     search + research, via httpx
     ├── perplexity.py   search + research, via httpx
@@ -143,10 +161,11 @@ src/web_router/
 tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         tests/mcp/ the server, tests/max_extract/ the race
                         (its conftest holds the fake members). test_contract.py,
-                        test_extract_contract.py, test_research_contract.py,
-                        test_browse_contract.py and test_browser_contract.py
-                        guard the five shared contracts; test_job_core.py the
-                        job core under research and browse;
+                        test_extract_contract.py, test_template_contract.py,
+                        test_research_contract.py, test_browse_contract.py and
+                        test_browser_contract.py guard the six shared
+                        contracts; test_job_core.py the job core under
+                        research and browse;
                         test_browser_actions.py the page actions, against
                         fixtures/browser/; test_auto_browser.py and
                         test_auto_browse.py the two billed `auto` chains;
@@ -314,13 +333,15 @@ does) or annotate the field as `Exception` and say why in its docstring (as
 validator.
 
 **Never override the public method in a provider.** `search`/`asearch`,
-`extract`/`aextract`, `submit`/`research`/`browse`/`poll`/`cancel` and
+`extract`/`aextract`, `run`/`templates`/`template`,
+`submit`/`research`/`browse`/`poll`/`cancel` and
 `open`/`release`/`status` (each with its `a` twin) live on the base
 classes and enforce validation, error wrapping, and — for extract — the URL
 fan-out, for research and browse the whole wait-and-poll cycle, and for a
 browser the idempotent release. Providers implement `_search`, `_asearch`, `_extract`,
-`_aextract`, `_start`, `_astart`, `_fetch`, `_afetch`, `_open`, `_aopen`,
-`_release`, `_arelease`, which are pure translation. The five contract test
+`_aextract`, `_run`, `_arun`, `_list`, `_alist`, `_get`, `_aget`, `_start`,
+`_astart`, `_fetch`, `_afetch`, `_open`, `_aopen`,
+`_release`, `_arelease`, which are pure translation. The six contract test
 modules enforce this.
 
 **A job is the base class's problem.** Research is a job, browse is another,
@@ -429,7 +450,7 @@ report prints a suggested order that stays a suggestion until such a PR. A calle
 name or `(name, kwargs)` -- built with its own `provider_config` entry, those
 kwargs over it, so a key passed in code reaches a member as it does a named
 backend -- and because `provider_config["auto"]` reaches the
-`auto` of all five methods, a list there is every method's chain while a
+`auto` of all six methods, a list there is every method's chain while a
 mapping keyed by method (`AUTO_CHAIN_METHODS`) sets only the ones it names.
 
 **A billed chain falls through only when nothing started.** A session that is
@@ -613,6 +634,35 @@ whose class declares it, and a clamped value is named in the result's `note`.
 The `browser_*` tools are listed only where Playwright imports; the `mcp` extra
 does not install it.
 
+**A template's inputs are the template's, never ours.** `TemplateRequest.params`
+is sent as the caller gave it, keyed by whatever the template's `input_schema`
+names; nothing here reads a URL out of it, derives one, or checks it against
+the schema -- the backend refuses inputs that do not match, in its own words.
+A run is one page and one record: a page the backend could not fetch, or a
+template that failed to parse it, raises `ProviderError` with the backend's
+reason, because an empty `data` cannot be told from a record with nothing in
+it. `format` is the one option, and it is the extract rule in reverse: unset
+sends nothing and returns no page, since the record is the answer and there is
+no vendor default to pin. The record is read from `data.parsing` in each of
+the three shapes the SDK's union allows (bare, wrapped beside `success`, or an
+`error` report -- `NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS` records which was
+seen live), and only the last is a failure; a record whose own field is
+called `status` is still a record. `templates()` returns one page as the
+backend pages it -- `limit` and `offset` unset are not sent -- never the whole
+catalogue, which runs to thousands. The MCP `templates` tool shapes a row to
+the words a model picks a template by and leaves the schemas to `template`,
+whose schemas are never cut: a cut `input_schema` sends the model guessing at
+the inputs it dropped. A schema or a record that does not fit the budget even
+on its own is left out whole, with a note naming the `fetch_raw` handle that
+holds it (`MCP_MSG_OVERSIZED`), never inlined over the budget. There is no
+template `auto`: a template's name belongs to one vendor, so `provider` is
+required on the three router methods and on the three MCP tools alone, and an
+unknown name raises `TemplateNotFoundError`, a `ProviderError`. One call is
+one page and one set of inputs, answered in real time with one record -- the
+shape every real-time parsed-extraction product shares; a vendor whose
+templates are dataset jobs would join through its synchronous endpoint and
+inherit its time cap, and batch inputs stay out of scope.
+
 **An extract call that partly fails stays partly successful.** `ExtractProvider`
 fans URLs out across calls for backends that take one at a time, records each
 URL that failed in `ExtractResponse.failures`, and raises only when nothing came
@@ -676,6 +726,50 @@ is the only way a caller can bound a session left open but unused, and it is
 mapped from the same documentation as the lifetime beside it; refusing it
 until a live call would leave that session billing too. The test module's
 docstring still names each one as unverified.
+
+## Provider contracts
+
+`contracts/<method>/<provider>.json` records the wire fields each option value sends,
+read from the provider's own code, beside three hand-written fields:
+
+- `source`: the vendor's reference for the endpoints.
+- `verified`: per mapped option, `live: <the test that calls it>` or `docs: <the page>`.
+- `vendor_options`: each documented vendor option no mapping sends, `passthrough` or `not_supported`, with a note.
+
+A contract is committed once those are filled. Start one with
+`make contracts PROVIDER=<method>/<provider>`, fill them in, and commit it; after any
+mapping change, `make contracts` regenerates every committed contract, keeping what
+was written by hand. `tests/test_provider_contracts.py` fails when a committed
+contract is stale, or its hand-written fields are partial or hold a `TODO`, and when a
+built-in provider has no contract at all.
+
+## Adding a template provider
+
+Against `TemplateProvider`. A vendor that already extracts gets a third class
+in its existing module, as `nimble.py` does.
+
+1. Implement `_run`/`_arun` -- one request in, one `TemplateResponse` out,
+   its record in `data` -- `_list`/`_alist`, returning one `TemplatePage`
+   with `limit` and `offset` sent only when set, and `_get`/`_aget`, one
+   `Template` by name with `input_schema` and `output_schema` from
+   the backend and `published` false when it has no runnable version. Set
+   `name`, `supported_parameters` and `supported_formats` -- the page formats
+   it returns beside the record, derived from its format table -- and build
+   the run's payload through `build_payload` so `provider_options` reaches
+   the API last. A fetch the backend refused, a page the site answered with
+   4xx or 5xx, or a parse that failed, raises `ProviderError` naming the
+   template and the backend's reason; an unknown name raises
+   `TemplateNotFoundError`; never return an empty record.
+2. Put the endpoints, the record's field names and the status values in
+   `constants.py`.
+3. Register the class in `_BUILTIN_TEMPLATE_PROVIDERS` in `registry.py` and
+   add the provider to `TEMPLATE_ENV_BY_PROVIDER` in `constants.py`. There is
+   no `auto` to join.
+4. Add `tests/providers/test_<name>_template.py` covering the payload, the
+   three response shapes (a record, a refused fetch, a failed parse), the
+   catalogue mapping, and a skipping `@pytest.mark.integration` live test
+   that lists, describes and runs one template.
+5. Update the README support table and `CHANGELOG.md`.
 
 ## Adding a research provider
 
@@ -878,10 +972,12 @@ Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses 
 read only by its judge behind `evaluate()` (the `evals` extra) —
 `OpenAIJudge` and `AnthropicJudge` — so each appears in `.env.example` and in
 no `*_ENV_BY_PROVIDER` table, and no search, extract, research or browser call
-ever touches either. `benchmarks/agent/` reads both too, for its agents —
+ever touches either. The opt-in `LLMDecider` behind `classify()` (`decider="llm"`, the `decider=`
+spike) reads `OPENAI_API_KEY` too, only when a caller asks for it and passes no `api_key`. `benchmarks/agent/` reads both too, for its agents —
 `ANTHROPIC_API_KEY` for Claude's, `OPENAI_API_KEY` for OpenAI's; the Claude and
 OpenAI tools never read either key, because they are
-definitions the caller's own client sends. `.env` is gitignored — keep it that way.
+definitions the caller's own client sends. `.env` is gitignored — keep it that way. `TEMPLATE_ENV_BY_PROVIDER` is the
+template method's table, and names Nimble's key again: one key, four classes.
 
 **The library never loads `.env` itself.** Only four entry points do:
 `tests/conftest.py`, for the live tests, `benchmarks/agent/run.py` and

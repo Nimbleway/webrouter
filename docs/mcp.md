@@ -1,9 +1,10 @@
 # The web-router MCP server
 
 A self-hosted stdio MCP server that gives an agent — Claude Code, Claude
-Desktop, Cursor, anything that speaks MCP — the three methods this package
-routes: `search`, `extract` and `research` — plus `browse` for a hosted browser
-agent, and the `browser_*` tools for driving a browser yourself.
+Desktop, Cursor, anything that speaks MCP — the methods this package
+routes: `search`, `extract`, `research` and a vendor's templates (`templates`,
+`template`, `run_template`) — plus `browse` for a hosted browser agent, and the
+`browser_*` tools for driving a browser yourself.
 
 It runs as a subprocess of your own client, on your own machine, and reads your
 own credentials out of your own environment. There is no hosted service in the
@@ -185,6 +186,9 @@ the client's `env` block or a file the server already read takes a restart.
 | --- | --- | --- |
 | `search` | Find pages: ranked links with their titles and page text. | about a second |
 | `extract` | Read pages you already have URLs for, as markdown, HTML or text. `provider="max"` reads through every configured backend at once and returns the first answer, at one fetch per backend per URL. | about a second |
+| `templates` | List a vendor's templates: saved, site-specific extractions, each turning one kind of page into a record. `provider` is required, as on the two tools below. Paged with `limit` and `offset`. | about a second |
+| `template` | Describe one template: the `input_schema` a run must pass as `inputs`, and the `output_schema` of the record. | about a second |
+| `run_template` | Run a template on one page and get its record back. | about a second, and it bills one fetch |
 | `research` | Start an agentic run that searches, reads and cross-checks over many turns. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the run** |
 | `research_status` | Poll a handle from `research`: its state, or the answer once it has one. | about a second, and free |
 | `browse` | Hand a task to a hosted browser agent that clicks, types and reads through pages. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the task** |
@@ -201,13 +205,14 @@ the client's `env` block or a file the server already read takes a restart.
 | `browser_read` | The page as it is now, as text or HTML, shaped like `extract`. | about a second |
 | `browser_close` | End the session and stop paying for it. | about a second |
 
-The descriptions the model reads say the same thing, because with seventeen tools in
+The descriptions the model reads say the same thing, because with twenty tools in
 front of it the model *is* the router: what it needs to choose on is what each
 tool is for, what it costs and how long it takes.
 
 Arguments mirror the library's own, name for name — `query`, `max_results`,
 `search_depth`, `include_domains`, `exclude_domains`, `country`, `locale`,
-`urls`, `format`, `output_schema`, `records`, `effort`, `task`, `start_url`,
+`urls`, `format`, `template`, `inputs`, `name`, `limit`, `offset`,
+`output_schema`, `records`, `effort`, `task`, `start_url`,
 `max_steps`, `allowed_domains`, `provider`, and for the browser tools the
 handle's own — `url`, `wait_until`, `ref`, `selector`, `text`, `submit`, `key`,
 `full_page`, `format`, `timeout`. Anything the library refuses, this refuses in
@@ -450,13 +455,15 @@ With nothing configured at all the enums read:
 ```
 search   ["auto", "you-mcp"]     # keyless
 extract  ["auto", "jina", "max"] # keyless; max races whatever auto would try
+template []                      # no keyless tier and no auto: a template's name belongs to one vendor
 research ["auto"]                # every research backend bills, so nothing here can run
 ```
 
-and the `research` tool's own description says so, in as many words, rather
-than pretending to be a tool that works.
+and the `research` and template tools' own descriptions say so, in as many
+words, rather than pretending to be tools that work.
 
-The resource `web-router://capabilities` carries the same lists as JSON, plus `browse` and `browser`,
+The resource `web-router://capabilities` carries the same lists as JSON, plus `browse` and `browser`
+-- the three template tools under one `template` key --
 so a client can learn what this install can do without a round trip through the
 model — and the `env` object [above](#what-the-server-found), saying where those
 keys came from.

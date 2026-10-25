@@ -1,0 +1,57 @@
+{
+  "provider": "browserbase",
+  "method": "browse",
+  "class": "web_router.providers.browserbase.BrowserbaseBrowseProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.browserbase.com",
+    "paths": {
+      "start_path": "/v1/agents/runs",
+      "status_path": "/v1/agents/runs/{job_id}",
+      "stop_path": "/v1/agents/runs/{job_id}/stop"
+    },
+    "auth_header": "X-BB-API-Key"
+  },
+  "credentials": [
+    "BROWSERBASE_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.task": "probe task"
+  },
+  "options": {},
+  "not_mapped": [
+    "allowed_domains",
+    "max_steps",
+    "output_schema",
+    "start_url"
+  ],
+  "source": [
+    "https://docs.browserbase.com/reference/api/run-an-agent",
+    "https://docs.browserbase.com/reference/api/get-a-run",
+    "https://docs.browserbase.com/reference/api/stop-a-run"
+  ],
+  "verified": {},
+  "vendor_options": {
+    "agentId": {
+      "status": "passthrough",
+      "note": "Runs a custom agent; without one a run may create a new Agent in the account."
+    },
+    "resultSchema": {
+      "status": "passthrough",
+      "note": "JSON Schema the result should follow; the answer comes back as structured. Not mapped to output_schema until a live call confirms it."
+    },
+    "browserSettings": {
+      "status": "passthrough",
+      "note": "context (id, persist), proxies and verified."
+    },
+    "variables": {
+      "status": "passthrough",
+      "note": "Named %placeholder% values the agent may use; not persisted."
+    },
+    "pauseWhen": {
+      "status": "not_supported",
+      "note": "Lets the run pause for input; web-router cannot resume a run and does not map the PAUSED status."
+    }
+  }
+}

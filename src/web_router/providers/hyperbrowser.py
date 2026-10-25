@@ -71,6 +71,7 @@ class HyperbrowserBrowserProvider(HttpBrowserProvider):
     base_url: ClassVar[str] = HYPERBROWSER_BASE_URL
     open_path: ClassVar[str] = HYPERBROWSER_OPEN_PATH
     release_path: ClassVar[str] = HYPERBROWSER_RELEASE_PATH
+    status_path: ClassVar[str] = HYPERBROWSER_SESSION_PATH
     release_method: ClassVar[ReleaseMethod] = "PUT"
     # Not `failed`: Hyperbrowser's `close-error` maps there, and it is a stop that
     # itself went wrong, on a session that may still bill. A failed release of
@@ -98,10 +99,10 @@ class HyperbrowserBrowserProvider(HttpBrowserProvider):
         )
 
     def _fetch(self, session_id: str) -> BrowserState:
-        return self._state(self._get(self._session_path(session_id, HYPERBROWSER_SESSION_PATH)))
+        return self._state(self._get(self._session_path(session_id, self.status_path)))
 
     async def _afetch(self, session_id: str) -> BrowserState:
-        return self._state(await self._aget(self._session_path(session_id, HYPERBROWSER_SESSION_PATH)))
+        return self._state(await self._aget(self._session_path(session_id, self.status_path)))
 
     def _check_release(self, response: httpx.Response) -> None:
         # Hyperbrowser puts its verdict in the body of a 200 that a status check

@@ -190,7 +190,7 @@ def test_a_member_missing_a_required_parameter_is_passed_over(chain: _Recorder) 
 
 
 def test_output_schema_no_member_maps_raises_naming_why_each_was_skipped(chain: _Recorder) -> None:
-    """No vendor maps `output_schema` yet, so `auto` must say so rather than return prose under a schema."""
+    """With no member mapping `output_schema`, `auto` must say so rather than return prose under a schema."""
     _member(chain, "url")
     _member(chain, "bare", supported=frozenset())
 
@@ -475,5 +475,39 @@ async def test_a_real_http_failure_that_may_have_created_the_task_stops_async(ch
             await provider.asubmit(TASK)
     finally:
         await provider.aclose()
+
+    assert chain.started == []
+
+
+def _refusing_long_tasks(member: type) -> None:
+    """A member that maps max_steps but will not run more than 20."""
+    member.refused_values = classmethod(  # type: ignore[attr-defined]
+        lambda cls, request: {"max_steps": request.max_steps} if (request.max_steps or 0) > 20 else {}
+    )
+
+
+def test_a_member_that_refuses_a_value_is_passed_over_for_one_that_runs_it(chain: _Recorder) -> None:
+    _refusing_long_tasks(_member(chain, "picky", supported=frozenset({"start_url", "max_steps"})))
+    _member(chain, "easy", supported=frozenset({"start_url", "max_steps"}))
+
+    provider = _auto("picky", "easy")
+    try:
+        response = provider.browse(TASK.model_copy(update={"max_steps": 50}))
+    finally:
+        provider.close()
+
+    assert chain.started == ["easy"]
+    assert response.provider == "easy"
+
+
+def test_a_value_every_member_refuses_is_refused_before_any_task_starts(chain: _Recorder) -> None:
+    _refusing_long_tasks(_member(chain, "picky", supported=frozenset({"start_url", "max_steps"})))
+
+    provider = _auto("picky")
+    try:
+        with pytest.raises(UnsupportedParameterError, match="max_steps=50"):
+            provider.browse(TASK.model_copy(update={"max_steps": 50}))
+    finally:
+        provider.close()
 
     assert chain.started == []

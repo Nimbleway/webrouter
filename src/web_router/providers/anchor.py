@@ -86,6 +86,7 @@ class AnchorBrowserProvider(HttpBrowserProvider):
     base_url: ClassVar[str] = ANCHOR_BASE_URL
     open_path: ClassVar[str] = ANCHOR_OPEN_PATH
     release_path: ClassVar[str] = ANCHOR_SESSION_PATH
+    status_path: ClassVar[str] = ANCHOR_SESSION_PATH
     release_method: ClassVar[ReleaseMethod] = "DELETE"
     env_api_key: ClassVar[str] = ENV_ANCHOR_API_KEY
     api_key_header: ClassVar[str] = ANCHOR_API_KEY_HEADER
@@ -107,10 +108,10 @@ class AnchorBrowserProvider(HttpBrowserProvider):
         )
 
     def _fetch(self, session_id: str) -> BrowserState:
-        return self._state(self._get(self._session_path(session_id, ANCHOR_SESSION_PATH)))
+        return self._state(self._get(self._session_path(session_id, self.status_path)))
 
     async def _afetch(self, session_id: str) -> BrowserState:
-        return self._state(await self._aget(self._session_path(session_id, ANCHOR_SESSION_PATH)))
+        return self._state(await self._aget(self._session_path(session_id, self.status_path)))
 
     def _orphan_id(self, payload: dict[str, Any]) -> str | None:
         # Anchor wraps every answer in `data`, so the id is one level below

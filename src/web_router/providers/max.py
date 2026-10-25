@@ -35,8 +35,9 @@ from typing import Any, ClassVar
 
 from web_router.constants import MSG_MAX_BAD_HEDGE, PROVIDER_MAX
 from web_router.exceptions import ConfigurationError, WebRouterError
+from web_router.providers._chain import _RECOVERABLE, _ChainSpec
 from web_router.providers._race import _AsyncRace, _Losses, _Race, _Runner
-from web_router.providers.auto import _RECOVERABLE, AutoExtractProvider, _ChainSpec
+from web_router.providers.auto import AutoExtractProvider
 from web_router.providers.base import ExtractProvider
 from web_router.types import ExtractRequest, ExtractResponse
 

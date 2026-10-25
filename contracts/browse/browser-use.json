@@ -1,0 +1,125 @@
+{
+  "provider": "browser-use",
+  "method": "browse",
+  "class": "web_router.providers.browser_use.BrowserUseBrowseProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.browser-use.com",
+    "paths": {
+      "status_path": "/api/v2/tasks/{job_id}/status",
+      "task_path": "/api/v2/tasks/{job_id}",
+      "tasks_path": "/api/v2/tasks"
+    },
+    "auth_header": "X-Browser-Use-API-Key"
+  },
+  "credentials": [
+    "BROWSER_USE_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.task": "probe task"
+  },
+  "options": {
+    "start_url": {
+      "sample": {
+        "body.startUrl": "https://example.com"
+      }
+    },
+    "output_schema": {
+      "sample": {
+        "body.structuredOutput": "{\"type\": \"object\", \"properties\": {\"answer\": {\"type\": \"string\"}}}"
+      }
+    },
+    "max_steps": {
+      "sample": {
+        "body.maxSteps": 10
+      }
+    },
+    "allowed_domains": {
+      "sample": {
+        "body.allowedDomains": [
+          "example.com"
+        ]
+      }
+    }
+  },
+  "not_mapped": [],
+  "source": [
+    "https://docs.browser-use.com/cloud/api-v2/tasks/create-task",
+    "https://docs.browser-use.com/cloud/api-v2/tasks/get-task-status",
+    "https://docs.browser-use.com/cloud/api-v2/tasks/get-task",
+    "https://docs.browser-use.com/cloud/api-v2/tasks/update-task"
+  ],
+  "verified": {
+    "start_url": "live: tests/providers/test_browser_use_browse.py::test_live_browse_answers_a_simple_task",
+    "output_schema": "live: tests/providers/test_browser_use_browse.py::test_live_browse_answers_in_the_schema_within_the_step_limit",
+    "max_steps": "live: tests/providers/test_browser_use_browse.py::test_live_browse_answers_in_the_schema_within_the_step_limit",
+    "allowed_domains": "live: tests/providers/test_browser_use_browse.py::test_live_browse_answers_in_the_schema_within_the_step_limit"
+  },
+  "vendor_options": {
+    "llm": {
+      "status": "passthrough",
+      "note": "The model the agent runs on."
+    },
+    "sessionId": {
+      "status": "passthrough",
+      "note": "Runs the task in a session the caller owns; cancelling then stops the task and leaves the session running."
+    },
+    "metadata": {
+      "status": "passthrough",
+      "note": "Up to 10 key-value pairs."
+    },
+    "secrets": {
+      "status": "passthrough",
+      "note": "Credentials the agent may use; allowedDomains is recommended alongside."
+    },
+    "opVaultId": {
+      "status": "passthrough",
+      "note": "1Password vault to inject secrets from."
+    },
+    "sessionSettings": {
+      "status": "passthrough",
+      "note": "Settings for the session Browser Use creates; ignored with sessionId."
+    },
+    "highlightElements": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "flashMode": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "thinking": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "thinkingLevel": {
+      "status": "passthrough",
+      "note": "Reasoning depth; supported values depend on the model."
+    },
+    "vision": {
+      "status": "passthrough",
+      "note": "true | false | auto."
+    },
+    "systemPromptExtension": {
+      "status": "passthrough",
+      "note": "Text appended to the agent's system prompt."
+    },
+    "judge": {
+      "status": "passthrough",
+      "note": "Boolean; evaluates completion against judgeGroundTruth."
+    },
+    "judgeGroundTruth": {
+      "status": "passthrough",
+      "note": "Expected answer for the judge."
+    },
+    "judgeLlm": {
+      "status": "passthrough",
+      "note": "The model the judge runs on."
+    },
+    "skillIds": {
+      "status": "passthrough",
+      "note": "Skills to enable; ['*'] enables all."
+    }
+  }
+}

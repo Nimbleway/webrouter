@@ -98,13 +98,14 @@ class KeenableProvider(_KeenableKeyless, HttpSearchProvider):
 
     base_url: ClassVar[str] = KEENABLE_BASE_URL
     search_path: ClassVar[str] = KEENABLE_SEARCH_PATH
+    public_search_path: ClassVar[str] = KEENABLE_SEARCH_PUBLIC_PATH
     env_api_key: ClassVar[str] = ENV_KEENABLE_API_KEY
     api_key_header: ClassVar[str] = KEENABLE_API_KEY_HEADER
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if self._keyless:
-            self.search_path = KEENABLE_SEARCH_PUBLIC_PATH  # type: ignore[misc]
+            self.search_path = self.public_search_path  # type: ignore[misc]
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         return build_payload(request, KEENABLE_PARAM_NAMES, query=request.query)
@@ -154,6 +155,7 @@ class KeenableExtractProvider(_KeenableKeyless, HttpExtractProvider):
 
     base_url: ClassVar[str] = KEENABLE_BASE_URL
     extract_path: ClassVar[str] = KEENABLE_FETCH_PATH
+    public_extract_path: ClassVar[str] = KEENABLE_FETCH_PUBLIC_PATH
     env_api_key: ClassVar[str] = ENV_KEENABLE_API_KEY
     api_key_header: ClassVar[str] = KEENABLE_API_KEY_HEADER
     http_method: ClassVar[Literal["GET", "POST"]] = "GET"
@@ -161,7 +163,7 @@ class KeenableExtractProvider(_KeenableKeyless, HttpExtractProvider):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if self._keyless:
-            self.extract_path = KEENABLE_FETCH_PUBLIC_PATH  # type: ignore[misc]
+            self.extract_path = self.public_extract_path  # type: ignore[misc]
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         return build_payload(

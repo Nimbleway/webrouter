@@ -111,28 +111,31 @@ class PerplexityResearchProvider(HttpResearchProvider):
     supported_parameters: ClassVar[frozenset[str]] = frozenset({"effort"})
 
     base_url: ClassVar[str] = PERPLEXITY_BASE_URL
+    research_path: ClassVar[str] = PERPLEXITY_RESEARCH_PATH
+    status_path: ClassVar[str] = PERPLEXITY_RESEARCH_STATUS_PATH
+    cancel_path: ClassVar[str] = PERPLEXITY_RESEARCH_CANCEL_PATH
     env_api_key: ClassVar[str] = ENV_PERPLEXITY_API_KEY
     api_key_header: ClassVar[str] = PERPLEXITY_API_KEY_HEADER
     api_key_prefix: ClassVar[str] = PERPLEXITY_API_KEY_PREFIX
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
-        return self._progress(request, self._post(PERPLEXITY_RESEARCH_PATH, self._build_payload(request)))
+        return self._progress(request, self._post(self.research_path, self._build_payload(request)))
 
     async def _astart(self, request: ResearchRequest) -> ResearchProgress:
-        return self._progress(request, await self._apost(PERPLEXITY_RESEARCH_PATH, self._build_payload(request)))
+        return self._progress(request, await self._apost(self.research_path, self._build_payload(request)))
 
     def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        return self._progress(request, self._get(self._path(PERPLEXITY_RESEARCH_STATUS_PATH, job_id)))
+        return self._progress(request, self._get(self._path(self.status_path, job_id)))
 
     async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        return self._progress(request, await self._aget(self._path(PERPLEXITY_RESEARCH_STATUS_PATH, job_id)))
+        return self._progress(request, await self._aget(self._path(self.status_path, job_id)))
 
     def _cancel(self, job_id: str) -> bool:
-        self._post(self._path(PERPLEXITY_RESEARCH_CANCEL_PATH, job_id), {})
+        self._post(self._path(self.cancel_path, job_id), {})
         return True
 
     async def _acancel(self, job_id: str) -> bool:
-        await self._apost(self._path(PERPLEXITY_RESEARCH_CANCEL_PATH, job_id), {})
+        await self._apost(self._path(self.cancel_path, job_id), {})
         return True
 
     @staticmethod
