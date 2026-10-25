@@ -289,8 +289,8 @@ would fix it.
 | `Provider.AUTO` *(default)* | `auto` | — | Nimble, when you hold its key | `markdown`, `html`, each routed to a member that returns it |
 
 Nimble is the only backend with a template catalogue so far. Verified live on
-2026-10-22: a listing, a description and a run against a `books.toscrape.com`
-template, whose payloads are the ones in the tests. See
+2026-10-22: a listing, a description and a run on a public test page, the
+response shapes of which the tests are modelled on. See
 [Running an Extract Template](#running-an-extract-template).
 
 ### Research

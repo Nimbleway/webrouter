@@ -13,7 +13,7 @@ a saved, site-specific extraction that turns one page into a record -- with
 :meth:`~web_router.WebRouter.templates` and :meth:`~web_router.WebRouter.template`
 to find one and read the inputs it takes:
 
-    >>> record = router.run_template("books_toscrape_pdp", {"url": "https://books.toscrape.com/..."}).data
+    >>> record = router.run_template("books_pdp", {"url": "https://books.example/..."}).data
 
 A third method, :meth:`~web_router.WebRouter.research`, runs an agentic backend
 over several turns and answers in minutes rather than milliseconds:
