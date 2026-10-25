@@ -2763,14 +2763,19 @@ MSG_REDIRECTS_WITH_CREDENTIAL = (
 )
 
 MSG_BENCHMARK_TIMEOUT = (
-    "Provider {provider!r} had not answered the benchmark query after {timeout:g}s. The comparison "
+    "Provider {provider!r} had not answered the comparison's call after {timeout:g}s. The comparison "
     "went on without it -- pass a longer timeout to wait, or leave it out of `providers`."
 )
+"""Shared by a search and an extract row: there is no query in an extract, so it says "call"."""
 
-MSG_BENCHMARK_NO_PROVIDERS = "benchmark() needs at least one provider to compare; `providers` named none."
+MSG_BENCHMARK_NO_PROVIDERS = (
+    "benchmark() needs at least one provider to compare: `providers` named none, or it was left unset and no "
+    "search backend is configured here."
+)
 
 MSG_BENCHMARK_EXTRACT_NO_PROVIDERS = (
-    "benchmark_extract() needs at least one provider to compare; `providers` named none."
+    "benchmark_extract() needs at least one provider to compare: `providers` named none, or it was left unset and "
+    "no extract backend is configured here."
 )
 
 MSG_BENCHMARK_ROW_FAILED = "the call raised outside the library's own errors: {error!r}"

@@ -361,3 +361,14 @@ def test_a_search_benchmark_and_an_extract_benchmark_keep_their_own_registries(
 
     assert extracted["fake"].response is not None and extracted["fake"].response.documents
     assert searched["fake"].response is not None and searched["fake"].response.results
+
+
+def test_an_extract_rows_timeout_speaks_of_a_call_not_a_query(registered: _Registered) -> None:
+    """The error's text lands in rows.jsonl; an extract has URLs, not a query."""
+    _member(registered, "slow", delay=0.3)
+
+    with WebRouter("slow") as router:
+        report = router.benchmark_extract("https://a.test", providers=["slow"], timeout=0.05)
+
+    message = str(report["slow"].error)
+    assert "query" not in message and "call" in message and "0.05s" in message

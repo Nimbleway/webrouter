@@ -210,7 +210,7 @@ class BrowseTimeoutError(WebRouterError):
 
 
 class BenchmarkTimeoutError(WebRouterError):
-    """One provider had not answered a benchmark query within the comparison's timeout.
+    """One provider had not answered the comparison's call within its timeout -- a search, or an extract.
 
     Never raised: it is the :attr:`~web_router.BenchmarkRun.error` of that
     provider's row, so a slow backend costs the comparison one row rather than
