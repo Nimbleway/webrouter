@@ -116,6 +116,8 @@ src/web_router/
     ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel.py
     ├── max.py          extract's parallel chain: auto's members all at once,
     │                   the first document wins, with an optional hedge
+    ├── _race.py        max's bookkeeping: the calls of one race, sync or async,
+    │                   handed back in the order they finished
     ├── auto.py         the default for every method: keyed backends, then keyless
     │                   (research and browse have no keyless tier, so their
     │                   chains end there; a browser chain ends with `local`)

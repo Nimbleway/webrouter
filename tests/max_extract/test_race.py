@@ -77,7 +77,7 @@ def test_every_member_validates_the_request_before_anything_is_fetched(members: 
 
 def test_calls_are_handed_back_in_the_order_they_finished_not_the_order_they_were_waited_on() -> None:
     """``wait()`` returns a set; the race records completion order itself, so the first document really is first."""
-    from web_router.providers.max import _Race
+    from web_router.providers._race import _Race
 
     race = _Race()
     with ThreadPoolExecutor(max_workers=2) as pool:
