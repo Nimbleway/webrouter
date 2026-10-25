@@ -457,21 +457,25 @@ def test_live_research_answers_with_citations() -> None:
 @pytest.mark.integration
 @pytest.mark.skipif(not os.getenv("NIMBLE_API_KEY"), reason="NIMBLE_API_KEY not set")
 def test_live_enrichment_fills_in_a_row_schema_per_record() -> None:
-    """The README's enrichment: one row's schema, filled in for each record."""
+    """The README's enrichment, as written: a row model, two records, Nimble's default effort."""
+    from pydantic import BaseModel
+
     from tests.conftest import billing_aware
     from web_router import WebRouter
 
-    row = {"type": "object", "properties": {"name": {"type": "string"}, "country": {"type": "string"}}}
+    class Company(BaseModel):
+        name: str
+        what_they_sell: str
+        headquarters: str | None = None
+
     with WebRouter("nimble") as router, billing_aware("nimble"):
         response = router.research(
-            "fill in the country each company is headquartered in",
-            output_schema=row,
-            records=[{"name": "Nimbleway"}],
-            effort="medium",
+            "fill in what each company sells and where it is headquartered",
+            output_schema=Company,
+            records=[{"name": "Nimble"}, {"name": "Tavily"}],
         )
 
     assert response.provider == "nimble"
     assert isinstance(response.structured, list), f"not one row per record: {response.structured!r}"
-    assert len(response.structured) == 1
-    assert response.structured[0]["name"] == "Nimbleway"
-    assert response.structured[0]["country"]
+    assert [row["name"] for row in response.structured] == ["Nimble", "Tavily"]
+    assert all(row["what_they_sell"] for row in response.structured)

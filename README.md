@@ -734,8 +734,9 @@ response.structured  # {'name': 'Nimble', ...}
 ```
 
 Add `records` on top of a schema and the run becomes an **enrichment**: the same
-schema, filled in once per row you already hold. Nimble, the backend that maps it,
-needs `effort` of `"medium"` or above for one, and a schema to fill in.
+schema, filled in once per row you already hold: `structured` comes back as one
+row per record. Nimble, the backend that maps it, refuses one at `effort="low"`;
+its default effort runs one, as the example below does (checked live).
 
 ```python
 router.research(
