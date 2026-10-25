@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import json
 import re
@@ -376,18 +377,27 @@ def test_a_finished_scan_writes_every_file_once_from_the_rows_it_ran(scan: Modul
     assert (out / "report.md").exists() and (out / "summary.json").exists()
 
 
-def test_sampling_keeps_the_sets_order_and_is_cheap_for_a_large_set(scan: ModuleType, tmp_path: Path) -> None:
-    """The sample used to be re-sorted with `rows.index`, O(limit x n); 50k rows at --limit 10000 is now instant."""
-    import time
+def test_the_real_run_hands_each_urls_rows_to_the_sink(scan: ModuleType, tmp_path: Path) -> None:
+    """The scan itself, not a stand-in: on a registered backend, each URL's rows reach the sink as its own batch."""
+    from tests.conftest import FakeExtractProvider
+    from web_router.registry import register_extract_provider, unregister_extract_provider
 
-    path = tmp_path / "big.csv"
-    path.write_text("url,category\n" + "".join(f"https://u{i}.test,c\n" for i in range(50_000)), encoding="utf-8")
-    args = scan.parse_args(["--urls", str(path), "--limit", "10000", "--seed", "3"])
+    class Scanned(FakeExtractProvider):  # type: ignore[misc, valid-type]
+        name = "scanned"
 
-    started = time.perf_counter()
-    sample = scan.load_urls(args)
-    assert time.perf_counter() - started < 2.0
+    path = tmp_path / "two.csv"
+    path.write_text("url,category\nhttps://a.test,blog\nhttps://b.test,news\n", encoding="utf-8")
+    args = scan.parse_args(["--urls", str(path), "--providers", "scanned", "--limit", "0"])
+    setup = scan.setup_of(args)
+    saved: list[list[dict[str, Any]]] = []
+    register_extract_provider("scanned", Scanned)
+    try:
+        rows = asyncio.run(scan.run(args, setup, saved.append))
+    finally:
+        unregister_extract_provider("scanned")
 
-    positions = [int(url[len("https://u") : -len(".test")]) for url, _ in sample]
-    assert len(sample) == 10_000 and positions == sorted(positions), "the set's order is kept"
-    assert sample == scan.load_urls(args), "the same seed picks the same URLs"
+    batches = sorted([(r["url"], r["category"], r["provider"], r["returned"]) for r in batch] for batch in saved)
+    assert batches == [[("https://a.test", "blog", "scanned", True)], [("https://b.test", "news", "scanned", True)]]
+    by_url = lambda r: r["url"]  # noqa: E731
+    assert sorted(rows, key=by_url) == sorted((r for batch in saved for r in batch), key=by_url)
+    assert setup["asked"] == 2
