@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from web_router import BenchmarkTimeoutError, ExtractBenchmarkRun
+from web_router import BenchmarkTimeoutError, ExtractBenchmarkRun, ProviderError
 from web_router.types import ExtractedDocument, ExtractResponse
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "extract.py"
@@ -290,6 +290,17 @@ def test_a_repeated_provider_name_is_scanned_and_reported_once(scan: ModuleType)
     assert scan.explicit_providers("a,b,a") == ["a", "b"]
     assert scan.explicit_providers("a, b ,,") == ["a", "b"]
     assert scan.explicit_providers("a,b") == ["a", "b"]
+
+
+def test_provider_names_are_spelled_as_the_rows_label_them(scan: ModuleType) -> None:
+    """`--providers Nimble,Jina` used to score every backend 0/0: the rows say `nimble`, the setup said `Nimble`."""
+    assert scan.explicit_providers("Nimble,JINA,nimble") == ["nimble", "jina"]
+
+    rows = [
+        scan.row_of("u0", None, ExtractBenchmarkRun(provider="nimble", latency=0.1, error=ProviderError("nimble", "x")))
+    ]
+    summary = scan.summarize(rows, {**SETUP, "providers": scan.explicit_providers("Nimble")})
+    assert summary["overall"]["nimble"]["urls"] == 1
 
 
 def test_a_shipped_set_and_a_file_of_your_own_each_carry_their_identity(scan: ModuleType, tmp_path: Path) -> None:

@@ -59,7 +59,7 @@ from web_router import AsyncWebRouter, BenchmarkTimeoutError, ExtractBenchmarkRu
 from web_router.constants import BENCHMARK_EXCLUDED
 from web_router.exceptions import ConfigurationError, ProviderNotInstalledError, UnsupportedFormatError
 from web_router.registry import configured_extract_providers
-from web_router.types import ExtractFormat
+from web_router.types import ExtractFormat, provider_name
 
 # The redundant aliases above re-export what the scan's tests read from this module, its surface.
 TIMED_OUT = BenchmarkTimeoutError.__name__
@@ -173,8 +173,12 @@ async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> li
 
 
 def explicit_providers(text: str) -> list[str]:
-    """``--providers`` as a list: trimmed, empty names dropped, repeats kept once in their first position."""
-    return list(dict.fromkeys(p.strip() for p in text.split(",") if p.strip()))
+    """``--providers`` as a list: trimmed, empty names dropped, repeats kept once in their first position.
+
+    Spelled as the rows are labelled -- ``provider_name()``, lowercase -- or
+    ``--providers Nimble`` would score 0/0 against rows labelled ``nimble``.
+    """
+    return list(dict.fromkeys(provider_name(p.strip()) for p in text.split(",") if p.strip()))
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
