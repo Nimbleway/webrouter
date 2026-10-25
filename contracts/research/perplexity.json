@@ -4,9 +4,12 @@
   "class": "web_router.providers.perplexity.PerplexityResearchProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.perplexity.ai",
-    "paths": {},
+    "paths": {
+      "perplexity_research_cancel_path": "/v1/responses/{response_id}/cancel",
+      "perplexity_research_path": "/v1/responses",
+      "perplexity_research_status_path": "/v1/responses/{response_id}"
+    },
     "auth_header": "Authorization"
   },
   "credentials": [
@@ -24,7 +27,7 @@
         "body.preset": "low"
       },
       "medium": {
-        "unchanged": "already in always_sent"
+        "unchanged": "no wire change"
       },
       "high": {
         "body.preset": "high"

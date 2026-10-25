@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from scripts.contracts import CONTRACTS_DIR, TODO, expected, stale
+from web_router.exceptions import ProviderNotInstalledError
 
 PENDING: frozenset[str] = frozenset(
     {
@@ -77,7 +78,11 @@ FILLED = sorted(set(CONTRACTS) - PENDING)
 
 
 def test_contracts_match_the_code() -> None:
-    assert stale(expected()) == [], "Run `make contracts` and commit the result."
+    try:
+        files = expected()
+    except ProviderNotInstalledError as exc:
+        pytest.skip(f"generating every contract needs every extra (uv sync --all-extras): {exc}")
+    assert stale(files) == [], "Run `make contracts` and commit the result."
 
 
 def test_pending_only_names_contracts_that_exist() -> None:
@@ -92,13 +97,21 @@ def test_a_pending_contract_leaves_pending_once_filled(key: str) -> None:
     )
 
 
+def _filled(text: object) -> bool:
+    return isinstance(text, str) and bool(text.strip()) and TODO not in text
+
+
 @pytest.mark.parametrize("key", FILLED)
 def test_a_filled_contract_has_no_todo_left(key: str) -> None:
     contract = CONTRACTS[key]
-    assert contract["source"] != TODO, f"{key}: name the vendor's documentation in `source`"
+    sources = contract["source"] if isinstance(contract["source"], list) else [contract["source"]]
+    assert sources and all(map(_filled, sources)), f"{key}: name the vendor's documentation in `source`"
     assert contract["vendor_options"] != TODO, f"{key}: list the vendor's unmapped options in `vendor_options`"
     for option, how in contract["verified"].items():
-        assert how.startswith(VERIFIED_KINDS), f"{key}: verified[{option!r}] must start with 'live: ' or 'docs: '"
+        kind = next((k for k in VERIFIED_KINDS if how.startswith(k)), None)
+        assert kind and _filled(how.removeprefix(kind)), (
+            f"{key}: verified[{option!r}] must be 'live: <the test>' or 'docs: <the page>'"
+        )
 
 
 @pytest.mark.parametrize("key", FILLED)

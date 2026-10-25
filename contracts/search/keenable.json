@@ -4,11 +4,12 @@
   "class": "web_router.providers.keenable.KeenableProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.keenable.ai",
     "paths": {
+      "keenable_search_public_path": "/v1/search/public",
       "search_path": "/v1/search"
     },
+    "method": "POST",
     "auth_header": "X-API-Key"
   },
   "credentials": [

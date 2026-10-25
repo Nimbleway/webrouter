@@ -4,11 +4,12 @@
   "class": "web_router.providers.keenable.KeenableExtractProvider",
   "transport": {
     "kind": "http",
-    "method": "GET",
     "base_url": "https://api.keenable.ai",
     "paths": {
-      "extract_path": "/v1/fetch"
+      "extract_path": "/v1/fetch",
+      "keenable_fetch_public_path": "/v1/fetch/public"
     },
+    "method": "GET",
     "auth_header": "X-API-Key"
   },
   "credentials": [
@@ -22,7 +23,7 @@
   "options": {
     "format": {
       "markdown": {
-        "unchanged": "already in always_sent"
+        "unchanged": "no wire change"
       },
       "html": {
         "refused": "UnsupportedFormatError"

@@ -4,11 +4,11 @@
   "class": "web_router.providers.firecrawl.FirecrawlExtractProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.firecrawl.dev",
     "paths": {
       "extract_path": "/v2/scrape"
     },
+    "method": "POST",
     "auth_header": "Authorization"
   },
   "credentials": [
@@ -24,7 +24,7 @@
   "options": {
     "format": {
       "markdown": {
-        "unchanged": "already in always_sent"
+        "unchanged": "no wire change"
       },
       "html": {
         "body.formats": [

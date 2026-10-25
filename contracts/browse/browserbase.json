@@ -4,9 +4,12 @@
   "class": "web_router.providers.browserbase.BrowserbaseBrowseProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.browserbase.com",
-    "paths": {},
+    "paths": {
+      "browserbase_browse_run_path": "/v1/agents/runs/{job_id}",
+      "browserbase_browse_start_path": "/v1/agents/runs",
+      "browserbase_browse_stop_path": "/v1/agents/runs/{job_id}/stop"
+    },
     "auth_header": "X-BB-API-Key"
   },
   "credentials": [

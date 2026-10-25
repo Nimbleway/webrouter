@@ -20,12 +20,13 @@ import argparse
 import json
 import os
 import sys
+import types
 import typing
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from web_router import registry
 from web_router.constants import (
@@ -98,6 +99,8 @@ class _Method(typing.NamedTuple):
     request: Callable[..., BaseModel]
     env: Callable[[str], tuple[str, ...]]
     keyless: tuple[tuple[str, dict[str, Any]], ...]
+    builtin: frozenset[str]
+    """The built-in providers: each method's credential table lists exactly those."""
 
 
 def _search_env(name: str) -> tuple[str, ...]:
@@ -112,6 +115,7 @@ METHODS: dict[str, _Method] = {
         lambda **kw: SearchRequest(query="probe query", **kw),
         _search_env,
         AUTO_KEYLESS,
+        frozenset(ENV_BY_PROVIDER),
     ),
     "extract": _Method(
         registry.available_extract_providers,
@@ -119,6 +123,7 @@ METHODS: dict[str, _Method] = {
         lambda **kw: ExtractRequest(urls=["https://example.com"], **kw),
         EXTRACT_ENV_BY_PROVIDER.__getitem__,
         AUTO_EXTRACT_KEYLESS,
+        frozenset(EXTRACT_ENV_BY_PROVIDER),
     ),
     "research": _Method(
         registry.available_research_providers,
@@ -126,6 +131,7 @@ METHODS: dict[str, _Method] = {
         lambda **kw: ResearchRequest(query="probe query", **kw),
         RESEARCH_ENV_BY_PROVIDER.__getitem__,
         (),
+        frozenset(RESEARCH_ENV_BY_PROVIDER),
     ),
     "browser": _Method(
         registry.available_browser_providers,
@@ -133,6 +139,7 @@ METHODS: dict[str, _Method] = {
         lambda **kw: BrowserRequest(**kw),
         BROWSER_ENV_BY_PROVIDER.__getitem__,
         (),
+        frozenset(BROWSER_ENV_BY_PROVIDER),
     ),
     "browse": _Method(
         registry.available_browse_providers,
@@ -140,6 +147,7 @@ METHODS: dict[str, _Method] = {
         lambda **kw: BrowseRequest(task="probe task", **kw),
         BROWSE_ENV_BY_PROVIDER.__getitem__,
         (),
+        frozenset(BROWSE_ENV_BY_PROVIDER),
     ),
 }
 
@@ -154,8 +162,7 @@ REQUEST_MODELS: dict[str, type[BaseModel]] = {
 
 def _options(model: type[BaseModel]) -> list[str]:
     """The model's caller-facing options: every field but the ones each provider always handles."""
-    always: frozenset[str] = getattr(model, "always_sent", frozenset())
-    return [name for name in model.model_fields if name not in always and name not in {"query", "task", "urls"}]
+    return [name for name in model.model_fields if name not in model.always_sent]  # type: ignore[attr-defined]
 
 
 def _values(model: type[BaseModel], option: str) -> list[Any]:
@@ -173,10 +180,19 @@ def _values(model: type[BaseModel], option: str) -> list[Any]:
 
 
 def _label(option: str, value: Any) -> str:
-    """A literal or boolean by its value; a free-form option's one sample as ``sample``."""
-    if option in SAMPLES:
+    """A free-form option's only sample as ``sample``; anything else by its value, so no two collide."""
+    if len(SAMPLES.get(option, [])) == 1 and SAMPLES[option][0] is value:
         return "sample"
-    return value if isinstance(value, str) else json.dumps(value)
+    if isinstance(value, BaseModel):
+        value = value.model_dump()
+    return value if isinstance(value, str) else json.dumps(value, sort_keys=True)
+
+
+def _segment(key: Any) -> str:
+    """A key as one path segment. A key that holds a dot is quoted, so ``{"a.b": 1}``
+    and ``{"a": {"b": 1}}`` never flatten to the same path."""
+    key = str(key)
+    return json.dumps(key) if "." in key or key.startswith('"') else key
 
 
 def _flatten(payload: Any, prefix: str = "") -> dict[str, Any]:
@@ -185,7 +201,10 @@ def _flatten(payload: Any, prefix: str = "") -> dict[str, Any]:
         return {prefix: payload} if prefix else {}
     flat: dict[str, Any] = {}
     for key, value in payload.items():
-        flat.update(_flatten(value, f"{prefix}.{key}" if prefix else str(key)))
+        for path, leaf in _flatten(value, f"{prefix}.{_segment(key)}" if prefix else _segment(key)).items():
+            if path in flat:
+                raise SystemExit(f"two wire fields flatten to {path!r}; make _segment tell them apart")
+            flat[path] = leaf
     return flat
 
 
@@ -199,7 +218,9 @@ def _default(value: Any) -> Any:
         return value.model_dump()
     if isinstance(value, (set, frozenset)):
         return sorted(value)
-    return str(value)
+    # Not str(): an object's default repr carries its address, and a contract that
+    # changes on every run would fail the check at random.
+    raise TypeError(f"{type(value).__name__} in a payload has no stable JSON form; teach _default to write it")
 
 
 def _diff(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
@@ -233,12 +254,18 @@ def _probe(provider: Any, method: str, option: str, value: Any) -> dict[str, Any
     base_fields = PREREQUISITES.get(option, {})
     try:
         before = _payload(provider, method, make(**base_fields))
+    except (WebRouterError, ValidationError) as exc:
+        raise SystemExit(
+            f"{method}/{provider.name}: the base request for {option!r} is refused ({exc}); fix PREREQUISITES"
+        ) from exc
+    try:
         after = _payload(provider, method, make(**base_fields, **{option: value}))
-    except WebRouterError as exc:
+    except (WebRouterError, ValidationError) as exc:
         return {"refused": type(exc).__name__}
-    # An empty diff is the value the provider already sends by default -- said
-    # in words, so it never reads like an option that was dropped on the way.
-    return _diff(before, after) or {"unchanged": "already in always_sent"}
+    # No change on the wire: the value is what the provider sends anyway, or the
+    # option is applied after the response (Parallel MCP trims max_results itself).
+    # Said in words, so it never reads like an option dropped on the way.
+    return _diff(before, after) or {"unchanged": "no wire change"}
 
 
 def _transport(cls: type) -> dict[str, Any]:
@@ -253,13 +280,18 @@ def _transport(cls: type) -> dict[str, Any]:
             for name in sorted(dir(cls))
             if name.endswith("_path") and isinstance(getattr(cls, name), str)
         }
-        return {
-            "kind": "http",
-            "method": cls.http_method,
-            "base_url": cls.base_url,
-            "paths": paths,
-            "auth_header": cls.api_key_header if cls.env_api_key else None,
-        }
+        paths.update(_endpoint_constants(cls))
+        if not paths:
+            raise SystemExit(
+                f"{cls.__qualname__}: found no endpoint; name it as a *_path attribute or a *_PATH constant"
+            )
+        transport: dict[str, Any] = {"kind": "http", "base_url": cls.base_url, "paths": dict(sorted(paths.items()))}
+        # The class's verb is the one its base sends a search or an extract with;
+        # research, browse and browser calls choose theirs per request.
+        if "search_path" in paths or "extract_path" in paths:
+            transport["method"] = cls.http_method
+        transport["auth_header"] = cls.api_key_header if cls.env_api_key else None
+        return transport
     module = sys.modules[cls.__module__]
     sdks = sorted(
         {
@@ -269,6 +301,37 @@ def _transport(cls: type) -> dict[str, Any]:
         }
     )
     return {"kind": "sdk", "packages": sdks}
+
+
+ENDPOINT_SUFFIXES = ("_PATH", "_URL")
+
+
+def _endpoint_constants(cls: type) -> dict[str, str]:
+    """Module constants the provider's own methods use as endpoints, e.g. ``PARALLEL_TASK_RUN_PATH``.
+
+    Read from the methods' bytecode, so an endpoint picked inside ``_start`` or
+    ``_fetch`` is recorded as surely as a class attribute is.
+    """
+    module = sys.modules[cls.__module__]
+    found: dict[str, str] = {}
+
+    def walk(code: types.CodeType) -> None:
+        for name in code.co_names:
+            value = getattr(module, name, None)
+            if name.endswith(ENDPOINT_SUFFIXES) and isinstance(value, str):
+                found[name.lower()] = value
+        for const in code.co_consts:
+            if isinstance(const, types.CodeType):
+                walk(const)
+
+    for klass in cls.__mro__:
+        if klass.__module__ != cls.__module__:
+            continue
+        for member in vars(klass).values():
+            function = getattr(member, "__func__", member)
+            if isinstance(function, types.FunctionType):
+                walk(function.__code__)
+    return found
 
 
 def _keyless(name: str, method: str) -> str | None:
@@ -288,8 +351,16 @@ def generate(method: str, name: str) -> dict[str, Any]:
     cls = spec.get_class(name)
     model = REQUEST_MODELS[method]
     provider = cls(api_key=PROBE_KEY)
-    supported: frozenset[str] = cls.supported_parameters
+    try:
+        return _contract(spec, cls, model, provider, method, name)
+    finally:
+        provider.close()
 
+
+def _contract(
+    spec: _Method, cls: type[Any], model: type[BaseModel], provider: Any, method: str, name: str
+) -> dict[str, Any]:
+    supported: frozenset[str] = cls.supported_parameters
     contract: dict[str, Any] = {
         "provider": name,
         "method": method,
@@ -297,7 +368,7 @@ def generate(method: str, name: str) -> dict[str, Any]:
         "transport": _transport(cls),
         "credentials": list(spec.env(name)),
         "keyless": _keyless(name, method),
-        "always_sent": _diff({}, _payload(provider, method, spec.request())),
+        "always_sent": dict(sorted(_payload(provider, method, spec.request()).items())),
         "options": {
             option: {_label(option, value): _probe(provider, method, option, value) for value in _values(model, option)}
             for option in _options(model)
@@ -336,10 +407,14 @@ def render(method: str, name: str) -> str:
 
 
 def providers() -> Iterator[tuple[str, str]]:
-    """Every (method, provider) that talks to a vendor. ``auto`` and ``local`` build no payload."""
+    """Every built-in (method, provider) that talks to a vendor.
+
+    Built-in only: a provider a caller registers at runtime has no contract here.
+    ``auto`` and ``local`` build no payload.
+    """
     for method, spec in METHODS.items():
         for name in spec.names():
-            if hasattr(spec.get_class(name), "_build_payload"):
+            if name in spec.builtin and hasattr(spec.get_class(name), "_build_payload"):
                 yield method, name
 
 

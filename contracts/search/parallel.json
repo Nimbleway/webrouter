@@ -4,11 +4,11 @@
   "class": "web_router.providers.parallel.ParallelProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.parallel.ai",
     "paths": {
       "search_path": "/v1beta/search"
     },
+    "method": "POST",
     "auth_header": "x-api-key"
   },
   "credentials": [

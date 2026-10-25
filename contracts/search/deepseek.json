@@ -4,11 +4,11 @@
   "class": "web_router.providers.deepseek.DeepSeekProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.deepseek.com",
     "paths": {
       "search_path": "/v1/tools/search"
     },
+    "method": "POST",
     "auth_header": "Authorization"
   },
   "credentials": [

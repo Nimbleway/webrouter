@@ -4,9 +4,12 @@
   "class": "web_router.providers.browser_use.BrowserUseBrowseProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.browser-use.com",
-    "paths": {},
+    "paths": {
+      "browser_use_task_path": "/api/v2/tasks/{job_id}",
+      "browser_use_task_status_path": "/api/v2/tasks/{job_id}/status",
+      "browser_use_tasks_path": "/api/v2/tasks"
+    },
     "auth_header": "X-Browser-Use-API-Key"
   },
   "credentials": [

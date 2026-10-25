@@ -4,11 +4,11 @@
   "class": "web_router.providers.webiq.WebIQProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.microsoft.ai",
     "paths": {
       "search_path": "/v3/search/web"
     },
+    "method": "POST",
     "auth_header": "x-apikey"
   },
   "credentials": [

@@ -4,11 +4,11 @@
   "class": "web_router.providers.perplexity.PerplexityProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.perplexity.ai",
     "paths": {
       "search_path": "/search"
     },
+    "method": "POST",
     "auth_header": "Authorization"
   },
   "credentials": [

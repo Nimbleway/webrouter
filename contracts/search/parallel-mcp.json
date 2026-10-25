@@ -22,7 +22,7 @@
   "options": {
     "max_results": {
       "sample": {
-        "unchanged": "already in always_sent"
+        "unchanged": "no wire change"
       }
     }
   },

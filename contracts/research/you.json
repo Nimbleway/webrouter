@@ -4,7 +4,6 @@
   "class": "web_router.providers.you.YouResearchProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.you.com",
     "paths": {
       "research_path": "/v1/research",

@@ -21,7 +21,7 @@
   "options": {
     "format": {
       "markdown": {
-        "unchanged": "already in always_sent"
+        "unchanged": "no wire change"
       },
       "html": {
         "refused": "UnsupportedFormatError"
@@ -67,8 +67,8 @@
       "note": "Boolean; usage stays in raw."
     },
     "timeout": {
-      "status": "not_supported",
-      "note": "The SDK's per-call timeout; set it with provider_config={'tavily': {'timeout': ...}}, not per request."
+      "status": "passthrough",
+      "note": "Per request through provider_options={'timeout': ...}; the provider-wide default is provider_config={'tavily': {'timeout': ...}}."
     }
   }
 }

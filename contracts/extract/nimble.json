@@ -21,7 +21,7 @@
   "options": {
     "format": {
       "markdown": {
-        "unchanged": "already in always_sent"
+        "unchanged": "no wire change"
       },
       "html": {
         "body.formats": [

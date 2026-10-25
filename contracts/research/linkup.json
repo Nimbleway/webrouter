@@ -4,9 +4,11 @@
   "class": "web_router.providers.linkup.LinkupResearchProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.linkup.so",
-    "paths": {},
+    "paths": {
+      "linkup_research_path": "/v1/research",
+      "linkup_research_status_path": "/v1/research/{research_id}"
+    },
     "auth_header": "Authorization"
   },
   "credentials": [

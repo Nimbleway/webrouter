@@ -4,11 +4,11 @@
   "class": "web_router.providers.linkup.LinkupExtractProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.linkup.so",
     "paths": {
       "extract_path": "/v1/fetch"
     },
+    "method": "POST",
     "auth_header": "Authorization"
   },
   "credentials": [
@@ -21,7 +21,7 @@
   "options": {
     "format": {
       "markdown": {
-        "unchanged": "already in always_sent"
+        "unchanged": "no wire change"
       },
       "html": {
         "body.includeRawContent": true

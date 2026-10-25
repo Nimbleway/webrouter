@@ -4,11 +4,12 @@
   "class": "web_router.providers.steel.SteelBrowserProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.steel.dev",
     "paths": {
       "open_path": "/v1/sessions",
-      "release_path": "/v1/sessions/{session_id}/release"
+      "release_path": "/v1/sessions/{session_id}/release",
+      "steel_connect_url": "wss://connect.steel.dev",
+      "steel_session_path": "/v1/sessions/{session_id}"
     },
     "auth_header": "steel-api-key"
   },

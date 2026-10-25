@@ -4,11 +4,11 @@
   "class": "web_router.providers.brave.BraveProvider",
   "transport": {
     "kind": "http",
-    "method": "GET",
     "base_url": "https://api.search.brave.com",
     "paths": {
       "search_path": "/res/v1/web/search"
     },
+    "method": "GET",
     "auth_header": "X-Subscription-Token"
   },
   "credentials": [

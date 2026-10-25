@@ -4,7 +4,6 @@
   "class": "web_router.providers.kernel.KernelBrowserProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.onkernel.com",
     "paths": {
       "open_path": "/browsers",

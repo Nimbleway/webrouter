@@ -4,9 +4,12 @@
   "class": "web_router.providers.parallel.ParallelResearchProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.parallel.ai",
-    "paths": {},
+    "paths": {
+      "parallel_task_result_path": "/v1/tasks/runs/{run_id}/result",
+      "parallel_task_run_path": "/v1/tasks/runs",
+      "parallel_task_status_path": "/v1/tasks/runs/{run_id}"
+    },
     "auth_header": "x-api-key"
   },
   "credentials": [
@@ -31,7 +34,7 @@
         "body.processor": "lite"
       },
       "medium": {
-        "unchanged": "already in always_sent"
+        "unchanged": "no wire change"
       },
       "high": {
         "body.processor": "pro"

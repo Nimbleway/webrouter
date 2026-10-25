@@ -4,9 +4,9 @@
   "class": "web_router.providers.browserbase.BrowserbaseBrowserProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.browserbase.com",
     "paths": {
+      "browserbase_debug_path": "/v1/sessions/{session_id}/debug",
       "open_path": "/v1/sessions",
       "release_path": "/v1/sessions/{session_id}"
     },

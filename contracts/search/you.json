@@ -4,11 +4,11 @@
   "class": "web_router.providers.you.YouProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://ydc-index.io",
     "paths": {
       "search_path": "/v1/search"
     },
+    "method": "POST",
     "auth_header": "X-API-Key"
   },
   "credentials": [
@@ -26,7 +26,7 @@
     },
     "search_depth": {
       "lite": {
-        "unchanged": "already in always_sent"
+        "unchanged": "no wire change"
       },
       "fast": {
         "body.extraction.extraction_mode": "highlights"

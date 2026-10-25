@@ -4,11 +4,11 @@
   "class": "web_router.providers.exa.ExaExtractProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.exa.ai",
     "paths": {
       "extract_path": "/contents"
     },
+    "method": "POST",
     "auth_header": "x-api-key"
   },
   "credentials": [
@@ -30,7 +30,7 @@
         "refused": "UnsupportedFormatError"
       },
       "text": {
-        "unchanged": "already in always_sent"
+        "unchanged": "no wire change"
       }
     }
   },

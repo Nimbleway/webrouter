@@ -4,9 +4,9 @@
   "class": "web_router.providers.anchor.AnchorBrowserProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.anchorbrowser.io",
     "paths": {
+      "anchor_session_path": "/v1/sessions/{session_id}",
       "open_path": "/v1/sessions",
       "release_path": "/v1/sessions/{session_id}"
     },

@@ -4,9 +4,9 @@
   "class": "web_router.providers.hyperbrowser.HyperbrowserBrowserProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.hyperbrowser.ai",
     "paths": {
+      "hyperbrowser_session_path": "/api/session/{session_id}",
       "open_path": "/api/session",
       "release_path": "/api/session/{session_id}/stop"
     },

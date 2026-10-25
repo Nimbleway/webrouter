@@ -65,7 +65,7 @@ repos:
         entry: uv run python -m scripts.contracts
         language: system
         pass_filenames: false
-        files: ^(src/web_router/(providers/|constants.*\.py|registry\.py|types\.py)|scripts/contracts\.py|contracts/)
+        files: ^(src/web_router/(providers/|constants.*\.py|registry\.py|types\.py|exceptions\.py)|scripts/contracts\.py|contracts/|pyproject\.toml|uv\.lock)
 
 default_stages: [pre-commit]
 default_install_hook_types: [pre-commit, pre-push]

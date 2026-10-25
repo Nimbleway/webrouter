@@ -4,11 +4,11 @@
   "class": "web_router.providers.linkup.LinkupProvider",
   "transport": {
     "kind": "http",
-    "method": "POST",
     "base_url": "https://api.linkup.so",
     "paths": {
       "search_path": "/v1/search"
     },
+    "method": "POST",
     "auth_header": "Authorization"
   },
   "credentials": [
