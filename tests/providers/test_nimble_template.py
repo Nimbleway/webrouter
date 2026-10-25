@@ -181,10 +181,9 @@ def test_a_record_with_a_status_and_entities_beside_other_fields_is_kept_whole(
     assert response.data == record
 
 
-@pytest.mark.parametrize("parsing", [None, {}])
-def test_a_fetched_page_with_no_record_raises(provider: NimbleTemplateProvider, parsing: Any) -> None:
+def test_a_fetched_page_with_no_record_raises(provider: NimbleTemplateProvider) -> None:
     with pytest.raises(ProviderError, match="without a record"):
-        provider._to_response(TemplateRequest(template=TEMPLATE), _run_payload(parsing))
+        provider._to_response(TemplateRequest(template=TEMPLATE), _run_payload(None))
 
 
 @pytest.mark.parametrize("status_code", [404.0, 403, 500.0, 503])

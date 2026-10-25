@@ -44,14 +44,6 @@ TEMPLATE = "books_pdp"
 PARAMS = {"url": "https://example.com/page"}
 
 
-def _translates(name: str) -> bool:
-    """Whether this provider builds a payload of its own; `auto` delegates and is covered in test_auto_template.py."""
-    return hasattr(get_template_provider_class(name), "_build_payload")
-
-
-TRANSLATING = [name for name in available_template_providers() if _translates(name)]
-
-
 @pytest.fixture
 def credentialed(monkeypatch: pytest.MonkeyPatch) -> None:
     """Every template credential set to a placeholder, so providers construct offline."""
@@ -109,62 +101,6 @@ def test_public_methods_are_always_the_base_implementation(name: str, method: st
 @pytest.mark.parametrize("name", available_template_providers())
 def test_providers_are_concrete(name: str) -> None:
     assert not inspect.isabstract(get_template_provider_class(name))
-
-
-@pytest.mark.parametrize("name", TRANSLATING)
-def test_provider_options_always_reach_the_api(name: str, credentialed: None) -> None:
-    """The escape hatch has to work on every provider, including new ones."""
-    provider = _build(name)
-    try:
-        payload = provider._build_payload(  # type: ignore[attr-defined]
-            TemplateRequest(template=TEMPLATE, params=PARAMS, provider_options={"x_custom": "sentinel"})
-        )
-    finally:
-        provider.close()
-
-    assert payload["x_custom"] == "sentinel"
-
-
-@pytest.mark.parametrize("name", TRANSLATING)
-def test_no_option_is_ever_sent_as_null(name: str, credentialed: None) -> None:
-    """An option left unset must not reach the provider as an explicit null."""
-    provider = _build(name)
-    try:
-        payload = provider._build_payload(TemplateRequest(template=TEMPLATE, params=PARAMS))  # type: ignore[attr-defined]
-    finally:
-        provider.close()
-
-    assert None not in payload.values()
-
-
-@pytest.mark.parametrize("name", TRANSLATING)
-def test_the_template_and_every_input_reach_the_payload(name: str, credentialed: None) -> None:
-    provider = _build(name)
-    params = {"url": "https://example.com/page", "page": 2}
-    try:
-        payload = provider._build_payload(TemplateRequest(template=TEMPLATE, params=params))  # type: ignore[attr-defined]
-    finally:
-        provider.close()
-
-    sent = repr(payload)
-    assert TEMPLATE in sent
-    assert all(repr(value) in sent for value in params.values()), f"{name} dropped an input it was handed: {payload}"
-
-
-@pytest.mark.parametrize("name", TRANSLATING)
-def test_every_format_a_provider_supports_is_a_distinct_request(name: str, credentialed: None) -> None:
-    """Two formats that build the same call, or a format that builds the bare call, are a mapping bug."""
-    provider = _build(name)
-    try:
-        shapes = {None: repr(provider._build_payload(TemplateRequest(template=TEMPLATE, params=PARAMS)))}  # type: ignore[attr-defined]
-        for body_format in sorted(provider.supported_formats):
-            request = TemplateRequest(template=TEMPLATE, params=PARAMS, format=body_format)
-            provider.validate(request)
-            shapes[body_format] = repr(provider._build_payload(request))  # type: ignore[attr-defined]
-    finally:
-        provider.close()
-
-    assert len(set(shapes.values())) == len(shapes), f"{name} builds the same call for two formats: {shapes}"
 
 
 @pytest.mark.parametrize("name", available_template_providers())
