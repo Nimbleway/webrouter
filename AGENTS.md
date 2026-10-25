@@ -691,6 +691,21 @@ mapped from the same documentation as the lifetime beside it; refusing it
 until a live call would leave that session billing too. The test module's
 docstring still names each one as unverified.
 
+## Provider contracts
+
+`contracts/<method>/<provider>.json` records the wire fields each option value sends,
+read from the provider's own code, beside three hand-written fields:
+
+- `source`: the vendor's reference for the endpoints.
+- `verified`: per mapped option, `live: <the test that calls it>` or `docs: <the page>`.
+- `vendor_options`: each documented vendor option no mapping sends, `passthrough` or `not_supported`, with a note.
+
+A contract is committed once those are filled. Start one with
+`make contracts PROVIDER=<method>/<provider>`, fill them in, and commit it; after any
+mapping change, `make contracts` regenerates every committed contract, keeping what
+was written by hand. `tests/test_provider_contracts.py` fails when a committed
+contract is stale, or its hand-written fields are partial or hold a `TODO`.
+
 ## Adding a template provider
 
 Against `TemplateProvider`. A vendor that already extracts gets a third class

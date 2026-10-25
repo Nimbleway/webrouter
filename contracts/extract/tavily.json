@@ -1,0 +1,71 @@
+{
+  "provider": "tavily",
+  "method": "extract",
+  "class": "web_router.providers.tavily.TavilyExtractProvider",
+  "transport": {
+    "kind": "sdk"
+  },
+  "credentials": [
+    "TAVILY_API_KEY"
+  ],
+  "keyless": "through auto, allow_keyless=True",
+  "always_sent": {
+    "body.format": "markdown",
+    "body.urls": [
+      "https://example.com"
+    ]
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "body.format": "text"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": true,
+  "source": [
+    "https://docs.tavily.com/documentation/api-reference/endpoint/extract",
+    "tavily-python TavilyClient.extract"
+  ],
+  "verified": {
+    "format": "live: tests/test_integration_surface.py::test_markdown_really_comes_back_without_markup"
+  },
+  "vendor_options": {
+    "extract_depth": {
+      "status": "passthrough",
+      "note": "basic | advanced."
+    },
+    "query": {
+      "status": "passthrough",
+      "note": "Reranks the returned chunks against a query."
+    },
+    "chunks_per_source": {
+      "status": "passthrough",
+      "note": "1-5; only with query."
+    },
+    "include_images": {
+      "status": "passthrough",
+      "note": "Boolean; images stay in raw."
+    },
+    "include_favicon": {
+      "status": "passthrough",
+      "note": "Boolean; stays in ExtractedDocument.extra."
+    },
+    "include_usage": {
+      "status": "passthrough",
+      "note": "Boolean; usage stays in raw."
+    },
+    "timeout": {
+      "status": "passthrough",
+      "note": "Per request through provider_options={'timeout': ...}; the provider-wide default is provider_config={'tavily': {'timeout': ...}}."
+    }
+  }
+}

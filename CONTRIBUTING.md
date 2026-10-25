@@ -61,6 +61,9 @@ that already serves one gets a second class in its existing module rather than a
 new file — `nimble.py`, `tavily.py` and `exa.py` each hold a search provider and
 an extract provider.
 
+Whatever the method, finish with `make contracts`, which regenerates the
+provider contracts; [AGENTS.md](AGENTS.md#provider-contracts) says how to start one.
+
 ### A search provider
 
 1. Create `src/web_router/providers/<name>.py` with a `SearchProvider` subclass
@@ -214,7 +217,9 @@ To add one:
    normalized set directly, because it already maps all of it.)
 3. Add a unit test for the mapping, and extend the provider's parametrized
    rejection test so the option is no longer listed as unmapped.
-4. Update the README support table and `CHANGELOG.md`.
+4. Run `make contracts`, and move the option out of the contract's
+   `vendor_options` — the test fails while a mapped field is still listed there.
+5. Update the README support table and `CHANGELOG.md`.
 
 Watch for options that mean the same thing but take a different form. Tavily's
 `country`, for instance, wants a lowercase country name and rejects the ISO
