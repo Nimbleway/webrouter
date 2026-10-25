@@ -1,0 +1,163 @@
+{
+  "provider": "firecrawl",
+  "method": "extract",
+  "class": "web_router.providers.firecrawl.FirecrawlExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.firecrawl.dev",
+    "paths": {
+      "extract_path": "/v2/scrape"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "FIRECRAWL_API_KEY"
+  ],
+  "keyless": "through auto, allow_keyless=True",
+  "always_sent": {
+    "body.formats": [
+      "markdown"
+    ],
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "body.formats": [
+          "html"
+        ]
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": [
+    "https://docs.firecrawl.dev/api-reference/endpoint/scrape",
+    "https://docs.firecrawl.dev/api-reference/v2-openapi.json"
+  ],
+  "verified": {
+    "format": "live: tests/providers/test_firecrawl.py::test_live_keyless_extract_returns_page_content"
+  },
+  "vendor_options": {
+    "onlyMainContent": {
+      "status": "passthrough",
+      "note": "Boolean; drops headers, navs and footers before markdown is generated."
+    },
+    "onlyCleanContent": {
+      "status": "passthrough",
+      "note": "Boolean; an extra LLM pass over the markdown to remove leftover boilerplate."
+    },
+    "includeTags": {
+      "status": "passthrough",
+      "note": "List of tags or selectors to keep."
+    },
+    "excludeTags": {
+      "status": "passthrough",
+      "note": "List of tags or selectors to drop."
+    },
+    "maxAge": {
+      "status": "passthrough",
+      "note": "Milliseconds; serves a cached copy younger than this."
+    },
+    "minAge": {
+      "status": "passthrough",
+      "note": "Milliseconds; checks the cache only and never scrapes afresh."
+    },
+    "headers": {
+      "status": "passthrough",
+      "note": "Headers Firecrawl sends to the target page, such as cookies or a user agent."
+    },
+    "waitFor": {
+      "status": "passthrough",
+      "note": "Milliseconds to wait before reading the page."
+    },
+    "mobile": {
+      "status": "passthrough",
+      "note": "Boolean; emulates a mobile device."
+    },
+    "skipTlsVerification": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "timeout": {
+      "status": "passthrough",
+      "note": "Milliseconds, 1000-300000; Firecrawl's own limit, separate from the HTTP client's."
+    },
+    "parsers": {
+      "status": "passthrough",
+      "note": "How PDFs and images are processed."
+    },
+    "actions": {
+      "status": "passthrough",
+      "note": "Browser actions (click, scroll, wait, ...) run before the page is read."
+    },
+    "location": {
+      "status": "passthrough",
+      "note": "Country and languages; picks a proxy and emulates the locale."
+    },
+    "removeBase64Images": {
+      "status": "passthrough",
+      "note": "Boolean; markdown only."
+    },
+    "blockAds": {
+      "status": "passthrough",
+      "note": "Boolean; blocks ads and cookie pop-ups."
+    },
+    "proxy": {
+      "status": "passthrough",
+      "note": "basic | enhanced | auto."
+    },
+    "storeInCache": {
+      "status": "passthrough",
+      "note": "Boolean; false keeps the page out of Firecrawl's index and cache."
+    },
+    "lockdown": {
+      "status": "passthrough",
+      "note": "Boolean; serves from cache only, with no request to the target."
+    },
+    "checkPromptInjection": {
+      "status": "passthrough",
+      "note": "Boolean; scans the page before any LLM-backed format runs."
+    },
+    "redactPII": {
+      "status": "passthrough",
+      "note": "true or an object; redacts personal data from the markdown."
+    },
+    "profile": {
+      "status": "passthrough",
+      "note": "Persistent browser storage shared across scrapes."
+    },
+    "threatProtection": {
+      "status": "passthrough",
+      "note": "Per-request override of the account's threat protection settings."
+    },
+    "auditMetadata": {
+      "status": "passthrough",
+      "note": "User attribution attached to SIEM log events."
+    },
+    "zeroDataRetention": {
+      "status": "passthrough",
+      "note": "Boolean; no data kept for this scrape."
+    },
+    "alexandria": {
+      "status": "not_supported",
+      "note": "Runs catalogued provider tools instead of a scrape and cannot be combined with url or formats, which web-router always sends."
+    },
+    "domainTools": {
+      "status": "passthrough",
+      "note": "Boolean; lists tool contracts for the page's domain in data.tools, which stays in raw."
+    },
+    "toolDetail": {
+      "status": "passthrough",
+      "note": "compact | summary | full; only with domainTools."
+    }
+  }
+}

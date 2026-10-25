@@ -1,0 +1,133 @@
+{
+  "provider": "skyvern",
+  "method": "browse",
+  "class": "web_router.providers.skyvern.SkyvernBrowseProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.skyvern.com",
+    "paths": {
+      "cancel_path": "/v1/runs/{job_id}/cancel",
+      "start_path": "/v1/run/tasks",
+      "status_path": "/v1/runs/{job_id}"
+    },
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "SKYVERN_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.prompt": "probe task"
+  },
+  "options": {
+    "start_url": {
+      "sample": {
+        "body.url": "https://example.com"
+      }
+    }
+  },
+  "not_mapped": [
+    "allowed_domains",
+    "max_steps",
+    "output_schema"
+  ],
+  "source": [
+    "https://www.skyvern.com/docs/api-reference/openapi.json",
+    "https://www.skyvern.com/docs/api-reference/runs/get-run-info-by-id",
+    "https://www.skyvern.com/docs/api-reference/runs/cancel-a-run-by-id",
+    "https://www.skyvern.com/docs/sdk-reference/runs"
+  ],
+  "verified": {
+    "start_url": "docs: https://www.skyvern.com/docs/api-reference/openapi.json"
+  },
+  "vendor_options": {
+    "engine": {
+      "status": "passthrough",
+      "note": "skyvern-1.0 | skyvern-2.0 | skyvern-3.0 | openai-cua | anthropic-cua | ui-tars | yutori-navigator."
+    },
+    "title": {
+      "status": "passthrough",
+      "note": "A title for the run."
+    },
+    "proxy_location": {
+      "status": "passthrough",
+      "note": "Proxy location or geotarget for the browser."
+    },
+    "data_extraction_schema": {
+      "status": "passthrough",
+      "note": "Same role as the shared output_schema; not mapped until a live call confirms it."
+    },
+    "error_code_mapping": {
+      "status": "passthrough",
+      "note": "Custom error codes and messages."
+    },
+    "max_steps": {
+      "status": "passthrough",
+      "note": "Same role as the shared max_steps; not mapped until a live call confirms it. A run over the limit fails."
+    },
+    "webhook_url": {
+      "status": "passthrough",
+      "note": "Notified when the run finishes."
+    },
+    "totp_identifier": {
+      "status": "passthrough",
+      "note": "Identifies a pushed 2FA code."
+    },
+    "totp_url": {
+      "status": "passthrough",
+      "note": "URL Skyvern fetches 2FA codes from."
+    },
+    "browser_session_id": {
+      "status": "passthrough",
+      "note": "Runs in an existing Skyvern browser session."
+    },
+    "browser_profile_id": {
+      "status": "passthrough",
+      "note": "Reuses a saved browser profile."
+    },
+    "start_fresh_browser": {
+      "status": "passthrough",
+      "note": "Boolean; ignores saved browser memory."
+    },
+    "model": {
+      "status": "passthrough",
+      "note": "Model configuration object."
+    },
+    "extra_http_headers": {
+      "status": "passthrough",
+      "note": "Headers the browser sends with its requests."
+    },
+    "cdp_connect_headers": {
+      "status": "passthrough",
+      "note": "Headers for the CDP handshake with browser_address."
+    },
+    "publish_workflow": {
+      "status": "passthrough",
+      "note": "Deprecated; publishes a skyvern-2.0 task as a workflow."
+    },
+    "include_action_history_in_verification": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "max_screenshot_scrolls": {
+      "status": "passthrough",
+      "note": "Scrolls for the post-action screenshot."
+    },
+    "browser_address": {
+      "status": "passthrough",
+      "note": "CDP address of a browser to drive instead of Skyvern's."
+    },
+    "run_with": {
+      "status": "passthrough",
+      "note": "agent | code."
+    },
+    "file_ids": {
+      "status": "passthrough",
+      "note": "Uploaded files to attach to the run."
+    },
+    "x-user-agent": {
+      "status": "not_supported",
+      "note": "A header, and provider_options sets body fields."
+    }
+  }
+}

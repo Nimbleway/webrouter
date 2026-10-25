@@ -1,0 +1,83 @@
+{
+  "provider": "linkup",
+  "method": "search",
+  "class": "web_router.providers.linkup.LinkupProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.linkup.so",
+    "paths": {
+      "search_path": "/v1/search"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "LINKUP_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.depth": "fast",
+    "body.outputType": "searchResults",
+    "body.q": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.maxResults": 3
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.includeDomains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.excludeDomains": [
+          "example.org"
+        ]
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "locale",
+    "search_depth"
+  ],
+  "source": [
+    "https://docs.linkup.so/pages/documentation/endpoints/search/reference"
+  ],
+  "verified": {
+    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
+    "include_domains": "live: tests/test_integration_surface.py::test_domain_filters_are_honored",
+    "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back"
+  },
+  "vendor_options": {
+    "fromDate": {
+      "status": "passthrough",
+      "note": "YYYY-MM-DD."
+    },
+    "toDate": {
+      "status": "passthrough",
+      "note": "YYYY-MM-DD."
+    },
+    "includeImages": {
+      "status": "passthrough",
+      "note": "Boolean; an image result keeps its type in SearchResult.extra."
+    },
+    "includeInlineCitations": {
+      "status": "passthrough",
+      "note": "Only with outputType=sourcedAnswer, which returns no results list to normalize."
+    },
+    "includeSources": {
+      "status": "passthrough",
+      "note": "Only with outputType=structured, which returns no results list to normalize."
+    },
+    "structuredOutputSchema": {
+      "status": "passthrough",
+      "note": "Only with outputType=structured, which returns no results list to normalize; the data stays in raw."
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "provider": "nimble",
+  "method": "extract",
+  "class": "web_router.providers.nimble.NimbleExtractProvider",
+  "transport": {
+    "kind": "sdk"
+  },
+  "credentials": [
+    "NIMBLE_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.formats": [
+      "markdown"
+    ],
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "body.formats": [
+          "html"
+        ]
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "html",
+  "batches_urls": false,
+  "source": [
+    "https://docs.nimbleway.com/api-reference/extract/extract",
+    "nimble-python Nimble.extract.run"
+  ],
+  "verified": {
+    "format": "live: tests/test_integration_surface.py::test_html_really_comes_back_as_markup"
+  },
+  "vendor_options": {
+    "driver": {
+      "status": "passthrough",
+      "note": "auto | vx6 | vx8 | vx10 | vx12 and their -pro variants."
+    },
+    "auto_driver_configuration": {
+      "status": "passthrough",
+      "note": "Attempts per driver candidate; opts into auto driver selection."
+    },
+    "render": {
+      "status": "passthrough",
+      "note": "true | false | auto; JavaScript rendering."
+    },
+    "browser": {
+      "status": "passthrough",
+      "note": "chrome | firefox, or an object with a name and version."
+    },
+    "device": {
+      "status": "passthrough",
+      "note": "desktop | mobile | tablet."
+    },
+    "os": {
+      "status": "passthrough",
+      "note": "windows | mac os | linux | android | ios."
+    },
+    "country": {
+      "status": "passthrough",
+      "note": "ISO country code for the proxy, or ALL."
+    },
+    "state": {
+      "status": "passthrough",
+      "note": "US state code; only with country=US."
+    },
+    "city": {
+      "status": "passthrough",
+      "note": "City for geolocation."
+    },
+    "locale": {
+      "status": "passthrough",
+      "note": "Browser language and region, such as en-US."
+    },
+    "browser_actions": {
+      "status": "passthrough",
+      "note": "Scripted page steps run before capture; results stay in ExtractedDocument.extra."
+    },
+    "network_capture": {
+      "status": "passthrough",
+      "note": "Filters for captured network calls; results stay in ExtractedDocument.extra."
+    },
+    "parse": {
+      "status": "passthrough",
+      "note": "Boolean; parsed data stays in ExtractedDocument.extra."
+    },
+    "parser": {
+      "status": "passthrough",
+      "note": "Custom parser configuration; output stays in ExtractedDocument.extra."
+    },
+    "markdown_backend": {
+      "status": "passthrough",
+      "note": "full_page | main_content."
+    },
+    "headers": {
+      "status": "passthrough",
+      "note": "Custom request headers."
+    },
+    "cookies": {
+      "status": "passthrough",
+      "note": "Cookies to send, as a list or a string."
+    },
+    "method": {
+      "status": "passthrough",
+      "note": "GET | POST | PUT | PATCH | DELETE."
+    },
+    "body": {
+      "status": "passthrough",
+      "note": "Request body for POST, PUT and PATCH."
+    },
+    "http2": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "is_xhr": {
+      "status": "passthrough",
+      "note": "Boolean; emulates an XMLHttpRequest."
+    },
+    "consent_header": {
+      "status": "passthrough",
+      "note": "Boolean; handles cookie consent automatically."
+    },
+    "referrer_type": {
+      "status": "passthrough",
+      "note": "random | no-referer | same-origin | google | bing | facebook | twitter | instagram."
+    },
+    "session": {
+      "status": "passthrough",
+      "note": "Session id and retry settings for a sticky browser session."
+    },
+    "expected_status_codes": {
+      "status": "passthrough",
+      "note": "Status codes to treat as success."
+    },
+    "request_timeout": {
+      "status": "passthrough",
+      "note": "Milliseconds."
+    },
+    "skill": {
+      "status": "passthrough",
+      "note": "Capabilities the request needs; marked private in the reference."
+    },
+    "tag": {
+      "status": "passthrough",
+      "note": "Free-text label for the request."
+    },
+    "realtime_total_timeout": {
+      "status": "passthrough",
+      "note": "Seconds, in the nimble-python signature, not the API reference."
+    },
+    "file_parsing_options": {
+      "status": "passthrough",
+      "note": "Parses PDF and Office files into markdown; not in the nimble-python 1.6 signature, so send it as provider_options={'extra_body': {...}}."
+    }
+  }
+}

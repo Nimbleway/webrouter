@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from scripts.contracts import CONTRACTS_DIR, HAND_FIELDS, expected, stale
+from scripts.contracts import CONTRACTS_DIR, HAND_FIELDS, expected, providers, stale
 from web_router.exceptions import ProviderNotInstalledError
 
 VENDOR_OPTION_STATUSES = frozenset({"passthrough", "not_supported"})
@@ -36,6 +36,16 @@ def test_contracts_match_the_code() -> None:
     except ProviderNotInstalledError as exc:
         pytest.skip(f"generating every contract needs every extra (uv sync --all-extras): {exc}")
     assert stale(files) == [], "Run `make contracts` and commit the result."
+
+
+def test_every_built_in_provider_has_a_contract() -> None:
+    """A provider merges with its vendor references: start one with make contracts PROVIDER=<method>/<provider>."""
+    try:
+        built_in = {f"{method}/{name}" for method, name in providers()}
+    except ProviderNotInstalledError as exc:
+        pytest.skip(f"listing every provider needs every extra (uv sync --all-extras): {exc}")
+    missing = sorted(built_in - set(CONTRACTS))
+    assert not missing, f"no contract for {', '.join(missing)}: run make contracts PROVIDER=<method>/<provider>"
 
 
 TODO = "TODO"

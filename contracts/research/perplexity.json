@@ -1,0 +1,129 @@
+{
+  "provider": "perplexity",
+  "method": "research",
+  "class": "web_router.providers.perplexity.PerplexityResearchProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.perplexity.ai",
+    "paths": {
+      "cancel_path": "/v1/responses/{response_id}/cancel",
+      "research_path": "/v1/responses",
+      "status_path": "/v1/responses/{response_id}"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "PERPLEXITY_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.background": true,
+    "body.input": "probe query",
+    "body.preset": "medium"
+  },
+  "options": {
+    "effort": {
+      "low": {
+        "body.preset": "low"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "body.preset": "high"
+      },
+      "max": {
+        "body.preset": "xhigh"
+      }
+    }
+  },
+  "not_mapped": [
+    "exclude_domains",
+    "include_domains",
+    "output_schema",
+    "records"
+  ],
+  "source": [
+    "https://docs.perplexity.ai/api-reference/agent-post",
+    "https://docs.perplexity.ai/api-reference/agent-get",
+    "https://docs.perplexity.ai/api-reference/agent-cancel-post",
+    "https://docs.perplexity.ai/docs/agent-api/openai-compatibility"
+  ],
+  "verified": {
+    "effort": "live: tests/providers/test_perplexity_research.py::test_live_research_answers_with_citations"
+  },
+  "vendor_options": {
+    "effort": {
+      "status": "passthrough",
+      "note": "fast | low | medium | high | xhigh; the reference's name for what the mapping sends as preset."
+    },
+    "profile": {
+      "status": "passthrough",
+      "note": "A saved, versioned configuration; not with effort."
+    },
+    "model": {
+      "status": "passthrough",
+      "note": "provider/model id."
+    },
+    "models": {
+      "status": "passthrough",
+      "note": "Fallback chain of up to 5 models."
+    },
+    "instructions": {
+      "status": "passthrough",
+      "note": "System instructions."
+    },
+    "language_preference": {
+      "status": "passthrough",
+      "note": "ISO 639-1 code for the answer's language."
+    },
+    "max_output_tokens": {
+      "status": "passthrough",
+      "note": "Integer."
+    },
+    "max_steps": {
+      "status": "passthrough",
+      "note": "Bounds the research loop."
+    },
+    "reasoning": {
+      "status": "passthrough",
+      "note": "Object with the model's reasoning effort."
+    },
+    "response_format": {
+      "status": "passthrough",
+      "note": "JSON Schema output; a candidate for the shared output_schema."
+    },
+    "previous_response_id": {
+      "status": "passthrough",
+      "note": "Continues from a completed earlier response."
+    },
+    "tools": {
+      "status": "passthrough",
+      "note": "Built-in, MCP and custom tools."
+    },
+    "tool_choice": {
+      "status": "passthrough",
+      "note": "Tool choice strategy."
+    },
+    "skills": {
+      "status": "passthrough",
+      "note": "Built-in, inline and custom skills."
+    },
+    "temperature": {
+      "status": "passthrough",
+      "note": "Number."
+    },
+    "top_p": {
+      "status": "passthrough",
+      "note": "Number."
+    },
+    "store": {
+      "status": "not_supported",
+      "note": "false makes the response unretrievable, and web-router polls for it."
+    },
+    "stream": {
+      "status": "not_supported",
+      "note": "Returns server-sent events; web-router reads JSON snapshots."
+    }
+  }
+}

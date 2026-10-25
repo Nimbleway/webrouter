@@ -1,0 +1,60 @@
+{
+  "provider": "parallel-mcp",
+  "method": "search",
+  "class": "web_router.providers.parallel_mcp.ParallelMcpProvider",
+  "transport": {
+    "kind": "mcp",
+    "url": "https://search.parallel.ai",
+    "tool": "web_search"
+  },
+  "credentials": [],
+  "keyless": "always",
+  "always_sent": {
+    "body.id": 1,
+    "body.jsonrpc": "2.0",
+    "body.method": "tools/call",
+    "body.params.arguments.objective": "probe query",
+    "body.params.arguments.search_queries": [
+      "probe query"
+    ],
+    "body.params.name": "web_search"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "unchanged": "no wire change"
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "search_depth"
+  ],
+  "source": [
+    "https://docs.parallel.ai/search/search-mcp"
+  ],
+  "verified": {
+    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound"
+  },
+  "vendor_options": {
+    "session_id": {
+      "status": "passthrough",
+      "note": "Conversation id, up to 100 characters, reused across related calls."
+    },
+    "mode": {
+      "status": "not_supported",
+      "note": "A connection-level override set in the server URL or a header, and ignored on anonymous calls."
+    },
+    "source_policy": {
+      "status": "not_supported",
+      "note": "A connection-level override set in the server URL or a header, and ignored on anonymous calls."
+    },
+    "advanced_settings": {
+      "status": "not_supported",
+      "note": "A connection-level override set in the server URL or a header, and ignored on anonymous calls."
+    }
+  }
+}

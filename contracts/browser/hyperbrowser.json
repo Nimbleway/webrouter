@@ -1,0 +1,231 @@
+{
+  "provider": "hyperbrowser",
+  "method": "browser",
+  "class": "web_router.providers.hyperbrowser.HyperbrowserBrowserProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.hyperbrowser.ai",
+    "paths": {
+      "open_path": "/api/session",
+      "release_path": "/api/session/{session_id}/stop",
+      "status_path": "/api/session/{session_id}"
+    },
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "HYPERBROWSER_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body": {}
+  },
+  "options": {
+    "proxy_country": {
+      "sample": {
+        "body": "<removed>",
+        "body.proxyCountry": "US",
+        "body.useProxy": true
+      }
+    },
+    "stealth": {
+      "off": {
+        "body": "<removed>",
+        "body.useStealth": false,
+        "body.useUltraStealth": false
+      },
+      "low": {
+        "body": "<removed>",
+        "body.useStealth": true
+      },
+      "high": {
+        "body": "<removed>",
+        "body.useUltraStealth": true
+      }
+    },
+    "solve_captchas": {
+      "true": {
+        "body": "<removed>",
+        "body.solveCaptchas": true
+      },
+      "false": {
+        "body": "<removed>",
+        "body.solveCaptchas": false
+      }
+    },
+    "profile": {
+      "sample": {
+        "body": "<removed>",
+        "body.profile.id": "profile-id"
+      }
+    },
+    "persist_profile": {
+      "true": {
+        "body.profile.persistChanges": true
+      },
+      "false": {
+        "body.profile.persistChanges": false
+      }
+    },
+    "timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.timeoutMinutes": 5
+      }
+    }
+  },
+  "not_mapped": [
+    "headless",
+    "idle_timeout",
+    "viewport"
+  ],
+  "source": [
+    "https://hyperbrowser.ai/docs/api-reference/create-new-session",
+    "https://hyperbrowser.ai/docs/api-reference/stop-a-session"
+  ],
+  "verified": {
+    "proxy_country": "docs: https://hyperbrowser.ai/docs/api-reference/create-new-session",
+    "stealth": "docs: https://hyperbrowser.ai/docs/api-reference/create-new-session",
+    "solve_captchas": "docs: https://hyperbrowser.ai/docs/api-reference/create-new-session",
+    "profile": "live: tests/providers/test_hyperbrowser_browser.py::test_live_a_login_saved_to_a_profile_is_there_in_the_next_session",
+    "persist_profile": "live: tests/providers/test_hyperbrowser_browser.py::test_live_a_login_saved_to_a_profile_is_there_in_the_next_session",
+    "timeout": "docs: https://hyperbrowser.ai/docs/api-reference/create-new-session"
+  },
+  "vendor_options": {
+    "proxyServer": {
+      "status": "passthrough",
+      "note": "Custom proxy host, with proxyServerUsername and proxyServerPassword."
+    },
+    "proxyServerUsername": {
+      "status": "passthrough",
+      "note": "Custom proxy username."
+    },
+    "proxyServerPassword": {
+      "status": "passthrough",
+      "note": "Custom proxy password."
+    },
+    "proxyState": {
+      "status": "passthrough",
+      "note": "US state code for the proxy; exclusive with proxyCity."
+    },
+    "proxyCity": {
+      "status": "passthrough",
+      "note": "City for the proxy; exclusive with proxyState."
+    },
+    "staticIpId": {
+      "status": "passthrough",
+      "note": "A static IP's id."
+    },
+    "proxyRoutes": {
+      "status": "passthrough",
+      "note": "Per-host routes choosing the session's proxy or a direct connection."
+    },
+    "region": {
+      "status": "passthrough",
+      "note": "us | us-central | us-west | us-east | asia-south | europe-west."
+    },
+    "operatingSystems": {
+      "status": "passthrough",
+      "note": "Fingerprint operating systems."
+    },
+    "device": {
+      "status": "passthrough",
+      "note": "Fingerprint device types."
+    },
+    "platform": {
+      "status": "passthrough",
+      "note": "Fingerprint browser platforms."
+    },
+    "locales": {
+      "status": "passthrough",
+      "note": "Browser locales; default [\"en\"]."
+    },
+    "screen": {
+      "status": "passthrough",
+      "note": "{width, height}; default 1280x720. A candidate for the shared viewport option."
+    },
+    "solverType": {
+      "status": "passthrough",
+      "note": "visual: the visual reCAPTCHA solver."
+    },
+    "imageCaptchaParams": {
+      "status": "passthrough",
+      "note": "List of {imageSelector, inputSelector} for image CAPTCHAs."
+    },
+    "adblock": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "trackers": {
+      "status": "passthrough",
+      "note": "Boolean; blocks trackers."
+    },
+    "annoyances": {
+      "status": "passthrough",
+      "note": "Boolean; blocks cookie banners and similar."
+    },
+    "acceptCookies": {
+      "status": "passthrough",
+      "note": "Boolean; accepts cookie prompts."
+    },
+    "urlBlocklist": {
+      "status": "passthrough",
+      "note": "URL patterns the browser will not load."
+    },
+    "browserArgs": {
+      "status": "passthrough",
+      "note": "Extra Chrome command-line arguments."
+    },
+    "extensionIds": {
+      "status": "passthrough",
+      "note": "Uploaded extension ids."
+    },
+    "saveDownloads": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "enableWebRecording": {
+      "status": "passthrough",
+      "note": "Boolean; records the session."
+    },
+    "enableVideoWebRecording": {
+      "status": "passthrough",
+      "note": "Boolean; needs enableWebRecording."
+    },
+    "enableWindowManager": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "enableWindowManagerTaskbar": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "viewOnlyLiveView": {
+      "status": "passthrough",
+      "note": "Boolean; makes the live view, and so control_url(), view-only."
+    },
+    "disablePasswordManager": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "enableAlwaysOpenPdfExternally": {
+      "status": "passthrough",
+      "note": "Boolean; downloads PDFs instead of showing them."
+    },
+    "disablePostQuantumKeyAgreement": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "enableWebMcp": {
+      "status": "passthrough",
+      "note": "Boolean; exposes pages' WebMCP tools to the session."
+    },
+    "credentials": {
+      "status": "passthrough",
+      "note": "Secrets the session may fill through Hyperbrowser's credentials endpoint."
+    },
+    "webBotAuth": {
+      "status": "passthrough",
+      "note": "Signs requests with Web Bot Auth, optionally only for onlyDomains."
+    }
+  }
+}
