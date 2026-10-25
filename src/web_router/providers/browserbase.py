@@ -183,7 +183,7 @@ class BrowserbaseBrowseProvider(HttpBrowseProvider):
 
     base_url: ClassVar[str] = BROWSERBASE_BASE_URL
     start_path: ClassVar[str] = BROWSERBASE_BROWSE_START_PATH
-    run_path: ClassVar[str] = BROWSERBASE_BROWSE_RUN_PATH
+    status_path: ClassVar[str] = BROWSERBASE_BROWSE_RUN_PATH
     stop_path: ClassVar[str] = BROWSERBASE_BROWSE_STOP_PATH
     env_api_key: ClassVar[str] = ENV_BROWSERBASE_API_KEY
     api_key_header: ClassVar[str] = BROWSERBASE_API_KEY_HEADER
@@ -195,10 +195,10 @@ class BrowserbaseBrowseProvider(HttpBrowseProvider):
         return self._progress(request, await self._apost(self.start_path, self._build_payload(request)))
 
     def _fetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
-        return self._progress(request, self._get(self._task_path(self.run_path, job_id)))
+        return self._progress(request, self._get(self._task_path(self.status_path, job_id)))
 
     async def _afetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
-        return self._progress(request, await self._aget(self._task_path(self.run_path, job_id)))
+        return self._progress(request, await self._aget(self._task_path(self.status_path, job_id)))
 
     def _cancel(self, job_id: str) -> bool:
         try:

@@ -56,7 +56,7 @@ class SkyvernBrowseProvider(HttpBrowseProvider):
 
     base_url: ClassVar[str] = SKYVERN_BASE_URL
     start_path: ClassVar[str] = SKYVERN_RUN_TASK_PATH
-    run_path: ClassVar[str] = SKYVERN_RUN_PATH
+    status_path: ClassVar[str] = SKYVERN_RUN_PATH
     cancel_path: ClassVar[str] = SKYVERN_CANCEL_PATH
     env_api_key: ClassVar[str] = ENV_SKYVERN_API_KEY
     api_key_header: ClassVar[str] = SKYVERN_API_KEY_HEADER
@@ -68,10 +68,10 @@ class SkyvernBrowseProvider(HttpBrowseProvider):
         return self._progress(request, await self._apost(self.start_path, self._build_payload(request)))
 
     def _fetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
-        return self._progress(request, self._get(self._task_path(self.run_path, job_id)))
+        return self._progress(request, self._get(self._task_path(self.status_path, job_id)))
 
     async def _afetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
-        return self._progress(request, await self._aget(self._task_path(self.run_path, job_id)))
+        return self._progress(request, await self._aget(self._task_path(self.status_path, job_id)))
 
     def _cancel(self, job_id: str) -> bool:
         # Answered with an untyped body, so success is the status alone. A run

@@ -112,17 +112,17 @@ class ParallelResearchProvider(HttpResearchProvider):
     supported_parameters: ClassVar[frozenset[str]] = frozenset({"effort", "output_schema"})
 
     base_url: ClassVar[str] = PARALLEL_BASE_URL
-    run_path: ClassVar[str] = PARALLEL_TASK_RUN_PATH
+    research_path: ClassVar[str] = PARALLEL_TASK_RUN_PATH
     status_path: ClassVar[str] = PARALLEL_TASK_STATUS_PATH
     result_path: ClassVar[str] = PARALLEL_TASK_RESULT_PATH
     env_api_key: ClassVar[str | None] = ENV_PARALLEL_API_KEY
     api_key_header: ClassVar[str] = PARALLEL_API_KEY_HEADER
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
-        return self._read(request, self._post(self.run_path, self._build_payload(request)))
+        return self._read(request, self._post(self.research_path, self._build_payload(request)))
 
     async def _astart(self, request: ResearchRequest) -> ResearchProgress:
-        return await self._aread(request, await self._apost(self.run_path, self._build_payload(request)))
+        return await self._aread(request, await self._apost(self.research_path, self._build_payload(request)))
 
     def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
         return self._read(request, self._get(self.status_path.format(run_id=job_id)))
