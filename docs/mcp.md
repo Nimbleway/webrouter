@@ -184,7 +184,7 @@ the client's `env` block or a file the server already read takes a restart.
 | Tool | What it is for | Latency |
 | --- | --- | --- |
 | `search` | Find pages: ranked links with their titles and page text. | about a second |
-| `extract` | Read pages you already have URLs for, as markdown, HTML or text. `provider="max"` reads through every configured backend at once and returns the first answer, at one fetch per backend. | about a second |
+| `extract` | Read pages you already have URLs for, as markdown, HTML or text. `provider="max"` reads through every configured backend at once and returns the first answer, at one fetch per backend per URL. | about a second |
 | `research` | Start an agentic run that searches, reads and cross-checks over many turns. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the run** |
 | `research_status` | Poll a handle from `research`: its state, or the answer once it has one. | about a second, and free |
 | `browse` | Hand a task to a hosted browser agent that clicks, types and reads through pages. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the task** |

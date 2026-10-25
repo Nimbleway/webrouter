@@ -396,9 +396,13 @@ failure is that member's loss and the race goes on, any other
 `WebRouterError` propagates, and with no winner `_exhausted` names each
 member's reason under `MAX_AGGREGATE_FAILURE`. It never judges the responses
 it did not return -- the first document is the answer, which is "never invent
-data" applied to a race. `hedge` is the one knob: the first eligible member
+data" applied to a race. Every fetch a member starts is billed, and most
+members take one URL per request, so a call costs up to one fetch per member
+per URL; a sync loser keeps fetching the URLs it has not reached after the
+winner returned. `hedge` is the one knob: the first eligible member
 runs alone for that many seconds, the rest start when it runs out or when
-that member fails, whichever comes first. The whole URL list is one race, so
+that member fails, whichever comes first; it covers that member's whole call,
+so it caps the cost of a one-URL request, not of a list. The whole URL list is one race, so
 every document comes from the winner -- and a member whose answer has
 `failures` fetched part of the list, so `_Losses` holds it while another
 member can still answer and returns the one with the fewest failures only

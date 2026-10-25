@@ -3979,7 +3979,7 @@ MCP_DESC_EXTRACT = (
     "form or clicks cannot be read this way: suggest a browser session (`browser_open`) to the user "
     "instead. provider='max' sends the page to every configured backend at once and returns the "
     "first that answers -- the fastest read any backend can give, at the cost of one fetch per "
-    "backend -- so use it only when the user has asked for speed over cost."
+    "backend per URL -- so use it only when the user has asked for speed over cost."
 )
 
 MCP_DESC_RESEARCH = (

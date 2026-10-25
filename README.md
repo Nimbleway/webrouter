@@ -629,8 +629,11 @@ response.provider  # whoever answered first -- never 'max'
 
 It is for the caller who wants the fastest working extract and is willing to
 pay for it: every fetch `max` starts is billed by its backend, so a call costs
-up to one extract per configured backend. That is why it is never the default
-and has to be named. The members are exactly the ones `auto` would try, in the
+up to one extract **per configured backend per URL**. Most backends take one
+URL per request, and a loser keeps fetching the URLs it has not reached after
+the winner has returned, so ten URLs through three backends can bill thirty
+fetches where `auto` bills ten. That is why it is never the default and has to
+be named. The members are exactly the ones `auto` would try, in the
 same order, chosen the same way: a `chain` set under `"auto"` in
 `provider_config` narrows `max` too, so a paid backend taken out of one is out
 of both, and `max` races a different list only when its own `"max"` entry
@@ -655,8 +658,12 @@ router = WebRouter(Provider.MAX, provider_config={"max": {"hedge": 0.8}})
 ```
 
 A page the first backend returns within the hedge costs one fetch; only the
-slow ones pay for the race. A first member that fails before the hedge runs
-out starts the rest at once. Unset, every member starts together.
+slow ones pay for the race. A first member that fails, or answers in part,
+before the hedge runs out starts the rest at once. Unset, every member starts
+together. The hedge covers the first member's whole call, however many URLs it
+carries: it caps the cost of a one-URL request, not of a list, since a first
+member slower than the hedge on a list of URLs starts every other member on
+the whole list.
 
 `max` is left out of `benchmark()`'s default set as `auto` is: a row for it
 would repeat one of the others under a name that says nothing about who

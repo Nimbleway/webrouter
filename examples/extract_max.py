@@ -3,9 +3,9 @@
 `auto` tries backends one after another; `max` sends the same URL to all of
 them at the same time and returns whichever answers first. It is the fastest
 read any backend can give, and it bills one fetch per backend that was
-started -- so it is never the default. A `hedge` keeps most calls to one
-fetch: the first backend runs alone for that long, and the rest join only if
-it has not answered.
+started, per URL -- so it is never the default. A `hedge` keeps most one-URL
+calls to one fetch: the first backend runs alone for that long, and the rest
+join only if it has not answered.
 
 Needs no key: with none, the race is between the keyless backends. Every key
 you hold adds a runner.
