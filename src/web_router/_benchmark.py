@@ -80,22 +80,22 @@ def members_of(
         seen.add(name)
         try:
             members.append((name, build(item)))
-        except WebRouterError as exc:
-            members.append((name, exc))
         except Exception as exc:
-            members.append((name, _unexpected(name, exc)))
+            members.append((name, _failure(name, exc)))
     if not members:
         raise ValueError(none_named)
     return members
 
 
-def _unexpected(name: str, exc: Exception) -> ProviderError:
-    """A failure the public path did not wrap -- a provider bug, a caller's own provider -- as the row's error.
+def _failure(name: str, exc: Exception) -> WebRouterError:
+    """What a call raised, as its row's error: a router error as it is, anything else wrapped.
 
-    The public methods wrap every backend failure, so nothing should reach
-    here; when something does, the report still comes back with this row
-    saying what raised, as its docstring promises.
+    The public methods wrap every backend failure, so only a router error
+    should reach here; when something else does -- a provider bug, a caller's
+    own provider -- the report still comes back with this row saying what raised.
     """
+    if isinstance(exc, WebRouterError):
+        return exc
     return ProviderError(name, MSG_BENCHMARK_ROW_FAILED.format(error=exc), original=exc)
 
 
@@ -135,10 +135,8 @@ def _start(
         own = time.perf_counter()
         try:
             outcome: _AnswerT | WebRouterError = call(provider)
-        except WebRouterError as exc:
-            outcome = exc
         except Exception as exc:
-            outcome = _unexpected(name, exc)
+            outcome = _failure(name, exc)
         return row_of(name, own, outcome)
 
     live = [(name, member) for name, member in members if not isinstance(member, WebRouterError)]
@@ -194,10 +192,8 @@ async def afan_out(
             outcome: _AnswerT | WebRouterError = await asyncio.wait_for(call(member), remaining)
         except asyncio.TimeoutError:
             outcome = BenchmarkTimeoutError(name, timeout or 0.0)
-        except WebRouterError as exc:
-            outcome = exc
         except Exception as exc:
-            outcome = _unexpected(name, exc)
+            outcome = _failure(name, exc)
         return row_of(name, own, outcome)
 
     return list(await asyncio.gather(*(row(name, member) for name, member in members)))
