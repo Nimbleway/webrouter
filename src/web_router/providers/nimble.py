@@ -3,8 +3,9 @@
 Search, extract and research are separate classes over one SDK client: the
 Search API ranks the web, the Extract API fetches a page you already have the
 URL of, and the Web Search Agent researches a question over several turns.
-Install with the ``search`` extra, ``[extract]`` or
-``[research]``. All three read ``NIMBLE_API_KEY`` unless a key is passed
+The Extract Template class is next door in :mod:`web_router.providers.nimble_template`,
+on the same clients. Install with the ``search`` extra, ``[extract]`` or
+``[research]``. All of them read ``NIMBLE_API_KEY`` unless a key is passed
 explicitly, or use a caller's own ``AsyncNimble`` passed as ``async_client``.
 """
 
@@ -47,7 +48,7 @@ from web_router.providers._utils import (
     research_budget,
     resolve_api_key,
 )
-from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider
+from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider, _BaseProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -68,8 +69,12 @@ from web_router.types import (
 )
 
 
-class _NimbleClients:
-    """The SDK clients a Nimble provider calls through, built here or handed in by the caller.
+class _NimbleClients(_BaseProvider):
+    """What the four Nimble classes share: one constructor, and the SDK clients it builds or is handed.
+
+    Each class lists this first and its method's base second, so the
+    constructor here resolves the key and builds the clients before the
+    method's base sees the kwargs.
 
     By default a provider builds a sync and an async client from its key and
     closes both. Given an ``async_client``, it uses that one instead -- one
@@ -85,6 +90,31 @@ class _NimbleClients:
     _client: Nimble | None
     _async_client: AsyncNimble
     _owns_clients: bool
+
+    def __init__(
+        self,
+        *,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        timeout: float | None = None,
+        async_client: AsyncNimble | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Args:
+            api_key: Nimble's key; unset, read from ``NIMBLE_API_KEY``.
+            base_url: Where the SDK sends its requests; unset, the SDK's own.
+            timeout: Each request's limit, in seconds; unset, the SDK's own.
+            async_client: A caller's own ``AsyncNimble``, used instead of
+                building clients from a key -- see the class docstring.
+            **kwargs: Further SDK client options, laid over the client.
+
+        Raises:
+            ConfigurationError: for no key anywhere, or a key beside a client.
+        """
+        key = _resolve_key(api_key, async_client, self.name)
+        super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
+        self._connect(key, async_client)
 
     def _connect(self, api_key: str | None, async_client: AsyncNimble | None) -> None:
         client_kwargs = compact({**self.options, "api_key": api_key})
@@ -133,19 +163,6 @@ class NimbleProvider(_NimbleClients, SearchProvider):
     name: ClassVar[str] = PROVIDER_NIMBLE
     supported_parameters: ClassVar[frozenset[str]] = NORMALIZED_PARAMETERS
 
-    def __init__(
-        self,
-        *,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        timeout: float | None = None,
-        async_client: AsyncNimble | None = None,
-        **kwargs: Any,
-    ) -> None:
-        key = _resolve_key(api_key, async_client, self.name)
-        super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
-        self._connect(key, async_client)
-
     def _search(self, request: SearchRequest) -> SearchResponse:
         raw = self._sync_client.search(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
@@ -192,19 +209,6 @@ class NimbleExtractProvider(_NimbleClients, ExtractProvider):
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(NIMBLE_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = NIMBLE_EXTRACT_DEFAULT_FORMAT
-
-    def __init__(
-        self,
-        *,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        timeout: float | None = None,
-        async_client: AsyncNimble | None = None,
-        **kwargs: Any,
-    ) -> None:
-        key = _resolve_key(api_key, async_client, self.name)
-        super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
-        self._connect(key, async_client)
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         raw = self._sync_client.extract.run(**self._build_payload(request, urls))
@@ -268,9 +272,7 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
         async_client: AsyncNimble | None = None,
         **kwargs: Any,
     ) -> None:
-        key = _resolve_key(api_key, async_client, self.name)
-        super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
-        self._connect(key, async_client)
+        super().__init__(api_key=api_key, base_url=base_url, timeout=timeout, async_client=async_client, **kwargs)
         self._research_timeout = timeout if timeout is not None else self._default_timeout(async_client)
 
     @staticmethod

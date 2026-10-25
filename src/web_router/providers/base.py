@@ -71,6 +71,9 @@ from web_router.constants import (
     MSG_RESEARCH_FAILED,
     MSG_RESEARCH_NOT_RESUMABLE,
     MSG_SEARCH_FAILED,
+    MSG_TEMPLATE_FAILED,
+    MSG_TEMPLATE_GET_FAILED,
+    MSG_TEMPLATES_FAILED,
     MSG_UNSUPPORTED_PROXY_COUNTRY,
     MSG_UNSUPPORTED_STEALTH,
     RESEARCH_TIMEOUT,
@@ -111,6 +114,10 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
     StealthLevel,
+    Template,
+    TemplatePage,
+    TemplateRequest,
+    TemplateResponse,
 )
 
 if TYPE_CHECKING:
@@ -445,6 +452,127 @@ class _Collected:
         detail = "; ".join(f"{failure.url}: {failure.error}" for failure in failures)
         original = self.errors[0][1].original if self.errors else None
         return ProviderError(self.provider, MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail), original=original)
+
+
+class TemplateProvider(_BaseProvider):
+    """Base class for an Extract Template backend.
+
+    A template is a saved, site-specific extraction the backend holds: run on
+    one page, it returns a record with fixed fields rather than the page's
+    text. The three things a caller does with a catalogue of them -- list it,
+    describe one, run one -- are the three methods here, each with its ``a``
+    twin. To add a backend, set :attr:`name`, :attr:`supported_parameters` and
+    :attr:`supported_formats`, then implement :meth:`_run`, :meth:`_list` and
+    :meth:`_get` with their async counterparts. See CONTRIBUTING.md for the
+    full checklist.
+
+    A run is one page, one record: there is no fan-out to fold, and a run the
+    backend could not complete raises rather than coming back empty, which is
+    the extract rule -- nothing came back, so say why -- with one URL.
+    """
+
+    supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset()
+    """Representations of the page this backend can return beside the record.
+
+    A format outside this set raises :class:`UnsupportedFormatError` rather
+    than coming back as a different representation under the requested name.
+    Unlike an extract there is no default to pin: with no format asked for,
+    no page comes back, on every backend alike.
+    """
+
+    # -- What subclasses implement -------------------------------------------
+
+    @abc.abstractmethod
+    def _run(self, request: TemplateRequest) -> TemplateResponse:
+        """Run the template. The request is already validated; errors are wrapped for you."""
+
+    @abc.abstractmethod
+    async def _arun(self, request: TemplateRequest) -> TemplateResponse:
+        """Async counterpart of :meth:`_run`."""
+
+    @abc.abstractmethod
+    def _list(self, *, limit: int | None, offset: int | None) -> TemplatePage:
+        """List one page of the catalogue. ``None`` means the caller left it to the backend."""
+
+    @abc.abstractmethod
+    async def _alist(self, *, limit: int | None, offset: int | None) -> TemplatePage:
+        """Async counterpart of :meth:`_list`."""
+
+    @abc.abstractmethod
+    def _get(self, name: str) -> Template:
+        """Describe one template by name."""
+
+    @abc.abstractmethod
+    async def _aget(self, name: str) -> Template:
+        """Async counterpart of :meth:`_get`."""
+
+    # -- What callers use ----------------------------------------------------
+
+    def run(self, request: TemplateRequest) -> TemplateResponse:
+        """Validate the request, run the template, and wrap any backend failure."""
+        self.validate(request)
+        try:
+            return self._run(request)
+        except WebRouterError:
+            raise
+        except Exception as exc:
+            raise ProviderError(self.name, MSG_TEMPLATE_FAILED.format(error=exc), original=exc) from exc
+
+    async def arun(self, request: TemplateRequest) -> TemplateResponse:
+        """Async counterpart of :meth:`run`."""
+        self.validate(request)
+        try:
+            return await self._arun(request)
+        except WebRouterError:
+            raise
+        except Exception as exc:
+            raise ProviderError(self.name, MSG_TEMPLATE_FAILED.format(error=exc), original=exc) from exc
+
+    def templates(self, *, limit: int | None = None, offset: int | None = None) -> TemplatePage:
+        """List one page of this backend's templates, wrapping any backend failure.
+
+        ``limit`` and ``offset`` left unset are not sent, so the backend pages
+        as it would for any client of its own.
+        """
+        try:
+            return self._list(limit=limit, offset=offset)
+        except WebRouterError:
+            raise
+        except Exception as exc:
+            raise ProviderError(self.name, MSG_TEMPLATES_FAILED.format(error=exc), original=exc) from exc
+
+    async def atemplates(self, *, limit: int | None = None, offset: int | None = None) -> TemplatePage:
+        """Async counterpart of :meth:`templates`."""
+        try:
+            return await self._alist(limit=limit, offset=offset)
+        except WebRouterError:
+            raise
+        except Exception as exc:
+            raise ProviderError(self.name, MSG_TEMPLATES_FAILED.format(error=exc), original=exc) from exc
+
+    def template(self, name: str) -> Template:
+        """Describe one template by name, wrapping any backend failure -- an unknown name included."""
+        try:
+            return self._get(name)
+        except WebRouterError:
+            raise
+        except Exception as exc:
+            raise ProviderError(self.name, MSG_TEMPLATE_GET_FAILED.format(name=name, error=exc), original=exc) from exc
+
+    async def atemplate(self, name: str) -> Template:
+        """Async counterpart of :meth:`template`."""
+        try:
+            return await self._aget(name)
+        except WebRouterError:
+            raise
+        except Exception as exc:
+            raise ProviderError(self.name, MSG_TEMPLATE_GET_FAILED.format(name=name, error=exc), original=exc) from exc
+
+    def validate(self, request: TemplateRequest) -> None:
+        """Raise for any option this backend does not map, or format it cannot return beside the record."""
+        self._reject_unmapped(request)
+        if request.format is not None and request.format not in self.supported_formats:
+            raise UnsupportedFormatError(self.name, request.format, self.supported_formats)
 
 
 class _Default(enum.Enum):

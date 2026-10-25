@@ -25,6 +25,7 @@ from web_router.constants import (
     ENV_NIMBLE_API_KEY,
     ENV_TAVILY_API_KEY,
     MCP_BROWSER_TOOLS,
+    MCP_METHOD_TEMPLATE,
     MCP_REDACTED,
     MCP_RESOURCE_URI,
     MCP_TOOL_BROWSE,
@@ -35,7 +36,10 @@ from web_router.constants import (
     MCP_TOOL_LOAD_ENV,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
+    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
+    MCP_TOOL_TEMPLATE,
+    MCP_TOOL_TEMPLATES,
     PROVIDER_AUTO,
     PROVIDER_BRAVE,
     PROVIDER_EXA_MCP,
@@ -69,10 +73,13 @@ def _payload(result: Any) -> dict[str, Any]:
     return parsed
 
 
-def test_serves_exactly_seventeen_tools(tools: WebRouterTools) -> None:
+def test_serves_exactly_twenty_tools(tools: WebRouterTools) -> None:
     assert [tool.name for tool in list_tools(tools).tools] == [
         MCP_TOOL_SEARCH,
         MCP_TOOL_EXTRACT,
+        MCP_TOOL_TEMPLATES,
+        MCP_TOOL_TEMPLATE,
+        MCP_TOOL_RUN_TEMPLATE,
         MCP_TOOL_RESEARCH,
         MCP_TOOL_RESEARCH_STATUS,
         MCP_TOOL_BROWSE,
@@ -212,6 +219,110 @@ async def test_extract_drops_raw_and_fetch_raw_returns_it(tools: WebRouterTools)
 
     raw = _payload(await call_tool(tools, MCP_TOOL_FETCH_RAW, {"handle": shaped["handle"]}))
     assert raw["raw"] == [{"urls": ["https://example.com"]}]
+
+
+async def test_templates_lists_the_catalogue_and_template_describes_one(tools: WebRouterTools) -> None:
+    listed = _payload(await call_tool(tools, MCP_TOOL_TEMPLATES, {"limit": 10, "provider": FAKE}))
+
+    assert listed["provider"] == FAKE
+    assert [row["name"] for row in listed["templates"]] == ["books_pdp", "jobs_listing"]
+    assert listed["total"] == 2 and listed["limit"] == 10
+    # A listing is the few words a template is picked by; the schemas are `template`'s.
+    assert "input_schema" not in listed["templates"][0]
+    assert listed["handle"].startswith(MCP_TOOL_TEMPLATES)
+
+    described = _payload(await call_tool(tools, MCP_TOOL_TEMPLATE, {"name": "books_pdp", "provider": FAKE}))
+
+    assert described["template"]["name"] == "books_pdp"
+    assert described["template"]["input_schema"]["required"] == ["url"]
+    assert described["template"]["output_schema"]["properties"]["title"] == {"type": "string"}
+    assert tools.router.get_template_provider(FAKE).listed == [(10, None)]  # type: ignore[attr-defined]
+
+
+async def test_run_template_passes_the_inputs_through_and_returns_the_record(tools: WebRouterTools) -> None:
+    inputs = {"url": "https://example.com/page"}
+    shaped = _payload(
+        await call_tool(tools, MCP_TOOL_RUN_TEMPLATE, {"template": "books_pdp", "inputs": inputs, "provider": FAKE})
+    )
+
+    assert shaped["provider"] == FAKE
+    assert shaped["template"] == "books_pdp"
+    assert shaped["data"] == {"title": "Example", "inputs": inputs}
+    assert shaped["document"] is None, "no format asked for means no page beside the record"
+    assert "raw" not in shaped and "inputs" not in shaped
+
+    request = tools.router.get_template_provider(FAKE).requests[-1]  # type: ignore[attr-defined]
+    assert request.inputs == inputs and request.format is None
+
+    raw = _payload(await call_tool(tools, MCP_TOOL_FETCH_RAW, {"handle": shaped["handle"]}))
+    assert raw["raw"] == {"template": "books_pdp", "inputs": inputs}
+
+
+async def test_run_template_with_a_format_returns_the_page_beside_the_record(tools: WebRouterTools) -> None:
+    shaped = _payload(
+        await call_tool(
+            tools,
+            MCP_TOOL_RUN_TEMPLATE,
+            {"template": "books_pdp", "inputs": {}, "format": "markdown", "provider": FAKE},
+        )
+    )
+
+    assert shaped["document"]["format"] == "markdown"
+    assert shaped["document"]["content"] == "# Page"
+
+
+async def test_run_template_without_the_template_names_it(tools: WebRouterTools) -> None:
+    result = await call_tool(tools, MCP_TOOL_RUN_TEMPLATE, {"inputs": {"url": "https://example.com"}, "provider": FAKE})
+
+    assert result.is_error
+    assert "'template'" in result.content[0].text
+
+
+async def test_the_template_tools_require_the_provider(
+    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A template's name belongs to one vendor, so these three tools alone make `provider` required."""
+    # A key, so the schema has a `provider` to require; with none the tool is dead and lists no provider at all.
+    monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
+    for name, arguments in (
+        (MCP_TOOL_TEMPLATES, {}),
+        (MCP_TOOL_TEMPLATE, {"name": "books_pdp"}),
+        (MCP_TOOL_RUN_TEMPLATE, {"template": "books_pdp"}),
+    ):
+        result = await call_tool(tools, name, arguments)
+        assert result.is_error and "'provider'" in result.content[0].text, name
+        assert "provider" in _tool(tools, name).input_schema["required"]
+    assert "provider" not in _tool(tools, MCP_TOOL_EXTRACT).input_schema["required"]
+
+
+def test_the_template_tools_say_so_when_nothing_can_serve_them(
+    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A template run fetches on the backend's account, so with no key the
+    # three tools are dead and say so, naming the variable that would fix it.
+    for name in (MCP_TOOL_TEMPLATES, MCP_TOOL_TEMPLATE, MCP_TOOL_RUN_TEMPLATE):
+        assert "NOTHING IS CONFIGURED" in _tool(tools, name).description
+        assert ENV_NIMBLE_API_KEY in _tool(tools, name).description
+        schema = _tool(tools, name).input_schema
+        assert "provider" not in schema["properties"] and "provider" not in schema["required"]
+
+    monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
+    for name in (MCP_TOOL_TEMPLATES, MCP_TOOL_TEMPLATE, MCP_TOOL_RUN_TEMPLATE):
+        assert "NOTHING IS CONFIGURED" not in _tool(tools, name).description
+        assert _tool(tools, name).input_schema["properties"]["provider"]["enum"] == ["nimble"]
+
+
+def test_the_capabilities_key_the_template_tools_method_once(
+    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    body = json.loads(read_resource(tools, MCP_RESOURCE_URI).contents[0].text)
+
+    assert body[MCP_METHOD_TEMPLATE] == [], "no keyless tier and no auto"
+    assert MCP_TOOL_TEMPLATES not in body and MCP_TOOL_RUN_TEMPLATE not in body
+    assert body["unlock"][MCP_METHOD_TEMPLATE] == {"nimble": [ENV_NIMBLE_API_KEY]}
+
+    monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
+    assert MCP_METHOD_TEMPLATE not in tools.capabilities()["unlock"]
 
 
 async def test_fetch_raw_refuses_a_handle_it_never_issued(tools: WebRouterTools) -> None:

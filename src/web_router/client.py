@@ -10,6 +10,12 @@ some extract backends do not search. Each method resolves the name against its
 own registry, so asking one for a backend that only serves another reports it
 as unknown and lists the ones that method does serve.
 
+:meth:`WebRouter.run_template` runs one of a vendor's templates -- a saved,
+site-specific extraction that turns one page into a record -- and
+:meth:`WebRouter.templates` and :meth:`WebRouter.template` list and describe
+the catalogue it is picked from; the three share one registry, and all three
+need ``provider`` named, since a template's name belongs to one vendor.
+
 :meth:`WebRouter.research` is the third method and the one that behaves
 differently: an agentic run takes minutes rather than milliseconds, so it waits
 for the answer -- or hands back a :class:`~web_router.ResearchJob` through
@@ -70,6 +76,7 @@ from web_router.providers.base import (
     ResearchJob,
     ResearchProvider,
     SearchProvider,
+    TemplateProvider,
 )
 from web_router.registry import (
     available_browse_providers,
@@ -77,12 +84,14 @@ from web_router.registry import (
     available_extract_providers,
     available_providers,
     available_research_providers,
+    available_template_providers,
     configured_providers,
     create_browse_provider,
     create_browser_provider,
     create_extract_provider,
     create_provider,
     create_research_provider,
+    create_template_provider,
 )
 from web_router.types import (
     BenchmarkReport,
@@ -101,6 +110,10 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
     StealthLevel,
+    Template,
+    TemplatePage,
+    TemplateRequest,
+    TemplateResponse,
     Viewport,
     provider_name,
 )
@@ -140,6 +153,7 @@ class _BaseRouter(Generic[_HandleT]):
         known = (
             available_providers()
             + available_extract_providers()
+            + available_template_providers()
             + available_research_providers()
             + available_browser_providers()
             + available_browse_providers()
@@ -158,6 +172,7 @@ class _BaseRouter(Generic[_HandleT]):
         # different class per method, and a vendor serving all three is three
         # objects here.
         self._extract_instances: dict[str, ExtractProvider] = {}
+        self._template_instances: dict[str, TemplateProvider] = {}
         self._research_instances: dict[str, ResearchProvider] = {}
         self._browser_instances: dict[str, BrowserProvider] = {}
         self._browse_instances: dict[str, BrowseProvider] = {}
@@ -169,7 +184,7 @@ class _BaseRouter(Generic[_HandleT]):
         # across threads, each with its own loop, and nothing awaits while it
         # is held, so it can never stall an event loop.
         self._handles_lock = threading.Lock()
-        # One lock for the five instance caches: evaluate() calls benchmark()
+        # One lock for the six instance caches: evaluate() calls benchmark()
         # from worker threads, so two rows can race the same check-then-create
         # and the loser's client would never be closed. Nothing awaits while it
         # is held.
@@ -228,6 +243,22 @@ class _BaseRouter(Generic[_HandleT]):
             if key not in self._extract_instances:
                 self._extract_instances[key] = create_extract_provider(key, **self._config_for(key))
             return self._extract_instances[key]
+
+    def get_template_provider(self, name: str | Provider | TemplateProvider) -> TemplateProvider:
+        """Return the named template provider, constructing and caching it on first use.
+
+        The template counterpart of :meth:`get_provider`, with the same
+        ownership rule -- but no default: a template's name belongs to one
+        vendor, so the caller always says which.
+        """
+        if isinstance(name, TemplateProvider):
+            return name
+
+        key = provider_name(name)
+        with self._providers_lock:
+            if key not in self._template_instances:
+                self._template_instances[key] = create_template_provider(key, **self._config_for(key))
+            return self._template_instances[key]
 
     def get_research_provider(self, name: str | Provider | ResearchProvider | None = None) -> ResearchProvider:
         """Return the named research provider, constructing and caching it on first use.
@@ -448,10 +479,13 @@ class _BaseRouter(Generic[_HandleT]):
 
     def _all_instances(
         self,
-    ) -> list[SearchProvider | ExtractProvider | ResearchProvider | BrowserProvider | BrowseProvider]:
+    ) -> list[
+        SearchProvider | ExtractProvider | TemplateProvider | ResearchProvider | BrowserProvider | BrowseProvider
+    ]:
         return [
             *self._instances.values(),
             *self._extract_instances.values(),
+            *self._template_instances.values(),
             *self._research_instances.values(),
             *self._browser_instances.values(),
             *self._browse_instances.values(),
@@ -731,6 +765,61 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         """
         request = self._build_extract_request(urls, format=format, provider_options=provider_options)
         return self.get_extract_provider(provider).extract(request)
+
+    def templates(
+        self,
+        *,
+        provider: str | Provider | TemplateProvider,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> TemplatePage:
+        """List one page of the templates ``provider`` holds.
+
+        A template is a vendor's saved, site-specific extraction: run on one
+        page of the site it was built for, it returns a record with fixed
+        fields. Names, inputs and fields are the vendor's own, which is why
+        ``provider`` has no default. The page says where in the catalogue it
+        sits and, when the backend reports it, how many templates there are
+        in all; ``limit`` and ``offset`` left unset leave the paging to the
+        backend.
+        """
+        return self.get_template_provider(provider).templates(limit=limit, offset=offset)
+
+    def template(
+        self,
+        name: str,
+        *,
+        provider: str | Provider | TemplateProvider,
+    ) -> Template:
+        """Describe one template: the inputs a run takes and the record it returns, as JSON Schema."""
+        return self.get_template_provider(provider).template(name)
+
+    def run_template(
+        self,
+        template: str,
+        inputs: Mapping[str, Any] | None = None,
+        *,
+        provider: str | Provider | TemplateProvider,
+        format: ExtractFormat | None = None,
+        provider_options: dict[str, Any] | None = None,
+    ) -> TemplateResponse:
+        """Run one of ``provider``'s templates on one page and return its record.
+
+        ``inputs`` are the template's own, named by its
+        :attr:`~web_router.Template.input_schema` -- a URL for some
+        templates, an id, a slug or a search term for others. ``format`` asks
+        for the page beside the record; unset, the record comes back alone.
+        A run the backend could not complete raises rather than coming back
+        with an empty record, and an unknown name raises
+        :class:`~web_router.TemplateNotFoundError`. One call is one page and
+        one set of inputs: a backend whose templates run as jobs over many
+        inputs would answer through its synchronous endpoint, under that
+        endpoint's own time cap.
+        """
+        request = TemplateRequest(
+            template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
+        )
+        return self.get_template_provider(provider).run(request)
 
     def research(
         self,
@@ -1115,6 +1204,44 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle]):
         """
         request = self._build_extract_request(urls, format=format, provider_options=provider_options)
         return await self.get_extract_provider(provider).aextract(request)
+
+    async def templates(
+        self,
+        *,
+        provider: str | Provider | TemplateProvider,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> TemplatePage:
+        """List one page of the templates ``provider`` holds."""
+        return await self.get_template_provider(provider).atemplates(limit=limit, offset=offset)
+
+    async def template(
+        self,
+        name: str,
+        *,
+        provider: str | Provider | TemplateProvider,
+    ) -> Template:
+        """Describe one template: the inputs a run takes and the record it returns, as JSON Schema."""
+        return await self.get_template_provider(provider).atemplate(name)
+
+    async def run_template(
+        self,
+        template: str,
+        inputs: Mapping[str, Any] | None = None,
+        *,
+        provider: str | Provider | TemplateProvider,
+        format: ExtractFormat | None = None,
+        provider_options: dict[str, Any] | None = None,
+    ) -> TemplateResponse:
+        """Run one of ``provider``'s templates on one page and return its record.
+
+        As on the sync router: ``inputs`` are the template's own, and
+        ``format`` asks for the page beside the record.
+        """
+        request = TemplateRequest(
+            template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
+        )
+        return await self.get_template_provider(provider).arun(request)
 
     async def research(
         self,
