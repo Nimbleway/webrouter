@@ -111,6 +111,15 @@ def test_the_extract_schema_reads_max_as_the_members_it_would_race(no_keys: None
     assert all(cls.name in router.get_extract_provider(PROVIDER_MAX).members for cls in serving)  # type: ignore[attr-defined]
 
 
+def test_a_method_with_only_delegating_providers_configured_is_not_usable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``max`` needs no key of its own any more than ``auto`` does, so neither counts as a backend that can run."""
+    from web_router.mcp import tools as module
+
+    monkeypatch.setitem(module._CONFIGURED, MCP_TOOL_EXTRACT, lambda: [PROVIDER_AUTO, PROVIDER_MAX])
+
+    assert not module._usable(MCP_TOOL_EXTRACT)
+
+
 def test_the_extract_tool_says_what_max_costs(tools: WebRouterTools) -> None:
     description = _tool(tools, MCP_TOOL_EXTRACT).description
     assert "provider='max'" in description and "one fetch per backend" in description
