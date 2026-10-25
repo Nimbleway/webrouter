@@ -77,7 +77,8 @@ def row_of(url: str, category: str | None, run: ExtractBenchmarkRun) -> dict[str
     per fan-out, so a call that answered carries at most the one document.
     """
     document = run.response.documents[0] if run.ok and run.response is not None and run.response.documents else None
-    chars = len(document.content) if document is not None else 0
+    # Stripped: a page that came back as whitespace has no text, and counting it would lift the backend's rate.
+    chars = len(document.content.strip()) if document is not None else 0
     return {
         "url": url,
         "category": category,

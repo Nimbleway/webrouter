@@ -93,6 +93,14 @@ def test_a_row_records_what_came_back_and_nothing_it_did_not(scan: ModuleType) -
     )
     assert row["returned"] and not row["with_text"] and row["chars"] == 0 and row["status_code"] is None
 
+    blank = ExtractedDocument(url="https://a.test", content="\n\n  \t", format="markdown")
+    row = scan.row_of(
+        "https://a.test",
+        None,
+        ExtractBenchmarkRun(provider="jina", latency=0.1, response=ExtractResponse(provider="jina", documents=[blank])),
+    )
+    assert row["returned"] and not row["with_text"] and row["chars"] == 0, "whitespace is not text"
+
     failed = ExtractBenchmarkRun(provider="exa", latency=2.0, error=BenchmarkTimeoutError("exa", 2.0))
     row = scan.row_of("https://a.test", None, failed)
     assert not row["returned"] and row["chars"] == 0 and row["format"] is None
