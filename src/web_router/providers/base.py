@@ -38,6 +38,8 @@ from collections.abc import Awaitable, Callable, Iterator, Mapping
 from types import MappingProxyType, TracebackType
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar
 
+from pydantic import SecretStr
+
 from web_router.constants import (
     BROWSE_TIMEOUT,
     BROWSER_TIMEOUT,
@@ -115,6 +117,14 @@ if TYPE_CHECKING:
     from playwright.async_api import Page as AsyncPlaywrightPage
 
 _ResultT = TypeVar("_ResultT")
+
+
+class _Unasked(enum.Enum):
+    UNASKED = "unasked"
+
+
+_UNASKED = _Unasked.UNASKED
+"""A handle's control URL before the backend was asked for it: not the ``None`` of a backend that has none."""
 _StateT = TypeVar("_StateT", bound=str)
 _RequestT = TypeVar("_RequestT", bound=NormalizedRequest)
 _ResponseT = TypeVar("_ResponseT")
@@ -232,6 +242,13 @@ class ExtractProvider(_BaseProvider):
     batches_urls: ClassVar[bool] = False
     """Whether one call can carry every URL. Most of these APIs take exactly one."""
 
+    min_start_interval: ClassVar[float] = 0.0
+    """Seconds between the starts of two calls of one extract, for a backend limited per second.
+
+    A cap on calls in flight is not enough there: calls that return quickly free
+    their slots early, and more start in a second than the backend allows.
+    """
+
     # -- What subclasses implement -------------------------------------------
 
     @abc.abstractmethod
@@ -253,7 +270,11 @@ class ExtractProvider(_BaseProvider):
         """Validate the request, fetch every URL, and wrap any backend failure."""
         self.validate(request)
         collected = _Collected(self.name, request.urls)
+        next_start = 0.0
         for urls in self._batches(request.urls):
+            if self.min_start_interval:
+                time.sleep(max(0.0, next_start - time.monotonic()))
+                next_start = time.monotonic() + self.min_start_interval
             try:
                 collected.add(urls, self._extract(request, urls))
             except ProviderError as exc:
@@ -268,14 +289,22 @@ class ExtractProvider(_BaseProvider):
         """Async counterpart of :meth:`extract`.
 
         The calls run concurrently, up to
-        :data:`~web_router.constants.MAX_CONCURRENT_EXTRACTS` at a time.
+        :data:`~web_router.constants.MAX_CONCURRENT_EXTRACTS` at a time, their
+        starts at least :attr:`min_start_interval` apart.
         """
         self.validate(request)
         batches = self._batches(request.urls)
         limit = asyncio.Semaphore(MAX_CONCURRENT_EXTRACTS)
+        spacing = asyncio.Lock()
+        next_start = 0.0
 
         async def _one(urls: list[str]) -> ExtractResponse:
+            nonlocal next_start
             async with limit:
+                if self.min_start_interval:
+                    async with spacing:
+                        await asyncio.sleep(max(0.0, next_start - time.monotonic()))
+                        next_start = time.monotonic() + self.min_start_interval
                 return await self._aextract(request, urls)
 
         outcomes = await asyncio.gather(*(_one(urls) for urls in batches), return_exceptions=True)
@@ -1108,6 +1137,19 @@ class BrowserProvider(_BaseProvider):
         """Async counterpart of :meth:`_fetch`."""
         return self._fetch(session_id)
 
+    def _control_url(self, session_id: str) -> SecretStr | None:
+        """Ask the backend for a page where a person can drive the session, when it hands one out only on request.
+
+        The default asks nothing, which is right for a backend that offers no
+        such page and for one that returns it on open, in
+        :attr:`BrowserSession.control_url <web_router.BrowserSession.control_url>`.
+        """
+        return None
+
+    async def _acontrol_url(self, session_id: str) -> SecretStr | None:
+        """Async counterpart of :meth:`_control_url`."""
+        return self._control_url(session_id)
+
     # -- What callers use ----------------------------------------------------
 
     def open(self, request: BrowserRequest) -> BrowserHandle:
@@ -1156,6 +1198,14 @@ class BrowserProvider(_BaseProvider):
     async def astatus(self, session_id: str) -> BrowserState:
         """Async counterpart of :meth:`status`."""
         return await self._aguarded(self._afetch(session_id))
+
+    def control_url(self, session_id: str) -> SecretStr | None:
+        """Ask the backend for a page where a person can drive the session, wrapping any failure."""
+        return self._guarded(lambda: self._control_url(session_id))
+
+    async def acontrol_url(self, session_id: str) -> SecretStr | None:
+        """Async counterpart of :meth:`control_url`."""
+        return await self._aguarded(self._acontrol_url(session_id))
 
     def validate(self, request: BrowserRequest) -> None:
         """Raise for an option this backend does not map, a value of one it cannot serve, or a partner left unset.
@@ -1322,6 +1372,7 @@ class _Handle:
         self._provider = provider
         self._session = session
         self._released = False
+        self._asked_control_url: SecretStr | _Unasked | None = _UNASKED
 
     @property
     def session(self) -> BrowserSession:
@@ -1349,8 +1400,17 @@ class _Handle:
 
     @property
     def live_view_url(self) -> str | None:
-        """A page showing the session as it runs, when the backend offers one."""
+        """A page showing the session as it runs, when the backend offers one that grants no control."""
         return self._session.live_view_url
+
+    def _known_control_url(self) -> str | None:
+        known = self._session.control_url or self._asked_control_url
+        return known.get_secret_value() if isinstance(known, SecretStr) else None
+
+    def _must_ask_control_url(self) -> bool:
+        # Asked once, answer or no answer; and never for a session already released,
+        # which has no page left to drive.
+        return self._session.control_url is None and self._asked_control_url is _UNASKED and not self._released
 
     @property
     def released(self) -> bool:
@@ -1517,6 +1577,25 @@ class BrowserHandle(_Handle):
             return "released"
         return self._provider.status(self.session_id)
 
+    def control_url(self) -> str | None:
+        """A page where a person can see and drive this session -- to log in to a site, say -- or ``None``.
+
+        Hand it to the person who will use it, and to nobody else: whoever
+        opens it controls the browser, and on some backends no account login
+        stands in the way. Do not log it. A backend that returns the page on
+        open answers from memory; Browserbase hands it out only on request, so
+        the first call asks once and later calls reuse the answer. ``None``
+        when the backend offers no such page, and on a released handle that
+        never asked: the session has no page left to drive.
+
+        A login typed there is kept for a later session only when the session
+        was opened with ``profile=`` and ``persist_profile=True``, and saved
+        when it is released.
+        """
+        if self._must_ask_control_url():
+            self._asked_control_url = self._provider.control_url(self.session_id)
+        return self._known_control_url()
+
     def __enter__(self) -> BrowserHandle:
         return self
 
@@ -1632,6 +1711,12 @@ class AsyncBrowserHandle(_Handle):
         if self._released:
             return "released"
         return await self._provider.astatus(self.session_id)
+
+    async def control_url(self) -> str | None:
+        """A page where a person can drive this session, as :meth:`BrowserHandle.control_url` returns it."""
+        if self._must_ask_control_url():
+            self._asked_control_url = await self._provider.acontrol_url(self.session_id)
+        return self._known_control_url()
 
     async def __aenter__(self) -> AsyncBrowserHandle:
         return self

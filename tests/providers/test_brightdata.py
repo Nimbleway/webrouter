@@ -1,15 +1,17 @@
 """Bright Data provider tests.
 
-The mapping here is derived from Bright Data's documentation, not from a live
-call -- no account was available during development. The integration test below
-is the check that matters; run it once credentials are available. See
-CONTRIBUTING.md on verifying against the live API.
+The envelope shape and the headers of a failed fetch were seen live on
+2026-10-16; the rest of the mapping is derived from Bright Data's documentation.
+The integration test below is the check that matters; run it once credentials
+are available. See CONTRIBUTING.md on verifying against the live API.
 """
 
 from __future__ import annotations
 
+import json
 import os
 
+import httpx
 import pytest
 
 from web_router import WebRouter
@@ -18,6 +20,7 @@ from web_router.providers.brightdata import BrightDataExtractProvider
 from web_router.types import ExtractRequest
 
 URL = "https://example.com"
+UNREACHABLE = "https://not-a-real-domain-zzz9.invalid"
 
 
 @pytest.fixture
@@ -71,6 +74,84 @@ def test_brightdata_envelope_is_normalized(provider: BrightDataExtractProvider) 
     assert document.status_code == 200
     assert document.extra["headers"] == {"content-type": "text/html"}
     assert response.raw == [payload]
+
+
+def test_a_fetch_the_unlocker_could_not_make_is_a_failure(provider: BrightDataExtractProvider) -> None:
+    """The envelope recorded live for an unresolvable host: 200 outside, 502 and an empty body inside."""
+    payload = {
+        "status_code": 502,
+        "headers": {
+            "x-brd-error": "Could not resolve host not-a-real-domain-zzz9.invalid.",
+            "x-brd-error-code": "proxy_error",
+        },
+        "body": "",
+    }
+
+    response = provider._to_response(ExtractRequest(urls=[URL]), [URL], payload)
+
+    assert response.documents == []
+    assert response.failures[0].url == URL
+    assert "Could not resolve host" in response.failures[0].error
+    assert "proxy_error" in response.failures[0].error, "the code tells a permanent failure from a retryable one"
+    assert response.raw == [payload]
+
+
+def test_the_error_header_is_read_whatever_its_case(provider: BrightDataExtractProvider) -> None:
+    payload = {"status_code": 502, "headers": {"X-Brd-Error": "Could not resolve host"}, "body": ""}
+
+    response = provider._to_response(ExtractRequest(urls=[URL]), [URL], payload)
+
+    assert response.documents == []
+    assert response.failures[0].error == "Could not resolve host"
+
+
+def test_an_error_code_alone_is_still_a_failure(provider: BrightDataExtractProvider) -> None:
+    payload = {"status_code": 502, "headers": {"x-brd-error-code": "proxy_error"}, "body": ""}
+
+    response = provider._to_response(ExtractRequest(urls=[URL]), [URL], payload)
+
+    assert response.documents == []
+    assert response.failures[0].error == "proxy_error"
+
+
+def test_headers_that_are_not_a_mapping_do_not_break_the_document(provider: BrightDataExtractProvider) -> None:
+    payload = {"status_code": 200, "headers": [["content-type", "text/html"]], "body": "<html></html>"}
+
+    response = provider._to_response(ExtractRequest(urls=[URL]), [URL], payload)
+
+    assert response.failures == []
+    assert response.documents[0].content == "<html></html>"
+
+
+def test_one_unreachable_url_keeps_the_page_that_was_fetched(provider: BrightDataExtractProvider) -> None:
+    """Through the real HTTP call: the failed envelope costs only its own URL."""
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if json.loads(request.content)["url"] == UNREACHABLE:
+            return httpx.Response(
+                200, json={"status_code": 502, "headers": {"x-brd-error": "Could not resolve host"}, "body": ""}
+            )
+        return httpx.Response(200, json={"status_code": 200, "headers": {}, "body": "<html>Example</html>"})
+
+    provider._sync = httpx.Client(**provider._client_kwargs, transport=httpx.MockTransport(handle))
+    try:
+        response = provider.extract(ExtractRequest(urls=[URL, UNREACHABLE]))
+    finally:
+        provider.close()
+
+    assert response.urls == [URL]
+    assert [failure.url for failure in response.failures] == [UNREACHABLE]
+
+
+def test_an_error_page_the_target_served_is_still_a_document(provider: BrightDataExtractProvider) -> None:
+    """A 404 the site answered was fetched; its status says what it is."""
+    payload = {"status_code": 404, "headers": {"content-type": "text/html"}, "body": "Not Found"}
+
+    response = provider._to_response(ExtractRequest(urls=[URL]), [URL], payload)
+
+    assert response.failures == []
+    assert response.documents[0].status_code == 404
+    assert response.documents[0].content == "Not Found"
 
 
 @pytest.mark.integration

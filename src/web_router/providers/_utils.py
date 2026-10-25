@@ -9,6 +9,8 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any
 
+from pydantic import BaseModel
+
 from web_router.constants import (
     BROWSER_FIELD_CASES,
     BROWSER_SECONDS_PARAMETERS,
@@ -138,6 +140,9 @@ def build_browser_payload(
             continue
         if parameter in BROWSER_SECONDS_PARAMETERS:
             value = convert(value)
+        elif isinstance(value, BaseModel):
+            # A `Viewport` is sent as its fields, which is what a JSON body can carry.
+            value = value.model_dump()
         for path, produced in _produced(parameter, row, value).items():
             _check_collision(placed, path, parameter)
             _place(payload, path, produced, parameter)

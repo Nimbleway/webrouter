@@ -221,6 +221,7 @@ and what `response.provider` and `configured_providers()` report back.
 | `Provider.LINKUP` | `linkup` | [Linkup](https://www.linkup.so) | direct HTTP | `max_results`, `include_domains`, `exclude_domains` |
 | `Provider.WEBIQ` | `webiq` | [WebIQ](https://api.microsoft.ai) (Microsoft AI Web Search) | direct HTTP | `max_results` |
 | `Provider.KEENABLE` | `keenable` | [Keenable](https://docs.keenable.ai) | direct HTTP; keyless with `allow_keyless=True` (rate-limited per IP) | `max_results` |
+| `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Search](https://api-docs.deepseek.com/guides/search) | direct HTTP | `max_results` (at most 50), `include_domains`, `exclude_domains`, `locale`, the last three sent inside the query, which must fit 128 characters. `content` is DeepSeek's summary unless `provider_options={"need_content": True}` |
 | `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | `max_results`, `search_depth` |
 | `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp) | direct HTTP, **no key** | `max_results` |
 | `Provider.PARALLEL_MCP` | `parallel-mcp` | [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/quickstart) | direct HTTP, **no key** | `max_results` (applied to the response: the tool ignores a count) |
@@ -254,8 +255,9 @@ which ones this environment can use.
 | `Provider.BRIGHTDATA` | `brightdata` | [Bright Data Web Unlocker](https://brightdata.com) | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | `markdown`, `html` |
 | `Provider.WEBIQ` | `webiq` | [WebIQ Browse](https://api.microsoft.ai) (Microsoft AI) — pages in WebIQ's own index | `WEBIQ_API_KEY` | `markdown`, `text` |
 | `Provider.KEENABLE` | `keenable` | [Keenable Fetch](https://docs.keenable.ai/api-reference/fetch) | `KEENABLE_API_KEY`, or keyless with `allow_keyless=True` (rate-limited per IP) | `markdown` |
+| `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Fetch](https://api-docs.deepseek.com/guides/search) | `DEEPSEEK_API_KEY` | `markdown` |
 | `Provider.JINA` | `jina` | [Jina Reader](https://jina.ai/reader) | **none** (`JINA_API_KEY` raises the rate limit) | `markdown`, `html`, `text` |
-| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ and Keenable | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it |
+| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable and DeepSeek | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it |
 
 Two need more than a key. Oxylabs authenticates with the username and password
 created under Web Scraper API in its dashboard — not the ones you sign in with —
@@ -265,7 +267,8 @@ to set.
 
 > **Oxylabs, Bright Data and Firecrawl are mapped from documentation** — no
 > account for any of them was available, so the endpoint, auth and response
-> shape have not been confirmed against a real response. Their integration tests
+> shape have not been confirmed against a real response (only Bright Data's
+> envelope, and the headers of a fetch it could not make, were seen live). Their integration tests
 > exist and skip themselves until credentials are. Nimble, Tavily, Jina and Linkup
 > were verified live; Exa's extract mapping is from documentation too.
 
@@ -337,22 +340,22 @@ Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
-| `search` | Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ, Parallel, Exa, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable |
-| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable |
+| `search` | Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ, Parallel, Exa, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek |
+| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
 Search's order follows a provider scan's judged accuracy, best first (run your
 own with [`benchmarks/providers/`](benchmarks/providers/README.md)), and every
 key you hold comes before the free tier — so a key you hold only for research,
-Perplexity's say, serves your plain searches too. Keenable joined after that
-scan, so it comes after the keyless tier until a scan places it. For extract, the backends that
+Perplexity's say, serves your plain searches too. Keenable and DeepSeek joined after that
+scan, so they come after the keyless tier until a scan places them. For extract, the backends that
 joined later come after the keyless tier, so holding one more key never moves a
 call that was already being served. Research has no free tier, so Linkup and then
 You.com simply follow the others there. To choose your own order, pass a `chain`.
 
 **`auto` routes each request to a member that can serve it.** It accepts every
 option some member maps — the domain, country and locale filters through
-Nimble, the domain filters through Linkup — and before trying a member it reads
+Nimble, the domain filters through Linkup, the domain and locale filters through DeepSeek — and before trying a member it reads
 that member's class, which costs no credential and sends nothing. A member that
 does not map an option you set is passed over for that call: ask for
 `search_depth` with keys for only Perplexity and Brave, neither of which has a
@@ -567,7 +570,8 @@ simplified markup rather than the page as fetched, so `html` is refused. It
 reads WebIQ's own index, so a page WebIQ has not crawled comes back as a
 failure. Keenable is left out as well: its Fetch API has no format field and
 returns markdown alone, so `html` and `text` are refused. web-router asks it for
-up to 500,000 characters, since it otherwise cuts a page at 50,000.
+up to 500,000 characters, since it otherwise cuts a page at 50,000. DeepSeek is
+left out too: its Fetch API returns markdown alone.
 
 A backend that cannot produce the format you asked for **raises rather than
 returning a different one under the same name**, because code that pipes
@@ -768,22 +772,24 @@ page actions need the `[browser]` extra, which is Playwright.
 | Pass | Name | Provider | Credentials | Options mapped | Verified how |
 | --- | --- | --- | --- | --- | --- |
 | `Provider.AUTO` *(default)* | `auto` | — | whatever its chain holds; none for `local` | every option some member maps, routed per request; `provider_options` is refused | Falls through only when a member refuses to open (no key, a 4xx, no connection); anything that may have opened a session is raised |
-| `Provider.STEEL` | `steel` | [Steel Sessions](https://docs.steel.dev) | `STEEL_API_KEY` | `timeout`, `idle_timeout`, `solve_captchas`, `proxy_country` (no enumerated country list; `stealth` not mapped — Steel has no on/off or tiered stealth field) | **Documentation only** — no key was available; `solve_captchas`/`proxy_country` await a live run |
-| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Sessions](https://docs.browserbase.com) | `BROWSERBASE_API_KEY` | `timeout`, `stealth` (`low`/`high`, via `browserSettings.verified` — `advancedStealth` is deprecated), `solve_captchas`, `proxy_country` | **Documentation only** — no key was available; `stealth`/`solve_captchas`/`proxy_country` await a live run |
-| `Provider.HYPERBROWSER` | `hyperbrowser` | [Hyperbrowser Sessions](https://hyperbrowser.ai/docs) | `HYPERBROWSER_API_KEY` | `timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country` | **Documentation only** — no key was available; `stealth`/`solve_captchas`/`proxy_country` await a live run |
-| `Provider.ANCHOR` | `anchor` | [Anchor Browser](https://docs.anchorbrowser.io) | `ANCHOR_API_KEY` | `timeout`, `idle_timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country` | **Documentation only** — no key was available; `stealth`/`solve_captchas`/`proxy_country` await a live run. Headful and recorded by default, and left that way |
+| `Provider.STEEL` | `steel` | [Steel Sessions](https://docs.steel.dev) | `STEEL_API_KEY` | `timeout`, `idle_timeout`, `solve_captchas`, `proxy_country` (no enumerated country list; `stealth` not mapped — Steel has no on/off or tiered stealth field), `profile` (an id), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `solve_captchas`/`proxy_country` await a live run |
+| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Sessions](https://docs.browserbase.com) | `BROWSERBASE_API_KEY` | `timeout`, `stealth` (`low`/`high`, via `browserSettings.verified` — `advancedStealth` is deprecated), `solve_captchas`, `proxy_country`, `profile` (a context id), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `stealth`/`solve_captchas`/`proxy_country` await a live run |
+| `Provider.HYPERBROWSER` | `hyperbrowser` | [Hyperbrowser Sessions](https://hyperbrowser.ai/docs) | `HYPERBROWSER_API_KEY` | `timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country`, `profile` (an id), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `stealth`/`solve_captchas`/`proxy_country` await a live run |
+| `Provider.ANCHOR` | `anchor` | [Anchor Browser](https://docs.anchorbrowser.io) | `ANCHOR_API_KEY` | `timeout`, `idle_timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country`, `profile` (a name), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `stealth`/`solve_captchas`/`proxy_country` await a live run. Headful and recorded by default, and left that way |
+| `Provider.KERNEL` | `kernel` | [Kernel Browsers](https://kernel.sh/docs) | `KERNEL_API_KEY` | `idle_timeout` (whole seconds, 10 s to 72 h), `stealth` (one tier, which also brings Kernel's CAPTCHA solver and proxy), `headless`, `viewport`, `profile` (an id), `persist_profile`. `timeout`, `solve_captchas` and `proxy_country` raise | **Live**, 2026-10-20: open, drive, status, release, `control_url()`, and every mapped option |
 | `Provider.LOCAL` | `local` | Google Chrome or Chromium on this machine | none (`CHROME_PATH` optional) | `headless`, `timeout`, `viewport` | **Live** against Google Chrome on macOS: launch, CDP `/json/version`, release, lifetime expiry, exit cleanup. `headless=False` is not exercised by a test |
 
 `auto` opens through the first vendor you hold a key for, in the order **Steel,
-Browserbase, Hyperbrowser, Anchor**, and then **`local`** — a key in the
+Browserbase, Hyperbrowser, Anchor, Kernel**, and then **`local`** — a key in the
 environment says which backend you want, so `local` is the fallback, never a
 substitute for a vendor you are paying for. Each member is checked against the
 request on its class before anything opens, so a member that does not map an
 option you set is passed over: `idle_timeout` skips Browserbase, Hyperbrowser
-and `local`, and `headless` every vendor. The ten-minute default does not count as an
+and `local`, `timeout` skips Kernel, and `headless` every vendor but Kernel. The ten-minute default does not count as an
 option you set. `provider_options` is refused, because it is one backend's own
 fields and `local` would read it as Chrome switches — name the backend you
-wrote it for. `auto` never opens a second session in one call: it moves on only
+wrote it for. `profile` and `persist_profile` are refused for the same reason:
+a profile is saved on one backend. `auto` never opens a second session in one call: it moves on only
 after a failure that proves nothing opened, and a read timeout, a 5xx or an
 unreadable answer, which may have left a session billing, is raised instead.
 The handle it returns is the member's own, so `browser.provider` names the
@@ -794,12 +800,61 @@ stealth) or `"high"` (its strongest, often plan-gated), and unset leaves the
 backend's own default. A backend without the level you ask for raises
 `UnsupportedParameterError` naming it rather than serving another one, and
 `auto` passes such a member over, as it does one that serves an option only
-beside another you left unset. Hyperbrowser, Browserbase and Anchor map it; Steel does not.
+beside another you left unset. Hyperbrowser, Browserbase, Anchor and Kernel map it; Steel does not.
 
 `provider_options` on a named backend merges beneath the mapped options, and
 setting a field a mapped option also sets — including a `timeout` filled in
 from the default — raises `ConfigurationError` rather than one side silently
 winning.
+
+### Logging in once, and reusing the login
+
+A site behind a login needs a person to log in once. `control_url()` hands back
+a page where that person sees the session and can type into it; with `profile`
+and `persist_profile=True`, what they leave behind — cookies, local storage —
+is saved when the session is released, and a later session opened on the same
+`profile` starts logged in:
+
+```python
+from web_router import WebRouter
+
+with WebRouter("browserbase") as router:
+    with router.open_browser(profile="<context id>", persist_profile=True) as browser:
+        print("Log in here:", browser.control_url())
+        input("Press Enter once you are logged in. ")
+    # Released: the login is saved to the profile. Give it a few seconds.
+
+    with router.open_browser(profile="<context id>") as browser:
+        browser.goto("https://example.com/account")  # already logged in
+```
+
+`control_url()` is a credential, like `cdp_url`: whoever opens it drives the
+browser, and on Steel, Kernel, Hyperbrowser and Anchor no account login stands
+in the way. Give it only to the person logging in, and do not log it. It is
+`None` on a backend that offers no such page. `live_view_url` stays for pages
+that show a session without granting control — today Steel's dashboard page,
+which asks for a Steel login. Browserbase hands out its page only on request,
+so `control_url()` asks for it the first time it is called; every other
+backend returned it on open. On an `AsyncBrowserHandle`, `await
+browser.control_url()`.
+
+| Backend | `profile` is | `control_url()` is | Make a profile |
+| --- | --- | --- | --- |
+| `browserbase` | a context id | `debuggerFullscreenUrl`, fetched on first call | `POST /v1/contexts` |
+| `steel` | a profile id | `debugUrl` | open a session with `provider_options={"persistProfile": True}` and read `raw["profileId"]` |
+| `hyperbrowser` | a profile id | `liveUrl` | `POST /api/profile` |
+| `anchor` | a name you choose | its `live_view_url` | none: the first session that saves to a name creates it |
+| `kernel` | a profile id | `browser_live_view_url`, for a session with `headless=False` | `POST /profiles` |
+| `local` | — | `None`: open it with `headless=False` and the window is on your screen | — |
+
+web-router takes a profile you already have; making, listing and deleting them
+stays with each vendor's own API or dashboard. `persist_profile` without a
+`profile` raises, rather than making a new one where the vendor would (Steel).
+Each backend saves as the session ends, not at the release call, so wait a few
+seconds before opening on the profile again; Steel answers 409 until its upload
+reports `READY`. Two sessions writing to one profile at once overwrite each
+other. Every row was checked live on 2026-10-20: a cookie and a localStorage
+entry set in one session were there in the next.
 
 ### Driving the page
 
@@ -863,7 +918,10 @@ against `local`, sync and async, with no key.
 Steel's own connection scheme. It keeps a session across a reconnect, as
 `local` does. Proxies, stealth, CAPTCHA solving, profiles, viewport and
 headless are reachable through `provider_options` until a live call confirms a
-mapping for them.
+mapping for them. `profile` and `persist_profile` map onto `profileId` and
+`persistProfile`. `live_view_url` is its `sessionViewerUrl`, a dashboard page
+that asks for a Steel login; its `debugUrl` needs none, so it is
+`control_url()`.
 
 **Browserbase.** Its `cdp_url` is the `connectUrl` it returns, which is enough
 on its own to drive the session. It solves CAPTCHAs unless
@@ -871,9 +929,11 @@ on its own to drive the session. It solves CAPTCHAs unless
 it ends a session when its CDP client disconnects, unless `keepAlive` is set;
 and it has no idle timeout, so `idle_timeout` is refused. It reports a session
 that ended because its client disconnected the same way as one that was
-released, so `status()` says `"released"` for both. Its live view takes a
-second request, so `live_view_url` stays `None`; `expires_at` is the
-`expiresAt` it reports.
+released, so `status()` says `"released"` for both. `profile` is a context id,
+sent with `persist_profile` as `browserSettings.context`. Its live view lets
+whoever opens it drive the session and takes a second request, so
+`live_view_url` stays `None` and `control_url()` makes that request when first
+called; `expires_at` is the `expiresAt` it reports.
 
 **Hyperbrowser.** Its `cdp_url` is the `wsEndpoint` it reports, which carries a
 session token. It takes its lifetime in whole minutes, so `timeout` is rounded
@@ -881,7 +941,8 @@ up, and it has no idle timeout, so `idle_timeout` raises. A session ends when
 its CDP client disconnects and when every page in it is closed; Hyperbrowser
 keeps one alive across a disconnect only with `keepAlive=true` on the connect
 URL, which web-router does not add. Its `liveUrl` lets whoever opens it drive
-the session, so it stays in `raw` rather than becoming `live_view_url`.
+the session, so it is `control_url()`, never `live_view_url`. `profile` and
+`persist_profile` map onto `profile.id` and `profile.persistChanges`.
 `stealth="off"` sends `useStealth: false` and `useUltraStealth: false`,
 `"low"` sends `useStealth: true`, `"high"` sends `useUltraStealth: true`
 (enterprise-only on Hyperbrowser's own plans). `solve_captchas` maps onto
@@ -900,7 +961,30 @@ silently disables extra stealth unless its proxy is active, so asking for
 `stealth="low"` or `"high"` without `proxy_country` raises before a session
 opens rather than opening one with less stealth than asked for.
 `proxy_country` is sent lower-case, as Anchor's guide shows it, and is checked
-against every country its proxy guide lists.
+against every country its proxy guide lists. `profile` is a profile's name,
+sent with `persist_profile` under `browser.profile`. Its live view is
+interactive unless the session was opened read-only, so it is `control_url()`,
+never `live_view_url`.
+
+**Kernel.** Its `cdp_url` is the `cdp_ws_url` it returns, which carries a
+session token. Kernel has no lifetime limit, only an idle one: `idle_timeout`
+maps onto `timeout_seconds`, which counts down only while no CDP, WebDriver or
+live-view client is connected, and Kernel deletes the session when it runs
+out — after 60 seconds if you leave it unset, so connect soon after opening.
+`timeout` raises, and the ten-minute default is not sent. Kernel has one
+stealth switch, so `"low"` and `"high"` both send `stealth: true`, and `"off"`
+sends `false`; stealth also turns on Kernel's CAPTCHA solver and its stealth
+proxy, which is why `solve_captchas` raises rather than claiming a separate
+switch. `proxy_country` raises too: a country needs a proxy created first
+through Kernel's Proxies API, and an existing one can be passed as
+`provider_options={"proxy": {"id": ...}}`. `profile` is a Kernel profile's
+id — pass a name as `provider_options={"profile": {"name": ...}}` — and
+`persist_profile` sends `profile.save_changes`, refused without a `profile`.
+Its live view lets whoever opens it drive the session, so it is
+`control_url()`, never `live_view_url`; Kernel offers one only for a session
+with `headless=False`. A deleted session, whether released or
+idled out, reads as `"released"`: Kernel answers 404 for both and does not say
+which. Every mapping was checked live on 2026-10-20.
 
 **`local`** starts a fresh browser process per session, with a temporary
 profile and its DevTools port pinned to `127.0.0.1`, and stops it and deletes
@@ -963,9 +1047,9 @@ API over httpx, which `[all]` installs.
 | Pass | Name | Provider | Credentials | Options mapped | Verified how |
 | --- | --- | --- | --- | --- | --- |
 | `Provider.AUTO` *(default)* | `auto` | — | Browser Use, Skyvern or Browserbase, whichever you hold | whatever the member it routes to maps | Routes around a member before any task starts; with no member left it raises, naming why each was skipped |
-| `Provider.BROWSER_USE` | `browser-use` | [Browser Use Cloud API v2](https://docs.browser-use.com/cloud/api-v2-overview) | `BROWSER_USE_API_KEY` | `start_url` | **Documentation only** — no key was available. Answers in prose; `output_schema`, `max_steps` and `allowed_domains` are refused until a live call confirms them |
+| `Provider.BROWSER_USE` | `browser-use` | [Browser Use Cloud API v2](https://docs.browser-use.com/cloud/api-v2-overview) | `BROWSER_USE_API_KEY` | `start_url`, `output_schema`, `max_steps`, `allowed_domains` | **Live**, 2026-10-21: a prose task, and each mapped option |
 | `Provider.SKYVERN` | `skyvern` | [Skyvern run-task API](https://skyvern.com/docs/sdk-reference/tasks/run-task) | `SKYVERN_API_KEY` | `start_url` (optional) | **Documentation only** — no key was available. `output_schema`, `max_steps` and `allowed_domains` are refused; most answers are only in `raw` (see below) |
-| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Agents](https://docs.browserbase.com/platform/agents/overview) | `BROWSERBASE_API_KEY` | none beyond the task | **Documentation only** — no key was available. `start_url` is refused; a schema goes through `provider_options` |
+| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Agents](https://docs.browserbase.com/platform/agents/overview) | `BROWSERBASE_API_KEY` | none beyond the task | **Live**, 2026-09-30 and 2026-10-21: a prose task. `start_url` is refused; a schema goes through `provider_options` as `resultSchema`, which awaits a live run |
 
 `auto` tries **Browser Use, Skyvern, then Browserbase**, only those you hold a
 key for, and nothing after them. Browser Use comes first because it answers in
@@ -982,10 +1066,17 @@ the task.
 ### Browse backend notes
 
 **Browser Use** runs each task in a session it creates for it, and cancelling a
-task stops that session too. Its steps carry the page, the screenshot and the
-agent's next goal; the stringified actions, its memory and the step number are
-in each step's `extra`. A finished task is `complete` even when Browser Use's
-self-reported `isSuccess` is `false`, which stays in `raw`.
+task stops that session too. Its steps carry the page, the screenshot, the
+agent's note on the step (its `memory`) and, for a step that took one action,
+that action as Browser Use wrote it; the full list of stringified actions, the
+step number and the always-empty `nextGoal` are in each step's `extra`.
+`output_schema` is sent as Browser Use's `structuredOutput`, and its answer
+comes back as `structured`; an answer that is not JSON stays in `answer`
+rather than being dropped. `allowed_domains` blocks navigation elsewhere, but
+the agent may still answer from what it already knows, so check
+`steps` when it matters where an answer came from. A finished task is
+`complete` even when Browser Use's self-reported `isSuccess` is `false`, which
+stays in `raw`.
 
 **Skyvern** answers in an object whose keys its agent chose unless a
 `data_extraction_schema` is sent, and that is not mapped yet, so most Skyvern
@@ -1493,6 +1584,48 @@ Other options passed beside it, such as `timeout`, apply to a copy that shares
 its connection pool, and research keeps the client's own timeouts, clamping
 only the read limit to the run's budget.
 
+### Classifying a query before running it (spike)
+
+`classify()` is an opt-in spike, off unless you pass `decider=`. It asks a
+decision model a few short questions about the query and turns the answers
+into a `Route`: the method (search, extract, research or browse) and the
+`auto` chain to run it on. It runs nothing itself; `execute()` runs the route,
+or you read it and call a method yourself. It is a baseline for measuring
+decision models, not a stable routing contract, and may change.
+
+```python
+router = WebRouter(decider="keywords")  # keyless
+
+route = router.classify("Summarize https://example.com/pricing")
+route.method  # "extract"
+route.fallback  # () -- or why the route is the default one
+print(route)  # the labels as plain instructions, for an agent to read
+response = router.execute(route)
+```
+
+The deciders:
+
+- `keywords`: simple keyword rules, keyless and offline. Its confidences are
+  fixed, not measured; a research or browse pick is below the threshold, so
+  it falls back to search.
+- `jev`: TypeSafe's Jev, reading `TYPESAFE_API_KEY`.
+- `llm`: a chat model with structured outputs over any OpenAI-compatible API,
+  with the `evals` extra. Configure it with `decider_config`, as
+  `provider_config` configures a backend:
+  `WebRouter(decider="llm", decider_config={"model": "...", "base_url": "...", "api_key": "..."})`;
+  without an `api_key` it reads `OPENAI_API_KEY`.
+- A name given to `register_decider()`, or any object with `decide()` and `close()`.
+
+Every decider reports confidence on one scale, how far its pick stands above
+an even guess, and a label below 0.5 takes its default. Passing `urls` routes
+to extract and `output_schema` to research without asking the decider. A
+decider that fails or raises, or a label it is unsure of, gives today's
+default, search on the default chain, and `route.fallback` says why:
+`decider_error`, `low_confidence`, `no_url` or `no_backend_for_method`.
+
+The query text is sent to the decider you choose, so `jev` and `llm` send it
+to that service.
+
 ### Which providers can I actually use?
 
 ```python
@@ -1671,6 +1804,7 @@ Keys are read from the environment, or passed explicitly through
 | Linkup | `LINKUP_API_KEY` | search, extract, research |
 | WebIQ | `WEBIQ_API_KEY` | search, extract |
 | Keenable | `KEENABLE_API_KEY` *(optional for `auto`, which uses its keyless tier without one)* | search, extract |
+| DeepSeek | `DEEPSEEK_API_KEY` | search, extract |
 | Firecrawl | `FIRECRAWL_API_KEY` | extract |
 | Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
 | Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |
@@ -1679,6 +1813,7 @@ Keys are read from the environment, or passed explicitly through
 | Browserbase | `BROWSERBASE_API_KEY` | open_browser, browse |
 | Hyperbrowser | `HYPERBROWSER_API_KEY` | open_browser |
 | Anchor | `ANCHOR_API_KEY` | open_browser |
+| Kernel | `KERNEL_API_KEY` | open_browser |
 | Browser Use | `BROWSER_USE_API_KEY` | browse |
 | Skyvern | `SKYVERN_API_KEY` | browse |
 | `local` | *none — keyless* (`CHROME_PATH` optional, the browser to launch) | open_browser |

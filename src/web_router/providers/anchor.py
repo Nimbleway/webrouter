@@ -19,9 +19,11 @@ turned off by Anchor when its proxy is not active, so ``stealth`` in
 ``{"low", "high"}`` requires ``proxy_country`` here -- without that
 co-requirement, a caller asking for stealth would silently get none. Anchor's
 proxy guide shows an optional ``type`` field (example: ``"anchor_residential"``)
-that is not required, so it is left unmapped; profiles, viewport and headless
-mode are still reachable only through ``provider_options`` -- mapping one
-properly is a welcome PR, see CONTRIBUTING.md.
+that is not required, so it is left unmapped. ``profile`` (a profile's name)
+and ``persist_profile`` map onto ``browser.profile``, and the session's
+``live_view_url`` is its control URL -- checked live on 2026-10-20. Viewport
+and headless mode are still reachable only through ``provider_options`` --
+mapping one properly is a welcome PR, see CONTRIBUTING.md.
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ from pydantic import SecretStr
 from web_router.constants import (
     ANCHOR_API_KEY_HEADER,
     ANCHOR_BASE_URL,
+    ANCHOR_CONTROL_URL_FIELD,
     ANCHOR_FIELDS,
     ANCHOR_OPEN_PATH,
     ANCHOR_PROXY_COUNTRIES,
@@ -67,15 +70,18 @@ class AnchorBrowserProvider(HttpBrowserProvider):
 
     name: ClassVar[str] = PROVIDER_ANCHOR
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
-        {"timeout", "idle_timeout", "stealth", "solve_captchas", "proxy_country"}
+        {"timeout", "idle_timeout", "stealth", "solve_captchas", "proxy_country", "profile", "persist_profile"}
     )
     stealth_levels: ClassVar[frozenset[StealthLevel]] = frozenset(ANCHOR_STEALTH)
     proxy_countries: ClassVar[frozenset[str] | None] = ANCHOR_PROXY_COUNTRIES
     co_requirements: ClassVar[Mapping[str, Mapping[Any, frozenset[str]]]] = MappingProxyType(
-        {"stealth": {"low": frozenset({"proxy_country"}), "high": frozenset({"proxy_country"})}}
+        {
+            "stealth": {"low": frozenset({"proxy_country"}), "high": frozenset({"proxy_country"})},
+            **HttpBrowserProvider.co_requirements,
+        }
     )
     """Anchor turns extra stealth off on its own unless the proxy is active; asking for it without a
-    country would silently get none."""
+    country would silently get none. Saving a profile needs the profile's name."""
 
     base_url: ClassVar[str] = ANCHOR_BASE_URL
     open_path: ClassVar[str] = ANCHOR_OPEN_PATH
@@ -89,13 +95,14 @@ class AnchorBrowserProvider(HttpBrowserProvider):
 
     def _to_session(self, request: BrowserRequest, payload: dict[str, Any]) -> BrowserSession:
         data = payload["data"]
-        # Anchor reports no expiry, so `expires_at` stays unset. `live_view_url`
-        # stays in `raw` alone: Anchor's live view is interactive unless the
-        # session was opened read-only, and `live_view_url` is meant to be safe to show.
+        # Anchor reports no expiry, so `expires_at` stays unset. Its live view is
+        # interactive unless the session was opened read-only, so it is the
+        # control URL, never `live_view_url`.
         return BrowserSession(
             provider=self.name,
             session_id=data["id"],
             cdp_url=SecretStr(data["cdp_url"]),
+            control_url=self._secret_field(data, ANCHOR_CONTROL_URL_FIELD),
             raw=payload,
         )
 

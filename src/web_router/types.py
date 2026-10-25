@@ -57,7 +57,7 @@ class Provider(str, Enum):
     Not every name serves every method: ``oxylabs``, ``brightdata``,
     ``firecrawl`` and ``jina`` extract but do not search, and most of the search
     backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``,
-    ``anchor`` and ``local`` open browser sessions and do nothing else, and
+    ``anchor``, ``kernel`` and ``local`` open browser sessions and do nothing else, and
     ``browser-use`` and ``skyvern`` run browse tasks and nothing else.
     :func:`web_router.available_providers`,
     :func:`web_router.available_extract_providers` and their research and
@@ -74,6 +74,7 @@ class Provider(str, Enum):
     LINKUP = "linkup"
     WEBIQ = "webiq"
     KEENABLE = "keenable"
+    DEEPSEEK = "deepseek"
     YOU_MCP = "you-mcp"
     EXA_MCP = "exa-mcp"
     PARALLEL_MCP = "parallel-mcp"
@@ -85,6 +86,7 @@ class Provider(str, Enum):
     BROWSERBASE = "browserbase"
     HYPERBROWSER = "hyperbrowser"
     ANCHOR = "anchor"
+    KERNEL = "kernel"
     SKYVERN = "skyvern"
     LOCAL = "local"
     BROWSER_USE = "browser-use"
@@ -585,7 +587,8 @@ class BrowserSession(BaseModel):
     some backends put the account's API key in it -- so it is a ``SecretStr``
     that prints as asterisks, and :attr:`raw`, which may repeat it, is kept out
     of both ``repr`` and ``model_dump()``. Read it with ``cdp_url.get_secret_value()``, or from
-    :attr:`BrowserHandle.cdp_url <web_router.BrowserHandle.cdp_url>`.
+    :attr:`BrowserHandle.cdp_url <web_router.BrowserHandle.cdp_url>`. :attr:`control_url`
+    is a credential for the same reason and kept the same way.
     """
 
     # Unknown keys are a provider bug: the untouched payload belongs in `raw`.
@@ -596,7 +599,15 @@ class BrowserSession(BaseModel):
     cdp_url: SecretStr = Field(description="The Chrome DevTools Protocol endpoint to connect a driver to.")
     live_view_url: str | None = Field(
         default=None,
-        description="A page that shows the session as it runs, when the backend offers one.",
+        description="A page that shows the session as it runs, when the backend offers one that grants no control.",
+    )
+    control_url: SecretStr | None = Field(
+        default=None,
+        description=(
+            "A page where a person can see and drive the session -- to log in, say -- when the backend returns one "
+            "on open. A credential, like `cdp_url`. Read it through the handle's `control_url()`, which also asks "
+            "a backend that hands it out only on request."
+        ),
     )
     expires_at: datetime | None = Field(
         default=None,

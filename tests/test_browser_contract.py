@@ -73,6 +73,8 @@ class _MinimalHttp(HttpBrowserProvider):
     base_url = "https://browser.example.test"
     open_path = "/sessions"
     release_path = "/sessions/{session_id}/release"
+    # It maps no profiles, so it clears the base's rule about saving one.
+    co_requirements = MappingProxyType({})
 
     def _build_payload(self, request: BrowserRequest) -> dict[str, Any]:
         return {}

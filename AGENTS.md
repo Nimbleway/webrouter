@@ -9,11 +9,11 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across five methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ and Keenable, plus two that need no credential: `you-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable and DeepSeek, plus two that need no credential: `you-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
-Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, the keyless Jina
+Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, the keyless Jina
 Reader, and `auto` again.
 
 **`research`** — an agentic run: the backend reasons over several turns and
@@ -24,7 +24,7 @@ Linkup, You.com, and `auto`. It has no keyless tier, because every backend bills
 CDP URL the caller drives with Playwright, browser-use or Stagehand, and
 released when the block holding it ends. The handle can also drive the page
 itself — `goto`, `snapshot`, `click`, `type`, `press`, `screenshot`, `read` —
-installed by [browser]. Steel, Browserbase, Hyperbrowser, Anchor, the keyless
+installed by [browser]. Steel, Browserbase, Hyperbrowser, Anchor, Kernel, the keyless
 `local`, which launches a Chromium on this machine, and `auto`, which tries the
 vendors you hold keys for and then `local`.
 
@@ -72,6 +72,10 @@ src/web_router/
 ├── constants.py        every endpoint, env var name, timeout and message template
 ├── constants_you.py    You.com research's endpoints, efforts and status table,
 │                       kept apart so constants.py stops growing
+├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
+│                       kept apart for the same reason
+├── constants_kernel.py Kernel's endpoints, field table and session states,
+│                       kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── exceptions.py       WebRouterError and subclasses
@@ -118,6 +122,7 @@ src/web_router/
     ├── linkup.py       search + extract + research, via httpx
     ├── webiq.py        search, via httpx — Microsoft AI's Web Search API
     ├── keenable.py     search + extract, via httpx — keyless on its /public twins
+    ├── deepseek.py     search + extract, via httpx — filters ride in the query
     ├── firecrawl.py    extract, via httpx
     ├── oxylabs.py      extract, via httpx — HTTP Basic, username + password
     ├── brightdata.py   extract, via httpx — needs a zone beside its token
@@ -126,6 +131,7 @@ src/web_router/
     ├── browserbase.py  browser + browse, via httpx — Sessions and Agents APIs
     ├── hyperbrowser.py browser, via httpx — stops with a PUT
     ├── anchor.py       browser, via httpx — timeouts in whole minutes
+    ├── kernel.py       browser, via httpx — an idle limit and no lifetime
     ├── local.py        browser, keyless — a Chromium subprocess on this machine
     ├── browser_use.py  browse, via httpx — Browser Use Cloud's v2 tasks
     └── skyvern.py      browse, via httpx — tasks on Skyvern Cloud
@@ -473,11 +479,24 @@ is filled in after validation and only for a provider that declares `timeout`:
 a backend with an idle limit alone is sent nothing, rather than refusing every
 call over an option the caller never set. Do not move this into a provider.
 
-**A CDP URL is a credential.** Whoever holds it drives the browser, and some
-backends put the account key in it. `BrowserSession.cdp_url` is a `SecretStr`,
+**A CDP URL is a credential, and so is a control URL.** Whoever holds either
+drives the browser, and some backends put the account key in the CDP URL.
+`BrowserSession.cdp_url` and `BrowserSession.control_url` are `SecretStr`s,
 `raw` is kept out of both `repr` and `model_dump()`, and a handle's `repr` names the provider and
-session id only. `handle.cdp_url` returns the plain string, because asking for
-it by name is the one moment it is needed. The MCP server never returns it.
+session id only. `handle.cdp_url` and `handle.control_url()` return the plain
+string, because asking for it by name is the one moment it is needed. The MCP
+server returns neither. `live_view_url` is only for a page that grants no
+control: a vendor's interactive live view is the control URL even when a query
+parameter makes it read-only, because whoever holds it can take that off. A
+backend that hands one out only on request implements `_control_url`, so the
+request is made when a caller asks, never on every open.
+
+**A saved profile belongs to one backend.** `profile` is the backend's own id
+or name for it, and `persist_profile` saves back to that profile, so every
+backend that maps it declares `BROWSER_PERSIST_PROFILE_REQUIRES` and refuses
+`persist_profile` alone, even where the vendor would make a new profile.
+`auto` refuses both, as it refuses `provider_options`. Making, listing and
+deleting profiles stays with each vendor.
 
 **Every session is released on every path.** Leaving the `with` block,
 an exception inside it, and `router.close()` / `aclose()` — which releases
@@ -688,7 +707,8 @@ The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
    not, rather than building one. Declare `co_requirements` when the vendor
    quietly ignores an option without another, as Anchor ignores stealth
    without its proxy.
-2. Put `cdp_url` in the `SecretStr` field and nowhere a `repr` reaches. Put the
+2. Put `cdp_url` in the `SecretStr` field and nowhere a `repr` reaches, and an
+   interactive live view in `control_url` the same way. Put the
    endpoints, env var and the session-status table in `constants.py`; read the
    status table through `state_of`.
 3. Register the class in `_BUILTIN_BROWSER_PROVIDERS` in `registry.py` and add
@@ -828,10 +848,10 @@ plumbing — never the network, and never `OPENAI_API_KEY` or
 Never commit API keys, write them into tests, or paste them into code. Keys come
 from the environment (`NIMBLE_API_KEY`, `TAVILY_API_KEY`, `YOU_API_KEY`,
 `BRAVE_SEARCH_API_KEY`, `EXA_API_KEY`, `PARALLEL_API_KEY`,
-`PERPLEXITY_API_KEY`, `LINKUP_API_KEY`, `WEBIQ_API_KEY`, `KEENABLE_API_KEY`, `FIRECRAWL_API_KEY`, `OXYLABS_USERNAME` +
+`PERPLEXITY_API_KEY`, `LINKUP_API_KEY`, `WEBIQ_API_KEY`, `KEENABLE_API_KEY`, `DEEPSEEK_API_KEY`, `FIRECRAWL_API_KEY`, `OXYLABS_USERNAME` +
 `OXYLABS_PASSWORD`, `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE`,
 `STEEL_API_KEY`, `BROWSERBASE_API_KEY`, `HYPERBROWSER_API_KEY`,
-`ANCHOR_API_KEY`, `BROWSER_USE_API_KEY`, `SKYVERN_API_KEY`, and the optional
+`ANCHOR_API_KEY`, `KERNEL_API_KEY`, `BROWSER_USE_API_KEY`, `SKYVERN_API_KEY`, and the optional
 `JINA_API_KEY`) or from `provider_config` at construction. `.env.example` lists
 every one, beside `CHROME_PATH`, which is a path for `local` rather than a
 secret; `WEB_ROUTER_ENV_FILE`, the path of the `.env` the MCP server loads, is
@@ -845,7 +865,8 @@ Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses 
 read only by its judge behind `evaluate()` (the `evals` extra) —
 `OpenAIJudge` and `AnthropicJudge` — so each appears in `.env.example` and in
 no `*_ENV_BY_PROVIDER` table, and no search, extract, research or browser call
-ever touches either. `benchmarks/agent/` reads both too, for its agents —
+ever touches either. The opt-in `LLMDecider` behind `classify()` (`decider="llm"`, the `decider=`
+spike) reads `OPENAI_API_KEY` too, only when a caller asks for it and passes no `api_key`. `benchmarks/agent/` reads both too, for its agents —
 `ANTHROPIC_API_KEY` for Claude's, `OPENAI_API_KEY` for OpenAI's; the Claude and
 OpenAI tools never read either key, because they are
 definitions the caller's own client sends. `.env` is gitignored — keep it that way.

@@ -14,6 +14,11 @@ carries a query string, and ``launchState``, which the create-session reference
 says echoes ``useStealth``, ``useUltraStealth``, ``useProxy`` and
 ``solveCaptchas`` back. Hyperbrowser has no idle timeout, so ``idle_timeout``
 stays unmapped. See CONTRIBUTING.md on verifying against the live API.
+
+``profile``, ``persist_profile`` and the control URL were checked live on
+2026-10-20, by ``test_live_a_login_saved_to_a_profile_is_there_in_the_next_session``:
+a cookie and a localStorage entry set in a session that saved to the profile were
+there in the next session opened on it.
 """
 
 from __future__ import annotations
@@ -25,10 +30,15 @@ from typing import Any
 import httpx
 import pytest
 
-from tests.providers._browser_live import astate_after_release, state_after_release
+from tests.providers._browser_live import astate_after_release, login_survives, state_after_release
 from web_router import AsyncWebRouter, WebRouter
-from web_router.constants import BROWSER_TIMEOUT
-from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
+from web_router.constants import BROWSER_TIMEOUT, HYPERBROWSER_BASE_URL
+from web_router.exceptions import (
+    ConfigurationError,
+    MissingParameterError,
+    ProviderError,
+    UnsupportedParameterError,
+)
 from web_router.providers.hyperbrowser import HyperbrowserBrowserProvider
 from web_router.types import BrowserRequest
 
@@ -158,8 +168,6 @@ def test_provider_options_reach_hyperbrowser_untranslated(hyperbrowser: _Hyperbr
     "option",
     [
         {"idle_timeout": 30},
-        {"profile": "p-1"},
-        {"persist_profile": True},
         {"viewport": {"width": 800, "height": 600}},
         {"headless": True},
     ],
@@ -235,13 +243,17 @@ def test_the_cdp_url_is_the_reported_ws_endpoint_and_stays_secret(hyperbrowser: 
         assert SESSION_TOKEN not in browser.session.model_dump_json()
 
 
-def test_the_session_is_normalized_without_the_control_url(hyperbrowser: _Hyperbrowser) -> None:
+def test_the_session_is_normalized_with_the_live_url_as_its_secret_control_url(hyperbrowser: _Hyperbrowser) -> None:
     with _provider(hyperbrowser).open(BrowserRequest()) as browser:
         session = browser.session
+        assert browser.control_url() == OPENED["liveUrl"]
 
     assert session.provider == "hyperbrowser"
     assert session.session_id == SESSION_ID
-    assert session.live_view_url is None, "liveUrl lets its holder drive the browser, so it stays in raw"
+    assert session.live_view_url is None, "liveUrl lets its holder drive the browser, so it is never shown"
+    assert SESSION_TOKEN not in repr(session)
+    assert SESSION_TOKEN not in session.model_dump_json()
+    assert [method for method, _, _ in hyperbrowser.calls] == ["POST", "PUT"], "answered from the open, not asked"
     assert session.expires_at is None, "Hyperbrowser reports no expiry, and one is not worked out for it"
     assert session.raw == OPENED
 
@@ -385,3 +397,32 @@ def test_live_session_opens_with_stealth_captchas_and_a_proxy_country() -> None:
         page = browser.goto("https://cookiesfordays.com/halloween-sugar-cookies")
         print(f"cookiesfordays title after stealth='low': {page.title!r}")
         assert page.title, "the page must load something, whichever side of the challenge it landed on"
+
+
+def test_a_profile_is_sent_by_id_with_whether_to_save_it(hyperbrowser: _Hyperbrowser) -> None:
+    payload = _provider(hyperbrowser)._build_payload(BrowserRequest(profile="p-1", persist_profile=True))
+    assert payload == {"profile": {"id": "p-1", "persistChanges": True}}
+
+
+@pytest.mark.parametrize("persist", [True, False])
+def test_persist_profile_without_a_profile_is_refused_before_a_session_opens(
+    hyperbrowser: _Hyperbrowser, persist: bool
+) -> None:
+    with pytest.raises(MissingParameterError, match="profile"):
+        _provider(hyperbrowser).open(BrowserRequest(persist_profile=persist))
+    assert hyperbrowser.calls == []
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("HYPERBROWSER_API_KEY"), reason="HYPERBROWSER_API_KEY not set")
+def test_live_a_login_saved_to_a_profile_is_there_in_the_next_session() -> None:
+    """Creates a throwaway profile through Hyperbrowser's Profiles API, and deletes it afterwards."""
+    provider = HyperbrowserBrowserProvider()
+    profiles = httpx.Client(base_url=HYPERBROWSER_BASE_URL, headers={"x-api-key": os.environ["HYPERBROWSER_API_KEY"]})
+    profile = profiles.post("/api/profile", json={}).raise_for_status().json()
+    try:
+        with WebRouter() as router:
+            assert login_survives(router, provider, profile["id"], timeout=60)
+    finally:
+        profiles.delete(f"/api/profile/{profile['id']}")
+        profiles.close()
