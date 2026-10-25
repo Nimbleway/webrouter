@@ -96,7 +96,9 @@ def _failure(name: str, exc: Exception) -> WebRouterError:
     """
     if isinstance(exc, WebRouterError):
         return exc
-    return ProviderError(name, MSG_BENCHMARK_ROW_FAILED.format(error=exc), original=exc)
+    wrapped = ProviderError(name, MSG_BENCHMARK_ROW_FAILED.format(error=exc), original=exc)
+    wrapped.__cause__ = exc  # Returned, not raised, so ``raise ... from`` cannot set it; the traceback stays reachable.
+    return wrapped
 
 
 def fan_out(

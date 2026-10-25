@@ -316,6 +316,7 @@ def test_a_failure_outside_the_librarys_own_errors_is_that_rows_error_not_the_co
         report = router.benchmark("q", providers=["buggy", "fine"])
     assert isinstance(report["buggy"].error, ProviderError)
     assert isinstance(report["buggy"].error.original, KeyError)
+    assert report["buggy"].error.__cause__ is report["buggy"].error.original, "the traceback is kept, as when raised"
     assert report["fine"].ok
 
     async def on_the_loop() -> BenchmarkReport:
@@ -335,6 +336,7 @@ def test_a_member_whose_constructor_raises_outside_the_librarys_errors_is_its_ro
 
     assert isinstance(report["untypable"].error, ProviderError)
     assert isinstance(report["untypable"].error.original, TypeError)
+    assert report["untypable"].error.__cause__ is report["untypable"].error.original
 
 
 def test_a_dumped_row_carries_the_error_as_its_message(registered: _Registered) -> None:
