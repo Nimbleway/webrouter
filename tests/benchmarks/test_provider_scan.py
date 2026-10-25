@@ -297,7 +297,9 @@ def test_a_csv_that_repeats_a_question_is_refused_before_any_search(scan: Module
     args = scan.parse_args(["--questions", "csv", "--dataset", str(path), "--providers", "nimble"])
 
     with pytest.raises(SystemExit, match="more than once"):
-        asyncio.run(scan.run(args, {"providers": ["nimble"], "dataset": str(path), "breakdowns": []}))
+        asyncio.run(
+            scan.run(args, {"providers": ["nimble"], "dataset": str(path), "breakdowns": []}, lambda rows: None)
+        )
 
 
 def test_scans_that_withheld_different_pages_do_not_combine(scan: ModuleType, tmp_path: Path) -> None:

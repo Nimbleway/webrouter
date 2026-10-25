@@ -28,11 +28,13 @@ Unset, ``--format`` lets each backend answer in markdown where it can and
 its own default where it cannot (Exa's text); named, a backend that cannot
 return it is that row's refusal, never a substitution.
 
-Writes into ``--out``: ``run.json`` (the setup), ``rows.jsonl`` (one line
-per URL and backend) and ``report.md`` with ``summary.json``, the same
-numbers for charts. ``--combine`` merges finished scans of the same URLs --
-backends added later -- into one report without fetching again. Nothing is
-estimated, and there is no cost column, because no backend here states one.
+Writes into ``--out``: ``run.json`` (the setup) before the first call,
+``rows.jsonl`` (one line per URL and backend) as each URL finishes, and
+``report.md`` with ``summary.json``, the same numbers for charts, at the end
+-- so a scan that dies keeps the rows it paid for. ``--combine`` merges
+finished scans of the same URLs -- backends added later -- into one report
+without fetching again. Nothing is estimated, and there is no cost column,
+because no backend here states one.
 """
 
 from __future__ import annotations
@@ -47,7 +49,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import cli
-from _common import MIN_GROUP, _pct, _wilson, combine_scans, scan_main
+from _common import MIN_GROUP, Sink, _pct, _wilson, combine_scans, scan_main
 from extract_report import markdown
 from extract_report import recommended_order as recommended_order
 from urls import COMBINE_KEYS, MSG_CANNOT_COMBINE, MSG_OTHER_URLS, load_urls, urls_identity
@@ -133,7 +135,8 @@ def summarize(rows: list[dict[str, Any]], setup: dict[str, Any]) -> dict[str, An
     }
 
 
-async def run(args: argparse.Namespace, setup: dict[str, Any]) -> list[dict[str, Any]]:
+async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> list[dict[str, Any]]:
+    """Every URL through ``benchmark_extract()``, each URL's rows handed to ``sink`` the moment they exist."""
     urls = load_urls(args)
     setup["asked"] = len(urls)
     providers = setup["providers"]
@@ -153,7 +156,9 @@ async def run(args: argparse.Namespace, setup: dict[str, Any]) -> list[dict[str,
             done += 1
             if done % 10 == 0 or done == len(urls):
                 print(f"  {done}/{len(urls)}", file=sys.stderr)
-            return [row_of(url, category, run) for run in report.runs]
+            batch = [row_of(url, category, run) for run in report.runs]
+            sink(batch)
+            return batch
 
         for batch in await asyncio.gather(*(one(url, category) for url, category in urls)):
             rows += batch

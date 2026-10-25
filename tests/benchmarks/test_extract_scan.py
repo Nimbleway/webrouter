@@ -275,3 +275,56 @@ def test_a_shipped_set_and_a_file_of_your_own_each_carry_their_identity(scan: Mo
         scan.load_urls(scan.parse_args(["--urls", str(path)]))
     with pytest.raises(SystemExit, match="not a shipped set"):
         scan.load_urls(scan.parse_args(["--urls", "nowhere"]))
+
+
+def test_a_scan_that_dies_leaves_run_json_and_the_rows_it_paid_for(
+    scan: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Nothing waits for the end: the setup is written first and each URL's rows the moment they exist."""
+    out = tmp_path / "scan"
+
+    async def dying_run(args: Any, setup: dict[str, Any], sink: Any) -> list[dict[str, Any]]:
+        sink([_row("nimble", "u0", 100)])
+        sink([_row("nimble", "u1", None)])
+        raise RuntimeError("connection dropped")
+
+    with pytest.raises(RuntimeError, match="connection dropped"):
+        scan.scan_main(
+            ["--out", str(out), "--providers", "nimble"],
+            parse_args=scan.parse_args,
+            setup_of=scan.setup_of,
+            run=dying_run,
+            combine=scan.combine,
+            summarize=scan.summarize,
+            markdown=scan.markdown,
+        )
+
+    setup = json.loads((out / "run.json").read_text())
+    assert setup["providers"] == ["nimble"], "run.json was written before the first call"
+    lines = [json.loads(line) for line in (out / "rows.jsonl").read_text().splitlines()]
+    assert [(r["url"], r["returned"]) for r in lines] == [("u0", True), ("u1", False)]
+    assert not (out / "report.md").exists(), "the report needs every row; the rows do not need the report"
+
+
+def test_a_finished_scan_writes_every_file_once_from_the_rows_it_ran(scan: ModuleType, tmp_path: Path) -> None:
+    out = tmp_path / "scan"
+
+    async def quick_run(args: Any, setup: dict[str, Any], sink: Any) -> list[dict[str, Any]]:
+        rows = [_row("nimble", "u0", 100)]
+        sink(rows)
+        setup["asked"] = 1
+        return rows
+
+    scan.scan_main(
+        ["--out", str(out), "--providers", "nimble"],
+        parse_args=scan.parse_args,
+        setup_of=scan.setup_of,
+        run=quick_run,
+        combine=scan.combine,
+        summarize=scan.summarize,
+        markdown=scan.markdown,
+    )
+
+    assert json.loads((out / "run.json").read_text())["asked"] == 1, "run.json is written again with what run added"
+    assert len((out / "rows.jsonl").read_text().splitlines()) == 1, "the sink's rows are not written twice"
+    assert (out / "report.md").exists() and (out / "summary.json").exists()

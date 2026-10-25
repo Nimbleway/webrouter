@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
-from _common import APART, DEFAULT_OUT, MIN_GROUP, _p, _pct, _s, _wilson, combine_scans, scan_main
+from _common import APART, DEFAULT_OUT, MIN_GROUP, Sink, _p, _pct, _s, _wilson, combine_scans, scan_main
 
 from web_router import AsyncWebRouter
 from web_router.constants import BENCHMARK_EXCLUDED, EVALS_CSV_SET, PROVIDER_AUTO
@@ -363,7 +363,7 @@ def load_questions(args: argparse.Namespace) -> Dataset:
         raise SystemExit(f"--questions {args.questions}: {exc} A local file goes in --dataset.") from exc
 
 
-async def run(args: argparse.Namespace, setup: dict[str, Any]) -> list[dict[str, Any]]:
+async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> list[dict[str, Any]]:
     dataset = load_questions(args)
     texts = [q.question for q in dataset.questions]
     if len(set(texts)) != len(texts):
@@ -406,10 +406,13 @@ async def run(args: argparse.Namespace, setup: dict[str, Any]) -> list[dict[str,
     finally:
         await judge.aclose()
     labels = [label for label, _ in setup["breakdowns"]]
-    return [
+    tabulated = [
         {**row.model_dump(mode="json"), **{label: meta.get(row.question, {}).get(label) for label in labels}}
         for row in rows
     ]
+    # evaluate() returns a depth's rows together, so they reach the file a depth at a time rather than at the end.
+    sink(tabulated)
+    return tabulated
 
 
 def _tags(metadata: dict[str, Any]) -> dict[str, Any]:

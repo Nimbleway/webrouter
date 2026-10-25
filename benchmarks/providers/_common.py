@@ -36,6 +36,8 @@ Rows = list[dict[str, Any]]
 """One dict per input and backend, as ``rows.jsonl`` holds them."""
 Setup = dict[str, Any]
 """What a scan was asked to do, as ``run.json`` holds it."""
+Sink = Callable[[Rows], None]
+"""Where a scan hands each input's rows the moment it has them, so a scan that dies keeps what it paid for."""
 
 
 def _wilson(hits: int, n: int) -> tuple[float, float] | None:
@@ -107,13 +109,21 @@ def scan_main(
     *,
     parse_args: Callable[[list[str]], argparse.Namespace],
     setup_of: Callable[[argparse.Namespace], Setup],
-    run: Callable[[argparse.Namespace, Setup], Awaitable[Rows]],
+    run: Callable[[argparse.Namespace, Setup, Sink], Awaitable[Rows]],
     combine: Callable[[list[Path]], tuple[Rows, Setup]],
     summarize: Callable[[Rows, Setup], dict[str, Any]],
     markdown: Callable[[dict[str, Any]], str],
     out_prefix: str = "",
 ) -> None:
-    """A scan's entry point: parse, then fetch or combine, then score and write, into a fresh ``--out`` folder."""
+    """A scan's entry point: parse, then fetch or combine, then score and write, into a fresh ``--out`` folder.
+
+    A scan is an hour of paid calls, so nothing waits for the end: ``run.json``
+    is written before the first call and every input's rows are appended to
+    ``rows.jsonl`` as ``run`` hands them to the sink. A scan that dies -- a
+    dropped connection, Ctrl-C, one stray exception -- leaves both behind for
+    ``--combine`` to build on; ``run.json`` is written again at the end with
+    whatever ``run`` added to the setup.
+    """
     # An entry point, like the agent benchmark's: it may read the repo's .env,
     # and a variable already exported wins. The library itself never does.
     if ENV_FILE.is_file():
@@ -127,8 +137,19 @@ def scan_main(
         write_scan(args.out, *combine(args.combine), summarize=summarize, markdown=markdown)
         return
     setup = setup_of(args)
-    rows = asyncio.run(run(args, setup))
+    write_setup(args.out, setup)
+    with (args.out / "rows.jsonl").open("a", encoding="utf-8") as sink_file:
+
+        def sink(rows: Rows) -> None:
+            sink_file.write("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
+            sink_file.flush()
+
+        rows = asyncio.run(run(args, setup, sink))
     write_scan(args.out, rows, setup, summarize=summarize, markdown=markdown)
+
+
+def write_setup(out: Path, setup: Setup) -> None:
+    (out / "run.json").write_text(json.dumps(setup, indent=2), encoding="utf-8")
 
 
 def write_scan(
@@ -139,8 +160,12 @@ def write_scan(
     summarize: Callable[[Rows, Setup], dict[str, Any]],
     markdown: Callable[[dict[str, Any]], str],
 ) -> None:
-    """The four files every scan writes: its setup, its rows, the numbers for charts and the report, also printed."""
-    (out / "run.json").write_text(json.dumps(setup, indent=2), encoding="utf-8")
+    """The four files every scan writes: its setup, its rows, the numbers for charts and the report, also printed.
+
+    The rows file is rewritten whole from ``rows``: for a scan that ran, the
+    same lines the sink appended; for a combine, the rows merged.
+    """
+    write_setup(out, setup)
     (out / "rows.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
     summary = summarize(rows, setup)
     (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
