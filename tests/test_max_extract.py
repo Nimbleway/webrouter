@@ -7,6 +7,7 @@ race is decided by the clock the test controls rather than by a network.
 from __future__ import annotations
 
 import asyncio
+import gc
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -508,6 +509,28 @@ async def test_the_async_race_cancels_the_losers(members: _Recorder) -> None:
 
     assert response.provider == "fast"
     assert members.cancelled == ["slow"]
+
+
+async def test_a_loser_that_failed_in_the_winners_tick_has_its_exception_read(members: _Recorder) -> None:
+    """Both finish before the race resumes; the loser is done by cancel(), and only gathering it reads its error."""
+    _member(members, "winner")
+    _member(members, "loser", raises=ProviderError("loser", "HTTP 500"))
+    loop = asyncio.get_running_loop()
+    unretrieved: list[str] = []
+    loop.set_exception_handler(lambda _loop, context: unretrieved.append(str(context.get("message"))))
+
+    try:
+        provider = _race("winner", "loser")
+        response = await provider.aextract(REQUEST)
+        await provider.aclose()
+        del provider
+        gc.collect()
+    finally:
+        loop.set_exception_handler(None)
+
+    assert response.provider == "winner"
+    assert "loser" in members.finished, "the loser finished on its own; it was not cancelled"
+    assert unretrieved == []
 
 
 async def test_the_async_race_holds_a_partial_answer_too(members: _Recorder) -> None:

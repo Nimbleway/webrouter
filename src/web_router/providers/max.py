@@ -302,7 +302,13 @@ class _Race:
 
 
 class _AsyncRace:
-    """The tasks of one async race, handed back in the order they finished, and cancelled at the end."""
+    """The tasks of one async race, handed back in the order they finished, and cancelled at the end.
+
+    Every task started stays in ``_tasks`` until :meth:`cancel` gathers it,
+    finished or not: a loser that failed in the same tick as the winner is
+    done by then, and gathering it is what reads its exception. Dropped
+    unread, the loop would log "Task exception was never retrieved".
+    """
 
     def __init__(self) -> None:
         self._finished: asyncio.Queue[tuple[str, asyncio.Task[ExtractResponse]]] = asyncio.Queue()
@@ -319,7 +325,7 @@ class _AsyncRace:
         return []
 
     def _finished_one(self, task: asyncio.Task[ExtractResponse]) -> None:
-        self._finished.put_nowait((self._tasks.pop(task), task))
+        self._finished.put_nowait((self._tasks[task], task))
 
     async def next(self, timeout: float | None = None) -> tuple[str, asyncio.Task[ExtractResponse]] | None:
         if self.running == 0:
@@ -332,6 +338,7 @@ class _AsyncRace:
         return finished
 
     async def cancel(self) -> None:
+        """Cancel every task still running and read every one's outcome, so no loser's exception goes unretrieved."""
         for task in self._tasks:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
