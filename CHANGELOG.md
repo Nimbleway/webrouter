@@ -13,6 +13,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
+- Nimble enrichments (`research` with `records`) work as documented. Nimble takes a table schema for one, so the row schema you pass as `output_schema` is now sent as an array of rows; it was sent as is and refused with a 422. `records` without an `output_schema`, or at `effort="low"`, which Nimble also refuses, now raise before a run starts. Checked live.
+
 - Browser Use steps now carry a `detail` and an `action`. `detail` came from `nextGoal`, which live tasks always return empty, so it was always `None`; it now reads the step's `memory`. A step that took a single action, which every step in four live tasks did, now has it as `action`. `nextGoal` moves to `extra`.
 
 ## [0.6.0] - 2026-10-20

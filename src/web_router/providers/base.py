@@ -1028,8 +1028,35 @@ class ResearchProvider(JobProvider[ResearchRequest, ResearchProgress, ResearchRe
         special cases: a backend with no structured output simply does not
         declare ``output_schema``, and asking it for one says so in the same
         sentence a backend that cannot geo-target a search does.
+
+        Then the backend's own conditions, through :meth:`missing_parameters` and
+        :meth:`refused_values`: an option it maps only alongside another, or at
+        some values. Raised before a run starts, so nothing is billed for it.
         """
         self._reject_unmapped(request)
+        missing = self.missing_parameters(request)
+        if missing:
+            raise MissingParameterError(self.name, missing, detail=self.conditions)
+        refused = self.refused_values(request)
+        if refused:
+            raise UnsupportedParameterError(self.name, refused, detail=self.conditions, values=refused)
+
+    conditions: ClassVar[str | None] = None
+    """What :meth:`missing_parameters` and :meth:`refused_values` enforce, in the backend's words."""
+
+    @classmethod
+    def missing_parameters(cls, request: ResearchRequest) -> frozenset[str]:
+        """Options this request leaves unset that the backend needs alongside the ones it set. None by default.
+
+        On the class, as :meth:`BrowseProvider.missing_parameters` is, so a chooser
+        can pass a backend over without a credential.
+        """
+        return frozenset()
+
+    @classmethod
+    def refused_values(cls, request: ResearchRequest) -> dict[str, Any]:
+        """Options this request sets to a value the backend maps the option for but will not run. None by default."""
+        return {}
 
     # -- Helpers -------------------------------------------------------------
 

@@ -18,7 +18,7 @@ from web_router.constants import (
     NIMBLE_RESEARCH_USE_CASE_ENRICHMENT,
     NIMBLE_RESEARCH_USE_CASE_RESEARCH,
 )
-from web_router.exceptions import ProviderError
+from web_router.exceptions import MissingParameterError, ProviderError, UnsupportedParameterError
 from web_router.types import ResearchRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
@@ -229,7 +229,34 @@ def test_records_turn_the_run_into_an_enrichment_under_its_own_agent(provider: N
     assert payload["input_data"] == records
     assert payload["use_case"] == NIMBLE_RESEARCH_USE_CASE_ENRICHMENT
     assert payload["agent_name"] == NIMBLE_RESEARCH_AGENT_NAMES[NIMBLE_RESEARCH_USE_CASE_ENRICHMENT]
-    assert payload["output_schema"] == SCHEMA
+
+
+def test_an_enrichment_sends_the_row_schema_as_the_table_nimble_takes(provider: NimbleResearchProvider) -> None:
+    """Nimble answers 422 for an enrichment whose schema is not an array of rows."""
+    payload = provider._build_payload(ResearchRequest(query="q", records=[{"name": "n"}], output_schema=SCHEMA))
+    assert payload["output_schema"] == {"type": "array", "items": SCHEMA}
+
+
+def test_a_table_schema_is_sent_as_it_is(provider: NimbleResearchProvider) -> None:
+    table = {"type": "array", "items": SCHEMA}
+    payload = provider._build_payload(ResearchRequest(query="q", records=[{"name": "n"}], output_schema=table))
+    assert payload["output_schema"] == table
+
+
+def test_a_question_keeps_its_schema_as_it_is(provider: NimbleResearchProvider) -> None:
+    assert provider._build_payload(ResearchRequest(query="q", output_schema=SCHEMA))["output_schema"] == SCHEMA
+
+
+def test_records_without_a_schema_are_refused_before_a_run_is_billed(provider: NimbleResearchProvider) -> None:
+    with pytest.raises(MissingParameterError, match="output_schema"):
+        provider.validate(ResearchRequest(query="q", records=[{"name": "n"}]))
+
+
+def test_an_enrichment_at_low_effort_is_refused_before_a_run_is_billed(provider: NimbleResearchProvider) -> None:
+    request = ResearchRequest(query="q", records=[{"name": "n"}], output_schema=SCHEMA, effort="low")
+    with pytest.raises(UnsupportedParameterError, match="effort='low'"):
+        provider.validate(request)
+    provider.validate(request.model_copy(update={"effort": "medium"}))
 
 
 def test_the_two_use_cases_do_not_share_an_agent(provider: NimbleResearchProvider) -> None:
@@ -405,3 +432,23 @@ def test_live_research_answers_with_citations() -> None:
     assert response.answer
     assert response.citations
     assert all(citation.url for citation in response.citations)
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("NIMBLE_API_KEY"), reason="NIMBLE_API_KEY not set")
+def test_live_enrichment_fills_in_a_row_schema_per_record() -> None:
+    """The README's enrichment: one row's schema, filled in for each record."""
+    from tests.conftest import billing_aware
+    from web_router import WebRouter
+
+    row = {"type": "object", "properties": {"name": {"type": "string"}, "country": {"type": "string"}}}
+    with WebRouter("nimble") as router, billing_aware("nimble"):
+        response = router.research(
+            "fill in the country each company is headquartered in",
+            output_schema=row,
+            records=[{"name": "Nimbleway"}],
+            effort="medium",
+        )
+
+    assert response.provider == "nimble"
+    assert response.structured, f"no structured output: {response.answer!r}"

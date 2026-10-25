@@ -22,7 +22,10 @@ from web_router.constants import (
     MSG_EXTRACT_BAD_STATUS,
     MSG_NIMBLE_ASYNC_CLIENT_ONLY,
     MSG_NIMBLE_CLIENT_AND_KEY,
+    MSG_NIMBLE_ENRICHMENT,
     MSG_NIMBLE_RESEARCH_BAD_JOB_ID,
+    NIMBLE_ENRICHMENT_REFUSED_EFFORTS,
+    NIMBLE_ENRICHMENT_SCHEMA_ROOT,
     NIMBLE_EXTRACT_DEFAULT_FORMAT,
     NIMBLE_EXTRACT_FORMATS,
     NIMBLE_EXTRACT_SUCCESS_STATUS,
@@ -338,6 +341,18 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
     # No `_cancel`: a run exposes get, result, list and stream_events and nothing
     # that stops one -- `agents.delete` removes the agent, not the run under it.
 
+    conditions: ClassVar[str | None] = MSG_NIMBLE_ENRICHMENT
+
+    @classmethod
+    def missing_parameters(cls, request: ResearchRequest) -> frozenset[str]:
+        """An enrichment fills in a schema: ``records`` without one is answered with a 422."""
+        return frozenset({"output_schema"}) if request.records and request.output_schema is None else frozenset()
+
+    @classmethod
+    def refused_values(cls, request: ResearchRequest) -> dict[str, Any]:
+        refused = request.records and request.effort in NIMBLE_ENRICHMENT_REFUSED_EFFORTS
+        return {"effort": request.effort} if refused else {}
+
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Nimble ``agents.run()`` keyword arguments."""
         # Records to fill in are what makes a run an enrichment rather than a
@@ -351,7 +366,7 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
             agent_name=NIMBLE_RESEARCH_AGENT_NAMES[use_case],
             use_case=use_case,
             effort=NIMBLE_RESEARCH_EFFORT[request.effort] if request.effort else None,
-            output_schema=request.output_schema,
+            output_schema=_enrichment_schema(request) if request.records else request.output_schema,
             input_data=request.records,
             sources=_sources(request),
         )
@@ -406,6 +421,14 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
 def _as_int(value: Any) -> int | None:
     """Nimble types its status code as a number and sends it as ``200.0``."""
     return None if value is None else int(value)
+
+
+def _enrichment_schema(request: ResearchRequest) -> dict[str, Any] | None:
+    """The table Nimble's enrichment takes: one row's schema per record, unless the caller already sent a table."""
+    schema = request.output_schema
+    if schema is None or schema.get("type") == NIMBLE_ENRICHMENT_SCHEMA_ROOT:
+        return schema
+    return {"type": NIMBLE_ENRICHMENT_SCHEMA_ROOT, "items": schema}
 
 
 def _sources(request: ResearchRequest) -> dict[str, Any] | None:

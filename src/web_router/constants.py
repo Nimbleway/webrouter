@@ -2184,6 +2184,16 @@ NIMBLE_RESEARCH_AGENT_NAMES: dict[str, str] = {
     NIMBLE_RESEARCH_USE_CASE_ENRICHMENT: "web-router-enrichment",
 }
 
+NIMBLE_ENRICHMENT_SCHEMA_ROOT = "array"
+"""Nimble's enrichment takes a table: an array of the rows to fill in. A row schema is wrapped into one."""
+NIMBLE_ENRICHMENT_REFUSED_EFFORTS: frozenset[str] = frozenset({"low"})
+MSG_NIMBLE_ENRICHMENT = (
+    "Nimble runs `records` as an enrichment, which fills in an `output_schema` for each row -- pass "
+    "the schema of one row -- at `effort` 'medium' or above."
+)
+"""Checked live: Nimble answers 422 for records with no schema, for a schema whose root is not an
+array of rows, and with "input_data (enrichment) is not supported for effort='low'"."""
+
 NIMBLE_RESEARCH_TEXT_OUTPUT = "text"
 NIMBLE_RESEARCH_JSON_OUTPUT = "json"
 
