@@ -78,6 +78,7 @@ from web_router.constants import (
     MSG_AUTO_BROWSE_MISSING,
     MSG_AUTO_BROWSE_NO_CREDENTIAL,
     MSG_AUTO_BROWSE_NO_MEMBER,
+    MSG_AUTO_BROWSE_REFUSES,
     MSG_AUTO_BROWSE_SKIPPED,
     MSG_AUTO_BROWSE_UNKNOWN_JOB,
     MSG_AUTO_BROWSE_UNMAPPED,
@@ -92,7 +93,9 @@ from web_router.constants import (
     MSG_AUTO_BROWSER_UNMAPPED,
     MSG_AUTO_BROWSER_UNSUPPORTED,
     MSG_AUTO_EXTRACT_NO_MEMBER,
+    MSG_AUTO_RESEARCH_NEEDS,
     MSG_AUTO_RESEARCH_NO_CAPABLE_BACKEND,
+    MSG_AUTO_RESEARCH_REFUSES,
     MSG_AUTO_RESEARCH_SKIPPED,
     MSG_AUTO_RESEARCH_UNKNOWN_JOB,
     MSG_AUTO_SEARCH_NO_MEMBER,
@@ -521,18 +524,30 @@ class AutoResearchProvider(ResearchProvider):
         wanted = request.specified_parameters()
         eligible: list[tuple[int, str]] = []
         skipped: list[str] = []
+        missing: frozenset[str] = frozenset()
+        refused: dict[str, Any] = {}
         for position, (provider_name, _) in enumerate(self._chain):
-            supported = get_research_provider_class(provider_name).supported_parameters
-            if wanted <= supported:
-                eligible.append((position, provider_name))
-            else:
+            member_cls = get_research_provider_class(provider_name)
+            supported = member_cls.supported_parameters
+            if not wanted <= supported:
                 skipped.append(
                     MSG_AUTO_RESEARCH_SKIPPED.format(
-                        name=provider_name,
-                        supported=", ".join(sorted(supported)) or "nothing",
+                        name=provider_name, supported=", ".join(sorted(supported)) or "nothing"
                     )
                 )
+            elif needs := member_cls.missing_parameters(request):
+                skipped.append(MSG_AUTO_RESEARCH_NEEDS.format(name=provider_name, names=_quoted(needs)))
+                missing |= needs
+            elif refuses := member_cls.refused_values(request):
+                skipped.append(MSG_AUTO_RESEARCH_REFUSES.format(name=provider_name, values=_valued(refuses)))
+                refused.update(refuses)
+            else:
+                eligible.append((position, provider_name))
 
+        if not eligible and missing:
+            raise MissingParameterError(self.name, missing, detail=", ".join(skipped))
+        if not eligible and refused:
+            raise UnsupportedParameterError(self.name, refused, detail=", ".join(skipped), values=refused)
         if not eligible and skipped:
             # Every option may be mapped by some member and yet no single member
             # map them all; then the whole set is what nothing could take.
@@ -900,28 +915,35 @@ class AutoBrowseProvider(BrowseProvider):
         skipped: list[str] = []
         unmapped: frozenset[str] = frozenset()
         missing: frozenset[str] = frozenset()
+        refused: dict[str, Any] = {}
         widest: frozenset[str] = frozenset()
         for position, (provider_name, _) in enumerate(self._chain):
             member_cls = get_browse_provider_class(provider_name)
             widest |= member_cls.supported_parameters
             lacks = wanted - member_cls.supported_parameters
             needs = member_cls.missing_parameters(request)
-            if not lacks and not needs:
+            refuses = member_cls.refused_values(request)
+            if not lacks and not needs and not refuses:
                 eligible.append((position, provider_name))
                 continue
             reasons = [MSG_AUTO_BROWSE_UNMAPPED.format(names=_quoted(lacks))] if lacks else []
             if needs:
                 reasons.append(MSG_AUTO_BROWSE_MISSING.format(names=_quoted(needs)))
+            if refuses:
+                reasons.append(MSG_AUTO_BROWSE_REFUSES.format(values=_valued(refuses)))
             skipped.append(MSG_AUTO_BROWSE_SKIPPED.format(name=provider_name, reasons="; ".join(reasons)))
             unmapped |= lacks
             if not lacks:
                 missing |= needs
+                refused.update(refuses)
 
         if eligible or not skipped:
             return eligible
         detail = MSG_AUTO_BROWSE_NO_MEMBER.format(skipped=", ".join(skipped))
         if missing:
             raise MissingParameterError(self.name, missing, detail=detail)
+        if refused:
+            raise UnsupportedParameterError(self.name, refused, detail=detail, values=refused)
         # Name what no member maps at all when there is such a thing: that is the
         # option to drop. Otherwise each is mapped somewhere, just never together.
         raise UnsupportedParameterError(self.name, (wanted - widest) or unmapped, detail=detail)

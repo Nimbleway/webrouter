@@ -76,7 +76,10 @@ SAMPLES: dict[str, Any] = {
 }
 """The value each free-form option is probed with. Literals and booleans are probed at every value."""
 
-ALONGSIDE: dict[str, dict[str, Any]] = {"persist_profile": {"profile": SAMPLES["profile"]}}
+ALONGSIDE: dict[str, dict[str, Any]] = {
+    "persist_profile": {"profile": SAMPLES["profile"]},
+    "records": {"output_schema": SAMPLES["output_schema"]},
+}
 """Options that mean nothing alone, probed on top of these; only their own change is recorded."""
 
 

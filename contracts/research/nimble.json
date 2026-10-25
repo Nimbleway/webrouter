@@ -29,6 +29,10 @@
             "name": "Example"
           }
         ],
+        "body.output_schema.items.properties.answer.type": "string",
+        "body.output_schema.items.type": "object",
+        "body.output_schema.properties.answer.type": "<removed>",
+        "body.output_schema.type": "array",
         "body.use_case": "enrichment"
       }
     },
@@ -80,7 +84,7 @@
   ],
   "verified": {
     "output_schema": "docs: https://docs.nimbleway.com/api-reference/public-api/create-run",
-    "records": "docs: https://docs.nimbleway.com/api-reference/public-api/create-run",
+    "records": "live: tests/providers/test_nimble_research.py::test_live_enrichment_fills_in_a_row_schema_per_record",
     "effort": "live: tests/providers/test_nimble_research.py::test_live_research_answers_with_citations",
     "include_domains": "docs: https://docs.nimbleway.com/api-reference/public-api/create-run",
     "exclude_domains": "docs: https://docs.nimbleway.com/api-reference/public-api/create-run"
