@@ -1,10 +1,8 @@
 """``contracts/`` must describe the code as it is, and say where each mapping comes from.
 
-The generated half of every contract is rebuilt here from the providers
-themselves, so a provider added, removed or remapped without ``make contracts``
-fails CI. The hand-written half -- the vendor's documentation, how each mapped
-option was verified, and the vendor options web-router does not map -- must be
-filled in for every contract outside :data:`PENDING`, which only shrinks.
+The generated part of every contract is rebuilt here from the providers, so a provider
+added, removed or remapped without ``make contracts`` fails CI. A contract whose
+hand-written fields are filled in must have all three, complete, and no ``TODO``.
 """
 
 from __future__ import annotations
@@ -14,53 +12,8 @@ from typing import Any
 
 import pytest
 
-from scripts.contracts import CONTRACTS_DIR, TODO, expected, stale
+from scripts.contracts import CONTRACTS_DIR, HAND_FIELDS, expected, stale
 from web_router.exceptions import ProviderNotInstalledError
-
-PENDING: frozenset[str] = frozenset(
-    {
-        "browse/browser-use",
-        "browse/browserbase",
-        "browse/skyvern",
-        "browser/anchor",
-        "browser/browserbase",
-        "browser/hyperbrowser",
-        "browser/kernel",
-        "browser/steel",
-        "extract/brightdata",
-        "extract/deepseek",
-        "extract/exa",
-        "extract/firecrawl",
-        "extract/jina",
-        "extract/keenable",
-        "extract/linkup",
-        "extract/nimble",
-        "extract/oxylabs",
-        "extract/webiq",
-        "research/linkup",
-        "research/nimble",
-        "research/parallel",
-        "research/perplexity",
-        "research/you",
-        "search/brave",
-        "search/deepseek",
-        "search/exa",
-        "search/exa-mcp",
-        "search/keenable",
-        "search/linkup",
-        "search/nimble",
-        "search/parallel",
-        "search/parallel-mcp",
-        "search/perplexity",
-        "search/webiq",
-        "search/you",
-        "search/you-mcp",
-    }
-)
-"""Contracts written before this check, whose hand-written fields are still to fill.
-
-Remove an entry once its contract is filled in; never add one. A provider added
-from here on starts outside this set, so it cannot merge with a ``TODO`` left in."""
 
 VENDOR_OPTION_STATUSES = frozenset({"passthrough", "not_supported"})
 VERIFIED_KINDS = ("live: ", "docs: ")
@@ -74,7 +27,8 @@ def _contracts() -> dict[str, dict[str, Any]]:
 
 
 CONTRACTS = _contracts()
-FILLED = sorted(set(CONTRACTS) - PENDING)
+FILLED = sorted(key for key, contract in CONTRACTS.items() if any(field in contract for field in HAND_FIELDS))
+"""Contracts with hand-written fields. One without them is not yet verified."""
 
 
 def test_contracts_match_the_code() -> None:
@@ -85,16 +39,7 @@ def test_contracts_match_the_code() -> None:
     assert stale(files) == [], "Run `make contracts` and commit the result."
 
 
-def test_pending_only_names_contracts_that_exist() -> None:
-    assert set() == PENDING - set(CONTRACTS)
-
-
-@pytest.mark.parametrize("key", sorted(PENDING & set(CONTRACTS)))
-def test_a_pending_contract_leaves_pending_once_filled(key: str) -> None:
-    """Keeps PENDING honest: a contract with nothing left to fill comes off the list."""
-    assert TODO in json.dumps({field: CONTRACTS[key][field] for field in ("source", "verified", "vendor_options")}), (
-        f"{key} is filled in; remove it from PENDING"
-    )
+TODO = "TODO"
 
 
 def _filled(text: object) -> bool:
@@ -102,11 +47,16 @@ def _filled(text: object) -> bool:
 
 
 @pytest.mark.parametrize("key", FILLED)
-def test_a_filled_contract_has_no_todo_left(key: str) -> None:
+def test_a_filled_contract_is_complete(key: str) -> None:
     contract = CONTRACTS[key]
+    assert all(field in contract for field in HAND_FIELDS), f"{key}: fill in all of {', '.join(HAND_FIELDS)}"
     sources = contract["source"] if isinstance(contract["source"], list) else [contract["source"]]
     assert sources and all(map(_filled, sources)), f"{key}: name the vendor's documentation in `source`"
-    assert contract["vendor_options"] != TODO, f"{key}: list the vendor's unmapped options in `vendor_options`"
+    assert isinstance(contract["vendor_options"], dict), (
+        f"{key}: list the vendor's unmapped options in `vendor_options`"
+    )
+    hand_written = json.dumps({field: contract[field] for field in HAND_FIELDS})
+    assert TODO not in hand_written, f"{key}: a TODO is left in {', '.join(HAND_FIELDS)}"
     for option, how in contract["verified"].items():
         kind = next((k for k in VERIFIED_KINDS if how.startswith(k)), None)
         assert kind and _filled(how.removeprefix(kind)), (

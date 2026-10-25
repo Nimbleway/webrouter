@@ -3,10 +3,7 @@
   "method": "search",
   "class": "web_router.providers.tavily.TavilyProvider",
   "transport": {
-    "kind": "sdk",
-    "packages": [
-      "tavily"
-    ]
+    "kind": "sdk"
   },
   "credentials": [
     "TAVILY_API_KEY"

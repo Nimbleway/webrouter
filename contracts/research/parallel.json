@@ -6,9 +6,9 @@
     "kind": "http",
     "base_url": "https://api.parallel.ai",
     "paths": {
-      "parallel_task_result_path": "/v1/tasks/runs/{run_id}/result",
-      "parallel_task_run_path": "/v1/tasks/runs",
-      "parallel_task_status_path": "/v1/tasks/runs/{run_id}"
+      "result_path": "/v1/tasks/runs/{run_id}/result",
+      "run_path": "/v1/tasks/runs",
+      "status_path": "/v1/tasks/runs/{run_id}"
     },
     "auth_header": "x-api-key"
   },
@@ -48,11 +48,5 @@
     "exclude_domains",
     "include_domains",
     "records"
-  ],
-  "source": "TODO",
-  "verified": {
-    "output_schema": "TODO",
-    "effort": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

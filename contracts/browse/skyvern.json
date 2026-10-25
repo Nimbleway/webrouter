@@ -6,9 +6,9 @@
     "kind": "http",
     "base_url": "https://api.skyvern.com",
     "paths": {
-      "skyvern_cancel_path": "/v1/runs/{job_id}/cancel",
-      "skyvern_run_path": "/v1/runs/{job_id}",
-      "skyvern_run_task_path": "/v1/run/tasks"
+      "cancel_path": "/v1/runs/{job_id}/cancel",
+      "run_path": "/v1/runs/{job_id}",
+      "start_path": "/v1/run/tasks"
     },
     "auth_header": "x-api-key"
   },
@@ -30,10 +30,5 @@
     "allowed_domains",
     "max_steps",
     "output_schema"
-  ],
-  "source": "TODO",
-  "verified": {
-    "start_url": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

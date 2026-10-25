@@ -6,9 +6,9 @@
     "kind": "http",
     "base_url": "https://api.browser-use.com",
     "paths": {
-      "browser_use_task_path": "/api/v2/tasks/{job_id}",
-      "browser_use_task_status_path": "/api/v2/tasks/{job_id}/status",
-      "browser_use_tasks_path": "/api/v2/tasks"
+      "status_path": "/api/v2/tasks/{job_id}/status",
+      "task_path": "/api/v2/tasks/{job_id}",
+      "tasks_path": "/api/v2/tasks"
     },
     "auth_header": "X-Browser-Use-API-Key"
   },
@@ -43,13 +43,5 @@
       }
     }
   },
-  "not_mapped": [],
-  "source": "TODO",
-  "verified": {
-    "start_url": "TODO",
-    "output_schema": "TODO",
-    "max_steps": "TODO",
-    "allowed_domains": "TODO"
-  },
-  "vendor_options": "TODO"
+  "not_mapped": []
 }

@@ -6,7 +6,7 @@
     "kind": "http",
     "base_url": "https://api.browserbase.com",
     "paths": {
-      "browserbase_debug_path": "/v1/sessions/{session_id}/debug",
+      "debug_path": "/v1/sessions/{session_id}/debug",
       "open_path": "/v1/sessions",
       "release_path": "/v1/sessions/{session_id}"
     },
@@ -81,15 +81,5 @@
     "headless",
     "idle_timeout",
     "viewport"
-  ],
-  "source": "TODO",
-  "verified": {
-    "proxy_country": "TODO",
-    "stealth": "TODO",
-    "solve_captchas": "TODO",
-    "profile": "TODO",
-    "persist_profile": "TODO",
-    "timeout": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

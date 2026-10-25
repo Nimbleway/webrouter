@@ -3,10 +3,7 @@
   "method": "extract",
   "class": "web_router.providers.tavily.TavilyExtractProvider",
   "transport": {
-    "kind": "sdk",
-    "packages": [
-      "tavily"
-    ]
+    "kind": "sdk"
   },
   "credentials": [
     "TAVILY_API_KEY"

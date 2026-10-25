@@ -3,10 +3,7 @@
   "method": "research",
   "class": "web_router.providers.nimble.NimbleResearchProvider",
   "transport": {
-    "kind": "sdk",
-    "packages": [
-      "nimble_python"
-    ]
+    "kind": "sdk"
   },
   "credentials": [
     "NIMBLE_API_KEY"
@@ -74,14 +71,5 @@
       }
     }
   },
-  "not_mapped": [],
-  "source": "TODO",
-  "verified": {
-    "output_schema": "TODO",
-    "records": "TODO",
-    "effort": "TODO",
-    "include_domains": "TODO",
-    "exclude_domains": "TODO"
-  },
-  "vendor_options": "TODO"
+  "not_mapped": []
 }

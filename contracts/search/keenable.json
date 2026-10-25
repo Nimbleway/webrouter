@@ -6,7 +6,7 @@
     "kind": "http",
     "base_url": "https://api.keenable.ai",
     "paths": {
-      "keenable_search_public_path": "/v1/search/public",
+      "public_search_path": "/v1/search/public",
       "search_path": "/v1/search"
     },
     "method": "POST",
@@ -32,10 +32,5 @@
     "include_domains",
     "locale",
     "search_depth"
-  ],
-  "source": "TODO",
-  "verified": {
-    "max_results": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

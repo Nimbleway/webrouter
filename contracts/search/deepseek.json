@@ -43,13 +43,5 @@
   "not_mapped": [
     "country",
     "search_depth"
-  ],
-  "source": "TODO",
-  "verified": {
-    "max_results": "TODO",
-    "include_domains": "TODO",
-    "exclude_domains": "TODO",
-    "locale": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

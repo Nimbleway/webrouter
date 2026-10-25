@@ -6,9 +6,9 @@
     "kind": "http",
     "base_url": "https://api.hyperbrowser.ai",
     "paths": {
-      "hyperbrowser_session_path": "/api/session/{session_id}",
       "open_path": "/api/session",
-      "release_path": "/api/session/{session_id}/stop"
+      "release_path": "/api/session/{session_id}/stop",
+      "status_path": "/api/session/{session_id}"
     },
     "auth_header": "x-api-key"
   },
@@ -77,15 +77,5 @@
     "headless",
     "idle_timeout",
     "viewport"
-  ],
-  "source": "TODO",
-  "verified": {
-    "proxy_country": "TODO",
-    "stealth": "TODO",
-    "solve_captchas": "TODO",
-    "profile": "TODO",
-    "persist_profile": "TODO",
-    "timeout": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

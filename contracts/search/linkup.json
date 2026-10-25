@@ -45,12 +45,5 @@
     "country",
     "locale",
     "search_depth"
-  ],
-  "source": "TODO",
-  "verified": {
-    "max_results": "TODO",
-    "include_domains": "TODO",
-    "exclude_domains": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

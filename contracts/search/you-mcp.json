@@ -39,11 +39,5 @@
     "exclude_domains",
     "include_domains",
     "locale"
-  ],
-  "source": "TODO",
-  "verified": {
-    "max_results": "TODO",
-    "search_depth": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

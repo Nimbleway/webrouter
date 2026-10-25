@@ -6,9 +6,9 @@
     "kind": "http",
     "base_url": "https://api.anchorbrowser.io",
     "paths": {
-      "anchor_session_path": "/v1/sessions/{session_id}",
       "open_path": "/v1/sessions",
-      "release_path": "/v1/sessions/{session_id}"
+      "release_path": "/v1/sessions/{session_id}",
+      "status_path": "/v1/sessions/{session_id}"
     },
     "auth_header": "anchor-api-key"
   },
@@ -79,16 +79,5 @@
   "not_mapped": [
     "headless",
     "viewport"
-  ],
-  "source": "TODO",
-  "verified": {
-    "proxy_country": "TODO",
-    "stealth": "TODO",
-    "solve_captchas": "TODO",
-    "profile": "TODO",
-    "persist_profile": "TODO",
-    "timeout": "TODO",
-    "idle_timeout": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

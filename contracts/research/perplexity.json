@@ -6,9 +6,9 @@
     "kind": "http",
     "base_url": "https://api.perplexity.ai",
     "paths": {
-      "perplexity_research_cancel_path": "/v1/responses/{response_id}/cancel",
-      "perplexity_research_path": "/v1/responses",
-      "perplexity_research_status_path": "/v1/responses/{response_id}"
+      "cancel_path": "/v1/responses/{response_id}/cancel",
+      "research_path": "/v1/responses",
+      "status_path": "/v1/responses/{response_id}"
     },
     "auth_header": "Authorization"
   },
@@ -42,10 +42,5 @@
     "include_domains",
     "output_schema",
     "records"
-  ],
-  "source": "TODO",
-  "verified": {
-    "effort": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

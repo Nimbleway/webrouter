@@ -40,10 +40,5 @@
     "include_domains",
     "output_schema",
     "records"
-  ],
-  "source": "TODO",
-  "verified": {
-    "effort": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

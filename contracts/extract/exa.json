@@ -36,10 +36,5 @@
   },
   "not_mapped": [],
   "default_format": "text",
-  "batches_urls": true,
-  "source": "TODO",
-  "verified": {
-    "format": "TODO"
-  },
-  "vendor_options": "TODO"
+  "batches_urls": true
 }

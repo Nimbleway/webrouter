@@ -6,8 +6,8 @@
     "kind": "http",
     "base_url": "https://api.linkup.so",
     "paths": {
-      "linkup_research_path": "/v1/research",
-      "linkup_research_status_path": "/v1/research/{research_id}"
+      "research_path": "/v1/research",
+      "status_path": "/v1/research/{research_id}"
     },
     "auth_header": "Authorization"
   },
@@ -45,11 +45,5 @@
     "exclude_domains",
     "include_domains",
     "records"
-  ],
-  "source": "TODO",
-  "verified": {
-    "output_schema": "TODO",
-    "effort": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }

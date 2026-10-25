@@ -7,7 +7,7 @@
     "base_url": "https://api.keenable.ai",
     "paths": {
       "extract_path": "/v1/fetch",
-      "keenable_fetch_public_path": "/v1/fetch/public"
+      "public_extract_path": "/v1/fetch/public"
     },
     "method": "GET",
     "auth_header": "X-API-Key"
@@ -35,10 +35,5 @@
   },
   "not_mapped": [],
   "default_format": "markdown",
-  "batches_urls": false,
-  "source": "TODO",
-  "verified": {
-    "format": "TODO"
-  },
-  "vendor_options": "TODO"
+  "batches_urls": false
 }

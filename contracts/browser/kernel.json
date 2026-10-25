@@ -75,15 +75,5 @@
     "proxy_country",
     "solve_captchas",
     "timeout"
-  ],
-  "source": "TODO",
-  "verified": {
-    "stealth": "TODO",
-    "profile": "TODO",
-    "persist_profile": "TODO",
-    "idle_timeout": "TODO",
-    "viewport": "TODO",
-    "headless": "TODO"
-  },
-  "vendor_options": "TODO"
+  ]
 }
