@@ -185,7 +185,7 @@ the client's `env` block or a file the server already read takes a restart.
 | Tool | What it is for | Latency |
 | --- | --- | --- |
 | `search` | Find pages: ranked links with their titles and page text. | about a second |
-| `extract` | Read pages you already have URLs for, as markdown, HTML or text. | about a second |
+| `extract` | Read pages you already have URLs for, as markdown, HTML or text. `provider="max"` reads through every configured backend at once and returns the first answer, at one fetch per backend per URL. | about a second |
 | `templates` | List a vendor's templates: saved, site-specific extractions, each turning one kind of page into a record. `provider` is required, as on the two tools below. Paged with `limit` and `offset`. | about a second |
 | `template` | Describe one template: the `input_schema` a run must pass as `inputs`, and the `output_schema` of the record. | about a second |
 | `run_template` | Run a template on one page and get its record back. | about a second, and it bills one fetch |
@@ -454,7 +454,7 @@ With nothing configured at all the enums read:
 
 ```
 search   ["auto", "you-mcp"]     # keyless
-extract  ["auto", "jina"]        # keyless
+extract  ["auto", "jina", "max"] # keyless; max races whatever auto would try
 template []                      # no keyless tier and no auto: a template's name belongs to one vendor
 research ["auto"]                # every research backend bills, so nothing here can run
 ```

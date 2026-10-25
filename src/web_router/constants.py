@@ -60,6 +60,23 @@ PROVIDER_BROWSER_USE = Provider.BROWSER_USE.value
 
 PROVIDER_LOCAL = Provider.LOCAL.value
 PROVIDER_AUTO = Provider.AUTO.value
+PROVIDER_MAX = Provider.MAX.value
+
+DELEGATING_PROVIDERS: frozenset[str] = frozenset({PROVIDER_AUTO, PROVIDER_MAX})
+"""The names that route to other backends rather than to an API of their own.
+
+Each builds its members itself, so the router hands it every other backend's
+``provider_config`` entry as ``members_config`` -- a key passed in code reaches
+Nimble the same way through ``auto`` or ``max`` as through ``provider="nimble"``.
+"""
+
+MAX_INHERITS_FROM_AUTO: tuple[str, ...] = ("chain", "members_config")
+"""The ``provider_config["auto"]`` entries ``max`` reads when its own entry does not set them.
+
+``max`` races the members ``auto`` would try, so a chain narrowed under ``auto``
+-- a paid backend taken out -- narrows ``max`` too; ``max`` names its own under
+``"max"`` only to race a different list.
+"""
 
 DEFAULT_PROVIDER = PROVIDER_AUTO
 """Used when the caller names no provider anywhere.
@@ -159,6 +176,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_DEEPSEEK: (ENV_DEEPSEEK_API_KEY,),
     PROVIDER_JINA: (),
     PROVIDER_AUTO: (),
+    PROVIDER_MAX: (),
 }
 """Which variables each extract provider needs, all of them; ``()`` means none.
 
@@ -681,6 +699,14 @@ MSG_AUTO_SEARCH_NO_MEMBER = (
 )
 """Replaces the ``provider_options`` advice, which ``auto`` cannot act on. Raised before any member is tried."""
 
+# --- max --------------------------------------------------------------------
+# Extract's parallel chain: the same members as `auto`, all at once.
+
+MAX_AGGREGATE_FAILURE = "no backend answered: {failures}"
+"""``max``'s exhaustion: every member was tried at once and each one's own reason follows."""
+
+MSG_MAX_BAD_HEDGE = "hedge is the seconds the first backend runs alone, a number of zero or more, not {hedge!r}."
+
 MSG_AUTO_EXTRACT_NO_MEMBER = (
     "No backend in its chain returns it, so nothing was fetched: {skipped}. Ask for one of those, set a "
     "credential for a backend that returns it, or name one -- see the extract table in README.md."
@@ -699,11 +725,11 @@ A row still unanswered when it runs out is reported as timed out; the others
 are unaffected, and the report is returned either way.
 """
 
-BENCHMARK_EXCLUDED: frozenset[str] = frozenset({PROVIDER_AUTO})
+BENCHMARK_EXCLUDED: frozenset[str] = DELEGATING_PROVIDERS
 """Configured backends left out of the default comparison.
 
-``auto`` delegates to the others, so a row for it would repeat one of theirs
-under a name that says nothing about who answered.
+``auto`` and ``max`` delegate to the others, so a row for either would repeat
+one of theirs under a name that says nothing about who answered.
 """
 
 # --- Evals ------------------------------------------------------------------
@@ -4110,7 +4136,9 @@ MCP_DESC_EXTRACT = (
     "from the user, or from a page you just read. Cheaper and far more reliable than guessing at "
     "a page's contents from a search snippet. A page whose content appears only after a login, a "
     "form or clicks cannot be read this way: suggest a browser session (`browser_open`) to the user "
-    "instead."
+    "instead. provider='max' sends the page to every configured backend at once and returns the "
+    "first that answers -- the fastest read any backend can give, at the cost of one fetch per "
+    "backend per URL -- so use it only when the user has asked for speed over cost."
 )
 
 MCP_DESC_TEMPLATES = (

@@ -14,7 +14,9 @@ tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
 Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, the keyless Jina
-Reader, and `auto` again.
+Reader, `auto` again, and `max`, which sends the request to every member
+`auto` would try at once and returns the first document back -- the fastest
+answer any backend can give, at one fetch per member, so never the default.
 
 **`run_template`** — a vendor's template: a saved, site-specific extraction
 (Nimble's Extract Templates, Oxylabs' sources, Bright Data's scrapers, Apify's
@@ -127,6 +129,10 @@ src/web_router/
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
     ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel.py
+    ├── max.py          extract's parallel chain: auto's members all at once,
+    │                   the first document wins, with an optional hedge
+    ├── _race.py        max's bookkeeping: the calls of one race, sync or async,
+    │                   handed back in the order they finished
     ├── _chain.py       what every auto chain is made of: resolving the members,
     │                   the caller's `chain`, what a member's failure means
     ├── auto.py         the default for search, extract, research, browser and
@@ -153,7 +159,8 @@ src/web_router/
     ├── browser_use.py  browse, via httpx — Browser Use Cloud's v2 tasks
     └── skyvern.py      browse, via httpx — tasks on Skyvern Cloud
 tests/                  mirrors src/; tests/providers/ holds per-provider tests,
-                        tests/mcp/ the server. test_contract.py,
+                        tests/mcp/ the server, tests/max_extract/ the race
+                        (its conftest holds the fake members). test_contract.py,
                         test_extract_contract.py, test_template_contract.py,
                         test_research_contract.py, test_browse_contract.py and
                         test_browser_contract.py guard the six shared
@@ -401,6 +408,35 @@ an option outside the member's `supported_parameters` (Browserbase refuses
 `start_url`) and a required one the request left unset, through
 `missing_parameters`; with no member left it raises `MissingParameterError` or
 `UnsupportedParameterError` naming why each was skipped.
+
+**`max` is `auto`'s members raced, and nothing more.** It subclasses
+`AutoExtractProvider` for its chain, its format routing and its member
+construction, and the router hands it the `chain` and `members_config` set
+under `auto` unless its own entry sets them (`MAX_INHERITS_FROM_AUTO`), so
+the two can never disagree about who is tried; it differs
+only in starting every eligible member at once and returning the first
+`ExtractResponse` that came back. Only a document wins: a `_RECOVERABLE`
+failure is that member's loss and the race goes on, any other
+`WebRouterError` propagates, and with no winner `_exhausted` names each
+member's reason under `MAX_AGGREGATE_FAILURE`. It never judges the responses
+it did not return -- the first document is the answer, which is "never invent
+data" applied to a race. Every fetch a member starts is billed, and most
+members take one URL per request, so a call costs up to one fetch per member
+per URL; a sync loser keeps fetching the URLs it has not reached after the
+winner returned. `hedge` is the one knob: the first eligible member
+runs alone for that many seconds, the rest start when it runs out or when
+that member fails, whichever comes first; it covers that member's whole call,
+so it caps the cost of a one-URL request, not of a list. The whole URL list is one race, so
+every document comes from the winner -- and a member whose answer has
+`failures` fetched part of the list, so `_Losses` holds it while another
+member can still answer and returns the one with the fewest failures only
+when none can; a partial answer also starts the hedged rest, as a failure
+does. The sync router cannot cancel a loser,
+so `close()` waits for the race's stragglers before closing the members; the
+async router cancels them. `max` and `auto` are `DELEGATING_PROVIDERS`: the
+router hands both every other backend's `provider_config` entry, and
+`benchmark()` excludes both. `max` is not a member of `auto` and `auto` is not
+a member of `max`.
 
 **Every backend of a method is a member of its `auto`, in a fixed order.**
 Search's keyed members (`AUTO_PREFERRED`) follow a provider scan's judged
@@ -930,7 +966,7 @@ not a secret either and comes from the real environment only, since no file can
 set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
 `RESEARCH_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
-`auto`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
+`auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
 Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
 `ANTHROPIC_API_KEY` are the two library keys that are not a provider's: each is
 read only by its judge behind `evaluate()` (the `evals` extra) —
@@ -989,7 +1025,7 @@ a library that reads dotfiles behind its caller's back surprises whoever
 embeds it.
 
 If `web-router://capabilities` reports only the keyless backends (`auto`,
-`you-mcp`, `exa-mcp`, `parallel-mcp`, `jina`, `local`) on a machine that should have keys, the keys are
+`max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina`, `local`) on a machine that should have keys, the keys are
 not reaching the server, not missing from the account: read its `env` object —
 every place the server looked, what it found there, the file it used and the
 variables it loaded, by name — and check that the file holds them and that the

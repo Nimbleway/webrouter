@@ -52,10 +52,13 @@ from web_router.constants import (
     BENCHMARK_TIMEOUT,
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
+    DELEGATING_PROVIDERS,
     EVALS_CONCURRENCY,
+    MAX_INHERITS_FROM_AUTO,
     MSG_BENCHMARK_NO_PROVIDERS,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
     PROVIDER_AUTO,
+    PROVIDER_MAX,
     RESEARCH_TIMEOUT,
 )
 from web_router.constants_decisions import MSG_ROUTE_DECIDER_CONFIG_UNUSED
@@ -195,14 +198,21 @@ class _BaseRouter(Generic[_HandleT]):
         self._stragglers_lock = threading.Lock()
 
     def _config_for(self, key: str) -> dict[str, Any]:
-        """Constructor kwargs for one backend: its ``provider_config`` entry, and for ``auto`` every other entry too.
+        """Constructor kwargs for one backend: its ``provider_config`` entry, and every entry for a delegating one.
 
-        ``auto`` builds its own members, so it is handed the config they would
-        get by name -- a key passed in code reaches Nimble the same way through
-        ``auto`` as through ``provider="nimble"``.
+        Each of those builds its own members, so it is handed the config they
+        would get by name -- a key passed in code reaches Nimble the same way
+        through ``auto`` or ``max`` as through ``provider="nimble"``. ``max``
+        races the members ``auto`` would try, so a ``chain`` or
+        ``members_config`` set under ``auto`` is its own unless it sets one.
         """
         config = dict(self._config.get(key, {}))
-        if key == PROVIDER_AUTO:
+        if key == PROVIDER_MAX:
+            shared = self._config.get(PROVIDER_AUTO, {})
+            for entry in MAX_INHERITS_FROM_AUTO:
+                if entry in shared and entry not in config:
+                    config[entry] = shared[entry]
+        if key in DELEGATING_PROVIDERS:
             siblings: dict[str, dict[str, Any]] = {name: c for name, c in self._config.items() if name != key}
             # An explicit members_config is laid over the sibling entries, member by member, never in place of them.
             explicit: dict[str, dict[str, Any]] = {
@@ -501,13 +511,15 @@ def _async_client_holders(config: dict[str, dict[str, Any]]) -> set[str]:
     A chain is a list of entries or a mapping from method to one, and an entry
     a bare name or ``(name, kwargs)`` -- only the latter can carry a client.
     """
-    auto = config.get(PROVIDER_AUTO, {})
-    entries: list[tuple[str, Any]] = [*config.items(), *(auto.get("members_config") or {}).items()]
-    chain = auto.get("chain") or ()
-    for listed in chain.values() if isinstance(chain, Mapping) else (chain,):
-        entries.extend(
-            (item[0], item[1]) for item in listed or () if isinstance(item, (tuple, list)) and len(item) == 2
-        )
+    entries: list[tuple[str, Any]] = list(config.items())
+    for delegating in DELEGATING_PROVIDERS:
+        own = config.get(delegating, {})
+        entries.extend((own.get("members_config") or {}).items())
+        chain = own.get("chain") or ()
+        for listed in chain.values() if isinstance(chain, Mapping) else (chain,):
+            entries.extend(
+                (item[0], item[1]) for item in listed or () if isinstance(item, (tuple, list)) and len(item) == 2
+            )
     return {
         provider_name(name)
         for name, options in entries

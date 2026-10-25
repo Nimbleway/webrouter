@@ -30,6 +30,7 @@ from web_router.client import AsyncWebRouter
 from web_router.constants import (
     BROWSE_ENV_BY_PROVIDER,
     BROWSER_ENV_BY_PROVIDER,
+    DELEGATING_PROVIDERS,
     ENV_BY_PROVIDER,
     ENV_MCP_ENV_FILE,
     EXTRACT_ENV_BY_PROVIDER,
@@ -99,7 +100,6 @@ from web_router.constants import (
     MCP_TOOL_TEMPLATE,
     MCP_TOOL_TEMPLATES,
     MCP_TOOL_WAITS,
-    PROVIDER_AUTO,
     RESEARCH_ENV_BY_PROVIDER,
     TEMPLATE_ENV_BY_PROVIDER,
 )
@@ -195,40 +195,45 @@ _CLASS_OF: dict[str, Callable[[str], type[_BaseProvider]]] = {
 """Each provider-picking tool's class lookup, which reads ``supported_parameters`` without a credential."""
 
 
-def _search_chain(router: AsyncWebRouter) -> tuple[str, ...]:
-    """The members the router's own search ``auto`` would try, read as :func:`_browser_chain` reads its own."""
-    provider = router.get_provider(PROVIDER_AUTO)
+def _search_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
+    """The members the router's own search ``name`` would try, read as :func:`_browser_chain` reads its own."""
+    provider = router.get_provider(name)
     return provider.members if isinstance(provider, AutoProvider) else ()
 
 
-def _extract_chain(router: AsyncWebRouter) -> tuple[str, ...]:
-    """The members the router's own extract ``auto`` would try, read as :func:`_browser_chain` reads its own."""
-    provider = router.get_extract_provider(PROVIDER_AUTO)
+def _extract_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
+    """The members the router's own extract ``name`` would try, read as :func:`_browser_chain` reads its own.
+
+    ``max`` subclasses ``auto``, so this reads the members it would race the
+    same way.
+    """
+    provider = router.get_extract_provider(name)
     return provider.members if isinstance(provider, AutoExtractProvider) else ()
 
 
-def _browser_chain(router: AsyncWebRouter) -> tuple[str, ...]:
-    """The members the router's own browser ``auto`` would try.
+def _browser_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
+    """The members the router's own browser ``name`` would try.
 
     Read from the instance the router serves ``open_browser`` with, so a
     ``chain`` in ``provider_config`` is honoured exactly as a request honours
     it. Building it costs no credential: members are created only when tried.
     """
-    provider = router.get_browser_provider(PROVIDER_AUTO)
+    provider = router.get_browser_provider(name)
     return provider.members if isinstance(provider, AutoBrowserProvider) else ()
 
 
-_CHAIN_OF: dict[str, Callable[[AsyncWebRouter], tuple[str, ...]]] = {
+_CHAIN_OF: dict[str, Callable[[AsyncWebRouter, str], tuple[str, ...]]] = {
     MCP_TOOL_SEARCH: _search_chain,
     MCP_TOOL_EXTRACT: _extract_chain,
     MCP_TOOL_BROWSER_OPEN: _browser_chain,
 }
-"""The tools whose ``auto`` declares what some member serves, routing each request to a member that serves it.
+"""The tools whose delegating providers declare what some member serves, and how each one's members are read.
 
-Its own declaration says nothing about what can be served here -- search
-``auto`` declares every filter Nimble maps, whether or not this machine holds a
-Nimble key -- so it stands for the chain it would try instead. Research ``auto``
-declares a fixed surface, and is read as it is.
+A delegating provider's own declaration says nothing about what can be served
+here -- search ``auto`` declares every filter Nimble maps, whether or not this
+machine holds a Nimble key, and extract's ``max`` declares every option as
+``auto`` does -- so each stands for the chain it would try instead. Research
+``auto`` declares a fixed surface, and is read as it is.
 """
 
 _OPTIONS: dict[str, frozenset[str]] = {
@@ -729,15 +734,19 @@ class WebRouterTools:
 
 
 def _serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[type[_BaseProvider]]:
-    """The classes that would serve ``providers`` for this tool's method: each one's own, ``auto``'s chain for it.
+    """The classes that would serve ``providers`` for this tool's method: each one's own, a delegating one's chain.
 
     A name this method does not know, or whose extra is not installed, can
     serve nothing, so it adds nothing.
     """
     names: list[str] = []
     for provider in providers:
-        if provider == PROVIDER_AUTO and tool in _CHAIN_OF:
-            names.extend(_CHAIN_OF[tool](router))
+        if provider in DELEGATING_PROVIDERS and tool in _CHAIN_OF:
+            # Not every delegating name is every method's: ``max`` is extract's alone.
+            try:
+                names.extend(_CHAIN_OF[tool](router, provider))
+            except (ProviderNotFoundError, ProviderNotInstalledError):
+                continue
         else:
             names.append(provider)
     classes: list[type[_BaseProvider]] = []
@@ -833,14 +842,15 @@ def _keyed(tool: str) -> list[str]:
 
 
 def _usable(tool: str) -> bool:
-    """Whether anything but ``auto`` is configured for this method.
+    """Whether anything but a delegating provider is configured for this method.
 
-    ``auto`` is always "configured" because it needs no credential of its own --
-    it needs whatever its chain does. For search and extract that chain ends in
-    a keyless backend and always works; for research and browse every backend
-    bills, so ``auto`` alone means nothing here can actually run.
+    ``auto`` and ``max`` are always "configured" because they need no credential
+    of their own -- they need whatever their chain does. For search and extract
+    that chain ends in a keyless backend and always works; for research and
+    browse every backend bills, so ``auto`` alone means nothing here can
+    actually run.
     """
-    return any(provider != PROVIDER_AUTO for provider in _CONFIGURED[tool]())
+    return any(provider not in DELEGATING_PROVIDERS for provider in _CONFIGURED[tool]())
 
 
 def _env_vars(tool: str) -> list[str]:
