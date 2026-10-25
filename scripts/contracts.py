@@ -158,7 +158,8 @@ def _values(model: type[BaseModel], option: str) -> list[Any]:
 
 
 def _label(option: str, value: Any) -> str:
-    if option in SAMPLES:
+    """``sample`` for an option's sample; any other value by itself, so no two probes share a label."""
+    if value is SAMPLES.get(option):
         return "sample"
     return value if isinstance(value, str) else json.dumps(value)
 
@@ -169,7 +170,12 @@ def _flatten(payload: Any, prefix: str = "") -> dict[str, Any]:
         return {prefix: payload} if prefix else {}
     flat: dict[str, Any] = {}
     for key, value in payload.items():
-        flat.update(_flatten(value, f"{prefix}.{key}" if prefix else str(key)))
+        # A key holding a dot is quoted, so {"a.b": 1} and {"a": {"b": 1}} never read the same.
+        segment = json.dumps(key) if "." in str(key) else str(key)
+        for path, leaf in _flatten(value, f"{prefix}.{segment}" if prefix else segment).items():
+            if path in flat:
+                raise SystemExit(f"two wire fields flatten to {path!r}")
+            flat[path] = leaf
     return flat
 
 
@@ -195,7 +201,12 @@ def _payload(provider: Any, method: str, request: BaseModel) -> dict[str, Any]:
 def _probe(provider: Any, method: str, option: str, value: Any) -> dict[str, Any]:
     make = METHODS[method].request
     alongside = ALONGSIDE.get(option, {})
-    before = _payload(provider, method, make(**alongside))
+    try:
+        before = _payload(provider, method, make(**alongside))
+    except (WebRouterError, ValidationError) as exc:
+        raise SystemExit(
+            f"{method}/{provider.name}: the base request for {option!r} is refused; fix ALONGSIDE"
+        ) from exc
     try:
         after = _payload(provider, method, make(**alongside, **{option: value}))
     except (WebRouterError, ValidationError) as exc:
