@@ -61,6 +61,9 @@ that already serves one gets a second class in its existing module rather than a
 new file — `nimble.py`, `tavily.py` and `exa.py` each hold a search provider and
 an extract provider.
 
+Whatever the method, finish with `make contracts` and commit the contract it
+writes; [AGENTS.md](AGENTS.md#provider-contracts) says what each field holds.
+
 ### A search provider
 
 1. Create `src/web_router/providers/<name>.py` with a `SearchProvider` subclass
@@ -164,13 +167,6 @@ Where no account is available, say so in the test module's docstring the way
 `tests/providers/test_oxylabs.py`, `test_brightdata.py` and `test_firecrawl.py`
 do, so the next person knows the mapping is documentation-derived rather than
 verified.
-
-### Its contract
-
-Every provider has a contract in `contracts/<method>/<provider>.json`. Run
-`make contracts` to generate it, then fill in the three fields only a person can:
-`source`, `verified` and `vendor_options`. AGENTS.md's "Provider contracts"
-section says what each holds; CI fails while any of them reads `TODO`.
 
 ### A research, browser, or browse provider
 
