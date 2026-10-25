@@ -16,6 +16,7 @@ from nimble_python import AsyncNimble
 
 from web_router.providers._utils import research_deadline
 from web_router.providers.nimble import NimbleExtractProvider, NimbleProvider, NimbleResearchProvider
+from web_router.providers.nimble_template import NimbleTemplateProvider
 
 URL = "https://example.com"
 
@@ -225,7 +226,7 @@ def test_live_extract_returns_page_content() -> None:
 
 # -- A caller's own client ---------------------------------------------------
 
-_PROVIDER_CLASSES = [NimbleProvider, NimbleExtractProvider, NimbleResearchProvider]
+_PROVIDER_CLASSES = [NimbleProvider, NimbleExtractProvider, NimbleTemplateProvider, NimbleResearchProvider]
 
 
 def _caller_client(seen: list[httpx.Request] | None = None) -> AsyncNimble:

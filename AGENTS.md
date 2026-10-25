@@ -115,7 +115,9 @@ src/web_router/
     │                   coercion, body selection, the job budget
     ├── _page.py        the page actions both browser handles delegate to,
     │                   once over CDP through Playwright; snapshot refs
-    ├── nimble.py       search + extract + templates + research, via the nimble-python SDK
+    ├── nimble.py       search + extract + research, via the nimble-python SDK;
+    │                   the shared clients and constructor of the four Nimble classes
+    ├── nimble_template.py  Extract Templates, on nimble.py's clients
     ├── tavily.py       search + extract, via the tavily-python SDK
     ├── exa.py          search + extract, via httpx (its research API is retired)
     ├── you.py          search + research, via httpx — You.com publishes no Python SDK

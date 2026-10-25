@@ -23,7 +23,7 @@ pytest.importorskip("nimble_python", reason="nimble extra not installed")
 
 from nimble_python import AsyncNimble, Nimble
 
-from web_router.providers.nimble import NimbleTemplateProvider
+from web_router.providers.nimble_template import NimbleTemplateProvider
 
 TEMPLATE = "wfl718_luna_prod_verify_books"
 URL = "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"

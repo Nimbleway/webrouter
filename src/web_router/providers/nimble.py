@@ -1,12 +1,11 @@
 """Nimble providers, backed by the official ``nimble-python`` SDK.
 
-Search, extract, Extract Templates and research are separate classes over one
-SDK client: the Search API ranks the web, the Extract API fetches a page you
-already have the URL of, an Extract Template parses one kind of page into a
-record, and the Web Search Agent researches a question over several turns.
-Install with the ``search`` extra, ``[extract]`` -- which installs the
-template class too, since a template run is the Extract API's -- or
-``[research]``. All four read ``NIMBLE_API_KEY`` unless a key is passed
+Search, extract and research are separate classes over one SDK client: the
+Search API ranks the web, the Extract API fetches a page you already have the
+URL of, and the Web Search Agent researches a question over several turns.
+The Extract Template class is next door in :mod:`web_router.providers.nimble_template`,
+on the same clients. Install with the ``search`` extra, ``[extract]`` or
+``[research]``. All of them read ``NIMBLE_API_KEY`` unless a key is passed
 explicitly, or use a caller's own ``AsyncNimble`` passed as ``async_client``.
 """
 
@@ -24,10 +23,6 @@ from web_router.constants import (
     MSG_NIMBLE_ASYNC_CLIENT_ONLY,
     MSG_NIMBLE_CLIENT_AND_KEY,
     MSG_NIMBLE_RESEARCH_BAD_JOB_ID,
-    MSG_TEMPLATE_BAD_STATUS,
-    MSG_TEMPLATE_NO_RECORD,
-    MSG_TEMPLATE_PAGE_FAILED,
-    MSG_TEMPLATE_PARSING_FAILED,
     NIMBLE_EXTRACT_DEFAULT_FORMAT,
     NIMBLE_EXTRACT_FORMATS,
     NIMBLE_EXTRACT_SUCCESS_STATUS,
@@ -41,15 +36,6 @@ from web_router.constants import (
     NIMBLE_RESEARCH_TEXT_OUTPUT,
     NIMBLE_RESEARCH_USE_CASE_ENRICHMENT,
     NIMBLE_RESEARCH_USE_CASE_RESEARCH,
-    NIMBLE_TEMPLATE_ERROR_FIELD,
-    NIMBLE_TEMPLATE_ERROR_SHAPE,
-    NIMBLE_TEMPLATE_FAILED_STATUS_FLOOR,
-    NIMBLE_TEMPLATE_PARSING_ERROR_STATUS,
-    NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS,
-    NIMBLE_TEMPLATE_RECORD_FIELD,
-    NIMBLE_TEMPLATE_RECORD_SHAPE,
-    NIMBLE_TEMPLATE_STATUS_FIELD,
-    NIMBLE_TEMPLATE_SUCCESS_STATUS,
     PROVIDER_NIMBLE,
     RESEARCH_HTTP_TIMEOUT,
 )
@@ -62,19 +48,17 @@ from web_router.providers._utils import (
     research_budget,
     resolve_api_key,
 )
-from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider, TemplateProvider
+from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider, _BaseProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
-    TEMPLATE_PARAMETERS,
     Citation,
     ExtractedDocument,
     ExtractFailure,
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
-    ExtractTemplate,
     ResearchProgress,
     ResearchRequest,
     ResearchResponse,
@@ -82,14 +66,15 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
     SearchResult,
-    TemplatePage,
-    TemplateRequest,
-    TemplateResponse,
 )
 
 
-class _NimbleClients:
-    """The SDK clients a Nimble provider calls through, built here or handed in by the caller.
+class _NimbleClients(_BaseProvider):
+    """What the four Nimble classes share: one constructor, and the SDK clients it builds or is handed.
+
+    Each class lists this first and its method's base second, so the
+    constructor here resolves the key and builds the clients before the
+    method's base sees the kwargs.
 
     By default a provider builds a sync and an async client from its key and
     closes both. Given an ``async_client``, it uses that one instead -- one
@@ -105,6 +90,31 @@ class _NimbleClients:
     _client: Nimble | None
     _async_client: AsyncNimble
     _owns_clients: bool
+
+    def __init__(
+        self,
+        *,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        timeout: float | None = None,
+        async_client: AsyncNimble | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Args:
+            api_key: Nimble's key; unset, read from ``NIMBLE_API_KEY``.
+            base_url: Where the SDK sends its requests; unset, the SDK's own.
+            timeout: Each request's limit, in seconds; unset, the SDK's own.
+            async_client: A caller's own ``AsyncNimble``, used instead of
+                building clients from a key -- see the class docstring.
+            **kwargs: Further SDK client options, laid over the client.
+
+        Raises:
+            ConfigurationError: for no key anywhere, or a key beside a client.
+        """
+        key = _resolve_key(api_key, async_client, self.name)
+        super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
+        self._connect(key, async_client)
 
     def _connect(self, api_key: str | None, async_client: AsyncNimble | None) -> None:
         client_kwargs = compact({**self.options, "api_key": api_key})
@@ -153,19 +163,6 @@ class NimbleProvider(_NimbleClients, SearchProvider):
     name: ClassVar[str] = PROVIDER_NIMBLE
     supported_parameters: ClassVar[frozenset[str]] = NORMALIZED_PARAMETERS
 
-    def __init__(
-        self,
-        *,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        timeout: float | None = None,
-        async_client: AsyncNimble | None = None,
-        **kwargs: Any,
-    ) -> None:
-        key = _resolve_key(api_key, async_client, self.name)
-        super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
-        self._connect(key, async_client)
-
     def _search(self, request: SearchRequest) -> SearchResponse:
         raw = self._sync_client.search(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
@@ -212,19 +209,6 @@ class NimbleExtractProvider(_NimbleClients, ExtractProvider):
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(NIMBLE_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = NIMBLE_EXTRACT_DEFAULT_FORMAT
-
-    def __init__(
-        self,
-        *,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        timeout: float | None = None,
-        async_client: AsyncNimble | None = None,
-        **kwargs: Any,
-    ) -> None:
-        key = _resolve_key(api_key, async_client, self.name)
-        super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
-        self._connect(key, async_client)
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         raw = self._sync_client.extract.run(**self._build_payload(request, urls))
@@ -273,193 +257,6 @@ class NimbleExtractProvider(_NimbleClients, ExtractProvider):
         )
 
 
-class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
-    """Lists, describes and runs Nimble Extract Templates.
-
-    A template run is the Extract API's realtime endpoint with a template
-    named instead of a URL: the template resolves its own inputs to the page,
-    fetches it and parses it into a record. The response is the same task
-    envelope an extract answers with, so a page the backend could not fetch
-    is told the same way, by ``status``, and the record arrives under
-    ``data.parsing``.
-    """
-
-    name: ClassVar[str] = PROVIDER_NIMBLE
-    supported_parameters: ClassVar[frozenset[str]] = TEMPLATE_PARAMETERS
-    supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(NIMBLE_EXTRACT_FORMATS)
-
-    def __init__(
-        self,
-        *,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        timeout: float | None = None,
-        async_client: AsyncNimble | None = None,
-        **kwargs: Any,
-    ) -> None:
-        key = _resolve_key(api_key, async_client, self.name)
-        super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
-        self._connect(key, async_client)
-
-    def _run(self, request: TemplateRequest) -> TemplateResponse:
-        raw = self._sync_client.extract.templates.run(**self._build_payload(request))
-        return self._to_response(request, model_to_dict(raw))
-
-    async def _arun(self, request: TemplateRequest) -> TemplateResponse:
-        raw = await self._async_client.extract.templates.run(**self._build_payload(request))
-        return self._to_response(request, model_to_dict(raw))
-
-    def _list(self, *, limit: int | None, offset: int | None) -> TemplatePage:
-        raw = self._sync_client.extract.templates.list(**compact({"limit": limit, "offset": offset}))
-        return self._to_page(model_to_dict(raw))
-
-    async def _alist(self, *, limit: int | None, offset: int | None) -> TemplatePage:
-        raw = await self._async_client.extract.templates.list(**compact({"limit": limit, "offset": offset}))
-        return self._to_page(model_to_dict(raw))
-
-    def _get(self, name: str) -> ExtractTemplate:
-        return self._to_template(model_to_dict(self._sync_client.extract.templates.get(name)))
-
-    async def _aget(self, name: str) -> ExtractTemplate:
-        return self._to_template(model_to_dict(await self._async_client.extract.templates.get(name)))
-
-    def _build_payload(self, request: TemplateRequest) -> dict[str, Any]:
-        """Translate a normalized request into Nimble ``extract.templates.run()`` keyword arguments.
-
-        ``formats`` is sent only when a format was asked for: Nimble returns no
-        page content without it, which is what an unset format means.
-        """
-        return build_payload(
-            request,
-            template=request.template,
-            params=dict(request.params),
-            formats=[NIMBLE_EXTRACT_FORMATS[request.format]] if request.format else None,
-        )
-
-    def _to_response(self, request: TemplateRequest, payload: dict[str, Any]) -> TemplateResponse:
-        status = payload.get("status")
-        data = payload.get("data") or {}
-
-        # As for an extract: a block or a fatal fetch error is a 200 whose
-        # `status` says so, and a record cannot have been parsed from nothing.
-        if status != NIMBLE_TEMPLATE_SUCCESS_STATUS:
-            detail = MSG_TEMPLATE_BAD_STATUS.format(template=request.template, status=status)
-            raise ProviderError(self.name, "; ".join([detail, *(payload.get("warnings") or [])]))
-
-        # The envelope says `success` whenever the fetch completed, a 404 page
-        # included, and the template then parses the error page. What it
-        # parsed is not the record the template promises.
-        status_code = _as_int(payload.get("status_code"))
-        if status_code is not None and status_code >= NIMBLE_TEMPLATE_FAILED_STATUS_FLOOR:
-            detail = MSG_TEMPLATE_PAGE_FAILED.format(template=request.template, status=status_code)
-            raise ProviderError(self.name, "; ".join([detail, *(payload.get("warnings") or [])]))
-
-        record = self._record(request, data.get("parsing"))
-        document = self._document(request, payload, data)
-
-        return TemplateResponse(
-            provider=self.name,
-            template=request.template,
-            params=dict(request.params),
-            data=record,
-            url=payload.get("url"),
-            document=document,
-            status_code=_as_int(payload.get("status_code")),
-            request_id=payload.get("task_id"),
-            # Read rather than popped, so `raw` keeps everything; the page
-            # body and the record are left out because each has its own field.
-            extra=compact(
-                {
-                    "metadata": payload.get("metadata"),
-                    "pagination": payload.get("pagination"),
-                    **{k: v for k, v in data.items() if k not in ("parsing", *NIMBLE_EXTRACT_FORMATS.values())},
-                }
-            ),
-            raw=payload,
-        )
-
-    def _record(self, request: TemplateRequest, parsing: Any) -> dict[str, Any]:
-        """The record under ``data.parsing``, in whichever of its three shapes Nimble sent it.
-
-        See ``NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS``: the record may arrive
-        bare, or wrapped beside a status that says it parsed, or replaced by
-        one that says it did not.
-
-        Raises:
-            ProviderError: when the template reports that it failed to parse
-                the page, or the page came back with no record at all.
-        """
-        if not isinstance(parsing, dict) or not parsing:
-            raise ProviderError(self.name, MSG_TEMPLATE_NO_RECORD.format(template=request.template))
-        # A wrapper is exactly the SDK's two fields and nothing else: a record
-        # whose own schema names `status` and `entities` beside other fields is
-        # still the record, and unwrapping it would lose the others.
-        reported = parsing.get(NIMBLE_TEMPLATE_STATUS_FIELD)
-        if set(parsing) == NIMBLE_TEMPLATE_ERROR_SHAPE and reported == NIMBLE_TEMPLATE_PARSING_ERROR_STATUS:
-            error = parsing[NIMBLE_TEMPLATE_ERROR_FIELD]
-            raise ProviderError(self.name, MSG_TEMPLATE_PARSING_FAILED.format(template=request.template, error=error))
-        if (
-            set(parsing) == NIMBLE_TEMPLATE_RECORD_SHAPE
-            and reported == NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS
-            and isinstance(parsing[NIMBLE_TEMPLATE_RECORD_FIELD], dict)
-        ):
-            return dict(parsing[NIMBLE_TEMPLATE_RECORD_FIELD])
-        return dict(parsing)
-
-    def _document(
-        self, request: TemplateRequest, payload: dict[str, Any], data: dict[str, Any]
-    ) -> ExtractedDocument | None:
-        """The page beside the record, only when a format asked for it."""
-        if request.format is None:
-            return None
-        return ExtractedDocument(
-            url=payload.get("url") or "",
-            content=data.get(NIMBLE_EXTRACT_FORMATS[request.format]) or "",
-            format=request.format,
-            status_code=_as_int(payload.get("status_code")),
-        )
-
-    def _to_page(self, payload: dict[str, Any]) -> TemplatePage:
-        return TemplatePage(
-            provider=self.name,
-            templates=[self._to_template(item) for item in payload.get("items") or []],
-            total=_as_int(payload.get("total")),
-            offset=_as_int(payload.get("offset")),
-            limit=_as_int(payload.get("limit")),
-            raw=payload,
-        )
-
-    def _to_template(self, item: dict[str, Any]) -> ExtractTemplate:
-        """One template as Nimble describes it: the published version carries everything a run needs."""
-        version = item.get("published_version") or {}
-        metadata = version.get("metadata") or {}
-        return ExtractTemplate(
-            provider=self.name,
-            name=item.get("name") or "",
-            description=metadata.get("description") or "",
-            domain=metadata.get("domain"),
-            entity_type=metadata.get("entity_type"),
-            input_schema=version.get("input_schema"),
-            output_schema=version.get("output_schema"),
-            version=_as_int(version.get("version_number")),
-            published=bool(version),
-            created_at=item.get("created_at"),
-            updated_at=item.get("updated_at"),
-            extra=compact(
-                {
-                    **{k: v for k, v in item.items() if k not in _TEMPLATE_MAPPED},
-                    **{k: v for k, v in metadata.items() if k not in _TEMPLATE_METADATA_MAPPED},
-                    "samples": version.get("samples"),
-                }
-            ),
-            raw=item,
-        )
-
-
-_TEMPLATE_MAPPED = frozenset({"name", "created_at", "updated_at", "published_version"})
-_TEMPLATE_METADATA_MAPPED = frozenset({"description", "domain", "entity_type"})
-
-
 class NimbleResearchProvider(_NimbleClients, ResearchProvider):
     """Runs agentic research through the Nimble Web Search Agent."""
 
@@ -475,9 +272,7 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
         async_client: AsyncNimble | None = None,
         **kwargs: Any,
     ) -> None:
-        key = _resolve_key(api_key, async_client, self.name)
-        super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
-        self._connect(key, async_client)
+        super().__init__(api_key=api_key, base_url=base_url, timeout=timeout, async_client=async_client, **kwargs)
         self._research_timeout = timeout if timeout is not None else self._default_timeout(async_client)
 
     @staticmethod
