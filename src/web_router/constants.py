@@ -2760,6 +2760,14 @@ MSG_BENCHMARK_TIMEOUT = (
 
 MSG_BENCHMARK_NO_PROVIDERS = "benchmark() needs at least one provider to compare; `providers` named none."
 
+MSG_BENCHMARK_ROW_FAILED = "the call raised outside the library's own errors: {error!r}"
+"""A row whose call raised something that is not a ``WebRouterError``.
+
+The public methods wrap every backend failure, so this is a provider bug or
+a failure in a caller-supplied provider; it is still that row's error, never
+the comparison's, because the report always comes back.
+"""
+
 MSG_EVALS_EMPTY_DATASET = "evaluate() needs at least one question; dataset {name!r} has none."
 
 MSG_EVALS_MISSING_COLUMN = "{path} has no {column!r} column; its columns are {columns}."

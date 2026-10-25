@@ -17,7 +17,8 @@ from collections.abc import Awaitable, Callable, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from typing import Any, TypeVar
 
-from web_router.exceptions import BenchmarkTimeoutError, WebRouterError
+from web_router.constants import MSG_BENCHMARK_ROW_FAILED
+from web_router.exceptions import BenchmarkTimeoutError, ProviderError, WebRouterError
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
     BenchmarkRun,
@@ -88,9 +89,21 @@ def members_of(
             members.append((name, build(item)))
         except WebRouterError as exc:
             members.append((name, exc))
+        except Exception as exc:
+            members.append((name, _unexpected(name, exc)))
     if not members:
         raise ValueError(none_named)
     return members
+
+
+def _unexpected(name: str, exc: Exception) -> ProviderError:
+    """A failure the public path did not wrap -- a provider bug, a caller's own provider -- as the row's error.
+
+    The public methods wrap every backend failure, so nothing should reach
+    here; when something does, the report still comes back with this row
+    saying what raised, as its docstring promises.
+    """
+    return ProviderError(name, MSG_BENCHMARK_ROW_FAILED.format(error=exc), original=exc)
 
 
 def search_row(name: str, started: float | None, outcome: SearchResponse | WebRouterError) -> BenchmarkRun:
@@ -146,6 +159,8 @@ def _start(
             outcome: _AnswerT | WebRouterError = call(provider)
         except WebRouterError as exc:
             outcome = exc
+        except Exception as exc:
+            outcome = _unexpected(name, exc)
         return row_of(name, own, outcome)
 
     live = [(name, member) for name, member in members if not isinstance(member, WebRouterError)]
@@ -203,6 +218,8 @@ async def afan_out(
             outcome = BenchmarkTimeoutError(name, timeout or 0.0)
         except WebRouterError as exc:
             outcome = exc
+        except Exception as exc:
+            outcome = _unexpected(name, exc)
         return row_of(name, own, outcome)
 
     return list(await asyncio.gather(*(row(name, member) for name, member in members)))

@@ -12,7 +12,7 @@ from web_router import AsyncWebRouter, BenchmarkTimeoutError, WebRouter, configu
 from web_router.constants import ENV_BY_PROVIDER
 from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
 from web_router.registry import register_provider, unregister_provider
-from web_router.types import NORMALIZED_PARAMETERS, BenchmarkRun, SearchRequest, SearchResponse
+from web_router.types import NORMALIZED_PARAMETERS, BenchmarkReport, BenchmarkRun, SearchRequest, SearchResponse
 
 
 class _Registered:
@@ -291,6 +291,50 @@ def test_the_router_closes_the_providers_it_built_for_the_comparison(registered:
         built = [router.get_provider(name) for name in ("first", "second")]
 
     assert all(provider.closed for provider in built)
+
+
+def test_a_failure_outside_the_librarys_own_errors_is_that_rows_error_not_the_comparisons(
+    registered: _Registered,
+) -> None:
+    """A provider bug -- here a `search` that bypasses the base class and raises KeyError -- still yields a report."""
+    from tests.conftest import FakeProvider
+
+    class Buggy(FakeProvider):  # type: ignore[misc, valid-type]
+        name = "buggy"
+
+        def search(self, request: SearchRequest) -> SearchResponse:  # the base wraps; a bug may not go through it
+            raise KeyError("results")
+
+        async def asearch(self, request: SearchRequest) -> SearchResponse:
+            raise KeyError("results")
+
+    register_provider("buggy", Buggy)
+    registered.names.append("buggy")
+    _member(registered, "fine")
+
+    with WebRouter("fine") as router:
+        report = router.benchmark("q", providers=["buggy", "fine"])
+    assert isinstance(report["buggy"].error, ProviderError)
+    assert isinstance(report["buggy"].error.original, KeyError)
+    assert report["fine"].ok
+
+    async def on_the_loop() -> BenchmarkReport:
+        async with AsyncWebRouter("fine") as router:
+            return await router.benchmark("q", providers=["buggy", "fine"])
+
+    report = asyncio.run(on_the_loop())
+    assert isinstance(report["buggy"].error.original, KeyError) and report["fine"].ok  # type: ignore[union-attr]
+
+
+def test_a_member_whose_constructor_raises_outside_the_librarys_errors_is_its_row(registered: _Registered) -> None:
+    _member(registered, "untypable", init_raises=TypeError("unexpected keyword"))
+    _member(registered, "fine")
+
+    with WebRouter("fine") as router:
+        report = router.benchmark("q", providers=["untypable", "fine"])
+
+    assert isinstance(report["untypable"].error, ProviderError)
+    assert isinstance(report["untypable"].error.original, TypeError)
 
 
 def test_a_dumped_row_carries_the_error_as_its_message(registered: _Registered) -> None:
