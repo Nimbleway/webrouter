@@ -29,14 +29,14 @@ from __future__ import annotations
 
 import math
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, ClassVar
 
-from web_router.constants import MAX_AGGREGATE_FAILURE, MSG_MAX_BAD_HEDGE, PROVIDER_MAX
+from web_router.constants import MSG_MAX_BAD_HEDGE, PROVIDER_MAX
 from web_router.exceptions import ConfigurationError, WebRouterError
-from web_router.providers._race import _AsyncRace, _Race, _Runner
-from web_router.providers.auto import _RECOVERABLE, AutoExtractProvider, _ChainSpec, _exhausted
+from web_router.providers._race import _AsyncRace, _Losses, _Race, _Runner
+from web_router.providers.auto import _RECOVERABLE, AutoExtractProvider, _ChainSpec
 from web_router.providers.base import ExtractProvider
 from web_router.types import ExtractRequest, ExtractResponse
 
@@ -224,49 +224,6 @@ class MaxExtractProvider(AutoExtractProvider):
         with self._quiet:
             self._quiet.wait_for(lambda: self._active == 0 and not self._inflight)
         super().close()
-
-
-class _Losses:
-    """What one race has seen that did not win: each loser's reason, and the best partial answer so far.
-
-    A member that answered with ``failures`` fetched some of the URLs and not
-    the rest. It is not judged on what it fetched, only on how much: it is
-    held while another member can still answer, and the one with the fewest
-    failures is what the call returns when none can.
-    """
-
-    def __init__(self, provider: str) -> None:
-        self.provider = provider
-        self.failures: dict[str, WebRouterError] = {}
-        self.partial: ExtractResponse | None = None
-
-    def record(self, provider_name: str, result: Callable[[], ExtractResponse]) -> ExtractResponse | None:
-        """The complete answer ``result`` gives, or ``None`` once a failure is recorded or a partial answer held.
-
-        Raises:
-            WebRouterError: any the call raised that the race does not recover
-                from -- a caller's mistake, which no other member's answer may hide.
-        """
-        try:
-            response = result()
-        except _RECOVERABLE as exc:
-            self.failures[provider_name] = exc
-            return None
-        if not response.failures:
-            return response
-        if self.partial is None or len(response.failures) < len(self.partial.failures):
-            self.partial = response
-        return None
-
-    def settle(self) -> ExtractResponse:
-        """Once no member can answer any more: the partial answer held, else the error naming each loss.
-
-        Raises:
-            ProviderError: under :data:`MAX_AGGREGATE_FAILURE`, when nothing came back at all.
-        """
-        if self.partial is not None:
-            return self.partial
-        raise _exhausted(self.provider, self.failures, MAX_AGGREGATE_FAILURE)
 
 
 def _is_seconds(hedge: Any) -> bool:
