@@ -1,0 +1,69 @@
+{
+  "provider": "linkup",
+  "method": "extract",
+  "class": "web_router.providers.linkup.LinkupExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.linkup.so",
+    "paths": {
+      "extract_path": "/v1/fetch"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "LINKUP_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "body.includeRawContent": true
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": [
+    "https://docs.linkup.so/pages/documentation/endpoints/fetch/reference"
+  ],
+  "verified": {
+    "format": "live: tests/providers/test_linkup.py::test_live_extract_returns_markdown_and_html"
+  },
+  "vendor_options": {
+    "renderJs": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "mode": {
+      "status": "passthrough",
+      "note": "standard | pro."
+    },
+    "extractImages": {
+      "status": "passthrough",
+      "note": "Boolean; images stay in ExtractedDocument.extra."
+    },
+    "schema": {
+      "status": "passthrough",
+      "note": "JSON Schema of the data to extract; the data stays in ExtractedDocument.extra."
+    },
+    "instructions": {
+      "status": "passthrough",
+      "note": "Guides extraction; requires schema."
+    },
+    "includeRawHtml": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of includeRawContent, which format=html sends."
+    }
+  }
+}

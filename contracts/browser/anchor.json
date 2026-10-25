@@ -1,0 +1,114 @@
+{
+  "provider": "anchor",
+  "method": "browser",
+  "class": "web_router.providers.anchor.AnchorBrowserProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.anchorbrowser.io",
+    "paths": {
+      "open_path": "/v1/sessions",
+      "release_path": "/v1/sessions/{session_id}",
+      "status_path": "/v1/sessions/{session_id}"
+    },
+    "auth_header": "anchor-api-key"
+  },
+  "credentials": [
+    "ANCHOR_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body": {}
+  },
+  "options": {
+    "proxy_country": {
+      "sample": {
+        "body": "<removed>",
+        "body.session.proxy.active": true,
+        "body.session.proxy.country_code": "us"
+      }
+    },
+    "stealth": {
+      "off": {
+        "body": "<removed>",
+        "body.browser.extra_stealth.active": false
+      },
+      "low": {
+        "refused": "MissingParameterError"
+      },
+      "high": {
+        "refused": "MissingParameterError"
+      }
+    },
+    "solve_captchas": {
+      "true": {
+        "body": "<removed>",
+        "body.browser.captcha_solver.active": true
+      },
+      "false": {
+        "body": "<removed>",
+        "body.browser.captcha_solver.active": false
+      }
+    },
+    "profile": {
+      "sample": {
+        "body": "<removed>",
+        "body.browser.profile.name": "profile-id"
+      }
+    },
+    "persist_profile": {
+      "true": {
+        "body.browser.profile.persist": true
+      },
+      "false": {
+        "body.browser.profile.persist": false
+      }
+    },
+    "timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.session.timeout.max_duration": 5
+      }
+    },
+    "idle_timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.session.timeout.idle_timeout": 1
+      }
+    }
+  },
+  "not_mapped": [
+    "headless",
+    "viewport"
+  ],
+  "source": [
+    "https://docs.anchorbrowser.io/api-reference/browser-sessions/start-browser-session",
+    "https://docs.anchorbrowser.io/api-reference/browser-sessions/end-browser-session"
+  ],
+  "verified": {
+    "proxy_country": "docs: https://docs.anchorbrowser.io/advanced/proxy",
+    "stealth": "docs: https://docs.anchorbrowser.io/essentials/stealth",
+    "solve_captchas": "docs: https://docs.anchorbrowser.io/api-reference/browser-sessions/start-browser-session",
+    "profile": "live: tests/providers/test_anchor_browser.py::test_live_a_login_saved_to_a_profile_is_there_in_the_next_session",
+    "persist_profile": "live: tests/providers/test_anchor_browser.py::test_live_a_login_saved_to_a_profile_is_there_in_the_next_session",
+    "timeout": "docs: https://docs.anchorbrowser.io/api-reference/browser-sessions/start-browser-session",
+    "idle_timeout": "docs: https://docs.anchorbrowser.io/api-reference/browser-sessions/start-browser-session"
+  },
+  "vendor_options": {
+    "integrations": {
+      "status": "passthrough",
+      "note": "Ids of integrations created through Anchor's Integrations API."
+    },
+    "identities": {
+      "status": "passthrough",
+      "note": "List of {id}; starts the session authenticated as a saved identity."
+    },
+    "identity_skip_validation": {
+      "status": "passthrough",
+      "note": "Boolean, default true; false re-validates the identity's saved profile."
+    },
+    "identity_async_auth": {
+      "status": "passthrough",
+      "note": "Boolean; authenticates the identity in the background and returns the session at once."
+    }
+  }
+}

@@ -36,6 +36,7 @@ from web_router.constants import (
     MCP_MAX_RESPONSE_CHARS,
     MCP_MIN_FIELD_CHARS,
     MCP_MSG_DROPPED,
+    MCP_MSG_OVERSIZED,
     MCP_MSG_REDACTED,
     MCP_MSG_TRUNCATED,
     MCP_REDACT_DEVTOOLS_PATTERN,
@@ -60,6 +61,9 @@ from web_router.types import (
     ResearchProgress,
     ResearchResponse,
     SearchResponse,
+    Template,
+    TemplatePage,
+    TemplateResponse,
 )
 
 _URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s\"'<>]+")
@@ -206,6 +210,117 @@ def shape_extract(response: ExtractResponse, handle: str, *, budget: int) -> dic
         "failures": [{"url": failure.url, "error": failure.error} for failure in response.failures],
     }
     return _fit(payload, documents, ("content",), handle=handle, budget=budget)
+
+
+def shape_templates(page: TemplatePage, handle: str, *, budget: int) -> dict[str, Any]:
+    """One page of a template catalogue, cut to fit: names and what each extracts, never the schemas.
+
+    A catalogue runs to thousands, so each row is the few words a model picks
+    a template by; ``template`` returns the schemas for the one it picked.
+    """
+    templates = [_template_row(template) for template in page.templates]
+    payload: dict[str, Any] = {
+        "provider": page.provider,
+        "total": page.total,
+        "offset": page.offset,
+        "limit": page.limit,
+        "templates": templates,
+    }
+    fitted = _fit(payload, templates, ("description",), handle=handle, budget=budget)
+    # Counted after the fit, which may have dropped rows: the count is of what is shown.
+    fitted["template_count"] = len(templates)
+    return fitted
+
+
+def shape_template(template: Template, handle: str, *, budget: int) -> dict[str, Any]:
+    """One template with its schemas, cut to fit.
+
+    The schemas are never shortened: a run has to match ``input_schema``
+    exactly, and a cut schema would send the model guessing at the inputs it
+    dropped. One that does not fit even on its own is left out whole, with a
+    note naming the handle that holds it, rather than inlined over the budget.
+    """
+    row = {
+        **_template_row(template),
+        "version": template.version,
+        "input_schema": template.input_schema,
+        "output_schema": template.output_schema,
+    }
+    payload: dict[str, Any] = {"provider": template.provider, "template": row}
+    fitted = _fit(payload, [row], ("description",), handle=handle, budget=budget)
+    return _bounded(fitted, ((row, "output_schema"), (row, "input_schema")), handle=handle, budget=budget)
+
+
+def shape_template_run(response: TemplateResponse, handle: str, *, budget: int) -> dict[str, Any]:
+    """A template run, cut to fit. The record is never shortened, as a research run's ``structured`` is not.
+
+    The record is what the caller asked for, shaped by the template's own
+    schema; the page beside it, when one was asked for, is the one thing
+    long enough to cut. A record that does not fit even on its own is left
+    out whole, with a note naming the handle that holds it.
+    """
+    page = (
+        {
+            "url": response.document.url,
+            "format": response.document.format,
+            "status_code": response.document.status_code,
+            "content": response.document.content,
+        }
+        if response.document is not None
+        else None
+    )
+    # The inputs are not echoed: the caller sent them, and unbounded they
+    # could fill the budget on their own.
+    payload: dict[str, Any] = {
+        "provider": response.provider,
+        "template": response.template,
+        "url": response.url,
+        "status_code": response.status_code,
+        "data": response.data,
+        "document": page,
+    }
+    fitted = _fit(payload, [page] if page is not None else [], ("content",), handle=handle, budget=budget)
+    return _bounded(fitted, ((payload, "data"),), handle=handle, budget=budget)
+
+
+def _bounded(
+    payload: dict[str, Any], fields: tuple[tuple[dict[str, Any], str], ...], *, handle: str, budget: int
+) -> dict[str, Any]:
+    """Leave out, largest first, each untrimmable field until the payload fits, saying so each time.
+
+    For a field that must stay whole to mean anything -- a schema, a record --
+    the choice is between inlining it over the budget and leaving it out with
+    a pointer to the raw payload; the second keeps a single result from
+    filling a context window. The largest goes first so the smaller ones
+    stay whenever dropping it is enough.
+    """
+    by_size = sorted(fields, key=lambda field: _size(field[0].get(field[1])), reverse=True)
+    for container, key in by_size:
+        if len(render(payload)) <= budget:
+            break
+        value = container.get(key)
+        if value is None:
+            continue
+        note = MCP_MSG_OVERSIZED.format(field=key, size=_size(value), handle=handle)
+        container[key] = None
+        payload["truncated"] = True
+        payload["note"] = f"{payload['note']} {note}" if payload.get("note") else note
+    return payload
+
+
+def _size(value: Any) -> int:
+    """How many characters a field takes once serialized as the tool returns it; nothing for an absent one."""
+    return 0 if value is None else len(json.dumps(value, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str))
+
+
+def _template_row(template: Template) -> dict[str, Any]:
+    return {
+        "name": template.name,
+        "description": template.description,
+        "domain": template.domain,
+        "entity_type": template.entity_type,
+        "published": template.published,
+    }
 
 
 def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> dict[str, Any]:

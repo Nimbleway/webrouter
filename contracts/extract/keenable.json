@@ -1,0 +1,55 @@
+{
+  "provider": "keenable",
+  "method": "extract",
+  "class": "web_router.providers.keenable.KeenableExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.keenable.ai",
+    "paths": {
+      "extract_path": "/v1/fetch",
+      "public_extract_path": "/v1/fetch/public"
+    },
+    "method": "GET",
+    "auth_header": "X-API-Key"
+  },
+  "credentials": [
+    "KEENABLE_API_KEY"
+  ],
+  "keyless": "through auto, allow_keyless=True",
+  "always_sent": {
+    "query.max_chars": 500000,
+    "query.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": [
+    "https://docs.keenable.ai/api-reference/fetch"
+  ],
+  "verified": {
+    "format": "live: tests/test_integration_surface.py::test_markdown_really_comes_back_without_markup"
+  },
+  "vendor_options": {
+    "live": {
+      "status": "passthrough",
+      "note": "Boolean; fetches from the source instead of the index copy."
+    },
+    "prompt": {
+      "status": "passthrough",
+      "note": "Up to 2000 characters; returns only what an LLM extracts for this instruction."
+    }
+  }
+}

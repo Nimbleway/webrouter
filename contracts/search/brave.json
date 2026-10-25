@@ -1,0 +1,143 @@
+{
+  "provider": "brave",
+  "method": "search",
+  "class": "web_router.providers.brave.BraveProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.search.brave.com",
+    "paths": {
+      "search_path": "/res/v1/web/search"
+    },
+    "method": "GET",
+    "auth_header": "X-Subscription-Token"
+  },
+  "credentials": [
+    "BRAVE_SEARCH_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "query.q": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "query.count": 3
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "search_depth"
+  ],
+  "source": [
+    "https://api-dashboard.search.brave.com/api-reference/web/search/get"
+  ],
+  "verified": {
+    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound"
+  },
+  "vendor_options": {
+    "country": {
+      "status": "passthrough",
+      "note": "Uppercase ISO code from a fixed list, or ALL; a candidate for the shared country option."
+    },
+    "search_lang": {
+      "status": "passthrough",
+      "note": "Language code from a fixed list; a candidate for the shared locale option."
+    },
+    "ui_lang": {
+      "status": "passthrough",
+      "note": "Language-country code, such as en-US."
+    },
+    "offset": {
+      "status": "passthrough",
+      "note": "0-9."
+    },
+    "safesearch": {
+      "status": "passthrough",
+      "note": "off | moderate | strict."
+    },
+    "spellcheck": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "freshness": {
+      "status": "passthrough",
+      "note": "pd | pw | pm | py, or a YYYY-MM-DDtoYYYY-MM-DD range."
+    },
+    "text_decorations": {
+      "status": "passthrough",
+      "note": "Boolean; highlight markup is stripped from results either way."
+    },
+    "result_filter": {
+      "status": "passthrough",
+      "note": "Comma-separated result types; leaving out web leaves the results empty."
+    },
+    "units": {
+      "status": "passthrough",
+      "note": "metric | imperial."
+    },
+    "goggles_id": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of goggles."
+    },
+    "goggles": {
+      "status": "passthrough",
+      "note": "A Goggle URL or inline definition that re-ranks results."
+    },
+    "extra_snippets": {
+      "status": "passthrough",
+      "note": "Boolean; the extra snippets fill SearchResult.content when returned."
+    },
+    "summary": {
+      "status": "passthrough",
+      "note": "Boolean; the summarizer key stays in raw."
+    },
+    "enable_rich_callback": {
+      "status": "passthrough",
+      "note": "Boolean; the rich callback key stays in raw."
+    },
+    "include_fetch_metadata": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "operators": {
+      "status": "passthrough",
+      "note": "Boolean; whether search operators in q are applied."
+    },
+    "x-loc-lat": {
+      "status": "not_supported",
+      "note": "A request header; provider_options sets query parameters only."
+    },
+    "x-loc-long": {
+      "status": "not_supported",
+      "note": "A request header; provider_options sets query parameters only."
+    },
+    "x-loc-timezone": {
+      "status": "not_supported",
+      "note": "A request header; provider_options sets query parameters only."
+    },
+    "x-loc-city": {
+      "status": "not_supported",
+      "note": "A request header; provider_options sets query parameters only."
+    },
+    "x-loc-state": {
+      "status": "not_supported",
+      "note": "A request header; provider_options sets query parameters only."
+    },
+    "x-loc-state-name": {
+      "status": "not_supported",
+      "note": "A request header; provider_options sets query parameters only."
+    },
+    "x-loc-country": {
+      "status": "not_supported",
+      "note": "A request header; provider_options sets query parameters only."
+    },
+    "x-loc-postal-code": {
+      "status": "not_supported",
+      "note": "A request header; provider_options sets query parameters only."
+    }
+  }
+}

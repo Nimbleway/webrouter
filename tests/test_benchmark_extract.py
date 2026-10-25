@@ -15,7 +15,7 @@ from typing import Any
 import pytest
 
 from web_router import AsyncWebRouter, BenchmarkTimeoutError, WebRouter, configured_extract_providers
-from web_router.constants import EXTRACT_ENV_BY_PROVIDER
+from web_router.constants import BENCHMARK_EXCLUDED, EXTRACT_ENV_BY_PROVIDER
 from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedFormatError
 from web_router.registry import register_extract_provider, unregister_extract_provider
 from web_router.types import (
@@ -258,10 +258,10 @@ def test_naming_no_provider_is_a_caller_error(registered: _Registered) -> None:
         router.benchmark_extract(URLS, providers=[])
 
 
-def test_the_default_comparison_is_every_configured_extract_backend_but_auto(
+def test_the_default_comparison_is_every_configured_extract_backend_but_the_delegating_ones(
     monkeypatch: pytest.MonkeyPatch, registered: _Registered
 ) -> None:
-    """`auto` delegates to the others, so a row for it would only repeat one of theirs.
+    """`auto` and `max` delegate to the others, so a row for either would only repeat one of theirs.
 
     Credentials handed to the router through `provider_config` count like
     ones in the environment; a config for a backend that cannot extract does
@@ -278,8 +278,8 @@ def test_the_default_comparison_is_every_configured_extract_backend_but_auto(
         provider_config={"keyed-here": {"api_key": "k"}, "oxylabs": {"username": "u", "password": "p"}, "brave": {}},
     )._default_extract_benchmark_providers()
 
-    assert "auto" in configured_extract_providers() and "auto" not in defaults
-    assert set(defaults) == (set(configured_extract_providers()) - {"auto"}) | {"keyed-here", "oxylabs"}
+    assert {"auto", "max"} <= set(configured_extract_providers()) and not {"auto", "max"} & set(defaults)
+    assert set(defaults) == (set(configured_extract_providers()) - BENCHMARK_EXCLUDED) | {"keyed-here", "oxylabs"}
     assert "brave" not in defaults, "search-only: an extract comparison cannot use it"
     assert "nimble" in defaults and "jina" in defaults, "a key in the environment, and the keyless tier"
     assert defaults == sorted(defaults)

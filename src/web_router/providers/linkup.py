@@ -182,15 +182,17 @@ class LinkupResearchProvider(HttpResearchProvider):
     supported_parameters: ClassVar[frozenset[str]] = frozenset({"effort", "output_schema"})
 
     base_url: ClassVar[str] = LINKUP_BASE_URL
+    research_path: ClassVar[str] = LINKUP_RESEARCH_PATH
+    status_path: ClassVar[str] = LINKUP_RESEARCH_STATUS_PATH
     env_api_key: ClassVar[str] = ENV_LINKUP_API_KEY
     api_key_header: ClassVar[str] = LINKUP_API_KEY_HEADER
     api_key_prefix: ClassVar[str] = LINKUP_API_KEY_PREFIX
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
-        return self._progress(request, self._post(LINKUP_RESEARCH_PATH, self._build_payload(request)))
+        return self._progress(request, self._post(self.research_path, self._build_payload(request)))
 
     async def _astart(self, request: ResearchRequest) -> ResearchProgress:
-        return self._progress(request, await self._apost(LINKUP_RESEARCH_PATH, self._build_payload(request)))
+        return self._progress(request, await self._apost(self.research_path, self._build_payload(request)))
 
     def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
         return self._progress(request, self._get(self._status_path(job_id)))
@@ -198,9 +200,8 @@ class LinkupResearchProvider(HttpResearchProvider):
     async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
         return self._progress(request, await self._aget(self._status_path(job_id)))
 
-    @staticmethod
-    def _status_path(job_id: str) -> str:
-        return LINKUP_RESEARCH_STATUS_PATH.format(research_id=quote(job_id, safe=""))
+    def _status_path(self, job_id: str) -> str:
+        return self.status_path.format(research_id=quote(job_id, safe=""))
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
         depth = LINKUP_RESEARCH_DEPTHS[request.effort] if request.effort else None

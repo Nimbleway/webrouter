@@ -10,7 +10,7 @@ description: >
 
 # web-router
 
-One typed interface over many web backends, five methods. The tools describe
+One typed interface over many web backends, six methods. The tools describe
 *your* install: their `provider` enums list only backends this machine holds
 keys for, and `search`/`extract` work with no key at all. Read the
 `web-router://capabilities` resource once to learn what is configured before
@@ -25,6 +25,12 @@ Work up this ladder and stop at the first rung that serves the task:
 2. **`extract`** — read pages you already have URLs for, about a second.
    Prefer `search` + `extract` over anything below: two cheap calls that you
    compose beat one expensive call you wait on.
+   **`run_template`** sits beside it: when `templates` lists a vendor's saved
+   extraction for the site and item at hand, one run returns the page's
+   fields as a record, about a second, one billed fetch. All three template
+   tools need `provider` named. Read `template` first — its `input_schema`
+   says exactly what `inputs` to pass, a URL for some templates and an id or
+   a search term for others.
 3. **`research`** — an agentic run that searches, reads and cross-checks over
    many turns. **Minutes, and it bills.** Use only when the question genuinely
    needs synthesis across many sources that iterative `search`/`extract`
@@ -51,6 +57,10 @@ Work up this ladder and stop at the first rung that serves the task:
   CAPTCHA solving, which only billed cloud vendors serve.
 - Leave `provider` unset (`auto`) unless you have a reason: it prefers the
   backends configured here and falls back to the keyless tier.
+- `extract` with `provider="max"` reads the page through every configured
+  backend at once and returns the first answer -- the fastest read possible,
+  at one fetch per backend. Use it only when the user has asked for speed
+  over cost, never by default.
 
 ## What the tools will and will not do
 

@@ -1,0 +1,110 @@
+{
+  "provider": "nimble",
+  "method": "research",
+  "class": "web_router.providers.nimble.NimbleResearchProvider",
+  "transport": {
+    "kind": "sdk"
+  },
+  "credentials": [
+    "NIMBLE_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.agent_name": "web-router-research",
+    "body.input": "probe query",
+    "body.use_case": "research"
+  },
+  "options": {
+    "output_schema": {
+      "sample": {
+        "body.output_schema.properties.answer.type": "string",
+        "body.output_schema.type": "object"
+      }
+    },
+    "records": {
+      "sample": {
+        "body.agent_name": "web-router-enrichment",
+        "body.input_data": [
+          {
+            "name": "Example"
+          }
+        ],
+        "body.output_schema.items.properties.answer.type": "string",
+        "body.output_schema.items.type": "object",
+        "body.output_schema.properties.answer.type": "<removed>",
+        "body.output_schema.type": "array",
+        "body.use_case": "enrichment"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.effort": "low"
+      },
+      "medium": {
+        "body.effort": "medium"
+      },
+      "high": {
+        "body.effort": "high"
+      },
+      "max": {
+        "body.effort": "max"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.sources.allow": [
+          {
+            "domains": [
+              "example.com"
+            ],
+            "title": "web-router"
+          }
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.sources.block": [
+          {
+            "domains": [
+              "example.org"
+            ],
+            "title": "web-router"
+          }
+        ]
+      }
+    }
+  },
+  "not_mapped": [],
+  "source": [
+    "https://docs.nimbleway.com/api-reference/public-api/create-run",
+    "https://docs.nimbleway.com/api-reference/public-api/get-agent-run",
+    "https://docs.nimbleway.com/api-reference/public-api/get-agent-run-result",
+    "nimble-python Nimble.agents.run"
+  ],
+  "verified": {
+    "output_schema": "docs: https://docs.nimbleway.com/api-reference/public-api/create-run",
+    "records": "live: tests/providers/test_nimble_research.py::test_live_enrichment_fills_in_a_row_schema_per_record",
+    "effort": "live: tests/providers/test_nimble_research.py::test_live_research_answers_with_citations",
+    "include_domains": "docs: https://docs.nimbleway.com/api-reference/public-api/create-run",
+    "exclude_domains": "docs: https://docs.nimbleway.com/api-reference/public-api/create-run"
+  },
+  "vendor_options": {
+    "enable_events": {
+      "status": "passthrough",
+      "note": "Boolean; events are published, but web-router polls and does not read them."
+    },
+    "previous_interaction_id": {
+      "status": "passthrough",
+      "note": "Continues the conversation of an earlier run."
+    },
+    "skill": {
+      "status": "passthrough",
+      "note": "Skill override for the run."
+    },
+    "origin": {
+      "status": "passthrough",
+      "note": "api, in the nimble-python signature, not the API reference."
+    }
+  }
+}

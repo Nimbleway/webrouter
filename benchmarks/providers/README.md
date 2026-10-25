@@ -153,7 +153,8 @@ that row's *timed out* and the others are unaffected. `--concurrency` is URLs
 in flight at once; each fans out to every backend, so a backend's own rate
 limit shows up as latency or failures. Credentials come from `.env` or the
 environment, every configured extract backend runs unless `--providers` names
-some, and `auto` is left out as it is from the search scan.
+some, and `auto` and `max` are left out: each delegates to the others, so
+its row would only repeat one of theirs under another name.
 
 It writes the same four files into its own `results/extract-…` folder:
 `report.md` with pages-with-text per backend and its 95% interval, the empty,

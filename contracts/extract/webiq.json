@@ -1,0 +1,72 @@
+{
+  "provider": "webiq",
+  "method": "extract",
+  "class": "web_router.providers.webiq.WebIQExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.microsoft.ai",
+    "paths": {
+      "extract_path": "/v3/browse"
+    },
+    "method": "POST",
+    "auth_header": "x-apikey"
+  },
+  "credentials": [
+    "WEBIQ_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.contentFormat": "markdown",
+    "body.maxLength": 500000,
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "body.contentFormat": "text"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": [
+    "https://webiq.microsoft.ai/documentation/api-reference/browse/",
+    "https://webiq.microsoft.ai/documentation/openapi.json"
+  ],
+  "verified": {
+    "format": "live: tests/providers/test_webiq.py::test_live_extract_returns_a_whole_page"
+  },
+  "vendor_options": {
+    "liveCrawl": {
+      "status": "passthrough",
+      "note": "none | fallback | force; a page crawled on demand answers 202 with retryAfter, which comes back as a failure."
+    },
+    "includeWebLinks": {
+      "status": "passthrough",
+      "note": "Boolean; links stay in ExtractedDocument.extra."
+    },
+    "includeImageLinks": {
+      "status": "passthrough",
+      "note": "Boolean; image links stay in ExtractedDocument.extra."
+    },
+    "renderDynamicPages": {
+      "status": "passthrough",
+      "note": "Boolean; only with liveCrawl fallback or force."
+    },
+    "language": {
+      "status": "passthrough",
+      "note": "ISO 639-1 code."
+    },
+    "region": {
+      "status": "passthrough",
+      "note": "Two-letter country code."
+    }
+  }
+}

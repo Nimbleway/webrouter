@@ -1,0 +1,104 @@
+{
+  "provider": "exa",
+  "method": "extract",
+  "class": "web_router.providers.exa.ExaExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.exa.ai",
+    "paths": {
+      "extract_path": "/contents"
+    },
+    "method": "POST",
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "EXA_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.text": true,
+    "body.urls": [
+      "https://example.com"
+    ]
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "refused": "UnsupportedFormatError"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "unchanged": "no wire change"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "text",
+  "batches_urls": true,
+  "source": [
+    "https://exa.ai/docs/reference/get-contents"
+  ],
+  "verified": {
+    "format": "docs: https://exa.ai/docs/reference/get-contents"
+  },
+  "vendor_options": {
+    "ids": {
+      "status": "not_supported",
+      "note": "Exa takes ids or urls, not both, and web-router always sends urls."
+    },
+    "highlights": {
+      "status": "passthrough",
+      "note": "Boolean or object; highlights stay in ExtractedDocument.extra."
+    },
+    "summary": {
+      "status": "passthrough",
+      "note": "Object of query and schema; the summary stays in ExtractedDocument.extra."
+    },
+    "extras": {
+      "status": "passthrough",
+      "note": "links, imageLinks, richImageLinks counts; stay in ExtractedDocument.extra."
+    },
+    "livecrawlTimeout": {
+      "status": "passthrough",
+      "note": "Milliseconds, up to 90000."
+    },
+    "maxAgeHours": {
+      "status": "passthrough",
+      "note": "-1 to 720; 0 always fetches fresh, -1 always uses the cache."
+    },
+    "snapshotAsOf": {
+      "status": "passthrough",
+      "note": "ISO 8601 date-time or date."
+    },
+    "subpages": {
+      "status": "passthrough",
+      "note": "0-100; subpages stay in ExtractedDocument.extra."
+    },
+    "subpageTarget": {
+      "status": "passthrough",
+      "note": "String or list of strings."
+    },
+    "compliance": {
+      "status": "passthrough",
+      "note": "hipaa."
+    },
+    "userIdentifier": {
+      "status": "passthrough",
+      "note": "1-64 characters."
+    },
+    "context": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of highlights or text."
+    },
+    "livecrawl": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of maxAgeHours."
+    },
+    "crawledBeforeDate": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of snapshotAsOf."
+    }
+  }
+}

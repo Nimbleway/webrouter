@@ -51,6 +51,9 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
     )
 
     base_url: ClassVar[str] = BROWSER_USE_BASE_URL
+    tasks_path: ClassVar[str] = BROWSER_USE_TASKS_PATH
+    status_path: ClassVar[str] = BROWSER_USE_TASK_STATUS_PATH
+    task_path: ClassVar[str] = BROWSER_USE_TASK_PATH
     env_api_key: ClassVar[str] = ENV_BROWSER_USE_API_KEY
     api_key_header: ClassVar[str] = BROWSER_USE_API_KEY_HEADER
 
@@ -63,33 +66,33 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
         self._own_sessions: set[str] = set()
 
     def _start(self, request: BrowseRequest) -> BrowseProgress:
-        return self._started(request, self._post(BROWSER_USE_TASKS_PATH, self._build_payload(request)))
+        return self._started(request, self._post(self.tasks_path, self._build_payload(request)))
 
     async def _astart(self, request: BrowseRequest) -> BrowseProgress:
-        return self._started(request, await self._apost(BROWSER_USE_TASKS_PATH, self._build_payload(request)))
+        return self._started(request, await self._apost(self.tasks_path, self._build_payload(request)))
 
     def _fetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
-        status = self._get(self._task_path(BROWSER_USE_TASK_STATUS_PATH, job_id))
+        status = self._get(self._task_path(self.status_path, job_id))
         state = self._state(status)
         if state != "completed":
             return self._progress(job_id, state, status)
-        task = self._get(self._task_path(BROWSER_USE_TASK_PATH, job_id))
+        task = self._get(self._task_path(self.task_path, job_id))
         return self._progress(job_id, state, status, self._to_response(request, status, task))
 
     async def _afetch(self, request: BrowseRequest, job_id: str) -> BrowseProgress:
-        status = await self._aget(self._task_path(BROWSER_USE_TASK_STATUS_PATH, job_id))
+        status = await self._aget(self._task_path(self.status_path, job_id))
         state = self._state(status)
         if state != "completed":
             return self._progress(job_id, state, status)
-        task = await self._aget(self._task_path(BROWSER_USE_TASK_PATH, job_id))
+        task = await self._aget(self._task_path(self.task_path, job_id))
         return self._progress(job_id, state, status, self._to_response(request, status, task))
 
     def _cancel(self, job_id: str) -> bool:
-        self._call("PATCH", self._task_path(BROWSER_USE_TASK_PATH, job_id), self._stop_body(job_id))
+        self._call("PATCH", self._task_path(self.task_path, job_id), self._stop_body(job_id))
         return True
 
     async def _acancel(self, job_id: str) -> bool:
-        await self._acall("PATCH", self._task_path(BROWSER_USE_TASK_PATH, job_id), self._stop_body(job_id))
+        await self._acall("PATCH", self._task_path(self.task_path, job_id), self._stop_body(job_id))
         return True
 
     def _stop_body(self, job_id: str) -> dict[str, str]:

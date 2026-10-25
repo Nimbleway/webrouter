@@ -6,8 +6,8 @@ actually requested.
 
 There is a table per method rather than per vendor, because a name does not
 imply a capability: ``brave`` searches and cannot extract, ``oxylabs`` extracts
-and cannot search, and ``nimble`` searches, extracts and researches through
-three different classes.
+and cannot search, and ``nimble`` searches, extracts, runs templates
+and researches through four different classes.
 Asking the wrong table for a name reports it as unknown and lists the ones that
 method does serve, which is the honest answer.
 """
@@ -44,6 +44,7 @@ from web_router.constants import (
     PROVIDER_KERNEL,
     PROVIDER_LINKUP,
     PROVIDER_LOCAL,
+    PROVIDER_MAX,
     PROVIDER_NIMBLE,
     PROVIDER_OXYLABS,
     PROVIDER_PARALLEL,
@@ -56,6 +57,7 @@ from web_router.constants import (
     PROVIDER_YOU,
     PROVIDER_YOU_MCP,
     RESEARCH_ENV_BY_PROVIDER,
+    TEMPLATE_ENV_BY_PROVIDER,
 )
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.types import Provider, provider_name
@@ -67,6 +69,7 @@ if TYPE_CHECKING:
         ExtractProvider,
         ResearchProvider,
         SearchProvider,
+        TemplateProvider,
         _BaseProvider,
     )
 
@@ -107,6 +110,13 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekExtractProvider", EXTRA_EXTRACT),
     PROVIDER_JINA: ("web_router.providers.jina", "JinaExtractProvider", EXTRA_EXTRACT),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoExtractProvider", AUTO_EXTRA),
+    PROVIDER_MAX: ("web_router.providers.max", "MaxExtractProvider", AUTO_EXTRA),
+}
+
+# A template run is the Extract API's, so the class ships with the extract extra.
+# No `auto`: a template's name belongs to one vendor, so there is nothing to route.
+_BUILTIN_TEMPLATE_PROVIDERS: dict[str, tuple[str, str, str]] = {
+    PROVIDER_NIMBLE: ("web_router.providers.nimble_template", "NimbleTemplateProvider", EXTRA_EXTRACT),
 }
 
 _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
@@ -142,6 +152,7 @@ _BUILTIN_BROWSE_PROVIDERS: dict[str, tuple[str, str, str]] = {
 
 _CUSTOM_PROVIDERS: dict[str, type[SearchProvider]] = {}
 _CUSTOM_EXTRACT_PROVIDERS: dict[str, type[ExtractProvider]] = {}
+_CUSTOM_TEMPLATE_PROVIDERS: dict[str, type[TemplateProvider]] = {}
 _CUSTOM_RESEARCH_PROVIDERS: dict[str, type[ResearchProvider]] = {}
 _CUSTOM_BROWSER_PROVIDERS: dict[str, type[BrowserProvider]] = {}
 _CUSTOM_BROWSE_PROVIDERS: dict[str, type[BrowseProvider]] = {}
@@ -165,6 +176,16 @@ def register_extract_provider(name: str | Provider, provider_cls: type[ExtractPr
 def unregister_extract_provider(name: str | Provider) -> None:
     """Remove a previously registered custom extract provider. A no-op if it was never registered."""
     _CUSTOM_EXTRACT_PROVIDERS.pop(provider_name(name), None)
+
+
+def register_template_provider(name: str | Provider, provider_cls: type[TemplateProvider]) -> None:
+    """Register an Extract Template provider class under ``name``, overriding any builtin of that name."""
+    _CUSTOM_TEMPLATE_PROVIDERS[provider_name(name)] = provider_cls
+
+
+def unregister_template_provider(name: str | Provider) -> None:
+    """Remove a previously registered custom template provider. A no-op if it was never registered."""
+    _CUSTOM_TEMPLATE_PROVIDERS.pop(provider_name(name), None)
 
 
 def register_research_provider(name: str | Provider, provider_cls: type[ResearchProvider]) -> None:
@@ -205,6 +226,11 @@ def available_providers() -> list[str]:
 def available_extract_providers() -> list[str]:
     """Every extract provider name the router knows, installed or not."""
     return sorted(set(_BUILTIN_EXTRACT_PROVIDERS) | set(_CUSTOM_EXTRACT_PROVIDERS))
+
+
+def available_template_providers() -> list[str]:
+    """Every Extract Template provider name the router knows, installed or not."""
+    return sorted(set(_BUILTIN_TEMPLATE_PROVIDERS) | set(_CUSTOM_TEMPLATE_PROVIDERS))
 
 
 def available_research_providers() -> list[str]:
@@ -251,6 +277,18 @@ def configured_extract_providers() -> list[str]:
     """
     return sorted(
         name for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
+    )
+
+
+def configured_template_providers() -> list[str]:
+    """Every builtin template provider you currently have credentials for.
+
+    The same caveats as :func:`configured_providers`. A template run fetches
+    and parses on the backend's account, so there is no keyless member and
+    no ``auto``; with no key at all this is empty.
+    """
+    return sorted(
+        name for name, env_vars in TEMPLATE_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
     )
 
 
@@ -350,6 +388,21 @@ def create_provider(name: str | Provider, **kwargs: Any) -> SearchProvider:
 def create_extract_provider(name: str | Provider, **kwargs: Any) -> ExtractProvider:
     """Instantiate an extract provider by name, passing ``kwargs`` to its constructor."""
     return get_extract_provider_class(name)(**kwargs)
+
+
+def get_template_provider_class(name: str | Provider) -> type[TemplateProvider]:
+    """Resolve an Extract Template provider name to its class, importing the module on first use."""
+    return _resolve(
+        name,
+        builtin=_BUILTIN_TEMPLATE_PROVIDERS,
+        custom=_CUSTOM_TEMPLATE_PROVIDERS,
+        available=available_template_providers(),
+    )
+
+
+def create_template_provider(name: str | Provider, **kwargs: Any) -> TemplateProvider:
+    """Instantiate an Extract Template provider by name, passing ``kwargs`` to its constructor."""
+    return get_template_provider_class(name)(**kwargs)
 
 
 def get_research_provider_class(name: str | Provider) -> type[ResearchProvider]:

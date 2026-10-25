@@ -38,10 +38,14 @@ from web_router.constants import (
     MCP_TOOL_LOAD_ENV,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
+    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
+    MCP_TOOL_TEMPLATE,
+    MCP_TOOL_TEMPLATES,
     PROVIDER_AUTO,
     PROVIDER_EXA_MCP,
     PROVIDER_JINA,
+    PROVIDER_MAX,
     PROVIDER_PARALLEL_MCP,
     PROVIDER_YOU_MCP,
 )
@@ -49,6 +53,9 @@ from web_router.constants import (
 EVERY_TOOL = [
     MCP_TOOL_SEARCH,
     MCP_TOOL_EXTRACT,
+    MCP_TOOL_TEMPLATES,
+    MCP_TOOL_TEMPLATE,
+    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
     MCP_TOOL_BROWSE,
@@ -114,7 +121,7 @@ async def test_the_schemas_describe_an_install_with_no_credentials() -> None:
         PROVIDER_PARALLEL_MCP,
         PROVIDER_YOU_MCP,
     ]
-    assert _provider_enum(schemas[MCP_TOOL_EXTRACT]) == [PROVIDER_AUTO, PROVIDER_JINA]
+    assert _provider_enum(schemas[MCP_TOOL_EXTRACT]) == [PROVIDER_AUTO, PROVIDER_JINA, PROVIDER_MAX]
     # Every research backend bills, so with no key there is nothing but the
     # chooser -- and its description has to say so rather than offering a tool
     # that can only fail.

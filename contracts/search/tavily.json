@@ -1,0 +1,134 @@
+{
+  "provider": "tavily",
+  "method": "search",
+  "class": "web_router.providers.tavily.TavilyProvider",
+  "transport": {
+    "kind": "sdk"
+  },
+  "credentials": [
+    "TAVILY_API_KEY"
+  ],
+  "keyless": "through auto, allow_keyless=True",
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.max_results": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "body.search_depth": "basic"
+      },
+      "fast": {
+        "body.search_depth": "advanced"
+      },
+      "deep": {
+        "body.include_raw_content": "markdown",
+        "body.search_depth": "advanced"
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale"
+  ],
+  "source": [
+    "https://docs.tavily.com/documentation/api-reference/endpoint/search",
+    "tavily-python TavilyClient.search"
+  ],
+  "verified": {
+    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
+    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content"
+  },
+  "vendor_options": {
+    "include_domains": {
+      "status": "passthrough",
+      "note": "Same meaning as the shared include_domains; not mapped yet."
+    },
+    "exclude_domains": {
+      "status": "passthrough",
+      "note": "Same meaning as the shared exclude_domains; not mapped yet."
+    },
+    "include_domains_mode": {
+      "status": "passthrough",
+      "note": "restrict | prefer."
+    },
+    "country": {
+      "status": "passthrough",
+      "note": "Takes a lowercase English country name, not the ISO code the shared country option uses; mapping it needs a translation table."
+    },
+    "language": {
+      "status": "passthrough",
+      "note": "ISO 639-1 code or English name; a candidate for the shared locale option."
+    },
+    "filter_by_language": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "topic": {
+      "status": "passthrough",
+      "note": "general | news | finance."
+    },
+    "time_range": {
+      "status": "passthrough",
+      "note": "day | week | month | year (or d | w | m | y)."
+    },
+    "start_date": {
+      "status": "passthrough",
+      "note": "YYYY-MM-DD."
+    },
+    "end_date": {
+      "status": "passthrough",
+      "note": "YYYY-MM-DD."
+    },
+    "include_published_date": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "filter_by_published_date": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "chunks_per_source": {
+      "status": "passthrough",
+      "note": "1-3."
+    },
+    "include_answer": {
+      "status": "passthrough",
+      "note": "true | false | basic | advanced; the answer lands in SearchResponse.answer."
+    },
+    "include_images": {
+      "status": "passthrough",
+      "note": "Boolean; images stay in raw."
+    },
+    "include_image_descriptions": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "include_favicon": {
+      "status": "passthrough",
+      "note": "Boolean; stays in SearchResult.extra."
+    },
+    "auto_parameters": {
+      "status": "passthrough",
+      "note": "Lets Tavily choose parameters itself."
+    },
+    "exact_match": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "include_usage": {
+      "status": "passthrough",
+      "note": "Boolean; usage stays in raw."
+    },
+    "safe_search": {
+      "status": "passthrough",
+      "note": "Boolean."
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "provider": "parallel",
+  "method": "research",
+  "class": "web_router.providers.parallel.ParallelResearchProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.parallel.ai",
+    "paths": {
+      "research_path": "/v1/tasks/runs",
+      "result_path": "/v1/tasks/runs/{run_id}/result",
+      "status_path": "/v1/tasks/runs/{run_id}"
+    },
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "PARALLEL_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.input": "probe query",
+    "body.processor": "core",
+    "body.task_spec.output_schema.type": "text"
+  },
+  "options": {
+    "output_schema": {
+      "sample": {
+        "body.task_spec.output_schema.json_schema.properties.answer.type": "string",
+        "body.task_spec.output_schema.json_schema.type": "object",
+        "body.task_spec.output_schema.type": "json"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.processor": "lite"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "body.processor": "pro"
+      },
+      "max": {
+        "body.processor": "ultra"
+      }
+    }
+  },
+  "not_mapped": [
+    "exclude_domains",
+    "include_domains",
+    "records"
+  ],
+  "source": [
+    "https://docs.parallel.ai/api-reference/tasks/create-task-run",
+    "https://docs.parallel.ai/api-reference/tasks/retrieve-task-run",
+    "https://docs.parallel.ai/api-reference/tasks/retrieve-task-run-result"
+  ],
+  "verified": {
+    "output_schema": "docs: https://docs.parallel.ai/api-reference/tasks/create-task-run",
+    "effort": "live: tests/providers/test_parallel_research.py::test_live_research_answers_with_citations"
+  },
+  "vendor_options": {
+    "source_policy": {
+      "status": "passthrough",
+      "note": "include_domains, exclude_domains and after_date; a candidate for the shared domain filters."
+    },
+    "advanced_settings": {
+      "status": "passthrough",
+      "note": "Search configuration for the run."
+    },
+    "previous_interaction_id": {
+      "status": "passthrough",
+      "note": "Continues from an earlier run's context."
+    },
+    "memory_scope_key": {
+      "status": "passthrough",
+      "note": "Selects the memory scope the run uses."
+    },
+    "metadata": {
+      "status": "passthrough",
+      "note": "String key-value pairs stored with the run."
+    },
+    "mcp_servers": {
+      "status": "passthrough",
+      "note": "MCP servers the run may call."
+    },
+    "enable_events": {
+      "status": "passthrough",
+      "note": "Boolean; events are recorded, but web-router polls and does not read them."
+    },
+    "webhook": {
+      "status": "passthrough",
+      "note": "Called when the run completes; web-router still polls."
+    }
+  }
+}

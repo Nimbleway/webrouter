@@ -1,0 +1,171 @@
+{
+  "provider": "steel",
+  "method": "browser",
+  "class": "web_router.providers.steel.SteelBrowserProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.steel.dev",
+    "paths": {
+      "connect_url": "wss://connect.steel.dev",
+      "open_path": "/v1/sessions",
+      "release_path": "/v1/sessions/{session_id}/release",
+      "status_path": "/v1/sessions/{session_id}"
+    },
+    "auth_header": "steel-api-key"
+  },
+  "credentials": [
+    "STEEL_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body": {}
+  },
+  "options": {
+    "proxy_country": {
+      "sample": {
+        "body": "<removed>",
+        "body.useProxy.geolocation.country": "US"
+      }
+    },
+    "solve_captchas": {
+      "true": {
+        "body": "<removed>",
+        "body.solveCaptcha": true
+      },
+      "false": {
+        "body": "<removed>",
+        "body.solveCaptcha": false
+      }
+    },
+    "profile": {
+      "sample": {
+        "body": "<removed>",
+        "body.profileId": "profile-id"
+      }
+    },
+    "persist_profile": {
+      "true": {
+        "body.persistProfile": true
+      },
+      "false": {
+        "body.persistProfile": false
+      }
+    },
+    "timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.timeout": 300000
+      }
+    },
+    "idle_timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.inactivityTimeout": 60000
+      }
+    }
+  },
+  "not_mapped": [
+    "headless",
+    "stealth",
+    "viewport"
+  ],
+  "source": [
+    "https://steel.apidocumentation.com/api-reference",
+    "https://docs.steel.dev/overview/sessions-api/configuration",
+    "steel-python SessionCreateParams"
+  ],
+  "verified": {
+    "proxy_country": "docs: https://docs.steel.dev/overview/stealth/proxies",
+    "solve_captchas": "docs: https://docs.steel.dev/overview/sessions-api/configuration",
+    "profile": "live: tests/providers/test_steel_browser.py::test_live_a_login_saved_to_a_profile_is_there_in_the_next_session",
+    "persist_profile": "live: tests/providers/test_steel_browser.py::test_live_a_login_saved_to_a_profile_is_there_in_the_next_session",
+    "timeout": "docs: https://docs.steel.dev/overview/sessions-api/configuration",
+    "idle_timeout": "docs: https://docs.steel.dev/overview/sessions-api/configuration"
+  },
+  "vendor_options": {
+    "headless": {
+      "status": "passthrough",
+      "note": "Boolean; Steel defaults to headful. Not mapped yet, though it matches the shared headless option."
+    },
+    "dimensions": {
+      "status": "passthrough",
+      "note": "{width, height}; a candidate for the shared viewport option."
+    },
+    "fullscreen": {
+      "status": "passthrough",
+      "note": "Boolean; 1920x1080, ignoring dimensions."
+    },
+    "deviceConfig": {
+      "status": "passthrough",
+      "note": "{device: desktop | mobile}."
+    },
+    "userAgent": {
+      "status": "passthrough",
+      "note": "A custom user agent string."
+    },
+    "proxyUrl": {
+      "status": "passthrough",
+      "note": "A custom proxy URL; overrides useProxy, so it conflicts with proxy_country."
+    },
+    "stealthConfig": {
+      "status": "passthrough",
+      "note": "{autoCaptchaSolving, humanizeInteractions, skipFingerprintInjection}; no on/off switch for stealth."
+    },
+    "sessionContext": {
+      "status": "passthrough",
+      "note": "Cookies and web storage to start the session with."
+    },
+    "credentials": {
+      "status": "passthrough",
+      "note": "{autoSubmit, blurFields, exactOrigin} for stored credentials."
+    },
+    "debugConfig": {
+      "status": "passthrough",
+      "note": "{interactive, systemCursor}; interactive=false makes control_url() view-only."
+    },
+    "isSelenium": {
+      "status": "passthrough",
+      "note": "Boolean; Selenium mode, which forces headless."
+    },
+    "optimizeBandwidth": {
+      "status": "passthrough",
+      "note": "true, or an object blocking images, media, stylesheets, hosts or URL patterns."
+    },
+    "blockAds": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "extensionIds": {
+      "status": "passthrough",
+      "note": "Uploaded extension ids."
+    },
+    "caCertificates": {
+      "status": "passthrough",
+      "note": "PEM root CA certificates to trust."
+    },
+    "experimentalFeatures": {
+      "status": "passthrough",
+      "note": "Names of experimental features to enable."
+    },
+    "region": {
+      "status": "passthrough",
+      "note": "A region code; Steel's guide says only one region is valid today."
+    },
+    "projectId": {
+      "status": "passthrough",
+      "note": "The project to create the session in."
+    },
+    "namespace": {
+      "status": "passthrough",
+      "note": "Default \"default\"."
+    },
+    "sessionId": {
+      "status": "passthrough",
+      "note": "A custom UUID for the session."
+    },
+    "concurrency": {
+      "status": "not_supported",
+      "note": "Creates several sessions in one call; web-router opens, tracks and releases one session per call."
+    }
+  }
+}

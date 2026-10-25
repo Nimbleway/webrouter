@@ -80,6 +80,8 @@ class SteelBrowserProvider(HttpBrowserProvider):
     base_url: ClassVar[str] = STEEL_BASE_URL
     open_path: ClassVar[str] = STEEL_OPEN_PATH
     release_path: ClassVar[str] = STEEL_RELEASE_PATH
+    status_path: ClassVar[str] = STEEL_SESSION_PATH
+    connect_url: ClassVar[str] = STEEL_CONNECT_URL
     release_method: ClassVar[ReleaseMethod] = "POST"
     env_api_key: ClassVar[str] = ENV_STEEL_API_KEY
     api_key_header: ClassVar[str] = STEEL_API_KEY_HEADER
@@ -104,17 +106,17 @@ class SteelBrowserProvider(HttpBrowserProvider):
         )
 
     def _fetch(self, session_id: str) -> BrowserState:
-        return self._state(self._get(self._session_path(session_id, STEEL_SESSION_PATH)))
+        return self._state(self._get(self._session_path(session_id, self.status_path)))
 
     async def _afetch(self, session_id: str) -> BrowserState:
-        return self._state(await self._aget(self._session_path(session_id, STEEL_SESSION_PATH)))
+        return self._state(await self._aget(self._session_path(session_id, self.status_path)))
 
     def _connect_url(self, session_id: str) -> str:
         # Built rather than read from `websocketUrl`, which Steel says not to
         # connect to directly. The key rides in the query string, which is the
         # reason `cdp_url` is a secret at all.
         query = urlencode({STEEL_CONNECT_KEY_PARAM: self.api_key, STEEL_CONNECT_SESSION_PARAM: session_id})
-        return f"{STEEL_CONNECT_URL}?{query}"
+        return f"{self.connect_url}?{query}"
 
     def _state(self, payload: dict[str, Any]) -> BrowserState:
         state = self.state_of(payload["status"], STEEL_SESSION_STATES)
