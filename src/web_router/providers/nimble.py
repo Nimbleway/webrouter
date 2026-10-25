@@ -19,6 +19,7 @@ from nimble_python import AsyncNimble, Nimble
 
 from web_router.constants import (
     ENV_NIMBLE_API_KEY,
+    JSON_SCHEMA_DEFINITIONS,
     MSG_EXTRACT_BAD_STATUS,
     MSG_NIMBLE_ASYNC_CLIENT_ONLY,
     MSG_NIMBLE_CLIENT_AND_KEY,
@@ -428,7 +429,10 @@ def _enrichment_schema(request: ResearchRequest) -> dict[str, Any] | None:
     schema = request.output_schema
     if schema is None or schema.get("type") == NIMBLE_ENRICHMENT_SCHEMA_ROOT:
         return schema
-    return {"type": NIMBLE_ENRICHMENT_SCHEMA_ROOT, "items": schema}
+    # A nested model's definitions stay at the root, where its `#/$defs/...` references point.
+    row = {key: value for key, value in schema.items() if key not in JSON_SCHEMA_DEFINITIONS}
+    definitions = {key: schema[key] for key in JSON_SCHEMA_DEFINITIONS if key in schema}
+    return {"type": NIMBLE_ENRICHMENT_SCHEMA_ROOT, "items": row, **definitions}
 
 
 def _sources(request: ResearchRequest) -> dict[str, Any] | None:

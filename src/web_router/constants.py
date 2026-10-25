@@ -2184,6 +2184,8 @@ NIMBLE_RESEARCH_AGENT_NAMES: dict[str, str] = {
     NIMBLE_RESEARCH_USE_CASE_ENRICHMENT: "web-router-enrichment",
 }
 
+JSON_SCHEMA_DEFINITIONS = ("$defs", "definitions")
+"""Where a JSON Schema keeps the shared definitions its ``$ref``s resolve against, at the document root."""
 NIMBLE_ENRICHMENT_SCHEMA_ROOT = "array"
 """Nimble's enrichment takes a table: an array of the rows to fill in. A row schema is wrapped into one."""
 NIMBLE_ENRICHMENT_REFUSED_EFFORTS: frozenset[str] = frozenset({"low"})

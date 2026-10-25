@@ -237,6 +237,26 @@ def test_an_enrichment_sends_the_row_schema_as_the_table_nimble_takes(provider: 
     assert payload["output_schema"] == {"type": "array", "items": SCHEMA}
 
 
+def test_a_nested_models_definitions_stay_where_its_references_point(provider: NimbleResearchProvider) -> None:
+    """Pydantic puts a nested model under the root's `$defs`; `#/$defs/...` must still resolve once wrapped."""
+    from pydantic import BaseModel
+
+    class Office(BaseModel):
+        city: str
+
+    class Company(BaseModel):
+        name: str
+        office: Office
+
+    row = Company.model_json_schema()
+    payload = provider._build_payload(ResearchRequest(query="q", records=[{"name": "n"}], output_schema=row))
+
+    schema = payload["output_schema"]
+    assert schema["$defs"] == row["$defs"]
+    assert "$defs" not in schema["items"]
+    assert schema["items"]["properties"]["office"] == {"$ref": "#/$defs/Office"}
+
+
 def test_a_table_schema_is_sent_as_it_is(provider: NimbleResearchProvider) -> None:
     table = {"type": "array", "items": SCHEMA}
     payload = provider._build_payload(ResearchRequest(query="q", records=[{"name": "n"}], output_schema=table))
@@ -451,4 +471,7 @@ def test_live_enrichment_fills_in_a_row_schema_per_record() -> None:
         )
 
     assert response.provider == "nimble"
-    assert response.structured, f"no structured output: {response.answer!r}"
+    assert isinstance(response.structured, list), f"not one row per record: {response.structured!r}"
+    assert len(response.structured) == 1
+    assert response.structured[0]["name"] == "Nimbleway"
+    assert response.structured[0]["country"]
