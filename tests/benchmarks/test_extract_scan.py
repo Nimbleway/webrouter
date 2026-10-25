@@ -115,8 +115,8 @@ def test_a_url_with_no_category_is_grouped_as_uncategorized(extract_scan: Module
 def test_the_recommended_auto_order_ranks_on_pages_with_text_and_says_which_the_run_tells_apart(
     extract_scan: ModuleType,
 ) -> None:
-    """A suggestion, opt-in: backends by pages with text over every URL, `auto` and a silent backend left out."""
-    counts = {"best": 40, "close": 38, "far": 20, "auto": 40, "silent": 0}
+    """A suggestion, opt-in: backends by pages with text over every URL; `auto`, `max` and a silent backend left out."""
+    counts = {"best": 40, "close": 38, "far": 20, "auto": 40, "max": 40, "silent": 0}
     rows = []
     for provider, hits in counts.items():
         for i in range(40):
@@ -130,7 +130,7 @@ def test_the_recommended_auto_order_ranks_on_pages_with_text_and_says_which_the_
     assert "| 1 | `best` |" in section and "| best |" in section
     assert "| 2 | `close` |" in section and "not shown apart" in section
     assert "| 3 | `far` |" in section and "behind" in section
-    assert "`auto`" not in section and "`silent`" not in section
+    assert "`auto`" not in section and "`max`" not in section and "`silent`" not in section
     assert 'WebRouter(provider_config={"auto": {"chain": {"extract": ["best", "close", "far"]}}})' in section
     assert "opt-in" in section and "backed by a scan" in section
     assert report.index("## Overall") < report.index("## Recommended auto order") < report.index("## By category")

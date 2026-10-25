@@ -7,7 +7,7 @@ from typing import Any
 
 from _common import APART, MIN_GROUP, _p, _s
 
-from web_router.constants import PROVIDER_AUTO
+from web_router.constants import BENCHMARK_EXCLUDED
 
 
 def recommended_order(summary: dict[str, Any]) -> list[tuple[str, bool | None]]:
@@ -15,13 +15,15 @@ def recommended_order(summary: dict[str, Any]) -> list[tuple[str, bool | None]]:
 
     Ranked on pages with text over every URL, a failure or a timeout counting
     as a miss, as the search scan ranks on correct answers over every
-    question. ``auto`` is left out if a scan named it: as a chain member it
-    would be a second ``auto`` on the default order. So is a backend that
-    returned nothing at all. A backend is behind only when its 95% interval
+    question. ``auto`` and ``max`` are left out if a scan named them: each
+    delegates to the others, so as a chain member ``auto`` would be a second
+    ``auto`` on the default order and ``max`` would race its own members
+    instead of following the measured order. So is a backend that returned
+    nothing at all. A backend is behind only when its 95% interval
     stops short of the best one's; ``None`` marks the best itself.
     """
     overall = summary["overall"]
-    plain = [p for p in summary["setup"]["providers"] if p != PROVIDER_AUTO and overall[p]["returned"]]
+    plain = [p for p in summary["setup"]["providers"] if p not in BENCHMARK_EXCLUDED and overall[p]["returned"]]
     ranked = sorted(plain, key=lambda p: -(overall[p]["with_text_rate"] or 0.0))
     if not ranked:
         return []
