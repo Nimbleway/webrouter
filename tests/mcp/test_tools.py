@@ -278,8 +278,12 @@ async def test_run_template_without_the_template_names_it(tools: WebRouterTools)
     assert "'template'" in result.content[0].text
 
 
-async def test_the_template_tools_require_the_provider(tools: WebRouterTools) -> None:
+async def test_the_template_tools_require_the_provider(
+    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A template's name belongs to one vendor, so these three tools alone make `provider` required."""
+    # A key, so the schema has a `provider` to require; with none the tool is dead and lists no provider at all.
+    monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
     for name, arguments in (
         (MCP_TOOL_TEMPLATES, {}),
         (MCP_TOOL_TEMPLATE, {"name": "books_pdp"}),
