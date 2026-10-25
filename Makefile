@@ -42,8 +42,8 @@ test-integration: ## Run tests that hit real provider APIs (needs credentials)
 test-browser: ## Run tests that launch a real local browser (skip when none is installed)
 	uv run pytest -m browser
 
-contracts: ## Regenerate contracts/ from the providers; commit the result
-	uv run python -m scripts.contracts
+contracts: ## Regenerate the committed contracts; PROVIDER=search/brave starts a new one
+	uv run python -m scripts.contracts $(if $(PROVIDER),--new $(PROVIDER))
 
 cov: ## Unit tests with a coverage report
 	uv run pytest -m "not integration and not browser" --cov --cov-report=term-missing

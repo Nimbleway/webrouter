@@ -4,8 +4,9 @@ Each provider is built with a throwaway key and its request is built once per op
 the contract records which wire fields each value sets, or that it is refused. ``source``,
 ``verified`` and ``vendor_options`` are written by hand and kept across regenerations.
 
-    make contracts                                # rewrite contracts/
-    uv run python -m scripts.contracts --check    # exit 1 if contracts/ is stale
+    make contracts                                # regenerate the committed contracts
+    make contracts PROVIDER=search/brave          # start a new one, then fill in its hand fields
+    uv run python -m scripts.contracts --check    # exit 1 if a committed contract is stale
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ import json
 import os
 import sys
 import typing
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin
 
@@ -302,12 +303,20 @@ def providers() -> Iterator[tuple[str, str]]:
                 yield method, name
 
 
-def expected() -> dict[Path, str]:
-    """Every contract the code implies, keyed by where it is committed."""
+def expected(new: Iterable[str] = ()) -> dict[Path, str]:
+    """The committed contracts as the code says they should read, plus any ``method/provider`` in ``new``.
+
+    A contract is committed once its hand-written fields are filled, so only those are regenerated.
+    """
+    known = set(providers())
+    unknown = sorted(key for key in new if tuple(key.split("/", 1)) not in known)
+    if unknown:
+        raise SystemExit(f"no built-in provider: {', '.join(unknown)} (expected method/provider, e.g. search/brave)")
+    wanted = [(m, n) for m, n in known if contract_path(m, n).is_file() or f"{m}/{n}" in new]
     saved = {key: os.environ.get(key) for key in PROBE_ENV}
     os.environ.update(PROBE_ENV)
     try:
-        return {contract_path(method, name): render(method, name) for method, name in providers()}
+        return {contract_path(method, name): render(method, name) for method, name in sorted(wanted)}
     finally:
         for key, value in saved.items():
             if value is None:
@@ -328,9 +337,11 @@ def stale(files: dict[Path, str]) -> list[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--check", action="store_true", help="exit 1 if contracts/ differs from the code")
-    files = expected()
-    if parser.parse_args().check:
+    parser.add_argument("--check", action="store_true", help="exit 1 if a committed contract differs from the code")
+    parser.add_argument("--new", action="append", default=[], metavar="METHOD/PROVIDER", help="start a contract")
+    args = parser.parse_args()
+    files = expected(args.new)
+    if args.check:
         problems = stale(files)
         print(
             "\n".join([*problems, "Run `make contracts` and commit the result."] if problems else []), file=sys.stderr

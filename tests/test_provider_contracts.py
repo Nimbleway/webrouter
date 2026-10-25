@@ -1,8 +1,8 @@
 """``contracts/`` must describe the code as it is, and say where each mapping comes from.
 
-The generated part of every contract is rebuilt here from the providers, so a provider
-added, removed or remapped without ``make contracts`` fails CI. A contract whose
-hand-written fields are filled in must have all three, complete, and no ``TODO``.
+The generated part of every committed contract is rebuilt here from the providers, so a
+mapping changed or a provider removed without ``make contracts`` fails CI. A contract is
+committed once its hand-written fields are filled: all three, complete, no ``TODO``.
 """
 
 from __future__ import annotations
@@ -27,8 +27,7 @@ def _contracts() -> dict[str, dict[str, Any]]:
 
 
 CONTRACTS = _contracts()
-FILLED = sorted(key for key, contract in CONTRACTS.items() if any(field in contract for field in HAND_FIELDS))
-"""Contracts with hand-written fields. One without them is not yet verified."""
+FILLED = sorted(CONTRACTS)
 
 
 def test_contracts_match_the_code() -> None:

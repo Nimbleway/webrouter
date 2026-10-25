@@ -693,17 +693,18 @@ docstring still names each one as unverified.
 
 ## Provider contracts
 
-Every recipe below ends with `make contracts`, which regenerates
-`contracts/<method>/<provider>.json`: the wire fields each option value sends,
-read from the provider's own code. Never edit that part by hand. A contract may
-also carry three hand-written fields, kept across regenerations:
+`contracts/<method>/<provider>.json` records the wire fields each option value sends,
+read from the provider's own code, beside three hand-written fields:
 
 - `source`: the vendor's reference for the endpoints.
 - `verified`: per mapped option, `live: <the test that calls it>` or `docs: <the page>`.
 - `vendor_options`: each documented vendor option no mapping sends, `passthrough` or `not_supported`, with a note.
 
-`tests/test_provider_contracts.py` fails when `contracts/` is stale, and when a
-contract's hand-written fields are partial or hold a `TODO`.
+A contract is committed once those are filled. Start one with
+`make contracts PROVIDER=<method>/<provider>`, fill them in, and commit it; after any
+mapping change, `make contracts` regenerates every committed contract, keeping what
+was written by hand. `tests/test_provider_contracts.py` fails when a committed
+contract is stale, or its hand-written fields are partial or hold a `TODO`.
 
 ## Adding a template provider
 

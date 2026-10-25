@@ -61,8 +61,8 @@ that already serves one gets a second class in its existing module rather than a
 new file — `nimble.py`, `tavily.py` and `exa.py` each hold a search provider and
 an extract provider.
 
-Whatever the method, finish with `make contracts` and commit the contract it
-writes; [AGENTS.md](AGENTS.md#provider-contracts) says what each field holds.
+Whatever the method, finish with `make contracts`, which regenerates the
+provider contracts; [AGENTS.md](AGENTS.md#provider-contracts) says how to start one.
 
 ### A search provider
 
