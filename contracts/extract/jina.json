@@ -1,0 +1,274 @@
+{
+  "provider": "jina",
+  "method": "extract",
+  "class": "web_router.providers.jina.JinaExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://r.jina.ai",
+    "paths": {
+      "extract_path": "/"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [],
+  "keyless": "always",
+  "always_sent": {
+    "body.url": "https://example.com",
+    "headers.X-Return-Format": "markdown"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "headers.X-Return-Format": "html"
+      },
+      "text": {
+        "headers.X-Return-Format": "text"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": [
+    "https://r.jina.ai/openapi.json",
+    "https://r.jina.ai/docs",
+    "https://jina.ai/reader/"
+  ],
+  "verified": {
+    "format": "live: tests/providers/test_jina.py::test_live_html_and_markdown_really_differ"
+  },
+  "vendor_options": {
+    "respondWith": {
+      "status": "not_supported",
+      "note": "Body twin of X-Respond-With; the format is chosen by format, which web-router sends as X-Return-Format."
+    },
+    "X-Respond-With": {
+      "status": "not_supported",
+      "note": "The format header the spec now documents; web-router chooses the format through format instead."
+    },
+    "Accept": {
+      "status": "not_supported",
+      "note": "Always application/json; web-router reads the JSON envelope."
+    },
+    "preloadUrl": {
+      "status": "passthrough",
+      "note": "URL to load before the target."
+    },
+    "noServiceWorker": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "html": {
+      "status": "passthrough",
+      "note": "Raw HTML to read instead of fetching."
+    },
+    "base": {
+      "status": "passthrough",
+      "note": "initial | final; how relative URLs resolve."
+    },
+    "pdf": {
+      "status": "passthrough",
+      "note": "Base64 PDF to read instead of fetching."
+    },
+    "file": {
+      "status": "passthrough",
+      "note": "Base64 file to read instead of fetching."
+    },
+    "page": {
+      "status": "passthrough",
+      "note": "Which page(s) of an uploaded document to return."
+    },
+    "withGeneratedAlt": {
+      "status": "passthrough",
+      "note": "Boolean; generates alt text for images."
+    },
+    "retainImages": {
+      "status": "passthrough",
+      "note": "none | all | alt | all_p | alt_p."
+    },
+    "retainMedia": {
+      "status": "passthrough",
+      "note": "none | text | link | image | html."
+    },
+    "preset": {
+      "status": "passthrough",
+      "note": "reader | index | research | agent | spider | ocr | ..."
+    },
+    "retainLinks": {
+      "status": "passthrough",
+      "note": "none | all | text | gpt-oss."
+    },
+    "withLinksSummary": {
+      "status": "passthrough",
+      "note": "Boolean; a links section, kept in extra."
+    },
+    "withImagesSummary": {
+      "status": "passthrough",
+      "note": "Boolean; an images section, kept in extra."
+    },
+    "noCache": {
+      "status": "passthrough",
+      "note": "Boolean; ignores Jina's cache."
+    },
+    "cacheTolerance": {
+      "status": "passthrough",
+      "note": "Seconds of cache age accepted."
+    },
+    "removeOverlay": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "detachInvisibles": {
+      "status": "passthrough",
+      "note": "Boolean; drops display:none elements."
+    },
+    "noGfm": {
+      "status": "passthrough",
+      "note": "Disables GitHub-flavoured markdown."
+    },
+    "targetSelector": {
+      "status": "passthrough",
+      "note": "CSS selector(s) to return instead of the whole page."
+    },
+    "waitForSelector": {
+      "status": "passthrough",
+      "note": "CSS selector(s) to wait for."
+    },
+    "removeSelector": {
+      "status": "passthrough",
+      "note": "CSS selector(s) to remove."
+    },
+    "keepImgDataUrl": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "withIframe": {
+      "status": "passthrough",
+      "note": "Boolean; inlines iframe contents."
+    },
+    "withShadowDom": {
+      "status": "passthrough",
+      "note": "Boolean; inlines shadow DOM contents."
+    },
+    "skipCertVerification": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "webBotAuth": {
+      "status": "passthrough",
+      "note": "Signs requests with Web Bot Auth."
+    },
+    "setCookies": {
+      "status": "passthrough",
+      "note": "Cookies for the headless browser."
+    },
+    "storageState": {
+      "status": "passthrough",
+      "note": "Browser storage state to start from."
+    },
+    "exportStorageState": {
+      "status": "passthrough",
+      "note": "Boolean; returns the storage state after the crawl."
+    },
+    "proxyUrl": {
+      "status": "passthrough",
+      "note": "Your own proxy."
+    },
+    "proxyResources": {
+      "status": "passthrough",
+      "note": "Boolean; loads page resources through the proxy too."
+    },
+    "proxy": {
+      "status": "passthrough",
+      "note": "Jina's proxy, optionally with a two-letter country code."
+    },
+    "userAgent": {
+      "status": "passthrough",
+      "note": "User-Agent override."
+    },
+    "engine": {
+      "status": "passthrough",
+      "note": "auto | browser | curl | cf-browser-rendering."
+    },
+    "injectPageScript": {
+      "status": "passthrough",
+      "note": "Scripts run in the page."
+    },
+    "injectFrameScript": {
+      "status": "passthrough",
+      "note": "Scripts run in every frame."
+    },
+    "timeout": {
+      "status": "passthrough",
+      "note": "Seconds, at most 180; Jina's own limit, separate from the HTTP client's."
+    },
+    "locale": {
+      "status": "passthrough",
+      "note": "Browser locale for the page."
+    },
+    "referer": {
+      "status": "passthrough",
+      "note": "Referer for the page."
+    },
+    "tokenBudget": {
+      "status": "passthrough",
+      "note": "Rejects the request if the result would cost more tokens."
+    },
+    "maxTokens": {
+      "status": "passthrough",
+      "note": "Trims the content to this many tokens (at least 500)."
+    },
+    "assertStatusCode": {
+      "status": "passthrough",
+      "note": "Fails unless the page answers with this status."
+    },
+    "viewport": {
+      "status": "passthrough",
+      "note": "Browser viewport size."
+    },
+    "instruction": {
+      "status": "passthrough",
+      "note": "Instruction for an LLM-based extraction."
+    },
+    "jsonSchema": {
+      "status": "passthrough",
+      "note": "Schema for an LLM-based extraction."
+    },
+    "robotsTxt": {
+      "status": "passthrough",
+      "note": "Obeys the target's robots.txt, optionally for a named bot."
+    },
+    "zeroDataRetention": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "markdown": {
+      "status": "passthrough",
+      "note": "Turndown options for the generated markdown (the X-Md-* headers)."
+    },
+    "ocr": {
+      "status": "passthrough",
+      "note": "OCR preferences."
+    },
+    "respondTiming": {
+      "status": "passthrough",
+      "note": "html | visible-content | mutation-idle | resource-idle | media-idle | network-idle."
+    },
+    "markdownChunking": {
+      "status": "passthrough",
+      "note": "Splits the markdown into chunks by heading or structure."
+    },
+    "customHeader": {
+      "status": "passthrough",
+      "note": "Headers Jina sends to the target page."
+    },
+    "DNT": {
+      "status": "not_supported",
+      "note": "Header only, and provider_options sets body fields; set it provider-wide with provider_config={'jina': {'headers': {...}}}."
+    }
+  }
+}

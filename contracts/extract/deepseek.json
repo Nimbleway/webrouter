@@ -1,0 +1,45 @@
+{
+  "provider": "deepseek",
+  "method": "extract",
+  "class": "web_router.providers.deepseek.DeepSeekExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.deepseek.com",
+    "paths": {
+      "extract_path": "/v1/tools/fetch"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "DEEPSEEK_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": [
+    "https://api-docs.deepseek.com/api/fetch",
+    "https://api-docs.deepseek.com/guides/search"
+  ],
+  "verified": {
+    "format": "live: tests/test_integration_surface.py::test_markdown_really_comes_back_without_markup"
+  },
+  "vendor_options": {}
+}

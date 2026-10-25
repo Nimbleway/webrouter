@@ -1,0 +1,90 @@
+{
+  "provider": "oxylabs",
+  "method": "extract",
+  "class": "web_router.providers.oxylabs.OxylabsExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://realtime.oxylabs.io",
+    "paths": {
+      "extract_path": "/v1/queries"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "OXYLABS_USERNAME",
+    "OXYLABS_PASSWORD"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.markdown": true,
+    "body.source": "universal",
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "body.markdown": "<removed>"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "html",
+  "batches_urls": false,
+  "source": [
+    "https://developers.oxylabs.io/products/web-scraper-api/targets/any-domain",
+    "https://developers.oxylabs.io/products/web-scraper-api/integration-methods/realtime",
+    "https://developers.oxylabs.io/products/web-scraper-api/features/result-processing-and-storage/output-types/markdown-output"
+  ],
+  "verified": {
+    "format": "docs: https://developers.oxylabs.io/products/web-scraper-api/features/result-processing-and-storage/output-types/markdown-output"
+  },
+  "vendor_options": {
+    "geo_location": {
+      "status": "passthrough",
+      "note": "Country, state, city or post code the proxy fetches from."
+    },
+    "render": {
+      "status": "passthrough",
+      "note": "html enables JavaScript rendering; png returns a screenshot, which web-router does not read."
+    },
+    "browser_instructions": {
+      "status": "passthrough",
+      "note": "Browser actions run while rendering."
+    },
+    "parse": {
+      "status": "passthrough",
+      "note": "Boolean; parsed data where a dedicated parser exists, not a format web-router reads."
+    },
+    "parsing_instructions": {
+      "status": "passthrough",
+      "note": "Custom parsing logic run on the HTML."
+    },
+    "context": {
+      "status": "passthrough",
+      "note": "List of key/value pairs: headers, cookies, session_id, http_method, content, follow_redirects, successful_status_codes."
+    },
+    "user_agent_type": {
+      "status": "passthrough",
+      "note": "Device type and browser, default desktop."
+    },
+    "content_encoding": {
+      "status": "passthrough",
+      "note": "base64, for downloading images."
+    },
+    "callback_url": {
+      "status": "not_supported",
+      "note": "Push-pull only; the realtime endpoint web-router calls returns the result inline."
+    },
+    "type": {
+      "status": "not_supported",
+      "note": "A query parameter (type=raw,markdown) and provider_options sets body fields."
+    }
+  }
+}

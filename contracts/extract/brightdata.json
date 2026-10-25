@@ -1,0 +1,67 @@
+{
+  "provider": "brightdata",
+  "method": "extract",
+  "class": "web_router.providers.brightdata.BrightDataExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.brightdata.com",
+    "paths": {
+      "extract_path": "/request"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "BRIGHTDATA_API_TOKEN",
+    "BRIGHTDATA_ZONE"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.data_format": "markdown",
+    "body.format": "json",
+    "body.url": "https://example.com",
+    "body.zone": "contract-probe-zone"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "body.data_format": "<removed>"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "html",
+  "batches_urls": false,
+  "source": "https://docs.brightdata.com/api-reference/rest-api/unlocker/unlock-website",
+  "verified": {
+    "format": "docs: https://docs.brightdata.com/api-reference/rest-api/unlocker/unlock-website"
+  },
+  "vendor_options": {
+    "method": {
+      "status": "passthrough",
+      "note": "HTTP method used for the target, default GET."
+    },
+    "country": {
+      "status": "passthrough",
+      "note": "Two-letter ISO code for the proxy location."
+    },
+    "render": {
+      "status": "passthrough",
+      "note": "'true' forces JavaScript rendering in a browser."
+    },
+    "debug": {
+      "status": "passthrough",
+      "note": "Boolean; adds the x-brd-debug response header."
+    },
+    "async": {
+      "status": "not_supported",
+      "note": "A query parameter, and an async request returns an id to poll rather than the page."
+    }
+  }
+}

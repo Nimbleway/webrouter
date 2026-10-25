@@ -1,0 +1,161 @@
+{
+  "provider": "kernel",
+  "method": "browser",
+  "class": "web_router.providers.kernel.KernelBrowserProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.onkernel.com",
+    "paths": {
+      "open_path": "/browsers",
+      "release_path": "/browsers/{session_id}"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "KERNEL_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body": {}
+  },
+  "options": {
+    "stealth": {
+      "off": {
+        "body": "<removed>",
+        "body.stealth": false
+      },
+      "low": {
+        "body": "<removed>",
+        "body.stealth": true
+      },
+      "high": {
+        "body": "<removed>",
+        "body.stealth": true
+      }
+    },
+    "profile": {
+      "sample": {
+        "body": "<removed>",
+        "body.profile.id": "profile-id"
+      }
+    },
+    "persist_profile": {
+      "true": {
+        "body.profile.save_changes": true
+      },
+      "false": {
+        "body.profile.save_changes": false
+      }
+    },
+    "idle_timeout": {
+      "sample": {
+        "body": "<removed>",
+        "body.timeout_seconds": 60
+      }
+    },
+    "viewport": {
+      "sample": {
+        "body": "<removed>",
+        "body.viewport.height": 720,
+        "body.viewport.width": 1280
+      }
+    },
+    "headless": {
+      "true": {
+        "body": "<removed>",
+        "body.headless": true
+      },
+      "false": {
+        "body": "<removed>",
+        "body.headless": false
+      }
+    }
+  },
+  "not_mapped": [
+    "proxy_country",
+    "solve_captchas",
+    "timeout"
+  ],
+  "source": [
+    "https://kernel.sh/docs/api-reference/browsers/create-a-browser-session",
+    "https://kernel.sh/docs/api-reference/browsers/delete-a-browser-session-by-id-or-name"
+  ],
+  "verified": {
+    "stealth": "live: tests/providers/test_kernel_browser.py::test_live_session_opens_is_driven_and_releases",
+    "profile": "live: tests/providers/test_kernel_browser.py::test_live_session_starts_from_a_profile_by_its_id",
+    "persist_profile": "live: tests/providers/test_kernel_browser.py::test_live_session_starts_from_a_profile_by_its_id",
+    "idle_timeout": "live: tests/providers/test_kernel_browser.py::test_live_session_opens_is_driven_and_releases",
+    "viewport": "live: tests/providers/test_kernel_browser.py::test_live_session_opens_is_driven_and_releases",
+    "headless": "live: tests/providers/test_kernel_browser.py::test_live_session_opens_is_driven_and_releases"
+  },
+  "vendor_options": {
+    "proxy": {
+      "status": "passthrough",
+      "note": "An existing proxy by id or name, or mode direct; proxy_country is not mapped because a country needs a proxy created first."
+    },
+    "proxy_id": {
+      "status": "passthrough",
+      "note": "Deprecated in favor of proxy."
+    },
+    "region": {
+      "status": "passthrough",
+      "note": "us-east | us-west | eu-west | ap-southeast."
+    },
+    "location": {
+      "status": "passthrough",
+      "note": "{locale, timezone} overrides for the session."
+    },
+    "start_url": {
+      "status": "passthrough",
+      "note": "A URL opened when the session starts; best effort."
+    },
+    "name": {
+      "status": "passthrough",
+      "note": "A name unique among active sessions, to find it later."
+    },
+    "tags": {
+      "status": "passthrough",
+      "note": "Key-value tags."
+    },
+    "extensions": {
+      "status": "passthrough",
+      "note": "Extensions to load, each by id or name."
+    },
+    "chrome_policy": {
+      "status": "passthrough",
+      "note": "Chrome enterprise policy overrides."
+    },
+    "kiosk_mode": {
+      "status": "passthrough",
+      "note": "Boolean; hides the address bar and tabs in the live view."
+    },
+    "memory": {
+      "status": "passthrough",
+      "note": "1GiB | 2GiB | 4GiB headless; 8GiB | 16GiB headful."
+    },
+    "gpu": {
+      "status": "passthrough",
+      "note": "Boolean; needs headless=false and region us-east."
+    },
+    "video_memory": {
+      "status": "passthrough",
+      "note": "2GiB | 4GiB, for a GPU session."
+    },
+    "network": {
+      "status": "passthrough",
+      "note": "Egress allowlist, private hosts and per-host proxy routes."
+    },
+    "telemetry": {
+      "status": "passthrough",
+      "note": "Telemetry capture, storage and OTLP export settings."
+    },
+    "vaults": {
+      "status": "passthrough",
+      "note": "Vaults to link to the session, by id or name."
+    },
+    "invocation_id": {
+      "status": "passthrough",
+      "note": "Ties the session to a Kernel action invocation."
+    }
+  }
+}

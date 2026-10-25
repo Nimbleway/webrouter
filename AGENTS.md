@@ -704,7 +704,8 @@ A contract is committed once those are filled. Start one with
 `make contracts PROVIDER=<method>/<provider>`, fill them in, and commit it; after any
 mapping change, `make contracts` regenerates every committed contract, keeping what
 was written by hand. `tests/test_provider_contracts.py` fails when a committed
-contract is stale, or its hand-written fields are partial or hold a `TODO`.
+contract is stale, or its hand-written fields are partial or hold a `TODO`, and when a
+built-in provider has no contract at all.
 
 ## Adding a template provider
 

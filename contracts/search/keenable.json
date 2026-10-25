@@ -1,0 +1,76 @@
+{
+  "provider": "keenable",
+  "method": "search",
+  "class": "web_router.providers.keenable.KeenableProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.keenable.ai",
+    "paths": {
+      "public_search_path": "/v1/search/public",
+      "search_path": "/v1/search"
+    },
+    "method": "POST",
+    "auth_header": "X-API-Key"
+  },
+  "credentials": [
+    "KEENABLE_API_KEY"
+  ],
+  "keyless": "through auto, allow_keyless=True",
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.max_results": 3
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "search_depth"
+  ],
+  "source": [
+    "https://docs.keenable.ai/api-reference/search"
+  ],
+  "verified": {
+    "max_results": "live: tests/providers/test_keenable.py::test_live_search_returns_results"
+  },
+  "vendor_options": {
+    "mode": {
+      "status": "passthrough",
+      "note": "pro | realtime."
+    },
+    "site": {
+      "status": "passthrough",
+      "note": "One site to restrict results to; a candidate for a single-domain include_domains."
+    },
+    "acquired_after": {
+      "status": "passthrough",
+      "note": "Date, ISO 8601 timestamp or relative delta such as 7d."
+    },
+    "acquired_before": {
+      "status": "passthrough",
+      "note": "Date, ISO 8601 timestamp or relative delta such as 7d."
+    },
+    "published_after": {
+      "status": "passthrough",
+      "note": "Date, ISO 8601 timestamp or relative delta such as 7d."
+    },
+    "published_before": {
+      "status": "passthrough",
+      "note": "Date, ISO 8601 timestamp or relative delta such as 7d."
+    },
+    "query_time": {
+      "status": "passthrough",
+      "note": "Searches the index as it stood at that time."
+    },
+    "snippet_max_length": {
+      "status": "passthrough",
+      "note": "180-10000 characters."
+    }
+  }
+}

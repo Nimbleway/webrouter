@@ -1,0 +1,106 @@
+{
+  "provider": "you",
+  "method": "search",
+  "class": "web_router.providers.you.YouProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://ydc-index.io",
+    "paths": {
+      "search_path": "/v1/search"
+    },
+    "method": "POST",
+    "auth_header": "X-API-Key"
+  },
+  "credentials": [
+    "YOU_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.count": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "unchanged": "no wire change"
+      },
+      "fast": {
+        "body.extraction.extraction_mode": "highlights"
+      },
+      "deep": {
+        "body.extraction.extraction_mode": "full_page"
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale"
+  ],
+  "source": [
+    "https://you.com/docs/api-reference/search/v1-search"
+  ],
+  "verified": {
+    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
+    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content"
+  },
+  "vendor_options": {
+    "include_domains": {
+      "status": "passthrough",
+      "note": "Same meaning as the shared include_domains (up to 500); not mapped yet."
+    },
+    "exclude_domains": {
+      "status": "passthrough",
+      "note": "Same meaning as the shared exclude_domains; not mapped yet. Cannot be combined with include_domains."
+    },
+    "boost_domains": {
+      "status": "passthrough",
+      "note": "Ranks these domains higher without filtering; cannot be combined with include_domains."
+    },
+    "country": {
+      "status": "passthrough",
+      "note": "Uppercase ISO 3166 code from a fixed list; a candidate for the shared country option."
+    },
+    "language": {
+      "status": "passthrough",
+      "note": "Uppercase language code from a fixed list (EN, EN-GB, ZH-HANS ...); a candidate for the shared locale option."
+    },
+    "freshness": {
+      "status": "passthrough",
+      "note": "day | week | month | year, or a YYYY-MM-DDtoYYYY-MM-DD range."
+    },
+    "offset": {
+      "status": "passthrough",
+      "note": "0-9, in multiples of count."
+    },
+    "safesearch": {
+      "status": "passthrough",
+      "note": "off | moderate | strict."
+    },
+    "knowledge": {
+      "status": "passthrough",
+      "note": "core; knowledge results stay in raw."
+    },
+    "strict_operators": {
+      "status": "passthrough",
+      "note": "Boolean; enforces quoted phrases and site: exactly. No effect with highlights."
+    },
+    "crawl_timeout": {
+      "status": "passthrough",
+      "note": "1-60 seconds; full_page extraction only (422 with highlights)."
+    },
+    "livecrawl": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of extraction: web | news | all."
+    },
+    "livecrawl_formats": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of extraction.full_page.extraction_formats: html | markdown."
+    }
+  }
+}

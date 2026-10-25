@@ -1,0 +1,97 @@
+{
+  "provider": "you-mcp",
+  "method": "search",
+  "class": "web_router.providers.you_mcp.YouMcpProvider",
+  "transport": {
+    "kind": "mcp",
+    "url": "https://api.you.com",
+    "tool": "you-search"
+  },
+  "credentials": [],
+  "keyless": "always",
+  "always_sent": {
+    "body.id": 1,
+    "body.jsonrpc": "2.0",
+    "body.method": "tools/call",
+    "body.params.arguments.query": "probe query",
+    "body.params.name": "you-search"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.params.arguments.count": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "body.params.arguments.extraction": "none"
+      },
+      "fast": {
+        "body.params.arguments.extraction": "highlights"
+      },
+      "deep": {
+        "body.params.arguments.extraction": "full_page"
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale"
+  ],
+  "source": [
+    "https://you.com/docs/agents/mcp-server",
+    "you-search tool, from tools/list on https://api.you.com/mcp?profile=free"
+  ],
+  "verified": {
+    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
+    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content"
+  },
+  "vendor_options": {
+    "exclude_domains": {
+      "status": "passthrough",
+      "note": "Same meaning as the shared exclude_domains (up to 500); not mapped yet."
+    },
+    "freshness": {
+      "status": "passthrough",
+      "note": "day | week | month | year, or a YYYY-MM-DDtoYYYY-MM-DD range."
+    },
+    "offset": {
+      "status": "passthrough",
+      "note": "0-9, in multiples of count."
+    },
+    "safesearch": {
+      "status": "passthrough",
+      "note": "off | moderate | strict."
+    },
+    "knowledge": {
+      "status": "passthrough",
+      "note": "core; knowledge results stay in raw."
+    },
+    "extraction_source": {
+      "status": "passthrough",
+      "note": "cache | fetch | blend; full_page extraction only."
+    },
+    "crawl_timeout": {
+      "status": "passthrough",
+      "note": "1-60 seconds; full_page extraction only."
+    },
+    "include_domains": {
+      "status": "not_supported",
+      "note": "Host-only: set under params._meta or an X-Search-* header, which provider_options cannot reach."
+    },
+    "boost_domains": {
+      "status": "not_supported",
+      "note": "Host-only: set under params._meta or an X-Search-* header, which provider_options cannot reach."
+    },
+    "country": {
+      "status": "not_supported",
+      "note": "Host-only: set under params._meta or an X-Search-* header, which provider_options cannot reach."
+    },
+    "language": {
+      "status": "not_supported",
+      "note": "Host-only: set under params._meta or an X-Search-* header, which provider_options cannot reach."
+    }
+  }
+}
