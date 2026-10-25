@@ -309,3 +309,56 @@ def test_scans_that_withheld_different_pages_do_not_combine(scan: ModuleType, tm
         scan.combine([old, new])
     again = _scan(tmp_path / "again", ["exa"], questions="sealqa-hard", withheld=["sealqa", "2506.01062"])
     assert scan.combine([new, again])[1]["providers"] == ["brave", "exa"]
+
+
+def test_a_depth_that_fails_keeps_the_depths_before_it_in_the_sink(
+    scan: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fake_provider: Any
+) -> None:
+    """Each depth's rows reach the sink once its evaluate() returns, so a crash in the second keeps the first's."""
+    from web_router.evals.types import EvaluationReport, EvaluationRow
+
+    path = tmp_path / "mine.csv"
+    path.write_text("problem,answer,topic\nWho?,Alice,People\nWhere?,Paris,Places\n", encoding="utf-8")
+    args = scan.parse_args(["--questions", "csv", "--dataset", str(path)])
+    depths: list[str | None] = []
+    fail_at: int | None = 2
+
+    class Router(scan.AsyncWebRouter):  # type: ignore[misc, name-defined]
+        async def evaluate(self, dataset: Any, **kwargs: Any) -> EvaluationReport:
+            depths.append(kwargs["search_depth"])
+            if len(depths) == fail_at:
+                raise RuntimeError("connection dropped")
+            rows = [
+                EvaluationRow(provider=p.name, question=q.question, target=q.answer, latency=0.1, grade="correct")
+                for p in kwargs["providers"]
+                for q in dataset.questions
+            ]
+            return EvaluationReport(dataset="csv", judge="stub", rows=rows)
+
+    monkeypatch.setattr(scan, "AsyncWebRouter", Router)
+    saved: list[list[dict[str, Any]]] = []
+
+    def scan_run() -> list[dict[str, Any]]:
+        depths.clear()
+        saved.clear()
+        setup = {"providers": ["fake@lite", "fake@deep"], "dataset": str(path), "breakdowns": [("topic", "Topic")]}
+        return asyncio.run(scan.run(args, setup, saved.append))
+
+    with pytest.raises(RuntimeError, match="connection dropped"):
+        scan_run()
+    assert depths == ["lite", "deep"]
+    assert sorted((r["provider"], r["question"], r["topic"]) for batch in saved for r in batch) == [
+        ("fake@lite", "Where?", "Places"),
+        ("fake@lite", "Who?", "People"),
+    ], "the first depth's rows were handed over before the second depth ran"
+
+    fail_at = None
+    rows = scan_run()
+    assert [len(batch) for batch in saved] == [2, 2], "one batch per depth, every question in each"
+    assert rows == [r for batch in saved for r in batch], "what run() returns is what reached the sink"
+    assert sorted((r["provider"], r["question"], r["topic"]) for r in rows) == [
+        ("fake@deep", "Where?", "Places"),
+        ("fake@deep", "Who?", "People"),
+        ("fake@lite", "Where?", "Places"),
+        ("fake@lite", "Who?", "People"),
+    ]

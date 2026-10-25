@@ -382,7 +382,8 @@ async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> li
         provider, depth, options = parse_setup(label, modes)
         by_depth[depth].append((label, provider, options))
     judge = OpenAIJudge()
-    rows = []
+    labels = [label for label, _ in setup["breakdowns"]]
+    rows: list[dict[str, Any]] = []
     try:
         async with AsyncWebRouter() as router:
             # One evaluate() per depth: the library sends one depth to every backend in a comparison.
@@ -402,17 +403,16 @@ async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> li
                     search_depth=cast(SearchDepth | None, depth),
                 )
                 setup["judge"] = report.judge
-                rows += report.rows
+                # A depth's rows reach the file once its evaluate() returns: a crash in the next depth keeps them.
+                batch = [
+                    {**row.model_dump(mode="json"), **{tag: meta.get(row.question, {}).get(tag) for tag in labels}}
+                    for row in report.rows
+                ]
+                sink(batch)
+                rows += batch
     finally:
         await judge.aclose()
-    labels = [label for label, _ in setup["breakdowns"]]
-    tabulated = [
-        {**row.model_dump(mode="json"), **{label: meta.get(row.question, {}).get(label) for label in labels}}
-        for row in rows
-    ]
-    # evaluate() returns a depth's rows together, so they reach the file a depth at a time rather than at the end.
-    sink(tabulated)
-    return tabulated
+    return rows
 
 
 def _tags(metadata: dict[str, Any]) -> dict[str, Any]:
