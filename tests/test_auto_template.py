@@ -39,6 +39,7 @@ def _register(name: str, **overrides: Any) -> type:
 
 @pytest.fixture
 def two_fakes() -> Any:
+    """Two members, ``first`` and ``second``; a test that needs one to misbehave re-registers it with ``_register``."""
     first = _register("first")
     second = _register("second")
     yield first, second
@@ -82,11 +83,7 @@ def _refused(provider: str, status: int) -> ProviderError:
 
 def test_a_member_that_refused_the_run_falls_through_to_the_next(two_fakes: Any) -> None:
     """A 4xx proves nothing was fetched, so nothing was billed, and the chain moves on."""
-
-    def _run(self: Any, request: TemplateRequest) -> Any:
-        raise _refused("first", 422)
-
-    two_fakes[0]._run = _run
+    _register("first", run_raises=_refused("first", 422))
     provider = AutoTemplateProvider(chain=["first", "second"])
 
     assert provider.run(REQUEST).provider == "second"
@@ -99,11 +96,7 @@ def test_a_member_that_refused_the_run_falls_through_to_the_next(two_fakes: Any)
 )
 def test_a_failure_that_may_follow_a_billed_fetch_is_raised_not_retried(two_fakes: Any, failure: ProviderError) -> None:
     """The first member may have fetched the page already; a second member would fetch, and bill, again."""
-
-    def _run(self: Any, request: TemplateRequest) -> Any:
-        raise failure
-
-    two_fakes[0]._run = _run
+    _register("first", run_raises=failure)
     provider = AutoTemplateProvider(chain=["first", "second"])
 
     with pytest.raises(ProviderError, match=re.escape(str(failure))):
@@ -112,20 +105,14 @@ def test_a_failure_that_may_follow_a_billed_fetch_is_raised_not_retried(two_fake
 
 
 def test_a_listing_that_fails_falls_through_because_it_bills_nothing(two_fakes: Any) -> None:
-    def _list(self: Any, **kwargs: Any) -> Any:
-        raise ProviderError("first", "HTTP 503")
-
-    two_fakes[0]._list = _list
+    _register("first", list_raises=ProviderError("first", "HTTP 503"))
 
     assert AutoTemplateProvider(chain=["first", "second"]).templates().provider == "second"
 
 
 def test_every_member_refusing_reports_each_ones_reason(two_fakes: Any) -> None:
-    def _run(self: Any, request: TemplateRequest) -> Any:
-        raise _refused(self.name, 401)
-
-    two_fakes[0]._run = _run
-    two_fakes[1]._run = _run
+    _register("first", run_raises=_refused("first", 401))
+    _register("second", run_raises=_refused("second", 401))
     with pytest.raises(ProviderError) as caught:
         AutoTemplateProvider(chain=["first", "second"]).run(REQUEST)
 
@@ -133,7 +120,7 @@ def test_every_member_refusing_reports_each_ones_reason(two_fakes: Any) -> None:
 
 
 def test_a_member_that_cannot_return_the_format_is_passed_over_before_being_built(two_fakes: Any) -> None:
-    two_fakes[0].supported_formats = frozenset({"html"})
+    _register("first", supported_formats=frozenset({"html"}))
     provider = AutoTemplateProvider(chain=["first", "second"])
 
     response = provider.run(REQUEST.model_copy(update={"format": "markdown"}))
@@ -143,8 +130,8 @@ def test_a_member_that_cannot_return_the_format_is_passed_over_before_being_buil
 
 
 def test_with_no_member_returning_the_format_the_call_raises_before_anything_runs(two_fakes: Any) -> None:
-    two_fakes[0].supported_formats = frozenset({"html"})
-    two_fakes[1].supported_formats = frozenset({"html"})
+    _register("first", supported_formats=frozenset({"html"}))
+    _register("second", supported_formats=frozenset({"html"}))
     provider = AutoTemplateProvider(chain=["first", "second"])
 
     with pytest.raises(UnsupportedFormatError, match="markdown") as caught:
@@ -160,8 +147,8 @@ def test_a_member_that_maps_the_options_but_not_the_format_makes_it_a_format_err
     The caller is told the format is unavailable, not to drop an option a
     configured backend does map.
     """
-    two_fakes[0].supported_parameters = frozenset()
-    two_fakes[1].supported_formats = frozenset({"html"})
+    _register("first", supported_parameters=frozenset())
+    _register("second", supported_formats=frozenset({"html"}))
     provider = AutoTemplateProvider(chain=["first", "second"])
 
     with pytest.raises(UnsupportedFormatError, match="markdown") as caught:
@@ -171,8 +158,8 @@ def test_a_member_that_maps_the_options_but_not_the_format_makes_it_a_format_err
 
 
 def test_with_no_member_mapping_an_option_the_call_raises_naming_it(two_fakes: Any) -> None:
-    two_fakes[0].supported_parameters = frozenset()
-    two_fakes[1].supported_parameters = frozenset()
+    _register("first", supported_parameters=frozenset())
+    _register("second", supported_parameters=frozenset())
     provider = AutoTemplateProvider(chain=["first", "second"])
 
     with pytest.raises(UnsupportedParameterError, match="format"):
@@ -188,10 +175,7 @@ def test_a_chain_keyed_by_method_reads_its_own_entry(two_fakes: Any) -> None:
 
 
 async def test_the_async_path_follows_the_same_chain(two_fakes: Any) -> None:
-    async def _arun(self: Any, request: TemplateRequest) -> Any:
-        raise _refused("first", 404)
-
-    two_fakes[0]._arun = _arun
+    _register("first", run_raises=_refused("first", 404))
     provider = AutoTemplateProvider(chain=["first", "second"])
 
     assert (await provider.arun(REQUEST)).provider == "second"

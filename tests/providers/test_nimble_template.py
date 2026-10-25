@@ -9,15 +9,19 @@ same live listing, which also carried fields the models do not declare
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
+import httpx
 import pytest
 
 from web_router.exceptions import ProviderError, UnsupportedFormatError
 from web_router.types import TemplateRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
+
+from nimble_python import AsyncNimble, Nimble
 
 from web_router.providers.nimble import NimbleTemplateProvider
 
@@ -282,6 +286,117 @@ def test_a_listing_is_a_page_with_its_place_in_the_catalogue(provider: NimbleTem
     assert (page.total, page.limit, page.offset) == (4127, 100, 0)
     assert len(page) == 2
     assert page.raw == payload
+
+
+# -- Through the SDK client ---------------------------------------------------
+
+
+class _Api:
+    """A fake of the three template endpoints behind the SDK, answering as the API does and recording each request."""
+
+    def __init__(self, *, missing: str | None = None) -> None:
+        self.requests: list[httpx.Request] = []
+        self.missing = missing
+
+    def handle(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        path = request.url.path
+        if path.endswith("/extract/templates/run"):
+            return httpx.Response(200, json=_run_payload(RECORD))
+        if path.endswith("/extract/templates"):
+            return httpx.Response(200, json={"items": [_item(_version())], "total": 1, "limit": 20, "offset": 5})
+        name = path.rsplit("/", 1)[-1]
+        if name == self.missing:
+            return httpx.Response(404, json={"detail": f"template {name} not found"})
+        return httpx.Response(200, json=_item(_version(name=name), name=name))
+
+    def sync_provider(self, monkeypatch: pytest.MonkeyPatch) -> NimbleTemplateProvider:
+        """A provider on its own clients, with the sync one routed through this fake API."""
+        monkeypatch.setenv("NIMBLE_API_KEY", "test-key")
+        provider = NimbleTemplateProvider()
+        transport = httpx.MockTransport(self.handle)
+        provider._client = Nimble(api_key="test-key", http_client=httpx.Client(transport=transport))
+        return provider
+
+    def async_provider(self) -> NimbleTemplateProvider:
+        """A provider on a caller's async client, as an app holding one per end user builds it."""
+        transport = httpx.MockTransport(self.handle)
+        client = AsyncNimble(api_key="end-user-key", http_client=httpx.AsyncClient(transport=transport))
+        return NimbleTemplateProvider(async_client=client)
+
+
+def test_run_list_and_describe_through_the_sdk_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    api = _Api(missing="gone")
+    provider = api.sync_provider(monkeypatch)
+    try:
+        response = provider.run(TemplateRequest(template=TEMPLATE, params={"url": URL}, format="markdown"))
+        page = provider.templates(limit=20, offset=5)
+        template = provider.template(TEMPLATE)
+        with pytest.raises(ProviderError, match="'gone'") as caught:
+            provider.template("gone")
+    finally:
+        provider.close()
+
+    run, listing, describe, missing = api.requests
+    assert run.method == "POST" and run.url.path.endswith("/v2/extract/templates/run")
+    assert json.loads(run.content) == {"template": TEMPLATE, "params": {"url": URL}, "formats": ["markdown"]}
+    assert run.headers["authorization"] == "Bearer test-key"
+    assert response.data == RECORD
+    assert response.status_code == 200, "the API's float status code is coerced to an int"
+    assert response.document is not None and response.document.format == "markdown"
+
+    assert listing.method == "GET" and listing.url.path.endswith("/v2/extract/templates")
+    assert dict(listing.url.params) == {"limit": "20", "offset": "5"}
+    assert page.names == [TEMPLATE] and (page.total, page.limit, page.offset) == (1, 20, 5)
+
+    assert describe.method == "GET" and describe.url.path.endswith(f"/v2/extract/templates/{TEMPLATE}")
+    assert template.name == TEMPLATE and template.published
+
+    assert missing.url.path.endswith("/v2/extract/templates/gone")
+    assert "404" in str(caught.value)
+
+
+def test_paging_left_unset_sends_no_query(monkeypatch: pytest.MonkeyPatch) -> None:
+    api = _Api()
+    provider = api.sync_provider(monkeypatch)
+    try:
+        provider.templates()
+    finally:
+        provider.close()
+
+    assert dict(api.requests[0].url.params) == {}
+
+
+async def test_the_async_calls_go_out_on_the_caller_s_client_as_its_end_user() -> None:
+    api = _Api()
+    provider = api.async_provider()
+    try:
+        response = await provider.arun(TemplateRequest(template=TEMPLATE, params={"url": URL}))
+        page = await provider.atemplates(limit=1)
+        template = await provider.atemplate(TEMPLATE)
+    finally:
+        await provider.aclose()
+
+    assert response.data == RECORD and response.document is None
+    assert page.names == [TEMPLATE]
+    assert template.name == TEMPLATE
+    assert all(request.headers["authorization"] == "Bearer end-user-key" for request in api.requests)
+    sent = json.loads(api.requests[0].content)
+    assert sent == {"template": TEMPLATE, "params": {"url": URL}}, "no format asked for, no formats sent"
+
+
+def test_an_error_page_through_the_sdk_client_is_a_failed_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _MissingPageApi(_Api):
+        def handle(self, request: httpx.Request) -> httpx.Response:
+            self.requests.append(request)
+            return httpx.Response(200, json=_run_payload({"title": "404 Error"}, status_code=404.0))
+
+    provider = _MissingPageApi().sync_provider(monkeypatch)
+    try:
+        with pytest.raises(ProviderError, match="HTTP 404"):
+            provider.run(TemplateRequest(template=TEMPLATE, params={"url": URL}))
+    finally:
+        provider.close()
 
 
 # -- Live ---------------------------------------------------------------------

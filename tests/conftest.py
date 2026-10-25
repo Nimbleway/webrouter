@@ -174,6 +174,9 @@ class FakeTemplateProvider(TemplateProvider):
     supported_formats: frozenset[ExtractFormat] = frozenset({"markdown", "html"})
 
     unknown_names: ClassVar[frozenset[str]] = frozenset()
+    run_raises: ClassVar[Exception | None] = None
+    """What every run raises instead of answering, so a chain test sets a member's behaviour on its class."""
+    list_raises: ClassVar[Exception | None] = None
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -200,6 +203,8 @@ class FakeTemplateProvider(TemplateProvider):
 
     def _respond(self, request: TemplateRequest) -> TemplateResponse:
         self.requests.append(request)
+        if self.run_raises is not None:
+            raise self.run_raises
         document = (
             ExtractedDocument(url="https://example.com/page", content="# Page", format=request.format)
             if request.format
@@ -224,6 +229,8 @@ class FakeTemplateProvider(TemplateProvider):
 
     def _list(self, *, limit: int | None, offset: int | None) -> TemplatePage:
         self.listed.append((limit, offset))
+        if self.list_raises is not None:
+            raise self.list_raises
         return TemplatePage(
             provider=self.name,
             templates=[self._describe(name) for name in FAKE_TEMPLATE_NAMES],
