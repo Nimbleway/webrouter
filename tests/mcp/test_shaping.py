@@ -30,9 +30,9 @@ from web_router.types import (
     BrowseStep,
     ExtractedDocument,
     ExtractResponse,
-    ExtractTemplate,
     SearchResponse,
     SearchResult,
+    Template,
     TemplatePage,
     TemplateResponse,
 )
@@ -306,7 +306,7 @@ _BIG_SCHEMA = {"type": "object", "properties": {f"field_{index}": {"type": "stri
 
 
 def test_a_schema_that_fits_is_never_shortened() -> None:
-    template = ExtractTemplate(provider="fake", name="t", input_schema=_BIG_SCHEMA, output_schema=_BIG_SCHEMA)
+    template = Template(provider="fake", name="t", input_schema=_BIG_SCHEMA, output_schema=_BIG_SCHEMA)
 
     shaped = shape_template(template, "template-0001", budget=100_000)
 
@@ -317,7 +317,7 @@ def test_a_schema_that_fits_is_never_shortened() -> None:
 
 def test_a_schema_that_cannot_fit_is_left_out_whole_with_a_pointer_to_the_handle() -> None:
     """A cut schema would send the model guessing at the inputs it dropped, so it goes whole or not at all."""
-    template = ExtractTemplate(provider="fake", name="t", input_schema={"type": "object"}, output_schema=_BIG_SCHEMA)
+    template = Template(provider="fake", name="t", input_schema={"type": "object"}, output_schema=_BIG_SCHEMA)
 
     shaped = shape_template(template, "template-0001", budget=2_000)
 
@@ -362,7 +362,7 @@ def test_a_record_that_fits_once_the_page_is_cut_is_kept() -> None:
 def test_a_listing_counts_the_rows_it_shows_not_the_rows_it_was_given() -> None:
     page = TemplatePage(
         provider="fake",
-        templates=[ExtractTemplate(provider="fake", name=f"t{i}", description=_PROSE) for i in range(200)],
+        templates=[Template(provider="fake", name=f"t{i}", description=_PROSE) for i in range(200)],
         total=200,
     )
 
@@ -376,13 +376,13 @@ def test_a_run_does_not_echo_its_inputs_so_they_cannot_crowd_out_the_record() ->
     response = TemplateResponse(
         provider="fake",
         template="t",
-        params={f"p{i}": _PROSE for i in range(100)},
+        inputs={f"p{i}": _PROSE for i in range(100)},
         data={"title": "Widget"},
     )
 
     shaped = shape_template_run(response, "run_template-0001", budget=20_000)
 
-    assert "params" not in shaped
+    assert "inputs" not in shaped
     assert shaped["data"] == {"title": "Widget"}
     assert len(render(shaped)) <= 20_000
 
@@ -390,7 +390,7 @@ def test_a_run_does_not_echo_its_inputs_so_they_cannot_crowd_out_the_record() ->
 def test_the_larger_schema_is_dropped_first_so_the_smaller_one_stays() -> None:
     big = {"type": "object", "properties": {f"field_{i}": {"type": "string"} for i in range(1000)}}
     small = {"type": "object", "properties": {f"field_{i}": {"type": "string"} for i in range(60)}}
-    template = ExtractTemplate(provider="fake", name="t", input_schema=big, output_schema=small)
+    template = Template(provider="fake", name="t", input_schema=big, output_schema=small)
 
     shaped = shape_template(template, "template-0001", budget=20_000)
 

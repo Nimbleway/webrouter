@@ -6,7 +6,7 @@ actually requested.
 
 There is a table per method rather than per vendor, because a name does not
 imply a capability: ``brave`` searches and cannot extract, ``oxylabs`` extracts
-and cannot search, and ``nimble`` searches, extracts, runs Extract Templates
+and cannot search, and ``nimble`` searches, extracts, runs templates
 and researches through four different classes.
 Asking the wrong table for a name reports it as unknown and lists the ones that
 method does serve, which is the honest answer.
@@ -112,9 +112,9 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
 }
 
 # A template run is the Extract API's, so the class ships with the extract extra.
+# No `auto`: a template's name belongs to one vendor, so there is nothing to route.
 _BUILTIN_TEMPLATE_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_NIMBLE: ("web_router.providers.nimble_template", "NimbleTemplateProvider", EXTRA_EXTRACT),
-    PROVIDER_AUTO: ("web_router.providers.auto_template", "AutoTemplateProvider", AUTO_EXTRA),
 }
 
 _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
@@ -279,12 +279,11 @@ def configured_extract_providers() -> list[str]:
 
 
 def configured_template_providers() -> list[str]:
-    """Every builtin Extract Template provider you currently have credentials for.
+    """Every builtin template provider you currently have credentials for.
 
     The same caveats as :func:`configured_providers`. A template run fetches
-    and parses on the backend's account, so there is no keyless member, and
-    with no key at all this is empty but for ``auto`` -- which will then say
-    which variables would fix it.
+    and parses on the backend's account, so there is no keyless member and
+    no ``auto``; with no key at all this is empty.
     """
     return sorted(
         name for name, env_vars in TEMPLATE_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)

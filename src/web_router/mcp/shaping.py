@@ -58,10 +58,10 @@ from web_router.types import (
     BrowseProgress,
     BrowseResponse,
     ExtractResponse,
-    ExtractTemplate,
     ResearchProgress,
     ResearchResponse,
     SearchResponse,
+    Template,
     TemplatePage,
     TemplateResponse,
 )
@@ -232,7 +232,7 @@ def shape_templates(page: TemplatePage, handle: str, *, budget: int) -> dict[str
     return fitted
 
 
-def shape_template(template: ExtractTemplate, handle: str, *, budget: int) -> dict[str, Any]:
+def shape_template(template: Template, handle: str, *, budget: int) -> dict[str, Any]:
     """One template with its schemas, cut to fit.
 
     The schemas are never shortened: a run has to match ``input_schema``
@@ -313,7 +313,7 @@ def _size(value: Any) -> int:
     return 0 if value is None else len(json.dumps(value, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str))
 
 
-def _template_row(template: ExtractTemplate) -> dict[str, Any]:
+def _template_row(template: Template) -> dict[str, Any]:
     return {
         "name": template.name,
         "description": template.description,

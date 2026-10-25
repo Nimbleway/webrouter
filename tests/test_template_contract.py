@@ -31,7 +31,7 @@ from web_router.types import (
     TemplateResponse,
 )
 
-ROUTER_ONLY_ARGUMENTS = {"self", "template", "params", "provider"}
+ROUTER_ONLY_ARGUMENTS = {"self", "template", "inputs", "provider"}
 
 FORMATS: tuple[ExtractFormat, ...] = get_args(ExtractFormat)
 
@@ -41,7 +41,7 @@ PUBLIC_METHODS = ("run", "arun", "templates", "atemplates", "template", "atempla
 """Everything a caller reaches, all of which enforce something on the backend's behalf."""
 
 TEMPLATE = "books_pdp"
-PARAMS = {"url": "https://example.com/page"}
+INPUTS = {"url": "https://example.com/page"}
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def _build(name: str) -> TemplateProvider:
 def test_router_run_template_exposes_every_shared_option(method: object) -> None:
     """The two signatures restate TemplateRequest's fields, so guard the copies."""
     exposed = set(inspect.signature(method).parameters) - ROUTER_ONLY_ARGUMENTS
-    assert exposed == TEMPLATE_PARAMETERS | TEMPLATE_ALWAYS_SENT - {"template", "params"}
+    assert exposed == TEMPLATE_PARAMETERS | TEMPLATE_ALWAYS_SENT - {"template", "inputs"}
 
 
 def test_every_provider_declares_where_its_credentials_come_from() -> None:
@@ -67,12 +67,21 @@ def test_every_provider_declares_where_its_credentials_come_from() -> None:
     assert set(TEMPLATE_ENV_BY_PROVIDER) == set(available_template_providers())
 
 
-def test_there_is_no_keyless_tier(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A run fetches on the backend's account, so with no key only `auto` is left, which then says so."""
+def test_there_is_no_keyless_tier_and_no_auto(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A run fetches on the backend's account, and a template's name belongs to one vendor: nothing to route."""
     for env_var in ENV_VARS:
         monkeypatch.delenv(env_var, raising=False)
 
-    assert configured_template_providers() == ["auto"]
+    assert configured_template_providers() == []
+    assert "auto" not in available_template_providers()
+
+
+@pytest.mark.parametrize("method", ["templates", "template", "run_template"])
+def test_the_router_requires_the_provider_to_be_named(method: str) -> None:
+    """No default: the router's default is `auto`, and a template's name means something to one vendor only."""
+    parameter = inspect.signature(getattr(WebRouter, method)).parameters["provider"]
+    assert parameter.default is inspect.Parameter.empty
+    assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
 
 
 def test_template_parameters_tracks_the_model() -> None:
@@ -110,7 +119,7 @@ def test_an_unsupported_format_is_rejected_not_substituted(name: str, credential
     try:
         for body_format in unsupported:
             with pytest.raises(UnsupportedFormatError, match=body_format):
-                provider.run(TemplateRequest(template=TEMPLATE, params=PARAMS, format=body_format))  # type: ignore[arg-type]
+                provider.run(TemplateRequest(template=TEMPLATE, inputs=INPUTS, format=body_format))  # type: ignore[arg-type]
     finally:
         provider.close()
 
@@ -143,14 +152,14 @@ def test_a_request_with_no_inputs_is_valid() -> None:
     """Some templates take nothing: the page is fixed, and the record is the whole of it."""
     response = _fake().run(TemplateRequest(template=TEMPLATE))
 
-    assert response.params == {}
+    assert response.inputs == {}
     assert response.data["inputs"] == {}
 
 
 def test_validation_runs_before_anything_is_run() -> None:
     provider = _fake(supported_formats=frozenset({"markdown"}))
     with pytest.raises(UnsupportedFormatError):
-        provider.run(TemplateRequest(template=TEMPLATE, params=PARAMS, format="html"))
+        provider.run(TemplateRequest(template=TEMPLATE, inputs=INPUTS, format="html"))
 
     assert provider.requests == []  # type: ignore[attr-defined]
 
@@ -158,21 +167,21 @@ def test_validation_runs_before_anything_is_run() -> None:
 def test_an_unmapped_option_is_rejected_before_anything_is_run() -> None:
     provider = _fake(supported_parameters=frozenset())
     with pytest.raises(UnsupportedParameterError, match="format"):
-        provider.run(TemplateRequest(template=TEMPLATE, params=PARAMS, format="markdown"))
+        provider.run(TemplateRequest(template=TEMPLATE, inputs=INPUTS, format="markdown"))
 
     assert provider.requests == []  # type: ignore[attr-defined]
 
 
 def test_no_format_asked_for_means_no_page_beside_the_record() -> None:
     """Unlike an extract, nothing is pinned: the record is the answer and the page is an extra."""
-    response = _fake().run(TemplateRequest(template=TEMPLATE, params=PARAMS))
+    response = _fake().run(TemplateRequest(template=TEMPLATE, inputs=INPUTS))
 
     assert response.document is None
     assert response.data
 
 
 def test_a_format_asked_for_is_what_the_page_reports() -> None:
-    response = _fake().run(TemplateRequest(template=TEMPLATE, params=PARAMS, format="html"))
+    response = _fake().run(TemplateRequest(template=TEMPLATE, inputs=INPUTS, format="html"))
 
     assert response.document is not None
     assert response.document.format == "html"
@@ -185,7 +194,7 @@ def test_a_backend_failure_on_a_run_is_wrapped_with_the_original() -> None:
         raise original
 
     with pytest.raises(ProviderError, match="connection reset") as caught:
-        _fake(_run=_run).run(TemplateRequest(template=TEMPLATE, params=PARAMS))
+        _fake(_run=_run).run(TemplateRequest(template=TEMPLATE, inputs=INPUTS))
 
     assert caught.value.original is original
 
@@ -213,7 +222,7 @@ def test_a_router_error_from_a_backend_is_not_rewrapped() -> None:
         raise UnsupportedParameterError("fake", ["format"])
 
     with pytest.raises(UnsupportedParameterError):
-        _fake(_run=_run).run(TemplateRequest(template=TEMPLATE, params=PARAMS))
+        _fake(_run=_run).run(TemplateRequest(template=TEMPLATE, inputs=INPUTS))
 
 
 def test_paging_left_unset_reaches_the_backend_unset() -> None:
@@ -228,10 +237,10 @@ def test_paging_left_unset_reaches_the_backend_unset() -> None:
 async def test_the_async_path_runs_lists_and_describes_the_same_way() -> None:
     provider = _fake()
 
-    response = await provider.arun(TemplateRequest(template=TEMPLATE, params=PARAMS, format="markdown"))
+    response = await provider.arun(TemplateRequest(template=TEMPLATE, inputs=INPUTS, format="markdown"))
     page = await provider.atemplates(limit=1)
     template = await provider.atemplate(TEMPLATE)
 
-    assert response.data["inputs"] == PARAMS and response.document is not None
+    assert response.data["inputs"] == INPUTS and response.document is not None
     assert page.names == ["books_pdp", "jobs_listing"] and page.limit == 1
     assert template.name == TEMPLATE and template.published

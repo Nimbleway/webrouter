@@ -170,13 +170,12 @@ only raises its rate limit -- and ``auto`` needs whatever its chain does.
 
 TEMPLATE_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_NIMBLE: (ENV_NIMBLE_API_KEY,),
-    PROVIDER_AUTO: (),
 }
-"""Which variables each Extract Template provider needs, all of them.
+"""Which variables each template provider needs, all of them.
 
 Shaped like :data:`EXTRACT_ENV_BY_PROVIDER`. A template run fetches and
-parses a page on the backend's account, so there is no keyless tier; ``auto``
-needs whatever its chain does.
+parses a page on the backend's account, so there is no keyless tier, and no
+``auto``: a template's name belongs to one vendor.
 """
 
 RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -642,7 +641,6 @@ AUTO_CHAIN_EXTRACT = "extract"
 AUTO_CHAIN_RESEARCH = "research"
 AUTO_CHAIN_BROWSER = "browser"
 AUTO_CHAIN_BROWSE = "browse"
-AUTO_CHAIN_TEMPLATE = "template"
 
 AUTO_CHAIN_METHODS: frozenset[str] = frozenset(
     {
@@ -651,16 +649,14 @@ AUTO_CHAIN_METHODS: frozenset[str] = frozenset(
         AUTO_CHAIN_RESEARCH,
         AUTO_CHAIN_BROWSER,
         AUTO_CHAIN_BROWSE,
-        AUTO_CHAIN_TEMPLATE,
     }
 )
 """The keys a ``chain`` may name to set one method's order alone: ``{"search": [...]}``.
 
 Needed because ``provider_config["auto"]`` reaches every method's ``auto``, so a
 chain given as a list is every method's chain. ``browser`` is ``open_browser``,
-named as its registry and environment table are, and ``template`` is
-``run_template`` with ``templates`` and ``template`` beside it, which share a
-registry.
+named as its registry and environment table are. Templates have no ``auto``:
+a template's name belongs to one vendor, so there is nothing to route.
 """
 
 MSG_AUTO_CHAIN_UNKNOWN_METHOD = "A chain keyed by method has no method {names}; the methods are {methods}."
@@ -2409,40 +2405,6 @@ MSG_AUTO_RESEARCH_UNKNOWN_JOB = (
     "it, so a job can only be polled from the router that submitted it."
 )
 
-# --- auto template ----------------------------------------------------------
-
-AUTO_TEMPLATE_PREFERRED: tuple[str, ...] = (PROVIDER_NIMBLE,)
-"""Tried in this order, and only those the caller holds a credential for.
-
-One member so far: Nimble is the only backend with an Extract Template
-catalogue. As for research there is nothing after the list -- a template run
-fetches and parses on the backend's account -- so with no key ``auto`` raises
-and names the variable that would fix it. A backend that joins later goes on
-the end, so an environment that reached Nimble still reaches it first.
-"""
-
-AUTO_TEMPLATE_SUPPORTED_PARAMETERS: frozenset[str] = frozenset({"format"})
-"""What every member of the chain maps: the page beside the record."""
-
-AUTO_TEMPLATE_FORMATS: frozenset[ExtractFormat] = frozenset({"markdown", "html"})
-"""The formats some member returns beside the record; a request is routed only to a member that returns its own."""
-
-MSG_AUTO_TEMPLATE_NO_CREDENTIAL = (
-    "No Extract Template backend is configured. A template run fetches and parses on the backend's "
-    "account, so `auto` has no keyless tier to fall back on -- set one of {env_vars}, or pass "
-    "provider_config to the router."
-)
-
-MSG_AUTO_TEMPLATE_EXHAUSTED = "no backend in the chain served the call: {failures}"
-
-MSG_AUTO_TEMPLATE_NO_CAPABLE_BACKEND = (
-    "No configured Extract Template backend serves it, so nothing was run: {skipped}. Drop the option, "
-    "or set a credential for a backend that serves it -- see the Extract Templates table in README.md."
-)
-"""Replaces the usual advice on the parameter or format error, which ``auto`` cannot act on."""
-
-MSG_AUTO_TEMPLATE_SKIPPED = "{name} ({reasons})"
-
 # --- auto browser -----------------------------------------------------------
 
 AUTO_BROWSER_PREFERRED: tuple[str, ...] = (
@@ -2583,6 +2545,9 @@ MSG_TEMPLATE_FAILED = "template run failed: {error}"
 MSG_TEMPLATES_FAILED = "listing templates failed: {error}"
 
 MSG_TEMPLATE_GET_FAILED = "fetching template {name!r} failed: {error}"
+
+MSG_TEMPLATE_NOT_FOUND = "the backend has no template named {name!r}"
+"""An unknown template name, as a backend reports it -- Nimble with a 404 on describe and on run."""
 
 MSG_RESEARCH_FAILED = "research failed: {error}"
 
@@ -3724,13 +3689,13 @@ MCP_MIME_JSON = "application/json"
 MCP_ARG_PROVIDER = "provider"
 MCP_ARG_HANDLE = "handle"
 
-MCP_METHOD_TEMPLATE = AUTO_CHAIN_TEMPLATE
+MCP_METHOD_TEMPLATE = "template"
 MCP_METHOD_BROWSER = AUTO_CHAIN_BROWSER
 """How the capabilities resource keys a method whose tools are not named after it.
 
 The three template tools share one registry, and the browser tools' method is
-``open_browser``; each is keyed as its ``chain`` entry is, so the resource and
-``provider_config`` speak the same names.
+``open_browser``; the browser's key is its ``chain`` entry, so the resource and
+``provider_config`` speak the same name.
 """
 
 # Argument names are the library's own keyword names, so the MCP layer passes
@@ -3789,7 +3754,7 @@ MCP_TEMPLATE_PROPERTIES: dict[str, dict[str, Any]] = {
 
 MCP_RUN_TEMPLATE_PROPERTIES: dict[str, dict[str, Any]] = {
     "template": {"type": "string", "description": "The template's name, as `templates` lists it."},
-    "params": {
+    "inputs": {
         "type": "object",
         "description": (
             "The template's inputs, named by its input_schema from `template` -- a URL for some, an id, "
@@ -4063,9 +4028,10 @@ backends actually configured there -- see
 MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_SEARCH: ("query",),
     MCP_TOOL_EXTRACT: ("urls",),
-    MCP_TOOL_TEMPLATES: (),
-    MCP_TOOL_TEMPLATE: ("name",),
-    MCP_TOOL_RUN_TEMPLATE: ("template",),
+    # `provider` is required here and nowhere else: a template's name belongs to one vendor.
+    MCP_TOOL_TEMPLATES: (MCP_ARG_PROVIDER,),
+    MCP_TOOL_TEMPLATE: ("name", MCP_ARG_PROVIDER),
+    MCP_TOOL_RUN_TEMPLATE: ("template", MCP_ARG_PROVIDER),
     MCP_TOOL_RESEARCH: ("query",),
     MCP_TOOL_RESEARCH_STATUS: (MCP_ARG_HANDLE,),
     MCP_TOOL_BROWSE: ("task",),
@@ -4111,7 +4077,7 @@ MCP_DESC_EXTRACT = (
 )
 
 MCP_DESC_TEMPLATES = (
-    "List the backend's Extract Templates: saved, site-specific extractions, each turning one kind of "
+    "List a vendor's templates: saved, site-specific extractions, each turning one kind of "
     "page -- a retailer's product page, a job listing, a search results page -- into a record with "
     "fixed fields. Returns in about a second, with each template's name, site and what it extracts. "
     "Call it before `run_template` to find a template for the site at hand; a catalogue can be "
@@ -4120,15 +4086,17 @@ MCP_DESC_TEMPLATES = (
 
 MCP_DESC_TEMPLATE = (
     "Describe one Extract Template: its input_schema, which says exactly what `run_template` must "
-    "pass as `params`, and its output_schema, which says what the record will hold. Returns in "
-    "about a second. Read it before running a template you have not run in this conversation."
+    "pass as `inputs`, and its output_schema, which says what the record will hold. Returns in "
+    "about a second. Read it before running a template you have not run in this conversation. "
+    "Names, inputs and fields are the vendor's own: the same page differs between vendors."
 )
 
 MCP_DESC_RUN_TEMPLATE = (
     "Run an Extract Template on one page and get its record back -- the page's fields, parsed by a "
     "saved extraction built for that site, rather than prose to read through. Returns in about a "
-    "second and bills one fetch. Use it when `templates` lists a template for the site and item you "
-    "have; use `extract` for a page no template covers, and `search` to find pages. `params` are the "
+    "second and bills one fetch; `provider` is required, since a template's name belongs to one "
+    "vendor. Use it when `templates` lists a template for the site and item you "
+    "have; use `extract` for a page no template covers, and `search` to find pages. `inputs` are the "
     "template's own inputs, from `template`: a URL for some templates, an id, a slug or a search "
     "term for others. A run the backend could not complete is an error, never an empty record."
 )

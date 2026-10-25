@@ -10,10 +10,11 @@ some extract backends do not search. Each method resolves the name against its
 own registry, so asking one for a backend that only serves another reports it
 as unknown and lists the ones that method does serve.
 
-:meth:`WebRouter.run_template` runs a backend's Extract Template -- a saved,
+:meth:`WebRouter.run_template` runs one of a vendor's templates -- a saved,
 site-specific extraction that turns one page into a record -- and
 :meth:`WebRouter.templates` and :meth:`WebRouter.template` list and describe
-the catalogue it is picked from; the three share one registry.
+the catalogue it is picked from; the three share one registry, and all three
+need ``provider`` named, since a template's name belongs to one vendor.
 
 :meth:`WebRouter.research` is the third method and the one that behaves
 differently: an agentic run takes minutes rather than milliseconds, so it waits
@@ -97,7 +98,6 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
-    ExtractTemplate,
     Provider,
     ResearchEffort,
     ResearchRequest,
@@ -106,6 +106,7 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
     StealthLevel,
+    Template,
     TemplatePage,
     TemplateRequest,
     TemplateResponse,
@@ -239,16 +240,17 @@ class _BaseRouter(Generic[_HandleT]):
                 self._extract_instances[key] = create_extract_provider(key, **self._config_for(key))
             return self._extract_instances[key]
 
-    def get_template_provider(self, name: str | Provider | TemplateProvider | None = None) -> TemplateProvider:
-        """Return the named Extract Template provider, constructing and caching it on first use.
+    def get_template_provider(self, name: str | Provider | TemplateProvider) -> TemplateProvider:
+        """Return the named template provider, constructing and caching it on first use.
 
         The template counterpart of :meth:`get_provider`, with the same
-        ownership rule.
+        ownership rule -- but no default: a template's name belongs to one
+        vendor, so the caller always says which.
         """
         if isinstance(name, TemplateProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name)
         with self._providers_lock:
             if key not in self._template_instances:
                 self._template_instances[key] = create_template_provider(key, **self._config_for(key))
@@ -727,17 +729,19 @@ class WebRouter(_BaseRouter[BrowserHandle]):
     def templates(
         self,
         *,
-        provider: str | Provider | TemplateProvider | None = None,
+        provider: str | Provider | TemplateProvider,
         limit: int | None = None,
         offset: int | None = None,
     ) -> TemplatePage:
-        """List one page of the Extract Templates ``provider`` (or the router's default) holds.
+        """List one page of the templates ``provider`` holds.
 
-        A template is a saved, site-specific extraction: run on one page of
-        the site it was built for, it returns a record with fixed fields. The
-        page says where in the catalogue it sits and, when the backend
-        reports it, how many templates there are in all; ``limit`` and
-        ``offset`` left unset leave the paging to the backend.
+        A template is a vendor's saved, site-specific extraction: run on one
+        page of the site it was built for, it returns a record with fixed
+        fields. Names, inputs and fields are the vendor's own, which is why
+        ``provider`` has no default. The page says where in the catalogue it
+        sits and, when the backend reports it, how many templates there are
+        in all; ``limit`` and ``offset`` left unset leave the paging to the
+        backend.
         """
         return self.get_template_provider(provider).templates(limit=limit, offset=offset)
 
@@ -745,31 +749,35 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         self,
         name: str,
         *,
-        provider: str | Provider | TemplateProvider | None = None,
-    ) -> ExtractTemplate:
-        """Describe one Extract Template: the inputs a run takes and the record it returns, as JSON Schema."""
+        provider: str | Provider | TemplateProvider,
+    ) -> Template:
+        """Describe one template: the inputs a run takes and the record it returns, as JSON Schema."""
         return self.get_template_provider(provider).template(name)
 
     def run_template(
         self,
         template: str,
-        params: Mapping[str, Any] | None = None,
+        inputs: Mapping[str, Any] | None = None,
         *,
-        provider: str | Provider | TemplateProvider | None = None,
+        provider: str | Provider | TemplateProvider,
         format: ExtractFormat | None = None,
         provider_options: dict[str, Any] | None = None,
     ) -> TemplateResponse:
-        """Run an Extract Template through ``provider`` (or the router's default) and return its record.
+        """Run one of ``provider``'s templates on one page and return its record.
 
-        ``params`` are the template's own inputs, named by its
-        :attr:`~web_router.ExtractTemplate.input_schema` -- a URL for some
+        ``inputs`` are the template's own, named by its
+        :attr:`~web_router.Template.input_schema` -- a URL for some
         templates, an id, a slug or a search term for others. ``format`` asks
         for the page beside the record; unset, the record comes back alone.
         A run the backend could not complete raises rather than coming back
-        with an empty record.
+        with an empty record, and an unknown name raises
+        :class:`~web_router.TemplateNotFoundError`. One call is one page and
+        one set of inputs: a backend whose templates run as jobs over many
+        inputs would answer through its synchronous endpoint, under that
+        endpoint's own time cap.
         """
         request = TemplateRequest(
-            template=template, params=dict(params or {}), format=format, provider_options=provider_options or {}
+            template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
         )
         return self.get_template_provider(provider).run(request)
 
@@ -1132,38 +1140,38 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle]):
     async def templates(
         self,
         *,
-        provider: str | Provider | TemplateProvider | None = None,
+        provider: str | Provider | TemplateProvider,
         limit: int | None = None,
         offset: int | None = None,
     ) -> TemplatePage:
-        """List one page of the Extract Templates ``provider`` (or the router's default) holds."""
+        """List one page of the templates ``provider`` holds."""
         return await self.get_template_provider(provider).atemplates(limit=limit, offset=offset)
 
     async def template(
         self,
         name: str,
         *,
-        provider: str | Provider | TemplateProvider | None = None,
-    ) -> ExtractTemplate:
-        """Describe one Extract Template: the inputs a run takes and the record it returns, as JSON Schema."""
+        provider: str | Provider | TemplateProvider,
+    ) -> Template:
+        """Describe one template: the inputs a run takes and the record it returns, as JSON Schema."""
         return await self.get_template_provider(provider).atemplate(name)
 
     async def run_template(
         self,
         template: str,
-        params: Mapping[str, Any] | None = None,
+        inputs: Mapping[str, Any] | None = None,
         *,
-        provider: str | Provider | TemplateProvider | None = None,
+        provider: str | Provider | TemplateProvider,
         format: ExtractFormat | None = None,
         provider_options: dict[str, Any] | None = None,
     ) -> TemplateResponse:
-        """Run an Extract Template through ``provider`` (or the router's default) and return its record.
+        """Run one of ``provider``'s templates on one page and return its record.
 
-        As on the sync router: ``params`` are the template's own inputs, and
+        As on the sync router: ``inputs`` are the template's own, and
         ``format`` asks for the page beside the record.
         """
         request = TemplateRequest(
-            template=template, params=dict(params or {}), format=format, provider_options=provider_options or {}
+            template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
         )
         return await self.get_template_provider(provider).arun(request)
 

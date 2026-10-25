@@ -397,7 +397,7 @@ class TemplateRequest(NormalizedRequest):
     A template is a reusable extraction a backend holds for one kind of page --
     a retailer's product page, a job board's listing -- that turns the page
     into a record shaped by the template's own output schema. Its inputs are
-    the template's, not ours: :attr:`params` is whatever its ``input_schema``
+    the template's, not ours: :attr:`inputs` is whatever its ``input_schema``
     names, a URL for some templates and an id, a slug or a search term for
     others, so nothing here presumes a URL.
 
@@ -407,10 +407,10 @@ class TemplateRequest(NormalizedRequest):
     answer and the page is an extra.
     """
 
-    always_sent: ClassVar[frozenset[str]] = frozenset({"template", "params", "provider_options"})
+    always_sent: ClassVar[frozenset[str]] = frozenset({"template", "inputs", "provider_options"})
 
     template: Annotated[str, Field(min_length=1, description="The template's name, as the backend knows it.")]
-    params: dict[str, Any] = Field(
+    inputs: dict[str, Any] = Field(
         default_factory=dict,
         description="The template's inputs, named by its input_schema -- a URL, an id, a search term.",
     )
@@ -427,7 +427,7 @@ TEMPLATE_PARAMETERS: frozenset[str] = TemplateRequest.normalized_parameters()
 """Every optional parameter a template provider may declare support for."""
 
 
-class ExtractTemplate(BaseModel):
+class Template(BaseModel):
     """One Extract Template a backend holds, as the backend describes it.
 
     What a caller needs to run it is :attr:`input_schema`, and what comes back
@@ -446,7 +446,7 @@ class ExtractTemplate(BaseModel):
     input_schema: dict[str, Any] | None = Field(
         default=None,
         description=(
-            "JSON Schema of the inputs a run passes as `params`. None for a template with no published version."
+            "JSON Schema of the inputs a run passes as `inputs`. None for a template with no published version."
         ),
     )
     output_schema: dict[str, Any] | None = Field(
@@ -465,7 +465,7 @@ class ExtractTemplate(BaseModel):
 
 
 class TemplatePage(BaseModel):
-    """One page of a backend's Extract Templates, tagged with the provider that served it.
+    """One page of a vendor's templates, tagged with the provider that served it.
 
     Backends page their catalogues, so this carries where in the catalogue the
     page sits beside the templates on it; :attr:`total` is the backend's count
@@ -476,7 +476,7 @@ class TemplatePage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     provider: str
-    templates: list[ExtractTemplate] = Field(default_factory=list)
+    templates: list[Template] = Field(default_factory=list)
     total: int | None = Field(default=None, description="How many templates the backend holds, when it says.")
     offset: int | None = Field(default=None, description="How many templates precede this page, when it says.")
     limit: int | None = Field(default=None, description="The page size the backend applied, when it says.")
@@ -506,7 +506,7 @@ class TemplateResponse(BaseModel):
 
     provider: str
     template: str
-    params: dict[str, Any] = Field(default_factory=dict, description="The inputs the run was given, as sent.")
+    inputs: dict[str, Any] = Field(default_factory=dict, description="The inputs the run was given, as sent.")
     data: dict[str, Any] = Field(
         default_factory=dict, description="The record, shaped by the template's output_schema."
     )

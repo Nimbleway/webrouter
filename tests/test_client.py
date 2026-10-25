@@ -241,11 +241,11 @@ async def test_async_context_manager_closes_both_methods_providers(
 
 def test_run_template_normalizes_arguments_into_the_request(fake_template_provider: type) -> None:
     router = WebRouter("fake")
-    response = router.run_template("books_pdp", {"url": "https://example.com/page"}, format="markdown")
+    response = router.run_template("books_pdp", {"url": "https://example.com/page"}, provider="fake", format="markdown")
 
-    request = router.get_template_provider().requests[0]  # type: ignore[attr-defined]
+    request = router.get_template_provider("fake").requests[0]  # type: ignore[attr-defined]
     assert request.template == "books_pdp"
-    assert request.params == {"url": "https://example.com/page"}
+    assert request.inputs == {"url": "https://example.com/page"}
     assert request.format == "markdown"
     assert response.provider == "fake"
     assert response.data["inputs"] == {"url": "https://example.com/page"}
@@ -253,18 +253,18 @@ def test_run_template_normalizes_arguments_into_the_request(fake_template_provid
 
 def test_run_template_with_no_inputs_sends_none(fake_template_provider: type) -> None:
     router = WebRouter("fake")
-    router.run_template("fixed_page")
+    router.run_template("fixed_page", provider="fake")
 
-    request = router.get_template_provider().requests[0]  # type: ignore[attr-defined]
-    assert request.params == {} and request.format is None
+    request = router.get_template_provider("fake").requests[0]  # type: ignore[attr-defined]
+    assert request.inputs == {} and request.format is None
 
 
 def test_templates_and_template_reach_the_same_cached_provider(fake_template_provider: type) -> None:
     router = WebRouter("fake")
-    page = router.templates(limit=1, offset=1)
-    template = router.template("books_pdp")
+    page = router.templates(provider="fake", limit=1, offset=1)
+    template = router.template("books_pdp", provider="fake")
 
-    provider = router.get_template_provider()
+    provider = router.get_template_provider("fake")
     assert provider is router.get_template_provider("fake")
     assert provider.listed == [(1, 1)]  # type: ignore[attr-defined]
     assert provider.described == ["books_pdp"]  # type: ignore[attr-defined]
@@ -285,8 +285,8 @@ def test_run_template_accepts_an_already_constructed_provider(fake_template_prov
 
 def test_closing_the_router_closes_the_template_provider_it_built(fake_template_provider: type) -> None:
     with WebRouter("fake") as router:
-        router.run_template("books_pdp")
-        provider = router.get_template_provider()
+        router.run_template("books_pdp", provider="fake")
+        provider = router.get_template_provider("fake")
 
     assert provider.closed  # type: ignore[attr-defined]
 
@@ -294,17 +294,26 @@ def test_closing_the_router_closes_the_template_provider_it_built(fake_template_
 def test_a_backend_that_only_runs_templates_says_so_when_asked_to_search(fake_template_provider: type) -> None:
     router = WebRouter("fake")
 
-    assert router.run_template("books_pdp").provider == "fake"
+    assert router.run_template("books_pdp", provider="fake").provider == "fake"
     with pytest.raises(ProviderNotFoundError):
         router.search("q")
 
 
+def test_a_backend_without_templates_is_reported_with_the_ones_that_have_them(fake_template_provider: type) -> None:
+    """Tavily extracts; it holds no templates, and the error lists the vendors that do."""
+    router = WebRouter("fake")
+
+    with pytest.raises(ProviderNotFoundError, match="fake") as caught:
+        router.run_template("books_pdp", provider="tavily")
+    assert "tavily" not in caught.value.available
+
+
 async def test_async_run_template_and_catalogue(fake_template_provider: type) -> None:
     async with AsyncWebRouter("fake") as router:
-        response = await router.run_template("books_pdp", {"url": "https://example.com/page"})
-        page = await router.templates()
-        template = await router.template("jobs_listing")
-        provider = router.get_template_provider()
+        response = await router.run_template("books_pdp", {"url": "https://example.com/page"}, provider="fake")
+        page = await router.templates(provider="fake")
+        template = await router.template("jobs_listing", provider="fake")
+        provider = router.get_template_provider("fake")
 
     assert response.data["inputs"] == {"url": "https://example.com/page"}
     assert page.names == ["books_pdp", "jobs_listing"]

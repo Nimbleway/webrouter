@@ -50,7 +50,6 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
-    ExtractTemplate,
     JobState,
     ResearchProgress,
     ResearchRequest,
@@ -59,6 +58,7 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
     StealthLevel,
+    Template,
     TemplatePage,
     TemplateRequest,
     TemplateResponse,
@@ -185,10 +185,10 @@ class FakeTemplateProvider(TemplateProvider):
         self.described: list[str] = []
         self.closed = False
 
-    def _describe(self, name: str) -> ExtractTemplate:
+    def _describe(self, name: str) -> Template:
         if name in self.unknown_names:
             raise RuntimeError(f"HTTP 404: no template {name}")
-        return ExtractTemplate(
+        return Template(
             provider=self.name,
             name=name,
             description=f"what {name} extracts",
@@ -213,12 +213,12 @@ class FakeTemplateProvider(TemplateProvider):
         return TemplateResponse(
             provider=self.name,
             template=request.template,
-            params=dict(request.params),
-            data={"title": "Example", "inputs": dict(request.params)},
+            inputs=dict(request.inputs),
+            data={"title": "Example", "inputs": dict(request.inputs)},
             url="https://example.com/page",
             document=document,
             request_id="task-1",
-            raw={"template": request.template, "params": dict(request.params)},
+            raw={"template": request.template, "inputs": dict(request.inputs)},
         )
 
     def _run(self, request: TemplateRequest) -> TemplateResponse:
@@ -243,11 +243,11 @@ class FakeTemplateProvider(TemplateProvider):
     async def _alist(self, *, limit: int | None, offset: int | None) -> TemplatePage:
         return self._list(limit=limit, offset=offset)
 
-    def _get(self, name: str) -> ExtractTemplate:
+    def _get(self, name: str) -> Template:
         self.described.append(name)
         return self._describe(name)
 
-    async def _aget(self, name: str) -> ExtractTemplate:
+    async def _aget(self, name: str) -> Template:
         return self._get(name)
 
     def close(self) -> None:

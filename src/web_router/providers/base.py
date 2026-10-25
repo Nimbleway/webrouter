@@ -101,7 +101,6 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
-    ExtractTemplate,
     JobState,
     NormalizedRequest,
     PageFormat,
@@ -115,6 +114,7 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
     StealthLevel,
+    Template,
     TemplatePage,
     TemplateRequest,
     TemplateResponse,
@@ -499,11 +499,11 @@ class TemplateProvider(_BaseProvider):
         """Async counterpart of :meth:`_list`."""
 
     @abc.abstractmethod
-    def _get(self, name: str) -> ExtractTemplate:
+    def _get(self, name: str) -> Template:
         """Describe one template by name."""
 
     @abc.abstractmethod
-    async def _aget(self, name: str) -> ExtractTemplate:
+    async def _aget(self, name: str) -> Template:
         """Async counterpart of :meth:`_get`."""
 
     # -- What callers use ----------------------------------------------------
@@ -550,7 +550,7 @@ class TemplateProvider(_BaseProvider):
         except Exception as exc:
             raise ProviderError(self.name, MSG_TEMPLATES_FAILED.format(error=exc), original=exc) from exc
 
-    def template(self, name: str) -> ExtractTemplate:
+    def template(self, name: str) -> Template:
         """Describe one template by name, wrapping any backend failure -- an unknown name included."""
         try:
             return self._get(name)
@@ -559,7 +559,7 @@ class TemplateProvider(_BaseProvider):
         except Exception as exc:
             raise ProviderError(self.name, MSG_TEMPLATE_GET_FAILED.format(name=name, error=exc), original=exc) from exc
 
-    async def atemplate(self, name: str) -> ExtractTemplate:
+    async def atemplate(self, name: str) -> Template:
         """Async counterpart of :meth:`template`."""
         try:
             return await self._aget(name)

@@ -2,7 +2,7 @@
 
 A self-hosted stdio MCP server that gives an agent — Claude Code, Claude
 Desktop, Cursor, anything that speaks MCP — the methods this package
-routes: `search`, `extract`, `research` and Extract Templates (`templates`,
+routes: `search`, `extract`, `research` and a vendor's templates (`templates`,
 `template`, `run_template`) — plus `browse` for a hosted browser agent, and the
 `browser_*` tools for driving a browser yourself.
 
@@ -186,8 +186,8 @@ the client's `env` block or a file the server already read takes a restart.
 | --- | --- | --- |
 | `search` | Find pages: ranked links with their titles and page text. | about a second |
 | `extract` | Read pages you already have URLs for, as markdown, HTML or text. | about a second |
-| `templates` | List the backend's Extract Templates: saved, site-specific extractions, each turning one kind of page into a record. Paged with `limit` and `offset`. | about a second |
-| `template` | Describe one template: the `input_schema` a run must pass as `params`, and the `output_schema` of the record. | about a second |
+| `templates` | List a vendor's templates: saved, site-specific extractions, each turning one kind of page into a record. `provider` is required, as on the two tools below. Paged with `limit` and `offset`. | about a second |
+| `template` | Describe one template: the `input_schema` a run must pass as `inputs`, and the `output_schema` of the record. | about a second |
 | `run_template` | Run a template on one page and get its record back. | about a second, and it bills one fetch |
 | `research` | Start an agentic run that searches, reads and cross-checks over many turns. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the run** |
 | `research_status` | Poll a handle from `research`: its state, or the answer once it has one. | about a second, and free |
@@ -211,7 +211,7 @@ tool is for, what it costs and how long it takes.
 
 Arguments mirror the library's own, name for name — `query`, `max_results`,
 `search_depth`, `include_domains`, `exclude_domains`, `country`, `locale`,
-`urls`, `format`, `template`, `params`, `name`, `limit`, `offset`,
+`urls`, `format`, `template`, `inputs`, `name`, `limit`, `offset`,
 `output_schema`, `records`, `effort`, `task`, `start_url`,
 `max_steps`, `allowed_domains`, `provider`, and for the browser tools the
 handle's own — `url`, `wait_until`, `ref`, `selector`, `text`, `submit`, `key`,
@@ -455,7 +455,7 @@ With nothing configured at all the enums read:
 ```
 search   ["auto", "you-mcp"]     # keyless
 extract  ["auto", "jina"]        # keyless
-template ["auto"]                # a template run fetches on the backend's account, so nothing here can run
+template []                      # no keyless tier and no auto: a template's name belongs to one vendor
 research ["auto"]                # every research backend bills, so nothing here can run
 ```
 

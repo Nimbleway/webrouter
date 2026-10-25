@@ -99,7 +99,7 @@ def test_the_three_registries_are_separate_tables() -> None:
 
 
 def test_nimble_is_a_builtin_template_provider() -> None:
-    assert available_template_providers() == ["auto", "nimble"]
+    assert available_template_providers() == ["nimble"], "no auto: a template name belongs to one vendor"
 
 
 def test_registered_template_provider_is_resolved_and_instantiated(fake_template_provider: type) -> None:

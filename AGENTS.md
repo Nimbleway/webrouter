@@ -16,14 +16,16 @@ tries the backends you hold keys for and falls back to the keyless ones.
 Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, the keyless Jina
 Reader, and `auto` again.
 
-**`run_template`** — an Extract Template: a saved, site-specific extraction the
-backend holds, run on one page and answering with a record shaped by the
-template's own output schema rather than page text. Its inputs are the
-template's own -- a URL for some, an id, a slug or a search term for others --
-which is why it is a method and not an option on `extract`. `templates` lists
-one page of the backend's catalogue and `template` describes one, schemas and
-all; the three share one registry. Nimble, and `auto`. No keyless tier: a run
-fetches and parses on the backend's account.
+**`run_template`** — a vendor's template: a saved, site-specific extraction
+(Nimble's Extract Templates, Oxylabs' sources, Bright Data's scrapers, Apify's
+actors), run on one page and answering with a record shaped by the template's
+own output schema rather than page text. Its inputs are the template's own --
+a URL for some, an id, a slug or a search term for others -- which is why it
+is a method and not an option on `extract`. `templates` lists one page of the
+vendor's catalogue and `template` describes one, schemas and all; the three
+share one registry. Nimble only so far. No keyless tier and no `auto`: a run
+fetches and parses on the backend's account, and a template's name belongs to
+one vendor, so `provider` is required.
 
 **`research`** — an agentic run: the backend reasons over several turns and
 answers in minutes rather than milliseconds. Nimble, Parallel, Perplexity,
@@ -61,7 +63,7 @@ defeat the point, even when they pass tests.
 ```
 src/web_router/
 ├── types.py            SearchRequest/Response/Result, ExtractRequest/Response/Document,
-│                       TemplateRequest/Response + ExtractTemplate/TemplatePage,
+│                       TemplateRequest/Response + Template/TemplatePage,
 │                       ResearchRequest/Response/Progress + Citation,
 │                       BrowserRequest/Session/State + Viewport,
 │                       BrowseRequest/Response/Progress + BrowseStep
@@ -117,7 +119,7 @@ src/web_router/
     │                   once over CDP through Playwright; snapshot refs
     ├── nimble.py       search + extract + research, via the nimble-python SDK;
     │                   the shared clients and constructor of the four Nimble classes
-    ├── nimble_template.py  Extract Templates, on nimble.py's clients
+    ├── nimble_template.py  Nimble's templates, on nimble.py's clients
     ├── tavily.py       search + extract, via the tavily-python SDK
     ├── exa.py          search + extract, via httpx (its research API is retired)
     ├── you.py          search + research, via httpx — You.com publishes no Python SDK
@@ -131,7 +133,6 @@ src/web_router/
     │                   browse: keyed backends, then keyless (research and browse
     │                   have no keyless tier, so their chains end there; a browser
     │                   chain ends with `local`)
-    ├── auto_template.py the template chain: keyed backends and nothing after
     ├── brave.py        search, via httpx
     ├── parallel.py     search + research, via httpx
     ├── perplexity.py   search + research, via httpx
@@ -157,8 +158,7 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         test_research_contract.py, test_browse_contract.py and
                         test_browser_contract.py guard the six shared
                         contracts; test_job_core.py the job core under
-                        research and browse; test_auto_template.py the
-                        template chain;
+                        research and browse;
                         test_browser_actions.py the page actions, against
                         fixtures/browser/; test_auto_browser.py and
                         test_auto_browse.py the two billed `auto` chains;
@@ -618,12 +618,14 @@ the words a model picks a template by and leaves the schemas to `template`,
 whose schemas are never cut: a cut `input_schema` sends the model guessing at
 the inputs it dropped. A schema or a record that does not fit the budget even
 on its own is left out whole, with a note naming the `fetch_raw` handle that
-holds it (`MCP_MSG_OVERSIZED`), never inlined over the budget. `auto` falls
-through to the next member on a listing or a description, which bill
-nothing, but on a run only when `_nothing_started` proves no page was
-fetched: a parse failure, a 5xx or a read timeout may follow a billed fetch,
-and a second member would fetch again. The `run_template` tool offers
-`format` only in the values some member of the chain returns.
+holds it (`MCP_MSG_OVERSIZED`), never inlined over the budget. There is no
+template `auto`: a template's name belongs to one vendor, so `provider` is
+required on the three router methods and on the three MCP tools alone, and an
+unknown name raises `TemplateNotFoundError`, a `ProviderError`. One call is
+one page and one set of inputs, answered in real time with one record -- the
+shape every real-time parsed-extraction product shares; a vendor whose
+templates are dataset jobs would join through its synchronous endpoint and
+inherit its time cap, and batch inputs stay out of scope.
 
 **An extract call that partly fails stays partly successful.** `ExtractProvider`
 fans URLs out across calls for backends that take one at a time, records each
@@ -689,7 +691,7 @@ mapped from the same documentation as the lifetime beside it; refusing it
 until a live call would leave that session billing too. The test module's
 docstring still names each one as unverified.
 
-## Adding an Extract Template provider
+## Adding a template provider
 
 Against `TemplateProvider`. A vendor that already extracts gets a third class
 in its existing module, as `nimble.py` does.
@@ -697,20 +699,20 @@ in its existing module, as `nimble.py` does.
 1. Implement `_run`/`_arun` -- one request in, one `TemplateResponse` out,
    its record in `data` -- `_list`/`_alist`, returning one `TemplatePage`
    with `limit` and `offset` sent only when set, and `_get`/`_aget`, one
-   `ExtractTemplate` by name with `input_schema` and `output_schema` from
+   `Template` by name with `input_schema` and `output_schema` from
    the backend and `published` false when it has no runnable version. Set
    `name`, `supported_parameters` and `supported_formats` -- the page formats
    it returns beside the record, derived from its format table -- and build
    the run's payload through `build_payload` so `provider_options` reaches
-   the API last. A fetch the backend refused, or a parse that failed, raises
-   `ProviderError` naming the template and the backend's reason; never
-   return an empty record.
+   the API last. A fetch the backend refused, a page the site answered with
+   4xx or 5xx, or a parse that failed, raises `ProviderError` naming the
+   template and the backend's reason; an unknown name raises
+   `TemplateNotFoundError`; never return an empty record.
 2. Put the endpoints, the record's field names and the status values in
    `constants.py`.
-3. Register the class in `_BUILTIN_TEMPLATE_PROVIDERS` in `registry.py`, add
-   the provider to `TEMPLATE_ENV_BY_PROVIDER` in `constants.py`, and append it
-   to `AUTO_TEMPLATE_PREFERRED` so `auto` reaches it after the members it
-   already had.
+3. Register the class in `_BUILTIN_TEMPLATE_PROVIDERS` in `registry.py` and
+   add the provider to `TEMPLATE_ENV_BY_PROVIDER` in `constants.py`. There is
+   no `auto` to join.
 4. Add `tests/providers/test_<name>_template.py` covering the payload, the
    three response shapes (a record, a refused fetch, a failed parse), the
    catalogue mapping, and a skipping `@pytest.mark.integration` live test

@@ -129,7 +129,6 @@ from web_router.mcp.shaping import (
     shape_templates,
 )
 from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider
-from web_router.providers.auto_template import AutoTemplateProvider
 from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
 from web_router.registry import (
     configured_browse_providers,
@@ -219,18 +218,9 @@ def _browser_chain(router: AsyncWebRouter) -> tuple[str, ...]:
     return provider.members if isinstance(provider, AutoBrowserProvider) else ()
 
 
-def _template_chain(router: AsyncWebRouter) -> tuple[str, ...]:
-    """The members the router's own template ``auto`` would try, read as :func:`_browser_chain` reads its own."""
-    provider = router.get_template_provider(PROVIDER_AUTO)
-    return provider.members if isinstance(provider, AutoTemplateProvider) else ()
-
-
 _CHAIN_OF: dict[str, Callable[[AsyncWebRouter], tuple[str, ...]]] = {
     MCP_TOOL_SEARCH: _search_chain,
     MCP_TOOL_EXTRACT: _extract_chain,
-    MCP_TOOL_TEMPLATES: _template_chain,
-    MCP_TOOL_TEMPLATE: _template_chain,
-    MCP_TOOL_RUN_TEMPLATE: _template_chain,
     MCP_TOOL_BROWSER_OPEN: _browser_chain,
 }
 """The tools whose ``auto`` declares what some member serves, routing each request to a member that serves it.
@@ -732,7 +722,8 @@ class WebRouterTools:
         return {
             "type": "object",
             "properties": properties,
-            "required": list(MCP_TOOL_REQUIRED[tool]),
+            # A required `provider` is listed only when there is one to offer; with none the tool is dead anyway.
+            "required": [name for name in MCP_TOOL_REQUIRED[tool] if name in properties],
             "additionalProperties": False,
         }
 

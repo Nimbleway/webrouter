@@ -7,7 +7,11 @@ SDK clients and constructor through :class:`~web_router.providers.nimble._Nimble
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, ClassVar
+
+from nimble_python import NotFoundError
 
 from web_router.constants import (
     MSG_TEMPLATE_BAD_STATUS,
@@ -26,7 +30,7 @@ from web_router.constants import (
     NIMBLE_TEMPLATE_SUCCESS_STATUS,
     PROVIDER_NIMBLE,
 )
-from web_router.exceptions import ProviderError
+from web_router.exceptions import ProviderError, TemplateNotFoundError
 from web_router.providers._utils import build_payload, compact, model_to_dict
 from web_router.providers.base import TemplateProvider
 from web_router.providers.nimble import _as_int, _NimbleClients
@@ -34,7 +38,7 @@ from web_router.types import (
     TEMPLATE_PARAMETERS,
     ExtractedDocument,
     ExtractFormat,
-    ExtractTemplate,
+    Template,
     TemplatePage,
     TemplateRequest,
     TemplateResponse,
@@ -57,11 +61,13 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(NIMBLE_EXTRACT_FORMATS)
 
     def _run(self, request: TemplateRequest) -> TemplateResponse:
-        raw = self._sync_client.extract.templates.run(**self._build_payload(request))
+        with _unknown_template_named(self.name, request.template):
+            raw = self._sync_client.extract.templates.run(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
 
     async def _arun(self, request: TemplateRequest) -> TemplateResponse:
-        raw = await self._async_client.extract.templates.run(**self._build_payload(request))
+        with _unknown_template_named(self.name, request.template):
+            raw = await self._async_client.extract.templates.run(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
 
     def _list(self, *, limit: int | None, offset: int | None) -> TemplatePage:
@@ -72,11 +78,15 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
         raw = await self._async_client.extract.templates.list(**compact({"limit": limit, "offset": offset}))
         return self._to_page(model_to_dict(raw))
 
-    def _get(self, name: str) -> ExtractTemplate:
-        return self._to_template(model_to_dict(self._sync_client.extract.templates.get(name)))
+    def _get(self, name: str) -> Template:
+        with _unknown_template_named(self.name, name):
+            raw = self._sync_client.extract.templates.get(name)
+        return self._to_template(model_to_dict(raw))
 
-    async def _aget(self, name: str) -> ExtractTemplate:
-        return self._to_template(model_to_dict(await self._async_client.extract.templates.get(name)))
+    async def _aget(self, name: str) -> Template:
+        with _unknown_template_named(self.name, name):
+            raw = await self._async_client.extract.templates.get(name)
+        return self._to_template(model_to_dict(raw))
 
     def _build_payload(self, request: TemplateRequest) -> dict[str, Any]:
         """Translate a normalized request into Nimble ``extract.templates.run()`` keyword arguments.
@@ -87,7 +97,7 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
         return build_payload(
             request,
             template=request.template,
-            params=dict(request.params),
+            params=dict(request.inputs),
             formats=[NIMBLE_EXTRACT_FORMATS[request.format]] if request.format else None,
         )
 
@@ -115,7 +125,7 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
         return TemplateResponse(
             provider=self.name,
             template=request.template,
-            params=dict(request.params),
+            inputs=dict(request.inputs),
             data=record,
             url=payload.get("url"),
             document=document,
@@ -184,11 +194,11 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
             raw=payload,
         )
 
-    def _to_template(self, item: dict[str, Any]) -> ExtractTemplate:
+    def _to_template(self, item: dict[str, Any]) -> Template:
         """One template as Nimble describes it: the published version carries everything a run needs."""
         version = item.get("published_version") or {}
         metadata = version.get("metadata") or {}
-        return ExtractTemplate(
+        return Template(
             provider=self.name,
             name=item.get("name") or "",
             description=metadata.get("description") or "",
@@ -209,6 +219,15 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
             ),
             raw=item,
         )
+
+
+@contextmanager
+def _unknown_template_named(provider: str, template: str) -> Iterator[None]:
+    """Turn Nimble's 404 for a template name into :class:`TemplateNotFoundError`, on a run and on a describe alike."""
+    try:
+        yield
+    except NotFoundError as exc:
+        raise TemplateNotFoundError(provider, template, original=exc) from exc
 
 
 _TEMPLATE_MAPPED = frozenset({"name", "created_at", "updated_at", "published_version"})

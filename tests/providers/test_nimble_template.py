@@ -16,7 +16,7 @@ from typing import Any
 import httpx
 import pytest
 
-from web_router.exceptions import ProviderError, UnsupportedFormatError
+from web_router.exceptions import ProviderError, TemplateNotFoundError, UnsupportedFormatError
 from web_router.types import TemplateRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
@@ -94,7 +94,7 @@ def _item(version: dict[str, Any] | None, **overrides: Any) -> dict[str, Any]:
 
 def test_the_template_and_its_inputs_are_sent_and_nothing_else(provider: NimbleTemplateProvider) -> None:
     """Nimble returns no page content unless `formats` names some, which is what an unset format means."""
-    payload = provider._build_payload(TemplateRequest(template=TEMPLATE, params={"url": URL}))
+    payload = provider._build_payload(TemplateRequest(template=TEMPLATE, inputs={"url": URL}))
 
     assert payload == {"template": TEMPLATE, "params": {"url": URL}}
 
@@ -103,18 +103,18 @@ def test_the_template_and_its_inputs_are_sent_and_nothing_else(provider: NimbleT
 def test_a_format_maps_onto_nimbles_formats_list(
     provider: NimbleTemplateProvider, body_format: Any, expected: str
 ) -> None:
-    payload = provider._build_payload(TemplateRequest(template=TEMPLATE, params={"url": URL}, format=body_format))
+    payload = provider._build_payload(TemplateRequest(template=TEMPLATE, inputs={"url": URL}, format=body_format))
 
     assert payload["formats"] == [expected]
 
 
 def test_plain_text_is_rejected_because_nimble_does_not_return_it(provider: NimbleTemplateProvider) -> None:
     with pytest.raises(UnsupportedFormatError, match="text"):
-        provider.validate(TemplateRequest(template=TEMPLATE, params={"url": URL}, format="text"))
+        provider.validate(TemplateRequest(template=TEMPLATE, inputs={"url": URL}, format="text"))
 
 
 def test_provider_options_pass_through(provider: NimbleTemplateProvider) -> None:
-    request = TemplateRequest(template=TEMPLATE, params={"url": URL}, provider_options={"localization": True})
+    request = TemplateRequest(template=TEMPLATE, inputs={"url": URL}, provider_options={"localization": True})
 
     assert provider._build_payload(request)["localization"] is True
 
@@ -126,11 +126,11 @@ def test_a_bare_record_under_parsing_is_the_record(provider: NimbleTemplateProvi
     """The shape the live API answered with: the template's fields straight under `data.parsing`."""
     payload = _run_payload(RECORD)
 
-    response = provider._to_response(TemplateRequest(template=TEMPLATE, params={"url": URL}), payload)
+    response = provider._to_response(TemplateRequest(template=TEMPLATE, inputs={"url": URL}), payload)
 
     assert response.provider == "nimble"
     assert response.template == TEMPLATE
-    assert response.params == {"url": URL}
+    assert response.inputs == {"url": URL}
     assert response.data == RECORD
     assert response.url == URL
     assert response.status_code == 200, "Nimble sends its status code as a float"
@@ -223,7 +223,7 @@ def test_a_format_asked_for_comes_back_as_the_page_beside_the_record(provider: N
     payload = _run_payload(RECORD)
     payload["data"]["markdown"] = "# A Light in the Attic"
 
-    request = TemplateRequest(template=TEMPLATE, params={"url": URL}, format="markdown")
+    request = TemplateRequest(template=TEMPLATE, inputs={"url": URL}, format="markdown")
     response = provider._to_response(request, payload)
 
     assert response.document is not None
@@ -331,10 +331,10 @@ def test_run_list_and_describe_through_the_sdk_client(monkeypatch: pytest.Monkey
     api = _Api(missing="gone")
     provider = api.sync_provider(monkeypatch)
     try:
-        response = provider.run(TemplateRequest(template=TEMPLATE, params={"url": URL}, format="markdown"))
+        response = provider.run(TemplateRequest(template=TEMPLATE, inputs={"url": URL}, format="markdown"))
         page = provider.templates(limit=20, offset=5)
         template = provider.template(TEMPLATE)
-        with pytest.raises(ProviderError, match="'gone'") as caught:
+        with pytest.raises(TemplateNotFoundError, match="'gone'") as caught:
             provider.template("gone")
     finally:
         provider.close()
@@ -355,7 +355,21 @@ def test_run_list_and_describe_through_the_sdk_client(monkeypatch: pytest.Monkey
     assert template.name == TEMPLATE and template.published
 
     assert missing.url.path.endswith("/v2/extract/templates/gone")
-    assert "404" in str(caught.value)
+    assert caught.value.template == "gone" and isinstance(caught.value, ProviderError)
+
+
+def test_a_run_on_an_unknown_template_is_the_same_not_found_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _NoSuchTemplateApi(_Api):
+        def handle(self, request: httpx.Request) -> httpx.Response:
+            self.requests.append(request)
+            return httpx.Response(404, json={"detail": "Template not found"})
+
+    provider = _NoSuchTemplateApi().sync_provider(monkeypatch)
+    try:
+        with pytest.raises(TemplateNotFoundError, match="'gone'"):
+            provider.run(TemplateRequest(template="gone", inputs={"url": URL}))
+    finally:
+        provider.close()
 
 
 def test_paging_left_unset_sends_no_query(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -373,7 +387,7 @@ async def test_the_async_calls_go_out_on_the_caller_s_client_as_its_end_user() -
     api = _Api()
     provider = api.async_provider()
     try:
-        response = await provider.arun(TemplateRequest(template=TEMPLATE, params={"url": URL}))
+        response = await provider.arun(TemplateRequest(template=TEMPLATE, inputs={"url": URL}))
         page = await provider.atemplates(limit=1)
         template = await provider.atemplate(TEMPLATE)
     finally:
@@ -396,7 +410,7 @@ def test_an_error_page_through_the_sdk_client_is_a_failed_run(monkeypatch: pytes
     provider = _MissingPageApi().sync_provider(monkeypatch)
     try:
         with pytest.raises(ProviderError, match="HTTP 404"):
-            provider.run(TemplateRequest(template=TEMPLATE, params={"url": URL}))
+            provider.run(TemplateRequest(template=TEMPLATE, inputs={"url": URL}))
     finally:
         provider.close()
 
@@ -416,13 +430,13 @@ def test_live_catalogue_and_run() -> None:
     from web_router import WebRouter
 
     with WebRouter("nimble") as router:
-        page = router.templates(limit=50)
+        page = router.templates(provider="nimble", limit=50)
         assert page.provider == "nimble"
         assert 0 < len(page) <= 50
         assert page.total is not None and page.total >= len(page)
 
         name = os.getenv("NIMBLE_TEMPLATE")
-        candidates = [router.template(name)] if name else [t for t in page.templates if t.published]
+        candidates = [router.template(name, provider="nimble")] if name else [t for t in page.templates if t.published]
         chosen = next(
             (
                 (t, s["input"])
@@ -434,10 +448,10 @@ def test_live_catalogue_and_run() -> None:
         )
         if chosen is None:
             pytest.skip("no published template on this account publishes a sample input to run with")
-        template, params = chosen
+        template, inputs = chosen
         assert template.input_schema is not None
 
-        response = router.run_template(template.name, params, format="markdown")
+        response = router.run_template(template.name, inputs, provider="nimble", format="markdown")
 
     assert response.provider == "nimble"
     assert response.data

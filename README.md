@@ -10,7 +10,7 @@
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Eight search backends, seven extract backends, an Extract Template catalogue,
+Eight search backends, seven extract backends, a template catalogue,
 three agentic research backends (plus Exa's, retired upstream), five
 browser-session backends and three browser agents. One call each. Switching
 between them is one argument.
@@ -25,7 +25,7 @@ WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
 
 WebRouter().extract("https://example.com")  # page contents, also keyless
 
-WebRouter(Provider.NIMBLE).run_template("walmart_pdp", {"product_id": "..."})  # one page, one record
+WebRouter().run_template("walmart_pdp", {"product_id": "..."}, provider="nimble")  # one page, one record
 
 WebRouter(Provider.NIMBLE).research("...")  # an agentic run: minutes, not milliseconds
 
@@ -202,7 +202,7 @@ uv run --env-file .env python examples/main.py
 
 A provider name serves the methods it serves and no others: `brave` searches
 and cannot extract, `oxylabs` extracts and cannot search, `nimble` searches,
-extracts, runs Extract Templates and researches, and `browserbase` opens
+extracts, runs templates and researches, and `browserbase` opens
 sessions and runs browse tasks.
 Ask a method for another's backend and it says so, naming the backends that
 method does serve.
@@ -276,22 +276,23 @@ to set.
 > exist and skip themselves until credentials are. Nimble, Tavily, Jina and Linkup
 > were verified live; Exa's extract mapping is from documentation too.
 
-### Extract Templates
+### Templates
 
-`[extract]` installs this too -- a template run is the Extract API's. There is
-no keyless tier: a run fetches and parses on the backend's account, so `auto`
-tries the backends you hold a key for and then stops, naming the variable that
-would fix it.
+A template is a vendor's saved, site-specific extraction: Nimble's Extract
+Templates, Oxylabs' dedicated sources, Bright Data's scrapers, Apify's
+actors. `[extract]` installs the Nimble adapter -- a template run is its
+Extract API's. There is no keyless tier and no `auto`: a run fetches and
+parses on the backend's account, and a template's name belongs to one
+vendor, so `provider` is required on all three calls.
 
 | Pass | Name | Provider | Credentials | Page formats beside the record |
 | --- | --- | --- | --- | --- |
 | `Provider.NIMBLE` | `nimble` | [Nimble Extract Templates](https://docs.nimbleway.com/api-reference/extract/extract-templates) | `NIMBLE_API_KEY` | `markdown`, `html` |
-| `Provider.AUTO` *(default)* | `auto` | — | Nimble, when you hold its key | `markdown`, `html`, each routed to a member that returns it |
 
 Nimble is the only backend with a template catalogue so far. Verified live on
 2026-10-22: a listing, a description and a run on a public test page, the
 response shapes of which the tests are modelled on. See
-[Running an Extract Template](#running-an-extract-template).
+[Running a template](#running-a-template).
 
 ### Research
 
@@ -461,7 +462,7 @@ WebRouter(Provider.TAVILY).search("...")  # ConfigurationError if TAVILY_API_KEY
 | `SearchResponse` / `SearchResult` | A normalized answer, plus the provider's untouched payload in `raw`. |
 | `ExtractResponse` / `ExtractedDocument` | The same for a page fetch, plus `failures` for the URLs that did not come back. |
 | `TemplateProvider` | The contract for an Extract Template backend: `_list` its catalogue, `_get` one template, `_run` it. |
-| `TemplateRequest` / `TemplateResponse` | A normalized run -- a template's name and its own inputs -- and the record it parsed, in `data`. `ExtractTemplate` describes one, `TemplatePage` a page of the catalogue. |
+| `TemplateRequest` / `TemplateResponse` | A normalized run -- a template's name and its own inputs -- and the record it parsed, in `data`. `Template` describes one, `TemplatePage` a page of the catalogue. |
 | `ResearchProvider` | The contract for an agentic backend: `_start` a run, `_fetch` where it got to. |
 | `ResearchRequest` / `ResearchResponse` | A normalized run, and its answer — prose, structure, and the `citations` behind either. |
 | `ResearchJob` | A run in progress. Polls with back-off, blocks with a timeout, and never fabricates an answer it does not have. |
@@ -639,51 +640,62 @@ single entry from a backend that took every URL at once, one per URL that came
 back from a backend that did not. A call that failed outright is in `failures`
 instead — there was no payload to keep.
 
-## Running an Extract Template
+## Running a template
 
-An Extract Template is a saved, site-specific extraction a backend holds -- a
-retailer's product page, a job board's listing, a search results page -- that
-turns one page into a **record with fixed fields** rather than page text to read
-through. Three calls cover a catalogue of them: list it, describe one, run one.
+A template is a vendor's saved, site-specific extraction -- a retailer's
+product page, a job board's listing, a search results page -- that turns one
+page into a **record with fixed fields** rather than page text to read through.
+Three calls cover a vendor's catalogue of them: list it, describe one, run one.
+All three name the vendor, because a template's name, inputs and fields are
+the vendor's own; the same page has a different name on each.
 
 ```python
-page = router.templates(limit=20)  # one page of the catalogue
+page = router.templates(provider="nimble", limit=20)  # one page of the catalogue
 for template in page.templates:
     print(template.name, template.domain, template.entity_type)
 
-template = router.template("walmart_pdp")
-template.input_schema  # JSON Schema of what a run passes as `params`
+template = router.template("walmart_pdp", provider="nimble")
+template.input_schema  # JSON Schema of what a run passes as `inputs`
 template.output_schema  # JSON Schema of the record that comes back
 
-response = router.run_template("walmart_pdp", {"product_id": "123456789"})
+response = router.run_template("walmart_pdp", {"product_id": "123456789"}, provider="nimble")
 response.data  # {'title': ..., 'price': ..., ...}, shaped by output_schema
 ```
 
-**A template's inputs are its own, not ours.** `params` is whatever its
+**A template's inputs are its own, not ours.** `inputs` is whatever its
 `input_schema` names: a URL for some templates, an id, a slug or a search term
 for others, and nothing at all for a template whose page is fixed. That is why
 this is a method of its own rather than an option on `extract`, which is keyed
 by URL. Read the schema -- or the `samples` the backend publishes under
 `template.extra` -- before running a template you have not run before; the
-backend refuses inputs that do not match.
+backend refuses inputs that do not match, and an unknown name raises
+`TemplateNotFoundError`.
 
 `format` asks for the page beside the record, as `markdown` or `html`:
 
 ```python
-response = router.run_template("walmart_pdp", {"product_id": "123456789"}, format="markdown")
+response = router.run_template("walmart_pdp", {"product_id": "123456789"}, provider="nimble", format="markdown")
 response.document.content  # the page the record was parsed from
 ```
 
 Unset, no page comes back -- the record is the answer and the page is an
 extra, so unlike `extract` there is no default format to pin. A run the
-backend could not complete, whether it could not fetch the page or the template
-failed to parse it, **raises** `ProviderError` with the backend's reason rather
-than coming back with an empty record.
+backend could not complete, whether it could not fetch the page, the site
+answered with an error page, or the template failed to parse it, **raises**
+`ProviderError` with the backend's reason rather than coming back with an
+empty record.
+
+**One call is one page and one set of inputs**, answered in real time with
+one record: a listing template returns its items inside that record, with
+pagination beside it. A vendor whose templates run as jobs over many inputs
+and answer with a dataset -- Bright Data's scrapers, Apify's actors -- would
+join through its synchronous endpoint, under that endpoint's own time cap;
+batch inputs are out of scope here.
 
 `TemplatePage.total` and `offset` say where in the catalogue a page sits, when
 the backend reports them; `limit` and `offset` left unset leave the paging to
-the backend. Every call tags its answer with `provider` -- never `auto` -- and
-keeps the untouched payload in `raw`.
+the backend. Every call tags its answer with `provider` and keeps the untouched
+payload in `raw`.
 
 ## Researching a question
 
@@ -1767,6 +1779,7 @@ except WebRouterError as exc:
 | `ProviderNotFoundError` | Unknown provider name, or one that does not serve the method you called | The message lists every name that method does serve |
 | `UnsupportedParameterError` | The provider does not map an option you set | Use `provider_options`, or add the mapping |
 | `UnsupportedFormatError` | The extract or template backend cannot return the `format` you asked for | Ask for one it can — the message lists them — or name another backend |
+| `TemplateNotFoundError` | A template run or describe named a template the vendor does not have | A `ProviderError`; list the vendor's templates with `templates()` — names are the vendor's own |
 | `MissingParameterError` | The browse backend cannot start without an option you left unset — `start_url`, today | Set it, or name a backend that finds its own first page; nothing was billed |
 | `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost — the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
 | `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers` — the other rows are unaffected |
