@@ -86,9 +86,11 @@ research = [
 # refs resolve through Playwright's `aria-ref=` selector engine, which the
 # driver registers but does not document; tests/test_browser_actions.py fails
 # if a release drops it. No `playwright install` is needed -- the
-# browser is the session's, reached over CDP.
+# browser is the session's, reached over CDP. Pillow converts a screenshot a
+# vendor's browser returns as JPEG although PNG was asked for (Anchor does).
 browser = [
     "playwright>=1.63,<1.64",
+    "pillow>=10",
 ]
 # The one extra not named after a method -- see EXTRA_MCP in constants.py. It
 # installs the stdio MCP server, which exposes the methods above to an agent

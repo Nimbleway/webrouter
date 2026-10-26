@@ -1257,6 +1257,9 @@ BROWSER_SCREENSHOT_TYPE: Literal["png"] = "png"
 PNG_SIZE_OFFSET = 16
 """Where a PNG's width and height sit: two big-endian uint32s in the IHDR chunk, which always comes first."""
 
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+"""The eight bytes every PNG starts with; a capture without them is converted (see ``as_png``)."""
+
 # --- Steel browser ----------------------------------------------------------
 # From Steel's documentation and the steel-python SDK's generated types, not a
 # live call: no account was available. See tests/providers/test_steel_browser.py.
