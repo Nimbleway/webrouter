@@ -5,8 +5,15 @@ Shapes from AWS's documentation of the web-search connector and its gateway
 and gateway-using-mcp-call.html): tools are named ``<target>___WebSearch``, the
 input schema gains ``filters`` from connector 1.2.0, and the tool answers with
 its results as a JSON string in a text block and, from 1.1.0, in
-``structuredContent``. The live test at the bottom checks them against a real
-gateway.
+``structuredContent``.
+
+Checked live on 2026-10-26 against a gateway with a default-version target:
+``tools/list`` named the tool ``web-search___WebSearch`` with ``filters`` in its
+schema; both calls answered plain JSON, not a stream; every hit carried
+``text``, ``url``, ``title`` and ``publishedDate``; domain and date filters were
+honoured; and ``publishedDate`` came as ``05:00PM, Sunday, October 06 2024, PDT``
+rather than the ISO date AWS's example shows. It is passed through as sent, as
+other backends' dates are.
 """
 
 from __future__ import annotations
@@ -225,7 +232,7 @@ def test_hits_normalize_into_results() -> None:
     assert first.title == HITS[0]["title"]
     assert first.content == HITS[0]["text"]
     assert first.description == HITS[0]["text"]
-    assert first.published_date == "2024-10-07"
+    assert first.published_date == "05:00PM, Sunday, October 06 2024, PDT"
     assert first.score is None
     assert response.request_id == "824f89d0"
     # A hit with no page, as a knowledge-graph fact may be, is no result to cite; raw keeps it.

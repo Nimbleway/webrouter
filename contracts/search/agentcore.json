@@ -48,11 +48,14 @@
     "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html",
     "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-using-mcp-call.html"
   ],
-  "verified": {},
+  "verified": {
+    "max_results": "live: tests/providers/test_agentcore.py::test_live_search_with_domains_and_dates",
+    "include_domains": "live: tests/providers/test_agentcore.py::test_live_search_with_domains_and_dates"
+  },
   "vendor_options": {
     "filters.publishedDateFilter": {
       "status": "passthrough",
-      "note": "from and to, ISO-8601 UTC, inclusive; merged with the mapped domain filter. Connector 1.2.0 or later."
+      "note": "from and to, ISO-8601 UTC, inclusive; merged with the mapped domain filter. Connector 1.2.0 or later. Checked live 2026-10-26."
     }
   }
 }

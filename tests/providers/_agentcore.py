@@ -17,7 +17,7 @@ TOOL = "web-search___WebSearch"
 HITS = [
     {
         "text": "Python 3.13 was released on October 7, 2024, featuring an experimental free-threaded mode.",
-        "publishedDate": "2024-10-07",
+        "publishedDate": "05:00PM, Sunday, October 06 2024, PDT",
         "url": "https://www.python.org/downloads/release/python-3130/",
         "title": "Python 3.13 Release Highlights",
     },
