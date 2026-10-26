@@ -120,6 +120,8 @@ src/web_router/
     │                   coercion, body selection, the job budget
     ├── _page.py        the page actions both browser handles delegate to,
     │                   once over CDP through Playwright; snapshot refs
+    ├── _png.py         a screenshot as PNG: converts what a backend returns as
+    │                   another format (Anchor: JPEG), and reads the size
     ├── nimble.py       search + extract + research, via the nimble-python SDK;
     │                   the shared clients and constructor of the four Nimble classes
     ├── nimble_template.py  Nimble's templates, on nimble.py's clients

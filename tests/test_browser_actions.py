@@ -24,7 +24,6 @@ import asyncio
 import base64
 import gc
 import importlib.util
-import io
 import re
 import struct
 import sys
@@ -38,7 +37,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import FakeBrowserProvider
+from tests.conftest import FakeBrowserProvider, jpeg
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants import (
     BROWSER_ACTION_TIMEOUT,
@@ -58,7 +57,8 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers import _page
-from web_router.providers._page import as_png, compact_snapshot, png_size
+from web_router.providers._page import compact_snapshot
+from web_router.providers._png import png_size
 from web_router.types import BrowserRequest, Screenshot
 
 HAS_PLAYWRIGHT = importlib.util.find_spec("playwright") is not None
@@ -314,21 +314,10 @@ def test_a_generic_that_is_clickable_or_has_text_is_kept() -> None:
     assert compact_snapshot(tree) == tree
 
 
-def test_png_size_is_read_from_the_header() -> None:
-    assert png_size(_png(1280, 720)) == (1280, 720)
-
-
-def _jpeg(width: int, height: int) -> bytes:
-    image = pytest.importorskip("PIL.Image")
-    out = io.BytesIO()
-    image.new("RGB", (width, height), "white").save(out, format="JPEG")
-    return out.getvalue()
-
-
 def test_a_screenshot_a_backend_returns_as_jpeg_comes_back_as_png(
     ledger: _Ledger, provider: FakeBrowserProvider
 ) -> None:
-    ledger.image = _jpeg(64, 48)
+    ledger.image = jpeg(64, 48)
     with provider.open(BrowserRequest()) as browser:
         shot = browser.screenshot()
     assert shot.png.startswith(PNG_SIGNATURE)
@@ -337,16 +326,11 @@ def test_a_screenshot_a_backend_returns_as_jpeg_comes_back_as_png(
 
 async def test_the_async_screenshot_converts_a_jpeg_too(ledger: _Ledger, provider: FakeBrowserProvider) -> None:
     _record_release(provider, ledger)
-    ledger.image = _jpeg(64, 48)
+    ledger.image = jpeg(64, 48)
     async with await provider.aopen(BrowserRequest()) as browser:
         shot = await browser.screenshot()
     assert shot.png.startswith(PNG_SIGNATURE)
     assert (shot.width, shot.height) == (64, 48)
-
-
-def test_a_png_is_returned_untouched() -> None:
-    png = _png(1280, 720)
-    assert as_png(png) is png
 
 
 # -- One connection per session ------------------------------------------------

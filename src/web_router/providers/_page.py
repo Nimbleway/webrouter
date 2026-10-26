@@ -21,9 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import io
 import re
-import struct
 import threading
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -63,8 +61,6 @@ from web_router.constants import (
     MSG_BROWSER_REF_DETACHED,
     MSG_BROWSER_REF_NOT_IN_SNAPSHOT,
     MSG_BROWSER_SYNC_IN_LOOP,
-    PNG_SIGNATURE,
-    PNG_SIZE_OFFSET,
 )
 from web_router.exceptions import (
     BrowserActionError,
@@ -76,6 +72,7 @@ from web_router.exceptions import (
     StaleElementError,
     WebRouterError,
 )
+from web_router.providers._png import as_png, png_size
 from web_router.types import ExtractedDocument, PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 if TYPE_CHECKING:
@@ -129,27 +126,6 @@ def compact_snapshot(tree: str) -> str:
 def refs_in(tree: str) -> frozenset[str]:
     """Every ref a snapshot carries."""
     return frozenset(_REF.findall(tree))
-
-
-def as_png(image: bytes) -> bytes:
-    """The capture as PNG. Some vendors' browsers answer a PNG request with another format -- Anchor's
-    with JPEG, even over raw CDP -- so it is converted here, and ``Screenshot.png`` holds a PNG on every backend."""
-    if image.startswith(PNG_SIGNATURE):
-        return image
-    try:
-        from PIL import Image
-    except ImportError as exc:
-        raise ConfigurationError(MSG_BROWSER_ACTIONS_NOT_INSTALLED.format(extra=EXTRA_BROWSER)) from exc
-    converted = io.BytesIO()
-    with Image.open(io.BytesIO(image)) as picture:
-        picture.save(converted, format="PNG")
-    return converted.getvalue()
-
-
-def png_size(png: bytes) -> tuple[int, int]:
-    """A PNG's width and height in pixels, read from its header."""
-    width, height = struct.unpack(">II", png[PNG_SIZE_OFFSET : PNG_SIZE_OFFSET + 8])
-    return int(width), int(height)
 
 
 def check_target(ref: str | None, selector: str | None) -> None:
