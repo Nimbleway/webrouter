@@ -1,6 +1,6 @@
 # Layer 1 Contract — web-router
 
-**Status:** Working draft, updated for package **0.4.0** (`src/web_router/_version.py`) plus the unreleased changes on `main` as of `c0d2cf7`. Earlier Probe checks ran against 0.0.1, before this repository moved, and have **not** been re-run on 0.4.0. See [Status and verification](#status-and-verification).
+**Status:** Working draft, updated for package **0.4.0** (`src/web_router/_version.py`) plus the unreleased changes on `main` as of `c0d2cf7`. Earlier verification checks ran against 0.0.1, before this repository moved, and have **not** been re-run on 0.4.0. See [Status and verification](#status-and-verification).
 
 This document defines the Layer 1 working contract of web-router: one interface that applications use to reach many web API backends. Layer 1 is the **interface contract**: one request and response shape per capability, a fixed-order `auto` fallback chain, and a Python library that implements both. It is an internal draft toward a multi-provider layer. Layer 2 (task routing, budget-aware selection, quality optimization) is out of scope here and does not exist yet.
 
