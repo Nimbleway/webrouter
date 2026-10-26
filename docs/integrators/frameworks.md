@@ -1,6 +1,6 @@
 # Framework Integration
 
-web-router lets frameworks integrate search and extract (and, where they need them, research and browser sessions) once, letting their users switch providers at runtime rather than at integration time.
+web-router lets frameworks integrate once against six methods (`search`, `extract`, `run_template`, `research`, `open_browser`, `browse`), letting their users switch providers at runtime rather than at integration time.
 
 ## The integration pattern
 
@@ -32,17 +32,17 @@ results = framework.search("query")
 
 ### For frameworks
 
-- **One integration** — works with 14 search backends and 11 extract backends, plus a template catalogue, research, browser-session and browse backends
-- **Provider-agnostic** — no conditional logic for each backend
-- **Consistent errors** — all providers raise the same exception hierarchy
-- **Testing flexibility** — mock the router or register fake providers for tests
+- **One integration**: works with 14 search backends (DeepSeek included) and 11 extract backends (DeepSeek included; `max` races that chain), a Nimble template catalogue, 5 research backends, 6 browser-session backends (Kernel included) and 3 browse backends
+- **Provider-agnostic**: no conditional logic for each backend
+- **Consistent errors**: all providers raise the same exception hierarchy
+- **Testing flexibility**: mock the router or register fake providers for tests
 
 ### For users
 
-- **Runtime switching** — change providers without changing code
-- **Credentials from environment** — `NIMBLE_API_KEY`, `TAVILY_API_KEY`, etc.
-- **Fallback support** — the `auto` provider tries credentialed backends, then keyless ones
-- **Escape hatch** — `provider_options` reaches provider-specific features
+- **Runtime switching**: change providers without changing code
+- **Credentials from environment**: `NIMBLE_API_KEY`, `TAVILY_API_KEY`, etc.
+- **Fallback support**: the `auto` provider tries credentialed backends, then keyless ones
+- **Escape hatch**: `provider_options` reaches provider-specific features
 
 ## Integration checklist
 
@@ -287,7 +287,9 @@ All web-router exceptions derive from `WebRouterError`, so catching that covers 
 
 ## See also
 
-- [Contract reference](../contract/README.md) — normalized request/response models
-- [Provider support](https://github.com/WebContextLayer/webrouter/blob/main/README.md#provider-support) — which providers map which options
-- [Error handling example](https://github.com/WebContextLayer/webrouter/blob/main/examples/error_handling.py) — every exception and its fix
-- [Routing example](https://github.com/WebContextLayer/webrouter/blob/main/examples/routing.py) — provider configuration patterns
+- [Provider contracts](../../contracts/): wire fields per provider. `make contracts` regenerates them.
+- [Request and response models](../../src/web_router/types.py)
+- [Adding a provider](../../CONTRIBUTING.md#adding-a-provider) and [promoting a provider option](../../CONTRIBUTING.md#promoting-a-provider-option)
+- [Provider support](https://github.com/WebContextLayer/webrouter/blob/main/README.md#provider-support): which providers map which options
+- [Error handling example](https://github.com/WebContextLayer/webrouter/blob/main/examples/error_handling.py): every exception and its fix
+- [Routing example](https://github.com/WebContextLayer/webrouter/blob/main/examples/routing.py): provider configuration patterns

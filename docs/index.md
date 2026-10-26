@@ -4,7 +4,7 @@ Technical documentation for web-router: one interface over many web search, extr
 
 ## What is web-router?
 
-web-router puts many backends behind one typed interface: 14 search backends (11 keyed, 3 keyless hosted MCP endpoints), 11 extract backends, 5 research backends, 6 browser-session backends and 3 hosted browse backends, plus a Nimble template catalogue and an `auto` provider that chains the methods that have one. Switch backends with one argument; the call, the options and the response shape stay the same.
+web-router (0.7.0) has six methods (`search`, `extract`, `run_template`, `research`, `open_browser`, `browse`) behind one typed interface: 14 search backends (11 keyed, including DeepSeek, and 3 keyless hosted MCP endpoints), 11 extract backends (including DeepSeek; `max` races that chain), 5 research backends, 6 browser-session backends (including Kernel and `local`) and 3 hosted browse backends, plus a Nimble template catalogue and an `auto` provider that chains the methods that have one. Switch backends with one argument; the call, the options and the response shape stay the same.
 
 ```python
 from web_router import Provider, WebRouter
@@ -18,13 +18,7 @@ WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
 
 ### Guides
 
-- **[Adding a Provider](guides/adding-a-provider.md)**: integrate a new search or extract API
-- **[Promoting an Option](guides/promoting-an-option.md)**: map a shared parameter to existing providers
 - **[Plugin vs Catalogue](guides/plugin-vs-catalogue.md)**: runtime registration vs. built-in providers
-
-### Contract
-
-- **[Contract Overview](contract/README.md)**: request and response models, invariants, and how they evolve
 
 ### Integrators
 
@@ -38,7 +32,9 @@ WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
 ## Quick links
 
 - [Main README](https://github.com/WebContextLayer/webrouter#readme): quickstart, examples, provider support
-- [Contributing](https://github.com/WebContextLayer/webrouter/blob/main/CONTRIBUTING.md): setup, tests, PR workflow
+- [Contributing](../CONTRIBUTING.md): setup, tests, PR workflow
+- [Adding a provider](../CONTRIBUTING.md#adding-a-provider) and [promoting a provider option](../CONTRIBUTING.md#promoting-a-provider-option)
+- [Provider contracts](../contracts/): one JSON file per method and provider. `make contracts` regenerates them.
 - [Examples](https://github.com/WebContextLayer/webrouter/tree/main/examples): runnable scripts for routing, errors, depth, custom providers
 - [Changelog](https://github.com/WebContextLayer/webrouter/blob/main/CHANGELOG.md): release history
 
@@ -66,8 +62,8 @@ Extras are named after the methods you call (`search`, `extract`, `research`, `b
 
 The most useful contributions:
 
-1. **Map a shared option to a provider**: see [Promoting an Option](guides/promoting-an-option.md)
-2. **Add a new provider**: see [Adding a Provider](guides/adding-a-provider.md)
+1. **Map a shared option to a provider**: see [Promoting a provider option](../CONTRIBUTING.md#promoting-a-provider-option)
+2. **Add a new provider**: see [Adding a provider](../CONTRIBUTING.md#adding-a-provider), then run `make contracts`
 3. **Check mappings against live APIs**: report where a provider's docs and its real responses differ
 
 Open an issue before starting a large change: [Issues](https://github.com/WebContextLayer/webrouter/issues).
