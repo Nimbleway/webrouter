@@ -714,15 +714,24 @@ MSG_AUTO_EXTRACT_NO_MEMBER = (
 """Replaces the usual advice on the format error. Raised before any member is tried."""
 
 # --- Benchmark --------------------------------------------------------------
-# One search fanned out across several backends, measured around the public
-# call. A consumer of `search`, not a sixth method: nothing here names an
-# endpoint or a registry.
+# One search, or one extract, fanned out across several backends, measured
+# around the public call. A consumer of `search` and `extract`, not a sixth
+# method: nothing here names an endpoint or a registry.
 
 BENCHMARK_TIMEOUT = 60.0
 """Seconds the whole comparison may take by default: one search's HTTP default, since the rows run at once.
 
 A row still unanswered when it runs out is reported as timed out; the others
 are unaffected, and the report is returned either way.
+"""
+
+BENCHMARK_EXTRACT_TIMEOUT = 120.0
+"""Seconds an extract comparison may take by default, twice a search's.
+
+A page is fetched live, rendered by some backends and queued by others, and a
+list of URLs is fanned out behind one call, so the slowest row of an extract
+comparison runs well past a search's. The same rule applies when it runs out:
+that row is timed out, the others are unaffected.
 """
 
 BENCHMARK_EXCLUDED: frozenset[str] = DELEGATING_PROVIDERS
@@ -2866,11 +2875,28 @@ MSG_REDIRECTS_WITH_CREDENTIAL = (
 )
 
 MSG_BENCHMARK_TIMEOUT = (
-    "Provider {provider!r} had not answered the benchmark query after {timeout:g}s. The comparison "
+    "Provider {provider!r} had not answered the comparison's call after {timeout:g}s. The comparison "
     "went on without it -- pass a longer timeout to wait, or leave it out of `providers`."
 )
+"""Shared by a search and an extract row: there is no query in an extract, so it says "call"."""
 
-MSG_BENCHMARK_NO_PROVIDERS = "benchmark() needs at least one provider to compare; `providers` named none."
+MSG_BENCHMARK_NO_PROVIDERS = (
+    "benchmark() needs at least one provider to compare: `providers` named none, or it was left unset and no "
+    "search backend is configured here."
+)
+
+MSG_BENCHMARK_EXTRACT_NO_PROVIDERS = (
+    "benchmark_extract() needs at least one provider to compare: `providers` named none, or it was left unset and "
+    "no extract backend is configured here."
+)
+
+MSG_BENCHMARK_ROW_FAILED = "the call raised outside the library's own errors: {error!r}"
+"""A row whose call raised something that is not a ``WebRouterError``.
+
+The public methods wrap every backend failure, so this is a provider bug or
+a failure in a caller-supplied provider; it is still that row's error, never
+the comparison's, because the report always comes back.
+"""
 
 MSG_EVALS_EMPTY_DATASET = "evaluate() needs at least one question; dataset {name!r} has none."
 

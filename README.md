@@ -67,8 +67,9 @@ dropped** — so a call never runs under weaker constraints than you asked for.
 
 > **Status: early preview.** `search`, `extract`, `run_template` (with
 > `templates` and `template` beside it), `research`, `open_browser`
-> and `browse` are implemented; `benchmark()` compares search backends on
-> your own queries and `evaluate()` scores their accuracy with an LLM judge —
+> and `browse` are implemented; `benchmark()` and `benchmark_extract()`
+> compare search and extract backends on your own queries and URLs, and
+> `evaluate()` scores search accuracy with an LLM judge —
 > see [Benchmarking providers](#benchmarking-providers) and
 > [Evaluating accuracy](#evaluating-accuracy). The API may change before 1.0.
 
@@ -1497,10 +1498,41 @@ question set with known answers, that is [`evaluate()`](#evaluating-accuracy).
 What it never does is fail as a whole: a
 provider that refuses an option, has no key, errors, or runs out of `timeout`
 is its own row's `error` (a `BenchmarkTimeoutError` for the last), and the
-others are unaffected. `search` only: `research`, `browse` and `open_browser`
-bill per run or per minute, and starting several at once to compare them is a
-decision to make explicitly per provider, not a default a comparison method
-should hide.
+others are unaffected.
+
+`benchmark_extract()` is the same comparison over `extract()`: the same URLs
+through several extract backends at once, each row measured around the same
+`extract()` call you would make, with the documents that came back and the
+URLs that did not:
+
+```python
+report = router.benchmark_extract(["https://example.com", "https://arxiv.org/abs/1706.03762"], timeout=60)
+
+for run in report.runs:
+    if run.ok:
+        print(f"{run.provider:10} {run.latency * 1000:6.0f} ms  {run.count} pages, {len(run.response.failures)} failed")
+    else:
+        print(f"{run.provider:10} {run.error}")
+
+report["nimble"].response.documents[0].content  # the full ExtractResponse rides along
+```
+
+Leave `providers` unset to compare every extract backend this environment holds
+credentials for plus the keyless Jina Reader, minus `auto`. `format` goes to
+every row unchanged; leave it unset and each backend answers in markdown where
+it can and its own default where it cannot, so every backend serves — name one
+and a backend that cannot return it is that row's `UnsupportedFormatError`,
+never a substitution. A call that fetched some of the URLs and not others is an
+answered row whose `response.failures` say which, exactly as the call itself
+stays partly successful; only a call where nothing came back is the row's
+error. The same measured facts only: how long, what came back, what did not.
+Whether a page's text is complete or correct is your judgment, as relevance is
+for a search. [`benchmarks/providers/extract.py`](benchmarks/providers/README.md#comparing-extract-backends)
+runs it over a URL set and tabulates the rows per backend and per category.
+
+`search` and `extract` only: `research`, `browse` and `open_browser` bill per
+run or per minute, and starting several at once to compare them is a decision
+to make explicitly per provider, not a default a comparison method should hide.
 
 ## Evaluating accuracy
 
@@ -1887,7 +1919,7 @@ except WebRouterError as exc:
 | `TemplateNotFoundError` | A template run or describe named a template the vendor does not have | A `ProviderError`; list the vendor's templates with `templates()` — names are the vendor's own |
 | `MissingParameterError` | The browse backend cannot start without an option you left unset — `start_url`, today | Set it, or name a backend that finds its own first page; nothing was billed |
 | `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost — the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
-| `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers` — the other rows are unaffected |
+| `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers` — the other rows are unaffected |
 | `ProviderError` | The backend itself failed — HTTP error, SDK exception, bad credentials | Depends on the backend; the original error is wrapped, not swallowed |
 | `BrowserActionError` | A page action on a browser handle failed; subclasses say how — see [Driving the page](#driving-the-page) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
 

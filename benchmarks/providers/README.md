@@ -112,8 +112,72 @@ default order changes only by a pull request backed by a scan.
   questions name no best backend.
 - **Compare only runs graded by the same judge**, which the report names.
 
+## Comparing extract backends
+
+`extract.py` is the same scan for the other half of the package: handed the
+same URLs, which extract backend brings the page back, how often, and how
+fast. Each URL is one `benchmark_extract()` fan-out -- the public `extract`
+path, one call per backend, timed around the call -- and the rows are measured
+facts only. No judge grades the text, so there is no accuracy column: a page is
+*returned* when the call answered with a document and *with text* when that
+document had any content, and the report says so. A bot wall or a cookie
+banner that came back with text counts as a page with text; telling it from
+the article is work for a scorer with ground truth, which this scan does not
+carry.
+
+```bash
+uv run --all-extras python benchmarks/providers/extract.py --limit 100
+uv run --all-extras python benchmarks/providers/extract.py --urls social-pdf --limit 0
+uv run --all-extras python benchmarks/providers/extract.py --urls mine.csv --url-column link --category-column kind
+uv run --all-extras python benchmarks/providers/extract.py --providers nimble,jina --format html
+```
+
+`--urls` names a shipped set or a CSV of your own:
+
+| Set | URLs | What's in it |
+| --- | --- | --- |
+| `general` (the default) | 455 | Reference sites (Wikipedia in several languages, arXiv, GitHub, MDN, PyPI, SEC), news in six languages, government and legal pages, social networks, 60 PDFs and a long tail of small sites; at most 8 URLs per domain. A generic zero-shot shape: a random-looking list, default settings. |
+| `social-pdf` | 908 | 575 domains stratified into social and UGC pages (131), PDF documents (407) and a long tail of general pages (370), with a strong non-English share. Stresses unblocking and file handling rather than clean article extraction. |
+
+Both are URL lists sampled from public pages, `url,category` only, under
+[`urls/`](urls/). `--limit` samples
+them by `--seed`, so two scans on the same seed fetch the same URLs; `--limit 0`
+is the whole set.
+
+`--format` is sent to every backend unchanged, so the rows are comparable.
+Unset, each backend answers in markdown where it can and its own default where
+it cannot (Exa's text), and every backend serves; named, a backend that cannot
+return it is that row's *refused*, never a substitution. `--timeout` bounds
+each URL's comparison, 120 seconds by default; a backend still unanswered is
+that row's *timed out* and the others are unaffected. `--concurrency` is URLs
+in flight at once; each fans out to every backend, so a backend's own rate
+limit shows up as latency or failures. Credentials come from `.env` or the
+environment, every configured extract backend runs unless `--providers` names
+some, and `auto` and `max` are left out: each delegates to the others, so
+its row would only repeat one of theirs under another name.
+
+It writes the same four files into its own `results/extract-…` folder:
+`report.md` with pages-with-text per backend and its 95% interval, the empty,
+failed, timed-out and refused counts, p50 and p95 latency and the median length
+of what came back, then a recommended `auto` extract order -- ranked on pages
+brought back with text out of every URL, a failure counting as a miss, and
+opt-in as the search one is -- then the same rate by category, the best backend
+in each row marked; `summary.json`, the same numbers; `rows.jsonl`, one line
+per URL and backend, appended as each URL finishes; and `run.json`, written
+before the first call and again with each URL. `--combine` merges scans of the
+same URL file, format and timeout, backends added later, and refuses anything
+else. A scan that died keeps the rows it fetched: `--combine` on its folder
+alone reports them, saying how many of the URLs asked they cover, and it
+cannot be merged with a finished scan, whose rows cover other URLs.
+
+Read it as a measure of who returns a page, not whose page is best. Intervals
+are as wide as the search scan's -- at 100 URLs a backend's rate is known to
+about ±10 points, a category row with 20 URLs to about ±20 -- and there is no
+cost column, because no backend states one; read the rates against
+[`PRICING.md`](PRICING.md).
+
 ## Keeping results
 
-Each run writes `rows.jsonl`, `summary.json` and `report.md` to its own folder
-under `results/`, which git ignores. Keep the reports you want to compare
-against the next run.
+Each run of either scan writes `rows.jsonl`, `summary.json` and `report.md` to
+its own folder under `results/`, which git ignores. Keep the reports you want
+to compare against the next run.

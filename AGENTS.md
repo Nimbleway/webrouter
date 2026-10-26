@@ -73,8 +73,9 @@ src/web_router/
 ├── client.py           WebRouter, AsyncWebRouter — the public facade
 │                       (search, extract, templates + template + run_template,
 │                        research + submit_research,
-│                        browse + submit_browse, open_browser, benchmark, a
-│                        fan-out over search, and evaluate, accuracy on top of it)
+│                        browse + submit_browse, open_browser, benchmark and
+│                        benchmark_extract, fan-outs over search and extract,
+│                        and evaluate, accuracy on top of benchmark)
 ├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
@@ -177,9 +178,12 @@ benchmarks/agent/       one agent over FRAMES on its platform's built-in web
                         search and on web-router — Claude on Managed Agents or
                         OpenAI on the Responses API; a script, not a method;
                         run with --group agent-bench
-benchmarks/providers/   every search backend on the same SimpleQA questions
-                        through evaluate(), by topic and answer type — a
-                        script; each run's report stays under results/
+benchmarks/providers/   run.py: every search backend on the same SimpleQA
+                        questions through evaluate(), by topic and answer
+                        type; extract.py: every extract backend on the same
+                        URLs through benchmark_extract(), by category, with
+                        the URL sets under urls/ — scripts; each run's
+                        report stays under results/
 ```
 
 ## Commands
@@ -208,24 +212,34 @@ A search that quietly ignores `country="US"` is worse than one that fails. If a
 provider gains support for a parameter, add it to that set — do not special-case
 it at the call site.
 
-**`benchmark()` is a consumer of `search()`, not a sixth method.** It fans one
-`SearchRequest` out across several providers through the same public `search`
-path a caller would use — validation, wrapping and normalization included — so
-what is measured is what a caller gets. It has no registry of its own and no
-provider implements anything for it. A `BenchmarkReport` holds one
-`BenchmarkRun` per provider, in the order asked; a row whose call raised —
-a refused option, a missing key, a backend failure, or `BenchmarkTimeoutError`
-when the comparison's single `timeout` ran out — carries that error, and the
-report is returned regardless. One backend failing never fails the comparison,
-exactly as a partly failed extract stays partly successful. A row carries
-measured facts only: latency around the call, the result count, the full
-response. Never add a quality score, a relevance estimate or a cost figure the
-backend did not state — that is the "never invent data" rule applied to
-metadata about the call. `search` only: `research`, `browse` and `open_browser`
-bill per run or per minute, so comparing them is a decision the caller makes
-explicitly per provider, not something a comparison method starts by default.
-`auto` is left out of the default set (`BENCHMARK_EXCLUDED`) because it would
-repeat one of the others under a name that says nothing about who answered.
+**`benchmark()` is a consumer of `search()`, not a sixth method, and
+`benchmark_extract()` the same consumer of `extract()`.** Each fans one
+request out across several providers through the same public path a caller
+would use — validation, wrapping and normalization included — so what is
+measured is what a caller gets. Neither has a registry of its own and no
+provider implements anything for them. A `BenchmarkReport` holds one
+`BenchmarkRun` per provider, in the order asked, and an `ExtractBenchmarkReport`
+one `ExtractBenchmarkRun`; the two pairs share a base in `types.py`, and the
+threads, the deadline and the rows that outlive it live once in `client.py`'s
+`_fan_out` / `_afan_out`, so a change to how a comparison runs is made there
+for both. A row whose call raised —
+a refused option or format, a missing key, a backend failure, or
+`BenchmarkTimeoutError` when the comparison's single `timeout` ran out —
+carries that error, and the report is returned regardless. One backend failing
+never fails the comparison, exactly as a partly failed extract stays partly
+successful — and an extract row that fetched some URLs and not others is an
+answered row whose response says which, never an error. A row carries
+measured facts only: latency around the call, the result or document count,
+the full response. Never add a quality score, a relevance estimate, a
+completeness figure or a cost the backend did not state — that is the "never
+invent data" rule applied to metadata about the call. `search` and `extract`
+only: `research`, `browse` and `open_browser` bill per run or per minute, so
+comparing them is a decision the caller makes explicitly per provider, not
+something a comparison method starts by default. `auto` is left out of both
+default sets (`BENCHMARK_EXCLUDED`) because it would repeat one of the others
+under a name that says nothing about who answered. `format` is one value sent
+to every extract row, as `search_depth` is to every search row; unset, it is
+the one request every backend can serve.
 
 **`evaluate()` is the one place a judgment enters a report, and it is
 labelled.** Accuracy is an LLM's grade of an answer the same LLM synthesized
@@ -316,7 +330,16 @@ the judged accuracy down by SimpleQA's topic and answer type — the evidence a
 routing rule or the routing guide's advice should rest on. Its `report.md`
 names the judge, it states no cost, and `--combine` merges scans only when
 their questions, search size and judge match. Keep a scan's report to compare
-the next one against: only runs graded by the same judge compare. A setup may name a normalized
+the next one against: only runs graded by the same judge compare. `extract.py`
+beside it is the extract scan: every configured extract backend through
+`benchmark_extract()` on the same URLs, one fan-out per URL, tabulated per
+backend and per category. It carries no judge and no score — a page is
+*returned* when a document came back and *with text* when that document had
+any, and a bot wall with text counts, which its report says — so it ranks who
+brings a page back, not whose page is best; scoring text against ground truth
+is work for a scorer that carries it, which this repository does not. Its URL
+sets under `urls/` are `url,category` lists only, no ground truth, and
+`--combine` merges scans only of the same file, format and timeout. A setup may name a normalized
 depth (`tavily@deep`, one `evaluate()` per depth) or a vendor mode from
 `modes.json` (`tavily:ultra-fast`), sent through `provider_options` by a
 wrapper that calls the backend's public `asearch`; mark a mode `verified` only
@@ -979,9 +1002,10 @@ OpenAI tools never read either key, because they are
 definitions the caller's own client sends. `.env` is gitignored — keep it that way. `TEMPLATE_ENV_BY_PROVIDER` is the
 template method's table, and names Nimble's key again: one key, four classes.
 
-**The library never loads `.env` itself.** Only four entry points do:
-`tests/conftest.py`, for the live tests, `benchmarks/agent/run.py` and
-`benchmarks/providers/run.py`, scripts run from the repo, and the MCP server —
+**The library never loads `.env` itself.** Only these entry points do:
+`tests/conftest.py`, for the live tests, `benchmarks/agent/run.py`,
+`benchmarks/providers/run.py` and `benchmarks/providers/extract.py`, scripts
+run from the repo, and the MCP server —
 its `main()` at startup and its `load_env` tool at runtime, both through
 `mcp/env.py` — because an application started by a client, often installed
 from PyPI with no repo beside it and started in whatever directory the client

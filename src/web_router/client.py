@@ -30,31 +30,32 @@ every handle it opened and releases the ones still open when it is closed.
 :meth:`WebRouter.benchmark` is not a method of its own kind but a consumer of
 :meth:`WebRouter.search`: the same query fanned out across several backends,
 each row measured around the public call, so what is compared is what a
-caller gets.
+caller gets. :meth:`WebRouter.benchmark_extract` is the same consumer of
+:meth:`WebRouter.extract`, the same URLs fanned out the same way.
 """
 
 from __future__ import annotations
 
-import asyncio
 import threading
-import time
 from collections.abc import Mapping, Sequence
-from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import AsyncExitStack, ExitStack, suppress
 from types import TracebackType
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
+from web_router._benchmark import Stragglers, afan_out, fan_out, members_of
 from web_router.constants import (
     AUTO_CLIENT_OPTION,
     BENCHMARK_EXCLUDED,
+    BENCHMARK_EXTRACT_TIMEOUT,
     BENCHMARK_TIMEOUT,
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
     DELEGATING_PROVIDERS,
     EVALS_CONCURRENCY,
     MAX_INHERITS_FROM_AUTO,
+    MSG_BENCHMARK_EXTRACT_NO_PROVIDERS,
     MSG_BENCHMARK_NO_PROVIDERS,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
     PROVIDER_AUTO,
@@ -68,7 +69,7 @@ from web_router.decisions.route import Route
 from web_router.evals.datasets import Dataset
 from web_router.evals.judge import Judge
 from web_router.evals.types import EvaluationReport
-from web_router.exceptions import BenchmarkTimeoutError, ConfigurationError, ProviderNotFoundError, WebRouterError
+from web_router.exceptions import ConfigurationError, ProviderNotFoundError
 from web_router.providers.base import (
     AsyncBrowserHandle,
     BrowseJob,
@@ -88,6 +89,7 @@ from web_router.registry import (
     available_providers,
     available_research_providers,
     available_template_providers,
+    configured_extract_providers,
     configured_providers,
     create_browse_provider,
     create_browser_provider,
@@ -102,6 +104,8 @@ from web_router.types import (
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
+    ExtractBenchmarkReport,
+    ExtractBenchmarkRun,
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
@@ -194,8 +198,7 @@ class _BaseRouter(Generic[_HandleT]):
         self._providers_lock = threading.Lock()
         # Rows the sync benchmark() gave up on whose calls still run; close()
         # waits for them so it never shuts a provider under a live search.
-        self._stragglers: set[Future[Any]] = set()
-        self._stragglers_lock = threading.Lock()
+        self._stragglers = Stragglers()
 
     def _config_for(self, key: str) -> dict[str, Any]:
         """Constructor kwargs for one backend: its ``provider_config`` entry, and every entry for a delegating one.
@@ -345,43 +348,17 @@ class _BaseRouter(Generic[_HandleT]):
         reads them, plus any search backend given a ``provider_config`` here --
         a key handed to the router is as good as one in the environment.
         """
-        known = set(available_providers())
-        names = set(configured_providers()) | {name for name in self._config if name in known}
+        return self._default_members(available_providers(), configured_providers())
+
+    def _default_extract_benchmark_providers(self) -> list[str]:
+        """Every extract backend this router can use, less ``auto``: the extract twin of the search default."""
+        return self._default_members(available_extract_providers(), configured_extract_providers())
+
+    def _default_members(self, available: list[str], configured: list[str]) -> list[str]:
+        """One method's default comparison: its configured backends and those keyed here, less the excluded."""
+        known = set(available)
+        names = set(configured) | {name for name in self._config if name in known}
         return sorted(name for name in names if name not in BENCHMARK_EXCLUDED)
-
-    def _benchmark_members(
-        self, providers: Sequence[str | Provider | SearchProvider] | None
-    ) -> list[tuple[str, SearchProvider | WebRouterError]]:
-        """The rows to run, as ``(row name, the provider or what stopped it)``, each name once, in the order asked.
-
-        Resolved here, on the caller's thread and before any row starts, for
-        two reasons: a backend whose extra is not installed or whose key is
-        missing is that row's failure rather than the comparison's, and a
-        provider built inside a worker after the router was closed would be
-        cached by a router that will never close it.
-        """
-        members: list[tuple[str, SearchProvider | WebRouterError]] = []
-        seen: set[str] = set()
-        for item in self._default_benchmark_providers() if providers is None else providers:
-            name = item.name if isinstance(item, SearchProvider) else provider_name(item)
-            if name in seen:
-                continue
-            seen.add(name)
-            try:
-                members.append((name, self.get_provider(item)))
-            except WebRouterError as exc:
-                members.append((name, exc))
-        if not members:
-            raise ValueError(MSG_BENCHMARK_NO_PROVIDERS)
-        return members
-
-    @staticmethod
-    def _benchmark_row(name: str, started: float, outcome: SearchResponse | WebRouterError) -> BenchmarkRun:
-        """A row from its own start: the call's latency, not the comparison's."""
-        latency = time.perf_counter() - started
-        if isinstance(outcome, WebRouterError):
-            return BenchmarkRun(provider=name, error=outcome, latency=latency)
-        return BenchmarkRun(provider=name, response=outcome, latency=latency)
 
     @staticmethod
     def _build_extract_request(
@@ -658,51 +635,65 @@ class WebRouter(_BaseRouter[BrowserHandle]):
             locale=locale,
             provider_options=None,
         )
-        members = self._benchmark_members(providers)
-        started = time.perf_counter()
+        members = members_of(
+            providers,
+            default=self._default_benchmark_providers,
+            build=self.get_provider,
+            none_named=MSG_BENCHMARK_NO_PROVIDERS,
+        )
+        runs = fan_out(
+            members, lambda provider: provider.search(request), BenchmarkRun.of, timeout, stragglers=self._stragglers
+        )
+        return BenchmarkReport(query=query, runs=runs)
 
-        def row(name: str, provider: SearchProvider) -> BenchmarkRun:
-            own = time.perf_counter()
-            try:
-                outcome: SearchResponse | WebRouterError = provider.search(request)
-            except WebRouterError as exc:
-                outcome = exc
-            return self._benchmark_row(name, own, outcome)
+    def benchmark_extract(
+        self,
+        urls: str | list[str],
+        *,
+        providers: Sequence[str | Provider | ExtractProvider] | None = None,
+        timeout: float | None = BENCHMARK_EXTRACT_TIMEOUT,
+        format: ExtractFormat | None = None,
+    ) -> ExtractBenchmarkReport:
+        """Fetch the same URLs through several providers at once and report what each did.
 
-        # A member that could not be built is its row already, with nothing to time.
-        runs = {
-            name: BenchmarkRun(provider=name, error=member, latency=0.0)
-            for name, member in members
-            if isinstance(member, WebRouterError)
-        }
-        # Not a `with` block: leaving one joins every thread, which would hold
-        # the report until the slowest backend answered and make the timeout
-        # a fiction. A row given up on finishes on its own and is discarded;
-        # its provider was built before it started, so the router closes it.
-        pool = ThreadPoolExecutor(max_workers=max(1, len(members) - len(runs)))
-        try:
-            futures: dict[str, Future[BenchmarkRun]] = {
-                name: pool.submit(row, name, member) for name, member in members if isinstance(member, SearchProvider)
-            }
-            wait(futures.values(), timeout=timeout)
-        finally:
-            pool.shutdown(wait=False)
-        for name, future in futures.items():
-            if future.done():
-                runs[name] = future.result()
-                continue
-            # A row given up on reports how long it was waited for. Its call
-            # keeps running, on a provider this router will close, so close()
-            # waits for it -- tracked here, dropped the moment it finishes.
-            runs[name] = self._benchmark_row(name, started, BenchmarkTimeoutError(name, timeout or 0.0))
-            with self._stragglers_lock:
-                self._stragglers.add(future)
-            future.add_done_callback(self._forget_straggler)
-        return BenchmarkReport(query=query, runs=[runs[name] for name, _ in members])
+        The extract twin of :meth:`benchmark`: one
+        :class:`~web_router.ExtractBenchmarkRun` per provider, in the order
+        named, each measured around the same :meth:`extract` call a caller
+        would make. A provider that fails -- a format it cannot return, a
+        missing key, a backend error, or running out of ``timeout`` -- is its
+        own row's :attr:`~web_router.ExtractBenchmarkRun.error`, never the
+        comparison's. A call that fetched some URLs and not others is an
+        answered row whose response says which, as the call itself would.
+        Measured facts only: how long each took, what came back and what did
+        not. Whether the text is any good is the caller's judgment.
 
-    def _forget_straggler(self, future: Future[Any]) -> None:
-        with self._stragglers_lock:
-            self._stragglers.discard(future)
+        Args:
+            providers: The backends to compare. Unset, every extract backend
+                this environment holds credentials for plus the keyless ones,
+                less ``auto``, which would only repeat one of them.
+            timeout: Seconds for the whole comparison, as on :meth:`benchmark`;
+                longer by default, because a page is fetched live and a list
+                of URLs is fanned out behind one call.
+            format: Sent to every row unchanged, so the rows are comparable.
+                Unset, each backend returns markdown where it can and its own
+                default where it cannot; a format a backend cannot return is
+                that row's refusal, never a substitution.
+        """
+        request = self._build_extract_request(urls, format=format, provider_options=None)
+        members = members_of(
+            providers,
+            default=self._default_extract_benchmark_providers,
+            build=self.get_extract_provider,
+            none_named=MSG_BENCHMARK_EXTRACT_NO_PROVIDERS,
+        )
+        runs = fan_out(
+            members,
+            lambda provider: provider.extract(request),
+            ExtractBenchmarkRun.of,
+            timeout,
+            stragglers=self._stragglers,
+        )
+        return ExtractBenchmarkReport(urls=request.urls, runs=runs)
 
     def evaluate(
         self,
@@ -1057,14 +1048,11 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         router never cached it and must not shut its client down. Sessions are
         released whichever provider opened them, since this router opened them.
         A session whose release fails stays tracked, so calling this again
-        retries it. A search a benchmark timed out on may still be running on
+        retries it. A call a benchmark timed out on may still be running on
         its thread; it is waited for first -- bounded by that provider's own
         HTTP timeout -- so no client is closed under a live call.
         """
-        with self._stragglers_lock:
-            pending = tuple(self._stragglers)
-        if pending:
-            wait(pending)
+        self._stragglers.join()
         with ExitStack() as stack:
             # Callbacks run last-in, first-out: the providers are pushed first
             # so they close after the releases, which need their clients. A
@@ -1154,26 +1142,37 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle]):
             locale=locale,
             provider_options=None,
         )
-        members = self._benchmark_members(providers)
-        deadline = None if timeout is None else time.perf_counter() + timeout
+        members = members_of(
+            providers,
+            default=self._default_benchmark_providers,
+            build=self.get_provider,
+            none_named=MSG_BENCHMARK_NO_PROVIDERS,
+        )
+        runs = await afan_out(members, lambda provider: provider.asearch(request), BenchmarkRun.of, timeout)
+        return BenchmarkReport(query=query, runs=runs)
 
-        async def row(name: str, member: SearchProvider | WebRouterError) -> BenchmarkRun:
-            own = time.perf_counter()
-            if isinstance(member, WebRouterError):
-                return self._benchmark_row(name, own, member)
-            # One deadline for the whole comparison: a row that starts late
-            # gets what is left of it, not a fresh timeout of its own.
-            remaining = None if deadline is None else max(0.0, deadline - own)
-            try:
-                outcome: SearchResponse | WebRouterError = await asyncio.wait_for(member.asearch(request), remaining)
-            except asyncio.TimeoutError:
-                outcome = BenchmarkTimeoutError(name, timeout or 0.0)
-            except WebRouterError as exc:
-                outcome = exc
-            return self._benchmark_row(name, own, outcome)
+    async def benchmark_extract(
+        self,
+        urls: str | list[str],
+        *,
+        providers: Sequence[str | Provider | ExtractProvider] | None = None,
+        timeout: float | None = BENCHMARK_EXTRACT_TIMEOUT,
+        format: ExtractFormat | None = None,
+    ) -> ExtractBenchmarkReport:
+        """Fetch the same URLs through several providers at once and report what each did.
 
-        runs = await asyncio.gather(*(row(name, member) for name, member in members))
-        return BenchmarkReport(query=query, runs=list(runs))
+        As on the sync router, with the rows gathered on the event loop: a row
+        that runs out of ``timeout`` is cancelled rather than left running.
+        """
+        request = self._build_extract_request(urls, format=format, provider_options=None)
+        members = members_of(
+            providers,
+            default=self._default_extract_benchmark_providers,
+            build=self.get_extract_provider,
+            none_named=MSG_BENCHMARK_EXTRACT_NO_PROVIDERS,
+        )
+        runs = await afan_out(members, lambda provider: provider.aextract(request), ExtractBenchmarkRun.of, timeout)
+        return ExtractBenchmarkReport(urls=request.urls, runs=runs)
 
     async def evaluate(
         self,

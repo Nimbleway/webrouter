@@ -42,17 +42,14 @@ backend here states one.
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
-import math
 import statistics
-import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
-from dotenv import load_dotenv
+from _common import APART, DEFAULT_OUT, MIN_GROUP, Sink, _p, _pct, _s, _wilson, combine_scans, scan_main
 
 from web_router import AsyncWebRouter
 from web_router.constants import BENCHMARK_EXCLUDED, EVALS_CSV_SET, PROVIDER_AUTO
@@ -61,9 +58,6 @@ from web_router.providers.base import SearchProvider
 from web_router.registry import configured_providers
 from web_router.types import SearchDepth, SearchRequest, SearchResponse
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ENV_FILE = REPO_ROOT / ".env"
-DEFAULT_OUT = Path(__file__).resolve().parent / "results"
 MODES_FILE = Path(__file__).resolve().parent / "modes.json"
 DEPTH_MARK = "@"
 MODE_MARK = ":"
@@ -73,12 +67,7 @@ MSG_UNKNOWN_MODE = "{setup!r}: no mode {mode!r} for {provider} in modes.json (it
 DEFAULT_LIMIT = 300
 DEFAULT_MAX_RESULTS = 5
 DEFAULT_CONCURRENCY = 8
-MIN_GROUP = 10
-"""A topic or answer type with fewer questions than this is shown but never named any backend's best."""
-Z_95 = 1.96
-MSG_OUT_NOT_EMPTY = "{path} already exists; pass a new --out folder rather than mixing two runs in one."
 MSG_OTHER_QUESTIONS = "{folder} asked different questions from the first scan; only scans of the same questions combine"
-MSG_REPEATED_BACKEND = "{folder} has {providers} again; each backend may appear in only one of the scans combined"
 MSG_CANNOT_COMBINE = (
     "{folder} was a different run ({key}: {theirs!r}, not {ours!r}); only scans of the same questions and judge combine"
 )
@@ -118,8 +107,6 @@ QUESTION_SETS: dict[str, dict[str, Any]] = {
 MSG_REPEATED_QUESTION = (
     "{dataset} asks {question!r} more than once; a scan labels each row by its question text, so each must be unique"
 )
-APART = {None: "best", False: "not shown apart", True: "behind"}
-"""The recommended order's last column: whether this run tells a backend from the best one."""
 
 
 class VendorMode(SearchProvider):
@@ -166,22 +153,6 @@ def _modes() -> dict[str, dict[str, Any]]:
     if not MODES_FILE.is_file():
         return {}
     return {k: v for k, v in json.loads(MODES_FILE.read_text(encoding="utf-8")).items() if not k.startswith("_")}
-
-
-def _wilson(correct: int, n: int) -> tuple[float, float] | None:
-    if n == 0:
-        return None
-    p = correct / n
-    denominator = 1 + Z_95**2 / n
-    centre = (p + Z_95**2 / (2 * n)) / denominator
-    half = Z_95 * math.sqrt(p * (1 - p) / n + Z_95**2 / (4 * n * n)) / denominator
-    return (centre - half, centre + half)
-
-
-def _pct(values: list[float], fraction: float) -> float | None:
-    # Nearest rank, as evaluate() computes its own p95, so the two agree on the same rows.
-    values = sorted(values)
-    return values[max(0, min(len(values) - 1, math.ceil(fraction * len(values)) - 1))] if values else None
 
 
 def _score(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -309,14 +280,6 @@ def _recommendation(summary: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _p(value: float | None) -> str:
-    return "n/a" if value is None else f"{value:.0%}"
-
-
-def _s(value: float | None) -> str:
-    return "n/a" if value is None else f"{value:.1f}s"
-
-
 def markdown(summary: dict[str, Any]) -> str:
     setup, overall = summary["setup"], summary["overall"]
     providers = sorted(setup["providers"], key=lambda p: -(overall[p]["accuracy"] or 0))
@@ -330,6 +293,15 @@ def markdown(summary: dict[str, Any]) -> str:
         f"`{setup['judge']}` with the SimpleQA grader. Accuracy is comparable only with runs graded by the same judge. "
         f"Started {setup['started']}.\n"
     )
+    asked = setup.get("asked")
+    unfinished = [p for p in providers if asked and overall[p]["questions"] < asked]
+    if unfinished:
+        # A scan that died: a depth's rows reach the file together, so a backend has every question or none.
+        w(
+            "**The scan stopped early:** "
+            + ", ".join(f"`{p}` has rows for {overall[p]['questions']}" for p in unfinished)
+            + f" of the {asked} questions asked. Their numbers are over what the scan reached, not the set.\n"
+        )
     w("## Overall\n")
     w("| Backend | Accuracy | 95% CI | Acc. when attempted | Failed | p50 latency | p95 latency |")
     w("|---|---|---|---|---|---|---|")
@@ -400,7 +372,7 @@ def load_questions(args: argparse.Namespace) -> Dataset:
         raise SystemExit(f"--questions {args.questions}: {exc} A local file goes in --dataset.") from exc
 
 
-async def run(args: argparse.Namespace, setup: dict[str, Any]) -> list[dict[str, Any]]:
+async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> list[dict[str, Any]]:
     dataset = load_questions(args)
     texts = [q.question for q in dataset.questions]
     if len(set(texts)) != len(texts):
@@ -419,7 +391,8 @@ async def run(args: argparse.Namespace, setup: dict[str, Any]) -> list[dict[str,
         provider, depth, options = parse_setup(label, modes)
         by_depth[depth].append((label, provider, options))
     judge = OpenAIJudge()
-    rows = []
+    labels = [label for label, _ in setup["breakdowns"]]
+    rows: list[dict[str, Any]] = []
     try:
         async with AsyncWebRouter() as router:
             # One evaluate() per depth: the library sends one depth to every backend in a comparison.
@@ -439,14 +412,16 @@ async def run(args: argparse.Namespace, setup: dict[str, Any]) -> list[dict[str,
                     search_depth=cast(SearchDepth | None, depth),
                 )
                 setup["judge"] = report.judge
-                rows += report.rows
+                # A depth's rows reach the file once its evaluate() returns: a crash in the next depth keeps them.
+                batch = [
+                    {**row.model_dump(mode="json"), **{tag: meta.get(row.question, {}).get(tag) for tag in labels}}
+                    for row in report.rows
+                ]
+                sink(batch)
+                rows += batch
     finally:
         await judge.aclose()
-    labels = [label for label, _ in setup["breakdowns"]]
-    return [
-        {**row.model_dump(mode="json"), **{label: meta.get(row.question, {}).get(label) for label in labels}}
-        for row in rows
-    ]
+    return rows
 
 
 def _tags(metadata: dict[str, Any]) -> dict[str, Any]:
@@ -487,55 +462,26 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def combine(folders: list[Path]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Rows and setup of several scans as one -- say, backends added later on the same questions."""
-    rows: list[dict[str, Any]] = []
-    setup: dict[str, Any] = {}
-    for folder in folders:
-        theirs = json.loads((folder / "run.json").read_text(encoding="utf-8"))
-        if not setup:
-            setup = {**theirs, "providers": [], "combined_from": []}
+    return combine_scans(
+        folders,
+        keys=COMBINE_KEYS,
+        identity=lambda row: (row["question"], row["target"]),
+        cannot_combine=MSG_CANNOT_COMBINE,
+        other_rows=MSG_OTHER_QUESTIONS,
         # A scan from before --questions existed asked SimpleQA.
-        theirs.setdefault("questions", "simpleqa")
-        setup.setdefault("questions", "simpleqa")
-        for key in COMBINE_KEYS:
-            if theirs.get(key) != setup.get(key):
-                raise SystemExit(
-                    MSG_CANNOT_COMBINE.format(folder=folder, key=key, theirs=theirs.get(key), ours=setup.get(key))
-                )
-        repeated = [p for p in theirs["providers"] if p in setup["providers"]]
-        if repeated:
-            raise SystemExit(MSG_REPEATED_BACKEND.format(folder=folder, providers=", ".join(repeated)))
-        theirs_rows = [
-            json.loads(line) for line in (folder / "rows.jsonl").read_text(encoding="utf-8").splitlines() if line
-        ]
-        asked = {(r["question"], r["target"]) for r in theirs_rows}
-        if rows and asked != {(r["question"], r["target"]) for r in rows}:
-            raise SystemExit(MSG_OTHER_QUESTIONS.format(folder=folder))
-        setup["providers"] += theirs["providers"]
-        setup["combined_from"].append(str(folder))
-        rows += theirs_rows
-    return rows, setup
+        defaults={"questions": "simpleqa"},
+    )
 
 
-def main(argv: list[str] | None = None) -> None:
-    # An entry point, like the agent benchmark's: it may read the repo's .env,
-    # and a variable already exported wins. The library itself never does.
-    if ENV_FILE.is_file():
-        load_dotenv(ENV_FILE)
-    args = parse_args(sys.argv[1:] if argv is None else argv)
-    args.out = args.out or DEFAULT_OUT / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    if (args.out / "rows.jsonl").exists():
-        raise SystemExit(MSG_OUT_NOT_EMPTY.format(path=args.out / "rows.jsonl"))
-    args.out.mkdir(parents=True, exist_ok=True)
-    if args.combine:
-        _write(args.out, *combine(args.combine))
-        return
+def setup_of(args: argparse.Namespace) -> dict[str, Any]:
+    """What this scan was asked to do, for ``run.json``: the set, the backends, the search size and when it started."""
     providers = (
         [p.strip() for p in args.providers.split(",") if p.strip()]
         if args.providers
         else [p for p in configured_providers() if p not in BENCHMARK_EXCLUDED]
     )
     chosen = QUESTION_SETS[args.questions]
-    setup: dict[str, Any] = {
+    return {
         "questions": args.questions,
         "dataset": chosen["dataset"] if args.questions != "csv" else str(args.dataset),
         "breakdowns": chosen["breakdowns"],
@@ -546,18 +492,18 @@ def main(argv: list[str] | None = None) -> None:
         "max_results": args.max_results,
         "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    rows = asyncio.run(run(args, setup))
-    _write(args.out, rows, setup)
 
 
-def _write(out: Path, rows: list[dict[str, Any]], setup: dict[str, Any]) -> None:
-    (out / "run.json").write_text(json.dumps(setup, indent=2), encoding="utf-8")
-    (out / "rows.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
-    summary = summarize(rows, setup)
-    (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    report = markdown(summary)
-    (out / "report.md").write_text(report, encoding="utf-8")
-    print(report)
+def main(argv: list[str] | None = None) -> None:
+    scan_main(
+        argv,
+        parse_args=parse_args,
+        setup_of=setup_of,
+        run=run,
+        combine=combine,
+        summarize=summarize,
+        markdown=markdown,
+    )
 
 
 if __name__ == "__main__":

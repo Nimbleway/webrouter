@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import json
+import sys
+from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -15,13 +17,19 @@ SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "run
 
 
 @pytest.fixture(scope="module")
-def scan() -> ModuleType:
+def scan() -> Iterator[ModuleType]:
+    # The scan imports what it shares with its neighbour as a sibling, as it does run from its folder.
     # Loaded under its own name: the agent benchmark's script is also called run.py.
-    spec = importlib.util.spec_from_file_location("provider_scan", SCRIPT)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    sys.path.insert(0, str(SCRIPT.parent))
+    try:
+        spec = importlib.util.spec_from_file_location("provider_scan", SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        yield module
+    finally:
+        sys.path.remove(str(SCRIPT.parent))
+        sys.modules.pop("_common", None)
 
 
 def _row(provider: str, question: str, grade: str | None, topic: str = "Science", **extra: Any) -> dict[str, Any]:
@@ -42,6 +50,16 @@ def _row(provider: str, question: str, grade: str | None, topic: str = "Science"
 
 
 SETUP = {"limit": 12, "seed": 0, "max_results": 5, "judge": "openai:gpt-4o", "started": "2026-09-30T00:00:00+00:00"}
+
+
+def test_a_backend_whose_depth_never_finished_is_named_in_the_report(scan: ModuleType) -> None:
+    """A scan that died between depths: the first depth's backends have every question, the next have none."""
+    rows = [_row("nimble", f"q{i}", "correct") for i in range(12)]
+    summary = scan.summarize(rows, {**SETUP, "providers": ["nimble", "tavily@deep"], "asked": 12})
+    report = scan.markdown(summary)
+
+    assert "**The scan stopped early:** `tavily@deep` has rows for 0 of the 12 questions asked." in report
+    assert "stopped early" not in scan.markdown(scan.summarize(rows, {**SETUP, "providers": ["nimble"], "asked": 12}))
 
 
 def test_a_failed_search_is_left_out_of_accuracy_and_the_best_backend_per_topic_is_named(scan: ModuleType) -> None:
@@ -289,7 +307,9 @@ def test_a_csv_that_repeats_a_question_is_refused_before_any_search(scan: Module
     args = scan.parse_args(["--questions", "csv", "--dataset", str(path), "--providers", "nimble"])
 
     with pytest.raises(SystemExit, match="more than once"):
-        asyncio.run(scan.run(args, {"providers": ["nimble"], "dataset": str(path), "breakdowns": []}))
+        asyncio.run(
+            scan.run(args, {"providers": ["nimble"], "dataset": str(path), "breakdowns": []}, lambda rows: None)
+        )
 
 
 def test_scans_that_withheld_different_pages_do_not_combine(scan: ModuleType, tmp_path: Path) -> None:
@@ -299,3 +319,56 @@ def test_scans_that_withheld_different_pages_do_not_combine(scan: ModuleType, tm
         scan.combine([old, new])
     again = _scan(tmp_path / "again", ["exa"], questions="sealqa-hard", withheld=["sealqa", "2506.01062"])
     assert scan.combine([new, again])[1]["providers"] == ["brave", "exa"]
+
+
+def test_a_depth_that_fails_keeps_the_depths_before_it_in_the_sink(
+    scan: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fake_provider: Any
+) -> None:
+    """Each depth's rows reach the sink once its evaluate() returns, so a crash in the second keeps the first's."""
+    from web_router.evals.types import EvaluationReport, EvaluationRow
+
+    path = tmp_path / "mine.csv"
+    path.write_text("problem,answer,topic\nWho?,Alice,People\nWhere?,Paris,Places\n", encoding="utf-8")
+    args = scan.parse_args(["--questions", "csv", "--dataset", str(path)])
+    depths: list[str | None] = []
+    fail_at: int | None = 2
+
+    class Router(scan.AsyncWebRouter):  # type: ignore[misc, name-defined]
+        async def evaluate(self, dataset: Any, **kwargs: Any) -> EvaluationReport:
+            depths.append(kwargs["search_depth"])
+            if len(depths) == fail_at:
+                raise RuntimeError("connection dropped")
+            rows = [
+                EvaluationRow(provider=p.name, question=q.question, target=q.answer, latency=0.1, grade="correct")
+                for p in kwargs["providers"]
+                for q in dataset.questions
+            ]
+            return EvaluationReport(dataset="csv", judge="stub", rows=rows)
+
+    monkeypatch.setattr(scan, "AsyncWebRouter", Router)
+    saved: list[list[dict[str, Any]]] = []
+
+    def scan_run() -> list[dict[str, Any]]:
+        depths.clear()
+        saved.clear()
+        setup = {"providers": ["fake@lite", "fake@deep"], "dataset": str(path), "breakdowns": [("topic", "Topic")]}
+        return asyncio.run(scan.run(args, setup, saved.append))
+
+    with pytest.raises(RuntimeError, match="connection dropped"):
+        scan_run()
+    assert depths == ["lite", "deep"]
+    assert sorted((r["provider"], r["question"], r["topic"]) for batch in saved for r in batch) == [
+        ("fake@lite", "Where?", "Places"),
+        ("fake@lite", "Who?", "People"),
+    ], "the first depth's rows were handed over before the second depth ran"
+
+    fail_at = None
+    rows = scan_run()
+    assert [len(batch) for batch in saved] == [2, 2], "one batch per depth, every question in each"
+    assert rows == [r for batch in saved for r in batch], "what run() returns is what reached the sink"
+    assert sorted((r["provider"], r["question"], r["topic"]) for r in rows) == [
+        ("fake@deep", "Where?", "Places"),
+        ("fake@deep", "Who?", "People"),
+        ("fake@lite", "Where?", "Places"),
+        ("fake@lite", "Who?", "People"),
+    ]

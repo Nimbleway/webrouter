@@ -12,7 +12,7 @@ from web_router import AsyncWebRouter, BenchmarkTimeoutError, WebRouter, configu
 from web_router.constants import ENV_BY_PROVIDER
 from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
 from web_router.registry import register_provider, unregister_provider
-from web_router.types import NORMALIZED_PARAMETERS, BenchmarkRun, SearchRequest, SearchResponse
+from web_router.types import NORMALIZED_PARAMETERS, BenchmarkReport, BenchmarkRun, SearchRequest, SearchResponse
 
 
 class _Registered:
@@ -293,6 +293,52 @@ def test_the_router_closes_the_providers_it_built_for_the_comparison(registered:
     assert all(provider.closed for provider in built)
 
 
+def test_a_failure_outside_the_librarys_own_errors_is_that_rows_error_not_the_comparisons(
+    registered: _Registered,
+) -> None:
+    """A provider bug -- here a `search` that bypasses the base class and raises KeyError -- still yields a report."""
+    from tests.conftest import FakeProvider
+
+    class Buggy(FakeProvider):  # type: ignore[misc, valid-type]
+        name = "buggy"
+
+        def search(self, request: SearchRequest) -> SearchResponse:  # the base wraps; a bug may not go through it
+            raise KeyError("results")
+
+        async def asearch(self, request: SearchRequest) -> SearchResponse:
+            raise KeyError("results")
+
+    register_provider("buggy", Buggy)
+    registered.names.append("buggy")
+    _member(registered, "fine")
+
+    with WebRouter("fine") as router:
+        report = router.benchmark("q", providers=["buggy", "fine"])
+    assert isinstance(report["buggy"].error, ProviderError)
+    assert isinstance(report["buggy"].error.original, KeyError)
+    assert report["buggy"].error.__cause__ is report["buggy"].error.original, "the traceback is kept, as when raised"
+    assert report["fine"].ok
+
+    async def on_the_loop() -> BenchmarkReport:
+        async with AsyncWebRouter("fine") as router:
+            return await router.benchmark("q", providers=["buggy", "fine"])
+
+    report = asyncio.run(on_the_loop())
+    assert isinstance(report["buggy"].error.original, KeyError) and report["fine"].ok  # type: ignore[union-attr]
+
+
+def test_a_member_whose_constructor_raises_outside_the_librarys_errors_is_its_row(registered: _Registered) -> None:
+    _member(registered, "untypable", init_raises=TypeError("unexpected keyword"))
+    _member(registered, "fine")
+
+    with WebRouter("fine") as router:
+        report = router.benchmark("q", providers=["untypable", "fine"])
+
+    assert isinstance(report["untypable"].error, ProviderError)
+    assert isinstance(report["untypable"].error.original, TypeError)
+    assert report["untypable"].error.__cause__ is report["untypable"].error.original
+
+
 def test_a_dumped_row_carries_the_error_as_its_message(registered: _Registered) -> None:
     _member(registered, "broken", raises=ProviderError("broken", "upstream 500"))
     _member(registered, "fine")
@@ -357,3 +403,28 @@ def test_two_threads_asking_for_one_provider_build_it_once(registered: _Register
         first, second = pool.map(lambda _: router.get_provider("slowinit"), range(2))
 
     assert first is second and len(built) == 1, "the loser of the race would be a client nobody closes"
+
+
+def test_a_report_serializes_what_names_the_comparison_before_its_rows() -> None:
+    """The order callers saw before the two reports shared anything: `query` then `runs`, `urls` then `runs`."""
+    from web_router.types import ExtractBenchmarkReport
+
+    assert list(BenchmarkReport(query="q").model_dump()) == ["query", "runs"]
+    assert list(ExtractBenchmarkReport(urls=["https://a.test"]).model_dump()) == ["urls", "runs"]
+    assert list(BenchmarkReport.model_fields) == ["query", "runs"]
+
+
+def test_types_imports_nothing_of_ours() -> None:
+    """The import graph is types <- constants <- exceptions <- everything else; the rows live here to keep it so."""
+    import ast
+    import inspect
+
+    import web_router.types as types_module
+
+    tree = ast.parse(inspect.getsource(types_module))
+    ours = [
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("web_router")
+    ]
+    assert ours == []
