@@ -79,6 +79,7 @@ class Provider(str, Enum):
     WEBIQ = "webiq"
     KEENABLE = "keenable"
     DEEPSEEK = "deepseek"
+    AGENTCORE = "agentcore"
     YOU_MCP = "you-mcp"
     EXA_MCP = "exa-mcp"
     PARALLEL_MCP = "parallel-mcp"

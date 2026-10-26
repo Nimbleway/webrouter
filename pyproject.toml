@@ -122,7 +122,15 @@ langchain = [
     "web-router[search,extract]",
     "langchain-core>=1.0,<2",
 ]
-all = ["web-router[search,extract,research,browser]"]
+# The second exception to the method rule (EXTRA_AWS in constants.py): the
+# backends reached through an AWS account -- AgentCore Web Search so far -- sign
+# their requests with botocore, a large install that a search user who never
+# touches AWS should not carry. Only signing is used, so no boto3.
+aws = [
+    "web-router[search]",
+    "botocore>=1.35",
+]
+all = ["web-router[search,extract,research,browser,aws]"]
 
 [project.scripts]
 web-router-mcp = "web_router.mcp.server:main"

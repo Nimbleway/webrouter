@@ -76,7 +76,8 @@ class McpSearchMixin:
                 if result.get("isError"):
                     raise ProviderError(self.name, MSG_MCP_ERROR.format(error=result))
                 text = "".join(block.get("text", "") for block in result.get("content") or [])
-                if not text:
+                # A tool may answer in structuredContent alone; its _unwrap reads that.
+                if not text and result.get("structuredContent") is None:
                     raise ProviderError(self.name, MSG_MCP_NO_RESULT)
                 return self._unwrap(text, result)
 

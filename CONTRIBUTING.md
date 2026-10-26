@@ -104,7 +104,9 @@ provider contracts; [AGENTS.md](AGENTS.md#provider-contracts) says how to start 
 5. Add the SDK to the extra for each method the provider serves in
    `pyproject.toml` — extras are named per method (`search`, `extract`), never
    per vendor, so a search backend goes in `search` rather than getting one of
-   its own. Register the module in
+   its own. The one exception is `aws`: a backend reached through an AWS
+   account signs with botocore, too large to impose on every `search` install.
+   Register the module in
    `_BUILTIN_PROVIDERS` in `src/web_router/registry.py`, and add an entry to
    `ENV_BY_PROVIDER` in `constants.py` naming the variable its credential comes
    from — or `None` if it needs none. `configured_providers()` reads that

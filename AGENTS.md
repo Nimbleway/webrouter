@@ -9,7 +9,7 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across six methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable and DeepSeek, plus two that need no credential: `you-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus two that need no credential: `you-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
@@ -147,6 +147,7 @@ src/web_router/
     ├── webiq.py        search, via httpx — Microsoft AI's Web Search API
     ├── keenable.py     search + extract, via httpx — keyless on its /public twins
     ├── deepseek.py     search + extract, via httpx — filters ride in the query
+    ├── agentcore.py    search, MCP via the caller's AgentCore Gateway: SigV4 (botocore, `aws` extra)
     ├── firecrawl.py    extract, via httpx
     ├── oxylabs.py      extract, via httpx — HTTP Basic, username + password
     ├── brightdata.py   extract, via httpx — needs a zone beside its token
@@ -982,7 +983,9 @@ from the environment (`NIMBLE_API_KEY`, `TAVILY_API_KEY`, `YOU_API_KEY`,
 `OXYLABS_PASSWORD`, `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE`,
 `STEEL_API_KEY`, `BROWSERBASE_API_KEY`, `HYPERBROWSER_API_KEY`,
 `ANCHOR_API_KEY`, `KERNEL_API_KEY`, `BROWSER_USE_API_KEY`, `SKYVERN_API_KEY`, and the optional
-`JINA_API_KEY`) or from `provider_config` at construction. `.env.example` lists
+`JINA_API_KEY`) or from `provider_config` at construction. `agentcore` reads
+`AGENTCORE_GATEWAY_URL`, which is not a secret; its credential is the AWS one
+botocore resolves, never a key of ours. `.env.example` lists
 every one, beside `CHROME_PATH`, which is a path for `local` rather than a
 secret; `WEB_ROUTER_ENV_FILE`, the path of the `.env` the MCP server loads, is
 not a secret either and comes from the real environment only, since no file can
