@@ -89,7 +89,13 @@ class McpSearchMixin:
         raise ProviderError(self.name, MSG_MCP_NO_RESULT)
 
     def _unwrap(self, text: str, result: dict[str, Any]) -> dict[str, Any]:
-        """The search payload in the tool's text content. JSON unless a provider says otherwise."""
+        """The search payload in the tool's text content. JSON unless a provider says otherwise.
+
+        A reply with structuredContent and no text reaches here too; a provider
+        that reads no structuredContent has nothing to parse, which is no result.
+        """
+        if not text:
+            raise ProviderError(self.name, MSG_MCP_NO_RESULT)
         payload: dict[str, Any] = json.loads(text)
         return payload
 
