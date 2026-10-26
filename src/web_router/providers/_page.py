@@ -22,7 +22,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import re
-import struct
 import threading
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -62,7 +61,6 @@ from web_router.constants import (
     MSG_BROWSER_REF_DETACHED,
     MSG_BROWSER_REF_NOT_IN_SNAPSHOT,
     MSG_BROWSER_SYNC_IN_LOOP,
-    PNG_SIZE_OFFSET,
 )
 from web_router.exceptions import (
     BrowserActionError,
@@ -74,6 +72,7 @@ from web_router.exceptions import (
     StaleElementError,
     WebRouterError,
 )
+from web_router.providers._png import as_png, png_size
 from web_router.types import ExtractedDocument, PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 if TYPE_CHECKING:
@@ -127,12 +126,6 @@ def compact_snapshot(tree: str) -> str:
 def refs_in(tree: str) -> frozenset[str]:
     """Every ref a snapshot carries."""
     return frozenset(_REF.findall(tree))
-
-
-def png_size(png: bytes) -> tuple[int, int]:
-    """A PNG's width and height in pixels, read from its header."""
-    width, height = struct.unpack(">II", png[PNG_SIZE_OFFSET : PNG_SIZE_OFFSET + 8])
-    return int(width), int(height)
 
 
 def check_target(ref: str | None, selector: str | None) -> None:
@@ -460,7 +453,7 @@ class SyncPage(_PageCore):
         page = self._ready("screenshot")
 
         def take() -> Screenshot:
-            png = page.screenshot(type=BROWSER_SCREENSHOT_TYPE, full_page=full_page, timeout=_ms(seconds))
+            png = as_png(page.screenshot(type=BROWSER_SCREENSHOT_TYPE, full_page=full_page, timeout=_ms(seconds)))
             width, height = png_size(png)
             return Screenshot(png=png, width=width, height=height, url=page.url)
 
@@ -680,7 +673,9 @@ class AsyncPage(_PageCore):
         page = await self._ready("screenshot")
 
         async def take() -> Screenshot:
-            png = await page.screenshot(type=BROWSER_SCREENSHOT_TYPE, full_page=full_page, timeout=_ms(seconds))
+            image = await page.screenshot(type=BROWSER_SCREENSHOT_TYPE, full_page=full_page, timeout=_ms(seconds))
+            # A conversion decodes the whole image, so it runs off the event loop.
+            png = await asyncio.to_thread(as_png, image)
             width, height = png_size(png)
             return Screenshot(png=png, width=width, height=height, url=page.url)
 

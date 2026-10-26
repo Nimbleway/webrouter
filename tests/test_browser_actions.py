@@ -37,9 +37,15 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import FakeBrowserProvider
+from tests.conftest import FakeBrowserProvider, jpeg
 from web_router import AsyncWebRouter, WebRouter
-from web_router.constants import BROWSER_ACTION_TIMEOUT, BROWSER_CONNECT_TIMEOUT, EXTRA_BROWSER, MS_PER_SECOND
+from web_router.constants import (
+    BROWSER_ACTION_TIMEOUT,
+    BROWSER_CONNECT_TIMEOUT,
+    EXTRA_BROWSER,
+    MS_PER_SECOND,
+    PNG_SIGNATURE,
+)
 from web_router.exceptions import (
     BrowserActionError,
     BrowserActionTimeoutError,
@@ -51,7 +57,8 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers import _page
-from web_router.providers._page import compact_snapshot, png_size
+from web_router.providers._page import compact_snapshot
+from web_router.providers._png import png_size
 from web_router.types import BrowserRequest, Screenshot
 
 HAS_PLAYWRIGHT = importlib.util.find_spec("playwright") is not None
@@ -96,6 +103,7 @@ class _Ledger:
         self.closed = False
         self.connected = True
         self.connect_error: BaseException | None = None
+        self.image: bytes | None = None  # what a screenshot returns instead of a PNG, as some vendors' browsers do
 
     def act(self, *call: Any) -> None:
         self.calls.append(call)
@@ -157,7 +165,7 @@ class _Page:
 
     def screenshot(self, type: str, full_page: bool, timeout: float) -> bytes:
         self.ledger.act("screenshot", type, full_page, timeout)
-        return _png(1280, 4000 if full_page else 720)
+        return self.ledger.image or _png(1280, 4000 if full_page else 720)
 
     def content(self) -> str:
         self.ledger.act("content")
@@ -306,8 +314,23 @@ def test_a_generic_that_is_clickable_or_has_text_is_kept() -> None:
     assert compact_snapshot(tree) == tree
 
 
-def test_png_size_is_read_from_the_header() -> None:
-    assert png_size(_png(1280, 720)) == (1280, 720)
+def test_a_screenshot_a_backend_returns_as_jpeg_comes_back_as_png(
+    ledger: _Ledger, provider: FakeBrowserProvider
+) -> None:
+    ledger.image = jpeg(64, 48)
+    with provider.open(BrowserRequest()) as browser:
+        shot = browser.screenshot()
+    assert shot.png.startswith(PNG_SIGNATURE)
+    assert (shot.width, shot.height) == (64, 48)
+
+
+async def test_the_async_screenshot_converts_a_jpeg_too(ledger: _Ledger, provider: FakeBrowserProvider) -> None:
+    _record_release(provider, ledger)
+    ledger.image = jpeg(64, 48)
+    async with await provider.aopen(BrowserRequest()) as browser:
+        shot = await browser.screenshot()
+    assert shot.png.startswith(PNG_SIGNATURE)
+    assert (shot.width, shot.height) == (64, 48)
 
 
 # -- One connection per session ------------------------------------------------

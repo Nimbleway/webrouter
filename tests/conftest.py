@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 from collections.abc import Iterator
 from contextlib import contextmanager
 from http import HTTPStatus
@@ -492,3 +493,11 @@ def fake_browse_provider() -> Any:
     register_browse_provider("fake", FakeBrowseProvider)
     yield FakeBrowseProvider
     unregister_browse_provider("fake")
+
+
+def jpeg(width: int, height: int) -> bytes:
+    """A real JPEG of the given size, as some vendors' browsers return for a PNG screenshot."""
+    image = pytest.importorskip("PIL.Image")
+    out = io.BytesIO()
+    image.new("RGB", (width, height), "white").save(out, format="JPEG")
+    return out.getvalue()
