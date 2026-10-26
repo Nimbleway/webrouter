@@ -69,9 +69,18 @@ Export the URL. The library reads the process environment, not a `.env` file. Th
 export AGENTCORE_GATEWAY_URL=https://<id>.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp
 ```
 
-Whoever calls it needs `bedrock-agentcore:InvokeGateway` on the gateway; the
-credential that created it has that already. Check it works by naming the backend,
-since `auto` tries AgentCore only after its keyless members:
+Whoever calls it needs `bedrock-agentcore:InvokeGateway` on the gateway, granted to
+their own IAM user or role: the policy above is the gateway's, not the caller's, and
+creating a gateway does not grant calling it. For example:
+
+```bash
+GATEWAY_ARN=$(aws bedrock-agentcore-control get-gateway --gateway-identifier "$GATEWAY_ID" --query gatewayArn --output text)
+aws iam put-user-policy --user-name <you> --policy-name invoke-webrouter-gateway --policy-document \
+  "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"bedrock-agentcore:InvokeGateway\", \"Resource\": \"$GATEWAY_ARN\"}]}"
+```
+
+Check it works by naming the backend, since `auto` tries AgentCore only after its
+keyless members:
 
 ```python
 from web_router import Provider, WebRouter
@@ -95,6 +104,7 @@ WebRouter(Provider.AGENTCORE).search(
 TARGET_ID=$(aws bedrock-agentcore-control list-gateway-targets --gateway-identifier "$GATEWAY_ID" --query 'items[0].targetId' --output text)
 aws bedrock-agentcore-control delete-gateway-target --gateway-identifier "$GATEWAY_ID" --target-id "$TARGET_ID"
 aws bedrock-agentcore-control delete-gateway --gateway-identifier "$GATEWAY_ID"
+aws iam delete-user-policy --user-name <you> --policy-name invoke-webrouter-gateway
 aws iam delete-role-policy --role-name webrouter-agentcore --policy-name websearch
 aws iam delete-role --role-name webrouter-agentcore
 ```
@@ -107,4 +117,4 @@ aws iam delete-role --role-name webrouter-agentcore
 | `No AWS credentials found` | botocore found no profile, role or `AWS_*` variables |
 | `needs exactly one` tool | the gateway has no web-search target, or two |
 | `Pin the target to connector version 1.2.0` | the target predates filters, so domain lists and a date range are refused |
-| HTTP 403 | the caller lacks `bedrock-agentcore:InvokeGateway`, or the gateway role lacks `InvokeWebSearch` |
+| HTTP 403 | the caller lacks `bedrock-agentcore:InvokeGateway` on the gateway (step 3), or the gateway role lacks `InvokeWebSearch` |
