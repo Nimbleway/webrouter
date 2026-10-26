@@ -58,6 +58,17 @@ class McpSearchMixin:
 
     def _payload(self, response: httpx.Response) -> dict[str, Any]:
         """The tool's answer, out of the JSON-RPC reply, whether it came as plain JSON or as an event stream."""
+        result = self._rpc_result(response)
+        if result.get("isError"):
+            raise ProviderError(self.name, MSG_MCP_ERROR.format(error=result))
+        text = "".join(block.get("text", "") for block in result.get("content") or [])
+        # A tool may answer in structuredContent alone; its _unwrap reads that.
+        if not text and result.get("structuredContent") is None:
+            raise ProviderError(self.name, MSG_MCP_NO_RESULT)
+        return self._unwrap(text, result)
+
+    def _rpc_result(self, response: httpx.Response) -> dict[str, Any]:
+        """The ``result`` of a JSON-RPC reply, for any method: an HTTP or JSON-RPC error raises."""
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
@@ -72,14 +83,8 @@ class McpSearchMixin:
             # Progress notifications share the stream with the answer; only the
             # reply to our call carries "result".
             if "result" in message:
-                result = message["result"]
-                if result.get("isError"):
-                    raise ProviderError(self.name, MSG_MCP_ERROR.format(error=result))
-                text = "".join(block.get("text", "") for block in result.get("content") or [])
-                # A tool may answer in structuredContent alone; its _unwrap reads that.
-                if not text and result.get("structuredContent") is None:
-                    raise ProviderError(self.name, MSG_MCP_NO_RESULT)
-                return self._unwrap(text, result)
+                result: dict[str, Any] = message["result"]
+                return result
 
         raise ProviderError(self.name, MSG_MCP_NO_RESULT)
 

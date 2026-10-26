@@ -23,6 +23,7 @@ Install with the ``aws`` extra, which adds botocore.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -38,7 +39,6 @@ from botocore.session import Session, get_session
 from web_router.constants import (
     ENV_AGENTCORE_GATEWAY_URL,
     MCP_JSONRPC_VERSION,
-    MSG_MCP_ERROR,
     MSG_MCP_NO_RESULT,
     MSG_REDIRECTS_WITH_CREDENTIAL,
     PROVIDER_AGENTCORE,
@@ -55,8 +55,10 @@ from web_router.constants_agentcore import (
     AGENTCORE_SETUP_DOC,
     AGENTCORE_SIGNING_SERVICE,
     AGENTCORE_TOOL_SUFFIX,
+    AGENTCORE_UNSIGNED_HEADER,
     ENV_AWS_REGION,
     MSG_AGENTCORE_BAD_URL,
+    MSG_AGENTCORE_CURSOR_REPEATED,
     MSG_AGENTCORE_FILTER_CLASH,
     MSG_AGENTCORE_NO_CREDENTIALS,
     MSG_AGENTCORE_NO_FILTERS,
@@ -97,10 +99,7 @@ class _SigV4(httpx.Auth):
             self._credentials = self._session.get_credentials()
             if self._credentials is None:
                 raise ConfigurationError(MSG_AGENTCORE_NO_CREDENTIALS.format(doc=AGENTCORE_SETUP_DOC))
-        # The server leaves Connection out of the signature it checks, so
-        # signing httpx's keep-alive header would fail every request (as AWS's
-        # own mcp-proxy-for-aws notes).
-        headers = {name: value for name, value in request.headers.items() if name.lower() != "connection"}
+        headers = {name: value for name, value in request.headers.items() if name.lower() != AGENTCORE_UNSIGNED_HEADER}
         signed = AWSRequest(method=request.method, url=str(request.url), data=request.content, headers=headers)
         SigV4Auth(
             self._credentials.get_frozen_credentials(), AGENTCORE_SIGNING_SERVICE, self._signing_region()
@@ -208,23 +207,21 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         if self._needs_tool(request):
-            tools: list[dict[str, Any]] = []
-            cursor = self._page(self._client.post(self.search_path, json=self._list_call(None)), tools)
-            while cursor:
-                cursor = self._page(self._client.post(self.search_path, json=self._list_call(cursor)), tools)
-            self._learn_tool(tools)
+            listing = self._list_tools()
+            body = next(listing)
+            with contextlib.suppress(StopIteration):
+                while True:
+                    body = listing.send(self._client.post(self.search_path, json=body))
         self._refuse_filters(request)
         return super()._search(request)
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
         if self._needs_tool(request):
-            tools: list[dict[str, Any]] = []
-            cursor = self._page(await self._async_client.post(self.search_path, json=self._list_call(None)), tools)
-            while cursor:
-                cursor = self._page(
-                    await self._async_client.post(self.search_path, json=self._list_call(cursor)), tools
-                )
-            self._learn_tool(tools)
+            listing = self._list_tools()
+            body = next(listing)
+            with contextlib.suppress(StopIteration):
+                while True:
+                    body = listing.send(await self._async_client.post(self.search_path, json=body))
         self._refuse_filters(request)
         return await super()._asearch(request)
 
@@ -236,12 +233,27 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
         self._check_gateway()
         return True
 
-    def _page(self, response: httpx.Response, tools: list[dict[str, Any]]) -> str | None:
-        """Add one ``tools/list`` page to ``tools`` and return the cursor of the next, if any."""
-        result = self._result(response)
-        tools += result.get("tools") or []
-        cursor = result.get("nextCursor")
-        return str(cursor) if cursor else None
+    def _list_tools(self) -> Generator[dict[str, Any], httpx.Response, None]:
+        """Page through ``tools/list``: yields each request body, is sent each reply, learns the tool at the end.
+
+        One copy of the paging for both paths, which differ only in the client
+        that sends what this yields. A cursor seen before stops it: a gateway
+        that repeats one would otherwise keep the search listing forever.
+        """
+        tools: list[dict[str, Any]] = []
+        cursor: str | None = None
+        seen: set[str] = set()
+        while True:
+            result = self._rpc_result((yield self._list_call(cursor)))
+            tools += result.get("tools") or []
+            cursor = result.get("nextCursor") or None
+            if cursor is None:
+                break
+            cursor = str(cursor)
+            if cursor in seen:
+                raise ProviderError(self.name, MSG_AGENTCORE_CURSOR_REPEATED.format(cursor=cursor))
+            seen.add(cursor)
+        self._learn_tool(tools)
 
     def _check_gateway(self) -> None:
         if not self._gateway_url:
@@ -259,17 +271,6 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
             "method": "tools/list",
             "params": compact({"cursor": cursor}),
         }
-
-    def _result(self, response: httpx.Response) -> dict[str, Any]:
-        """The ``result`` of a JSON-RPC reply that carries no tool content, as ``tools/list``'s does not."""
-        self._raise_for_status(response)
-        for message in self._messages(response.text):
-            if error := message.get("error"):
-                raise ProviderError(self.name, MSG_MCP_ERROR.format(error=error))
-            if "result" in message:
-                result: dict[str, Any] = message["result"]
-                return result
-        raise ProviderError(self.name, MSG_MCP_NO_RESULT)
 
     def _learn_tool(self, tools: list[dict[str, Any]]) -> None:
         matches = [tool for tool in tools if str(tool.get("name", "")).endswith(AGENTCORE_TOOL_SUFFIX)]

@@ -155,6 +155,24 @@ def test_the_tool_list_is_followed_across_pages() -> None:
     assert len(response.results) == 1
 
 
+def _repeating_cursor(request: httpx.Request) -> httpx.Response:
+    return _reply({**_tools("other___Thing"), "nextCursor": "same"})
+
+
+def test_a_repeated_tool_list_cursor_stops_the_listing() -> None:
+    with pytest.raises(ProviderError, match="repeated the page cursor"):
+        _provider(httpx.MockTransport(_repeating_cursor)).search(SearchRequest(query="hi"))
+
+
+async def test_a_repeated_tool_list_cursor_stops_the_async_listing() -> None:
+    provider = _provider(httpx.MockTransport(_repeating_cursor))
+    try:
+        with pytest.raises(ProviderError, match="repeated the page cursor"):
+            await provider.asearch(SearchRequest(query="hi"))
+    finally:
+        await provider.aclose()
+
+
 @pytest.mark.parametrize("names", [(), (TOOL, "second___WebSearch")], ids=["none", "two"])
 def test_a_gateway_without_exactly_one_search_tool_raises(names: tuple[str, ...]) -> None:
     provider = _provider(_gateway(listing=_tools(*names)))

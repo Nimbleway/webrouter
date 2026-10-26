@@ -18,6 +18,9 @@ AGENTCORE_DEFAULT_PATH = "/mcp"
 """Where a gateway serves MCP: ``CreateGateway`` returns a ``gatewayUrl`` ending in it."""
 
 AGENTCORE_SIGNING_SERVICE = "bedrock-agentcore"
+AGENTCORE_UNSIGNED_HEADER = "connection"
+"""Left out of the signature: the gateway does not include it in the one it checks, so signing
+httpx's keep-alive header would fail every request (as AWS's own mcp-proxy-for-aws notes)."""
 AGENTCORE_HOST_PATTERN = r"^[^.]+\.gateway\.bedrock-agentcore\.(?P<region>[a-z0-9-]+)\.amazonaws\.com$"
 """A gateway's hostname, whose region is the one its requests are signed for."""
 
@@ -46,6 +49,7 @@ MSG_AGENTCORE_NO_CREDENTIALS = (
     "No AWS credentials found for agentcore. Configure a profile, a role or the AWS_* variables "
     "botocore reads. See {doc}."
 )
+MSG_AGENTCORE_CURSOR_REPEATED = "The gateway's tool list repeated the page cursor {cursor!r}; stopped listing."
 MSG_AGENTCORE_TOOL = (
     "Gateway has {count} tools ending in {suffix!r} ({names}); agentcore needs exactly one. "
     "Add the web-search connector as a target. See {doc}."
