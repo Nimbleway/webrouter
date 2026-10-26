@@ -1053,15 +1053,6 @@ anywhere in the library proper —
 a library that reads dotfiles behind its caller's back surprises whoever
 embeds it.
 
-## Cursor Cloud specific instructions
-
-`make install` ends in `pre-commit install`. A Cloud Agent VM already sets
-`core.hooksPath`, and pre-commit exits rather than replace those hooks. Leave
-`core.hooksPath` as it is and run `uv run pre-commit run --all-files` when the
-hooks themselves should run. `make check` does not install them. Search,
-extract, and a `local` browser session need no API key; `make test-integration`
-skips when a credential is absent.
-
 If `web-router://capabilities` reports only the keyless backends (`auto`,
 `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina`, `local`) on a machine that should have keys, the keys are
 not reaching the server, not missing from the account: read its `env` object —
@@ -1073,3 +1064,12 @@ key is genuinely absent, ask the user which providers they hold credentials
 for and have them put the value in a `.env` themselves — the one in the user
 config directory is read wherever the server starts — never ask them to paste
 a key into the conversation, and never write one into a file for them.
+
+## Cursor Cloud specific instructions
+
+`make install` ends in `pre-commit install`. A Cloud Agent VM already sets
+`core.hooksPath`, and pre-commit exits rather than replace those hooks. Leave
+`core.hooksPath` as it is and run `uv run pre-commit run --all-files` when the
+hooks themselves should run. `make check` does not install them. Search,
+extract, and a `local` browser session need no API key; `make test-integration`
+skips when a credential is absent.
