@@ -697,7 +697,9 @@ class AsyncPage(_PageCore):
         page = await self._ready("screenshot")
 
         async def take() -> Screenshot:
-            png = as_png(await page.screenshot(type=BROWSER_SCREENSHOT_TYPE, full_page=full_page, timeout=_ms(seconds)))
+            image = await page.screenshot(type=BROWSER_SCREENSHOT_TYPE, full_page=full_page, timeout=_ms(seconds))
+            # A conversion decodes the whole image, so it runs off the event loop.
+            png = await asyncio.to_thread(as_png, image)
             width, height = png_size(png)
             return Screenshot(png=png, width=width, height=height, url=page.url)
 
