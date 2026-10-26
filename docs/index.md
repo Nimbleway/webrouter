@@ -4,7 +4,7 @@ Technical documentation for web-router: one interface over many web search, extr
 
 ## What is web-router?
 
-web-router puts many backends behind one typed interface: 13 search backends (10 keyed, 3 keyless hosted MCP endpoints), 10 extract backends, 5 research backends, 5 browser-session backends and 3 hosted browse backends, plus an `auto` provider that chains them. Switch backends with one argument; the call, the options and the response shape stay the same.
+web-router puts many backends behind one typed interface: 14 search backends (11 keyed, 3 keyless hosted MCP endpoints), 11 extract backends, 5 research backends, 6 browser-session backends and 3 hosted browse backends, plus a Nimble template catalogue and an `auto` provider that chains the methods that have one. Switch backends with one argument; the call, the options and the response shape stay the same.
 
 ```python
 from web_router import Provider, WebRouter
@@ -44,7 +44,7 @@ WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
 
 ## Get started
 
-web-router (0.4.0) is installed from a clone of this repository, not from a package index. The one prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/). Clone it, set it up, and run an example that needs no credentials:
+web-router (0.7.0) is installed from a clone of this repository, not from a package index. The one prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/). Clone it, set it up, and run an example that needs no credentials:
 
 ```bash
 git clone https://github.com/WebContextLayer/webrouter.git

@@ -4,11 +4,11 @@
 
 Each provider is deliberately called with the minimum the method needs — the query, `max_results` and `search_depth` for a search; the URLs and `format` for an extract. Their APIs can all do far more, and today those extras are only reachable through `provider_options`, untranslated and provider-specific. Mapping one properly makes it work the same way across every backend, for every user.
 
-The clearest gaps right now: `country` is mapped by Nimble alone; `include_domains` and `exclude_domains` are mapped by Nimble and Linkup. On the extract side nobody maps JS rendering or geo-targeting even though most of those backends support both.
+The clearest gaps right now: `country` is mapped by Nimble alone; `include_domains` and `exclude_domains` are mapped by Nimble, Linkup and DeepSeek, and `locale` by Nimble and DeepSeek. On the extract side nobody maps JS rendering or geo-targeting even though most of those backends support both.
 
 ## Mapping an existing option to a provider
 
-The common case. `SearchRequest` already has `include_domains`, `exclude_domains`, `country` and `locale`. Nimble and Linkup map `include_domains` and `exclude_domains`; Nimble additionally maps `country` and `locale`.
+The common case. `SearchRequest` already has `include_domains`, `exclude_domains`, `country` and `locale`. Nimble, Linkup and DeepSeek map `include_domains` and `exclude_domains`; Nimble maps `country` and `locale`, and DeepSeek maps `locale`.
 
 To add one:
 

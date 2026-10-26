@@ -11,9 +11,9 @@ The contract is defined by:
 3. **The contract tests** listed below
 4. **This page** and the [guides](../guides/adding-a-provider.md)
 
-The code is the source of truth. A longer working draft of the Layer 1 contract, covering all five methods, is in review separately (draft PR #16, `docs/spec/layer-1-contract.md`); until it lands, this page and the code are the reference.
+The code is the source of truth. The package has six methods: `search`, `extract`, `run_template`, `research`, `open_browser` and `browse`. A longer working draft of the Layer 1 contract is in review separately (draft PR #16, `docs/spec/layer-1-contract.md`); until it lands, this page and the code are the reference.
 
-This page covers search and extract in detail. Research, browser sessions and browse follow the same rules (unset means unset, unmapped raises, untouched payload in `raw`); their models are in `types.py` and their contract tests are listed below.
+This page covers search and extract in detail. Templates, research, browser sessions and browse follow the same rules (unset means unset, unmapped raises, untouched payload in `raw`); their models are in `types.py` and their contract tests are listed below.
 
 ## Core contracts
 
@@ -132,10 +132,11 @@ See the [Plugin vs Catalogue guide](../guides/plugin-vs-catalogue.md) for regist
 
 ## Contract tests
 
-Five test modules enforce these contracts. They run offline (no API calls) and check structure:
+Six test modules enforce these contracts. They run offline (no API calls) and check structure:
 
 - [`tests/test_contract.py`](https://github.com/WebContextLayer/webrouter/blob/main/tests/test_contract.py): search
 - [`tests/test_extract_contract.py`](https://github.com/WebContextLayer/webrouter/blob/main/tests/test_extract_contract.py): extract
+- [`tests/test_template_contract.py`](https://github.com/WebContextLayer/webrouter/blob/main/tests/test_template_contract.py): templates (`run_template`, `templates`, `template`)
 - [`tests/test_research_contract.py`](https://github.com/WebContextLayer/webrouter/blob/main/tests/test_research_contract.py): research
 - [`tests/test_browser_contract.py`](https://github.com/WebContextLayer/webrouter/blob/main/tests/test_browser_contract.py): browser sessions (`open_browser`)
 - [`tests/test_browse_contract.py`](https://github.com/WebContextLayer/webrouter/blob/main/tests/test_browse_contract.py): browse

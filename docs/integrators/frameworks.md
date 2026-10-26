@@ -32,7 +32,7 @@ results = framework.search("query")
 
 ### For frameworks
 
-- **One integration** — works with 13 search backends and 10 extract backends, plus research, browser-session and browse backends
+- **One integration** — works with 14 search backends and 11 extract backends, plus a template catalogue, research, browser-session and browse backends
 - **Provider-agnostic** — no conditional logic for each backend
 - **Consistent errors** — all providers raise the same exception hierarchy
 - **Testing flexibility** — mock the router or register fake providers for tests
