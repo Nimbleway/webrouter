@@ -108,6 +108,10 @@ packaging==26.3
     # via
     #   langchain-core
     #   langsmith
+pillow==12.3.0 ; python_full_version < '3.11'
+    # via web-router
+pillow==13.0.0 ; python_full_version >= '3.11'
+    # via web-router
 playwright==1.63.0
     # via web-router
 pyarrow==25.0.1
