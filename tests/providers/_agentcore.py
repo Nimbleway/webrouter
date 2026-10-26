@@ -81,5 +81,5 @@ def gateway(
     return httpx.MockTransport(handle)
 
 
-def provider(transport: httpx.MockTransport, url: str = GATEWAY) -> AgentCoreProvider:
-    return AgentCoreProvider(gateway_url=url, transport=transport)
+def provider(transport: httpx.MockTransport, url: str = GATEWAY, **kwargs: Any) -> AgentCoreProvider:
+    return AgentCoreProvider(gateway_url=url, transport=transport, **kwargs)

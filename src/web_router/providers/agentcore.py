@@ -40,6 +40,7 @@ from web_router.constants import (
     MCP_JSONRPC_VERSION,
     MSG_MCP_ERROR,
     MSG_MCP_NO_RESULT,
+    MSG_REDIRECTS_WITH_CREDENTIAL,
     PROVIDER_AGENTCORE,
 )
 from web_router.constants_agentcore import (
@@ -160,6 +161,11 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
         # slash, which the gateway does not serve.
         self.search_path = parts.path or AGENTCORE_DEFAULT_PATH  # type: ignore[misc]
         self._takes_filters = False
+        # The base class pins redirects off only for a provider with a key. This
+        # one's credential is the signature, and its session token is a header
+        # httpx would carry to another host, so the pin applies here too.
+        if kwargs.get("follow_redirects"):
+            raise ConfigurationError(MSG_REDIRECTS_WITH_CREDENTIAL.format(provider=self.name))
         auth = _SigV4(get_session(), self._host)
         super().__init__(base_url=f"{parts.scheme}://{parts.netloc}", auth=auth, **kwargs)
 

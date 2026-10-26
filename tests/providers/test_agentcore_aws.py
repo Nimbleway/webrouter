@@ -49,3 +49,8 @@ def test_no_aws_credentials_raise_a_configuration_error(monkeypatch: pytest.Monk
 
     with pytest.raises(ConfigurationError, match="No AWS credentials"):
         _provider(_gateway()).search(SearchRequest(query="hi"))
+
+
+def test_redirects_are_refused_since_the_signature_is_a_credential() -> None:
+    with pytest.raises(ConfigurationError, match="redirect"):
+        _provider(_gateway(), follow_redirects=True)
