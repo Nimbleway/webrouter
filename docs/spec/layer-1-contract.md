@@ -1,8 +1,8 @@
-# Layer 1 Contract — web-router
+# Layer 1 Contract: web-router
 
-**Status:** Working draft, updated for package **0.4.0** (`src/web_router/_version.py`) plus the unreleased changes on `main` as of `c0d2cf7`. Earlier verification checks ran against 0.0.1, before this repository moved, and have **not** been re-run on 0.4.0. See [Status and verification](#status-and-verification).
+**Status:** Working draft, updated for package **0.7.0** (`src/web_router/_version.py`, `main` at `10cddcd`). Earlier verification checks ran against 0.0.1, before this repository moved, and have **not** been re-run on 0.7.0. See [Status and verification](#status-and-verification).
 
-This document defines the Layer 1 working contract of web-router: one interface that applications use to reach many web API backends. Layer 1 is the **interface contract**: one request and response shape per capability, a fixed-order `auto` fallback chain, and a Python library that implements both. It is an internal draft toward a multi-provider layer. Layer 2 (task routing, budget-aware selection, quality optimization) is out of scope here and does not exist yet.
+This document defines the Layer 1 working contract of web-router: one interface that applications use to reach many web API backends. Layer 1 is the **interface contract**: one request and response shape per capability, a fixed-order `auto` fallback chain, and a Python library that implements both. It is an internal draft toward a multi-provider layer. Layer 2 (task routing, budget-aware selection, quality optimization) is out of scope here.
 
 ## 1. Purpose and Non-Goals
 
@@ -21,8 +21,8 @@ Layer 1 unifies this:
 
 ### What it is not
 
-- **Not a task router.** Layer 1 routes by name (`provider="tavily"`) or by the `auto` chain's fixed order, not by task. "Which backend for this query?" is Layer 2, which is not built.
-- **Not a prompt router.** No prompt analysis, no rewriting, no quality model. The caller decides what to ask.
+- **Not a task router by default.** Layer 1 routes by name (`provider="tavily"`) or by the `auto` chain's fixed order, not by task. Passing `decider=` opts in to `classify()` and `execute()` (Smart Routing v0), which pick a method and an auto chain before the call. Without `decider=`, that default is unchanged.
+- **Not a prompt router.** No prompt rewriting and no quality model in the default path. The caller decides what to ask, unless `decider=` is set.
 - **Not budget-aware.** Layer 1 does not decide "cheap is good enough here."
 - **Not a hosted service.** web-router is a library. Credentials come from the caller's environment or code; each key goes only to the backend it belongs to. The MCP server is self-hosted: it runs as a stdio subprocess of the client.
 - **Not a LiteLLM replacement.** LiteLLM unifies model APIs; web-router unifies web search, extraction, research and browser automation. They solve adjacent problems.
@@ -58,13 +58,13 @@ The same pattern applies to extraction (page content for a URL you already have)
 
 ## 2. Capability Set
 
-web-router Layer 1 defines five capabilities. Each has its own registry and resolves a provider name against its own list, so a backend that searches may not extract, and vice versa. Asking a capability for a backend it does not serve raises, naming the backends it does serve.
+web-router Layer 1 defines six capabilities. Each has its own registry and resolves a provider name against its own list, so a backend that searches may not extract, and vice versa. Asking a capability for a backend it does not serve raises, naming the backends it does serve.
 
 ### `search`: ranked links with page text
 
 A query goes in; a ranked list of URLs with titles and page text comes out. Latency is typically under a second.
 
-Built-in backends: `nimble`, `tavily`, `you`, `brave`, `exa`, `parallel`, `perplexity`, `linkup`, `webiq`, `keenable` (with a key, or keyless on its rate-limited `/public` tier), plus three keyless hosted MCP endpoints: `you-mcp`, `exa-mcp`, `parallel-mcp`.
+Built-in backends: `nimble`, `tavily`, `you`, `brave`, `exa`, `parallel`, `perplexity`, `linkup`, `webiq`, `keenable` (with a key, or keyless on its rate-limited `/public` tier), `deepseek`, plus three keyless hosted MCP endpoints: `you-mcp`, `exa-mcp`, `parallel-mcp`.
 
 ```python
 response = router.search("what is retrieval augmented generation", max_results=5)
@@ -76,7 +76,7 @@ for result in response.results:
 
 Read pages you already have URLs for, as markdown, HTML or text. Latency is typically under a second.
 
-Built-in backends: `nimble`, `tavily`, `exa` (text only), `linkup`, `firecrawl`, `oxylabs`, `brightdata`, `webiq` (pages in WebIQ's own index), `keenable` (markdown only; with a key, or keyless on its `/public` tier), plus `jina` (keyless). With no `format`, every backend that can return markdown returns markdown; one that cannot (Exa) returns its own default, and `ExtractedDocument.format` names what came back. `auto` accepts every format and routes each request to a member that can return it.
+Built-in backends: `nimble`, `tavily`, `exa` (text only), `linkup`, `firecrawl`, `oxylabs`, `brightdata`, `webiq` (pages in WebIQ's own index), `keenable` (markdown only; with a key, or keyless on its `/public` tier), `deepseek` (markdown only), plus `jina` (keyless) and `max`. `max` is not a fetch backend of its own: it races the members `auto` would try and returns the first document, it is never the default, and `response.provider` names the member that won. With no `format`, every backend that can return markdown returns markdown; one that cannot (Exa) returns its own default, and `ExtractedDocument.format` names what came back. `auto` accepts every format and routes each request to a member that can return it.
 
 ```python
 pages = router.extract(["https://example.com", "https://example.org"], format="markdown")
@@ -84,11 +84,22 @@ for doc in pages.documents:
     print(doc.url, len(doc.content))
 ```
 
+### `run_template`: a vendor's saved extraction
+
+Run one of a vendor's saved, site-specific extractions on one page and get the record it parsed. The inputs are the template's own (a URL, an id, a slug, or a search term), which is why this is its own method rather than an option on `extract`. `provider` is required: a template name belongs to one vendor, and there is no template `auto`.
+
+Built-in backends: `nimble` (Nimble's Extract Templates). `templates(provider=...)` lists one page of that vendor's catalogue, and `template(name, provider=...)` describes one, including the JSON Schema of its inputs and of the record it returns. `format` asks for the page beside the record (`markdown` or `html`); unset, the record comes back alone. A run the backend could not complete raises `ProviderError`, and an unknown name raises `TemplateNotFoundError`.
+
+```python
+record = router.run_template("some-template", {"url": "https://example.com"}, provider="nimble")
+print(record.data)
+```
+
 ### `research`: an agentic run over multiple sources
 
 The backend searches, reads and cross-checks over many turns, then returns a prose or structured answer with citations. Latency is **minutes**, and **every backend bills for the run**.
 
-Built-in backends: `nimble`, `parallel`, `perplexity`, `linkup`, `you` (unreleased on `main`; You.com's Research API, reading `YOU_API_KEY`). (Exa retired its Research API upstream; web-router no longer ships an Exa research provider. Exa search and extract are unaffected.) `auto` has no keyless tier, because every backend bills.
+Built-in backends: `nimble`, `parallel`, `perplexity`, `linkup`, `you`. (Exa retired its Research API upstream; web-router no longer ships an Exa research provider. Exa search and extract are unaffected.) `auto` has no keyless tier, because every backend bills.
 
 ```python
 response = router.research("who founded the Wikimedia Foundation", effort="medium")
@@ -108,7 +119,7 @@ response = job.result()  # blocks until the run finishes, or raises ResearchTime
 
 Open a browser session and get a handle. Drive it over its CDP URL with Playwright, browser-use or Stagehand, or through the handle's own page actions: `goto`, `snapshot`, `click`, `type`, `press`, `screenshot`, `read` (these need the `browser` extra, which is Playwright). Opening takes a few seconds; **a cloud backend bills until the session is released**.
 
-Built-in backends: `steel`, `browserbase`, `hyperbrowser`, `anchor`, plus `local` (keyless; launches Chrome or Chromium on this machine). `auto` tries the vendors you hold keys for, then `local`.
+Built-in backends: `steel`, `browserbase`, `hyperbrowser`, `anchor`, `kernel`, plus `local` (keyless; launches Chrome or Chromium on this machine). `auto` tries the vendors you hold keys for, then `local`.
 
 ```python
 with router.open_browser() as browser:
@@ -141,12 +152,13 @@ response = job.result()
 
 ### Measurement helpers (not selection)
 
-Two methods measure backends; neither chooses one for you:
+Three methods measure backends; none of them chooses one for you:
 
 - **`benchmark(query, providers=...)`** runs the same search through several providers at once and returns a `BenchmarkReport`: one `BenchmarkRun` per provider with latency, result count, and the response or the error. Measured facts only: no quality score, no price.
+- **`benchmark_extract(urls, providers=...)`** fetches the same URLs through several extract providers at once and returns an `ExtractBenchmarkReport`: one `ExtractBenchmarkRun` per provider with latency and the response or the error. Measured facts only, same rule as `benchmark()`.
 - **`evaluate(dataset, providers=..., judge=...)`** runs every question in a `Dataset` through several providers and has an LLM judge grade a synthesized answer against the gold answer (SimpleQA grader). Question sets load with `Dataset.for_set(...)` (`simpleqa`, `simpleqa-verified`, `frames`, `sealqa-0`, `sealqa-hard`, or your own `csv`). Needs the `evals` extra.
 
-Both exist so routing decisions can be made from data. Neither feeds back into `auto`'s order at runtime: the order changes only through a PR backed by a provider scan.
+They exist so routing decisions can be made from data. None of them feeds back into `auto`'s order at runtime: the order changes only through a PR backed by a provider scan.
 
 ## 3. Unified Request Shape
 
@@ -162,7 +174,7 @@ Requests are normally built for you by the router methods (`router.search(...)` 
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `query` | `str` | ✓ | — | The search query (minimum 1 character) |
+| `query` | `str` | ✓ | - | The search query (minimum 1 character) |
 | `max_results` | `int \| None` | | `None` | Upper bound on results returned (≥ 1) |
 | `search_depth` | `"lite" \| "fast" \| "deep" \| None` | | `None` | How much page content to retrieve |
 | `include_domains` | `list[str] \| None` | | `None` | Restrict results to these domains |
@@ -182,7 +194,7 @@ Providers map these levels onto their own vocabulary (for example Tavily's `"bas
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `urls` | `list[str]` | ✓ | — | URLs to fetch, in the order documents come back (minimum 1) |
+| `urls` | `list[str]` | ✓ | - | URLs to fetch, in the order documents come back (minimum 1) |
 | `format` | `"markdown" \| "html" \| "text" \| None` | | `None` | Which representation of each page to return |
 | `provider_options` | `dict[str, Any]` | | `{}` | Passed straight through to the provider, untranslated |
 
@@ -205,7 +217,7 @@ response = router.research(
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `query` | `str` | ✓ | — | The question, or the instructions for the run |
+| `query` | `str` | ✓ | - | The question, or the instructions for the run |
 | `effort` | `"low" \| "medium" \| "high" \| "max" \| None` | | `None` | How much work the run does |
 | `output_schema` | `dict[str, Any] \| None` | | `None` | JSON Schema the answer must conform to. The router methods also accept a pydantic model and convert it. |
 | `records` | `list[dict[str, Any]] \| None` | | `None` | Partial records to enrich, each shaped like `output_schema` |
@@ -243,13 +255,14 @@ The provider is chosen by the `open_browser(provider=...)` argument, not by a re
 
 **Notes:**
 - A backend refuses an option it does not map, or a value it cannot serve (for example, Browserbase maps `stealth` as `low` / `high` only, so `stealth="off"` raises).
-- `timeout` is the one field filled in when unset: a backend that maps a lifetime limit is sent 600 seconds (`BROWSER_TIMEOUT`) rather than its own default, which on some is hours, because a session nobody released bills until the backend ends it. Pass a larger `timeout` explicitly to go past it.
+- `profile` is one backend's saved login. `persist_profile` without a `profile` raises. `auto` refuses both, because a profile belongs to one backend.
+- `timeout` is the one field filled in when unset: a backend that maps a lifetime limit is sent 600 seconds (`BROWSER_TIMEOUT`) rather than its own default, which on some is hours, because a session nobody released bills until the backend ends it. Pass a larger `timeout` explicitly to go past it. Kernel maps no lifetime, so `timeout` raises and no default lifetime is sent. Kernel does map `idle_timeout`, `stealth`, `headless`, `viewport`, `profile` and `persist_profile`.
 
 ### `BrowseRequest`
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `task` | `str` | ✓ | — | What the agent should do, in plain words (minimum 1 character) |
+| `task` | `str` | ✓ | - | What the agent should do, in plain words (minimum 1 character) |
 | `start_url` | `str \| None` | | `None` | The page the agent starts on |
 | `output_schema` | `dict[str, Any] \| None` | | `None` | JSON Schema the answer must conform to (the router methods also accept a pydantic model) |
 | `max_steps` | `int \| None` | | `None` | Upper bound on the actions the agent may take (≥ 1) |
@@ -258,7 +271,8 @@ The provider is chosen by the `open_browser(provider=...)` argument, not by a re
 
 **Notes:**
 - There is no `effort` or `model` field: the agent behind one vendor is not comparable to another's, so those go through `provider_options`.
-- A backend that cannot start without an option lists it in `required_parameters`, and the base class raises `MissingParameterError` before anything is billed. A backend that cannot take an option (Browserbase refuses `start_url`) raises `UnsupportedParameterError`, also before billing.
+- `browser-use` maps `start_url`, `output_schema`, `max_steps` and `allowed_domains`. Skyvern maps `start_url` only. Browserbase's browse provider maps none of these, so `start_url` raises `UnsupportedParameterError` before billing.
+- A backend that cannot start without an option lists it in `required_parameters`, and the base class raises `MissingParameterError` before anything is billed. A backend that cannot take an option raises `UnsupportedParameterError`, also before billing.
 - `browse()` takes a `timeout`. Running out raises `BrowseTimeoutError` and leaves the task going.
 
 ## 4. Unified Response Shape
@@ -388,7 +402,8 @@ with router.open_browser() as handle:
 | `provider` | `str` | Which backend opened the session |
 | `session_id` | `str` | The backend's id for the session |
 | `cdp_url` | `SecretStr` | The CDP endpoint. A credential: printed as asterisks |
-| `live_view_url` | `str \| None` | A page that shows the session live, when offered |
+| `control_url` | `SecretStr \| None` | A page where a person can see and drive the session, when the backend returns one. A credential, like `cdp_url` |
+| `live_view_url` | `str \| None` | A page that shows the session live and grants no control, when offered |
 | `expires_at` | `datetime \| None` | When the backend will end the session, when it says |
 | `raw` | `dict[str, Any] \| None` | Untouched payload; kept out of `repr()` and `model_dump()` |
 
@@ -396,8 +411,9 @@ Session state comes from `handle.status()`: `starting`, `running`, `released`, `
 
 **Credential handling:**
 - The CDP URL is a credential: whoever holds it drives the browser, and some backends put the account key in it.
-- It is a `SecretStr`, and `raw` (which may repeat it) is never serialized.
-- `handle.cdp_url` returns the plain string, because that is the one moment it is needed. `session.cdp_url.get_secret_value()` does the same.
+- `control_url` is a credential for the same reason. `handle.control_url()` returns the plain string, and asks a backend that hands the page out only on request. Use it to log in on a saved `profile`.
+- Both are `SecretStr`s, and `raw` (which may repeat them) is never serialized.
+- `handle.cdp_url` returns the plain string, because that is the one moment it is needed. `session.cdp_url.get_secret_value()` does the same. `live_view_url` stays a plain string, for a page that grants no control.
 
 ### `BrowseResponse`
 
@@ -511,7 +527,7 @@ A request carrying an option the backend does not map is an error, not a no-op. 
 
 ### `search` chain
 
-`auto` tries, in order, the backends you hold keys for: **Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ, Parallel, Exa, You.com** (`AUTO_PREFERRED`, the order of the 2026-10-06 provider scan run with `benchmarks/providers/`). Then **Keenable** with a key (`AUTO_APPENDED`: it joined after that scan, so it comes after every member already being served). Then the keyless tiers (`AUTO_KEYLESS`): **Tavily's anonymous tier, You.com MCP, Exa MCP, Parallel MCP, Keenable `/public`**. The keyless tiers are rate-limited, which is why it is a chain: when one is throttled, the next answers.
+`auto` tries, in order, the backends you hold keys for: **Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ, Parallel, Exa, You.com** (`AUTO_PREFERRED`, the order of the 2026-10-06 provider scan run with `benchmarks/providers/`). Then the keyless tiers (`AUTO_KEYLESS`): **Tavily's anonymous tier, You.com MCP, Exa MCP, Parallel MCP, Keenable `/public`**. Then **Keenable** and **DeepSeek** with a key (`AUTO_APPENDED`: each joined after that scan, so they come after every member already being served, DeepSeek last). The keyless tiers are rate-limited, which is why it is a chain: when one is throttled, the next answers.
 
 Every key you hold comes before the keyless tier, so a key held only for research (Perplexity's, say) also serves and bills plain searches. Pass your own `chain` to change that:
 
@@ -523,7 +539,7 @@ router = WebRouter(provider_config={"auto": {"chain": {"search": ["nimble", "tav
 
 ### `extract` chain
 
-`auto` tries the backends you hold keys for (**Nimble, Tavily, Firecrawl, Oxylabs, Bright Data**), then the keyless ones (**Tavily's anonymous tier, Jina Reader, Firecrawl's keyless tier, Keenable `/public`**), then **Linkup, Exa, WebIQ and Keenable** with a key (`AUTO_EXTRACT_APPENDED`). Each request goes only to members that can return the format it asks for. Jina Reader needs no key; `JINA_API_KEY` only raises its rate limit. Firecrawl's keyless tier is capped per IP per day.
+`auto` tries the backends you hold keys for (**Nimble, Tavily, Firecrawl, Oxylabs, Bright Data**), then the keyless ones (**Tavily's anonymous tier, Jina Reader, Firecrawl's keyless tier, Keenable `/public`**), then **Linkup, Exa, WebIQ, Keenable and DeepSeek** with a key (`AUTO_EXTRACT_APPENDED`). Each request goes only to members that can return the format it asks for. Jina Reader needs no key; `JINA_API_KEY` only raises its rate limit. Firecrawl's keyless tier is capped per IP per day. `max` is not a member of this chain.
 
 ```python
 WebRouter().extract(["https://example.com"])  # no key needed; markdown by default
@@ -531,7 +547,7 @@ WebRouter().extract(["https://example.com"])  # no key needed; markdown by defau
 
 ### `open_browser` fallback
 
-`auto` tries the vendors you hold keys for (**Steel, Browserbase, Hyperbrowser, Anchor**), then **`local`**, which launches Chrome or Chromium on this machine. `local` comes last: a key in the environment says which vendor you want, so `local` is the fallback, never a substitute.
+`auto` tries the vendors you hold keys for (**Steel, Browserbase, Hyperbrowser, Anchor, Kernel**), then **`local`**, which launches Chrome or Chromium on this machine. `local` comes last: a key in the environment says which vendor you want, so `local` is the fallback, never a substitute. Kernel joined after the others, so it is last among the vendors and no call they already served moves.
 
 ```python
 with WebRouter().open_browser() as browser:  # opens a local Chromium when no vendor key is set
@@ -597,7 +613,7 @@ Such a provider reads no key and builds no sync client: a sync call raises `Conf
 | LangChain tools | `web_router.integrations.langchain.web_router_tools` | `langchain` |
 | Evals | `router.evaluate(...)`, `web_router.evals.Dataset` | `evals` |
 
-The agent integrations expose two tools, search and extract (`web_router_search` / `web_router_extract` for Claude and OpenAI; `web_search` / `web_extract` for LangChain). The model supplies only the query or the URLs; the provider and options are fixed when the tools are built. The model reads a compact rendering of each result (text cut to a fixed length), and the caller keeps the full response. `tools.guide()` / `routing_guide()` return a static routing guide: fixed text on which tool to use when. There is no planner and no per-query routing in these tools.
+The agent integrations expose two tools, search and extract (`web_router_search` / `web_router_extract` for Claude and OpenAI; `web_search` / `web_extract` for LangChain). The model supplies only the query or the URLs; the provider and options are fixed when the tools are built. The model reads a compact rendering of each result (text cut to a fixed length), and the caller keeps the full response. `tools.guide()` / `routing_guide()` return a static routing guide: fixed text on which tool to use when. These tools do not plan per query. Passing `decider=` on `WebRouter` opts in to `classify()` and `execute()` (Smart Routing v0). Without `decider=`, default routing is unchanged, and these tools do not call that spike.
 
 **Install.** The package is not published to any package index. It is installed from a clone of this repository: `make setup` in the clone (every extra), then `uv add --editable "/path/to/webrouter[all]"` or `pip install -e "/path/to/webrouter[all]"` from your own project, as the README describes. A missing extra's error names the `uv sync --extra <name>` to run. Publishing is a later decision and is not part of this contract.
 
@@ -630,7 +646,7 @@ Failures that raise immediately:
 
 #### `auto` routes around a member that cannot serve the request
 
-Each member is checked against the request **before it is tried**, on its class, which costs no credential and sends nothing. So `auto` accepts every option some member maps (the union, not the intersection), and each request goes only to members that map everything it sets. When none is left, it raises `UnsupportedParameterError` or `UnsupportedFormatError` naming what each member lacked, and nothing is sent. (Research `auto` is the exception: it accepts only `effort` and `output_schema`, which every member maps.)
+Each member is checked against the request **before it is tried**, on its class, which costs no credential and sends nothing. So `auto` accepts every option some member maps (the union, not the intersection), and each request goes only to members that map everything it sets. When none is left, it raises `UnsupportedParameterError` or `UnsupportedFormatError` naming what each member lacked, and nothing is sent. Research `auto` accepts `effort` and `output_schema`, and a member that does not map `output_schema` is passed over.
 
 Examples: `auto` search with `include_domains` passes over members that do not map domain filters. `auto` extract with `format="html"` passes over Tavily and Exa. `auto` browser with `stealth="low"` passes over `local` and Steel. `auto` browse with `start_url` set passes over Browserbase.
 
@@ -670,11 +686,11 @@ How recent the indexed content is: "indexed within N hours of publication" for n
 
 ### What exists today
 
-- `benchmark()` measures latency, result counts and errors for one query across providers.
+- `benchmark()` measures latency, result counts and errors for one query across providers. `benchmark_extract()` does the same for one URL list across extract providers.
 - `evaluate()` measures judged accuracy, failure rate and latency percentiles over a question set.
 - The repo's provider scan (`benchmarks/providers/`) and agent benchmark (`benchmarks/agent/`) use these to compare backends and to compare an agent on its platform's built-in search against the same agent on web-router's tools and static routing guide.
 
-These are measurement tools. `auto`'s order is a fixed default chosen from a scan, not a per-query decision. Where the agent benchmark shows token savings, they come from the compact result rendering and the static routing guide, not from a planner or a routing model.
+These are measurement tools. `auto`'s order is a fixed default chosen from a scan, not a per-query decision. Where the agent benchmark shows token savings, they come from the compact result rendering and the static routing guide. Default routing stays that fixed order unless the caller passes `decider=`, which opts in to `classify()` and `execute()` (Smart Routing v0).
 
 ## 9. Conformance and "Readable Standalone"
 
@@ -689,7 +705,7 @@ This document is meant to be **readable standalone**: someone new to web-router 
 5. **Failure modes are explicit.** Section 5: what raises, when, and why.
 6. **Keyless paths are documented.** Section 6: which capabilities work with no credentials, and which do not.
 7. **Adapter contract and fallback policy.** Section 7: how to call it, its entry points, and the `auto` rules.
-8. **Selection criteria are named.** Section 8, even though Layer 2 does not exist.
+8. **Selection criteria are named.** Section 8. Layer 2 is out of scope. `classify()` / `execute()` with `decider=` is an opt-in spike, not that layer.
 
 ### What this document is not
 
@@ -716,13 +732,13 @@ This checklist states what the package must do:
 The Python package also provides:
 - `WebRouter` and `AsyncWebRouter`, importable from `web_router`.
 - A `Provider` enum of built-in backend names, and `provider_name(...)` (in `web_router.types`) normalizing a provider argument to lowercase.
-- `available_providers()`, `available_extract_providers()`, `available_research_providers()`, `available_browser_providers()`, `available_browse_providers()`: every registered name per capability.
-- `configured_providers()` and its per-capability counterparts: the names this environment holds a credential for, plus the keyless ones (environment variables only).
-- `register_provider()` / `unregister_provider()` and per-capability counterparts, for backends added outside the package.
+- `available_providers()`, `available_extract_providers()`, `available_template_providers()`, `available_research_providers()`, `available_browser_providers()`, `available_browse_providers()`: every registered name per capability.
+- `configured_providers()` and its per-capability counterparts, including `configured_template_providers()`: the names this environment holds a credential for, plus the keyless ones (environment variables only).
+- `register_provider()` / `unregister_provider()` and per-capability counterparts, including `register_template_provider()`, for backends added outside the package.
 
 ## 10. Layer 2: Not Built
 
-Layer 2 is **out of scope for this document** and does not exist. If it is built, it would own:
+Layer 2 is **out of scope for this document**. If it is built, it would own:
 
 - **Task routing:** which backend for this query, based on the query, the result requirements and the caller's budget.
 - **Budget-aware selection:** "cheap is good enough here" vs. "this is worth a deep search."
@@ -732,6 +748,8 @@ Layer 2 is **out of scope for this document** and does not exist. If it is built
 - **Structured output negotiation:** when a backend cannot structure its answer, using one that can.
 
 Layer 2 parameters (query classification, budget envelopes, quality thresholds) are **not part of Layer 1** and would be specified separately.
+
+0.7.0 ships `classify()` and `execute()` when the caller passes `decider=` (Smart Routing v0). The spike picks a method and an auto chain before the call. Without `decider=`, default routing is unchanged. The library documents the spike as not a router contract, so this document does not specify its labels.
 
 Layer 1 does not pre-build Layer 2. It defines the adapter contract and the fail-loud policy so that anything added later can build on a stable surface without breaking it.
 
@@ -749,21 +767,21 @@ Layer 1 does not pre-build Layer 2. It defines the adapter contract and the fail
 
 ## Status and Verification
 
-**Package version described:** 0.4.0 (2026-10-14), plus the unreleased changes on `main` as of `c0d2cf7`. Since the 2026-10-08 alpha snapshot: Nimble `async_client` (0.3.0), missing-extra errors that name `uv sync --extra` (0.3.0), Keenable search and extract with a keyless `/public` tier (0.4.0), and, unreleased, You.com research, blank keys counting as missing, a stalled job poll raising the method's timeout error with the job id, and Bright Data treating an unreachable URL as a failure. Install is from a clone; there is no package index.
+**Package version described:** 0.7.0 (2026-10-26, `src/web_router/_version.py`, `main` at `10cddcd`). Releases since the 2026-10-08 alpha snapshot through 0.7.0 include Nimble `async_client`, Keenable, You.com research, DeepSeek search and extract, Kernel browser sessions, saved browser profiles, `control_url()`, Extract Templates, `max` extract, and `benchmark_extract()`. `classify()` and `execute()` ship only when `decider=` is set (Smart Routing v0) and are outside this contract. Install is from a clone; there is no package index.
 
-**Earlier verification (package 0.0.1, before the repository moved; not re-run on 0.4.0):**
+**Earlier verification (package 0.0.1, before the repository moved; not re-run on 0.7.0):**
 - Keyless search and extract (Tavily anonymous tier, You.com MCP, Jina Reader) passed.
 - Keyed search and extract on several providers passed.
 - Explicit `provider="tavily"` without a key raised `ConfigurationError`, as specified.
 - `auto` without a key served from an anonymous tier, and `response.provider` named the real backend.
 - Host-side wrapping of the package functions in an AI SDK Python app (`@ai.tool`, Agent, OpenAI) passed. There is **no** shipped `web_router.ai_sdk` module.
 
-**Shipped but not re-verified here:** `research`, `browse`, `open_browser`, the agent integrations, `benchmark()` and `evaluate()`. The README records how far each backend has been verified (live, against SDK types, or from documentation only).
+**Shipped but not re-verified here:** `research`, `browse`, `open_browser`, templates, `max`, the agent integrations, `benchmark()`, `benchmark_extract()`, `evaluate()`, and `classify()` / `execute()`. The README records how far each backend has been verified (live, against SDK types, or from documentation only).
 
-**Next step:** re-run the checks above on 0.4.0 and record the commit SHA here.
+**Next step:** re-run the checks above on 0.7.0 and record the commit SHA here.
 
 **Not built:**
 - Other language adapters (section 7).
 - Layer 2 (section 10).
 
-This is a **working contract draft**. It describes what the 0.4.x package does and the rules it follows, and it is readable standalone.
+This is a **working contract draft**. It describes what the 0.7.0 package does and the rules it follows. Sections 3 and 4 tabulate search, extract, research, open_browser and browse. Templates are summarized in section 2; their request and response models are not tabulated here.
