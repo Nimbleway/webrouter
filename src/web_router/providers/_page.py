@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import io
 import re
 import struct
 import threading
@@ -62,6 +63,7 @@ from web_router.constants import (
     MSG_BROWSER_REF_DETACHED,
     MSG_BROWSER_REF_NOT_IN_SNAPSHOT,
     MSG_BROWSER_SYNC_IN_LOOP,
+    PNG_SIGNATURE,
     PNG_SIZE_OFFSET,
 )
 from web_router.exceptions import (
@@ -127,6 +129,21 @@ def compact_snapshot(tree: str) -> str:
 def refs_in(tree: str) -> frozenset[str]:
     """Every ref a snapshot carries."""
     return frozenset(_REF.findall(tree))
+
+
+def as_png(image: bytes) -> bytes:
+    """The capture as PNG. Some vendors' browsers answer a PNG request with another format -- Anchor's
+    with JPEG, even over raw CDP -- so it is converted here, and ``Screenshot.png`` holds a PNG on every backend."""
+    if image.startswith(PNG_SIGNATURE):
+        return image
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise ConfigurationError(MSG_BROWSER_ACTIONS_NOT_INSTALLED.format(extra=EXTRA_BROWSER)) from exc
+    converted = io.BytesIO()
+    with Image.open(io.BytesIO(image)) as picture:
+        picture.save(converted, format="PNG")
+    return converted.getvalue()
 
 
 def png_size(png: bytes) -> tuple[int, int]:
@@ -460,7 +477,7 @@ class SyncPage(_PageCore):
         page = self._ready("screenshot")
 
         def take() -> Screenshot:
-            png = page.screenshot(type=BROWSER_SCREENSHOT_TYPE, full_page=full_page, timeout=_ms(seconds))
+            png = as_png(page.screenshot(type=BROWSER_SCREENSHOT_TYPE, full_page=full_page, timeout=_ms(seconds)))
             width, height = png_size(png)
             return Screenshot(png=png, width=width, height=height, url=page.url)
 
@@ -680,7 +697,7 @@ class AsyncPage(_PageCore):
         page = await self._ready("screenshot")
 
         async def take() -> Screenshot:
-            png = await page.screenshot(type=BROWSER_SCREENSHOT_TYPE, full_page=full_page, timeout=_ms(seconds))
+            png = as_png(await page.screenshot(type=BROWSER_SCREENSHOT_TYPE, full_page=full_page, timeout=_ms(seconds)))
             width, height = png_size(png)
             return Screenshot(png=png, width=width, height=height, url=page.url)
 
