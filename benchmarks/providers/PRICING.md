@@ -179,6 +179,18 @@ requests a second.
 | default (`need_content` false) | `deepseek` | Titles, URLs, a snippet and a summary per result (live: 108-4,651 characters, median about 1,800) | $0.75 | [search and fetch](https://api-docs.deepseek.com/guides/search) |
 | `need_content=true` | `deepseek:content` | The same, plus the page body | $0.75 | same |
 
+### AWS AgentCore Web Search
+
+Billed by AWS to the account that owns the gateway: per query, plus the
+gateway's own fee per tool invocation. An idle gateway costs nothing
+([AgentCore pricing](https://aws.amazon.com/bedrock/agentcore/pricing/)). No mode
+is registered for the scan yet: AWS's terms forbid storing results in bulk, so
+check what a run keeps before adding one.
+
+| Mode | Setup | What it returns | Price per 1k | Source |
+|---|---|---|---|---|
+| default | `agentcore` | Titles, URLs, a passage and a published date per result, up to 25 | $7 per 1k queries plus $0.005 per 1k gateway invocations | [pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) |
+
 ### Keyless MCP search
 
 | Backend | Setup | Price | Source |

@@ -96,6 +96,14 @@ def test_a_stream_with_no_result_is_an_error_not_an_empty_response(provider: You
         provider._payload(_sse({"jsonrpc": "2.0", "method": "notifications/message", "params": {}}))
 
 
+def test_structured_content_without_text_is_no_result(provider: YouMcpProvider) -> None:
+    """Only AgentCore reads structuredContent; for the others it still means nothing to parse."""
+    reply = {"jsonrpc": "2.0", "id": 1, "result": {"content": [], "structuredContent": {"results": []}}}
+
+    with pytest.raises(ProviderError, match="no result payload"):
+        provider._payload(_sse(reply))
+
+
 def test_normalization_is_inherited_from_the_rest_provider(provider: YouMcpProvider) -> None:
     """Same payload shape as the REST API, so the mapping must not be duplicated."""
     payload = {

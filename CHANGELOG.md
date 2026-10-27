@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- AWS AgentCore Web Search as a search backend (`agentcore`), through the caller's own AgentCore Gateway, set in `AGENTCORE_GATEWAY_URL`. Requests are SigV4-signed with botocore's usual credential chain, for the region in the gateway's hostname; botocore comes with a new `aws` extra, which `all` includes. Maps `max_results` (at most 25), `include_domains` and `exclude_domains`; on a target older than connector 1.2.0, which takes no filters, the domain options raise rather than being dropped. A date range goes through `provider_options["filters"]["publishedDateFilter"]` and merges with the mapped domains. `auto` tries it last, after DeepSeek, so no existing call changes backend. Setup and teardown: `docs/agentcore-setup.md`.
+
 ### Fixed
 
 - Screenshots on Anchor are PNG, as on every other backend. Anchor's browser answers a PNG request with JPEG, even over raw CDP, so `Screenshot.png` held JPEG bytes, `width` and `height` were read from the wrong header (65536 by 4293001688), and the MCP server sent them as `image/png`. A capture that is not PNG is now converted, with Pillow, which the `browser` extra now installs. Checked live on Anchor.

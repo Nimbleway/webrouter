@@ -22,6 +22,7 @@ from web_router.constants import (
     AUTO_CLIENT_PROVIDERS,
     AUTO_EXTRA,
     AUTO_RESEARCH_PREFERRED,
+    AUTO_SETTING_PROVIDERS,
     MSG_AUTO_CHAIN_ONE_NAME,
     MSG_AUTO_CHAIN_UNKNOWN_METHOD,
     MSG_AUTO_CLIENT_AND_KEY,
@@ -125,11 +126,13 @@ def _member_options(
 
 
 def _configured_in(members_config: Mapping[str, Mapping[str, Any]]) -> frozenset[str]:
-    """The backends handed a key or a client in code, as ``provider_config``, beside the environment's."""
+    """The backends handed a key, a client or their setting in code, as ``provider_config``."""
     return frozenset(
         name
         for name, config in members_config.items()
-        if config.get("api_key") or (name in AUTO_CLIENT_PROVIDERS and config.get(AUTO_CLIENT_OPTION))
+        if config.get("api_key")
+        or (name in AUTO_CLIENT_PROVIDERS and config.get(AUTO_CLIENT_OPTION))
+        or (name in AUTO_SETTING_PROVIDERS and config.get(AUTO_SETTING_PROVIDERS[name]))
     )
 
 

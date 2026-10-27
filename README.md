@@ -10,7 +10,7 @@
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Eight search backends, seven extract backends, a template catalogue,
+Twelve search backends, seven extract backends, a template catalogue,
 three agentic research backends (plus Exa's, retired upstream), five
 browser-session backends and three browser agents. One call each. Switching
 between them is one argument.
@@ -210,7 +210,7 @@ method does serve.
 
 ### Search
 
-`[search]` installs all of these — the first column is what you pass to
+`[search]` installs all of these but AgentCore, which needs `[aws]`. The first column is what you pass to
 `WebRouter(...)` to pick one at runtime. The string beside it is the same value,
 and what `response.provider` and `configured_providers()` report back.
 
@@ -227,6 +227,7 @@ and what `response.provider` and `configured_providers()` report back.
 | `Provider.WEBIQ` | `webiq` | [WebIQ](https://api.microsoft.ai) (Microsoft AI Web Search) | direct HTTP | `max_results` |
 | `Provider.KEENABLE` | `keenable` | [Keenable](https://docs.keenable.ai) | direct HTTP; keyless with `allow_keyless=True` (rate-limited per IP) | `max_results` |
 | `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Search](https://api-docs.deepseek.com/guides/search) | direct HTTP | `max_results` (at most 50), `include_domains`, `exclude_domains`, `locale`, the last three sent inside the query, which must fit 128 characters. `content` is DeepSeek's summary unless `provider_options={"need_content": True}` |
+| `Provider.AGENTCORE` | `agentcore` | [AWS AgentCore Web Search](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html), through your own AgentCore Gateway ([setup](docs/agentcore-setup.md)) | MCP over HTTP, SigV4 via `botocore` (`[aws]`) | `max_results` (at most 25), `include_domains`, `exclude_domains` (connector 1.2.0 or later). A date range is AgentCore's own `provider_options={"filters": {"publishedDateFilter": {"from": ..., "to": ...}}}`. Queries up to 200 characters. AWS's terms: show each result's citation, and do not store results in bulk |
 | `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | `max_results`, `search_depth` |
 | `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp) | direct HTTP, **no key** | `max_results` |
 | `Provider.PARALLEL_MCP` | `parallel-mcp` | [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/quickstart) | direct HTTP, **no key** | `max_results` (applied to the response: the tool ignores a count) |
@@ -364,15 +365,16 @@ Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
-| `search` | Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ, Parallel, Exa, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek |
+| `search` | Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ, Parallel, Exa, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore |
 | `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
 Search's order follows a provider scan's judged accuracy, best first (run your
 own with [`benchmarks/providers/`](benchmarks/providers/README.md)), and every
 key you hold comes before the free tier — so a key you hold only for research,
-Perplexity's say, serves your plain searches too. Keenable and DeepSeek joined after that
-scan, so they come after the keyless tier until a scan places them. For extract, the backends that
+Perplexity's say, serves your plain searches too. Keenable, DeepSeek and AgentCore joined after that
+scan, so they come after the keyless tier until a scan places them: with a gateway set up, a plain
+`WebRouter().search()` is still served by a keyless member first, so name `Provider.AGENTCORE` to reach it. For extract, the backends that
 joined later come after the keyless tier, so holding one more key never moves a
 call that was already being served. Research has no free tier, so Linkup and then
 You.com simply follow the others there. To choose your own order, pass a `chain`.
@@ -1945,6 +1947,7 @@ Keys are read from the environment, or passed explicitly through
 | WebIQ | `WEBIQ_API_KEY` | search, extract |
 | Keenable | `KEENABLE_API_KEY` *(optional for `auto`, which uses its keyless tier without one)* | search, extract |
 | DeepSeek | `DEEPSEEK_API_KEY` | search, extract |
+| AgentCore Web Search | `AGENTCORE_GATEWAY_URL`, plus an AWS credential from botocore's usual chain *(not a key: see [setup](docs/agentcore-setup.md))* | search |
 | Firecrawl | `FIRECRAWL_API_KEY` | extract |
 | Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
 | Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |

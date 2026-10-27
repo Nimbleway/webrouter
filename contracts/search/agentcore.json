@@ -1,0 +1,61 @@
+{
+  "provider": "agentcore",
+  "method": "search",
+  "class": "web_router.providers.agentcore.AgentCoreProvider",
+  "transport": {
+    "kind": "mcp",
+    "url": "",
+    "tool": ""
+  },
+  "credentials": [
+    "AGENTCORE_GATEWAY_URL"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.id": 1,
+    "body.jsonrpc": "2.0",
+    "body.method": "tools/call",
+    "body.params.arguments.query": "probe query",
+    "body.params.name": ""
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.params.arguments.maxResults": 3
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.params.arguments.filters.domainFilter.include": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.params.arguments.filters.domainFilter.exclude": [
+          "example.org"
+        ]
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "locale",
+    "search_depth"
+  ],
+  "source": [
+    "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html",
+    "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-using-mcp-call.html"
+  ],
+  "verified": {
+    "max_results": "live: tests/providers/test_agentcore.py::test_live_search_with_domains_and_dates",
+    "include_domains": "live: tests/providers/test_agentcore.py::test_live_search_with_domains_and_dates"
+  },
+  "vendor_options": {
+    "filters.publishedDateFilter": {
+      "status": "passthrough",
+      "note": "from and to, ISO-8601 UTC, inclusive; merged with the mapped domain filter. Connector 1.2.0 or later. Checked live 2026-10-26."
+    }
+  }
+}

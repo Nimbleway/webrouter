@@ -43,6 +43,7 @@ PROVIDER_LINKUP = Provider.LINKUP.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
+PROVIDER_AGENTCORE = Provider.AGENTCORE.value
 PROVIDER_YOU_MCP = Provider.YOU_MCP.value
 PROVIDER_EXA_MCP = Provider.EXA_MCP.value
 PROVIDER_PARALLEL_MCP = Provider.PARALLEL_MCP.value
@@ -107,6 +108,14 @@ it names a transport instead -- the deliberate exception to the rule the
 comment over [project.optional-dependencies] states.
 """
 
+EXTRA_AWS = "aws"
+"""botocore, for the backends reached through an AWS account -- ``agentcore`` so far.
+
+The second exception to the method rule: botocore is a large install that
+signs requests for one cloud, and a ``search`` install that never touches AWS
+should not carry it. ``all`` includes it.
+"""
+
 # --- Credentials ------------------------------------------------------------
 
 ENV_NIMBLE_API_KEY = "NIMBLE_API_KEY"
@@ -120,6 +129,7 @@ ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
+ENV_AGENTCORE_GATEWAY_URL = "AGENTCORE_GATEWAY_URL"
 ENV_OXYLABS_USERNAME = "OXYLABS_USERNAME"
 ENV_OXYLABS_PASSWORD = "OXYLABS_PASSWORD"
 ENV_BRIGHTDATA_API_KEY = "BRIGHTDATA_API_TOKEN"
@@ -146,6 +156,9 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
+    # Not a credential: the AWS one comes from botocore's chain. The gateway is
+    # what has to exist before a call can be worth trying.
+    PROVIDER_AGENTCORE: ENV_AGENTCORE_GATEWAY_URL,
     PROVIDER_YOU_MCP: None,
     PROVIDER_EXA_MCP: None,
     PROVIDER_PARALLEL_MCP: None,
@@ -500,6 +513,14 @@ joins the default chain as though its key were in the environment. Any other
 backend would only fail to start on it, so a client there counts for nothing.
 """
 
+AUTO_SETTING_PROVIDERS: dict[str, str] = {PROVIDER_AGENTCORE: "gateway_url"}
+"""The backends configured in code by a setting rather than a key, and that setting's name.
+
+``agentcore`` takes no key -- its credential is the AWS one botocore resolves -- so
+the gateway URL is what says it is set up, in ``provider_config`` as in the
+environment's ``AGENTCORE_GATEWAY_URL``.
+"""
+
 AUTO_PREFERRED: tuple[str, ...] = (
     PROVIDER_PERPLEXITY,
     PROVIDER_NIMBLE,
@@ -526,12 +547,13 @@ Reordering the defaults is a change backed by a provider scan; a caller who
 wants another order passes their own ``chain``.
 """
 
-AUTO_APPENDED: tuple[str, ...] = (PROVIDER_KEENABLE, PROVIDER_DEEPSEEK)
+AUTO_APPENDED: tuple[str, ...] = (PROVIDER_KEENABLE, PROVIDER_DEEPSEEK, PROVIDER_AGENTCORE)
 """Members added to the chain after the last reordering, tried after the keyless tier, with a credential.
 
 Every backend before the 2026-10-06 scan took its place in
 :data:`AUTO_PREFERRED`; ``keenable`` joined after it (2026-10-13) and
-``deepseek`` after that (2026-10-18), each behind the last. A backend that
+``deepseek`` after that (2026-10-18) and ``agentcore`` after that (2026-10-22),
+each behind the last. A backend that
 joins later goes here first, so joining changes no environment's routing; moving
 it ahead of the keyless tier is a routing change, and so one backed by a
 provider scan.
@@ -3110,6 +3132,8 @@ MSG_LINKUP_NO_HTML = (
     "fall back to markdown, so use format='markdown' for it."
 )
 
+
+# AgentCore's gateway path, signing service, limits and messages are in constants_agentcore.py.
 
 # --- Keenable ---------------------------------------------------------------
 # Search and fetch (docs.keenable.ai/api-reference). The keyless `/public` twins
