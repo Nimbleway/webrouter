@@ -266,8 +266,10 @@ async def test_templates_lists_the_catalogue_and_template_describes_one(tools: W
     assert listed["provider"] == FAKE
     assert [row["name"] for row in listed["templates"]] == ["books_pdp", "jobs_listing"]
     assert listed["total"] == 2 and listed["limit"] == 10
-    # A listing is the few words a template is picked by; the schemas are `template`'s.
+    # A listing is the few words a template is picked by, plus what a run must pass; the schemas are `template`'s.
     assert "input_schema" not in listed["templates"][0]
+    assert listed["templates"][0]["required_inputs"] == ["url"]
+    assert listed["templates"][0]["sample_inputs"] == {"url": "https://example.com/p/1"}
     assert listed["handle"].startswith(MCP_TOOL_TEMPLATES)
 
     described = _payload(await call_tool(tools, MCP_TOOL_TEMPLATE, {"name": "books_pdp", "provider": FAKE}))
@@ -275,6 +277,7 @@ async def test_templates_lists_the_catalogue_and_template_describes_one(tools: W
     assert described["template"]["name"] == "books_pdp"
     assert described["template"]["input_schema"]["required"] == ["url"]
     assert described["template"]["output_schema"]["properties"]["title"] == {"type": "string"}
+    assert described["template"]["samples"] == [{"input": {"url": "https://example.com/p/1"}, "output": {"title": "A"}}]
     assert tools.router.get_template_provider(FAKE).listed == [(10, None)]  # type: ignore[attr-defined]
 
 

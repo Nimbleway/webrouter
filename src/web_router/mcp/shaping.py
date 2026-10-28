@@ -213,12 +213,15 @@ def shape_extract(response: ExtractResponse, handle: str, *, budget: int) -> dic
 
 
 def shape_templates(page: TemplatePage, handle: str, *, budget: int) -> dict[str, Any]:
-    """One page of a template catalogue, cut to fit: names and what each extracts, never the schemas.
+    """One page of a template catalogue, cut to fit: names, what each extracts and what each takes, never the schemas.
 
     A catalogue runs to thousands, so each row is the few words a model picks
-    a template by; ``template`` returns the schemas for the one it picked.
+    a template by, plus the names of the inputs a run must pass and one
+    recorded input, enough to tell a URL-keyed template from an id-keyed one
+    without a second call; ``template`` returns the schemas and the full
+    samples for the one it picked.
     """
-    templates = [_template_row(template) for template in page.templates]
+    templates = [_template_listing_row(template) for template in page.templates]
     payload: dict[str, Any] = {
         "provider": page.provider,
         "total": page.total,
@@ -233,22 +236,27 @@ def shape_templates(page: TemplatePage, handle: str, *, budget: int) -> dict[str
 
 
 def shape_template(template: Template, handle: str, *, budget: int) -> dict[str, Any]:
-    """One template with its schemas, cut to fit.
+    """One template with its schemas and samples, cut to fit.
 
     The schemas are never shortened: a run has to match ``input_schema``
     exactly, and a cut schema would send the model guessing at the inputs it
-    dropped. One that does not fit even on its own is left out whole, with a
-    note naming the handle that holds it, rather than inlined over the budget.
+    dropped. The samples go the same way: a recorded input with half its
+    fields is not one a run can copy. Whichever does not fit even on its own
+    is left out whole, largest first, with a note naming the handle that
+    holds it, rather than inlined over the budget.
     """
     row = {
         **_template_row(template),
         "version": template.version,
         "input_schema": template.input_schema,
         "output_schema": template.output_schema,
+        "samples": [sample.model_dump() for sample in template.samples],
     }
     payload: dict[str, Any] = {"provider": template.provider, "template": row}
     fitted = _fit(payload, [row], ("description",), handle=handle, budget=budget)
-    return _bounded(fitted, ((row, "output_schema"), (row, "input_schema")), handle=handle, budget=budget)
+    return _bounded(
+        fitted, ((row, "samples"), (row, "output_schema"), (row, "input_schema")), handle=handle, budget=budget
+    )
 
 
 def shape_template_run(response: TemplateResponse, handle: str, *, budget: int) -> dict[str, Any]:
@@ -320,6 +328,23 @@ def _template_row(template: Template) -> dict[str, Any]:
         "domain": template.domain,
         "entity_type": template.entity_type,
         "published": template.published,
+    }
+
+
+def _template_listing_row(template: Template) -> dict[str, Any]:
+    """A catalogue row: the picking words plus what a run must pass, read from the schema and the first sample.
+
+    ``required_inputs`` is the schema's own ``required`` list, so it is empty
+    for a template whose inputs are all optional and ``None`` for one with
+    no published schema; ``sample_inputs`` is the first recorded input as the
+    backend published it, never one made up here.
+    """
+    schema = template.input_schema
+    required = schema.get("required") if isinstance(schema, dict) else None
+    return {
+        **_template_row(template),
+        "required_inputs": list(required) if isinstance(required, list) else ([] if schema else None),
+        "sample_inputs": template.samples[0].input if template.samples else None,
     }
 
 

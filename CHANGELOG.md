@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- `Template.samples`: the runs a backend recorded for a template, each a `TemplateSample` with the `input` it accepted and the `output` record it returned -- the shortest route to a first run of a template you have not run before. Nimble publishes one per template, and its catalogue rows carry the published version whole, so a `templates()` page describes each template as fully as `template()` does, schemas and samples included. The MCP `template` tool returns `samples` beside the schemas, whole or not at all, as the schemas go; a listing row from `templates` now carries `required_inputs`, the schema's own `required` list, and `sample_inputs`, the first recorded input, so a URL-keyed template is told from an id-keyed one without a second call. `run_template`'s description says what a run bills: one template run on the vendor's account, on Nimble at one flat rate for every template, with the dated figure in `benchmarks/providers/PRICING.md` and never in code.
+
+### Changed
+
+- Nimble's `samples` moved out of `Template.extra` into the typed `Template.samples`; a caller reading `template.extra["samples"]` reads `template.samples` now.
+
 ## [0.8.0] - 2026-10-28
 
 ### Added

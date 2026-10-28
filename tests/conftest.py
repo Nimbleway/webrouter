@@ -63,6 +63,7 @@ from web_router.types import (
     TemplatePage,
     TemplateRequest,
     TemplateResponse,
+    TemplateSample,
 )
 
 # Load .env before collection, so the integration tests' skipif conditions see
@@ -197,6 +198,7 @@ class FakeTemplateProvider(TemplateProvider):
             entity_type="Product Detail Page (PDP)",
             input_schema={"type": "object", "required": ["url"], "properties": {"url": {"type": "string"}}},
             output_schema={"type": "object", "properties": {"title": {"type": "string"}}},
+            samples=[TemplateSample(input={"url": "https://example.com/p/1"}, output={"title": "A"})],
             version=1,
             published=True,
             raw={"name": name},

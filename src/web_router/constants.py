@@ -4197,26 +4197,32 @@ MCP_DESC_EXTRACT = (
 MCP_DESC_TEMPLATES = (
     "List a vendor's templates: saved, site-specific extractions, each turning one kind of "
     "page -- a retailer's product page, a job listing, a search results page -- into a record with "
-    "fixed fields. Returns in about a second, with each template's name, site and what it extracts. "
+    "fixed fields. Returns in about a second, with each template's name, site, what it extracts, "
+    "the names of the inputs a run must pass (`required_inputs`) and one input the vendor recorded "
+    "a run with (`sample_inputs`), so a URL-keyed template is told from an id-keyed one here. "
     "Call it before `run_template` to find a template for the site at hand; a catalogue can be "
-    "long, so page with `limit` and `offset`. Then `template` for the inputs one takes."
+    "long, so page with `limit` and `offset`. Then `template` for the full schemas and samples."
 )
 
 MCP_DESC_TEMPLATE = (
     "Describe one Extract Template: its input_schema, which says exactly what `run_template` must "
-    "pass as `inputs`, and its output_schema, which says what the record will hold. Returns in "
-    "about a second. Read it before running a template you have not run in this conversation. "
-    "Names, inputs and fields are the vendor's own: the same page differs between vendors."
+    "pass as `inputs`, its output_schema, which says what the record will hold, and its `samples`, "
+    "runs the vendor recorded -- an input and the record it returned -- to copy a first run from. "
+    "Returns in about a second and bills nothing. Read it before running a template you have not "
+    "run in this conversation. Names, inputs and fields are the vendor's own: the same page differs "
+    "between vendors."
 )
 
 MCP_DESC_RUN_TEMPLATE = (
     "Run an Extract Template on one page and get its record back -- the page's fields, parsed by a "
     "saved extraction built for that site, rather than prose to read through. Returns in about a "
-    "second and bills one fetch; `provider` is required, since a template's name belongs to one "
-    "vendor. Use it when `templates` lists a template for the site and item you "
-    "have; use `extract` for a page no template covers, and `search` to find pages. `inputs` are the "
-    "template's own inputs, from `template`: a URL for some templates, an id, a slug or a search "
-    "term for others. A run the backend could not complete is an error, never an empty record."
+    "second and bills one template run on the vendor's account, at the vendor's per-run template "
+    "rate; on Nimble that is one flat rate for every template, whatever the site, listed on its "
+    "pricing page. `provider` is required, since a template's name belongs to one vendor. Use it "
+    "when `templates` lists a template for the site and item you have; use `extract` for a page no "
+    "template covers, and `search` to find pages. `inputs` are the template's own inputs, from "
+    "`template`: a URL for some templates, an id, a slug or a search term for others. A run the "
+    "backend could not complete is an error, never an empty record."
 )
 
 MCP_DESC_RESEARCH = (
