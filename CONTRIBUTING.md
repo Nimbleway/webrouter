@@ -257,7 +257,8 @@ time.
   `pyproject.toml`, `make lock && make requirements` too.
 - Note user-visible changes under `## [Unreleased]` in `CHANGELOG.md`. A check fails the PR
   without one; a PR with nothing to note (CI, docs, tests, refactors) takes the
-  `skip-changelog` label instead.
+  `skip-changelog` label instead (release bumps too). New lines must sit under
+  `## [Unreleased]`, not under a released version.
 - Direct commits to `main` are blocked; work on a branch and open a PR.
 
 Every unit test must work without an API key. Anything that needs one belongs

@@ -2,14 +2,16 @@ name: Changelog
 
 # Every pull request notes its user-visible change under `## [Unreleased]` in
 # CHANGELOG.md (see CONTRIBUTING.md). A PR with nothing to note (CI, docs,
-# tests, refactors) carries the `skip-changelog` label instead. Reads the PR's
-# file list only; nothing from the PR runs.
+# tests, refactors, release bumps) carries the `skip-changelog` label instead.
+# Reads the PR's file list and CHANGELOG.md through the API; nothing from the
+# PR is checked out or run.
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
+  contents: read
   pull-requests: read
 
 jobs:
@@ -18,11 +20,46 @@ jobs:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
     runs-on: ubuntu-latest
     steps:
-      - name: The PR must change CHANGELOG.md, or carry skip-changelog
+      - name: New CHANGELOG lines must sit under ## [Unreleased]
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename' | grep -qx 'CHANGELOG.md' \
-            || { echo "::error::Add your change under ## [Unreleased] in CHANGELOG.md, or label the PR skip-changelog if there is nothing to note."; exit 1; }
+          gh api "repos/$REPO/pulls/$PR/files" --paginate \
+            --jq '.[] | select(.filename == "CHANGELOG.md") | .patch // ""' > patch.diff
+          gh api "repos/$REPO/contents/CHANGELOG.md?ref=$HEAD_SHA" -H "Accept: application/vnd.github.raw" > CHANGELOG.md
+          python3 - <<'PY'
+          import re, sys
+
+          hint = "or label the PR skip-changelog if there is nothing to note."
+          patch = open("patch.diff").read()
+          if not patch.strip():
+              sys.exit(f"::error::Add your change under ## [Unreleased] in CHANGELOG.md, {hint}")
+          lines = open("CHANGELOG.md").read().splitlines()
+          start = next((i for i, l in enumerate(lines, 1) if l.strip() == "## [Unreleased]"), None)
+          if start is None:
+              sys.exit("::error::CHANGELOG.md has no ## [Unreleased] heading.")
+          end = next((i for i, l in enumerate(lines, 1) if i > start and l.startswith("## ")), len(lines) + 1)
+
+          inside, outside, line = 0, [], 0
+          for row in patch.splitlines():
+              hunk = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)", row)
+              if hunk:
+                  line = int(hunk.group(1))
+                  continue
+              if row.startswith(("-", "\\")):
+                  continue
+              if row.startswith("+") and row[1:].strip() and not row[1:].startswith("#"):
+                  if start < line < end:
+                      inside += 1
+                  else:
+                      outside.append(line)
+              line += 1
+          if outside:
+              sys.exit(f"::error::CHANGELOG.md lines {outside} were added under a released version; move them under ## [Unreleased].")
+          if not inside:
+              sys.exit(f"::error::Add your change under ## [Unreleased] in CHANGELOG.md, {hint}")
+          print(f"{inside} new line(s) under ## [Unreleased]")
+          PY
