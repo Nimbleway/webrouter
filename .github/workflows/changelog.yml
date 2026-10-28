@@ -1,0 +1,28 @@
+name: Changelog
+
+# Every pull request notes its user-visible change under `## [Unreleased]` in
+# CHANGELOG.md (see CONTRIBUTING.md). A PR with nothing to note (CI, docs,
+# tests, refactors) carries the `skip-changelog` label instead. Reads the PR's
+# file list only; nothing from the PR runs.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  changelog:
+    name: CHANGELOG updated
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: The PR must change CHANGELOG.md, or carry skip-changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename' | grep -qx 'CHANGELOG.md' \
+            || { echo "::error::Add your change under ## [Unreleased] in CHANGELOG.md, or label the PR skip-changelog if there is nothing to note."; exit 1; }
