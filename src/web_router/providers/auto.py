@@ -53,7 +53,7 @@ member that accepted it.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping
-from typing import Any, ClassVar, TypeVar
+from typing import Any, ClassVar
 
 from web_router.constants import (
     AUTO_APPENDED,
@@ -121,7 +121,10 @@ from web_router.exceptions import (
 from web_router.providers._chain import (
     _RECOVERABLE,
     _ChainSpec,
+    _empty_extract,
+    _empty_search,
     _exhausted,
+    _held_or_raise,
     _keyed_chain,
     _keyless_after,
     _member_options,
@@ -1018,30 +1021,6 @@ class AutoBrowseProvider(BrowseProvider):
     async def aclose(self) -> None:
         for member in self._members.values():
             await member.aclose()
-
-
-def _empty_search(response: SearchResponse) -> bool:
-    """No results and no answer: nothing a caller could use."""
-    return not response.results and not (response.answer or "").strip()
-
-
-def _empty_extract(response: ExtractResponse) -> bool:
-    """Every document blank. One with text makes the answer usable, as a partial fetch is."""
-    return not any(document.content.strip() for document in response.documents)
-
-
-_Answer = TypeVar("_Answer", SearchResponse, ExtractResponse)
-
-
-def _held_or_raise(held: _Answer | None, provider: str, failures: dict[str, WebRouterError]) -> _Answer:
-    """The first empty answer when one came back, else every member's reason.
-
-    An empty result is an answer: it outranks the failures that followed it,
-    from members that were never tried before an empty answer fell through.
-    """
-    if held is not None:
-        return held
-    raise _exhausted(provider, failures)
 
 
 def resolve_default_chains(config: Mapping[str, Any]) -> dict[str, tuple[tuple[str, dict[str, Any]], ...]]:
