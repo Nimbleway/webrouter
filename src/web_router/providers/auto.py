@@ -25,6 +25,12 @@ that does not map an option the request set, or cannot return the format it
 asks for, is passed over for that request. When none is left the call raises,
 naming why each one was, rather than running under weaker terms than asked.
 
+An answer with nothing in it falls through too: a search with no results and
+no answer, or an extract whose every document is blank, moves on to the next
+member as a failure would. When every member answers empty, the first empty
+answer is returned rather than an error, since an empty result is still an
+answer. ``fallback_on_empty=False`` returns the first answer, empty or not.
+
 ``chain`` replaces the default order, as a list for every method's ``auto`` or
 keyed by method for one alone -- ``provider_config={"auto": {"chain":
 {"search": ["perplexity", "nimble"]}}}`` on the router.
@@ -47,7 +53,7 @@ member that accepted it.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeVar
 
 from web_router.constants import (
     AUTO_APPENDED,
@@ -171,6 +177,7 @@ class AutoProvider(SearchProvider):
         *,
         chain: _ChainSpec | None = None,
         members_config: Mapping[str, Mapping[str, Any]] | None = None,
+        fallback_on_empty: bool = True,
         **kwargs: Any,
     ) -> None:
         """
@@ -185,6 +192,8 @@ class AutoProvider(SearchProvider):
                 over it, and a backend given an ``api_key`` (or Nimble an
                 ``async_client``) there counts as held as well as one whose
                 key is in the environment.
+            fallback_on_empty: Whether a member that answers with no results
+                and no answer is passed over for the next, as a failure is.
             **kwargs: Ignored. Accepted so a router configured for several
                 providers can hand this one its config without special-casing.
         """
@@ -192,6 +201,7 @@ class AutoProvider(SearchProvider):
         self._members_config, self._chain = _members_and_chain(
             chain, members_config, AUTO_CHAIN_SEARCH, self.default_chain
         )
+        self.fallback_on_empty = fallback_on_empty
         # Keyed by position, not by name: the same provider can appear twice on
         # different terms -- Tavily keyed, then Tavily keyless.
         self._members: dict[int, SearchProvider] = {}
@@ -224,21 +234,32 @@ class AutoProvider(SearchProvider):
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         failures: dict[str, WebRouterError] = {}
+        held: SearchResponse | None = None
         for position, provider_name in self._eligible(request):
             try:
-                return self._member(position).search(request)
+                response = self._member(position).search(request)
             except _RECOVERABLE as exc:
                 failures[provider_name] = exc
-        raise _exhausted(self.name, failures)
+                continue
+            if not (self.fallback_on_empty and _empty_search(response)):
+                return response
+            # Not `held or response`: an empty response is falsy, having no length.
+            held = response if held is None else held
+        return _held_or_raise(held, self.name, failures)
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
         failures: dict[str, WebRouterError] = {}
+        held: SearchResponse | None = None
         for position, provider_name in self._eligible(request):
             try:
-                return await self._member(position).asearch(request)
+                response = await self._member(position).asearch(request)
             except _RECOVERABLE as exc:
                 failures[provider_name] = exc
-        raise _exhausted(self.name, failures)
+                continue
+            if not (self.fallback_on_empty and _empty_search(response)):
+                return response
+            held = response if held is None else held
+        return _held_or_raise(held, self.name, failures)
 
     def _eligible(self, request: SearchRequest) -> list[tuple[int, str]]:
         """The chain members that map every option this request sets, in order.
@@ -311,18 +332,22 @@ class AutoExtractProvider(ExtractProvider):
         *,
         chain: _ChainSpec | None = None,
         members_config: Mapping[str, Mapping[str, Any]] | None = None,
+        fallback_on_empty: bool = True,
         **kwargs: Any,
     ) -> None:
         """
         Args:
             chain: Backends to try, in order, as on :class:`AutoProvider`; keyed
                 by method, this reads the ``"extract"`` entry.
+            fallback_on_empty: Whether a member whose every document is blank
+                is passed over for the next, as a failure is.
             **kwargs: Ignored, as on :class:`AutoProvider`.
         """
         super().__init__(**kwargs)
         self._members_config, self._chain = _members_and_chain(
             chain, members_config, AUTO_CHAIN_EXTRACT, self.default_chain
         )
+        self.fallback_on_empty = fallback_on_empty
         self._members: dict[int, ExtractProvider] = {}
 
     @staticmethod
@@ -354,22 +379,32 @@ class AutoExtractProvider(ExtractProvider):
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         delegated = self._delegated(request, urls)
         failures: dict[str, WebRouterError] = {}
+        held: ExtractResponse | None = None
         for position, provider_name in self._eligible(self.format_of(request)):
             try:
-                return self._member(position).extract(delegated)
+                response = self._member(position).extract(delegated)
             except _RECOVERABLE as exc:
                 failures[provider_name] = exc
-        raise _exhausted(self.name, failures)
+                continue
+            if not (self.fallback_on_empty and _empty_extract(response)):
+                return response
+            held = response if held is None else held
+        return _held_or_raise(held, self.name, failures)
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         delegated = self._delegated(request, urls)
         failures: dict[str, WebRouterError] = {}
+        held: ExtractResponse | None = None
         for position, provider_name in self._eligible(self.format_of(request)):
             try:
-                return await self._member(position).aextract(delegated)
+                response = await self._member(position).aextract(delegated)
             except _RECOVERABLE as exc:
                 failures[provider_name] = exc
-        raise _exhausted(self.name, failures)
+                continue
+            if not (self.fallback_on_empty and _empty_extract(response)):
+                return response
+            held = response if held is None else held
+        return _held_or_raise(held, self.name, failures)
 
     def _eligible(self, wanted: ExtractFormat) -> list[tuple[int, str]]:
         """The chain members that return ``wanted``, in order, read from their classes as search's are.
@@ -983,6 +1018,30 @@ class AutoBrowseProvider(BrowseProvider):
     async def aclose(self) -> None:
         for member in self._members.values():
             await member.aclose()
+
+
+def _empty_search(response: SearchResponse) -> bool:
+    """No results and no answer: nothing a caller could use."""
+    return not response.results and not (response.answer or "").strip()
+
+
+def _empty_extract(response: ExtractResponse) -> bool:
+    """Every document blank. One with text makes the answer usable, as a partial fetch is."""
+    return not any(document.content.strip() for document in response.documents)
+
+
+_Answer = TypeVar("_Answer", SearchResponse, ExtractResponse)
+
+
+def _held_or_raise(held: _Answer | None, provider: str, failures: dict[str, WebRouterError]) -> _Answer:
+    """The first empty answer when one came back, else every member's reason.
+
+    An empty result is an answer: it outranks the failures that followed it,
+    from members that were never tried before an empty answer fell through.
+    """
+    if held is not None:
+        return held
+    raise _exhausted(provider, failures)
 
 
 def resolve_default_chains(config: Mapping[str, Any]) -> dict[str, tuple[tuple[str, dict[str, Any]], ...]]:
