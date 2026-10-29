@@ -1345,6 +1345,32 @@ metadata addresses and the session's own debugging endpoint are refused, and a
 page that lands on one is sent back to `about:blank`. See
 [docs/mcp.md](docs/mcp.md#driving-a-browser).
 
+## Integrating a framework
+
+Which backend serves a call stays the caller's choice. The shipped integrations
+are the [MCP server](#the-mcp-server), [LangChain](#langchain),
+[Claude](#claude-agents), and [OpenAI](#openai-agents).
+
+`auto` uses every key held. A key held only for research also serves plain
+searches, and those calls bill. A caller who wants another order passes
+`provider_config={"auto": {"chain": ...}}`. See
+[Working with no credentials](#working-with-no-credentials).
+
+### Framework checklist
+
+When integrating web-router:
+
+- [ ] Accept a `search_provider` or `extract_provider` parameter
+- [ ] Default to `"auto"` (web-router's default provider)
+- [ ] Pass it to `WebRouter(search_provider)` or `AsyncWebRouter(...)`
+- [ ] Use `router.search()` or `router.extract()` in your implementation
+- [ ] Let `WebRouterError` propagate or wrap it in your own exception
+- [ ] Document credential environment variables (`NIMBLE_API_KEY`, etc.)
+- [ ] Document the `auto` behavior above
+
+Error types are in [Errors](#errors). Adding a backend, or keeping one private,
+is [Adding a provider](CONTRIBUTING.md#adding-a-provider).
+
 ## LangChain
 
 `web_router.integrations.langchain` puts search and extract in front of a
