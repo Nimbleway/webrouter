@@ -199,6 +199,8 @@ make test      # unit tests only, no network
 make test-browser  # tests that launch a real local Chromium; skip without one
 ```
 
+Cloud Agent VMs already set `core.hooksPath`, so `pre-commit install` exits rather than replacing those hooks. A `local` browser needs Chromium. `make install` does not install it. `make setup` does (`uv run playwright install chromium`).
+
 Use `uv run <cmd>`, never a bare `python` or `pip`. Dependencies live in
 `pyproject.toml`; after editing it run `make lock && make requirements` and
 commit `uv.lock` and the regenerated `requirements*.txt` together. Never
@@ -1064,13 +1066,3 @@ key is genuinely absent, ask the user which providers they hold credentials
 for and have them put the value in a `.env` themselves — the one in the user
 config directory is read wherever the server starts — never ask them to paste
 a key into the conversation, and never write one into a file for them.
-
-## Cursor Cloud specific instructions
-
-`make install` runs `uv sync --all-extras --dev`, then `uv run pre-commit install`.
-A Cloud Agent VM already sets `core.hooksPath`, and that install exits rather than
-replace those hooks. Leave `core.hooksPath` as it is and run
-`uv run pre-commit run --all-files` when the hooks themselves should run.
-`make check` runs lint, typecheck, and unit tests, and leaves hooks uninstalled.
-Search, extract, and a `local` browser session need no API key. The live tests
-`make test-integration` runs skip when the relevant key is absent.
