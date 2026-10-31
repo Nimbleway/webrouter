@@ -37,7 +37,7 @@
   "default_format": "markdown",
   "batches_urls": false,
   "source": [
-    "https://webiq.microsoft.ai/documentation/api-reference/browse/",
+    "https://webiq.microsoft.ai/documentation/",
     "https://webiq.microsoft.ai/documentation/openapi.json"
   ],
   "verified": {
