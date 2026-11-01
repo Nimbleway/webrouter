@@ -137,6 +137,7 @@ _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
 
 # No `auto`: its order waits on a comparison of the backends' answers.
 _BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {
+    PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityAnswerProvider", EXTRA_ANSWER),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupAnswerProvider", EXTRA_ANSWER),
 }
 

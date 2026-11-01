@@ -1,0 +1,145 @@
+{
+  "provider": "perplexity",
+  "method": "answer",
+  "class": "web_router.providers.perplexity.PerplexityAnswerProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.perplexity.ai",
+    "paths": {
+      "answer_path": "/v1/responses"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "PERPLEXITY_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.effort": "fast",
+    "body.input": "probe query"
+  },
+  "options": {
+    "include_domains": {
+      "sample": {
+        "body.tools": [
+          {
+            "filters": {
+              "search_domain_filter": [
+                "example.com"
+              ]
+            },
+            "type": "web_search"
+          }
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.tools": [
+          {
+            "filters": {
+              "search_domain_filter": [
+                "-example.org"
+              ]
+            },
+            "type": "web_search"
+          }
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.tools": [
+          {
+            "type": "web_search",
+            "user_location": {
+              "country": "US"
+            }
+          }
+        ]
+      }
+    },
+    "recency": {
+      "day": {
+        "body.tools": [
+          {
+            "filters": {
+              "search_recency_filter": "day"
+            },
+            "type": "web_search"
+          }
+        ]
+      },
+      "week": {
+        "body.tools": [
+          {
+            "filters": {
+              "search_recency_filter": "week"
+            },
+            "type": "web_search"
+          }
+        ]
+      },
+      "month": {
+        "body.tools": [
+          {
+            "filters": {
+              "search_recency_filter": "month"
+            },
+            "type": "web_search"
+          }
+        ]
+      },
+      "year": {
+        "body.tools": [
+          {
+            "filters": {
+              "search_recency_filter": "year"
+            },
+            "type": "web_search"
+          }
+        ]
+      }
+    }
+  },
+  "not_mapped": [
+    "locale"
+  ],
+  "source": [
+    "https://docs.perplexity.ai/docs/agent-api/quickstart",
+    "https://docs.perplexity.ai/docs/agent-api/tools/web-search",
+    "https://docs.perplexity.ai/docs/agent-api/presets"
+  ],
+  "verified": {
+    "include_domains": "live: tests/test_integration_surface.py::test_an_answers_sources_honor_the_domain_filter",
+    "exclude_domains": "live: tests/test_integration_surface.py::test_an_answers_sources_leave_out_excluded_domains",
+    "country": "live: tests/providers/test_perplexity_answer.py::test_live_answer_ties_its_markers_to_sources",
+    "recency": "live: tests/test_integration_surface.py::test_recency_is_accepted"
+  },
+  "vendor_options": {
+    "background": {
+      "status": "not_supported",
+      "note": "An answer is one call; background is research's."
+    },
+    "instructions": {
+      "status": "passthrough",
+      "note": "A system prompt for the answer; no normalized field. Echoed in the live response."
+    },
+    "max_output_tokens": {
+      "status": "passthrough",
+      "note": "Caps the answer's length; no normalized field. Echoed in the live response."
+    },
+    "model": {
+      "status": "passthrough",
+      "note": "Overrides the model the fast effort picks. Echoed in the live response."
+    },
+    "search_recency_filter: hour": {
+      "status": "passthrough",
+      "note": "An hour's window; recency stops at day, the shortest every backend offers. Send the tools array through provider_options."
+    },
+    "user_location: region, city, latitude, longitude": {
+      "status": "passthrough",
+      "note": "Finer than country; send the tools array through provider_options."
+    }
+  }
+}
