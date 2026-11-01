@@ -200,8 +200,10 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         questions through evaluate(), by topic and answer
                         type; extract.py: every extract backend on the same
                         URLs through benchmark_extract(), by category, with
-                        the URL sets under urls/ — scripts; each run's
-                        report stays under results/
+                        the URL sets under urls/; answer.py: every answer
+                        backend on the same questions, each backend's own
+                        answer graded, beside a search scan — scripts; each
+                        run's report stays under results/
 ```
 
 ## Commands
@@ -368,7 +370,15 @@ sets under `urls/` are `url,category` lists only, no ground truth, and
 depth (`tavily@deep`, one `evaluate()` per depth) or a vendor mode from
 `modes.json` (`tavily:ultra-fast`), sent through `provider_options` by a
 wrapper that calls the backend's public `asearch`; mark a mode `verified` only
-after a live call shows it changing the response. `PRICING.md` beside it is a
+after a live call shows it changing the response. `answer.py` is the answer scan: every configured answer backend through the
+public `answer()` on the same questions, each backend's own answer graded by an
+`evaluate()` judge -- nothing synthesized, since the backend wrote the answer
+-- so its `report.md` is a third place a judged accuracy appears, and it names
+the judge. `--baseline` sets a search scan of the same questions, seed and judge
+beside it, and is refused otherwise. A row citing one of the set's withheld
+pages is *leaked*, never graded and out of accuracy, because an answer backend
+has read the answer key before anything could be withheld. It shows a cost only
+where the backend's response states one, never an estimate. `PRICING.md` beside it is a
 dated, sourced reference for reading results against list prices; no code
 reads it, and the library still never shows a price.
 
@@ -1063,7 +1073,8 @@ template method's table, and names Nimble's key again: one key, four classes.
 
 **The library never loads `.env` itself.** Only these entry points do:
 `tests/conftest.py`, for the live tests, `benchmarks/agent/run.py`,
-`benchmarks/providers/run.py` and `benchmarks/providers/extract.py`, scripts
+`benchmarks/providers/run.py`, `benchmarks/providers/extract.py` and
+`benchmarks/providers/answer.py`, scripts
 run from the repo, and the MCP server —
 its `main()` at startup and its `load_env` tool at runtime, both through
 `mcp/env.py` — because an application started by a client, often installed

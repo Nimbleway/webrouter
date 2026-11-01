@@ -176,6 +176,33 @@ about ±10 points, a category row with 20 URLs to about ±20 -- and there is no
 cost column, because no backend states one; read the rates against
 [`PRICING.md`](PRICING.md).
 
+## Comparing answer backends
+
+`answer.py` scans the backends behind `answer()` the same way: one call per
+backend per question, the answer each backend wrote graded by the same judge
+with the same SimpleQA grader. Nothing is synthesized: the backend's own answer
+is what the judge reads.
+
+```bash
+uv run --all-extras python benchmarks/providers/answer.py --limit 300 \
+  --baseline results/simpleqa-300-v2
+```
+
+`--baseline` names a finished search scan of the same questions, seed and
+judge; the report then sets the two pipelines side by side -- the answer a
+backend wrote, and the answer the judge wrote from a search backend's top
+results. Both are graded alike, so accuracy compares. Latency does not quite:
+the search side's is the search alone, without the judge writing its answer.
+A baseline graded by another judge, or on other questions, is refused.
+
+An answer backend has read SealQA's own pages before it answers, so nothing
+can be withheld: a row whose citations include one is marked *leaked*, left
+ungraded and out of accuracy, and counted in the report. Cost is shown only
+where the backend states it in its response (Perplexity's `usage.cost`), as a
+mean over the answers that stated one; everything else is in
+[`PRICING.md`](PRICING.md). `--combine` merges answer scans of the same
+questions and judge.
+
 ## Keeping results
 
 Each run of either scan writes `rows.jsonl`, `summary.json` and `report.md` to

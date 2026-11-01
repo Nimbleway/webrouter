@@ -217,6 +217,17 @@ You.com's keyless MCP is priced in its own section above.
 | DeepSeek | markdown | $0.75 per 1k successful fetches | [search and fetch](https://api-docs.deepseek.com/guides/search) |
 | Linkup | markdown (default) or html (`includeRawContent`), `mode=standard`, no rendering | $0.001 per call ($1 per 1k); `renderJs` or `mode=pro` $0.005, both $0.01; a `schema` adds $0.001 | [fetch overview](https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md) |
 
+## Answer
+
+What one `answer()` costs at list price, checked 2026-11-01. The answer scan
+(`answer.py`) shows a backend's own stated cost per answer where its response
+carries one; this table is for reading the others.
+
+| Backend | What web-router sends | Price | Source |
+|---|---|---|---|
+| Linkup | `/v1/search`, `outputType=sourcedAnswer`, `depth=fast` | $5 per 1k at `fast`, plus $0.001 a call for `sourcedAnswer`: about $6 per 1k | [pricing page](https://www.linkup.so/pricing), [search overview](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) |
+| Perplexity | `/v1/responses`, `effort=fast` | Tokens plus tools: $0.001 a web search, and the `fast` model's tokens. Its response states the total under `usage.cost`; live on 2026-11-01, about $0.0015 an answer | [presets](https://docs.perplexity.ai/docs/agent-api/presets.md), [pricing](https://docs.perplexity.ai/getting-started/pricing) |
+
 ## Research
 
 Not benchmarked and not reachable from a search setup; listed because a run bills
