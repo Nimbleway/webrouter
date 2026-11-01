@@ -21,7 +21,8 @@ To add a search backend::
 
 An extract backend is the same shape, against :class:`HttpExtractProvider`,
 with ``extract_path`` in place of ``search_path`` and a list of URLs passed
-alongside the request.
+alongside the request. An answer backend is the search shape again, against
+:class:`HttpAnswerProvider`, with ``answer_path``.
 
 A browse backend, against :class:`HttpBrowseProvider`, implements the job's
 ``_start`` and ``_fetch`` over the request helpers it is given, as a research
@@ -61,6 +62,7 @@ from web_router.constants import (
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._utils import compact, error_detail, job_budget, research_budget, resolve_api_key
 from web_router.providers.base import (
+    AnswerProvider,
     BrowseProvider,
     BrowserProvider,
     ExtractProvider,
@@ -69,6 +71,8 @@ from web_router.providers.base import (
     _BaseProvider,
 )
 from web_router.types import (
+    AnswerRequest,
+    AnswerResponse,
     BrowserRequest,
     BrowserSession,
     ExtractRequest,
@@ -247,6 +251,34 @@ class HttpSearchProvider(_HttpProvider, SearchProvider):
     def _call_kwargs(self, request: SearchRequest) -> dict[str, Any]:
         payload = self._build_payload(request)
         return {"json": payload} if self.http_method == "POST" else {"params": payload}
+
+
+class HttpAnswerProvider(_HttpProvider, AnswerProvider):
+    """An answer backend over a plain HTTP endpoint: one POST, one answer."""
+
+    answer_path: ClassVar[str]
+
+    # -- What subclasses implement -------------------------------------------
+
+    @abc.abstractmethod
+    def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
+        """Translate a normalized request into this API's request body."""
+
+    @abc.abstractmethod
+    def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
+        """Translate this API's response into a normalized one."""
+
+    # -- The HTTP plumbing ---------------------------------------------------
+
+    def _answer(self, request: AnswerRequest) -> AnswerResponse:
+        response = self._client.request(self.http_method, self.answer_path, json=self._build_payload(request))
+        return self._to_response(request, self._payload(response))
+
+    async def _aanswer(self, request: AnswerRequest) -> AnswerResponse:
+        response = await self._async_client.request(
+            self.http_method, self.answer_path, json=self._build_payload(request)
+        )
+        return self._to_response(request, self._payload(response))
 
 
 class HttpExtractProvider(_HttpProvider, ExtractProvider):

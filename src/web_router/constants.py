@@ -95,6 +95,7 @@ keeps the old behaviour: a missing key for *that* provider is still an error.
 EXTRA_SEARCH = "search"
 EXTRA_EXTRACT = "extract"
 EXTRA_RESEARCH = "research"
+EXTRA_ANSWER = "answer"
 EXTRA_BROWSER = "browser"
 """Playwright, for the page actions on a browser handle. Opening a session needs no extra."""
 EXTRA_ALL = "all"
@@ -223,6 +224,14 @@ Shaped like :data:`EXTRACT_ENV_BY_PROVIDER` rather than
 :data:`ENV_BY_PROVIDER`, so a backend that later needs a second value does not
 change the table's type. Every research backend costs money to call, so unlike
 the other two methods there is no keyless tier to fall back on.
+"""
+
+ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {}
+"""Which variables each answer provider needs, all of them.
+
+Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. Every answer backend bills the
+call, so there is no keyless tier, and there is no ``auto`` yet: its order
+waits on a comparison of the backends' answers.
 """
 
 BROWSER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -2647,6 +2656,19 @@ MSG_TEMPLATE_NOT_FOUND = "the backend has no template named {name!r}"
 """An unknown template name, as a backend reports it -- Nimble with a 404 on describe and on run."""
 
 MSG_RESEARCH_FAILED = "research failed: {error}"
+
+MSG_ANSWER_FAILED = "answer failed: {error}"
+
+MSG_ANSWER_NO_DEFAULT = (
+    "answer() has no 'auto' yet: the router's default ({default!r}) does not serve it, and with {count} "
+    "answer backends configured there is no single one to use. Name one with provider=. "
+    "Answer backends: {available}."
+)
+"""Raised as :class:`~web_router.exceptions.ProviderNotFoundError` when no answer backend could be chosen.
+
+``answer()`` falls back to the one configured backend when the router's default
+does not serve it; with none or several configured, which to call is the caller's choice.
+"""
 
 MSG_JOB_FAILED = "job failed: {error}"
 

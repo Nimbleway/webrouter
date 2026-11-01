@@ -6,7 +6,7 @@ Guidance for AI coding agents working in this repository. Humans: see
 ## What this project is
 
 `web-router` is a Python package that puts one typed interface in front of many
-web APIs, across six methods.
+web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
 Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus two that need no credential: `you-mcp`, and `auto`, the default, which
@@ -32,6 +32,15 @@ one vendor, so `provider` is required.
 **`research`** — an agentic run: the backend reasons over several turns and
 answers in minutes rather than milliseconds. Nimble, Parallel, Perplexity,
 Linkup, You.com, and `auto`. It has no keyless tier, because every backend bills for the run.
+
+**`answer`** — one question, answered in one call: the backend searches and
+writes the answer itself, and the response carries it with the sources it rests
+on. Between `search`, which returns pages, and `research`, a job of minutes.
+Nothing here composes or edits the answer. No keyless tier, since every backend
+bills the call, and no `auto` until a comparison of the backends' answers sets
+its order: with no `provider`, the router's default serves it when that is an
+answer backend, else the one configured answer backend, and with none or
+several the call raises `ProviderNotFoundError` naming them.
 
 **`open_browser`** — a browser session: not an answer but a handle, carrying a
 CDP URL the caller drives with Playwright, browser-use or Stagehand, and
@@ -67,12 +76,13 @@ src/web_router/
 ├── types.py            SearchRequest/Response/Result, ExtractRequest/Response/Document,
 │                       TemplateRequest/Response + Template/TemplatePage,
 │                       ResearchRequest/Response/Progress + Citation,
+│                       AnswerRequest/Response,
 │                       BrowserRequest/Session/State + Viewport,
 │                       BrowseRequest/Response/Progress + BrowseStep
 │                       — the normalized contract, one request model per method
 ├── client.py           WebRouter, AsyncWebRouter — the public facade
 │                       (search, extract, templates + template + run_template,
-│                        research + submit_research,
+│                        answer, research + submit_research,
 │                        browse + submit_browse, open_browser, benchmark and
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
@@ -111,12 +121,13 @@ src/web_router/
 │                       Chat Completions, + local executor) — no SDK, no extra
 └── providers/
     ├── base.py         SearchProvider / ExtractProvider / TemplateProvider /
-    │                   ResearchProvider / BrowseProvider / BrowserProvider ABCs over a shared
+    │                   ResearchProvider / AnswerProvider / BrowseProvider /
+    │                   BrowserProvider ABCs over a shared
     │                   base; the generic JobProvider / Job core that
     │                   ResearchProvider / ResearchJob and BrowseProvider /
     │                   BrowseJob specialize; BrowserHandle / AsyncBrowserHandle
     ├── _http.py        HttpSearchProvider / HttpExtractProvider /
-    │                   HttpResearchProvider / HttpBrowseProvider /
+    │                   HttpResearchProvider / HttpAnswerProvider / HttpBrowseProvider /
     │                   HttpBrowserProvider — for APIs with no SDK
     ├── _utils.py       payload assembly, key and setting resolution, dict
     │                   coercion, body selection, the job budget
@@ -168,8 +179,9 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         tests/mcp/ the server, tests/max_extract/ the race
                         (its conftest holds the fake members). test_contract.py,
                         test_extract_contract.py, test_template_contract.py,
-                        test_research_contract.py, test_browse_contract.py and
-                        test_browser_contract.py guard the six shared
+                        test_research_contract.py, test_answer_contract.py,
+                        test_browse_contract.py and
+                        test_browser_contract.py guard the seven shared
                         contracts; test_job_core.py the job core under
                         research and browse;
                         test_browser_actions.py the page actions, against
@@ -369,15 +381,15 @@ validator. A `constants_<provider>.py` sits at the same level as `constants`:
 it may import `types` and nothing else of ours.
 
 **Never override the public method in a provider.** `search`/`asearch`,
-`extract`/`aextract`, `run`/`templates`/`template`,
+`extract`/`aextract`, `run`/`templates`/`template`, `answer`/`aanswer`,
 `submit`/`research`/`browse`/`poll`/`cancel` and
 `open`/`release`/`status` (each with its `a` twin) live on the base
 classes and enforce validation, error wrapping, and — for extract — the URL
 fan-out, for research and browse the whole wait-and-poll cycle, and for a
 browser the idempotent release. Providers implement `_search`, `_asearch`, `_extract`,
-`_aextract`, `_run`, `_arun`, `_list`, `_alist`, `_get`, `_aget`, `_start`,
+`_aextract`, `_answer`, `_aanswer`, `_run`, `_arun`, `_list`, `_alist`, `_get`, `_aget`, `_start`,
 `_astart`, `_fetch`, `_afetch`, `_open`, `_aopen`,
-`_release`, `_arelease`, which are pure translation. The six contract test
+`_release`, `_arelease`, which are pure translation. The seven contract test
 modules enforce this.
 
 **A job is the base class's problem.** Research is a job, browse is another,
@@ -835,6 +847,32 @@ The same shape as the two below, against `ResearchProvider` or
    `@pytest.mark.integration` live test.
 5. Update the README support table and `CHANGELOG.md`.
 
+## Adding an answer provider
+
+Search's shape, against `HttpAnswerProvider` — one POST, one answer — or
+`AnswerProvider` for an SDK.
+
+1. Implement `_build_payload` and `_to_response` and declare `answer_path`
+   (or `_answer`/`_aanswer` on `AnswerProvider`). Set `name` and
+   `supported_parameters`, declaring an option only after a live call showed
+   the backend honouring it. The answer is the backend's own: never edit,
+   join or summarize it. An empty one is returned as `""`, not raised. Put an
+   inline citation marker (`[2]`, `[[1, 2]]`) in `Citation.field`, set
+   `outcome` to `partial` only when the backend says it stopped early, and
+   keep every payload in `raw`. A combination the vendor forbids — both
+   domain lists where it takes one — raises `UnsupportedParameterError`
+   before the call.
+2. Put the endpoint and field names in `constants_<provider>.py`.
+3. Register the class in `_BUILTIN_ANSWER_PROVIDERS` in `registry.py` and add
+   the provider to `ANSWER_ENV_BY_PROVIDER` in `constants.py`. There is no
+   `auto` to join yet.
+4. Add `tests/providers/test_<name>_answer.py` covering the payload, each
+   mapped option and the response against a recorded payload, plus a skipping
+   `@pytest.mark.integration` live test. `tests/test_answer_contract.py`
+   already holds every unmapped option to a refusal before anything is sent.
+5. Start its contract with `make contracts PROVIDER=answer/<name>`, and update
+   the README support table and `CHANGELOG.md`.
+
 ## Adding a browser provider
 
 The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
@@ -1007,7 +1045,7 @@ every one, beside `CHROME_PATH`, which is a path for `local` rather than a
 secret; `WEB_ROUTER_ENV_FILE`, the path of the `.env` the MCP server loads, is
 not a secret either and comes from the real environment only, since no file can
 set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
-`RESEARCH_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
+`RESEARCH_ENV_BY_PROVIDER`, `ANSWER_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
 `auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
 Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and

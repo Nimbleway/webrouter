@@ -24,6 +24,7 @@ from pydantic import BaseModel, ValidationError
 
 from web_router import registry
 from web_router.constants import (
+    ANSWER_ENV_BY_PROVIDER,
     AUTO_EXTRACT_KEYLESS,
     AUTO_KEYLESS,
     BROWSE_ENV_BY_PROVIDER,
@@ -35,6 +36,7 @@ from web_router.constants import (
 )
 from web_router.exceptions import WebRouterError
 from web_router.types import (
+    AnswerRequest,
     BrowseRequest,
     BrowserRequest,
     ExtractRequest,
@@ -117,6 +119,14 @@ METHODS: dict[str, _Method] = {
         registry.get_research_provider_class,
         lambda **kw: ResearchRequest(query="probe query", **kw),
         RESEARCH_ENV_BY_PROVIDER,
+        (),
+    ),
+    "answer": _Method(
+        AnswerRequest,
+        registry.available_answer_providers,
+        registry.get_answer_provider_class,
+        lambda **kw: AnswerRequest(query="probe query", **kw),
+        ANSWER_ENV_BY_PROVIDER,
         (),
     ),
     "browser": _Method(

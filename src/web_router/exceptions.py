@@ -76,12 +76,18 @@ class ConfigurationError(WebRouterError):
 class ProviderNotFoundError(WebRouterError):
     """A provider was requested by a name that is not registered."""
 
-    def __init__(self, name: str, available: Iterable[str]) -> None:
+    def __init__(self, name: str, available: Iterable[str], *, message: str | None = None) -> None:
+        """
+        Args:
+            message: Replaces the "unknown provider" text, for a name that is
+                registered but cannot serve the call -- a router default that
+                ``answer()``, which has no ``auto``, cannot fall back from.
+        """
         self.name = name
         # Deduplicated: the router looks a default up in both method registries,
         # and a provider serving both would otherwise be listed twice.
         self.available = sorted(set(available))
-        super().__init__(MSG_UNKNOWN_PROVIDER.format(name=name, available=", ".join(self.available)))
+        super().__init__(message or MSG_UNKNOWN_PROVIDER.format(name=name, available=", ".join(self.available)))
 
 
 class ProviderNotInstalledError(WebRouterError):

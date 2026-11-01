@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- `answer()`, a seventh method, and its async twin: `WebRouter.answer(query, provider=...)` asks one question and returns the backend's own written answer with the sources it rests on, in one call -- between `search()`, which returns pages, and `research()`, a job of minutes. `AnswerResponse` carries `answer`, `citations` (the shared `Citation`; an inline marker in the answer goes in `field`), `outcome` (`partial` only when the backend says it stopped early), `request_id` and `raw`, one payload per call. An empty answer is returned as `""`, never raised. The options are `include_domains`, `exclude_domains`, `country`, `locale` and `recency` (`day`, `week`, `month` or `year`); a backend refuses each one it does not map with `UnsupportedParameterError`, before anything is sent. There is no `auto` yet: with `provider` unset the router's default serves the call when it is an answer backend, else the one configured answer backend, and with none or several configured it raises `ProviderNotFoundError` naming them. `AnswerProvider` and `HttpAnswerProvider` to add a backend, `register_answer_provider()`, `available_answer_providers()` and `configured_answer_providers()` beside the other registries, and an `answer` extra, which `mcp` and `all` include. Backends are added one per change; none is built in yet.
+
 ### Changed
 
 - `auto` now moves to the next backend when one answers with nothing usable, as it does on an error: a search with no results and no `answer`, or an extract whose every document is blank. A document's page status is not read, since only some backends report one. When every member answers empty, the first empty answer comes back, naming its backend, rather than an error. A call that ends empty has tried every backend that can serve it, one after another, and each one you hold a key for bills for it. `provider_config={"auto": {"fallback_on_empty": False}}` returns the first answer, empty or not; the MCP server has no such switch. `max` is unchanged.

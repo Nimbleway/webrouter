@@ -50,6 +50,7 @@ from web_router.constants import (
     JOB_TIMEOUT,
     JOB_TIMEOUT_ERROR_SUFFIXES,
     MAX_CONCURRENT_EXTRACTS,
+    MSG_ANSWER_FAILED,
     MSG_BROWSE_FAILED,
     MSG_BROWSE_NOT_RESUMABLE,
     MSG_BROWSER_CO_REQUIRED,
@@ -90,6 +91,8 @@ from web_router.exceptions import (
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.providers._utils import job_deadline
 from web_router.types import (
+    AnswerRequest,
+    AnswerResponse,
     BrowseProgress,
     BrowseRequest,
     BrowseResponse,
@@ -213,6 +216,51 @@ class SearchProvider(_BaseProvider):
             raise ProviderError(self.name, MSG_SEARCH_FAILED.format(error=exc), original=exc) from exc
 
     def validate(self, request: SearchRequest) -> None:
+        """Raise :class:`UnsupportedParameterError` for any option this backend does not map."""
+        self._reject_unmapped(request)
+
+
+class AnswerProvider(_BaseProvider):
+    """Base class for an answer backend: one question in, a written answer and its sources out.
+
+    One request answers in one call, so unlike research there is no job: set
+    :attr:`name` and :attr:`supported_parameters`, then implement
+    :meth:`_answer` and :meth:`_aanswer`.
+    """
+
+    # -- What subclasses implement -------------------------------------------
+
+    @abc.abstractmethod
+    def _answer(self, request: AnswerRequest) -> AnswerResponse:
+        """Ask the backend. The request is already validated; errors are wrapped for you."""
+
+    @abc.abstractmethod
+    async def _aanswer(self, request: AnswerRequest) -> AnswerResponse:
+        """Async counterpart of :meth:`_answer`."""
+
+    # -- What callers use ----------------------------------------------------
+
+    def answer(self, request: AnswerRequest) -> AnswerResponse:
+        """Validate the request, ask the backend, and wrap any backend failure."""
+        self.validate(request)
+        try:
+            return self._answer(request)
+        except WebRouterError:
+            raise
+        except Exception as exc:
+            raise ProviderError(self.name, MSG_ANSWER_FAILED.format(error=exc), original=exc) from exc
+
+    async def aanswer(self, request: AnswerRequest) -> AnswerResponse:
+        """Async counterpart of :meth:`answer`."""
+        self.validate(request)
+        try:
+            return await self._aanswer(request)
+        except WebRouterError:
+            raise
+        except Exception as exc:
+            raise ProviderError(self.name, MSG_ANSWER_FAILED.format(error=exc), original=exc) from exc
+
+    def validate(self, request: AnswerRequest) -> None:
         """Raise :class:`UnsupportedParameterError` for any option this backend does not map."""
         self._reject_unmapped(request)
 

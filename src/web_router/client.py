@@ -16,7 +16,10 @@ site-specific extraction that turns one page into a record -- and
 the catalogue it is picked from; the three share one registry, and all three
 need ``provider`` named, since a template's name belongs to one vendor.
 
-:meth:`WebRouter.research` is the third method and the one that behaves
+:meth:`WebRouter.answer` asks one question and returns the backend's written
+answer with the sources it rests on, in a single call.
+
+:meth:`WebRouter.research` is the method that behaves
 differently: an agentic run takes minutes rather than milliseconds, so it waits
 for the answer -- or hands back a :class:`~web_router.ResearchJob` through
 :meth:`WebRouter.submit_research` when you would rather not sit on it.
@@ -55,6 +58,7 @@ from web_router.constants import (
     DELEGATING_PROVIDERS,
     EVALS_CONCURRENCY,
     MAX_INHERITS_FROM_AUTO,
+    MSG_ANSWER_NO_DEFAULT,
     MSG_BENCHMARK_EXTRACT_NO_PROVIDERS,
     MSG_BENCHMARK_NO_PROVIDERS,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
@@ -71,6 +75,7 @@ from web_router.evals.judge import Judge
 from web_router.evals.types import EvaluationReport
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
 from web_router.providers.base import (
+    AnswerProvider,
     AsyncBrowserHandle,
     BrowseJob,
     BrowseProvider,
@@ -83,14 +88,17 @@ from web_router.providers.base import (
     TemplateProvider,
 )
 from web_router.registry import (
+    available_answer_providers,
     available_browse_providers,
     available_browser_providers,
     available_extract_providers,
     available_providers,
     available_research_providers,
     available_template_providers,
+    configured_answer_providers,
     configured_extract_providers,
     configured_providers,
+    create_answer_provider,
     create_browse_provider,
     create_browser_provider,
     create_extract_provider,
@@ -99,6 +107,8 @@ from web_router.registry import (
     create_template_provider,
 )
 from web_router.types import (
+    AnswerRequest,
+    AnswerResponse,
     BenchmarkReport,
     BenchmarkRun,
     BrowseRequest,
@@ -110,6 +120,7 @@ from web_router.types import (
     ExtractRequest,
     ExtractResponse,
     Provider,
+    Recency,
     ResearchEffort,
     ResearchRequest,
     ResearchResponse,
@@ -162,6 +173,7 @@ class _BaseRouter(Generic[_HandleT]):
             + available_extract_providers()
             + available_template_providers()
             + available_research_providers()
+            + available_answer_providers()
             + available_browser_providers()
             + available_browse_providers()
         )
@@ -181,6 +193,7 @@ class _BaseRouter(Generic[_HandleT]):
         self._extract_instances: dict[str, ExtractProvider] = {}
         self._template_instances: dict[str, TemplateProvider] = {}
         self._research_instances: dict[str, ResearchProvider] = {}
+        self._answer_instances: dict[str, AnswerProvider] = {}
         self._browser_instances: dict[str, BrowserProvider] = {}
         self._browse_instances: dict[str, BrowseProvider] = {}
         # Every session this router opened that has not been seen released, so
@@ -191,7 +204,7 @@ class _BaseRouter(Generic[_HandleT]):
         # across threads, each with its own loop, and nothing awaits while it
         # is held, so it can never stall an event loop.
         self._handles_lock = threading.Lock()
-        # One lock for the six instance caches: evaluate() calls benchmark()
+        # One lock for the instance caches: evaluate() calls benchmark()
         # from worker threads, so two rows can race the same check-then-create
         # and the loser's client would never be closed. Nothing awaits while it
         # is held.
@@ -287,6 +300,36 @@ class _BaseRouter(Generic[_HandleT]):
             if key not in self._research_instances:
                 self._research_instances[key] = create_research_provider(key, **self._config_for(key))
             return self._research_instances[key]
+
+    def get_answer_provider(self, name: str | Provider | AnswerProvider | None = None) -> AnswerProvider:
+        """Return the named answer provider, constructing and caching it on first use.
+
+        The answer counterpart of :meth:`get_provider`, with the same ownership
+        rule. ``answer()`` has no ``auto`` yet, so with no name it uses the
+        router's default when that serves answers, else the one configured
+        answer backend; with none or several configured it raises
+        :class:`~web_router.ProviderNotFoundError` naming them.
+        """
+        if isinstance(name, AnswerProvider):
+            return name
+
+        key = provider_name(name) if name is not None else self._default_answer_provider()
+        with self._providers_lock:
+            if key not in self._answer_instances:
+                self._answer_instances[key] = create_answer_provider(key, **self._config_for(key))
+            return self._answer_instances[key]
+
+    def _default_answer_provider(self) -> str:
+        available = available_answer_providers()
+        if self.default_provider in available:
+            return self.default_provider
+        configured = configured_answer_providers()
+        if len(configured) == 1:
+            return configured[0]
+        message = MSG_ANSWER_NO_DEFAULT.format(
+            default=self.default_provider, count=len(configured), available=", ".join(available) or "none"
+        )
+        raise ProviderNotFoundError(self.default_provider, available, message=message)
 
     def get_browser_provider(self, name: str | Provider | BrowserProvider | None = None) -> BrowserProvider:
         """Return the named browser provider, constructing and caching it on first use.
@@ -398,6 +441,27 @@ class _BaseRouter(Generic[_HandleT]):
         )
 
     @staticmethod
+    def _build_answer_request(
+        query: str,
+        *,
+        include_domains: list[str] | None,
+        exclude_domains: list[str] | None,
+        country: str | None,
+        locale: str | None,
+        recency: Recency | None,
+        provider_options: dict[str, Any] | None,
+    ) -> AnswerRequest:
+        return AnswerRequest(
+            query=query,
+            include_domains=include_domains,
+            exclude_domains=exclude_domains,
+            country=country,
+            locale=locale,
+            recency=recency,
+            provider_options=provider_options or {},
+        )
+
+    @staticmethod
     def _build_browser_request(
         *,
         proxy_country: str | None,
@@ -467,13 +531,20 @@ class _BaseRouter(Generic[_HandleT]):
     def _all_instances(
         self,
     ) -> list[
-        SearchProvider | ExtractProvider | TemplateProvider | ResearchProvider | BrowserProvider | BrowseProvider
+        SearchProvider
+        | ExtractProvider
+        | TemplateProvider
+        | ResearchProvider
+        | AnswerProvider
+        | BrowserProvider
+        | BrowseProvider
     ]:
         return [
             *self._instances.values(),
             *self._extract_instances.values(),
             *self._template_instances.values(),
             *self._research_instances.values(),
+            *self._answer_instances.values(),
             *self._browser_instances.values(),
             *self._browse_instances.values(),
         ]
@@ -823,6 +894,41 @@ class WebRouter(_BaseRouter[BrowserHandle]):
             template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
         )
         return self.get_template_provider(provider).run(request)
+
+    def answer(
+        self,
+        query: str,
+        *,
+        provider: str | Provider | AnswerProvider | None = None,
+        include_domains: list[str] | None = None,
+        exclude_domains: list[str] | None = None,
+        country: str | None = None,
+        locale: str | None = None,
+        recency: Recency | None = None,
+        provider_options: dict[str, Any] | None = None,
+    ) -> AnswerResponse:
+        """Ask ``provider`` one question and return its written answer with the sources it rests on.
+
+        One call, answered in seconds: the backend searches and writes the
+        answer itself, and nothing here composes or edits it. Between
+        :meth:`search`, which returns the pages, and :meth:`research`, a job
+        of minutes. An option the backend does not map raises
+        :class:`~web_router.UnsupportedParameterError` before anything is sent.
+
+        There is no ``auto`` yet. With ``provider`` unset the router's default
+        serves the call when it is an answer backend, else the one answer
+        backend configured; with none or several configured, name one.
+        """
+        request = self._build_answer_request(
+            query,
+            include_domains=include_domains,
+            exclude_domains=exclude_domains,
+            country=country,
+            locale=locale,
+            recency=recency,
+            provider_options=provider_options,
+        )
+        return self.get_answer_provider(provider).answer(request)
 
     def research(
         self,
@@ -1253,6 +1359,30 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle]):
             template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
         )
         return await self.get_template_provider(provider).arun(request)
+
+    async def answer(
+        self,
+        query: str,
+        *,
+        provider: str | Provider | AnswerProvider | None = None,
+        include_domains: list[str] | None = None,
+        exclude_domains: list[str] | None = None,
+        country: str | None = None,
+        locale: str | None = None,
+        recency: Recency | None = None,
+        provider_options: dict[str, Any] | None = None,
+    ) -> AnswerResponse:
+        """Ask ``provider`` one question and await its written answer, as on the sync router."""
+        request = self._build_answer_request(
+            query,
+            include_domains=include_domains,
+            exclude_domains=exclude_domains,
+            country=country,
+            locale=locale,
+            recency=recency,
+            provider_options=provider_options,
+        )
+        return await self.get_answer_provider(provider).aanswer(request)
 
     async def research(
         self,
