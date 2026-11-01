@@ -1351,10 +1351,7 @@ Which backend serves a call stays the caller's choice. The shipped integrations
 are the [MCP server](#the-mcp-server), [LangChain](#langchain),
 [Claude](#claude-agents), and [OpenAI](#openai-agents).
 
-`auto` uses every key held. A key held only for research also serves plain
-searches, and those calls bill. A caller who wants another order passes
-`provider_config={"auto": {"chain": ...}}`. See
-[Working with no credentials](#working-with-no-credentials).
+`auto` uses every key held; see the [`Provider.AUTO`](#search) row in the search table.
 
 ### Framework checklist
 
