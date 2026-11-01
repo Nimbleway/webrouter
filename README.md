@@ -10,7 +10,7 @@
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Twelve search backends, seven extract backends, a template catalogue, three
+Twelve search backends, seven extract backends, a template catalogue, four
 answer backends, three agentic research backends (plus Exa's, retired upstream), five
 browser-session backends and three browser agents. One call each. Switching
 between them is one argument.
@@ -310,6 +310,7 @@ backends' answers. See [Asking for an answer](#asking-for-an-answer).
 | --- | --- | --- | --- | --- | --- |
 | `Provider.PERPLEXITY` | `perplexity` | [Perplexity Agent API, `fast` effort](https://docs.perplexity.ai/docs/agent-api/quickstart) | `PERPLEXITY_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[N]` markers, in `citation.field` |
 | `Provider.YOU` | `you` | [You.com Answer API](https://you.com/docs/guides/answer.md) | `YOU_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[[1, 2]]` markers, in `citation.field` |
+| `Provider.PARALLEL` | `parallel` | [Parallel Chat API (beta), `lite`](https://docs.parallel.ai/chat-api) | `PARALLEL_API_KEY` | none: the Chat API takes no source filter | no: its `basis` backs the answer as a whole |
 | `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | no: every page read, for the answer as a whole |
 
 All verified live on 2026-11-01, every mapped option seen to apply.
@@ -324,6 +325,11 @@ All verified live on 2026-11-01, every mapped option seen to apply.
   `field`, and its title comes from the pages You.com considered. It takes one
   domain list, not both: asking for both raises before the call. `language` was
   accepted but showed no effect, so `locale` is not mapped.
+- `parallel` answers in about seven seconds with the `lite` model, the fastest
+  whose `basis` ties its sources to the answer (`speed` returned none). Each
+  citation carries the basis's `confidence` in `extra`; its reasoning stays in
+  `raw`. Its Chat API is in beta and takes no source filter, so every option
+  is refused.
 - `linkup` answers in about a second (median 0.9 s over 300 questions) and lists every page it read, tied to no
   sentence. `recency` is its `fromDate`, and Linkup filters on the date it holds
   for a page, which is not always the publication date.

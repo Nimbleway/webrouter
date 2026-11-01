@@ -226,6 +226,7 @@ carries one; this table is for reading the others.
 | Backend | What web-router sends | Price | Source |
 |---|---|---|---|
 | Linkup | `/v1/search`, `outputType=sourcedAnswer`, `depth=fast` | $5 per 1k at `fast`, plus $0.001 a call for `sourcedAnswer`: about $6 per 1k | [pricing page](https://www.linkup.so/pricing), [search overview](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) |
+| Parallel | Chat API (beta), `model=lite` | Not checked here; see the vendor's page | [pricing](https://parallel.ai/pricing) |
 | You.com | `/v1/answer` on `api.you.com` | $5 per 1k; its response states no cost | [changelog](https://you.com/docs/additional-resources/changelog/2026/8/5.md) |
 | Perplexity | `/v1/responses`, `effort=fast` | Tokens plus tools: $0.001 a web search, and the `fast` model's tokens. Its response states the total under `usage.cost`; live on 2026-11-01, about $0.0015 an answer | [presets](https://docs.perplexity.ai/docs/agent-api/presets.md), [pricing](https://docs.perplexity.ai/getting-started/pricing) |
 
