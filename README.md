@@ -1,6 +1,6 @@
 # web-router
 
-**One interface over many web search, extraction, research and browser APIs.**
+**One interface over many web search, extraction, answer, research and browser APIs.**
 
 > **Alpha.** You have early access to `web-router` under your agreement with
 > Nimble. Please don't share the code or this repository. Issues and pull
@@ -10,8 +10,8 @@
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Twelve search backends, seven extract backends, a template catalogue,
-three agentic research backends (plus Exa's, retired upstream), five
+Twelve search backends, seven extract backends, a template catalogue, an
+answer backend, three agentic research backends (plus Exa's, retired upstream), five
 browser-session backends and three browser agents. One call each. Switching
 between them is one argument.
 Maintained by [Nimble](https://nimbleway.com), one of the backends it routes to.
@@ -26,6 +26,8 @@ WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
 WebRouter().extract("https://example.com")  # page contents, also keyless
 
 WebRouter().run_template("walmart_pdp", {"product_id": "..."}, provider="nimble")  # one page, one record
+
+WebRouter(Provider.LINKUP).answer("...")  # a written answer with its sources, in one call
 
 WebRouter(Provider.NIMBLE).research("...")  # an agentic run: minutes, not milliseconds
 
@@ -296,6 +298,22 @@ Nimble is the only backend with a template catalogue so far. Verified live on
 2026-10-22: a listing, a description and a run on a public test page, the
 response shapes of which the tests are modelled on. See
 [Running a template](#running-a-template).
+
+### Answer
+
+`[answer]` installs these. One question, answered in one call: the backend
+searches and writes the answer itself. No keyless tier, since every backend
+bills the call, and no `auto` yet -- its order waits on a comparison of the
+backends' answers. See [Asking for an answer](#asking-for-an-answer).
+
+| Pass | Name | Provider | Credentials | Options mapped | Citations tied to claims |
+| --- | --- | --- | --- | --- | --- |
+| `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | no: every page read, for the answer as a whole |
+
+Verified live on 2026-11-01: answers in 2 to 4 seconds, the domain filters held
+on every source, and `recency` (sent as Linkup's `fromDate`) moved an answer to
+the window's sources. Linkup filters on the date it holds for a page, which is
+not always the publication date.
 
 ### Research
 
@@ -765,10 +783,44 @@ the backend reports them; `limit` and `offset` left unset leave the paging to
 the backend. Every call tags its answer with `provider` and keeps the untouched
 payload in `raw`.
 
+## Asking for an answer
+
+`answer()` asks one question and returns the backend's own written answer with
+the sources it rests on, in one call. It sits between `search()`, which returns
+the pages, and `research()`, a job of minutes.
+
+```python
+response = router.answer("who won the 2022 world cup final", provider="linkup")
+
+print(response.answer)
+for citation in response.citations:
+    print(citation.url, citation.field or "")
+```
+
+Nothing here writes, joins or edits the answer: it is the backend's, as it came.
+An empty one comes back as `""` rather than an error, with its sources and
+`raw`, so "the backend had nothing" reads differently from a failure. Where a
+backend marks which source backs which sentence, the marker is in
+`citation.field`; where it does not (Linkup), every citation backs the answer
+as a whole. `outcome` is `partial` only when the backend says it stopped early.
+
+The options are `include_domains`, `exclude_domains`, `country`, `locale` and
+`recency` (`"day"`, `"week"`, `"month"` or `"year"`). A backend that does not
+map one raises `UnsupportedParameterError` before anything is sent -- the
+[answer table](#answer) says which backend maps what.
+
+There is no `auto` yet. With `provider` unset, the router's default answers
+when it is an answer backend (`WebRouter("linkup").answer(q)`), otherwise the
+one answer backend you hold a key for. With none or several, the call raises
+`ProviderNotFoundError` naming them: say which with `provider=`.
+
+"Answer" means two other things nearby. `SearchResponse.answer` is an answer a
+search backend volunteered beside its results, unasked (You.com's knowledge
+panel); `answer()` is one you asked for, with its sources.
+
 ## Researching a question
 
-`research()` is the third method, and the one that behaves differently enough to
-be worth a section. A search answers in a second. A research run reasons over
+`research()` behaves differently enough to be worth a section. A search answers in a second. A research run reasons over
 several turns — searching, reading, cross-checking — and answers in minutes.
 
 ```python
@@ -780,8 +832,8 @@ for citation in response.citations:
 ```
 
 The line between this and `search` is not "does it reason". It is **whether the
-work fits inside one request/response**. A synthesized answer that comes back in
-one call is a search — `SearchResponse.answer` already holds one. A run that
+work fits inside one request/response**. A written answer that comes back in
+one call is `answer()`. A run that
 takes minutes, can be polled, can be cancelled and bills by the unit of effort is
 a job, and it needs a different shape.
 

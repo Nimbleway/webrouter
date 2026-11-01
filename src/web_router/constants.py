@@ -226,7 +226,9 @@ change the table's type. Every research backend costs money to call, so unlike
 the other two methods there is no keyless tier to fall back on.
 """
 
-ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {}
+ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
+    PROVIDER_LINKUP: (ENV_LINKUP_API_KEY,),
+}
 """Which variables each answer provider needs, all of them.
 
 Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. Every answer backend bills the

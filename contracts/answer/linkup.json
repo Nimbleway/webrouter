@@ -1,0 +1,90 @@
+{
+  "provider": "linkup",
+  "method": "answer",
+  "class": "web_router.providers.linkup.LinkupAnswerProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.linkup.so",
+    "paths": {
+      "answer_path": "/v1/search"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "LINKUP_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.depth": "fast",
+    "body.outputType": "sourcedAnswer",
+    "body.q": "probe query"
+  },
+  "options": {
+    "include_domains": {
+      "sample": {
+        "body.includeDomains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.excludeDomains": [
+          "example.org"
+        ]
+      }
+    },
+    "recency": {
+      "day": {
+        "body.fromDate": "2026-01-14"
+      },
+      "week": {
+        "body.fromDate": "2026-01-08"
+      },
+      "month": {
+        "body.fromDate": "2025-12-16"
+      },
+      "year": {
+        "body.fromDate": "2025-01-15"
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "locale"
+  ],
+  "source": [
+    "https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search"
+  ],
+  "verified": {
+    "include_domains": "live: tests/test_integration_surface.py::test_an_answers_sources_honor_the_domain_filter",
+    "exclude_domains": "live: tests/test_integration_surface.py::test_an_answers_sources_leave_out_excluded_domains",
+    "recency": "live: tests/test_integration_surface.py::test_recency_is_accepted"
+  },
+  "vendor_options": {
+    "includeImages": {
+      "status": "passthrough",
+      "note": "The sourcedAnswer schema has no image fields; no normalized field."
+    },
+    "includeInlineCitations": {
+      "status": "passthrough",
+      "note": "Documented for sourcedAnswer: puts citation markers in the answer. Not checked live; Citation.field would carry them once it is."
+    },
+    "includeSources": {
+      "status": "not_supported",
+      "note": "Documented for structured output only; a sourcedAnswer always lists its sources."
+    },
+    "maxResults": {
+      "status": "passthrough",
+      "note": "Caps the sources read; answer() has no max_results."
+    },
+    "structuredOutputSchema": {
+      "status": "not_supported",
+      "note": "Structured output is research's output_schema; answer has none in this release."
+    },
+    "toDate": {
+      "status": "passthrough",
+      "note": "An end date; recency sets only fromDate. Checked live: a 2019 toDate gave a 2019-only answer."
+    }
+  }
+}

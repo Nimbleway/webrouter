@@ -2,11 +2,12 @@
 
 Talks to the REST endpoints directly: Linkup's SDK would add a dependency for the
 handful of fields used here. Install with the ``search`` extra,
-``[extract]`` or ``[research]``. Reads ``LINKUP_API_KEY`` unless a key is passed
-explicitly.
+``[extract]``, ``[research]`` or ``[answer]``. Reads ``LINKUP_API_KEY`` unless a
+key is passed explicitly.
 
 Slim by design. A search maps ``max_results`` and the domain filters; an extract
-maps ``format``; a research run maps ``effort``. A search refuses
+maps ``format``; a research run maps ``effort``; an answer maps the domain
+filters and ``recency``. A search refuses
 ``search_depth``, because Linkup's ``depth`` is retrieval effort rather than page
 content (see ``LINKUP_DEFAULT_DEPTH``). Everything else -- its depths, dates,
 images, a research ``mode`` -- is reachable through ``provider_options``, and mapping one properly is a welcome PR;
@@ -16,6 +17,7 @@ see CONTRIBUTING.md.
 from __future__ import annotations
 
 import json
+from datetime import timedelta
 from typing import Any, ClassVar
 from urllib.parse import quote
 
@@ -43,10 +45,24 @@ from web_router.constants import (
     MSG_LINKUP_NO_HTML,
     PROVIDER_LINKUP,
 )
-from web_router.providers._http import HttpExtractProvider, HttpResearchProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, build_payload, error_detail
+from web_router.constants_linkup import (
+    LINKUP_ANSWER_DATE_FORMAT,
+    LINKUP_ANSWER_FROM_DATE_FIELD,
+    LINKUP_ANSWER_OUTPUT_TYPE,
+    LINKUP_ANSWER_PARAM_NAMES,
+    LINKUP_ANSWER_RECENCY_DAYS,
+)
+from web_router.providers._http import (
+    HttpAnswerProvider,
+    HttpExtractProvider,
+    HttpResearchProvider,
+    HttpSearchProvider,
+)
+from web_router.providers._utils import as_snippet, build_payload, error_detail, today
 from web_router.types import (
     EXTRACT_PARAMETERS,
+    AnswerRequest,
+    AnswerResponse,
     Citation,
     ExtractedDocument,
     ExtractFailure,
@@ -250,5 +266,58 @@ class LinkupResearchProvider(HttpResearchProvider):
                 for source in output.get("sources") or []
             ],
             request_id=str(payload.get("id") or "") or None,
+            raw=[payload],
+        )
+
+
+class LinkupAnswerProvider(HttpAnswerProvider):
+    """Answers a question through Linkup's Search API, with ``outputType: sourcedAnswer``.
+
+    Linkup writes the answer and lists every page it read under ``sources``; the
+    answer carries no markers, so each citation backs the answer as a whole and
+    ``field`` stays ``None``. There is no request id and no field saying the
+    answer stopped early, so ``request_id`` is ``None`` and ``outcome`` is
+    always ``complete``.
+
+    ``include_domains`` and ``exclude_domains`` map as on search; ``recency``
+    sets ``fromDate`` that far back from today. ``depth`` is required and sent
+    as on search (see ``LINKUP_DEFAULT_DEPTH``); a deeper one goes through
+    ``provider_options``.
+    """
+
+    name: ClassVar[str] = PROVIDER_LINKUP
+    supported_parameters: ClassVar[frozenset[str]] = frozenset({*LINKUP_ANSWER_PARAM_NAMES, "recency"})
+
+    base_url: ClassVar[str] = LINKUP_BASE_URL
+    answer_path: ClassVar[str] = LINKUP_SEARCH_PATH
+    env_api_key: ClassVar[str] = ENV_LINKUP_API_KEY
+    api_key_header: ClassVar[str] = LINKUP_API_KEY_HEADER
+    api_key_prefix: ClassVar[str] = LINKUP_API_KEY_PREFIX
+
+    def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
+        since = today() - timedelta(days=LINKUP_ANSWER_RECENCY_DAYS[request.recency]) if request.recency else None
+        return build_payload(
+            request,
+            LINKUP_ANSWER_PARAM_NAMES,
+            q=request.query,
+            depth=LINKUP_DEFAULT_DEPTH,
+            outputType=LINKUP_ANSWER_OUTPUT_TYPE,
+            **{LINKUP_ANSWER_FROM_DATE_FIELD: since.strftime(LINKUP_ANSWER_DATE_FORMAT) if since else None},
+        )
+
+    def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
+        return AnswerResponse(
+            provider=self.name,
+            query=request.query,
+            answer=payload.get("answer") or "",
+            citations=[
+                Citation(
+                    url=source.get("url", ""),
+                    title=source.get("name") or "",
+                    snippet=source.get("snippet") or "",
+                    extra={k: v for k, v in source.items() if k not in _MAPPED_SOURCE_FIELDS},
+                )
+                for source in payload.get("sources") or []
+            ],
             raw=[payload],
         )

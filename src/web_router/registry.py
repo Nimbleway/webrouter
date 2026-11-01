@@ -26,6 +26,7 @@ from web_router.constants import (
     BROWSER_ENV_BY_PROVIDER,
     ENV_BY_PROVIDER,
     EXTRA_ALL,
+    EXTRA_ANSWER,
     EXTRA_AWS,
     EXTRA_EXTRACT,
     EXTRA_RESEARCH,
@@ -134,8 +135,10 @@ _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoResearchProvider", AUTO_EXTRA),
 }
 
-# No builtins yet, and no `auto`: its order waits on a comparison of the backends' answers.
-_BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {}
+# No `auto`: its order waits on a comparison of the backends' answers.
+_BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {
+    PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupAnswerProvider", EXTRA_ANSWER),
+}
 
 # Opening a session needs only httpx, which `all` installs, so the vendors name
 # `all` rather than `browser`: that extra is Playwright, for the handle's page
