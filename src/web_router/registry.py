@@ -141,6 +141,7 @@ _BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_PARALLEL: ("web_router.providers.parallel", "ParallelAnswerProvider", EXTRA_ANSWER),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupAnswerProvider", EXTRA_ANSWER),
     PROVIDER_YOU: ("web_router.providers.you", "YouAnswerProvider", EXTRA_ANSWER),
+    PROVIDER_EXA: ("web_router.providers.exa", "ExaAnswerProvider", EXTRA_ANSWER),
 }
 
 # Opening a session needs only httpx, which `all` installs, so the vendors name
