@@ -10,7 +10,7 @@
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Twelve search backends, seven extract backends, a template catalogue, two
+Twelve search backends, seven extract backends, a template catalogue, three
 answer backends, three agentic research backends (plus Exa's, retired upstream), five
 browser-session backends and three browser agents. One call each. Switching
 between them is one argument.
@@ -309,15 +309,21 @@ backends' answers. See [Asking for an answer](#asking-for-an-answer).
 | Pass | Name | Provider | Credentials | Options mapped | Citations tied to claims |
 | --- | --- | --- | --- | --- | --- |
 | `Provider.PERPLEXITY` | `perplexity` | [Perplexity Agent API, `fast` effort](https://docs.perplexity.ai/docs/agent-api/quickstart) | `PERPLEXITY_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[N]` markers, in `citation.field` |
+| `Provider.YOU` | `you` | [You.com Answer API](https://you.com/docs/guides/answer.md) | `YOU_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[[1, 2]]` markers, in `citation.field` |
 | `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | no: every page read, for the answer as a whole |
 
-Both verified live on 2026-11-01, every mapped option seen to apply.
+All verified live on 2026-11-01, every mapped option seen to apply.
 
 - `perplexity` answers in about two seconds (median 1.9 s over 300 questions) and cites inline as `[2]`; a
   citation whose marker appears in the answer carries it in `field`, and the
   response states its own cost under `raw[0]["usage"]["cost"]` (about $0.0012
   an answer over 300 questions). `country` is its `user_location`: an emergency-number question
   answered 999 for `GB` and 911 for `US`.
+- `you` answers in about two seconds (median 1.7 s over 300 questions). Its `citations` are only the sources the
+  answer cites, marked `[[1, 2]]`; each carries the first marker naming it in
+  `field`, and its title comes from the pages You.com considered. It takes one
+  domain list, not both: asking for both raises before the call. `language` was
+  accepted but showed no effect, so `locale` is not mapped.
 - `linkup` answers in about a second (median 0.9 s over 300 questions) and lists every page it read, tied to no
   sentence. `recency` is its `fromDate`, and Linkup filters on the date it holds
   for a page, which is not always the publication date.

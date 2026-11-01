@@ -230,6 +230,7 @@ the other two methods there is no keyless tier to fall back on.
 ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_PERPLEXITY: (ENV_PERPLEXITY_API_KEY,),
     PROVIDER_LINKUP: (ENV_LINKUP_API_KEY,),
+    PROVIDER_YOU: (ENV_YOU_API_KEY,),
 }
 """Which variables each answer provider needs, all of them.
 
