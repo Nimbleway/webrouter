@@ -87,6 +87,7 @@ from web_router.exceptions import (
     UnsupportedFormatError,
     UnsupportedParameterError,
     WebRouterError,
+    describe,
 )
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.providers._utils import job_deadline
@@ -203,7 +204,7 @@ class SearchProvider(_BaseProvider):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, MSG_SEARCH_FAILED.format(error=exc), original=exc) from exc
+            raise ProviderError(self.name, MSG_SEARCH_FAILED.format(error=describe(exc)), original=exc) from exc
 
     async def asearch(self, request: SearchRequest) -> SearchResponse:
         """Async counterpart of :meth:`search`."""
@@ -213,7 +214,7 @@ class SearchProvider(_BaseProvider):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, MSG_SEARCH_FAILED.format(error=exc), original=exc) from exc
+            raise ProviderError(self.name, MSG_SEARCH_FAILED.format(error=describe(exc)), original=exc) from exc
 
     def validate(self, request: SearchRequest) -> None:
         """Raise :class:`UnsupportedParameterError` for any option this backend does not map."""
@@ -248,7 +249,7 @@ class AnswerProvider(_BaseProvider):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, MSG_ANSWER_FAILED.format(error=exc), original=exc) from exc
+            raise ProviderError(self.name, MSG_ANSWER_FAILED.format(error=describe(exc)), original=exc) from exc
 
     async def aanswer(self, request: AnswerRequest) -> AnswerResponse:
         """Async counterpart of :meth:`answer`."""
@@ -258,7 +259,7 @@ class AnswerProvider(_BaseProvider):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, MSG_ANSWER_FAILED.format(error=exc), original=exc) from exc
+            raise ProviderError(self.name, MSG_ANSWER_FAILED.format(error=describe(exc)), original=exc) from exc
 
     def validate(self, request: AnswerRequest) -> None:
         """Raise :class:`UnsupportedParameterError` for any option this backend does not map."""
@@ -405,7 +406,7 @@ class ExtractProvider(_BaseProvider):
         return [list(urls)] if self.batches_urls else [[url] for url in urls]
 
     def _failure(self, exc: BaseException) -> ProviderError:
-        return ProviderError(self.name, MSG_EXTRACT_FAILED.format(error=exc), original=exc)
+        return ProviderError(self.name, MSG_EXTRACT_FAILED.format(error=describe(exc)), original=exc)
 
 
 class _Collected:
@@ -564,7 +565,7 @@ class TemplateProvider(_BaseProvider):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATE_FAILED.format(error=exc), original=exc) from exc
+            raise ProviderError(self.name, MSG_TEMPLATE_FAILED.format(error=describe(exc)), original=exc) from exc
 
     async def arun(self, request: TemplateRequest) -> TemplateResponse:
         """Async counterpart of :meth:`run`."""
@@ -574,7 +575,7 @@ class TemplateProvider(_BaseProvider):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATE_FAILED.format(error=exc), original=exc) from exc
+            raise ProviderError(self.name, MSG_TEMPLATE_FAILED.format(error=describe(exc)), original=exc) from exc
 
     def templates(self, *, limit: int | None = None, offset: int | None = None) -> TemplatePage:
         """List one page of this backend's templates, wrapping any backend failure.
@@ -587,7 +588,7 @@ class TemplateProvider(_BaseProvider):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATES_FAILED.format(error=exc), original=exc) from exc
+            raise ProviderError(self.name, MSG_TEMPLATES_FAILED.format(error=describe(exc)), original=exc) from exc
 
     async def atemplates(self, *, limit: int | None = None, offset: int | None = None) -> TemplatePage:
         """Async counterpart of :meth:`templates`."""
@@ -596,7 +597,7 @@ class TemplateProvider(_BaseProvider):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATES_FAILED.format(error=exc), original=exc) from exc
+            raise ProviderError(self.name, MSG_TEMPLATES_FAILED.format(error=describe(exc)), original=exc) from exc
 
     def template(self, name: str) -> Template:
         """Describe one template by name, wrapping any backend failure -- an unknown name included."""
@@ -605,7 +606,9 @@ class TemplateProvider(_BaseProvider):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATE_GET_FAILED.format(name=name, error=exc), original=exc) from exc
+            raise ProviderError(
+                self.name, MSG_TEMPLATE_GET_FAILED.format(name=name, error=describe(exc)), original=exc
+            ) from exc
 
     async def atemplate(self, name: str) -> Template:
         """Async counterpart of :meth:`template`."""
@@ -614,7 +617,9 @@ class TemplateProvider(_BaseProvider):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATE_GET_FAILED.format(name=name, error=exc), original=exc) from exc
+            raise ProviderError(
+                self.name, MSG_TEMPLATE_GET_FAILED.format(name=name, error=describe(exc)), original=exc
+            ) from exc
 
     def validate(self, request: TemplateRequest) -> None:
         """Raise for any option this backend does not map, or format it cannot return beside the record."""
@@ -847,7 +852,7 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, self._failed_message.format(error=exc), original=exc) from exc
+            raise ProviderError(self.name, self._failed_message.format(error=describe(exc)), original=exc) from exc
 
     async def _aguarded(self, awaitable: Awaitable[_ResultT]) -> _ResultT:
         try:
@@ -855,7 +860,7 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
         except WebRouterError:
             raise
         except Exception as exc:
-            raise ProviderError(self.name, self._failed_message.format(error=exc), original=exc) from exc
+            raise ProviderError(self.name, self._failed_message.format(error=describe(exc)), original=exc) from exc
 
 
 class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
@@ -1552,7 +1557,7 @@ class BrowserProvider(_BaseProvider):
             return False
 
     def _failure(self, exc: Exception) -> ProviderError:
-        return ProviderError(self.name, MSG_BROWSER_FAILED.format(error=exc), original=exc)
+        return ProviderError(self.name, MSG_BROWSER_FAILED.format(error=describe(exc)), original=exc)
 
     def _guarded(self, call: Callable[[], _ResultT]) -> _ResultT:
         try:

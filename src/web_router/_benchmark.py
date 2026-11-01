@@ -18,7 +18,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, wait
 from typing import Any, TypeVar
 
 from web_router.constants import MSG_BENCHMARK_ROW_FAILED
-from web_router.exceptions import BenchmarkTimeoutError, ProviderError, WebRouterError
+from web_router.exceptions import BenchmarkTimeoutError, ProviderError, WebRouterError, describe
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import BenchmarkRun, ExtractBenchmarkRun, ExtractResponse, Provider, SearchResponse, provider_name
 
@@ -96,7 +96,7 @@ def _failure(name: str, exc: Exception) -> WebRouterError:
     """
     if isinstance(exc, WebRouterError):
         return exc
-    wrapped = ProviderError(name, MSG_BENCHMARK_ROW_FAILED.format(error=exc), original=exc)
+    wrapped = ProviderError(name, MSG_BENCHMARK_ROW_FAILED.format(error=describe(exc)), original=exc)
     wrapped.__cause__ = exc  # Returned, not raised, so ``raise ... from`` cannot set it; the traceback stays reachable.
     return wrapped
 

@@ -18,7 +18,7 @@ from web_router.constants import BENCHMARK_TIMEOUT, EVALS_CONCURRENCY, MSG_EVALS
 from web_router.evals.datasets import Dataset, Question
 from web_router.evals.judge import Judge, OpenAIJudge
 from web_router.evals.types import EvaluationReport, EvaluationRow, FailedAt, Grade, ProviderScore
-from web_router.exceptions import ProviderError
+from web_router.exceptions import ProviderError, describe
 from web_router.types import BenchmarkRun, Provider, SearchDepth, SearchResult
 
 if TYPE_CHECKING:
@@ -175,7 +175,7 @@ def _row(
 
 def _judge_error(judge: Judge, step: FailedAt, exc: Exception) -> ProviderError:
     # The judge's failure, wrapped under the judge's name: it is not the backend's.
-    return ProviderError(judge.name, MSG_EVALS_JUDGE_FAILED.format(step=step, error=exc), original=exc)
+    return ProviderError(judge.name, MSG_EVALS_JUDGE_FAILED.format(step=step, error=describe(exc)), original=exc)
 
 
 def _report(dataset: Dataset, judge: Judge, per_question: list[list[EvaluationRow]]) -> EvaluationReport:

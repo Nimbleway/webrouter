@@ -50,6 +50,15 @@ from web_router.constants import (
 )
 
 
+def describe(exc: BaseException) -> str:
+    """What to say about ``exc`` in a message: its text, or its type when it has none.
+
+    httpx's timeouts carry no text, so a read timeout wrapped as
+    ``"answer failed: {error}"`` read "answer failed: " and said nothing.
+    """
+    return str(exc) or type(exc).__name__
+
+
 class WebRouterError(Exception):
     """Base class for every error raised by web-router."""
 

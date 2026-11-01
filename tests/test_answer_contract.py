@@ -207,3 +207,13 @@ def test_an_empty_answer_is_returned_not_raised() -> None:
     assert isinstance(response, AnswerResponse)
     assert response.answer == ""
     assert response.raw == [{"answer": ""}]
+
+
+def test_an_error_with_no_text_is_named_by_its_type() -> None:
+    """httpx's timeouts carry no text; the message must still say what happened."""
+    import httpx
+
+    provider = _fake(raises=httpx.ReadTimeout(""))
+
+    with pytest.raises(ProviderError, match=r"answer failed: ReadTimeout$"):
+        provider.answer(_request())

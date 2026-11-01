@@ -17,6 +17,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 - Exa as an answer backend (`exa`): its Answer API, answering in about 1.3 seconds with its stated cost in `raw`. The answer cites inline as `[N]`, numbering its citations from 1, and each cited source carries its marker in `Citation.field`. No option is mapped: the API has no source filter, and `userLocation` showed no clear effect, so `country` is refused. Verified live.
 - Linkup as an answer backend (`linkup`): its Search API with `outputType: sourcedAnswer`, answering in about a second. Maps `include_domains`, `exclude_domains` and `recency`, sent as `fromDate` that far back from today; `country` and `locale` have no Linkup field and are refused. Its sources are every page read, not tied to sentences, so `field` stays `None`. Verified live.
 
+### Fixed
+
+- An error whose exception has no text -- httpx's read and connect timeouts -- now names its type instead of ending blank: a timed-out answer read `answer failed: ` and now reads `answer failed: ReadTimeout`. The same for every method's wrapped failure, a benchmark row's and the judge's.
+
 ### Changed
 
 - `auto` now moves to the next backend when one answers with nothing usable, as it does on an error: a search with no results and no `answer`, or an extract whose every document is blank. A document's page status is not read, since only some backends report one. When every member answers empty, the first empty answer comes back, naming its backend, rather than an error. A call that ends empty has tried every backend that can serve it, one after another, and each one you hold a key for bills for it. `provider_config={"auto": {"fallback_on_empty": False}}` returns the first answer, empty or not; the MCP server has no such switch. `max` is unchanged.
