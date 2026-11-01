@@ -358,7 +358,8 @@ model that needs an exception type or a message template cannot live in
 `types.py` — put it in a subpackage's own `types.py` (as `evals/types.py`
 does) or annotate the field as `Exception` and say why in its docstring (as
 `BenchmarkRun.error` does). Do not "fix" this by importing lazily inside a
-validator.
+validator. A `constants_<provider>.py` sits at the same level as `constants`:
+it may import `types` and nothing else of ours.
 
 **Never override the public method in a provider.** `search`/`asearch`,
 `extract`/`aextract`, `run`/`templates`/`template`,
@@ -401,6 +402,7 @@ already read — and do not read it directly.
 provider declares its own status table in `constants_<provider>.py` and reads it
 through `JobProvider.state_of` (a browser provider through `BrowserProvider.state_of`,
 which shares its translation), which raises on a status the table does not list.
+Older providers' status tables are still in `constants.py`.
 An unrecognized status means the backend changed under us, and treating it as
 "still running" would poll a finished job until the timeout.
 
@@ -595,10 +597,11 @@ bump the pin only with `make test-browser` green.
 
 **A browser provider's `provider_options` cannot override a mapped option.**
 Build the payload with `build_browser_payload`, from a table in
-`constants_<provider>.py` saying where each mapped option goes in the body. A
-row is one of three shapes, and stays data: a path, for a value sent as it is; a
-`BrowserField`, for one option that sets several fields (`proxy_country`
-turning a vendor's proxy on as well as naming the country) with
+`constants_<provider>.py` (older providers' are still in `constants.py`) saying
+where each mapped option goes in the body. A row is one of three shapes, and
+stays data: a path, for a value sent as it is; a `BrowserField`, for one
+option that sets several fields (`proxy_country` turning a vendor's proxy on
+as well as naming the country) with
 `REQUEST_VALUE` marking where the caller's value lands and an optional `case`;
 or, for `stealth`, a lookup from each level to the fields it sets. It merges
 `provider_options` beneath every field a row produces, at every depth, and
