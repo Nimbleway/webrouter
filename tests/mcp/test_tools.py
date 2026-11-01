@@ -23,11 +23,13 @@ from web_router.constants import (
     ENV_LINKUP_API_KEY,
     ENV_MCP_ENV_FILE,
     ENV_NIMBLE_API_KEY,
+    ENV_PERPLEXITY_API_KEY,
     ENV_TAVILY_API_KEY,
     MCP_BROWSER_TOOLS,
     MCP_METHOD_TEMPLATE,
     MCP_REDACTED,
     MCP_RESOURCE_URI,
+    MCP_TOOL_ANSWER,
     MCP_TOOL_BROWSE,
     MCP_TOOL_BROWSE_STATUS,
     MCP_TOOL_BROWSER_OPEN,
@@ -74,13 +76,14 @@ def _payload(result: Any) -> dict[str, Any]:
     return parsed
 
 
-def test_serves_exactly_twenty_tools(tools: WebRouterTools) -> None:
+def test_serves_exactly_twenty_one_tools(tools: WebRouterTools) -> None:
     assert [tool.name for tool in list_tools(tools).tools] == [
         MCP_TOOL_SEARCH,
         MCP_TOOL_EXTRACT,
         MCP_TOOL_TEMPLATES,
         MCP_TOOL_TEMPLATE,
         MCP_TOOL_RUN_TEMPLATE,
+        MCP_TOOL_ANSWER,
         MCP_TOOL_RESEARCH,
         MCP_TOOL_RESEARCH_STATUS,
         MCP_TOOL_BROWSE,
@@ -447,6 +450,7 @@ def test_the_capabilities_resource_lists_what_this_install_serves(tools: WebRout
     body = json.loads(read_resource(tools, MCP_RESOURCE_URI).contents[0].text)
     assert body[MCP_TOOL_SEARCH] == [PROVIDER_AUTO, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP, PROVIDER_YOU_MCP]
     assert body[MCP_TOOL_RESEARCH] == [PROVIDER_AUTO]
+    assert body[MCP_TOOL_ANSWER] == [], "no keyless tier and no auto"
     # Every browse backend bills, so with no key there is no keyless tier to list.
     assert set(body[MCP_TOOL_BROWSE]) <= {PROVIDER_AUTO}
     assert body["default_provider"] == FAKE
@@ -848,3 +852,70 @@ def test_the_capabilities_say_which_keys_would_unlock_more(
     assert unlock["extract"]["oxylabs"] == ["OXYLABS_USERNAME", "OXYLABS_PASSWORD"]
     assert "steel" in unlock["browser"] and "local" not in unlock["browser"]
     assert "every capability is available" in tools.instructions()
+
+
+# -- answer ------------------------------------------------------------------
+
+
+async def test_answer_round_trip_and_fetch_raw(tools: WebRouterTools, fake_answer_provider: Any) -> None:
+    payload = _payload(
+        await call_tool(tools, MCP_TOOL_ANSWER, {"query": "who won", "recency": "week", "country": "US"})
+    )
+
+    assert payload["provider"] == FAKE
+    assert payload["answer"] == "the answer"
+    assert payload["outcome"] == "complete"
+    assert payload["citation_count"] == 1
+    assert payload["citations"][0]["url"] == "https://example.com"
+    assert payload["handle"].startswith(MCP_TOOL_ANSWER)
+    request = tools.router.get_answer_provider(FAKE).requests[-1]  # type: ignore[attr-defined]
+    assert (request.recency, request.country, request.locale) == ("week", "US", None)
+
+    raw = _payload(await call_tool(tools, MCP_TOOL_FETCH_RAW, {"handle": payload["handle"]}))
+    assert raw["raw"] == [{"answer": "the answer"}]
+
+
+def test_answer_needs_no_provider_argument(tools: WebRouterTools, no_keys: None) -> None:
+    """With one answer backend configured the router uses it, so the model need not name it."""
+    assert _tool(tools, MCP_TOOL_ANSWER).input_schema["required"] == ["query"]
+
+
+def test_answer_says_so_when_nothing_can_serve_it(
+    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    described = _tool(tools, MCP_TOOL_ANSWER).description
+    assert "NOTHING IS CONFIGURED" in described
+    assert ENV_LINKUP_API_KEY in described
+
+    monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
+    schema = _tool(tools, MCP_TOOL_ANSWER).input_schema
+    assert "NOTHING IS CONFIGURED" not in _tool(tools, MCP_TOOL_ANSWER).description
+    assert schema["properties"]["provider"]["enum"] == [PROVIDER_LINKUP]
+
+
+def test_answer_offers_only_the_options_a_configured_backend_maps(
+    no_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Linkup has no country or locale; Perplexity has country. Neither has locale."""
+    monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
+    linkup_only = set(_tool(WebRouterTools(AsyncWebRouter()), MCP_TOOL_ANSWER).input_schema["properties"])
+    assert {"include_domains", "exclude_domains", "recency"} <= linkup_only
+    assert {"country", "locale"}.isdisjoint(linkup_only)
+
+    monkeypatch.setenv(ENV_PERPLEXITY_API_KEY, "x")
+    both = set(_tool(WebRouterTools(AsyncWebRouter()), MCP_TOOL_ANSWER).input_schema["properties"])
+    assert "country" in both
+    assert "locale" not in both
+
+
+async def test_a_bare_answer_with_two_backends_configured_is_an_error_naming_them(
+    no_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
+    monkeypatch.setenv(ENV_PERPLEXITY_API_KEY, "x")
+
+    result = await call_tool(WebRouterTools(AsyncWebRouter()), MCP_TOOL_ANSWER, {"query": "who won"})
+
+    assert result.is_error
+    assert "linkup" in result.content[0].text
+    assert "perplexity" in result.content[0].text

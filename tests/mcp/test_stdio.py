@@ -31,6 +31,7 @@ from tests.mcp.conftest import isolated_environment
 from web_router.constants import (
     MCP_BROWSER_TOOLS,
     MCP_RESOURCE_URI,
+    MCP_TOOL_ANSWER,
     MCP_TOOL_BROWSE,
     MCP_TOOL_BROWSE_STATUS,
     MCP_TOOL_EXTRACT,
@@ -56,6 +57,7 @@ EVERY_TOOL = [
     MCP_TOOL_TEMPLATES,
     MCP_TOOL_TEMPLATE,
     MCP_TOOL_RUN_TEMPLATE,
+    MCP_TOOL_ANSWER,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
     MCP_TOOL_BROWSE,

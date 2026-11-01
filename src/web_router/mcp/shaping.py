@@ -55,6 +55,7 @@ from web_router.constants import (
 )
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
+    AnswerResponse,
     BrowseProgress,
     BrowseResponse,
     ExtractResponse,
@@ -347,6 +348,24 @@ def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> d
     }
     shortened = answer != response.answer
     return _fit(payload, citations, ("snippet",), handle=handle, budget=budget, shortened=shortened)
+
+
+def shape_answer(response: AnswerResponse, handle: str, *, budget: int) -> dict[str, Any]:
+    """A written answer and its sources, cut to fit -- the answer first, with its own share of the budget."""
+    answer = truncate(response.answer, int(budget * MCP_ANSWER_SHARE)) if response.answer else response.answer
+    citations = [
+        {"url": citation.url, "title": citation.title, "field": citation.field, "snippet": citation.snippet}
+        for citation in response.citations
+    ]
+    payload: dict[str, Any] = {
+        "provider": response.provider,
+        "query": response.query,
+        "outcome": response.outcome,
+        "answer": answer,
+        "citation_count": len(citations),
+        "citations": citations,
+    }
+    return _fit(payload, citations, ("snippet",), handle=handle, budget=budget, shortened=answer != response.answer)
 
 
 def shape_browse(response: BrowseResponse, handle: str, *, budget: int) -> dict[str, Any]:

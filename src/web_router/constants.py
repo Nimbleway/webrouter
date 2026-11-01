@@ -23,6 +23,7 @@ from web_router.types import (
     PageFormat,
     PageLoadState,
     Provider,
+    Recency,
     ResearchEffort,
     ResearchState,
     SearchDepth,
@@ -3337,7 +3338,8 @@ MCP_SERVER_INSTRUCTIONS = (
     "Search, read and research the web through whichever backends this machine holds keys for. "
     "`search` and `extract` answer in about a second, and so does `run_template`, which runs a "
     "backend's Extract Template -- a saved, site-specific extraction that turns one page into a "
-    "record; `templates` lists them and `template` describes one, inputs and all. `research` runs an "
+    "record; `templates` lists them and `template` describes one, inputs and all. `answer` returns a "
+    "backend's own written answer to one question, with its sources, in a few seconds. `research` runs an "
     "agentic job that takes "
     "minutes and bills for the run, and `browse` hands a task to a hosted browser agent on the same "
     "terms. The `browser_*` tools let you drive a browser yourself: `browser_open` hands back a "
@@ -3370,6 +3372,7 @@ MCP_TOOL_EXTRACT = "extract"
 MCP_TOOL_TEMPLATES = "templates"
 MCP_TOOL_TEMPLATE = "template"
 MCP_TOOL_RUN_TEMPLATE = "run_template"
+MCP_TOOL_ANSWER = "answer"
 MCP_TOOL_RESEARCH = "research"
 MCP_TOOL_RESEARCH_STATUS = "research_status"
 MCP_TOOL_BROWSE = "browse"
@@ -3920,6 +3923,27 @@ MCP_RUN_TEMPLATE_PROPERTIES: dict[str, dict[str, Any]] = {
     },
 }
 
+MCP_ANSWER_PROPERTIES: dict[str, dict[str, Any]] = {
+    "query": {"type": "string", "description": "The question to answer."},
+    "include_domains": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Restrict sources to these domains.",
+    },
+    "exclude_domains": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Keep these domains out of the sources.",
+    },
+    "country": {"type": "string", "description": "Country code for geo-targeting, e.g. 'US'."},
+    "locale": {"type": "string", "description": "Language code, e.g. 'en'."},
+    "recency": {
+        "type": "string",
+        "enum": list(get_args(Recency)),
+        "description": "Only sources from the last day, week, month or year.",
+    },
+}
+
 MCP_RESEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": "The question, or the instructions for the run."},
     "output_schema": {
@@ -3982,7 +4006,7 @@ MCP_FETCH_RAW_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_HANDLE: {
         "type": "string",
         "description": (
-            "A handle from `search`, `extract`, `templates`, `template`, `run_template`, `research`, "
+            "A handle from `search`, `extract`, `templates`, `template`, `run_template`, `answer`, `research`, "
             "`research_status`, `browse`, `browse_status` or `browser_read`."
         ),
     },
@@ -4151,6 +4175,7 @@ MCP_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_TEMPLATES: MCP_TEMPLATES_PROPERTIES,
     MCP_TOOL_TEMPLATE: MCP_TEMPLATE_PROPERTIES,
     MCP_TOOL_RUN_TEMPLATE: MCP_RUN_TEMPLATE_PROPERTIES,
+    MCP_TOOL_ANSWER: MCP_ANSWER_PROPERTIES,
     MCP_TOOL_RESEARCH: MCP_RESEARCH_PROPERTIES,
     MCP_TOOL_RESEARCH_STATUS: MCP_RESEARCH_STATUS_PROPERTIES,
     MCP_TOOL_BROWSE: MCP_BROWSE_PROPERTIES,
@@ -4181,6 +4206,8 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_TEMPLATES: (MCP_ARG_PROVIDER,),
     MCP_TOOL_TEMPLATE: ("name", MCP_ARG_PROVIDER),
     MCP_TOOL_RUN_TEMPLATE: ("template", MCP_ARG_PROVIDER),
+    # Not `provider`, though answer has no `auto`: with one answer backend configured the router uses it.
+    MCP_TOOL_ANSWER: ("query",),
     MCP_TOOL_RESEARCH: ("query",),
     MCP_TOOL_RESEARCH_STATUS: (MCP_ARG_HANDLE,),
     MCP_TOOL_BROWSE: ("task",),
@@ -4205,7 +4232,7 @@ MCP_PROVIDER_DESCRIPTION = (
 )
 
 # A tool description is the routing decision: the model choosing between these
-# twenty is the actual router, and latency and cost are what it has to choose on.
+# twenty-one is the actual router, and latency and cost are what it has to choose on.
 
 MCP_DESC_SEARCH = (
     "Search the web: ranked links with their titles, descriptions and page text. Returns in about "
@@ -4252,6 +4279,16 @@ MCP_DESC_RUN_TEMPLATE = (
     "term for others. A run the backend could not complete is an error, never an empty record."
 )
 
+MCP_DESC_ANSWER = (
+    "Answer one question: the backend searches and writes a short answer itself, and it comes back "
+    "with the sources it rests on. Returns in a few seconds and bills one call. Use it for a closed "
+    "question whose answer is a sentence or two; use `search` when you need the pages themselves, "
+    "`extract` when you have the URL, and `research` for a question that needs an investigation. "
+    "The answer is the backend's own, unedited -- check it against the sources when it matters. A "
+    "source the answer cites inline carries that marker (e.g. '[2]') in its `field`. There is no "
+    "automatic choice of backend yet: with more than one configured, name one with `provider`."
+)
+
 MCP_DESC_RESEARCH = (
     "Start an agentic research run: the backend searches, reads and cross-checks over many turns, "
     "which takes MINUTES, not milliseconds, and bills for the run. Worth it for a question a "
@@ -4286,7 +4323,7 @@ MCP_DESC_BROWSE_STATUS = (
 
 MCP_DESC_FETCH_RAW = (
     "Return the backend's full, unshaped payload for a handle from `search`, `extract`, `templates`, "
-    "`template`, `run_template`, `research`, `research_status`, `browse` or `browse_status`. Instant -- "
+    "`template`, `run_template`, `answer`, `research`, `research_status`, `browse` or `browse_status`. Instant -- "
     "nothing is called again, the "
     "payload was kept from the original call -- but it can be very large and is not shortened. "
     "Ask for it when a shaped result said it was truncated and you need what was cut. For a browse "
@@ -4372,6 +4409,7 @@ MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
     MCP_TOOL_TEMPLATES: MCP_DESC_TEMPLATES,
     MCP_TOOL_TEMPLATE: MCP_DESC_TEMPLATE,
     MCP_TOOL_RUN_TEMPLATE: MCP_DESC_RUN_TEMPLATE,
+    MCP_TOOL_ANSWER: MCP_DESC_ANSWER,
     MCP_TOOL_RESEARCH: MCP_DESC_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS: MCP_DESC_RESEARCH_STATUS,
     MCP_TOOL_BROWSE: MCP_DESC_BROWSE,
@@ -4465,7 +4503,7 @@ MCP_MSG_UNKNOWN_TOOL = "Unknown tool {name!r}. This server serves: {tools}."
 
 MCP_MSG_UNKNOWN_HANDLE = (
     "Unknown handle {handle!r}. Handles come back from search, extract, templates, template, "
-    "run_template, research, browse and browser_read, and only the {limit} most recent are kept."
+    "run_template, answer, research, browse and browser_read, and only the {limit} most recent are kept."
 )
 
 MCP_MSG_NOT_A_JOB = (

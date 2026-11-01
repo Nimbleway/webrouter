@@ -1313,7 +1313,7 @@ the transcript is a separate endpoint this provider does not read.
 
 The package ships a **self-hosted stdio MCP server**, so an agent can call these
 methods as tools -- `search`, `extract`, `templates` / `template` /
-`run_template` and `research` -- plus `browse` / `browse_status` for a hosted browser
+`run_template`, `answer` and `research` -- plus `browse` / `browse_status` for a hosted browser
 agent's task, shaped like `research` / `research_status`: the tool waits 25
 seconds, then hands back a handle to poll. It runs in your own process and reads your own keys from
 your own environment — each key goes only to the backend it belongs to, which is
