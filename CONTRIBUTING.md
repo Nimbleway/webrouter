@@ -64,7 +64,7 @@ submission is the steps below.
 | Aspect | Runtime registration | Catalogue submission |
 | --- | --- | --- |
 | Visibility | Private to your application | Available to every web-router install |
-| Installation | You install its dependencies | The extra that installs that backend (`search`, `extract`, `research`, `browser`, or `aws`) |
+| Installation | You install its dependencies | The method's extra (`search`, `extract`, `research`), `aws` for `agentcore`, `all` for browser sessions and browse |
 | Reference | String name only | `Provider` enum + string |
 | Configuration | Your choice | Environment variables + `provider_config` |
 | Maintenance | Your responsibility | Maintained with web-router |
