@@ -212,7 +212,7 @@ You.com's keyless MCP is priced in its own section above.
 | Oxylabs | html (default) or markdown, no rendering | $0.95–1.15 per 1k results by plan; rendering $1.25–1.35 | [Web Scraper API pricing](https://oxylabs.io/products/scraper-api/web/pricing) |
 | Jina Reader | markdown, keyless | free at 20 requests a minute keyless; with a key, billed by output tokens: 10M free (non-commercial), then $50 per 1B tokens (Standard) or $500 per 11B (Premium), varies by location | [Jina Reader](https://jina.ai/reader) |
 | Parallel | not used for extract in web-router | $1 per 1k results | [pricing](https://parallel.ai/pricing) |
-| WebIQ (Browse) | markdown or text, `maxLength` 500,000 | not published: limited access for select enterprise customers, by request | [Web IQ](https://webiq.microsoft.ai), [SDK docs](https://webiq.microsoft.ai/documentation/sdk) |
+| WebIQ (Browse) | markdown or text, `maxLength` 500,000 | not published: limited access for select enterprise customers, by request | [Web IQ](https://webiq.microsoft.ai), [docs](https://webiq.microsoft.ai/documentation/) |
 | Keenable | markdown, `max_chars` 500,000 | one credit per fetch, 100k requests a month free, then not published; keyless free at 1,000 an hour per IP | [credits](https://docs.keenable.ai/credits.md), [fetch](https://docs.keenable.ai/api-reference/fetch.md) |
 | DeepSeek | markdown | $0.75 per 1k successful fetches | [search and fetch](https://api-docs.deepseek.com/guides/search) |
 | Linkup | markdown (default) or html (`includeRawContent`), `mode=standard`, no rendering | $0.001 per call ($1 per 1k); `renderJs` or `mode=pro` $0.005, both $0.01; a `schema` adds $0.001 | [fetch overview](https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md) |
