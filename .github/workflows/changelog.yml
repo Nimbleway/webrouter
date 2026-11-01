@@ -47,8 +47,8 @@ jobs:
               sys.exit("::error::CHANGELOG.md has no ## [Unreleased] heading.")
           end = next((i for i, l in enumerate(lines, 1) if i > start and l.startswith("## ")), len(lines) + 1)
 
-          # A "+" line that replaces a "-" line just above it is an edit (a typo fix in an
-          # old entry), not a new entry, so it may sit under a released version.
+          # A "+" line that replaces a non-blank "-" line just above it is an edit (a typo
+          # fix in an old entry), not a new entry, so it may sit under a released version.
           inside, outside, line, removed = 0, [], 0, 0
           for row in patch.splitlines():
               hunk = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)", row)
@@ -58,7 +58,7 @@ jobs:
               if row.startswith("\\"):
                   continue
               if row.startswith("-"):
-                  removed += 1
+                  removed += 1 if row[1:].strip() else 0
                   continue
               text = row[1:].strip()
               if row.startswith("+"):
