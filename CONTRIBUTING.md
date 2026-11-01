@@ -124,7 +124,7 @@ example.
    `_to_response`, or `ExtractProvider` and `_extract`/`_aextract` when you are
    wrapping an SDK. Never override `extract`/`aextract`: the base class runs
    validation, wraps failures, and fans the URLs out across calls for you.
-2. Put your format mapping in `constants.py` as a table keyed by
+2. Put your format mapping in `constants_<provider>.py` as a table keyed by
    `ExtractFormat`, and derive `supported_formats = frozenset(ACME_EXTRACT_FORMATS)`
    from it so the table stays the single description of what the provider can
    do. Set `default_format` to what the API returns when asked for nothing in
@@ -211,9 +211,9 @@ rendering or geo-targeting even though most of those backends support both.
 `locale`. Nimble maps them; no other provider does yet.
 To add one:
 
-1. Add the normalized name to that provider's mapping table in `constants.py`
-   (for example `TAVILY_PARAM_NAMES`), pointing at the provider's own field
-   name.
+1. Add the normalized name to that provider's mapping table, in
+   `constants_<provider>.py` or, for an older provider, `constants.py` (for
+   example `TAVILY_PARAM_NAMES`), pointing at the provider's own field name.
 2. On every provider that would be gaining an option, `supported_parameters` is
    derived from that table, so it updates itself. (Nimble declares the whole
    normalized set directly, because it already maps all of it.)
