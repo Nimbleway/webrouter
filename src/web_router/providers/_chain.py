@@ -13,7 +13,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from http import HTTPStatus
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, TypeVar
 
 from web_router.constants import (
     AUTO_AGGREGATE_FAILURE,
@@ -37,6 +37,7 @@ from web_router.exceptions import (
     ProviderNotInstalledError,
     WebRouterError,
 )
+from web_router.types import ExtractResponse, SearchResponse
 from web_router.types import provider_name as _lookup_name
 
 _Entry: TypeAlias = "str | tuple[str, Mapping[str, Any]]"
@@ -259,6 +260,30 @@ def _exhausted(
 
     detail = "; ".join(f"{name}: {exc}" for name, exc in failures.items())
     return ProviderError(provider, template.format(failures=detail))
+
+
+def _empty_search(response: SearchResponse) -> bool:
+    """No results and no answer: nothing a caller could use."""
+    return not response.results and not (response.answer or "").strip()
+
+
+def _empty_extract(response: ExtractResponse) -> bool:
+    """Every document blank. One with text makes the answer usable, as a partial fetch is."""
+    return not any(document.content.strip() for document in response.documents)
+
+
+_Answer = TypeVar("_Answer", SearchResponse, ExtractResponse)
+
+
+def _held_or_raise(held: _Answer | None, provider: str, failures: dict[str, WebRouterError]) -> _Answer:
+    """The first empty answer when one came back, else every member's reason.
+
+    An empty result is an answer: it outranks the failures that followed it,
+    from members that were never tried before an empty answer fell through.
+    """
+    if held is not None:
+        return held
+    raise _exhausted(provider, failures)
 
 
 def _no_backend(

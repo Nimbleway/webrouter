@@ -415,7 +415,9 @@ cannot return the format asked for, the pinned `markdown` default included, so
 Exa serves only `text`. With no member left, search raises
 `UnsupportedParameterError` and extract `UnsupportedFormatError`, each naming
 what every member lacked; among the members that can serve the call, a failure
-falls through as it always has, and a member whose extra is not installed
+falls through as it always has, and so does an empty answer (no results and no
+answer, or every document blank) unless `fallback_on_empty=False`; when every
+member is empty the first empty answer is returned. A member whose extra is not installed
 cannot be read, so it is kept and fails that way. The MCP server reads search,
 extract and browser `auto` as the chain it would try, so a union never
 advertises an option no reachable member maps. Its research chain passes over
