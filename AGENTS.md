@@ -201,6 +201,13 @@ make test      # unit tests only, no network
 make test-browser  # tests that launch a real local Chromium; skip without one
 ```
 
+Cloud Agent VMs already set `core.hooksPath`, so `pre-commit install` exits
+rather than replacing those hooks. Leave `core.hooksPath` as it is and run
+`uv run pre-commit run --all-files` when the hooks themselves should run.
+
+A `local` browser needs Chromium. `make install` does not install it.
+`make setup` does (`uv run playwright install chromium`).
+
 Use `uv run <cmd>`, never a bare `python` or `pip`. Dependencies live in
 `pyproject.toml`; after editing it run `make lock && make requirements` and
 commit `uv.lock` and the regenerated `requirements*.txt` together. Never
