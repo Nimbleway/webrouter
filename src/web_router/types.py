@@ -153,7 +153,18 @@ class SearchRequest(NormalizedRequest):
     always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
 
     query: Annotated[str, Field(min_length=1, description="The search query.")]
-    max_results: Annotated[int | None, Field(default=None, ge=1, description="Upper bound on results returned.")] = None
+    max_results: Annotated[
+        int | None,
+        Field(
+            default=None,
+            ge=1,
+            description=(
+                "How many results to return; unset, the backend's own default. For an agent: 5 to 10 for most"
+                " questions, more for news or a question with several parts, and 1 only when the user asked for"
+                " a single link."
+            ),
+        ),
+    ] = None
     search_depth: SearchDepth | None = Field(default=None, description="How much page content to retrieve.")
     include_domains: list[str] | None = Field(default=None, description="Restrict results to these domains.")
     exclude_domains: list[str] | None = Field(default=None, description="Drop results from these domains.")

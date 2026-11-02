@@ -26,6 +26,7 @@ from web_router.types import (
     ResearchEffort,
     ResearchState,
     SearchDepth,
+    SearchRequest,
     StealthLevel,
 )
 
@@ -3819,7 +3820,11 @@ The three template tools share one registry, and the browser tools' method is
 
 MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": "What to search for."},
-    "max_results": {"type": "integer", "minimum": 1, "description": "Upper bound on results returned."},
+    "max_results": {
+        "type": "integer",
+        "minimum": 1,
+        "description": SearchRequest.model_fields["max_results"].description,
+    },
     "search_depth": {
         "type": "string",
         "enum": list(get_args(SearchDepth)),
