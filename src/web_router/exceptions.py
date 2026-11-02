@@ -6,6 +6,7 @@ handle failures uniformly regardless of which backend served the request:
     WebRouterError
     ├── ConfigurationError          bad or missing configuration
     ├── ProviderNotFoundError       no provider registered under that name
+    │   └── NoAnswerProviderError       answer() named no backend and none could be chosen
     ├── ProviderNotInstalledError   provider known, optional dependency missing
     ├── UnsupportedParameterError   provider does not map a requested parameter
     ├── UnsupportedFormatError      provider cannot return a requested format
@@ -30,6 +31,8 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from web_router.constants import (
+    MSG_ANSWER_NO_DEFAULT,
+    MSG_ANSWER_NONE_CONFIGURED,
     MSG_BENCHMARK_TIMEOUT,
     MSG_BROWSE_TIMEOUT,
     MSG_BROWSER_ACTION_FAILED,
@@ -48,6 +51,15 @@ from web_router.constants import (
     MSG_UNSUPPORTED_PARAMETERS_ADVICE,
     MSG_UNSUPPORTED_VALUES,
 )
+
+
+def describe(exc: BaseException) -> str:
+    """What to say about ``exc`` in a message: its text, or its type when it has none.
+
+    httpx's timeouts carry no text, so a read timeout wrapped as
+    ``"answer failed: {error}"`` read "answer failed: " and said nothing.
+    """
+    return str(exc) or type(exc).__name__
 
 
 class WebRouterError(Exception):
@@ -82,6 +94,29 @@ class ProviderNotFoundError(WebRouterError):
         # and a provider serving both would otherwise be listed twice.
         self.available = sorted(set(available))
         super().__init__(MSG_UNKNOWN_PROVIDER.format(name=name, available=", ".join(self.available)))
+
+
+class NoAnswerProviderError(ProviderNotFoundError):
+    """``answer()`` was called with no provider, and none could be chosen: it has no ``auto`` yet.
+
+    A :class:`ProviderNotFoundError`, so an ``except`` for that still catches it.
+    :attr:`configured` names the answer backends with a key -- several, so which
+    to call is the caller's choice -- and when there are none, :attr:`env_vars`
+    names the variables that would add one.
+    """
+
+    def __init__(self, default: str, available: Iterable[str], configured: Iterable[str], env_vars: Iterable[str]):
+        self.name = default
+        self.available = sorted(set(available))
+        self.configured = sorted(configured)
+        self.env_vars = sorted(env_vars)
+        if self.configured:
+            message = MSG_ANSWER_NO_DEFAULT.format(
+                default=default, count=len(self.configured), available=", ".join(self.configured)
+            )
+        else:
+            message = MSG_ANSWER_NONE_CONFIGURED.format(default=default, env_vars=", ".join(self.env_vars) or "none")
+        WebRouterError.__init__(self, message)
 
 
 class ProviderNotInstalledError(WebRouterError):

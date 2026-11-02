@@ -3027,6 +3027,9 @@ all = [
     { name = "playwright" },
     { name = "tavily-python" },
 ]
+answer = [
+    { name = "httpx" },
+]
 aws = [
     { name = "botocore" },
     { name = "httpx" },
@@ -3095,6 +3098,7 @@ requires-dist = [
     { name = "botocore", marker = "extra == 'all'", specifier = ">=1.35" },
     { name = "botocore", marker = "extra == 'aws'", specifier = ">=1.35" },
     { name = "httpx", marker = "extra == 'all'", specifier = ">=0.27" },
+    { name = "httpx", marker = "extra == 'answer'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'aws'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'evals'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'extract'", specifier = ">=0.27" },
@@ -3129,7 +3133,7 @@ requires-dist = [
     { name = "tavily-python", marker = "extra == 'search'", specifier = ">=0.5.0" },
     { name = "typing-extensions", specifier = ">=4.10" },
 ]
-provides-extras = ["all", "aws", "browser", "evals", "extract", "langchain", "mcp", "research", "search"]
+provides-extras = ["all", "answer", "aws", "browser", "evals", "extract", "langchain", "mcp", "research", "search"]
 
 [package.metadata.requires-dev]
 agent-bench = [

@@ -190,11 +190,11 @@ Where no account is available, say so in the test module's docstring the way
 do, so the next person knows the mapping is documentation-derived rather than
 verified.
 
-### A research, browser, or browse provider
+### A research, answer, browser, or browse provider
 
 The same shape again. The step-by-step recipes live in
-[AGENTS.md](AGENTS.md)'s "Adding a research provider", "Adding a browser
-provider" and "Adding a browse provider" sections — written for coding agents,
+[AGENTS.md](AGENTS.md)'s "Adding a research provider", "Adding an answer
+provider", "Adding a browser provider" and "Adding a browse provider" sections — written for coding agents,
 but they apply to humans exactly the same.
 
 ## Dependencies

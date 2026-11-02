@@ -1,4 +1,4 @@
-"""web-router: one interface over many web search, extraction, research and browser APIs.
+"""web-router: one interface over many web search, extraction, answer, research and browser APIs.
 
 Point the router at a provider and call it; swapping backends is a one-word
 change rather than a rewrite.
@@ -15,7 +15,12 @@ to find one and read the inputs it takes:
 
     >>> record = router.run_template("books_pdp", {"url": "https://books.example/..."}).data
 
-A third method, :meth:`~web_router.WebRouter.research`, runs an agentic backend
+:meth:`~web_router.WebRouter.answer` asks one question and returns the
+backend's written answer with the sources it rests on, in a single call:
+
+    >>> reply = router.answer("who won the 2022 world cup final", provider="linkup")
+
+:meth:`~web_router.WebRouter.research` runs an agentic backend
 over several turns and answers in minutes rather than milliseconds:
 
     >>> answer = router.research("how did nvidia's datacenter revenue mix shift in 2025")
@@ -47,6 +52,7 @@ from web_router.exceptions import (
     ElementNotFoundError,
     MissingParameterError,
     NavigationError,
+    NoAnswerProviderError,
     PageClosedError,
     ProviderError,
     ProviderNotFoundError,
@@ -59,6 +65,7 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers.base import (
+    AnswerProvider,
     AsyncBrowserHandle,
     BrowseJob,
     BrowseProvider,
@@ -71,24 +78,28 @@ from web_router.providers.base import (
     TemplateProvider,
 )
 from web_router.registry import (
+    available_answer_providers,
     available_browse_providers,
     available_browser_providers,
     available_extract_providers,
     available_providers,
     available_research_providers,
     available_template_providers,
+    configured_answer_providers,
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
     configured_providers,
     configured_research_providers,
     configured_template_providers,
+    register_answer_provider,
     register_browse_provider,
     register_browser_provider,
     register_extract_provider,
     register_provider,
     register_research_provider,
     register_template_provider,
+    unregister_answer_provider,
     unregister_browse_provider,
     unregister_browser_provider,
     unregister_extract_provider,
@@ -144,8 +155,10 @@ from web_router.types import (
     TemplateResponse,
     Viewport,
 )
+from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
 
 __all__ = [
+    "ANSWER_PARAMETERS",
     "BROWSER_PARAMETERS",
     "BROWSE_PARAMETERS",
     "DEFAULT_PROVIDER",
@@ -153,6 +166,9 @@ __all__ = [
     "NORMALIZED_PARAMETERS",
     "RESEARCH_PARAMETERS",
     "TEMPLATE_PARAMETERS",
+    "AnswerProvider",
+    "AnswerRequest",
+    "AnswerResponse",
     "AsyncBrowserHandle",
     "AsyncWebRouter",
     "BenchmarkReport",
@@ -186,6 +202,7 @@ __all__ = [
     "ExtractedDocument",
     "MissingParameterError",
     "NavigationError",
+    "NoAnswerProviderError",
     "PageClosedError",
     "PageFormat",
     "PageLoadState",
@@ -195,6 +212,7 @@ __all__ = [
     "ProviderError",
     "ProviderNotFoundError",
     "ProviderNotInstalledError",
+    "Recency",
     "ResearchEffort",
     "ResearchJob",
     "ResearchOutcome",
@@ -224,24 +242,28 @@ __all__ = [
     "WebRouter",
     "WebRouterError",
     "__version__",
+    "available_answer_providers",
     "available_browse_providers",
     "available_browser_providers",
     "available_extract_providers",
     "available_providers",
     "available_research_providers",
     "available_template_providers",
+    "configured_answer_providers",
     "configured_browse_providers",
     "configured_browser_providers",
     "configured_extract_providers",
     "configured_providers",
     "configured_research_providers",
     "configured_template_providers",
+    "register_answer_provider",
     "register_browse_provider",
     "register_browser_provider",
     "register_extract_provider",
     "register_provider",
     "register_research_provider",
     "register_template_provider",
+    "unregister_answer_provider",
     "unregister_browse_provider",
     "unregister_browser_provider",
     "unregister_extract_provider",

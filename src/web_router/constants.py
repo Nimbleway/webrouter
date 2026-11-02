@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Literal, get_args
 
+from web_router.constants_answer import *  # noqa: F403 -- answer()'s messages and MCP text, re-exported
+from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -95,6 +97,7 @@ keeps the old behaviour: a missing key for *that* provider is still an error.
 EXTRA_SEARCH = "search"
 EXTRA_EXTRACT = "extract"
 EXTRA_RESEARCH = "research"
+EXTRA_ANSWER = "answer"
 EXTRA_BROWSER = "browser"
 """Playwright, for the page actions on a browser handle. Opening a session needs no extra."""
 EXTRA_ALL = "all"
@@ -223,6 +226,20 @@ Shaped like :data:`EXTRACT_ENV_BY_PROVIDER` rather than
 :data:`ENV_BY_PROVIDER`, so a backend that later needs a second value does not
 change the table's type. Every research backend costs money to call, so unlike
 the other two methods there is no keyless tier to fall back on.
+"""
+
+ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
+    PROVIDER_PERPLEXITY: (ENV_PERPLEXITY_API_KEY,),
+    PROVIDER_LINKUP: (ENV_LINKUP_API_KEY,),
+    PROVIDER_YOU: (ENV_YOU_API_KEY,),
+    PROVIDER_PARALLEL: (ENV_PARALLEL_API_KEY,),
+    PROVIDER_EXA: (ENV_EXA_API_KEY,),
+}
+"""Which variables each answer provider needs, all of them.
+
+Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. Every answer backend bills the
+call, so there is no keyless tier, and there is no ``auto`` yet: its order
+waits on a comparison of the backends' answers.
 """
 
 BROWSER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -3304,7 +3321,8 @@ MCP_SERVER_INSTRUCTIONS = (
     "Search, read and research the web through whichever backends this machine holds keys for. "
     "`search` and `extract` answer in about a second, and so does `run_template`, which runs a "
     "backend's Extract Template -- a saved, site-specific extraction that turns one page into a "
-    "record; `templates` lists them and `template` describes one, inputs and all. `research` runs an "
+    "record; `templates` lists them and `template` describes one, inputs and all. `answer` returns a "
+    "backend's own written answer to one question, with its sources, in a few seconds. `research` runs an "
     "agentic job that takes "
     "minutes and bills for the run, and `browse` hands a task to a hosted browser agent on the same "
     "terms. The `browser_*` tools let you drive a browser yourself: `browser_open` hands back a "
@@ -3337,6 +3355,7 @@ MCP_TOOL_EXTRACT = "extract"
 MCP_TOOL_TEMPLATES = "templates"
 MCP_TOOL_TEMPLATE = "template"
 MCP_TOOL_RUN_TEMPLATE = "run_template"
+MCP_TOOL_ANSWER = "answer"
 MCP_TOOL_RESEARCH = "research"
 MCP_TOOL_RESEARCH_STATUS = "research_status"
 MCP_TOOL_BROWSE = "browse"
@@ -3949,7 +3968,7 @@ MCP_FETCH_RAW_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_HANDLE: {
         "type": "string",
         "description": (
-            "A handle from `search`, `extract`, `templates`, `template`, `run_template`, `research`, "
+            "A handle from `search`, `extract`, `templates`, `template`, `run_template`, `answer`, `research`, "
             "`research_status`, `browse`, `browse_status` or `browser_read`."
         ),
     },
@@ -4118,6 +4137,7 @@ MCP_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_TEMPLATES: MCP_TEMPLATES_PROPERTIES,
     MCP_TOOL_TEMPLATE: MCP_TEMPLATE_PROPERTIES,
     MCP_TOOL_RUN_TEMPLATE: MCP_RUN_TEMPLATE_PROPERTIES,
+    MCP_TOOL_ANSWER: MCP_ANSWER_PROPERTIES,
     MCP_TOOL_RESEARCH: MCP_RESEARCH_PROPERTIES,
     MCP_TOOL_RESEARCH_STATUS: MCP_RESEARCH_STATUS_PROPERTIES,
     MCP_TOOL_BROWSE: MCP_BROWSE_PROPERTIES,
@@ -4148,6 +4168,8 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_TEMPLATES: (MCP_ARG_PROVIDER,),
     MCP_TOOL_TEMPLATE: ("name", MCP_ARG_PROVIDER),
     MCP_TOOL_RUN_TEMPLATE: ("template", MCP_ARG_PROVIDER),
+    # Not `provider`, though answer has no `auto`: with one answer backend configured the router uses it.
+    MCP_TOOL_ANSWER: ("query",),
     MCP_TOOL_RESEARCH: ("query",),
     MCP_TOOL_RESEARCH_STATUS: (MCP_ARG_HANDLE,),
     MCP_TOOL_BROWSE: ("task",),
@@ -4172,7 +4194,7 @@ MCP_PROVIDER_DESCRIPTION = (
 )
 
 # A tool description is the routing decision: the model choosing between these
-# twenty is the actual router, and latency and cost are what it has to choose on.
+# twenty-one is the actual router, and latency and cost are what it has to choose on.
 
 MCP_DESC_SEARCH = (
     "Search the web: ranked links with their titles, descriptions and page text. Returns in about "
@@ -4253,7 +4275,7 @@ MCP_DESC_BROWSE_STATUS = (
 
 MCP_DESC_FETCH_RAW = (
     "Return the backend's full, unshaped payload for a handle from `search`, `extract`, `templates`, "
-    "`template`, `run_template`, `research`, `research_status`, `browse` or `browse_status`. Instant -- "
+    "`template`, `run_template`, `answer`, `research`, `research_status`, `browse` or `browse_status`. Instant -- "
     "nothing is called again, the "
     "payload was kept from the original call -- but it can be very large and is not shortened. "
     "Ask for it when a shaped result said it was truncated and you need what was cut. For a browse "
@@ -4339,6 +4361,7 @@ MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
     MCP_TOOL_TEMPLATES: MCP_DESC_TEMPLATES,
     MCP_TOOL_TEMPLATE: MCP_DESC_TEMPLATE,
     MCP_TOOL_RUN_TEMPLATE: MCP_DESC_RUN_TEMPLATE,
+    MCP_TOOL_ANSWER: MCP_DESC_ANSWER,
     MCP_TOOL_RESEARCH: MCP_DESC_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS: MCP_DESC_RESEARCH_STATUS,
     MCP_TOOL_BROWSE: MCP_DESC_BROWSE,
@@ -4432,7 +4455,7 @@ MCP_MSG_UNKNOWN_TOOL = "Unknown tool {name!r}. This server serves: {tools}."
 
 MCP_MSG_UNKNOWN_HANDLE = (
     "Unknown handle {handle!r}. Handles come back from search, extract, templates, template, "
-    "run_template, research, browse and browser_read, and only the {limit} most recent are kept."
+    "run_template, answer, research, browse and browser_read, and only the {limit} most recent are kept."
 )
 
 MCP_MSG_NOT_A_JOB = (

@@ -43,17 +43,27 @@ from __future__ import annotations
 
 import argparse
 import json
-import statistics
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
-from _common import APART, DEFAULT_OUT, MIN_GROUP, Sink, _p, _pct, _s, _wilson, combine_scans, scan_main
+from _common import APART, DEFAULT_OUT, MIN_GROUP, Sink, _p, _s, _wilson, combine_scans, scan_main
+from _questions import (
+    MSG_CANNOT_COMBINE,
+    MSG_OTHER_QUESTIONS,
+    QUESTION_SETS,
+    base_setup,
+    breakdowns,
+    load_checked_questions,
+    question_args,
+    question_tags,
+)
+from _report_tables import breakdown, breakdown_tables, search_score
 
 from web_router import AsyncWebRouter
-from web_router.constants import BENCHMARK_EXCLUDED, EVALS_CSV_SET, PROVIDER_AUTO
-from web_router.evals import Dataset, OpenAIJudge
+from web_router.constants import BENCHMARK_EXCLUDED, PROVIDER_AUTO
+from web_router.evals import OpenAIJudge
 from web_router.providers.base import SearchProvider
 from web_router.registry import configured_providers
 from web_router.types import SearchDepth, SearchRequest, SearchResponse
@@ -64,13 +74,8 @@ MODE_MARK = ":"
 DEPTHS = ("lite", "fast", "deep")
 MSG_UNKNOWN_DEPTH = "{setup!r}: depth must be one of {depths}"
 MSG_UNKNOWN_MODE = "{setup!r}: no mode {mode!r} for {provider} in modes.json (it has: {known})"
-DEFAULT_LIMIT = 300
 DEFAULT_MAX_RESULTS = 5
 DEFAULT_CONCURRENCY = 8
-MSG_OTHER_QUESTIONS = "{folder} asked different questions from the first scan; only scans of the same questions combine"
-MSG_CANNOT_COMBINE = (
-    "{folder} was a different run ({key}: {theirs!r}, not {ours!r}); only scans of the same questions and judge combine"
-)
 COMBINE_KEYS = (
     "questions",
     "dataset_sha256",
@@ -83,30 +88,6 @@ COMBINE_KEYS = (
     "judge",
 )
 """What two scans must share for their rows to sit in one table: the same questions, search size and judge."""
-SEALQA_BREAKDOWNS = [["topic", "By topic"], ["freshness", "By freshness"], ["search_results", "By what search returns"]]
-"""SealQA's labels: how fast the answer changes, and whether search turns up conflicting or unhelpful pages."""
-QUESTION_SETS: dict[str, dict[str, Any]] = {
-    "simpleqa": {
-        "dataset": "SimpleQA (openai/simple-evals)",
-        "short": "SimpleQA",
-        "breakdowns": [["topic", "By topic"], ["answer_type", "By answer type"]],
-    },
-    "sealqa-0": {
-        "dataset": "SealQA Seal-0 (vtllms/sealqa, pinned)",
-        "short": "SealQA Seal-0",
-        "breakdowns": SEALQA_BREAKDOWNS,
-    },
-    "sealqa-hard": {
-        "dataset": "SealQA Seal-Hard (vtllms/sealqa, pinned)",
-        "short": "SealQA Seal-Hard",
-        "breakdowns": SEALQA_BREAKDOWNS,
-    },
-    "csv": {"dataset": "a CSV of your own", "short": "your questions", "breakdowns": [["topic", "By topic"]]},
-}
-"""``--questions``: what the report calls the set, and the labels it breaks accuracy down by."""
-MSG_REPEATED_QUESTION = (
-    "{dataset} asks {question!r} more than once; a scan labels each row by its question text, so each must be unique"
-)
 
 
 class VendorMode(SearchProvider):
@@ -155,55 +136,13 @@ def _modes() -> dict[str, dict[str, Any]]:
     return {k: v for k, v in json.loads(MODES_FILE.read_text(encoding="utf-8")).items() if not k.startswith("_")}
 
 
-def _score(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    served = [r for r in rows if r["grade"] is not None]
-    correct = sum(r["grade"] == "correct" for r in served)
-    incorrect = sum(r["grade"] == "incorrect" for r in served)
-    latencies = [r["latency"] for r in served]
-    return {
-        "questions": len(rows),
-        "served": len(served),
-        "correct": correct,
-        "accuracy": correct / len(served) if served else None,
-        "accuracy_ci95": _wilson(correct, len(served)),
-        "accuracy_when_attempted": correct / (correct + incorrect) if correct + incorrect else None,
-        "failed": len(rows) - len(served),
-        "withheld": sum(r.get("withheld", 0) for r in rows),
-        "latency_p50": statistics.median(latencies) if latencies else None,
-        "latency_p95": _pct(latencies, 0.95),
-    }
-
-
-def _breakdown(rows: list[dict[str, Any]], key: str, providers: list[str]) -> dict[str, dict[str, Any]]:
-    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for row in rows:
-        groups[row[key] or "untagged"].append(row)
-    table = {}
-    for group in sorted(groups, key=lambda g: -len(groups[g])):
-        members = groups[group]
-        scores = {p: _score([r for r in members if r["provider"] == p]) for p in providers}
-        questions = len({r["question"] for r in members})
-        accuracies = {p: s["accuracy"] for p, s in scores.items() if s["accuracy"] is not None}
-        # Ranked on correct answers out of the group's questions, so a backend that
-        # failed most of them cannot lead on the few it served.
-        most = max((s["correct"] for s in scores.values()), default=0)
-        leaders = [p for p, s in scores.items() if s["correct"] == most and most] if questions >= MIN_GROUP else []
-        table[group] = {"questions": questions, "accuracy": accuracies, "leaders": leaders}
-    return table
-
-
-def _breakdowns(setup: dict[str, Any]) -> list[list[str]]:
-    # A scan from before --questions existed was SimpleQA.
-    return setup.get("breakdowns") or QUESTION_SETS["simpleqa"]["breakdowns"]
-
-
 def summarize(rows: list[dict[str, Any]], setup: dict[str, Any]) -> dict[str, Any]:
     providers = setup["providers"]
-    overall = {p: _score([r for r in rows if r["provider"] == p]) for p in providers}
+    overall = {p: search_score([r for r in rows if r["provider"] == p]) for p in providers}
     return {
         "setup": setup,
         "overall": overall,
-        **{f"by_{key}": _breakdown(rows, key, providers) for key, _ in _breakdowns(setup)},
+        **{f"by_{key}": breakdown(rows, key, providers) for key, _ in breakdowns(setup)},
     }
 
 
@@ -321,23 +260,16 @@ def markdown(summary: dict[str, Any]) -> str:
             "paper or a copy): " + ", ".join(f"`{p}` {n}" for p, n in withheld.items()) + ".\n"
         )
     out.extend(_recommendation(summary))
-    for label, title in _breakdowns(setup):
-        key = f"by_{label}"
-        w(f"## {title}\n")
-        w(
+    out.extend(
+        breakdown_tables(
+            summary,
+            breakdowns(setup),
+            providers,
             f"Accuracy per backend over the searches it served; **bold** marks the most questions answered "
             f"correctly in the row, a failed search counting as a miss. Rows under {MIN_GROUP} questions name no "
-            "best -- too few to tell backends apart.\n"
+            "best -- too few to tell backends apart.\n",
         )
-        w("| Group | Questions | " + " | ".join(f"`{p}`" for p in providers) + " |")
-        w("|---|---|" + "---|" * len(providers))
-        for group, entry in summary[key].items():
-            cells = []
-            for p in providers:
-                cell = _p(entry["accuracy"].get(p))
-                cells.append(f"**{cell}**" if p in entry["leaders"] else cell)
-            w(f"| {group} | {entry['questions']} | " + " | ".join(cells) + " |")
-        w("")
+    )
     w("## How to read this\n")
     w(
         "- **Intervals are wide.** Two backends whose 95% intervals overlap are not shown apart by this run; a topic "
@@ -350,41 +282,11 @@ def markdown(summary: dict[str, Any]) -> str:
     return "\n".join(out) + "\n"
 
 
-def csv_identity(args: argparse.Namespace) -> dict[str, Any]:
-    """A CSV run's file digest and columns, for ``run.json``; nothing for a named set."""
-    if args.questions != EVALS_CSV_SET or args.dataset is None:
-        return {}
-    return Dataset.csv_identity(args.dataset, args.question_column, args.answer_column)
-
-
-def load_questions(args: argparse.Namespace) -> Dataset:
-    """``--questions``, sampled by ``--seed``: SimpleQA, a SealQA split, or a CSV of your own."""
-    try:
-        return Dataset.for_set(
-            args.questions,
-            path=args.dataset,
-            question_column=args.question_column,
-            answer_column=args.answer_column,
-            limit=args.limit,
-            seed=args.seed,
-        )
-    except ValueError as exc:
-        raise SystemExit(f"--questions {args.questions}: {exc} A local file goes in --dataset.") from exc
-
-
 async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> list[dict[str, Any]]:
-    dataset = load_questions(args)
-    texts = [q.question for q in dataset.questions]
-    if len(set(texts)) != len(texts):
-        repeated = next(text for text in texts if texts.count(text) > 1)
-        raise SystemExit(MSG_REPEATED_QUESTION.format(dataset=setup["dataset"], question=repeated))
-    setup["asked"] = len(dataset)
-    if dataset.withheld_markers:
-        # What was kept from the judge: scans that withheld different pages are not judged alike.
-        setup["withheld"] = list(dataset.withheld_markers)
+    dataset = load_checked_questions(args, setup)
     providers = setup["providers"]
     print(f"{len(providers)} backends x {len(dataset)} questions -> {args.out}: {', '.join(providers)}")
-    meta = {q.question: _tags(q.metadata) for q in dataset.questions}
+    meta = {q.question: question_tags(q.metadata) for q in dataset.questions}
     modes = _modes()
     by_depth: dict[str | None, list[tuple[str, str, dict[str, Any]]]] = defaultdict(list)
     for label in setup["providers"]:
@@ -424,31 +326,16 @@ async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> li
     return rows
 
 
-def _tags(metadata: dict[str, Any]) -> dict[str, Any]:
-    # SimpleQA's own column is named ``metadata``; a local CSV may hold anything there, or nothing.
-    inner = metadata.get("metadata", metadata)
-    return inner if isinstance(inner, dict) else {}
-
-
 def _supported(router: AsyncWebRouter, provider: str) -> frozenset[str]:
     return router.get_provider(provider).supported_parameters
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
-    parser.add_argument(
-        "--questions", choices=sorted(QUESTION_SETS), default="simpleqa", help="the question set (default: simpleqa)"
-    )
-    parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help="questions to sample")
-    parser.add_argument("--seed", type=int, default=0)
+    question_args(parser)
     parser.add_argument("--providers", default=None, help="comma-separated (default: every configured backend)")
     parser.add_argument("--max-results", type=int, default=DEFAULT_MAX_RESULTS, help="per search")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY, help="questions at once")
-    parser.add_argument(
-        "--dataset", type=Path, default=None, help="a local copy of the set's file (required for --questions csv)"
-    )
-    parser.add_argument("--question-column", default="problem", help="--questions csv: the question column")
-    parser.add_argument("--answer-column", default="answer", help="--questions csv: the gold answer column")
     parser.add_argument("--out", type=Path, default=None, help=f"results folder (default: under {DEFAULT_OUT})")
     parser.add_argument(
         "--combine",
@@ -480,15 +367,8 @@ def setup_of(args: argparse.Namespace) -> dict[str, Any]:
         if args.providers
         else [p for p in configured_providers() if p not in BENCHMARK_EXCLUDED]
     )
-    chosen = QUESTION_SETS[args.questions]
     return {
-        "questions": args.questions,
-        "dataset": chosen["dataset"] if args.questions != "csv" else str(args.dataset),
-        "breakdowns": chosen["breakdowns"],
-        **csv_identity(args),
-        "limit": args.limit,
-        "seed": args.seed,
-        "providers": providers,
+        **base_setup(args, providers),
         "max_results": args.max_results,
         "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }

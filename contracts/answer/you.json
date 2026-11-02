@@ -1,0 +1,86 @@
+{
+  "provider": "you",
+  "method": "answer",
+  "class": "web_router.providers.you.YouAnswerProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.you.com",
+    "paths": {
+      "answer_path": "/v1/answer"
+    },
+    "method": "POST",
+    "auth_header": "X-API-Key"
+  },
+  "credentials": [
+    "YOU_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "include_domains": {
+      "sample": {
+        "body.include_domains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.exclude_domains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.country": "US"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.freshness": "day"
+      },
+      "week": {
+        "body.freshness": "week"
+      },
+      "month": {
+        "body.freshness": "month"
+      },
+      "year": {
+        "body.freshness": "year"
+      }
+    }
+  },
+  "not_mapped": [
+    "locale"
+  ],
+  "source": [
+    "https://you.com/docs/guides/answer.md"
+  ],
+  "verified": {
+    "include_domains": "live: tests/test_integration_answer.py::test_an_answers_sources_honor_the_domain_filter",
+    "exclude_domains": "live: tests/test_integration_answer.py::test_an_answers_sources_leave_out_excluded_domains",
+    "country": "live: tests/providers/test_you_answer.py::test_live_answer_ties_its_markers_to_sources",
+    "recency": "live: tests/test_integration_answer.py::test_recency_keeps_dated_sources_in_the_window"
+  },
+  "vendor_options": {
+    "boost_domains": {
+      "status": "passthrough",
+      "note": "Favours domains without restricting to them; no normalized field. Cannot be sent with include_domains."
+    },
+    "freshness: date range": {
+      "status": "passthrough",
+      "note": "YYYY-MM-DDtoYYYY-MM-DD; recency is a window counted back from now."
+    },
+    "language": {
+      "status": "passthrough",
+      "note": "Accepted live, but FR changed neither the answer nor its sources, so locale is not mapped to it."
+    },
+    "safesearch": {
+      "status": "passthrough",
+      "note": "off, moderate (the default) or strict; no normalized field."
+    }
+  }
+}

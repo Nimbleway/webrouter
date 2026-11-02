@@ -99,6 +99,7 @@ def tools(
     fake_extract_provider: Any,
     fake_template_provider: Any,
     fake_research_provider: Any,
+    fake_answer_provider: Any,
     fake_browse_provider: Any,
 ) -> WebRouterTools:
     """A session whose every method routes to the in-memory fakes.

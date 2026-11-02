@@ -471,3 +471,127 @@ async def test_async_context_manager_closes_all_three_methods_providers(
         researcher = router.get_research_provider()
 
     assert searcher.closed and extractor.closed and researcher.closed
+
+
+# -- answer(): one call, and no `auto` to fall back on -----------------------
+
+
+def _configure(monkeypatch: pytest.MonkeyPatch, *names: str) -> None:
+    """Make exactly ``names`` the configured answer backends, whatever .env holds."""
+    from web_router.constants import ANSWER_ENV_BY_PROVIDER
+
+    for name in list(ANSWER_ENV_BY_PROVIDER):
+        monkeypatch.delitem(ANSWER_ENV_BY_PROVIDER, name)
+    for name in names:
+        env_var = f"WEB_ROUTER_TEST_{name.upper()}_KEY"
+        monkeypatch.setitem(ANSWER_ENV_BY_PROVIDER, name, (env_var,))
+        monkeypatch.setenv(env_var, "test-key")
+
+
+def test_answer_normalizes_arguments_into_the_request(fake_answer_provider: type) -> None:
+    router = WebRouter("fake")
+    response = router.answer("q", include_domains=["example.com"], country="US", recency="week")
+
+    request = router.get_answer_provider().requests[0]  # type: ignore[attr-defined]
+    assert request.query == "q"
+    assert request.include_domains == ["example.com"]
+    assert request.country == "US"
+    assert request.recency == "week"
+    assert response.provider == "fake"
+    assert response.answer == "the answer"
+
+
+def test_a_bare_answer_uses_the_one_configured_backend(
+    fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The router's default is `auto`, which answer() lacks; one configured backend needs no order."""
+    _configure(monkeypatch, "fake")
+
+    assert WebRouter().answer("q").provider == "fake"
+
+
+def test_a_bare_answer_with_two_configured_backends_asks_which(
+    fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.conftest import FakeAnswerProvider
+    from web_router import register_answer_provider, unregister_answer_provider
+
+    register_answer_provider("other", type("Other", (FakeAnswerProvider,), {"name": "other"}))
+    try:
+        _configure(monkeypatch, "fake", "other")
+
+        with pytest.raises(ProviderNotFoundError, match="2 answer backends are configured") as caught:
+            WebRouter().answer("q")
+        assert {"fake", "other"} <= set(caught.value.available)
+    finally:
+        unregister_answer_provider("other")
+
+
+def test_a_bare_answer_with_nothing_configured_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    _configure(monkeypatch)
+
+    with pytest.raises(ProviderNotFoundError, match="no answer backend has a key"):
+        WebRouter().answer("q")
+
+
+def test_a_named_provider_wins_over_the_one_configured(
+    fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.conftest import FakeAnswerProvider
+    from web_router import register_answer_provider, unregister_answer_provider
+
+    register_answer_provider("other", type("Other", (FakeAnswerProvider,), {"name": "other"}))
+    try:
+        _configure(monkeypatch, "fake")
+
+        assert WebRouter("other").answer("q").provider == "other"
+        assert WebRouter().answer("q", provider="other").provider == "other"
+    finally:
+        unregister_answer_provider("other")
+
+
+def test_closing_the_router_closes_the_answer_provider_it_built(fake_answer_provider: type) -> None:
+    with WebRouter("fake") as router:
+        router.answer("q")
+        provider = router.get_answer_provider()
+
+    assert provider.closed  # type: ignore[attr-defined]
+
+
+async def test_async_answer_awaits_the_backend_and_closes_it(fake_answer_provider: type) -> None:
+    async with AsyncWebRouter("fake") as router:
+        response = await router.answer("q", locale="en")
+        provider = router.get_answer_provider()
+
+    assert response.answer == "the answer"
+    assert provider.requests[0].locale == "en"  # type: ignore[attr-defined]
+    assert provider.closed  # type: ignore[attr-defined]
+
+
+def test_a_key_passed_in_code_configures_an_answer_backend(
+    fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure(monkeypatch)
+
+    router = WebRouter(provider_config={"fake": {"api_key": "in-code"}})
+
+    assert router.answer("q").provider == "fake"
+
+
+def test_the_no_default_refusal_is_its_own_error_and_still_a_provider_not_found(
+    fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from web_router import NoAnswerProviderError
+    from web_router.constants import ANSWER_ENV_BY_PROVIDER
+
+    _configure(monkeypatch)
+    monkeypatch.setitem(ANSWER_ENV_BY_PROVIDER, "fake", ("WEB_ROUTER_TEST_UNSET_KEY",))
+    monkeypatch.delenv("WEB_ROUTER_TEST_UNSET_KEY", raising=False)
+
+    with pytest.raises(NoAnswerProviderError) as caught:
+        WebRouter().answer("q")
+
+    assert isinstance(caught.value, ProviderNotFoundError)
+    assert caught.value.configured == []
+    assert caught.value.env_vars == ["WEB_ROUTER_TEST_UNSET_KEY"], "with nothing configured it names what to set"
+    assert "WEB_ROUTER_TEST_UNSET_KEY" in str(caught.value)

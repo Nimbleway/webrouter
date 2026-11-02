@@ -1,4 +1,4 @@
-"""The twenty tools, and the session state they share.
+"""The twenty-one tools, and the session state they share.
 
 Everything here is a thin projection of :class:`~web_router.AsyncWebRouter`:
 each tool's arguments are the library's own keyword names, passed through
@@ -28,6 +28,7 @@ from mcp_types import Tool
 
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
+    ANSWER_ENV_BY_PROVIDER,
     BROWSE_ENV_BY_PROVIDER,
     BROWSER_ENV_BY_PROVIDER,
     DELEGATING_PROVIDERS,
@@ -76,6 +77,7 @@ from web_router.constants import (
     MCP_PROVIDER_DESCRIPTION,
     MCP_RESEARCH_WAIT,
     MCP_SERVER_INSTRUCTIONS,
+    MCP_TOOL_ANSWER,
     MCP_TOOL_BROWSE,
     MCP_TOOL_BROWSE_STATUS,
     MCP_TOOL_BROWSER_CLICK,
@@ -118,6 +120,7 @@ from web_router.mcp.shaping import (
     max_response_chars,
     redact,
     redaction_note,
+    shape_answer,
     shape_browse,
     shape_extract,
     shape_pending,
@@ -131,12 +134,14 @@ from web_router.mcp.shaping import (
 from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider
 from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
 from web_router.registry import (
+    configured_answer_providers,
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
     configured_providers,
     configured_research_providers,
     configured_template_providers,
+    get_answer_provider_class,
     get_browse_provider_class,
     get_browser_provider_class,
     get_extract_provider_class,
@@ -156,6 +161,7 @@ from web_router.types import (
     PageState,
     StealthLevel,
 )
+from web_router.types_answer import ANSWER_PARAMETERS
 
 _CONFIGURED: dict[str, Callable[[], list[str]]] = {
     MCP_TOOL_SEARCH: configured_providers,
@@ -163,13 +169,14 @@ _CONFIGURED: dict[str, Callable[[], list[str]]] = {
     MCP_TOOL_TEMPLATES: configured_template_providers,
     MCP_TOOL_TEMPLATE: configured_template_providers,
     MCP_TOOL_RUN_TEMPLATE: configured_template_providers,
+    MCP_TOOL_ANSWER: configured_answer_providers,
     MCP_TOOL_RESEARCH: configured_research_providers,
     MCP_TOOL_BROWSE: configured_browse_providers,
     MCP_TOOL_BROWSER_OPEN: configured_browser_providers,
 }
 """Which registry answers "what can this install actually serve?" for each tool.
 
-Only the eight tools that reach a backend appear: the two ``*_status`` tools,
+Only the nine tools that reach a backend appear: the two ``*_status`` tools,
 ``fetch_raw`` and the browser actions work on what an earlier call left behind
 and never pick a provider. The three template tools share one registry.
 """
@@ -188,6 +195,7 @@ _CLASS_OF: dict[str, Callable[[str], type[_BaseProvider]]] = {
     MCP_TOOL_TEMPLATES: get_template_provider_class,
     MCP_TOOL_TEMPLATE: get_template_provider_class,
     MCP_TOOL_RUN_TEMPLATE: get_template_provider_class,
+    MCP_TOOL_ANSWER: get_answer_provider_class,
     MCP_TOOL_RESEARCH: get_research_provider_class,
     MCP_TOOL_BROWSE: get_browse_provider_class,
     MCP_TOOL_BROWSER_OPEN: get_browser_provider_class,
@@ -243,6 +251,7 @@ _OPTIONS: dict[str, frozenset[str]] = {
     MCP_TOOL_TEMPLATES: frozenset(),
     MCP_TOOL_TEMPLATE: frozenset(),
     MCP_TOOL_RUN_TEMPLATE: TEMPLATE_PARAMETERS,
+    MCP_TOOL_ANSWER: ANSWER_PARAMETERS,
     MCP_TOOL_RESEARCH: RESEARCH_PARAMETERS,
     MCP_TOOL_BROWSE: BROWSE_PARAMETERS,
     MCP_TOOL_BROWSER_OPEN: BROWSER_PARAMETERS,
@@ -255,6 +264,7 @@ _ENV_TABLE: dict[str, dict[str, Any]] = {
     MCP_TOOL_TEMPLATES: TEMPLATE_ENV_BY_PROVIDER,
     MCP_TOOL_TEMPLATE: TEMPLATE_ENV_BY_PROVIDER,
     MCP_TOOL_RUN_TEMPLATE: TEMPLATE_ENV_BY_PROVIDER,
+    MCP_TOOL_ANSWER: ANSWER_ENV_BY_PROVIDER,
     MCP_TOOL_RESEARCH: RESEARCH_ENV_BY_PROVIDER,
     MCP_TOOL_BROWSE: BROWSE_ENV_BY_PROVIDER,
     MCP_TOOL_BROWSER_OPEN: BROWSER_ENV_BY_PROVIDER,
@@ -313,6 +323,7 @@ class WebRouterTools:
             MCP_TOOL_TEMPLATES: self._templates,
             MCP_TOOL_TEMPLATE: self._template,
             MCP_TOOL_RUN_TEMPLATE: self._run_template,
+            MCP_TOOL_ANSWER: self._answer,
             MCP_TOOL_RESEARCH: self._research,
             MCP_TOOL_RESEARCH_STATUS: self._research_status,
             MCP_TOOL_BROWSE: self._browse,
@@ -427,6 +438,11 @@ class WebRouterTools:
         response = await self.router.run_template(**self._kwargs(MCP_TOOL_RUN_TEMPLATE, arguments))
         record = self.store.add(MCP_TOOL_RUN_TEMPLATE, raw=response.raw)
         return shape_template_run(response, record.handle, budget=max_response_chars())
+
+    async def _answer(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        response = await self.router.answer(**self._kwargs(MCP_TOOL_ANSWER, arguments))
+        record = self.store.add(MCP_TOOL_ANSWER, raw=response.raw)
+        return shape_answer(response, record.handle, budget=max_response_chars())
 
     async def _research(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         job = await self.router.submit_research(**self._kwargs(MCP_TOOL_RESEARCH, arguments))
@@ -809,6 +825,7 @@ def _configured() -> dict[str, list[str]]:
         MCP_TOOL_SEARCH: configured_providers(),
         MCP_TOOL_EXTRACT: configured_extract_providers(),
         MCP_METHOD_TEMPLATE: configured_template_providers(),
+        MCP_TOOL_ANSWER: configured_answer_providers(),
         MCP_TOOL_RESEARCH: configured_research_providers(),
         MCP_TOOL_BROWSE: configured_browse_providers(),
         MCP_METHOD_BROWSER: configured_browser_providers(),
@@ -848,7 +865,7 @@ def _usable(tool: str) -> bool:
     of their own -- they need whatever their chain does. For search and extract
     that chain ends in a keyless backend and always works; for research and
     browse every backend bills, so ``auto`` alone means nothing here can
-    actually run.
+    actually run. Answer has no ``auto``, so it is usable exactly when a key is there.
     """
     return any(provider not in DELEGATING_PROVIDERS for provider in _CONFIGURED[tool]())
 

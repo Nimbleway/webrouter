@@ -1,0 +1,60 @@
+{
+  "provider": "exa",
+  "method": "answer",
+  "class": "web_router.providers.exa.ExaAnswerProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.exa.ai",
+    "paths": {
+      "answer_path": "/answer"
+    },
+    "method": "POST",
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "EXA_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {},
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "recency"
+  ],
+  "source": [
+    "https://docs.exa.ai/reference/answer",
+    "https://exa.ai/docs/reference/pricing"
+  ],
+  "verified": {},
+  "vendor_options": {
+    "userLocation": {
+      "status": "passthrough",
+      "note": "A country; accepted live but showed no clear effect, so country is not mapped to it."
+    },
+    "text": {
+      "status": "passthrough",
+      "note": "Returns each cited page's text, read as the snippet; not sent by default."
+    },
+    "outputSchema": {
+      "status": "not_supported",
+      "note": "Structured output; answer has no output_schema in this release. An object answer stays in raw."
+    },
+    "model": {
+      "status": "passthrough",
+      "note": "exa, exa-pro, exa-research or exa-fast; unset is Exa's default."
+    },
+    "systemPrompt": {
+      "status": "passthrough",
+      "note": "Guidance for the answer; no normalized field."
+    },
+    "stream": {
+      "status": "not_supported",
+      "note": "answer() returns the finished answer."
+    }
+  }
+}

@@ -4,6 +4,7 @@ import pytest
 
 from web_router.exceptions import ProviderNotFoundError
 from web_router.registry import (
+    available_answer_providers,
     available_browse_providers,
     available_browser_providers,
     available_extract_providers,
@@ -55,6 +56,7 @@ def test_every_enum_member_is_a_registered_provider() -> None:
         | set(available_extract_providers())
         | set(available_template_providers())
         | set(available_research_providers())
+        | set(available_answer_providers())
         | set(available_browser_providers())
         | set(available_browse_providers())
     )
