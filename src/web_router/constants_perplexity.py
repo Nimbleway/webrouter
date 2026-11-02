@@ -28,17 +28,15 @@ PERPLEXITY_ANSWER_DOMAIN_FIELD = "search_domain_filter"
 PERPLEXITY_ANSWER_EXCLUDE_PREFIX = "-"
 """An excluded domain is the same list's entry with this prefix."""
 
-PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE = frozenset({"include_domains", "exclude_domains"})
-"""Refused together: the docs say a list is an allowlist or a denylist, not both.
+MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE = (
+    "Perplexity filters on one domain list, not both: send include_domains or exclude_domains."
+)
+"""Both domain lists are refused together: the docs say a list is an allowlist or a denylist, not both.
 
 Live, a list holding both answered 200 and kept to the allowed domain, which
 says nothing about whether the excluded one was honoured -- so the pair is
 refused rather than risk a dropped exclusion.
 """
-
-MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE = (
-    "Perplexity filters on one domain list, not both: send include_domains or exclude_domains."
-)
 
 PERPLEXITY_ANSWER_RECENCY_FIELD = "search_recency_filter"
 PERPLEXITY_ANSWER_LOCATION_FIELD = "user_location"

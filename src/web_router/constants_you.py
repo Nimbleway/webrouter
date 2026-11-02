@@ -68,12 +68,10 @@ GB and 911 for US.
 the answer nor its sources, so nothing showed it doing what ``locale`` means.
 """
 
-YOU_ANSWER_DOMAINS_EXCLUSIVE = frozenset({"include_domains", "exclude_domains"})
-"""Answered 422 ``mutually_exclusive`` when sent together, so the pair is refused before the call."""
-
 MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE = (
     "You.com answers with one domain list, not both: send include_domains or exclude_domains."
 )
+"""Both domain lists answered 422 ``mutually_exclusive`` when sent together, so the pair is refused before the call."""
 
 YOU_ANSWER_FRESHNESS_FIELD = "freshness"
 

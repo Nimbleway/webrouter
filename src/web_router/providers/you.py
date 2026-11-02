@@ -30,7 +30,6 @@ from web_router.constants import (
 )
 from web_router.constants_you import (
     MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE,
-    YOU_ANSWER_DOMAINS_EXCLUSIVE,
     YOU_ANSWER_FRESHNESS_FIELD,
     YOU_ANSWER_MARKER,
     YOU_ANSWER_PARAM_NAMES,
@@ -43,9 +42,9 @@ from web_router.constants_you import (
     YOU_RESEARCH_STATES,
     YOU_RESEARCH_STATUS_PATH,
 )
-from web_router.exceptions import UnsupportedParameterError
 from web_router.providers._http import HttpAnswerProvider, HttpPolledResearchProvider, HttpSearchProvider
 from web_router.providers._utils import best_text, build_payload
+from web_router.providers.answer import refuse_domain_pair
 from web_router.types import (
     Citation,
     ResearchRequest,
@@ -205,9 +204,7 @@ class YouAnswerProvider(HttpAnswerProvider):
     api_key_header: ClassVar[str] = YOU_API_KEY_HEADER
 
     def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
-        together = {name for name in YOU_ANSWER_DOMAINS_EXCLUSIVE if getattr(request, name)}
-        if together == YOU_ANSWER_DOMAINS_EXCLUSIVE:
-            raise UnsupportedParameterError(self.name, together, detail=MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE)
+        refuse_domain_pair(self.name, request, MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE)
         return build_payload(
             request,
             YOU_ANSWER_PARAM_NAMES,

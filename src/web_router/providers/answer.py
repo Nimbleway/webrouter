@@ -8,10 +8,13 @@ from __future__ import annotations
 import abc
 
 from web_router.constants import MSG_ANSWER_FAILED
+from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.base import _BaseProvider
 from web_router.types_answer import AnswerRequest, AnswerResponse
 
-__all__ = ["AnswerProvider"]
+__all__ = ["AnswerProvider", "refuse_domain_pair"]
+
+_DOMAIN_LISTS = frozenset({"include_domains", "exclude_domains"})
 
 
 class AnswerProvider(_BaseProvider):
@@ -47,3 +50,12 @@ class AnswerProvider(_BaseProvider):
     def validate(self, request: AnswerRequest) -> None:
         """Raise :class:`UnsupportedParameterError` for any option this backend does not map."""
         self._reject_unmapped(request)
+
+
+def refuse_domain_pair(provider: str, request: AnswerRequest, detail: str) -> None:
+    """Raise :class:`UnsupportedParameterError` when ``request`` sets both domain lists.
+
+    For a backend that takes one list or the other, never both; ``detail`` says so in its words.
+    """
+    if all(getattr(request, name) for name in _DOMAIN_LISTS):
+        raise UnsupportedParameterError(provider, set(_DOMAIN_LISTS), detail=detail)

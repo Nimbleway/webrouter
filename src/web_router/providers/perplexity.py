@@ -41,7 +41,6 @@ from web_router.constants_perplexity import (
     MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE,
     PERPLEXITY_ANSWER_COUNTRY_FIELD,
     PERPLEXITY_ANSWER_DOMAIN_FIELD,
-    PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE,
     PERPLEXITY_ANSWER_EFFORT,
     PERPLEXITY_ANSWER_EFFORT_FIELD,
     PERPLEXITY_ANSWER_EXCLUDE_PREFIX,
@@ -50,9 +49,9 @@ from web_router.constants_perplexity import (
     PERPLEXITY_ANSWER_RECENCY_FIELD,
     PERPLEXITY_ANSWER_TOOL,
 )
-from web_router.exceptions import UnsupportedParameterError
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
 from web_router.providers._utils import build_payload, cited_marker, compact, error_detail
+from web_router.providers.answer import refuse_domain_pair
 from web_router.types import (
     Citation,
     ResearchProgress,
@@ -214,9 +213,7 @@ class PerplexityAnswerProvider(HttpAnswerProvider):
     api_key_prefix: ClassVar[str] = PERPLEXITY_API_KEY_PREFIX
 
     def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
-        together = {name for name in PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE if getattr(request, name)}
-        if together == PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE:
-            raise UnsupportedParameterError(self.name, together, detail=MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE)
+        refuse_domain_pair(self.name, request, MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE)
         tool = self._web_search(request)
         return build_payload(
             request,
