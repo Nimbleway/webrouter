@@ -295,10 +295,20 @@ def test_a_listing_is_a_page_with_its_place_in_the_catalogue(provider: NimbleTem
     assert page.templates[1].samples == []
 
 
-def test_a_sample_that_is_not_an_input_and_an_output_is_skipped_not_invented(
+def test_a_malformed_sample_is_skipped_and_a_sample_with_no_input_takes_none(
     provider: NimbleTemplateProvider,
 ) -> None:
-    item = _item(_version(samples=[{"input": {"url": URL}}, "not a sample", {"output": RECORD}]))
+    item = _item(
+        _version(
+            samples=[
+                {"input": {"url": URL}},
+                "not a sample",
+                {"input": "https://example.com"},
+                {"input": [["url", URL]]},
+                {"output": RECORD},
+            ]
+        )
+    )
 
     template = provider._to_template(item)
 

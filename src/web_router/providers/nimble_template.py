@@ -213,9 +213,11 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
             input_schema=version.get("input_schema"),
             output_schema=version.get("output_schema"),
             samples=[
-                TemplateSample(input=dict(sample.get("input") or {}), output=sample.get("output"))
+                TemplateSample(input=sample.get("input") or {}, output=sample.get("output"))
                 for sample in version.get("samples") or []
-                if isinstance(sample, dict)
+                # A sample with no input is a fixed page's, which takes none;
+                # one whose input is not a mapping is malformed and skipped.
+                if isinstance(sample, dict) and isinstance(sample.get("input") or {}, dict)
             ],
             version=_as_int(version.get("version_number")),
             published=bool(version),
