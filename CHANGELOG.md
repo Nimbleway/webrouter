@@ -19,7 +19,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
-- An error whose exception has no text -- httpx's read and connect timeouts -- now names its type instead of ending blank: a timed-out answer read `answer failed: ` and now reads `answer failed: ReadTimeout`. The same for every method's wrapped failure, a benchmark row's and the judge's.
+- An error whose exception has no text -- httpx's read and connect timeouts -- now names its type instead of ending blank: a timed-out answer read `answer failed: ` and now reads `answer failed: ReadTimeout`. The same for every method's wrapped failure and the judge's.
 
 ### Changed
 
