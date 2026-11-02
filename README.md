@@ -314,7 +314,9 @@ for what an unnamed call does.
 | `Provider.EXA` | `exa` | [Exa Answer API](https://docs.exa.ai/reference/answer) | `EXA_API_KEY` | none: no source filter, and `userLocation` showed no clear effect | yes: `[N]` markers, in `citation.field` |
 | `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | yes: `[N]` markers, in `citation.field` |
 
-All verified live on 2026-11-01, every mapped option seen to apply.
+All verified live on 2026-11-01, every mapped option seen to apply. The
+medians and stated costs below are from the answer scan of 300 SimpleQA
+questions on 2026-11-01, graded by `openai:gpt-4o`.
 
 - `perplexity` answers in about two seconds (median 1.9 s over 300 questions) and cites inline as `[2]`; a
   citation whose marker appears in the answer carries it in `field`, and the
@@ -850,7 +852,7 @@ Argentina won, beating France 4-2 on penalties after a 3-3 draw through extra ti
 
 With more than one key set, name the backend: `router.answer(q, provider="linkup")`.
 Which one: they score alike on accuracy (see [Choosing one](#answer)), so pick
-on what you need -- Linkup is the fastest (about a second); Perplexity, You.com
+on what you need -- Linkup had the lowest median latency in that scan (0.9 s); Perplexity, You.com
 and Linkup take source filters (domains, recency); Perplexity, You.com, Exa and
 Linkup tie each source to a sentence. [`examples/answer.py`](examples/answer.py)
 runs the whole flow, errors included.
