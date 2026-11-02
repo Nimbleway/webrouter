@@ -229,7 +229,19 @@ def shape_templates(page: TemplatePage, handle: str, *, budget: int) -> dict[str
         "limit": page.limit,
         "templates": templates,
     }
-    fitted = _fit(payload, templates, ("description",), handle=handle, budget=budget)
+    # A recorded input is copied whole or not at all, so one larger than its
+    # row's share of the budget is left out rather than crowding out the rows.
+    share = max(MCP_MIN_FIELD_CHARS, budget // max(len(templates), 1))
+    notes = []
+    for row in templates:
+        size = _size(row["sample_inputs"])
+        if size > share:
+            row["sample_inputs"] = None
+            notes.append(MCP_MSG_OVERSIZED.format(field=f"{row['name']}'s sample_inputs", size=size, handle=handle))
+    extra_note = " " + " ".join(notes) if notes else ""
+    fitted = _fit(payload, templates, ("description",), handle=handle, budget=budget, extra_note=extra_note)
+    fitted["truncated"] = fitted["truncated"] or bool(notes)
+    fitted = _bounded(fitted, tuple((row, "sample_inputs") for row in templates), handle=handle, budget=budget)
     # Counted after the fit, which may have dropped rows: the count is of what is shown.
     fitted["template_count"] = len(templates)
     return fitted

@@ -413,6 +413,35 @@ def test_a_listing_row_says_what_a_run_must_pass_without_the_schemas() -> None:
     assert draft["required_inputs"] is None, "no published schema, so nothing to read the inputs from"
 
 
+@pytest.mark.parametrize("rows", [1, 5])
+def test_a_sample_input_too_large_for_the_listing_is_left_out_whole(rows: int) -> None:
+    huge = TemplateSample(input={"url": "https://example.com/" + "x" * 24_000})
+    small = TemplateSample(input={"url": "https://example.com/p/1"})
+    schema = {"type": "object", "required": ["url"]}
+    templates = [Template(provider="fake", name="huge", input_schema=schema, samples=[huge])]
+    templates += [Template(provider="fake", name=f"t{i}", samples=[small]) for i in range(rows - 1)]
+
+    shaped = shape_templates(TemplatePage(provider="fake", templates=templates), "templates-0001", budget=8_000)
+
+    assert len(render(shaped)) <= 8_000
+    assert shaped["template_count"] == rows, "one oversized sample does not crowd out the other rows"
+    first, *rest = shaped["templates"]
+    assert first["sample_inputs"] is None and first["required_inputs"] == ["url"]
+    assert all(row["sample_inputs"] == small.input for row in rest)
+    assert shaped["truncated"] is True
+    assert "sample_inputs" in shaped["note"] and "templates-0001" in shaped["note"]
+
+
+def test_a_listing_with_small_sample_inputs_is_not_truncated() -> None:
+    sample = TemplateSample(input={"url": "https://example.com/p/1"})
+    page = TemplatePage(provider="fake", templates=[Template(provider="fake", name="t", samples=[sample])])
+
+    shaped = shape_templates(page, "templates-0001", budget=8_000)
+
+    assert shaped["templates"][0]["sample_inputs"] == sample.input
+    assert shaped["truncated"] is False and "note" not in shaped
+
+
 def test_a_listing_counts_the_rows_it_shows_not_the_rows_it_was_given() -> None:
     page = TemplatePage(
         provider="fake",
