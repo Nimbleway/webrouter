@@ -13,7 +13,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Removed
 
-- The `decider=` spike: `WebRouter(decider=..., decider_config=...)`, the Jev, LLM and keyword deciders and their registry (`web_router.decisions`), `execute(route)`, and the old `Route` fields (`chain`, `urls`, `output_schema`, `labels`, `fallback`, `requested`, `latency_ms`). `classify()` no longer takes `urls` or `output_schema`.
+- `execute(route)`, the old `classify(query, urls=, output_schema=)` and the old `Route` fields (`chain`, `urls`, `output_schema`, `labels`, `fallback`, `requested`, `latency_ms`). `classify()` no longer reads `decider=`; the deciders in `web_router.decisions` are unchanged.
 
 ## [0.8.0] - 2026-10-28
 
