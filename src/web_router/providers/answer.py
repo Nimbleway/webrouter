@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import abc
 
-from web_router.constants import MSG_ANSWER_FAILED
+from web_router.constants import ANSWER_MARKER, MSG_ANSWER_FAILED
 from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.base import _BaseProvider
 from web_router.types_answer import AnswerRequest, AnswerResponse
 
-__all__ = ["AnswerProvider", "refuse_domain_pair"]
+__all__ = ["AnswerProvider", "cited_marker", "refuse_domain_pair"]
 
 _DOMAIN_LISTS = frozenset({"include_domains", "exclude_domains"})
 
@@ -59,3 +59,9 @@ def refuse_domain_pair(provider: str, request: AnswerRequest, detail: str) -> No
     """
     if all(getattr(request, name) for name in _DOMAIN_LISTS):
         raise UnsupportedParameterError(provider, set(_DOMAIN_LISTS), detail=detail)
+
+
+def cited_marker(answer: str, number: object) -> str | None:
+    """The ``[number]`` marker when ``answer`` cites it, else ``None`` -- a source's ``Citation.field``."""
+    marker = ANSWER_MARKER.format(number=number)
+    return marker if number is not None and marker in answer else None

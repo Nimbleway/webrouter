@@ -31,7 +31,8 @@ from web_router.constants import (
 )
 from web_router.constants_exa import EXA_ANSWER_CITATION_TEXT_FIELD, EXA_ANSWER_PATH
 from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, best_text, build_payload, cited_marker
+from web_router.providers._utils import as_snippet, best_text, build_payload
+from web_router.providers.answer import cited_marker
 from web_router.types import (
     EXTRACT_PARAMETERS,
     Citation,

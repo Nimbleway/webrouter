@@ -50,8 +50,8 @@ from web_router.constants_perplexity import (
     PERPLEXITY_ANSWER_TOOL,
 )
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
-from web_router.providers._utils import build_payload, cited_marker, compact, error_detail
-from web_router.providers.answer import refuse_domain_pair
+from web_router.providers._utils import build_payload, compact, error_detail
+from web_router.providers.answer import cited_marker, refuse_domain_pair
 from web_router.types import (
     Citation,
     ResearchProgress,

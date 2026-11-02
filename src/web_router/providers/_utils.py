@@ -12,7 +12,6 @@ from typing import Any
 from pydantic import BaseModel
 
 from web_router.constants import (
-    ANSWER_MARKER,
     BROWSER_FIELD_CASES,
     BROWSER_SECONDS_PARAMETERS,
     MIN_JOB_BUDGET,
@@ -320,9 +319,3 @@ def job_budget(default: float) -> float:
 # wrappers, so there is one budget whichever name a provider reads it by.
 research_deadline = job_deadline
 research_budget = job_budget
-
-
-def cited_marker(answer: str, number: object) -> str | None:
-    """The ``[number]`` marker when ``answer`` cites it, else ``None`` -- a source's ``Citation.field``."""
-    marker = ANSWER_MARKER.format(number=number)
-    return marker if number is not None and marker in answer else None
