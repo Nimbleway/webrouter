@@ -55,6 +55,42 @@ from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "excerpts", "publish_date"})
 _MAPPED_BASIS_FIELDS = frozenset({"field", "citations"})
+_ANSWER_BASIS_EXTRA = frozenset({"confidence"})
+"""The basis keys an answer's citation keeps in ``extra``; a research run's keeps every unmapped one."""
+
+
+def _citations_from_basis(
+    basis: list[dict[str, Any]], *, whole_field: str | None = None, basis_extra: frozenset[str] | None = None
+) -> list[Citation]:
+    """Flatten Parallel's per-field basis into one citation per cited source.
+
+    Each basis entry says which output field it supports and why; what it
+    carries besides belongs to the whole entry rather than to any one source,
+    so every citation drawn from it carries it in ``extra`` -- every unmapped
+    key, or only ``basis_extra``. An entry for ``whole_field`` backs the whole
+    output, so its citations have ``field=None``. Empty excerpts are dropped.
+    """
+    return [
+        Citation(
+            url=cited.get("url", ""),
+            title=cited.get("title") or "",
+            snippet="\n\n".join(excerpt for excerpt in cited.get("excerpts") or [] if excerpt),
+            field=None if entry.get("field") == whole_field else entry.get("field"),
+            extra={
+                **{
+                    key: value
+                    for key, value in entry.items()
+                    if key not in _MAPPED_BASIS_FIELDS
+                    and (basis_extra is None or (key in basis_extra and value is not None))
+                },
+                **{key: value for key, value in cited.items() if key not in _MAPPED_CITATION_FIELDS},
+            },
+        )
+        for entry in basis
+        for cited in entry.get("citations") or []
+    ]
+
+
 _MAPPED_CITATION_FIELDS = frozenset({"url", "title", "excerpts"})
 
 
@@ -223,20 +259,7 @@ class ParallelResearchProvider(HttpResearchProvider):
         reasoning and confidence belong to the whole entry rather than to any
         one source, so every citation drawn from it carries them.
         """
-        return [
-            Citation(
-                url=cited.get("url", ""),
-                title=cited.get("title") or "",
-                snippet="\n\n".join(excerpt for excerpt in cited.get("excerpts") or [] if excerpt),
-                field=basis.get("field"),
-                extra={
-                    **{key: value for key, value in basis.items() if key not in _MAPPED_BASIS_FIELDS},
-                    **{key: value for key, value in cited.items() if key not in _MAPPED_CITATION_FIELDS},
-                },
-            )
-            for basis in output.get("basis") or []
-            for cited in basis.get("citations") or []
-        ]
+        return _citations_from_basis(output.get("basis") or [])
 
 
 class ParallelAnswerProvider(HttpAnswerProvider):
@@ -276,20 +299,9 @@ class ParallelAnswerProvider(HttpAnswerProvider):
             provider=self.name,
             query=request.query,
             answer=(choice.get("message") or {}).get("content") or "",
-            citations=[
-                Citation(
-                    url=citation.get("url", ""),
-                    title=citation.get("title") or "",
-                    snippet="\n\n".join(citation.get("excerpts") or []),
-                    field=None if basis.get("field") == PARALLEL_ANSWER_WHOLE_FIELD else basis.get("field"),
-                    extra={
-                        **{k: v for k, v in citation.items() if k not in _MAPPED_CITATION_FIELDS},
-                        **({"confidence": basis["confidence"]} if basis.get("confidence") else {}),
-                    },
-                )
-                for basis in payload.get("basis") or []
-                for citation in basis.get("citations") or []
-            ],
+            citations=_citations_from_basis(
+                payload.get("basis") or [], whole_field=PARALLEL_ANSWER_WHOLE_FIELD, basis_extra=_ANSWER_BASIS_EXTRA
+            ),
             outcome="partial" if choice.get("finish_reason") == PARALLEL_ANSWER_TRUNCATED else "complete",
             request_id=payload.get("id"),
             raw=[payload],
