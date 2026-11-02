@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from datetime import date
+from datetime import date, datetime, timezone
 
 _PINNED_TODAY: ContextVar[date | None] = ContextVar("web_router_pinned_today", default=None)
 
@@ -13,11 +13,11 @@ _PINNED_TODAY: ContextVar[date | None] = ContextVar("web_router_pinned_today", d
 def today() -> date:
     """Today's date, for an option counted back from it -- ``recency`` on a backend that takes a start date.
 
-    Read through here rather than ``date.today()`` so :func:`pinned_today` can
-    fix it: a provider contract records the dates a request sends, and must not
-    go stale overnight.
+    The UTC date, so a window does not move with the caller's time zone. Read
+    through here so :func:`pinned_today` can fix it: a provider contract records
+    the dates a request sends, and must not go stale overnight.
     """
-    return _PINNED_TODAY.get() or date.today()
+    return _PINNED_TODAY.get() or datetime.now(timezone.utc).date()
 
 
 @contextmanager

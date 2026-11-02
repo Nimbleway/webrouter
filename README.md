@@ -863,7 +863,9 @@ backend marks which source backs which sentence, the marker is in
 as a whole. `outcome` is `partial` only when the backend says it stopped early.
 
 The options are `include_domains`, `exclude_domains`, `country`, `locale` and
-`recency` (`"day"`, `"week"`, `"month"` or `"year"`). A backend that does not
+`recency` (`"day"`, `"week"`, `"month"` or `"year"`). Windows count whole days;
+where the router sets the start date itself (Linkup), it counts back from
+today's date in UTC. A backend that does not
 map one raises `UnsupportedParameterError` before anything is sent -- the
 [answer table](#answer) says which backend maps what.
 
