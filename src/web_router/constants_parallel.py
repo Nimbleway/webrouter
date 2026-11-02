@@ -28,5 +28,8 @@ PARALLEL_ANSWER_ROLE = "user"
 PARALLEL_ANSWER_WHOLE_FIELD = "answer"
 """The ``basis`` field naming the answer as a whole, which a citation leaves as ``field=None``."""
 
+PARALLEL_ANSWER_BASIS_EXTRA = frozenset({"confidence"})
+"""The basis keys an answer's citation keeps in ``extra``; a research run's keeps every unmapped one."""
+
 PARALLEL_ANSWER_TRUNCATED = "length"
 """The ``finish_reason`` saying the generation was cut short, the one early stop the API reports."""

@@ -33,6 +33,7 @@ from web_router.constants import (
 from web_router.constants_parallel import (
     PARALLEL_ANSWER_API_KEY_HEADER,
     PARALLEL_ANSWER_API_KEY_PREFIX,
+    PARALLEL_ANSWER_BASIS_EXTRA,
     PARALLEL_ANSWER_MODEL,
     PARALLEL_ANSWER_PATH,
     PARALLEL_ANSWER_ROLE,
@@ -55,8 +56,6 @@ from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "excerpts", "publish_date"})
 _MAPPED_BASIS_FIELDS = frozenset({"field", "citations"})
-_ANSWER_BASIS_EXTRA = frozenset({"confidence"})
-"""The basis keys an answer's citation keeps in ``extra``; a research run's keeps every unmapped one."""
 
 
 def _citations_from_basis(
@@ -300,7 +299,9 @@ class ParallelAnswerProvider(HttpAnswerProvider):
             query=request.query,
             answer=(choice.get("message") or {}).get("content") or "",
             citations=_citations_from_basis(
-                payload.get("basis") or [], whole_field=PARALLEL_ANSWER_WHOLE_FIELD, basis_extra=_ANSWER_BASIS_EXTRA
+                payload.get("basis") or [],
+                whole_field=PARALLEL_ANSWER_WHOLE_FIELD,
+                basis_extra=PARALLEL_ANSWER_BASIS_EXTRA,
             ),
             outcome="partial" if choice.get("finish_reason") == PARALLEL_ANSWER_TRUNCATED else "complete",
             request_id=payload.get("id"),
