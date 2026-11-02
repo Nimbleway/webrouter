@@ -109,6 +109,8 @@ src/web_router/
 │                       kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
+├── registry_answer.py  the answer backends' table, and the backend an
+│                       unnamed answer() uses
 ├── exceptions.py       WebRouterError and subclasses
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
@@ -879,7 +881,7 @@ Search's shape, against `HttpAnswerProvider` — one POST, one answer — or
    domain lists where it takes one — raises `UnsupportedParameterError`
    before the call.
 2. Put the endpoint and field names in `constants_<provider>.py`.
-3. Register the class in `_BUILTIN_ANSWER_PROVIDERS` in `registry.py` and add
+3. Register the class in `_BUILTIN_ANSWER_PROVIDERS` in `registry_answer.py` and add
    the provider to `ANSWER_ENV_BY_PROVIDER` in `constants.py`. There is no
    `auto` to join yet.
 4. Add `tests/providers/test_<name>_answer.py` covering the payload, each

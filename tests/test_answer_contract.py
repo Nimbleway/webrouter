@@ -21,7 +21,7 @@ from web_router.constants import ANSWER_ENV_BY_PROVIDER
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers._http import _HttpProvider
 from web_router.providers.answer import AnswerProvider
-from web_router.registry import (
+from web_router.registry_answer import (
     available_answer_providers,
     configured_answer_providers,
     get_answer_provider_class,

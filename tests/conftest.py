@@ -20,14 +20,12 @@ from web_router.providers.base import (
     TemplateProvider,
 )
 from web_router.registry import (
-    register_answer_provider,
     register_browse_provider,
     register_browser_provider,
     register_extract_provider,
     register_provider,
     register_research_provider,
     register_template_provider,
-    unregister_answer_provider,
     unregister_browse_provider,
     unregister_browser_provider,
     unregister_extract_provider,
@@ -35,6 +33,7 @@ from web_router.registry import (
     unregister_research_provider,
     unregister_template_provider,
 )
+from web_router.registry_answer import register_answer_provider, unregister_answer_provider
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,

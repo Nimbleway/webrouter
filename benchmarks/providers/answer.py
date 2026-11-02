@@ -52,7 +52,7 @@ from answer_report import BASELINE_KEYS, check_baseline, markdown, stated_cost, 
 from web_router import AsyncWebRouter
 from web_router.evals import Dataset, OpenAIJudge
 from web_router.exceptions import WebRouterError
-from web_router.registry import configured_answer_providers
+from web_router.registry_answer import configured_answer_providers
 
 DEFAULT_CONCURRENCY = 3
 """Questions at once; every backend is asked each question together, so this many calls reach each backend."""

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from web_router import ProviderNotFoundError, UnsupportedParameterError, WebRouter, configured_answer_providers
 from web_router.constants import ANSWER_ENV_BY_PROVIDER
-from web_router.registry import get_answer_provider_class
+from web_router.registry_answer import get_answer_provider_class
 
 QUESTION = "Who won the 2022 FIFA World Cup final and what was the score?"
 

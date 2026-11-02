@@ -10,7 +10,7 @@ import threading
 from typing import Any
 
 from web_router.providers.answer import AnswerProvider
-from web_router.registry import create_answer_provider, default_answer_provider
+from web_router.registry_answer import create_answer_provider, default_answer_provider
 from web_router.types import Provider, provider_name
 from web_router.types_answer import AnswerRequest, AnswerResponse, Recency
 

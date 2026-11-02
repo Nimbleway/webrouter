@@ -23,7 +23,7 @@ from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
-from web_router import registry
+from web_router import registry, registry_answer
 from web_router.constants import (
     ANSWER_ENV_BY_PROVIDER,
     AUTO_EXTRACT_KEYLESS,
@@ -128,8 +128,8 @@ METHODS: dict[str, _Method] = {
     ),
     "answer": _Method(
         AnswerRequest,
-        registry.available_answer_providers,
-        registry.get_answer_provider_class,
+        registry_answer.available_answer_providers,
+        registry_answer.get_answer_provider_class,
         lambda **kw: AnswerRequest(query="probe query", **kw),
         ANSWER_ENV_BY_PROVIDER,
         (),
