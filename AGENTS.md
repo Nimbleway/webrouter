@@ -345,7 +345,7 @@ and named in the report. When the judge shares an agent's family
 the report's setup names that platform, because that judge is not independent
 of what it grades. Its winners-by-axis verdicts come from a paired bootstrap
 over the rows; they say whether a gap is noise, not how good an answer is. It adds no
-method and no report type to the package. Its `report.md` is one of the two
+method and no report type to the package. Its `report.md` is one of the three
 places outside `evals/` a judged accuracy appears, and it names the judge the
 same way. The only cost it reports is Anthropic's own list-cost figure for a Claude
 session, never an estimate, and it says that a web-router backend's charges
@@ -375,8 +375,8 @@ depth (`tavily@deep`, one `evaluate()` per depth) or a vendor mode from
 `modes.json` (`tavily:ultra-fast`), sent through `provider_options` by a
 wrapper that calls the backend's public `asearch`; mark a mode `verified` only
 after a live call shows it changing the response. `answer.py` is the answer scan: every configured answer backend through the
-public `answer()` on the same questions, each backend's own answer graded by an
-`evaluate()` judge -- nothing synthesized, since the backend wrote the answer
+public `answer()` on the same questions, each backend's own answer graded by the
+same judge as the search scan -- nothing synthesized, since the backend wrote the answer
 -- so its `report.md` is a third place a judged accuracy appears, and it names
 the judge. `--baseline` sets a search scan of the same questions, seed and judge
 beside it, and is refused otherwise. A row whose sources include one of the
