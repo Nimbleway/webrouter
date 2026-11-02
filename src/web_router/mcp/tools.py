@@ -124,10 +124,8 @@ from web_router.mcp.shaping import (
     shape_progress,
     shape_research,
     shape_search,
-    shape_template,
-    shape_template_run,
-    shape_templates,
 )
+from web_router.mcp.shaping_templates import shape_template, shape_template_run, shape_templates
 from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider
 from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
 from web_router.registry import (
