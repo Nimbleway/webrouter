@@ -10,8 +10,9 @@ was always empty. `effort` and `preset` were both accepted, both echoed as
 
 The filters go to the `web_search` tool and were each seen to apply:
 `search_domain_filter` `["wikipedia.org"]` kept every result on wikipedia.org,
-`["-wikipedia.org"]` kept every one off it, and both at once -- which the docs
-say a list cannot hold -- answered 200 and kept to wikipedia.org;
+and `["-wikipedia.org"]` kept every one off it. Both at once -- which the docs
+say a list cannot hold -- answered 200 and kept to wikipedia.org, which shows
+nothing about the excluded domain, so the pair is refused before the call;
 `search_recency_filter: "year"` kept every result dated within the year; and an
 emergency-number question answered 999 for `GB` and 911 for `US`. `locale` has
 no field and is refused.
@@ -19,13 +20,12 @@ no field and is refused.
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any
 
-import httpx
 import pytest
 
+from tests.providers._answer_stub import stub_answer_api
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.perplexity import PerplexityAnswerProvider
 from web_router.types import AnswerRequest, Recency
@@ -94,29 +94,6 @@ def _response(text: str = TEXT, status: str = "completed") -> dict[str, Any]:
     }
 
 
-class _Api:
-    """Stands in for the Agent API: answers one payload and records every call."""
-
-    def __init__(self, payload: dict[str, Any], status: int = 200) -> None:
-        self.payload = payload
-        self.status = status
-        self.calls: list[tuple[str, str]] = []
-        self.bodies: list[dict[str, Any]] = []
-
-    def handle(self, request: httpx.Request) -> httpx.Response:
-        self.calls.append((request.method, request.url.path))
-        self.bodies.append(json.loads(request.content or b"{}"))
-        return httpx.Response(self.status, json=self.payload)
-
-
-def _stub(provider: PerplexityAnswerProvider, payload: dict[str, Any], status: int = 200) -> _Api:
-    api = _Api(payload, status)
-    transport = httpx.MockTransport(api.handle)
-    provider._sync = httpx.Client(**provider._client_kwargs, transport=transport)
-    provider._async = httpx.AsyncClient(**provider._client_kwargs, transport=transport)
-    return api
-
-
 @pytest.fixture
 def provider(monkeypatch: pytest.MonkeyPatch) -> PerplexityAnswerProvider:
     monkeypatch.setenv("PERPLEXITY_API_KEY", "test-key")
@@ -124,7 +101,7 @@ def provider(monkeypatch: pytest.MonkeyPatch) -> PerplexityAnswerProvider:
 
 
 def test_an_answer_is_one_response_at_the_fast_effort(provider: PerplexityAnswerProvider) -> None:
-    api = _stub(provider, _response())
+    api = stub_answer_api(provider, _response())
 
     provider.answer(AnswerRequest(query=QUESTION))
 
@@ -133,7 +110,7 @@ def test_an_answer_is_one_response_at_the_fast_effort(provider: PerplexityAnswer
 
 
 def test_the_answer_its_sources_and_its_markers_are_normalized(provider: PerplexityAnswerProvider) -> None:
-    _stub(provider, _response())
+    stub_answer_api(provider, _response())
 
     response = provider.answer(AnswerRequest(query=QUESTION))
 
@@ -153,29 +130,39 @@ def test_the_answer_its_sources_and_its_markers_are_normalized(provider: Perplex
 
 
 def test_the_filters_configure_the_web_search_tool(provider: PerplexityAnswerProvider) -> None:
-    api = _stub(provider, _response())
+    api = stub_answer_api(provider, _response())
 
-    provider.answer(
-        AnswerRequest(
-            query=QUESTION,
-            include_domains=["wikipedia.org"],
-            exclude_domains=["fandom.com"],
-            recency="year",
-            country="GB",
-        )
-    )
+    provider.answer(AnswerRequest(query=QUESTION, include_domains=["wikipedia.org"], recency="year", country="GB"))
 
     assert api.bodies[0]["tools"] == [
         {
             "type": "web_search",
-            "filters": {"search_domain_filter": ["wikipedia.org", "-fandom.com"], "search_recency_filter": "year"},
+            "filters": {"search_domain_filter": ["wikipedia.org"], "search_recency_filter": "year"},
             "user_location": {"country": "GB"},
         }
     ]
 
 
+def test_an_excluded_domain_is_prefixed(provider: PerplexityAnswerProvider) -> None:
+    api = stub_answer_api(provider, _response())
+
+    provider.answer(AnswerRequest(query=QUESTION, exclude_domains=["fandom.com", "reddit.com"]))
+
+    assert api.bodies[0]["tools"][0]["filters"] == {"search_domain_filter": ["-fandom.com", "-reddit.com"]}
+
+
+def test_both_domain_lists_together_are_refused_before_the_call(provider: PerplexityAnswerProvider) -> None:
+    api = stub_answer_api(provider, _response())
+
+    with pytest.raises(UnsupportedParameterError, match="one domain list") as caught:
+        provider.answer(AnswerRequest(query=QUESTION, include_domains=["a.com"], exclude_domains=["b.com"]))
+
+    assert caught.value.parameters == ["exclude_domains", "include_domains"]
+    assert api.calls == []
+
+
 def test_a_country_alone_sets_only_the_location(provider: PerplexityAnswerProvider) -> None:
-    api = _stub(provider, _response())
+    api = stub_answer_api(provider, _response())
 
     provider.answer(AnswerRequest(query=QUESTION, country="US"))
 
@@ -184,7 +171,7 @@ def test_a_country_alone_sets_only_the_location(provider: PerplexityAnswerProvid
 
 @pytest.mark.parametrize("recency", ["day", "week", "month", "year"])
 def test_every_recency_is_perplexitys_own_value(provider: PerplexityAnswerProvider, recency: Recency) -> None:
-    api = _stub(provider, _response())
+    api = stub_answer_api(provider, _response())
 
     provider.answer(AnswerRequest(query=QUESTION, recency=recency))
 
@@ -192,7 +179,7 @@ def test_every_recency_is_perplexitys_own_value(provider: PerplexityAnswerProvid
 
 
 def test_locale_has_no_field_and_is_refused(provider: PerplexityAnswerProvider) -> None:
-    api = _stub(provider, _response())
+    api = stub_answer_api(provider, _response())
 
     with pytest.raises(UnsupportedParameterError, match="locale"):
         provider.answer(AnswerRequest(query=QUESTION, locale="en"))
@@ -201,7 +188,7 @@ def test_locale_has_no_field_and_is_refused(provider: PerplexityAnswerProvider) 
 
 
 def test_provider_options_reach_the_api_last(provider: PerplexityAnswerProvider) -> None:
-    api = _stub(provider, _response())
+    api = stub_answer_api(provider, _response())
 
     provider.answer(AnswerRequest(query=QUESTION, provider_options={"effort": "low"}))
 
@@ -209,13 +196,13 @@ def test_provider_options_reach_the_api_last(provider: PerplexityAnswerProvider)
 
 
 def test_an_incomplete_response_is_partial(provider: PerplexityAnswerProvider) -> None:
-    _stub(provider, _response(status="incomplete"))
+    stub_answer_api(provider, _response(status="incomplete"))
 
     assert provider.answer(AnswerRequest(query=QUESTION)).outcome == "partial"
 
 
 def test_an_empty_answer_is_returned_with_its_sources(provider: PerplexityAnswerProvider) -> None:
-    _stub(provider, _response(text=""))
+    stub_answer_api(provider, _response(text=""))
 
     response = provider.answer(AnswerRequest(query=QUESTION))
 
@@ -225,14 +212,14 @@ def test_an_empty_answer_is_returned_with_its_sources(provider: PerplexityAnswer
 
 
 def test_an_http_error_is_a_provider_error(provider: PerplexityAnswerProvider) -> None:
-    _stub(provider, {"error": {"message": "invalid effort"}}, status=400)
+    stub_answer_api(provider, {"error": {"message": "invalid effort"}}, status=400)
 
     with pytest.raises(ProviderError, match="400"):
         provider.answer(AnswerRequest(query=QUESTION))
 
 
 async def test_the_async_path_answers_the_same_way(provider: PerplexityAnswerProvider) -> None:
-    api = _stub(provider, _response())
+    api = stub_answer_api(provider, _response())
 
     response = await provider.aanswer(AnswerRequest(query=QUESTION, country="GB"))
 

@@ -2662,6 +2662,9 @@ MSG_RESEARCH_FAILED = "research failed: {error}"
 
 MSG_ANSWER_FAILED = "answer failed: {error}"
 
+ANSWER_MARKER = "[{number}]"
+"""An inline citation as most answer backends write it: the source's number in brackets, ``[2]``."""
+
 MSG_ANSWER_NO_DEFAULT = (
     "answer() has no 'auto' yet: the router's default ({default!r}) does not serve it, and {count} answer "
     "backends are configured, so there is no single one to use. Name one with provider=: {available}."

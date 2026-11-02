@@ -8,6 +8,7 @@
     "paths": {
       "answer_path": "/v1/responses"
     },
+    "method": "POST",
     "auth_header": "Authorization"
   },
   "credentials": [
@@ -114,7 +115,7 @@
     "include_domains": "live: tests/test_integration_surface.py::test_an_answers_sources_honor_the_domain_filter",
     "exclude_domains": "live: tests/test_integration_surface.py::test_an_answers_sources_leave_out_excluded_domains",
     "country": "live: tests/providers/test_perplexity_answer.py::test_live_answer_ties_its_markers_to_sources",
-    "recency": "live: tests/test_integration_surface.py::test_recency_is_accepted"
+    "recency": "live: tests/test_integration_surface.py::test_recency_keeps_dated_sources_in_the_window"
   },
   "vendor_options": {
     "background": {

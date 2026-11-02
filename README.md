@@ -308,7 +308,7 @@ backends' answers. See [Asking for an answer](#asking-for-an-answer).
 
 | Pass | Name | Provider | Credentials | Options mapped | Citations tied to claims |
 | --- | --- | --- | --- | --- | --- |
-| `Provider.PERPLEXITY` | `perplexity` | [Perplexity Agent API, `fast` effort](https://docs.perplexity.ai/docs/agent-api/quickstart) | `PERPLEXITY_API_KEY` | `include_domains`, `exclude_domains`, `country`, `recency` | yes: `[N]` markers, in `citation.field` |
+| `Provider.PERPLEXITY` | `perplexity` | [Perplexity Agent API, `fast` effort](https://docs.perplexity.ai/docs/agent-api/quickstart) | `PERPLEXITY_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[N]` markers, in `citation.field` |
 | `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | no: every page read, for the answer as a whole |
 
 Both verified live on 2026-11-01, every mapped option seen to apply.

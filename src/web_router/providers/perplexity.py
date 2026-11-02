@@ -38,19 +38,21 @@ from web_router.constants import (
     PROVIDER_PERPLEXITY,
 )
 from web_router.constants_perplexity import (
+    MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE,
     PERPLEXITY_ANSWER_COUNTRY_FIELD,
     PERPLEXITY_ANSWER_DOMAIN_FIELD,
+    PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE,
     PERPLEXITY_ANSWER_EFFORT,
     PERPLEXITY_ANSWER_EFFORT_FIELD,
     PERPLEXITY_ANSWER_EXCLUDE_PREFIX,
     PERPLEXITY_ANSWER_LOCATION_FIELD,
-    PERPLEXITY_ANSWER_MARKER,
     PERPLEXITY_ANSWER_RECENCY,
     PERPLEXITY_ANSWER_RECENCY_FIELD,
     PERPLEXITY_ANSWER_TOOL,
 )
+from web_router.exceptions import UnsupportedParameterError
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
-from web_router.providers._utils import build_payload, compact, error_detail
+from web_router.providers._utils import build_payload, cited_marker, compact, error_detail
 from web_router.types import (
     AnswerRequest,
     AnswerResponse,
@@ -195,8 +197,8 @@ class PerplexityAnswerProvider(HttpAnswerProvider):
     in ``raw``.
 
     The filters go to the ``web_search`` tool, configured only when one is set:
-    the domain lists share ``search_domain_filter`` (an excluded domain
-    prefixed ``-``), ``recency`` is ``search_recency_filter`` and ``country``
+    a domain list is ``search_domain_filter`` (an excluded domain prefixed
+    ``-``; the two lists together are refused before the call), ``recency`` is ``search_recency_filter`` and ``country``
     is ``user_location.country``. ``locale`` has no field and is refused.
     Another effort level goes through ``provider_options``.
     """
@@ -213,6 +215,9 @@ class PerplexityAnswerProvider(HttpAnswerProvider):
     api_key_prefix: ClassVar[str] = PERPLEXITY_API_KEY_PREFIX
 
     def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
+        together = {name for name in PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE if getattr(request, name)}
+        if together == PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE:
+            raise UnsupportedParameterError(self.name, together, detail=MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE)
         tool = self._web_search(request)
         return build_payload(
             request,
@@ -276,13 +281,12 @@ def _citations(output: list[dict[str, Any]], *, cited_in: str | None = None) -> 
         if item.get("type") != PERPLEXITY_OUTPUT_SEARCH_RESULTS:
             continue
         for result in item.get("results") or []:
-            marker = PERPLEXITY_ANSWER_MARKER.format(id=result.get("id"))
             citations.append(
                 Citation(
                     url=result.get("url", ""),
                     title=result.get("title") or "",
                     snippet=result.get("snippet") or "",
-                    field=marker if cited_in and result.get("id") is not None and marker in cited_in else None,
+                    field=cited_marker(cited_in, result.get("id")) if cited_in else None,
                     extra={key: value for key, value in result.items() if key not in _MAPPED_SOURCE_FIELDS},
                 )
             )
