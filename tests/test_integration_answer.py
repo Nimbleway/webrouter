@@ -16,7 +16,7 @@ import pytest
 
 from tests.conftest import billing_aware
 from web_router import WebRouter
-from web_router.constants import ANSWER_ENV_BY_PROVIDER
+from web_router.constants import ANSWER_ENV_BY_PROVIDER, PERPLEXITY_OUTPUT_SEARCH_RESULTS
 from web_router.registry import available_answer_providers, get_answer_provider_class
 
 pytestmark = pytest.mark.integration
@@ -79,7 +79,7 @@ STATED_DATES: dict[str, Any] = {
     "perplexity": lambda raw: [
         result.get("date")
         for item in raw.get("output") or []
-        if item.get("type") == "search_results"
+        if item.get("type") == PERPLEXITY_OUTPUT_SEARCH_RESULTS
         for result in item.get("results") or []
     ],
     "you": lambda raw: [page.get("page_age") for page in (raw.get("results") or {}).get("web") or []],
