@@ -233,7 +233,7 @@ and what `response.provider` and `configured_providers()` report back.
 | `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | `max_results`, `search_depth` |
 | `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp) | direct HTTP, **no key** | `max_results` |
 | `Provider.PARALLEL_MCP` | `parallel-mcp` | [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/quickstart) | direct HTTP, **no key** | `max_results` (applied to the response: the tool ignores a count) |
-| `Provider.AUTO` *(default)* | `auto` | — | every backend you hold a key for, in the provider scan's order, then the keyless ones — so a key held only for research serves searches too; see [Working with no credentials](#working-with-no-credentials) | every option some member maps, each request routed to a member that maps what it sets |
+| `Provider.AUTO` *(default)* | `auto` | — | every backend you hold a key for, in the provider scan's order, then the keyless ones — so a key held only for research serves searches too, and those calls bill; see [Working with no credentials](#working-with-no-credentials) | every option some member maps, each request routed to a member that maps what it sets |
 
 Every provider but Nimble and Linkup is called with the minimum a search needs. Their APIs
 can all do much more; mapping one of those options properly is a small PR and
