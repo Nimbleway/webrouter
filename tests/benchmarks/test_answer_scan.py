@@ -32,7 +32,7 @@ def scan() -> Iterator[ModuleType]:
         yield module
     finally:
         sys.path.remove(str(SCRIPT.parent))
-        for name in ("_common", "_questions", "_report_tables"):
+        for name in ("_common", "_questions", "_report_tables", "answer_report"):
             sys.modules.pop(name, None)
 
 

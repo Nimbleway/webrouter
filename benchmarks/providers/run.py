@@ -59,7 +59,7 @@ from _questions import (
     question_args,
     question_tags,
 )
-from _report_tables import breakdown, breakdown_tables, grade_stats
+from _report_tables import breakdown, breakdown_tables, search_score
 
 from web_router import AsyncWebRouter
 from web_router.constants import BENCHMARK_EXCLUDED, PROVIDER_AUTO
@@ -136,14 +136,9 @@ def _modes() -> dict[str, dict[str, Any]]:
     return {k: v for k, v in json.loads(MODES_FILE.read_text(encoding="utf-8")).items() if not k.startswith("_")}
 
 
-def _score(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    stats = grade_stats(rows)
-    return {**stats, "failed": len(rows) - stats["served"], "withheld": sum(r.get("withheld", 0) for r in rows)}
-
-
 def summarize(rows: list[dict[str, Any]], setup: dict[str, Any]) -> dict[str, Any]:
     providers = setup["providers"]
-    overall = {p: _score([r for r in rows if r["provider"] == p]) for p in providers}
+    overall = {p: search_score([r for r in rows if r["provider"] == p]) for p in providers}
     return {
         "setup": setup,
         "overall": overall,

@@ -36,6 +36,12 @@ def grade_stats(rows: list[dict[str, Any]], latencies: list[float] | None = None
     }
 
 
+def search_score(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """A search backend's numbers: :func:`grade_stats`, the searches that failed, and the results withheld."""
+    stats = grade_stats(rows)
+    return {**stats, "failed": len(rows) - stats["served"], "withheld": sum(r.get("withheld", 0) for r in rows)}
+
+
 def breakdown(rows: list[dict[str, Any]], key: str, providers: list[str]) -> dict[str, dict[str, Any]]:
     """Accuracy per backend in each group of one label, and which backends lead the group."""
     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
