@@ -322,8 +322,8 @@ All verified live on 2026-11-01, every mapped option seen to apply.
   an answer over 300 questions). `country` is its `user_location`: an emergency-number question
   answered 999 for `GB` and 911 for `US`.
 - `you` answers in about two seconds (median 1.7 s over 300 questions). Its `citations` are only the sources the
-  answer cites, marked `[[1, 2]]`; each carries the first marker naming it in
-  `field`, and its title comes from the pages You.com considered. It takes one
+  answer cites, marked `[[1, 2]]`; each carries in `field` the whole marker
+  group that first names it (`[[1, 2]]`, where other backends give one `[N]`), and its title comes from the pages You.com considered. It takes one
   domain list, not both: asking for both raises before the call. `language` was
   accepted but showed no effect, so `locale` is not mapped.
 - `parallel` answers in about six seconds (median 6.3 s over 300 questions) with the `lite` model, the fastest

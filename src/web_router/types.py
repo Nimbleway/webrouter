@@ -677,7 +677,8 @@ class Citation(BaseModel):
         default=None,
         description=(
             "Which part of the answer this source backs -- a JSON path into `structured`, or a marker "
-            "in `answer` -- when the backend attributes per field. `None` when it ties the source to no part of it."
+            "in `answer` (`[2]`, or on You.com the whole group that names it, `[[1, 2]]`) -- when the "
+            "backend attributes per field. `None` when it ties the source to no part of it."
         ),
     )
     extra: dict[str, Any] = Field(
