@@ -20,7 +20,16 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Generic, Literal, TypeVar, cast
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_serializer, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    SerializerFunctionWrapHandler,
+    field_serializer,
+    model_serializer,
+    model_validator,
+)
 
 SearchDepth = Literal["lite", "fast", "deep"]
 """How much page content to retrieve per result.
@@ -1100,3 +1109,106 @@ class Screenshot(BaseModel):
     width: int = Field(description="Width of the image in pixels.")
     height: int = Field(description="Height of the image in pixels.")
     url: str = Field(description="The page it was taken of.")
+
+
+# --- classify ---------------------------------------------------------------
+
+CLASSIFY_QUERY_MAX_CHARS = 10_000
+"""The longest query :meth:`~web_router.WebRouter.classify` takes: the cap on a Nimble agent run's input."""
+
+CLASSIFY_TIME_SECONDS_MAX = 1_000
+"""The largest time budget :meth:`~web_router.WebRouter.classify` takes, in seconds."""
+
+Method = Literal["search", "extract", "extract_template", "browse", "research", "answer"]
+"""The tools :meth:`~web_router.WebRouter.classify` can choose between."""
+
+
+class Budgets(BaseModel):
+    """What a request may spend. A budget left as ``None`` sets no limit."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    time_seconds: int | None = Field(
+        default=None, ge=1, le=CLASSIFY_TIME_SECONDS_MAX, description="Wall-clock time, in whole seconds."
+    )
+    cost_usd: float | None = Field(default=None, gt=0, description="Spend, in US dollars.")
+
+
+class ClassifyRequest(BaseModel):
+    """What :meth:`~web_router.WebRouter.classify` takes: a query, and what answering it may spend."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    query: str = Field(min_length=1, max_length=CLASSIFY_QUERY_MAX_CHARS, description="The request, as free text.")
+    budgets: Budgets | None = None
+
+
+class _ParamsBase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class SearchParams(_ParamsBase):
+    """The params :meth:`~web_router.WebRouter.classify` suggests for a search. None are defined yet."""
+
+
+class ExtractParams(_ParamsBase):
+    """The params :meth:`~web_router.WebRouter.classify` suggests for an extract. None are defined yet."""
+
+
+class ExtractTemplateParams(_ParamsBase):
+    """The params :meth:`~web_router.WebRouter.classify` suggests for an extract template. None are defined yet."""
+
+
+class BrowseParams(_ParamsBase):
+    """The params :meth:`~web_router.WebRouter.classify` suggests for a browse. None are defined yet."""
+
+
+class ResearchParams(_ParamsBase):
+    """The params :meth:`~web_router.WebRouter.classify` suggests for a research run. None are defined yet."""
+
+
+class AnswerParams(_ParamsBase):
+    """The params :meth:`~web_router.WebRouter.classify` suggests for an answer. None are defined yet."""
+
+
+class MethodParams(BaseModel):
+    """The params to call the chosen method with: one field per method, and only the chosen one is set.
+
+    Serialized, it holds that one field alone: ``{"search": {...}}``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    search: SearchParams | None = None
+    extract: ExtractParams | None = None
+    extract_template: ExtractTemplateParams | None = None
+    browse: BrowseParams | None = None
+    research: ResearchParams | None = None
+    answer: AnswerParams | None = None
+
+    def chosen(self) -> list[str]:
+        """The names of the methods whose params are set."""
+        return [name for name in type(self).model_fields if getattr(self, name) is not None]
+
+    @model_serializer(mode="wrap")
+    def _only_chosen(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        dumped: dict[str, Any] = handler(self)
+        return {name: value for name, value in dumped.items() if value is not None}
+
+
+class Route(BaseModel):
+    """What :meth:`~web_router.WebRouter.classify` chose for a query: the method, and the params to call it with."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    query: str = Field(description="The query this route was chosen for.")
+    method: Method = Field(description="The tool to call.")
+    method_params: MethodParams = Field(description="The params to call :attr:`method` with.")
+
+    @model_validator(mode="after")
+    def _params_for_method(self) -> Route:
+        # Inline rather than in constants.py, which imports this module.
+        chosen = self.method_params.chosen()
+        if chosen != [self.method]:
+            raise ValueError(f"method_params must set {self.method!r} alone, not {chosen}")
+        return self

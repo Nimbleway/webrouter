@@ -8,7 +8,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Changed
 
+- `classify()` has a new contract, on both `WebRouter` and `AsyncWebRouter`: `classify(query, budgets=None)` returns a `Route` holding the `query`, the chosen `method` and `method_params`, the params to call that method with. `query` is 1 to 10,000 characters. `Budgets` holds `time_seconds` (1 to 1,000) and `cost_usd` (above zero), both optional. `method` is one of `search`, `extract`, `extract_template`, `browse`, `research` and `answer`, and `method_params` carries the chosen method's params alone, under its name; none are defined yet, so each is an empty object. Input outside these limits raises `pydantic.ValidationError`. The choice is a placeholder until the feature-vector lookup lands: `extract` when the query holds a URL, `search` otherwise.
 - `auto` now moves to the next backend when one answers with nothing usable, as it does on an error: a search with no results and no `answer`, or an extract whose every document is blank. A document's page status is not read, since only some backends report one. When every member answers empty, the first empty answer comes back, naming its backend, rather than an error. A call that ends empty has tried every backend that can serve it, one after another, and each one you hold a key for bills for it. `provider_config={"auto": {"fallback_on_empty": False}}` returns the first answer, empty or not; the MCP server has no such switch. `max` is unchanged.
+
+### Removed
+
+- The `decider=` spike: `WebRouter(decider=..., decider_config=...)`, the Jev, LLM and keyword deciders and their registry (`web_router.decisions`), `execute(route)`, and the old `Route` fields (`chain`, `urls`, `output_schema`, `labels`, `fallback`, `requested`, `latency_ms`). `classify()` no longer takes `urls` or `output_schema`.
 
 ## [0.8.0] - 2026-10-28
 

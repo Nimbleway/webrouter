@@ -44,6 +44,7 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
+from web_router import routing
 from web_router._benchmark import Stragglers, afan_out, fan_out, members_of
 from web_router.constants import (
     AUTO_CLIENT_OPTION,
@@ -62,10 +63,6 @@ from web_router.constants import (
     PROVIDER_MAX,
     RESEARCH_TIMEOUT,
 )
-from web_router.constants_decisions import MSG_ROUTE_DECIDER_CONFIG_UNUSED
-from web_router.decisions import execution
-from web_router.decisions.registry import create_decider
-from web_router.decisions.route import Route
 from web_router.evals.datasets import Dataset
 from web_router.evals.judge import Judge
 from web_router.evals.types import EvaluationReport
@@ -104,6 +101,7 @@ from web_router.types import (
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
+    Budgets,
     ExtractBenchmarkReport,
     ExtractBenchmarkRun,
     ExtractFormat,
@@ -113,6 +111,7 @@ from web_router.types import (
     ResearchEffort,
     ResearchRequest,
     ResearchResponse,
+    Route,
     SearchDepth,
     SearchRequest,
     SearchResponse,
@@ -256,6 +255,21 @@ class _BaseRouter(Generic[_HandleT]):
             if key not in self._extract_instances:
                 self._extract_instances[key] = create_extract_provider(key, **self._config_for(key))
             return self._extract_instances[key]
+
+    def classify(self, query: str, budgets: Budgets | None = None) -> Route:
+        """Choose the method for ``query``, and the params to call it with, before anything is spent.
+
+        Nothing is called: read :attr:`Route.method` and call that method with
+        :attr:`Route.method_params`. ``budgets`` says what answering may spend;
+        a budget left unset sets no limit.
+
+        Raises:
+            pydantic.ValidationError: for an empty query or one over
+                ``CLASSIFY_QUERY_MAX_CHARS`` characters, a ``time_seconds``
+                outside 1 to ``CLASSIFY_TIME_SECONDS_MAX``, or a ``cost_usd``
+                that is not above zero.
+        """
+        return routing.classify(query, budgets)
 
     def get_template_provider(self, name: str | Provider | TemplateProvider) -> TemplateProvider:
         """Return the named template provider, constructing and caching it on first use.
@@ -519,53 +533,17 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        decider: str | Any | None = None,
-        decider_config: dict[str, Any] | None = None,
     ) -> None:
         """
-        Args:
-            decider: Turns on :meth:`classify`. ``"keywords"`` uses simple keyword
-                rules, keyless; ``"jev"`` asks TypeSafe's Jev with
-                ``TYPESAFE_API_KEY``; ``"llm"`` a chat model over any
-                OpenAI-compatible API, with ``OPENAI_API_KEY``. A name
-                given to :func:`~web_router.decisions.register_decider` works
-                the same way, and any instance with ``decide`` and ``close`` --
-                a configured :class:`~web_router.decisions.JevDecider`, say -- is
-                used as given. The query text is sent to it.
-            decider_config: Constructor kwargs for a decider given by name, as
-                ``provider_config`` is for backends: for example
-                ``decider="llm", decider_config={"model": ..., "base_url": ..., "api_key": ...}``.
-                With a decider instance, or no decider, it raises ConfigurationError rather than being ignored.
-
         Raises:
             ConfigurationError: for a backend handed an ``async_client``, which
                 this router, calling synchronously, could never use: through
-                ``auto`` the call would quietly go to another backend instead;
-                for a decider name nothing is registered under; or for a named
-                decider with no key, such as ``decider="jev"`` with no TypeSafe key;
-                or for ``decider_config`` with a decider that is not a name;
-                or for a decider whose ``passthrough`` is not an exception class or a tuple of them.
+                ``auto`` the call would quietly go to another backend instead.
         """
         super().__init__(provider, provider_config=provider_config)
         async_only = sorted(_async_client_holders(self._config))
         if async_only:
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
-        if decider_config and not isinstance(decider, str):
-            raise ConfigurationError(MSG_ROUTE_DECIDER_CONFIG_UNUSED)
-        # Built after every check that can refuse the router, so a refused build leaves no open client behind.
-        if isinstance(decider, str):
-            # Imported on first use: Jev needs httpx, the llm decider the openai SDK.
-            decider = create_decider(decider, **(decider_config or {}))
-            self._owns_decider = True
-        else:
-            self._owns_decider = False  # a decider handed in may be shared: its owner closes it
-        try:
-            self._decider_passthrough = execution.passthrough_types(decider)
-        except ConfigurationError:
-            if self._owns_decider and decider is not None:
-                decider.close()
-            raise
-        self.decider = decider
 
     def search(
         self,
@@ -1015,32 +993,6 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         )
         return self._track(self.get_browser_provider(provider).open(request))
 
-    def classify(
-        self,
-        query: str,
-        *,
-        urls: str | list[str] | None = None,
-        output_schema: JsonSchema | None = None,
-    ) -> Route:
-        """Decide what to run for ``query`` before spending on it: the method, and the auto chain to run it on.
-
-        One call to the decider labels the query; a lookup table turns the
-        labels into a route. Passing ``urls`` routes to extract and
-        ``output_schema`` to research without asking. A decider that fails, times
-        out or raises anything else gives today's default -- search on the default chain -- with
-        :attr:`Route.fallback` saying why. Nothing is searched: run it with
-        :meth:`execute`, or read it and call a method yourself.
-
-        This is a baseline for measuring decision-model routing, not a router contract.
-        """
-        return execution.classify(self, query, urls=urls, output_schema=output_schema)
-
-    def execute(
-        self, route: Route, **overrides: Any
-    ) -> SearchResponse | ExtractResponse | ResearchResponse | BrowseResponse:
-        """Run a :class:`Route` with this router's methods, on the route's chain. ``overrides`` go to the method."""
-        return execution.execute(self, route, **overrides)
-
     def close(self) -> None:
         """Release every browser session still open, then close every provider this router built.
 
@@ -1061,8 +1013,6 @@ class WebRouter(_BaseRouter[BrowserHandle]):
                 stack.callback(instance.close)
             for handle in self._open_handles():
                 stack.callback(self._release_tracked, handle)
-            if self._owns_decider and self.decider is not None:
-                stack.callback(self.decider.close)
 
     def _release_tracked(self, handle: BrowserHandle) -> None:
         handle.release()

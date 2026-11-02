@@ -1736,47 +1736,37 @@ Other options passed beside it, such as `timeout`, apply to a copy that shares
 its connection pool, and research keeps the client's own timeouts, clamping
 only the read limit to the run's budget.
 
-### Classifying a query before running it (spike)
+### Classifying a query before running it
 
-`classify()` is an opt-in spike, off unless you pass `decider=`. It asks a
-decision model a few short questions about the query and turns the answers
-into a `Route`: the method (search, extract, research or browse) and the
-`auto` chain to run it on. It runs nothing itself; `execute()` runs the route,
-or you read it and call a method yourself. It is a baseline for measuring
-decision models, not a stable routing contract, and may change.
+`classify()` chooses the method for a query, and the params to call it with,
+before anything is spent. It calls nothing: you read the route and call the
+method yourself.
 
 ```python
-router = WebRouter(decider="keywords")  # keyless
+from web_router import Budgets, WebRouter
 
-route = router.classify("Summarize https://example.com/pricing")
+router = WebRouter()
+route = router.classify(
+    "Summarize https://example.com/pricing",
+    Budgets(time_seconds=30, cost_usd=0.05),
+)
 route.method  # "extract"
-route.fallback  # () -- or why the route is the default one
-print(route)  # the labels as plain instructions, for an agent to read
-response = router.execute(route)
+route.model_dump()
+# {"query": "Summarize https://example.com/pricing",
+#  "method": "extract",
+#  "method_params": {"extract": {}}}
 ```
 
-The deciders:
+- `query`: the request as free text, 1 to 10,000 characters.
+- `budgets`: optional. `time_seconds` is a whole number from 1 to 1,000 and
+  `cost_usd` a number above zero; a budget left unset sets no limit.
+- `method`: one of `search`, `extract`, `extract_template`, `browse`,
+  `research` or `answer`.
+- `method_params`: the params for the chosen method only, under its name.
+  No params are defined yet, so each holds an empty object.
 
-- `keywords`: simple keyword rules, keyless and offline. Its confidences are
-  fixed, not measured; a research or browse pick is below the threshold, so
-  it falls back to search.
-- `jev`: TypeSafe's Jev, reading `TYPESAFE_API_KEY`.
-- `llm`: a chat model with structured outputs over any OpenAI-compatible API,
-  with the `evals` extra. Configure it with `decider_config`, as
-  `provider_config` configures a backend:
-  `WebRouter(decider="llm", decider_config={"model": "...", "base_url": "...", "api_key": "..."})`;
-  without an `api_key` it reads `OPENAI_API_KEY`.
-- A name given to `register_decider()`, or any object with `decide()` and `close()`.
-
-Every decider reports confidence on one scale, how far its pick stands above
-an even guess, and a label below 0.5 takes its default. Passing `urls` routes
-to extract and `output_schema` to research without asking the decider. A
-decider that fails or raises, or a label it is unsure of, gives today's
-default, search on the default chain, and `route.fallback` says why:
-`decider_error`, `low_confidence`, `no_url` or `no_backend_for_method`.
-
-The query text is sent to the decider you choose, so `jev` and `llm` send it
-to that service.
+Input outside these limits raises `pydantic.ValidationError`. The choice is a
+placeholder for now: `extract` when the query holds a URL, `search` otherwise.
 
 ### Which providers can I actually use?
 
