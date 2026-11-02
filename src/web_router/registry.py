@@ -69,8 +69,8 @@ from web_router.exceptions import NoAnswerProviderError, ProviderNotFoundError, 
 from web_router.types import Provider, provider_name
 
 if TYPE_CHECKING:
+    from web_router.providers.answer import AnswerProvider
     from web_router.providers.base import (
-        AnswerProvider,
         BrowseProvider,
         BrowserProvider,
         ExtractProvider,

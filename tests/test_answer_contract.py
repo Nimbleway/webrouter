@@ -20,7 +20,7 @@ from web_router import AsyncWebRouter, WebRouter
 from web_router.constants import ANSWER_ENV_BY_PROVIDER
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers._http import _HttpProvider
-from web_router.providers.base import AnswerProvider
+from web_router.providers.answer import AnswerProvider
 from web_router.registry import (
     available_answer_providers,
     configured_answer_providers,

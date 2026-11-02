@@ -64,8 +64,8 @@ from web_router.exceptions import (
     UnsupportedParameterError,
     WebRouterError,
 )
+from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
-    AnswerProvider,
     AsyncBrowserHandle,
     BrowseJob,
     BrowseProvider,

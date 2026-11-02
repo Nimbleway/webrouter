@@ -1891,6 +1891,3 @@ def _is_timeout(error: ProviderError) -> bool:
             return True
         current = current.__cause__ or current.__context__
     return False
-
-
-from web_router.providers.answer import *  # noqa: E402, F403 -- answer()'s base, re-exported

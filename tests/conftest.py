@@ -10,8 +10,8 @@ from typing import Any, ClassVar, get_args
 import pytest
 
 from web_router.exceptions import ProviderError
+from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
-    AnswerProvider,
     BrowseProvider,
     BrowserProvider,
     ExtractProvider,

@@ -71,8 +71,8 @@ from web_router.evals.datasets import Dataset
 from web_router.evals.judge import Judge
 from web_router.evals.types import EvaluationReport
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
+from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
-    AnswerProvider,
     AsyncBrowserHandle,
     BrowseJob,
     BrowseProvider,

@@ -100,7 +100,7 @@ src/web_router/
 ├── constants.py        shared env var registries, timeouts and message templates;
 │                       a provider's own go in constants_<provider>.py (older
 │                       providers' are still here)
-├── constants_answer.py answer()'s messages and MCP tool text, re-exported from constants
+├── constants_answer.py answer()'s messages and MCP tool text, imported from here by name
 ├── constants_you.py    You.com research's endpoints, efforts and status table,
 │                       kept apart so constants.py stops growing
 ├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
@@ -130,7 +130,7 @@ src/web_router/
     │                   base; the generic JobProvider / Job core that
     │                   ResearchProvider / ResearchJob and BrowseProvider /
     │                   BrowseJob specialize; BrowserHandle / AsyncBrowserHandle
-    ├── answer.py       AnswerProvider, answer()'s base, re-exported from base.py
+    ├── answer.py       AnswerProvider, answer()'s base, and the helpers its backends share
     ├── _http.py        HttpSearchProvider / HttpExtractProvider /
     │                   HttpResearchProvider / HttpAnswerProvider / HttpBrowseProvider /
     │                   HttpBrowserProvider — for APIs with no SDK
