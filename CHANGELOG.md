@@ -13,7 +13,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Removed
 
-- `execute(route)`, the old `classify(query, urls=, output_schema=)` and the old `Route` fields (`chain`, `urls`, `output_schema`, `labels`, `fallback`, `requested`, `latency_ms`). `classify()` no longer reads `decider=`; the deciders in `web_router.decisions` are unchanged.
+- `execute(route)`, the old `classify(query, urls=, output_schema=)` and the old `Route` fields (`chain`, `urls`, `output_schema`, `labels`, `fallback`, `requested`, `latency_ms`). `WebRouter` no longer takes `decider=` or `decider_config=`. The deciders in `web_router.decisions` stay, unused for now.
 
 ## [0.8.0] - 2026-10-28
 
