@@ -12,7 +12,8 @@ late-October ones, and a `toDate` in 2019 gave a 2019-only answer.
 `includeInlineCitations` is always sent. Checked live on 2026-11-02: the answer
 then ends its sentences with `[2]` or `[1][2]`, numbering `sources` from 1 --
 for "What is the emergency phone number in the UK?", `[1][2]` named two guides to
-UK emergency numbers -- with no other change in shape or time.
+UK emergency numbers -- with no other change in shape or time. `CITED` is
+trimmed from that call; `ANSWERED`, recorded the day before, has no markers.
 
 `country` and `locale` have no Linkup field and are refused.
 """
@@ -35,7 +36,7 @@ QUESTION = "Who won the 2022 FIFA World Cup final and what was the score?"
 
 ANSWERED: dict[str, Any] = {
     "answer": "Argentina won the 2022 FIFA World Cup final, drawing 3-3 with France before winning the "
-    "penalty shootout 4-2.[2]",
+    "penalty shootout 4-2.",
     "sources": [
         {
             "name": "2022 FIFA World Cup final",
@@ -52,6 +53,34 @@ ANSWERED: dict[str, Any] = {
         },
     ],
 }
+
+
+CITED_QUESTION = "What is the emergency phone number in the UK?"
+
+CITED: dict[str, Any] = {
+    "answer": "Call **999** for an emergency in the UK. **112** also connects to emergency services.[1][2]",
+    "sources": [
+        {
+            "name": "A Guide to Emergency Numbers in the UK - Clearview Relocation",
+            "url": "https://www.clearviewrelocation.com/a-guide-to-emergency-numbers-in-the-uk/",
+            "favicon": "https://favicons.linkup.so?domain=www.clearviewrelocation.com",
+            "snippet": "Knowing the emergency numbers in the UK is crucial for ensuring safety and swift response.",
+        },
+        {
+            "name": "What Is the Emergency Number in England? (And Other Need-to-Know Info)",
+            "url": "https://brighttax.com/blog/what-is-the-emergency-number-in-england/",
+            "favicon": "https://favicons.linkup.so?domain=brighttax.com",
+            "snippet": "The two main emergency numbers are 999 and 112.",
+        },
+        {
+            "name": "UK Phone Number Format: Complete Calling Guide",
+            "url": "https://www.dialphone.com/resources/blog/uk-phone-number-format",
+            "favicon": "https://favicons.linkup.so?domain=www.dialphone.com",
+            "snippet": "Learn the UK phone number format, country code +44, area codes, and how to dial from the US.",
+        },
+    ],
+}
+"""Trimmed from the call made on 2026-11-02 with ``includeInlineCitations``: the first three of twenty sources."""
 
 
 @pytest.fixture
@@ -84,7 +113,7 @@ def test_the_answer_and_every_source_are_normalized(provider: LinkupAnswerProvid
     assert first.title == "2022 FIFA World Cup final"
     assert first.snippet.startswith("The final match")
     assert first.extra == {"favicon": "https://favicons.linkup.so?domain=en.wikipedia.org"}
-    assert [c.field for c in response.citations] == [None, "[2]"], "only the source the answer marks is tied"
+    assert [c.field for c in response.citations] == [None, None], "recorded before inline citations: no markers"
     assert response.outcome == "complete"
     assert response.request_id is None
     assert response.raw == [ANSWERED]
@@ -171,3 +200,11 @@ def test_live_answer_comes_with_its_sources() -> None:
     assert all("wikipedia.org" in citation.url for citation in response.citations)
     assert any(citation.field for citation in response.citations)
     assert all(citation.field in (response.answer or "") for citation in response.citations if citation.field)
+
+
+def test_the_sources_the_answer_marks_carry_their_marker(provider: LinkupAnswerProvider) -> None:
+    stub_answer_api(provider, CITED)
+
+    response = provider.answer(AnswerRequest(query=CITED_QUESTION))
+
+    assert [c.field for c in response.citations] == ["[1]", "[2]", None], "a page read but never cited has none"

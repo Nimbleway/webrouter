@@ -22,8 +22,6 @@ LINKUP_ANSWER_INLINE_CITATIONS_FIELD = "includeInlineCitations"
 LINKUP_ANSWER_INLINE_CITATIONS = True
 """Always sent, so the answer marks which source backs which sentence, as Perplexity, You.com and Exa do."""
 
-LINKUP_ANSWER_MARKER = "[{position}]"
-"""How the answer cites a source: its place in ``sources``, counted from 1, in brackets."""
 
 LINKUP_ANSWER_PARAM_NAMES: dict[str, str] = {
     "include_domains": "includeDomains",
