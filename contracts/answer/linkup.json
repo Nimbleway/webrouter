@@ -17,6 +17,7 @@
   "keyless": null,
   "always_sent": {
     "body.depth": "fast",
+    "body.includeInlineCitations": true,
     "body.outputType": "sourcedAnswer",
     "body.q": "probe query"
   },
@@ -66,10 +67,6 @@
     "includeImages": {
       "status": "passthrough",
       "note": "The sourcedAnswer schema has no image fields; no normalized field."
-    },
-    "includeInlineCitations": {
-      "status": "passthrough",
-      "note": "Documented for sourcedAnswer: puts citation markers in the answer. Not checked live; Citation.field would carry them once it is."
     },
     "includeSources": {
       "status": "not_supported",

@@ -312,7 +312,7 @@ for what an unnamed call does.
 | `Provider.YOU` | `you` | [You.com Answer API](https://you.com/docs/guides/answer.md) | `YOU_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[[1, 2]]` markers, in `citation.field` |
 | `Provider.PARALLEL` | `parallel` | [Parallel Chat API (beta), `lite`](https://docs.parallel.ai/chat-api) | `PARALLEL_API_KEY` | none: the Chat API takes no source filter | no: its `basis` backs the answer as a whole |
 | `Provider.EXA` | `exa` | [Exa Answer API](https://docs.exa.ai/reference/answer) | `EXA_API_KEY` | none: no source filter, and `userLocation` showed no clear effect | yes: `[N]` markers, in `citation.field` |
-| `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | no: every page read, for the answer as a whole |
+| `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | yes: `[N]` markers, in `citation.field` |
 
 All verified live on 2026-11-01, every mapped option seen to apply.
 
@@ -334,8 +334,9 @@ All verified live on 2026-11-01, every mapped option seen to apply.
 - `exa` answers in about 1.3 seconds (median over 300 questions) and cites inline as `[1]`, numbering its
   citations from 1; it states its cost under `raw[0]["costDollars"]` ($0.005 an
   answer). Its Answer API has no source filter, so every option is refused.
-- `linkup` answers in about a second (median 0.9 s over 300 questions) and lists every page it read, tied to no
-  sentence. `recency` is its `fromDate`, and Linkup filters on the date it holds
+- `linkup` answers in about a second (median 0.9 s over 300 questions) and lists every page it read; it is
+  asked for inline citations, so the answer marks the ones it rests on as `[N]`, numbering them from 1, and a
+  page read but never cited has no `field`. `recency` is its `fromDate`, and Linkup filters on the date it holds
   for a page, which is not always the publication date.
 
 **Choosing one.** On 300 SimpleQA questions graded by one judge, all five land
@@ -833,7 +834,7 @@ Nothing here writes, joins or edits the answer: it is the backend's, as it came.
 An empty one comes back as `""` rather than an error, with its sources and
 `raw`, so "the backend had nothing" reads differently from a failure. Where a
 backend marks which source backs which sentence, the marker is in
-`citation.field`; where it does not (Linkup), every citation backs the answer
+`citation.field`; where it does not (Parallel), every citation backs the answer
 as a whole. `outcome` is `partial` only when the backend says it stopped early.
 
 The options are `include_domains`, `exclude_domains`, `country`, `locale` and

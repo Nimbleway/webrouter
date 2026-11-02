@@ -48,6 +48,9 @@ from web_router.constants import (
 from web_router.constants_linkup import (
     LINKUP_ANSWER_DATE_FORMAT,
     LINKUP_ANSWER_FROM_DATE_FIELD,
+    LINKUP_ANSWER_INLINE_CITATIONS,
+    LINKUP_ANSWER_INLINE_CITATIONS_FIELD,
+    LINKUP_ANSWER_MARKER,
     LINKUP_ANSWER_OUTPUT_TYPE,
     LINKUP_ANSWER_PARAM_NAMES,
     LINKUP_ANSWER_RECENCY_DAYS,
@@ -273,9 +276,11 @@ class LinkupResearchProvider(HttpResearchProvider):
 class LinkupAnswerProvider(HttpAnswerProvider):
     """Answers a question through Linkup's Search API, with ``outputType: sourcedAnswer``.
 
-    Linkup writes the answer and lists every page it read under ``sources``; the
-    answer carries no markers, so each citation backs the answer as a whole and
-    ``field`` stays ``None``. There is no request id and no field saying the
+    Linkup writes the answer and lists every page it read under ``sources``.
+    ``includeInlineCitations`` is always sent, so the answer marks its sources
+    as ``[2]``, numbering ``sources`` from 1; a source whose marker appears in
+    the answer carries it in ``field``, and a page read but never cited has
+    ``None``. There is no request id and no field saying the
     answer stopped early, so ``request_id`` is ``None`` and ``outcome`` is
     always ``complete``.
 
@@ -302,22 +307,25 @@ class LinkupAnswerProvider(HttpAnswerProvider):
             q=request.query,
             depth=LINKUP_DEFAULT_DEPTH,
             outputType=LINKUP_ANSWER_OUTPUT_TYPE,
+            **{LINKUP_ANSWER_INLINE_CITATIONS_FIELD: LINKUP_ANSWER_INLINE_CITATIONS},
             **{LINKUP_ANSWER_FROM_DATE_FIELD: since.strftime(LINKUP_ANSWER_DATE_FORMAT) if since else None},
         )
 
     def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
+        answer = payload.get("answer") or ""
         return AnswerResponse(
             provider=self.name,
             query=request.query,
-            answer=payload.get("answer") or "",
+            answer=answer,
             citations=[
                 Citation(
                     url=source.get("url", ""),
                     title=source.get("name") or "",
                     snippet=source.get("snippet") or "",
+                    field=marker if (marker := LINKUP_ANSWER_MARKER.format(position=position)) in answer else None,
                     extra={k: v for k, v in source.items() if k not in _MAPPED_SOURCE_FIELDS},
                 )
-                for source in payload.get("sources") or []
+                for position, source in enumerate(payload.get("sources") or [], start=1)
             ],
             raw=[payload],
         )

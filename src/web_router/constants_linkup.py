@@ -12,10 +12,18 @@ from web_router.types import Recency
 # Verified live on 2026-11-01. An answer is a search with `outputType:
 # sourcedAnswer`: the same POST /v1/search, answering `{answer, sources}` at the
 # top level -- not nested under `output`, as a research run's is -- and no
-# request id. `sources` is every page read, not a citation per claim: the
-# answer carries no markers tying a sentence to a source.
+# request id. `sources` is every page read. With `includeInlineCitations`
+# (checked live 2026-11-02) the answer ends its sentences with `[2]` or
+# `[1][2]`, numbering `sources` from 1, at no other change in shape or time.
 
 LINKUP_ANSWER_OUTPUT_TYPE = "sourcedAnswer"
+
+LINKUP_ANSWER_INLINE_CITATIONS_FIELD = "includeInlineCitations"
+LINKUP_ANSWER_INLINE_CITATIONS = True
+"""Always sent, so the answer marks which source backs which sentence, as Perplexity, You.com and Exa do."""
+
+LINKUP_ANSWER_MARKER = "[{position}]"
+"""How the answer cites a source: its place in ``sources``, counted from 1, in brackets."""
 
 LINKUP_ANSWER_PARAM_NAMES: dict[str, str] = {
     "include_domains": "includeDomains",

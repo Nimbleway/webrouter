@@ -9,8 +9,12 @@ on wikipedia.org. `fromDate` was checked on a question about a topic's latest
 news: a week's window moved the answer from early-October sources to
 late-October ones, and a `toDate` in 2019 gave a 2019-only answer.
 
-`country` and `locale` have no Linkup field and are refused. The answer carries
-no markers, so no citation is tied to a sentence.
+`includeInlineCitations` is always sent. Checked live on 2026-11-02: the answer
+then ends its sentences with `[2]` or `[1][2]`, numbering `sources` from 1 --
+for "What is the emergency phone number in the UK?", `[1][2]` named two guides to
+UK emergency numbers -- with no other change in shape or time.
+
+`country` and `locale` have no Linkup field and are refused.
 """
 
 from __future__ import annotations
@@ -31,7 +35,7 @@ QUESTION = "Who won the 2022 FIFA World Cup final and what was the score?"
 
 ANSWERED: dict[str, Any] = {
     "answer": "Argentina won the 2022 FIFA World Cup final, drawing 3-3 with France before winning the "
-    "penalty shootout 4-2.",
+    "penalty shootout 4-2.[2]",
     "sources": [
         {
             "name": "2022 FIFA World Cup final",
@@ -62,7 +66,9 @@ def test_an_answer_is_a_sourced_answer_search(provider: LinkupAnswerProvider) ->
     provider.answer(AnswerRequest(query=QUESTION))
 
     assert api.calls == [("POST", "/v1/search")]
-    assert api.bodies == [{"q": QUESTION, "depth": "fast", "outputType": "sourcedAnswer"}]
+    assert api.bodies == [
+        {"q": QUESTION, "depth": "fast", "outputType": "sourcedAnswer", "includeInlineCitations": True}
+    ]
     assert api.headers[0]["authorization"] == "Bearer test-key"
 
 
@@ -78,7 +84,7 @@ def test_the_answer_and_every_source_are_normalized(provider: LinkupAnswerProvid
     assert first.title == "2022 FIFA World Cup final"
     assert first.snippet.startswith("The final match")
     assert first.extra == {"favicon": "https://favicons.linkup.so?domain=en.wikipedia.org"}
-    assert first.field is None, "Linkup's answer carries no markers, so no source is tied to a sentence"
+    assert [c.field for c in response.citations] == [None, "[2]"], "only the source the answer marks is tied"
     assert response.outcome == "complete"
     assert response.request_id is None
     assert response.raw == [ANSWERED]
@@ -163,3 +169,5 @@ def test_live_answer_comes_with_its_sources() -> None:
     assert response.answer
     assert response.citations
     assert all("wikipedia.org" in citation.url for citation in response.citations)
+    assert any(citation.field for citation in response.citations)
+    assert all(citation.field in (response.answer or "") for citation in response.citations if citation.field)
