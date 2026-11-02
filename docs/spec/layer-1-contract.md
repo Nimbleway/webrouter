@@ -25,7 +25,7 @@ Each backend has its own parameters and payload. Layer 1 gives the caller one sh
 - **Not a prompt rewriter and not a quality model** on the default path.
 - **Not budget-aware.** Layer 1 does not decide that a cheaper backend is good enough.
 - **Not a hosted service.** It is a library. Each credential goes only to the backend it belongs to. The MCP server is a stdio subprocess of the caller's client. See [docs/mcp.md](../mcp.md).
-- **Not a model-API router.** It unifies web search, extraction, templates, research, browser sessions, and hosted browse tasks.
+- **Not a model-API router.** It unifies web search, extraction, templates, research, written answers, browser sessions, and hosted browse tasks.
 
 ```python
 from web_router import Provider, WebRouter
@@ -36,11 +36,11 @@ response = router.search("...", max_results=5, search_depth="deep")
 router = WebRouter()  # auto: keyed members in section 5, then keyless tiers where they exist
 ```
 
-The same shape applies to `extract`, `run_template`, `research`, `open_browser`, and `browse`.
+The same shape applies to `extract`, `run_template`, `research`, `answer`, `open_browser`, and `browse`.
 
 ## 2. Capabilities
 
-Six methods. Each has its own registry. A name that one method does not serve raises, and the error names the names that method does serve.
+Seven methods. Each has its own registry. A name that one method does not serve raises, and the error names the names that method does serve.
 
 The built-in names, and the `auto` tiers, are the block in [section 5](#5-auto-chains). [`tests/test_layer1_contract.py`](../../tests/test_layer1_contract.py) checks that block against the registries and `constants.py`. README tables say which options each backend maps. This section states what each method returns.
 
@@ -61,6 +61,10 @@ One of a vendor's saved extractions, on one page, returning the record that temp
 ### `research`
 
 An agentic run. Latency is minutes, and every backend bills. `auto` has no keyless tier. Exa has no research provider. `submit_research` returns a job. `research(timeout=...)` raises `ResearchTimeoutError` when the wait ends and does not cancel the run.
+
+### `answer`
+
+One question, answered in one call. The backend searches and writes the answer. The response carries that answer and the sources it rests on. This package does not edit the answer. Every backend bills, so there is no keyless tier. There is no `auto` yet. With no `provider`, the router's default serves the call when that default is an answer backend. Otherwise the one configured answer backend serves it, and a key in `provider_config` counts. With none configured, or with several and no default, the call raises `NoAnswerProviderError`.
 
 ### `open_browser`
 
@@ -109,7 +113,7 @@ For research, browse, and opening a session, validation runs before anything is 
 
 `auto` is the exception to "missing credential fails the call", and only there: a member that cannot be built is skipped, and another member may answer. The rules for that skip are [section 5](#5-auto-chains). An option no remaining member can serve still raises, and the error names what each member lacked.
 
-These checks live on the provider base classes. A provider implements the underscored translation methods and does not override the public method. [`tests/test_contract.py`](../../tests/test_contract.py) guards that pattern for search. The extract, template, research, browse, and browser contract tests guard their methods.
+These checks live on the provider base classes. A provider implements the underscored translation methods and does not override the public method. [`tests/test_contract.py`](../../tests/test_contract.py) guards that pattern for search. The extract, template, research, answer, browse, and browser contract tests guard their methods.
 
 ## 5. auto chains
 
@@ -125,12 +129,12 @@ Non-billed chains (`search`, `extract`) try the next member on a missing extra, 
 
 Billed chains (`research`, `open_browser`, `browse`) try the next member only when nothing was created: a missing credential or setting, a missing extra, a 4xx, or a connection that never reached the backend. A 5xx, a read timeout, or an unreadable 200 raises. The chain does not start a second billed run, session, or task. The handle or job `auto` returns is the member's own.
 
-The lines in the block are normative. Names are the provider strings. `tests/test_layer1_contract.py` fails when the registries or `constants.py` disagree with it.
+The lines in the block are normative. Names are the provider strings. `tests/test_layer1_contract.py` fails when the registries or `constants.py` disagree with it. The `package` line equals `web_router.__version__`. A release that bumps the version updates that line in the same change. The test keeps the match on purpose. Release automation does not edit this file.
 
 ```text
 # layer1-chains
 package: 0.8.0
-extras: search extract research browser mcp evals langchain aws all
+extras: search extract research answer browser mcp evals langchain aws all
 search.backends: nimble tavily you brave exa parallel perplexity linkup webiq keenable deepseek agentcore you-mcp exa-mcp parallel-mcp auto
 search.preferred: perplexity nimble linkup tavily brave webiq parallel exa you
 search.keyless: tavily you-mcp exa-mcp parallel-mcp keenable
@@ -142,6 +146,7 @@ extract.appended: linkup exa webiq keenable deepseek
 template.backends: nimble
 research.backends: nimble parallel perplexity linkup you auto
 research.preferred: nimble parallel perplexity linkup you
+answer.backends: perplexity parallel linkup you exa
 browser.backends: steel browserbase hyperbrowser anchor kernel local auto
 browser.preferred: steel browserbase hyperbrowser anchor kernel
 browser.keyless: local
@@ -164,7 +169,7 @@ There is no package index. Install from a clone, as the README describes: `make 
 
 ### Extras
 
-`search`, `extract`, `research`, and `browser` are named after methods. `all` installs those plus `aws`.
+`search`, `extract`, `research`, `answer`, and `browser` are named after methods. `all` installs those plus `aws`.
 
 `aws` is not a method. It installs botocore for backends reached through an AWS account. `agentcore` is the one so far, and the search registry records its extra as `aws`, not `search`. `mcp` (the stdio server), `evals` (judges for `evaluate()`), and `langchain` (LangChain tools) are not methods either. The set is the `extras` line above, and it matches `[project.optional-dependencies]` in `pyproject.toml` and the `EXTRA_*` names in `constants.py`.
 
@@ -182,7 +187,7 @@ The Claude, OpenAI, and LangChain tools do not call the spike. The model supplie
 
 The package conforms when all of the following hold.
 
-1. The six methods exist, each with its own registry, and the built-in names are the `*.backends` lines.
+1. The seven methods exist, each with its own registry, and the built-in names are the `*.backends` lines.
 2. `auto` tier membership and order are the `preferred`, `keyless`, and `appended` lines. Runtime filtering is the rule in [section 5](#5-auto-chains).
 3. `response.provider`, and a browser handle's provider, name the backend that served the call, never `auto`.
 4. An unmapped parameter, an unsupported format, and an unservable value raise, as in [section 4](#4-fail-loud). They are not dropped or swapped.
@@ -193,7 +198,7 @@ The package conforms when all of the following hold.
 9. A billed chain does not start a second run, session, or task after one member may have accepted the first.
 10. `classify()` and `execute()` stay off unless `decider=` is set.
 11. `agentcore` is a search backend, its install extra is `aws`, and its place in `search.appended` is the line above.
-12. The `package` line equals `web_router.__version__`.
+12. The `package` line equals `web_router.__version__`. A version bump updates that line in the same change.
 
 Public helpers the library also provides: `WebRouter`, `AsyncWebRouter`, `Provider`, `provider_name`, `available_*` and `configured_*` per method (environment variables only for `configured_*`), and `register_*` / `unregister_*` for a backend added outside the package.
 
@@ -216,11 +221,11 @@ Layer 1 does not pre-build Layer 2. It keeps one shape per method and fail-loud 
 
 ## Status and verification
 
-**Package:** 0.8.0. Relative to 0.7.0, 0.8.0 adds `agentcore` and the `aws` extra. `auto` tries `agentcore` last in the search appended tier, so an existing call does not move. The `decider=` spike shipped in 0.7.0 and is unchanged as a contract: off unless the caller opts in, and not part of the default route.
+**Package:** 0.8.0. Relative to 0.7.0, 0.8.0 adds `agentcore` and the `aws` extra. `auto` tries `agentcore` last in the search appended tier, so an existing call does not move. The `decider=` spike shipped in 0.7.0 and is unchanged as a contract: off unless the caller opts in, and not part of the default route. This tree also includes `answer` and the `answer` extra, added after the 0.8.0 tag while `web_router.__version__` is still 0.8.0.
 
 **Earlier verification (package 0.0.1, not re-run on 0.8.0):** keyless search and extract passed. Keyed search and extract on several providers passed. `provider="tavily"` without a key raised `ConfigurationError`. `auto` without a key was served by an anonymous tier, and `response.provider` named that backend. There is no shipped `web_router.ai_sdk` module.
 
-**Shipped and not re-verified in this document:** `research`, `browse`, `open_browser`, templates, `max`, `agentcore`, the agent integrations, `benchmark()`, `benchmark_extract()`, `evaluate()`, and `classify()` / `execute()`. The README records how far each backend mapping was checked.
+**Shipped and not re-verified in this document:** `research`, `answer`, `browse`, `open_browser`, templates, `max`, `agentcore`, the agent integrations, `benchmark()`, `benchmark_extract()`, `evaluate()`, and `classify()` / `execute()`. The README records how far each backend mapping was checked.
 
 **Not built:** adapters in other languages. Layer 2.
 
