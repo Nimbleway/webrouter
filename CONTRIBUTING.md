@@ -84,6 +84,15 @@ an extract provider.
 Whatever the method, finish with `make contracts`, which regenerates the
 provider contracts; [AGENTS.md](AGENTS.md#provider-contracts) says how to start one.
 
+Adding a backend, or reordering an `auto` tier, also updates the normative
+`layer1-chains` block in
+[`docs/spec/layer-1-contract.md`](docs/spec/layer-1-contract.md).
+`tests/test_layer1_contract.py` fails when that block disagrees with the
+registries or `constants.py`. The block's `package:` line equals
+`web_router.__version__`. A release version bump updates that line in the same
+change. The test keeps the match on purpose. Release automation does not edit
+the spec.
+
 ### A search provider
 
 1. Create `src/web_router/providers/<name>.py` with a `SearchProvider` subclass
@@ -134,6 +143,9 @@ provider contracts; [AGENTS.md](AGENTS.md#provider-contracts) says how to start 
 6. Add tests — parameter mapping and response normalization against a recorded
    payload, plus one `@pytest.mark.integration` live test — and a row in the
    README support table.
+7. Add the backend to the `layer1-chains` block in
+   `docs/spec/layer-1-contract.md`, on `search.backends` and on the `auto` tier
+   it joins.
 
 ### An extract provider
 
@@ -171,6 +183,9 @@ example.
    `tests/test_integration_surface.py`, which run only against providers
    declaring the format under test. Add a row to the README's extract support
    table.
+7. Add the backend to the `layer1-chains` block in
+   `docs/spec/layer-1-contract.md`, on `extract.backends` and on the `auto` tier
+   it joins.
 
 If your auth scheme is not a single header, override `_auth_headers` rather than
 building the header yourself — Oxylabs' HTTP Basic is the worked example. Doing
@@ -287,7 +302,10 @@ behind `@pytest.mark.integration`.
 ## Releases
 
 The maintainers cut each release. A pull request merged here is carried into
-the next one.
+the next one. A version bump in `src/web_router/_version.py` also bumps the
+`package:` line in `docs/spec/layer-1-contract.md`, so
+`tests/test_layer1_contract.py` stays green. Release automation does not edit
+that line.
 
 ## AI coding agents
 
