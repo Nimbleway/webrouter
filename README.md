@@ -2016,11 +2016,11 @@ Keys are read from the environment, or passed explicitly through
 | Nimble | `NIMBLE_API_KEY` | search, extract, research |
 | Tavily | `TAVILY_API_KEY` | search, extract |
 | Exa | `EXA_API_KEY` | search, extract |
-| You.com | `YOU_API_KEY` | search, research |
+| You.com | `YOU_API_KEY` | search, research, answer |
 | Brave | `BRAVE_SEARCH_API_KEY` | search |
 | Parallel | `PARALLEL_API_KEY` | search, research |
-| Perplexity | `PERPLEXITY_API_KEY` | search, research |
-| Linkup | `LINKUP_API_KEY` | search, extract, research |
+| Perplexity | `PERPLEXITY_API_KEY` | search, research, answer |
+| Linkup | `LINKUP_API_KEY` | search, extract, research, answer |
 | WebIQ | `WEBIQ_API_KEY` | search, extract |
 | Keenable | `KEENABLE_API_KEY` *(optional for `auto`, which uses its keyless tier without one)* | search, extract |
 | DeepSeek | `DEEPSEEK_API_KEY` | search, extract |

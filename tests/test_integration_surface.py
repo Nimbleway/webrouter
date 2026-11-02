@@ -263,6 +263,7 @@ STATED_DATES: dict[str, Any] = {
         if item.get("type") == "search_results"
         for result in item.get("results") or []
     ],
+    "you": lambda raw: [page.get("page_age") for page in (raw.get("results") or {}).get("web") or []],
 }
 """Per backend, the publication dates its own payload states for the pages behind an answer."""
 

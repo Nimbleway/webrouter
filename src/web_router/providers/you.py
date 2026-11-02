@@ -206,7 +206,7 @@ class YouAnswerProvider(HttpAnswerProvider):
     api_key_header: ClassVar[str] = YOU_API_KEY_HEADER
 
     def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
-        together = YOU_ANSWER_DOMAINS_EXCLUSIVE & request.specified_parameters()
+        together = {name for name in YOU_ANSWER_DOMAINS_EXCLUSIVE if getattr(request, name)}
         if together == YOU_ANSWER_DOMAINS_EXCLUSIVE:
             raise UnsupportedParameterError(self.name, together, detail=MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE)
         return build_payload(
