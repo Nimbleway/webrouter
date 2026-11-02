@@ -243,3 +243,51 @@ async def test_a_judge_that_cannot_grade_stops_the_scan_before_any_backend_is_as
         await scan.check_judge(judge)
 
     assert judge.closed
+
+
+class _FailingJudge:
+    async def agrade(self, question: str, target: str, predicted: str) -> str:
+        raise RuntimeError("judge unavailable")
+
+
+async def test_a_judge_failure_mid_scan_is_the_rows_and_keeps_the_answer(scan: ModuleType) -> None:
+    response = AnswerResponse(provider="linkup", query="q", answer="Argentina", citations=[])
+
+    row = await scan.answer_row(_Router(response), _FailingJudge(), SEALQA, "linkup", "q", "a")
+
+    assert (row["failed_at"], row["answer"], row["grade"]) == ("judge", "Argentina", None)
+    summary = scan.summarize([{**row, "topic": "Science", "answer_type": "Date"}], {**SETUP, "providers": ["linkup"]})
+    assert summary["overall"]["linkup"]["failed"] == 1
+
+
+async def test_only_the_cited_sources_decide_a_leak_when_the_answer_marks_them(scan: ModuleType) -> None:
+    read_only = Citation(url="https://huggingface.co/datasets/vtllms/sealqa")
+    cited = Citation(url="https://en.wikipedia.org/x", field="[2]")
+    response = AnswerResponse(provider="linkup", query="q", answer="Argentina [2]", citations=[read_only, cited])
+
+    row = await scan.answer_row(_Router(response), _Judge(), SEALQA, "linkup", "q", "a")
+
+    assert row["leaked"] is False
+    assert row["grade"] == "correct"
+
+
+def test_citations_per_answer_counts_answered_rows_only(scan: ModuleType) -> None:
+    rows = [_row("you", "q0", "correct", citations=2), _row("you", "q1", None, failed_at="answer", citations=0)]
+
+    assert scan.summarize(rows, {**SETUP, "providers": ["you"]})["overall"]["you"]["citations_mean"] == 2
+
+
+def test_a_repeated_backend_is_asked_once(scan: ModuleType) -> None:
+    assert scan.setup_of(scan.parse_args(["--providers", "linkup,perplexity,linkup"]))["providers"] == [
+        "linkup",
+        "perplexity",
+    ]
+
+
+def test_a_mismatched_baseline_is_refused_before_anything_is_asked(scan: ModuleType, tmp_path: Path) -> None:
+    baseline = _write_search_scan(tmp_path / "search")
+
+    with pytest.raises(SystemExit, match="seed"):
+        scan.setup_of(
+            scan.parse_args(["--providers", "linkup", "--seed", "7", "--limit", "12", "--baseline", str(baseline)])
+        )

@@ -73,7 +73,7 @@ STATED_TOKEN_PATHS: dict[str, tuple[str, ...]] = {
 COMBINE_KEYS = ("questions", "dataset_sha256", "question_column", "answer_column", "withheld", "limit", "seed", "judge")
 """What two answer scans must share for their rows to sit in one table."""
 
-BASELINE_KEYS = ("questions", "dataset_sha256", "limit", "seed", "judge")
+BASELINE_KEYS = ("questions", "dataset_sha256", "question_column", "answer_column", "limit", "seed", "judge")
 """What a search scan must share with this one to stand beside it: the same questions and the same judge."""
 
 MSG_OTHER_QUESTIONS = search_scan.MSG_OTHER_QUESTIONS
@@ -118,6 +118,16 @@ def stated_tokens(response: AnswerResponse) -> dict[str, int]:
     return tokens
 
 
+def _backing(response: AnswerResponse) -> list[Any]:
+    """The citations the answer rests on: the ones it marks, when it marks any, else every one it lists.
+
+    A backend that lists every page it read beside the few it cites would
+    otherwise count as leaked for a page it read and never used.
+    """
+    marked = [citation for citation in response.citations if citation.field]
+    return marked or list(response.citations)
+
+
 async def answer_row(
     router: AsyncWebRouter, judge: OpenAIJudge, dataset: Dataset, provider: str, question: str, target: str
 ) -> dict[str, Any]:
@@ -150,7 +160,7 @@ async def answer_row(
         latency=time.perf_counter() - started,
         answer=response.answer,
         citations=len(response.citations),
-        leaked=any(dataset.withholds(citation.url) for citation in response.citations),
+        leaked=any(dataset.withholds(citation.url) for citation in _backing(response)),
         cost_usd=stated_cost(response),
         **stated_tokens(response),
     )
@@ -188,6 +198,8 @@ async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> li
     judge.check()
     await check_judge(judge)
     setup["judge"] = judge.label
+    if setup.get("baseline"):
+        check_baseline(setup, ("judge",))
     gate = asyncio.Semaphore(args.concurrency)
     rows: list[dict[str, Any]] = []
 
@@ -217,6 +229,7 @@ def _score(rows: list[dict[str, Any]]) -> dict[str, Any]:
     incorrect = sum(r["grade"] == "incorrect" for r in graded)
     latencies = [r["latency"] for r in rows if r["failed_at"] != "answer" and r["latency"] is not None]
     costs = [r["cost_usd"] for r in rows if r.get("cost_usd") is not None]
+    answered = [r for r in rows if r["failed_at"] != "answer"]
     return {
         "questions": len(rows),
         "served": len(graded),
@@ -228,11 +241,24 @@ def _score(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "leaked": len(leaked),
         "latency_p50": statistics.median(latencies) if latencies else None,
         "latency_p95": _pct(latencies, 0.95),
-        "citations_mean": statistics.mean(r["citations"] for r in rows) if rows else None,
+        "citations_mean": statistics.mean(r["citations"] for r in answered) if answered else None,
         "stated_cost_answers": len(costs),
         "stated_cost_total": sum(costs) if costs else None,
         "stated_cost_mean": statistics.mean(costs) if costs else None,
     }
+
+
+def check_baseline(setup: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
+    """The ``--baseline`` scan's setup, after refusing it unless it shares ``keys`` with this one."""
+    folder = setup["baseline"]
+    theirs = {"questions": "simpleqa", **json.loads((Path(folder) / "run.json").read_text(encoding="utf-8"))}
+    ours = {"questions": "simpleqa", **setup}
+    for key in keys:
+        if theirs.get(key) != ours.get(key):
+            raise SystemExit(
+                MSG_BASELINE_MISMATCH.format(folder=folder, key=key, theirs=theirs.get(key), ours=ours.get(key))
+            )
+    return theirs
 
 
 def _baseline(setup: dict[str, Any], asked: set[str]) -> dict[str, Any] | None:
@@ -240,13 +266,7 @@ def _baseline(setup: dict[str, Any], asked: set[str]) -> dict[str, Any] | None:
     folder = setup.get("baseline")
     if not folder:
         return None
-    theirs = {"questions": "simpleqa", **json.loads((Path(folder) / "run.json").read_text(encoding="utf-8"))}
-    ours = {"questions": "simpleqa", **setup}
-    for key in BASELINE_KEYS:
-        if theirs.get(key) != ours.get(key):
-            raise SystemExit(
-                MSG_BASELINE_MISMATCH.format(folder=folder, key=key, theirs=theirs.get(key), ours=ours.get(key))
-            )
+    theirs = check_baseline(setup, BASELINE_KEYS)
     rows = [
         json.loads(line)
         for line in (Path(folder) / "rows.jsonl").read_text(encoding="utf-8").splitlines()
@@ -391,13 +411,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def setup_of(args: argparse.Namespace) -> dict[str, Any]:
     """What this scan was asked to do, for ``run.json``."""
-    providers = (
-        [p.strip() for p in args.providers.split(",") if p.strip()] if args.providers else configured_answer_providers()
-    )
+    named = [p.strip() for p in args.providers.split(",") if p.strip()] if args.providers else None
+    # Each backend once: a name repeated would be asked, and paid for, twice per question.
+    providers = list(dict.fromkeys(named)) if named else configured_answer_providers()
     if not providers:
         raise SystemExit(MSG_NO_PROVIDERS)
     chosen = search_scan.QUESTION_SETS[args.questions]
-    return {
+    setup = {
         "questions": args.questions,
         "dataset": chosen["dataset"] if args.questions != "csv" else str(args.dataset),
         "breakdowns": chosen["breakdowns"],
@@ -408,6 +428,10 @@ def setup_of(args: argparse.Namespace) -> dict[str, Any]:
         **({"baseline": str(args.baseline)} if args.baseline else {}),
         "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
+    if args.baseline:
+        # Before anything is paid for; the judge is checked once it is built, still before the first answer.
+        check_baseline(setup, tuple(key for key in BASELINE_KEYS if key != "judge"))
+    return setup
 
 
 def combine(folders: list[Path]) -> tuple[list[dict[str, Any]], dict[str, Any]]:

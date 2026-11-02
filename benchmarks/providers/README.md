@@ -185,7 +185,7 @@ is what the judge reads.
 
 ```bash
 uv run --all-extras python benchmarks/providers/answer.py --limit 300 \
-  --baseline results/simpleqa-300-v2
+  --baseline benchmarks/providers/results/simpleqa-300-v2
 ```
 
 `--baseline` names a finished search scan of the same questions, seed and
