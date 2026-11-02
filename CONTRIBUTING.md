@@ -32,10 +32,10 @@ make test-integration # tests that hit real provider APIs (needs credentials)
 make test-browser     # tests that launch a real local Chromium
 ```
 
-Pre-commit runs the same lint/format/type checks on staged files. This
-repository has no CI, so `make check` on your machine is the gate a reviewer
-relies on. After editing `pyproject.toml`, run `make lock && make requirements`
-and commit the results.
+Pre-commit runs the same lint/format/type checks on staged files. CI runs them
+again on every pull request, with the unit tests; run `make check` before you push
+so a red CI does not cost a review round. After editing `pyproject.toml`, run
+`make lock && make requirements` and commit the results.
 
 `requires-python` is `>=3.10` — the floor the package supports. `.python-version` pins 3.12, which is just the interpreter `uv` uses
 for local development, not a requirement.
