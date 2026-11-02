@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import importlib
 import os
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from web_router.constants import (
@@ -32,6 +33,8 @@ from web_router.constants import (
     EXTRA_RESEARCH,
     EXTRA_SEARCH,
     EXTRACT_ENV_BY_PROVIDER,
+    MSG_ANSWER_NO_DEFAULT,
+    MSG_ANSWER_NONE_CONFIGURED,
     PROVIDER_AGENTCORE,
     PROVIDER_ANCHOR,
     PROVIDER_AUTO,
@@ -508,3 +511,27 @@ def get_browse_provider_class(name: str | Provider) -> type[BrowseProvider]:
 def create_browse_provider(name: str | Provider, **kwargs: Any) -> BrowseProvider:
     """Instantiate a browse provider by name, passing ``kwargs`` to its constructor."""
     return get_browse_provider_class(name)(**kwargs)
+
+
+def default_answer_provider(default: str, config: Mapping[str, Mapping[str, Any]]) -> str:
+    """The answer backend an unnamed ``answer()`` call uses, with no ``auto`` to fall back on.
+
+    The router's ``default`` when it serves answers, else the one configured
+    answer backend -- a key passed in ``config`` counts, as one in the
+    environment does. Otherwise raises :class:`ProviderNotFoundError`, naming
+    the configured backends when there are several and the variables to set
+    when there are none.
+    """
+    available = available_answer_providers()
+    if default in available:
+        return default
+    in_code = {name for name, entry in config.items() if name in available and entry.get("api_key")}
+    configured = sorted(set(configured_answer_providers()) | in_code)
+    if len(configured) == 1:
+        return configured[0]
+    if configured:
+        message = MSG_ANSWER_NO_DEFAULT.format(default=default, count=len(configured), available=", ".join(configured))
+    else:
+        env_vars = sorted({var for name in available for var in ANSWER_ENV_BY_PROVIDER.get(name, ())})
+        message = MSG_ANSWER_NONE_CONFIGURED.format(default=default, env_vars=", ".join(env_vars) or "none")
+    raise ProviderNotFoundError(default, available, message=message)

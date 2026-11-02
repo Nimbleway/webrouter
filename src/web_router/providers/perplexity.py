@@ -54,8 +54,6 @@ from web_router.exceptions import UnsupportedParameterError
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
 from web_router.providers._utils import build_payload, cited_marker, compact, error_detail
 from web_router.types import (
-    AnswerRequest,
-    AnswerResponse,
     Citation,
     ResearchProgress,
     ResearchRequest,
@@ -64,6 +62,7 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
 )
+from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "snippet", "date"})
 _MAPPED_SOURCE_FIELDS = frozenset({"url", "title", "snippet"})

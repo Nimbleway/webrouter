@@ -34,8 +34,6 @@ from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, 
 from web_router.providers._utils import as_snippet, best_text, build_payload, cited_marker
 from web_router.types import (
     EXTRACT_PARAMETERS,
-    AnswerRequest,
-    AnswerResponse,
     Citation,
     ExtractedDocument,
     ExtractFailure,
@@ -46,6 +44,7 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
 )
+from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "text", "summary", "highlights", "score", "publishedDate"})
 _MAPPED_DOCUMENT_FIELDS = frozenset({"url", "title", "text", "publishedDate"})

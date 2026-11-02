@@ -71,8 +71,6 @@ from web_router.providers.base import (
     _BaseProvider,
 )
 from web_router.types import (
-    AnswerRequest,
-    AnswerResponse,
     BrowserRequest,
     BrowserSession,
     ExtractRequest,
@@ -84,6 +82,7 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
 )
+from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _RequestT = TypeVar("_RequestT", SearchRequest, AnswerRequest)
 _ResponseT = TypeVar("_ResponseT", SearchResponse, AnswerResponse)

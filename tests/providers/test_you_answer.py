@@ -27,7 +27,7 @@ import pytest
 from tests.providers._answer_stub import stub_answer_api
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.you import YouAnswerProvider
-from web_router.types import AnswerRequest, Recency
+from web_router.types_answer import AnswerRequest, Recency
 
 QUESTION = "What is the emergency phone number?"
 KU = "https://iss.ku.edu/when-call-911"

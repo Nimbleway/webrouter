@@ -23,7 +23,7 @@ import pytest
 from tests.providers._answer_stub import stub_answer_api
 from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.parallel import ParallelAnswerProvider
-from web_router.types import AnswerRequest
+from web_router.types_answer import AnswerRequest
 
 QUESTION = "Who won the 2022 FIFA World Cup final and what was the score?"
 FIFA = "https://www.fifa.com/en/match-centre/match/17/255711/285077/400128145"

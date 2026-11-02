@@ -27,7 +27,6 @@ from web_router.mcp.shaping import (
     truncate,
 )
 from web_router.types import (
-    AnswerResponse,
     BrowseResponse,
     BrowseStep,
     Citation,
@@ -39,6 +38,7 @@ from web_router.types import (
     TemplatePage,
     TemplateResponse,
 )
+from web_router.types_answer import AnswerResponse
 
 _PROSE = "alpha beta gamma delta " * 200
 

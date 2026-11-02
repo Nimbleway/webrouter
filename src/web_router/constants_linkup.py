@@ -7,7 +7,7 @@ search path stay there, beside its search, extract and research settings.
 
 from __future__ import annotations
 
-from web_router.types import Recency
+from web_router.types_answer import Recency
 
 # Verified live on 2026-11-01. An answer is a search with `outputType:
 # sourcedAnswer`: the same POST /v1/search, answering `{answer, sources}` at the

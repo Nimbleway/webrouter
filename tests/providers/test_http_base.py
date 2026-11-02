@@ -412,7 +412,7 @@ def _answer_backend(method: str, status: int = 200, body: dict[str, Any] | None 
     import httpx as _httpx
 
     from web_router.providers._http import HttpAnswerProvider
-    from web_router.types import AnswerRequest, AnswerResponse
+    from web_router.types_answer import AnswerRequest, AnswerResponse
 
     seen: list[_httpx.Request] = []
 
@@ -436,7 +436,7 @@ def _answer_backend(method: str, status: int = 200, body: dict[str, Any] | None 
 
 
 def test_an_answer_backend_on_get_sends_its_payload_as_query_parameters() -> None:
-    from web_router.types import AnswerRequest
+    from web_router.types_answer import AnswerRequest
 
     provider, seen = _answer_backend("GET")
 
@@ -447,7 +447,7 @@ def test_an_answer_backend_on_get_sends_its_payload_as_query_parameters() -> Non
 async def test_an_answer_backend_on_post_sends_its_payload_as_a_json_body() -> None:
     import json as _json
 
-    from web_router.types import AnswerRequest
+    from web_router.types_answer import AnswerRequest
 
     provider, seen = _answer_backend("POST")
 
@@ -460,7 +460,7 @@ async def test_an_answer_backend_on_post_sends_its_payload_as_a_json_body() -> N
 
 @pytest.mark.parametrize("status", [400, 503])
 def test_an_answer_backends_error_status_is_a_provider_error_naming_it(status: int) -> None:
-    from web_router.types import AnswerRequest
+    from web_router.types_answer import AnswerRequest
 
     provider, _ = _answer_backend("POST", status, {"error": "refused"})
 

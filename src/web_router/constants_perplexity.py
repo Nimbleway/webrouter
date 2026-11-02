@@ -8,7 +8,7 @@ settings.
 
 from __future__ import annotations
 
-from web_router.types import Recency
+from web_router.types_answer import Recency
 
 # Verified live on 2026-11-01. An answer is POST /v1/responses with no
 # `background`, so the call returns the finished response: `status`

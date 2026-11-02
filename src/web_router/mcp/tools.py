@@ -150,7 +150,6 @@ from web_router.registry import (
     get_template_provider_class,
 )
 from web_router.types import (
-    ANSWER_PARAMETERS,
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
     EXTRACT_PARAMETERS,
@@ -162,6 +161,7 @@ from web_router.types import (
     PageState,
     StealthLevel,
 )
+from web_router.types_answer import ANSWER_PARAMETERS
 
 _CONFIGURED: dict[str, Callable[[], list[str]]] = {
     MCP_TOOL_SEARCH: configured_providers,

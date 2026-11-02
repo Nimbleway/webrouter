@@ -26,7 +26,7 @@ from web_router.registry import (
     configured_answer_providers,
     get_answer_provider_class,
 )
-from web_router.types import ANSWER_ALWAYS_SENT, ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
+from web_router.types_answer import ANSWER_ALWAYS_SENT, ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
 
 ROUTER_ONLY_ARGUMENTS = {"self", "query", "provider"}
 

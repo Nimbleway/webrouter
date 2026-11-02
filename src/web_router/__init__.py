@@ -107,15 +107,12 @@ from web_router.registry import (
     unregister_template_provider,
 )
 from web_router.types import (
-    ANSWER_PARAMETERS,
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
     TEMPLATE_PARAMETERS,
-    AnswerRequest,
-    AnswerResponse,
     BenchmarkReport,
     BenchmarkRun,
     BrowseOutcome,
@@ -139,7 +136,6 @@ from web_router.types import (
     PageSnapshot,
     PageState,
     Provider,
-    Recency,
     ResearchEffort,
     ResearchOutcome,
     ResearchProgress,
@@ -158,6 +154,7 @@ from web_router.types import (
     TemplateResponse,
     Viewport,
 )
+from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
 
 __all__ = [
     "ANSWER_PARAMETERS",

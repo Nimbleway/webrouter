@@ -23,7 +23,7 @@ import pytest
 from tests.providers._answer_stub import stub_answer_api
 from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.exa import ExaAnswerProvider
-from web_router.types import AnswerRequest
+from web_router.types_answer import AnswerRequest
 
 QUESTION = "Who won the 2022 FIFA World Cup final and what was the score?"
 WIKI = "https://en.wikipedia.org/wiki/2022_FIFA_World_Cup_final"

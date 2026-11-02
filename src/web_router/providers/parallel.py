@@ -42,8 +42,6 @@ from web_router.constants_parallel import (
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
 from web_router.providers._utils import as_snippet, build_payload
 from web_router.types import (
-    AnswerRequest,
-    AnswerResponse,
     Citation,
     ResearchProgress,
     ResearchRequest,
@@ -53,6 +51,7 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
 )
+from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "excerpts", "publish_date"})
 _MAPPED_BASIS_FIELDS = frozenset({"field", "citations"})

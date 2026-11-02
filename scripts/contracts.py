@@ -38,7 +38,6 @@ from web_router.constants import (
 from web_router.exceptions import WebRouterError
 from web_router.providers._utils import pinned_today
 from web_router.types import (
-    AnswerRequest,
     BrowseRequest,
     BrowserRequest,
     ExtractRequest,
@@ -47,6 +46,7 @@ from web_router.types import (
     TemplateRequest,
     Viewport,
 )
+from web_router.types_answer import AnswerRequest
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACTS_DIR = ROOT / "contracts"

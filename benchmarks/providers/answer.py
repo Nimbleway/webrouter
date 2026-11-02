@@ -51,7 +51,7 @@ from web_router import AsyncWebRouter
 from web_router.evals import Dataset, OpenAIJudge
 from web_router.exceptions import WebRouterError
 from web_router.registry import configured_answer_providers
-from web_router.types import AnswerResponse
+from web_router.types_answer import AnswerResponse
 
 DEFAULT_LIMIT = search_scan.DEFAULT_LIMIT
 DEFAULT_CONCURRENCY = 3

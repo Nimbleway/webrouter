@@ -63,8 +63,6 @@ from web_router.providers._http import (
 from web_router.providers._utils import as_snippet, build_payload, cited_marker, error_detail, today
 from web_router.types import (
     EXTRACT_PARAMETERS,
-    AnswerRequest,
-    AnswerResponse,
     Citation,
     ExtractedDocument,
     ExtractFailure,
@@ -78,6 +76,7 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
 )
+from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "name", "content"})
 _MAPPED_SOURCE_FIELDS = frozenset({"url", "name", "snippet"})

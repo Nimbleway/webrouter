@@ -30,7 +30,7 @@ from tests.providers._answer_stub import stub_answer_api
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers._utils import pinned_today
 from web_router.providers.linkup import LinkupAnswerProvider
-from web_router.types import AnswerRequest, Recency
+from web_router.types_answer import AnswerRequest, Recency
 
 QUESTION = "Who won the 2022 FIFA World Cup final and what was the score?"
 

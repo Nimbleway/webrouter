@@ -14,7 +14,8 @@ import pytest
 
 from web_router.evals import Dataset, Question
 from web_router.exceptions import ProviderError
-from web_router.types import AnswerResponse, Citation
+from web_router.types import Citation
+from web_router.types_answer import AnswerResponse
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "answer.py"
 

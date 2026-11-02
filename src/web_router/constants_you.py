@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import re
 
-from web_router.types import Recency, ResearchEffort, ResearchState
+from web_router.types import ResearchEffort, ResearchState
+from web_router.types_answer import Recency
 
 # Verified live on 2026-10-16. Research lives on api.you.com, not on the
 # ydc-index.io host search uses: there the same path answers 403. POST with

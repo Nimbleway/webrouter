@@ -28,7 +28,7 @@ import pytest
 from tests.providers._answer_stub import stub_answer_api
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.perplexity import PerplexityAnswerProvider
-from web_router.types import AnswerRequest, Recency
+from web_router.types_answer import AnswerRequest, Recency
 
 QUESTION = "What is the emergency phone number?"
 RESPONSE_ID = "resp_107a569e-fd55-4708-8f0b-8f386355ac50"

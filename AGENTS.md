@@ -77,16 +77,18 @@ src/web_router/
 ├── types.py            SearchRequest/Response/Result, ExtractRequest/Response/Document,
 │                       TemplateRequest/Response + Template/TemplatePage,
 │                       ResearchRequest/Response/Progress + Citation,
-│                       AnswerRequest/Response,
 │                       BrowserRequest/Session/State + Viewport,
 │                       BrowseRequest/Response/Progress + BrowseStep
 │                       — the normalized contract, one request model per method
+├── types_answer.py     AnswerRequest/Response + Recency: answer()'s contract, apart so
+│                       types.py stops growing; it imports types, never the reverse
 ├── client.py           WebRouter, AsyncWebRouter — the public facade
 │                       (search, extract, templates + template + run_template,
 │                        answer, research + submit_research,
 │                        browse + submit_browse, open_browser, benchmark and
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
+├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
 ├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
@@ -98,6 +100,7 @@ src/web_router/
 ├── constants.py        shared env var registries, timeouts and message templates;
 │                       a provider's own go in constants_<provider>.py (older
 │                       providers' are still here)
+├── constants_answer.py answer()'s messages and MCP tool text, re-exported from constants
 ├── constants_you.py    You.com research's endpoints, efforts and status table,
 │                       kept apart so constants.py stops growing
 ├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
@@ -122,11 +125,12 @@ src/web_router/
 │                       Chat Completions, + local executor) — no SDK, no extra
 └── providers/
     ├── base.py         SearchProvider / ExtractProvider / TemplateProvider /
-    │                   ResearchProvider / AnswerProvider / BrowseProvider /
+    │                   ResearchProvider / BrowseProvider /
     │                   BrowserProvider ABCs over a shared
     │                   base; the generic JobProvider / Job core that
     │                   ResearchProvider / ResearchJob and BrowseProvider /
     │                   BrowseJob specialize; BrowserHandle / AsyncBrowserHandle
+    ├── answer.py       AnswerProvider, answer()'s base, re-exported from base.py
     ├── _http.py        HttpSearchProvider / HttpExtractProvider /
     │                   HttpResearchProvider / HttpAnswerProvider / HttpBrowseProvider /
     │                   HttpBrowserProvider — for APIs with no SDK
@@ -389,7 +393,8 @@ model that needs an exception type or a message template cannot live in
 does) or annotate the field as `Exception` and say why in its docstring (as
 `BenchmarkRun.error` does). Do not "fix" this by importing lazily inside a
 validator. A `constants_<provider>.py` sits at the same level as `constants`:
-it may import `types` and nothing else of ours.
+it may import `types` (and `types_answer`, which imports only `types`) and
+nothing else of ours.
 
 **Never override the public method in a provider.** `search`/`asearch`,
 `extract`/`aextract`, `run`/`templates`/`template`, `answer`/`aanswer`,

@@ -36,15 +36,12 @@ from web_router.registry import (
     unregister_template_provider,
 )
 from web_router.types import (
-    ANSWER_PARAMETERS,
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
     TEMPLATE_PARAMETERS,
-    AnswerRequest,
-    AnswerResponse,
     BrowseProgress,
     BrowseRequest,
     BrowseResponse,
@@ -70,6 +67,7 @@ from web_router.types import (
     TemplateRequest,
     TemplateResponse,
 )
+from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
 
 # Load .env before collection, so the integration tests' skipif conditions see
 # the keys. Unit tests never read them. Absent in CI, which is the point: no
