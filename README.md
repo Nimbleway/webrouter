@@ -1462,6 +1462,40 @@ error flag on a tool's output, so an error's text says on its own that the
 call failed or did not run. The tools keep their `web_router_` names, so they
 never collide with OpenAI's built-in `web_search` either.
 
+## Wrapping `search` for your own agent
+
+The three integrations above never let the model choose how many results come
+back: it supplies the query, and `max_results` is yours, fixed when the tool
+is built. A model left to choose will sometimes ask for one result, get one
+page, and answer thinly, so a wrapper you write yourself should do the same.
+Keep `max_results` out of the schema the model sees and pin 5 to 10 in the
+handler:
+
+```python
+from web_router import WebRouter
+
+router = WebRouter()
+
+SEARCH_TOOL = {
+    "name": "web_search",
+    "description": "Search the web. Returns ranked pages with their text.",
+    "input_schema": {
+        "type": "object",
+        "properties": {"query": {"type": "string", "description": "What to search for."}},
+        "required": ["query"],
+    },
+}
+
+
+def web_search(query: str) -> str:
+    return router.search(query, max_results=8).model_dump_json()
+```
+
+If you do expose `max_results`, its description in `SearchRequest`'s JSON
+schema says when more results matter: 5 to 10 for most questions, more for
+news, comparisons or a question with several parts, and 1 only when the user
+asked for a single link. The MCP server shows the model the same text.
+
 ## Agent benchmark
 
 [`benchmarks/agent/`](benchmarks/agent/README.md) answers the question the
