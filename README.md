@@ -310,7 +310,7 @@ backends' answers. See [Asking for an answer](#asking-for-an-answer).
 | --- | --- | --- | --- | --- | --- |
 | `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | no: every page read, for the answer as a whole |
 
-Verified live on 2026-11-01: answers in 2 to 4 seconds, the domain filters held
+Verified live on 2026-11-01: answers in about a second (median 0.9 s over 300 questions), the domain filters held
 on every source, and `recency` (sent as Linkup's `fromDate`) moved an answer to
 the window's sources. Linkup filters on the date it holds for a page, which is
 not always the publication date.
@@ -811,8 +811,9 @@ map one raises `UnsupportedParameterError` before anything is sent -- the
 
 There is no `auto` yet. With `provider` unset, the router's default answers
 when it is an answer backend (`WebRouter("linkup").answer(q)`), otherwise the
-one answer backend you hold a key for. With none or several, the call raises
-`ProviderNotFoundError` naming them: say which with `provider=`.
+one answer backend you hold a key for (in the environment or in
+`provider_config`). With several, the call raises `ProviderNotFoundError`
+naming them: say which with `provider=`. With none, it names the variables to set.
 
 "Answer" means two other things nearby. `SearchResponse.answer` is an answer a
 search backend volunteered beside its results, unasked (You.com's knowledge

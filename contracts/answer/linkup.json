@@ -8,6 +8,7 @@
     "paths": {
       "answer_path": "/v1/search"
     },
+    "method": "POST",
     "auth_header": "Authorization"
   },
   "credentials": [
@@ -59,7 +60,7 @@
   "verified": {
     "include_domains": "live: tests/test_integration_surface.py::test_an_answers_sources_honor_the_domain_filter",
     "exclude_domains": "live: tests/test_integration_surface.py::test_an_answers_sources_leave_out_excluded_domains",
-    "recency": "live: tests/test_integration_surface.py::test_recency_is_accepted"
+    "recency": "live: checked by hand 2026-11-01, see tests/providers/test_linkup_answer.py; Linkup's sources carry no date, so no test can assert the window"
   },
   "vendor_options": {
     "includeImages": {

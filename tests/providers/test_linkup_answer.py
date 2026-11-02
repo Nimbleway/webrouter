@@ -15,15 +15,15 @@ no markers, so no citation is tied to a sentence.
 
 from __future__ import annotations
 
-import json
 import os
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
-import httpx
 import pytest
 
+from tests.providers._answer_stub import stub_answer_api
 from web_router.exceptions import ProviderError, UnsupportedParameterError
+from web_router.providers._utils import pinned_today
 from web_router.providers.linkup import LinkupAnswerProvider
 from web_router.types import AnswerRequest, Recency
 
@@ -50,31 +50,6 @@ ANSWERED: dict[str, Any] = {
 }
 
 
-class _Api:
-    """Stands in for the Search API: answers one payload and records every call."""
-
-    def __init__(self, payload: dict[str, Any], status: int = 200) -> None:
-        self.payload = payload
-        self.status = status
-        self.calls: list[tuple[str, str]] = []
-        self.bodies: list[dict[str, Any]] = []
-        self.headers: list[httpx.Headers] = []
-
-    def handle(self, request: httpx.Request) -> httpx.Response:
-        self.calls.append((request.method, request.url.path))
-        self.bodies.append(json.loads(request.content or b"{}"))
-        self.headers.append(request.headers)
-        return httpx.Response(self.status, json=self.payload)
-
-
-def _stub(provider: LinkupAnswerProvider, payload: dict[str, Any], status: int = 200) -> _Api:
-    api = _Api(payload, status)
-    transport = httpx.MockTransport(api.handle)
-    provider._sync = httpx.Client(**provider._client_kwargs, transport=transport)
-    provider._async = httpx.AsyncClient(**provider._client_kwargs, transport=transport)
-    return api
-
-
 @pytest.fixture
 def provider(monkeypatch: pytest.MonkeyPatch) -> LinkupAnswerProvider:
     monkeypatch.setenv("LINKUP_API_KEY", "test-key")
@@ -82,7 +57,7 @@ def provider(monkeypatch: pytest.MonkeyPatch) -> LinkupAnswerProvider:
 
 
 def test_an_answer_is_a_sourced_answer_search(provider: LinkupAnswerProvider) -> None:
-    api = _stub(provider, ANSWERED)
+    api = stub_answer_api(provider, ANSWERED)
 
     provider.answer(AnswerRequest(query=QUESTION))
 
@@ -92,7 +67,7 @@ def test_an_answer_is_a_sourced_answer_search(provider: LinkupAnswerProvider) ->
 
 
 def test_the_answer_and_every_source_are_normalized(provider: LinkupAnswerProvider) -> None:
-    _stub(provider, ANSWERED)
+    stub_answer_api(provider, ANSWERED)
 
     response = provider.answer(AnswerRequest(query=QUESTION))
 
@@ -110,7 +85,7 @@ def test_the_answer_and_every_source_are_normalized(provider: LinkupAnswerProvid
 
 
 def test_the_domain_filters_map_as_on_search(provider: LinkupAnswerProvider) -> None:
-    api = _stub(provider, ANSWERED)
+    api = stub_answer_api(provider, ANSWERED)
 
     provider.answer(AnswerRequest(query=QUESTION, include_domains=["wikipedia.org"], exclude_domains=["fandom.com"]))
 
@@ -118,18 +93,22 @@ def test_the_domain_filters_map_as_on_search(provider: LinkupAnswerProvider) -> 
     assert api.bodies[0]["excludeDomains"] == ["fandom.com"]
 
 
-@pytest.mark.parametrize(("recency", "days"), [("day", 1), ("week", 7), ("month", 30), ("year", 365)])
-def test_recency_sets_from_date_that_far_back(provider: LinkupAnswerProvider, recency: Recency, days: int) -> None:
-    api = _stub(provider, ANSWERED)
+@pytest.mark.parametrize(
+    ("recency", "since"),
+    [("day", "2026-01-14"), ("week", "2026-01-08"), ("month", "2025-12-16"), ("year", "2025-01-15")],
+)
+def test_recency_sets_from_date_that_far_back(provider: LinkupAnswerProvider, recency: Recency, since: str) -> None:
+    api = stub_answer_api(provider, ANSWERED)
 
-    provider.answer(AnswerRequest(query=QUESTION, recency=recency))
+    with pinned_today(date(2026, 1, 15)):
+        provider.answer(AnswerRequest(query=QUESTION, recency=recency))
 
-    assert api.bodies[0]["fromDate"] == (date.today() - timedelta(days=days)).isoformat()
+    assert api.bodies[0]["fromDate"] == since
 
 
 @pytest.mark.parametrize("option", [{"country": "US"}, {"locale": "en"}])
 def test_options_linkup_has_no_field_for_are_refused(provider: LinkupAnswerProvider, option: dict[str, Any]) -> None:
-    api = _stub(provider, ANSWERED)
+    api = stub_answer_api(provider, ANSWERED)
 
     with pytest.raises(UnsupportedParameterError, match=next(iter(option))):
         provider.answer(AnswerRequest(query=QUESTION, **option))
@@ -139,7 +118,7 @@ def test_options_linkup_has_no_field_for_are_refused(provider: LinkupAnswerProvi
 
 def test_provider_options_reach_the_api_last(provider: LinkupAnswerProvider) -> None:
     """A deeper `depth` is Linkup's own choice, reachable here."""
-    api = _stub(provider, ANSWERED)
+    api = stub_answer_api(provider, ANSWERED)
 
     provider.answer(AnswerRequest(query=QUESTION, provider_options={"depth": "deep"}))
 
@@ -147,7 +126,7 @@ def test_provider_options_reach_the_api_last(provider: LinkupAnswerProvider) -> 
 
 
 def test_an_empty_answer_is_returned_with_its_sources(provider: LinkupAnswerProvider) -> None:
-    _stub(provider, {"answer": None, "sources": ANSWERED["sources"]})
+    stub_answer_api(provider, {"answer": None, "sources": ANSWERED["sources"]})
 
     response = provider.answer(AnswerRequest(query=QUESTION))
 
@@ -156,14 +135,14 @@ def test_an_empty_answer_is_returned_with_its_sources(provider: LinkupAnswerProv
 
 
 def test_an_http_error_is_a_provider_error(provider: LinkupAnswerProvider) -> None:
-    _stub(provider, {"error": {"code": "BAD_REQUEST", "message": "depth must be one of"}}, status=400)
+    stub_answer_api(provider, {"error": {"code": "BAD_REQUEST", "message": "depth must be one of"}}, status=400)
 
     with pytest.raises(ProviderError, match="400"):
         provider.answer(AnswerRequest(query=QUESTION))
 
 
 async def test_the_async_path_answers_the_same_way(provider: LinkupAnswerProvider) -> None:
-    api = _stub(provider, ANSWERED)
+    api = stub_answer_api(provider, ANSWERED)
 
     response = await provider.aanswer(AnswerRequest(query=QUESTION, include_domains=["wikipedia.org"]))
 
