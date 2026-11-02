@@ -1,7 +1,8 @@
 """The answer backends' registry: which backends serve ``answer()``, and which one an unnamed call uses.
 
-Apart from :mod:`web_router.registry`, whose helpers it uses, as ``answer``
-has a table of its own: a vendor's answer endpoint is not its search endpoint.
+``answer`` has a table of its own, because a vendor's answer endpoint is not its
+search endpoint. It lives here rather than in :mod:`web_router.registry`, whose
+lookup helpers it reuses; that module does not import this one.
 """
 
 from __future__ import annotations
