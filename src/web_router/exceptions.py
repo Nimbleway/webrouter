@@ -6,6 +6,7 @@ handle failures uniformly regardless of which backend served the request:
     WebRouterError
     ├── ConfigurationError          bad or missing configuration
     ├── ProviderNotFoundError       no provider registered under that name
+    │   └── NoAnswerProviderError       answer() named no backend and none could be chosen
     ├── ProviderNotInstalledError   provider known, optional dependency missing
     ├── UnsupportedParameterError   provider does not map a requested parameter
     ├── UnsupportedFormatError      provider cannot return a requested format
