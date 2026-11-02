@@ -57,6 +57,7 @@ from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
     BrowseProgress,
     BrowseResponse,
+    Citation,
     ExtractResponse,
     ResearchProgress,
     ResearchResponse,
@@ -324,6 +325,19 @@ def _template_row(template: Template) -> dict[str, Any]:
     }
 
 
+def _cut_answer(text: str | None, budget: int) -> str | None:
+    """A written answer cut to its share of the budget; ``None`` or ``""`` as it came."""
+    return truncate(text, int(budget * MCP_ANSWER_SHARE)) if text else text
+
+
+def _citation_rows(citations: list[Citation]) -> list[dict[str, Any]]:
+    """The citations a research run or an answer carries, as the rows a cut trims the snippets of."""
+    return [
+        {"url": citation.url, "title": citation.title, "field": citation.field, "snippet": citation.snippet}
+        for citation in citations
+    ]
+
+
 def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> dict[str, Any]:
     """A finished research run, cut to fit.
 
@@ -331,12 +345,8 @@ def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> d
     asked for, and trimming it would hand back something that no longer
     validates against the schema they supplied.
     """
-    answer_budget = int(budget * MCP_ANSWER_SHARE)
-    answer = truncate(response.answer, answer_budget) if response.answer else response.answer
-    citations = [
-        {"url": citation.url, "title": citation.title, "field": citation.field, "snippet": citation.snippet}
-        for citation in response.citations
-    ]
+    answer = _cut_answer(response.answer, budget)
+    citations = _citation_rows(response.citations)
     payload: dict[str, Any] = {
         "provider": response.provider,
         "query": response.query,
@@ -346,8 +356,7 @@ def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> d
         "structured": response.structured,
         "citations": citations,
     }
-    shortened = answer != response.answer
-    return _fit(payload, citations, ("snippet",), handle=handle, budget=budget, shortened=shortened)
+    return _fit(payload, citations, ("snippet",), handle=handle, budget=budget, shortened=answer != response.answer)
 
 
 def shape_answer(response: AnswerResponse, handle: str, *, budget: int) -> dict[str, Any]:
@@ -356,12 +365,8 @@ def shape_answer(response: AnswerResponse, handle: str, *, budget: int) -> dict[
     The sources the answer cites (``field`` set) come before the ones it only
     read, so a cut, which drops from the end, drops an uncited page before a cited one.
     """
-    answer = truncate(response.answer, int(budget * MCP_ANSWER_SHARE)) if response.answer else response.answer
-    cited_first = sorted(response.citations, key=lambda citation: citation.field is None)
-    citations = [
-        {"url": citation.url, "title": citation.title, "field": citation.field, "snippet": citation.snippet}
-        for citation in cited_first
-    ]
+    answer = _cut_answer(response.answer, budget)
+    citations = _citation_rows(sorted(response.citations, key=lambda citation: citation.field is None))
     payload: dict[str, Any] = {
         "provider": response.provider,
         "query": response.query,
