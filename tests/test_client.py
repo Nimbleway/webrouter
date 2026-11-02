@@ -576,3 +576,22 @@ def test_a_key_passed_in_code_configures_an_answer_backend(
     router = WebRouter(provider_config={"fake": {"api_key": "in-code"}})
 
     assert router.answer("q").provider == "fake"
+
+
+def test_the_no_default_refusal_is_its_own_error_and_still_a_provider_not_found(
+    fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from web_router import NoAnswerProviderError
+    from web_router.constants import ANSWER_ENV_BY_PROVIDER
+
+    _configure(monkeypatch)
+    monkeypatch.setitem(ANSWER_ENV_BY_PROVIDER, "fake", ("WEB_ROUTER_TEST_UNSET_KEY",))
+    monkeypatch.delenv("WEB_ROUTER_TEST_UNSET_KEY", raising=False)
+
+    with pytest.raises(NoAnswerProviderError) as caught:
+        WebRouter().answer("q")
+
+    assert isinstance(caught.value, ProviderNotFoundError)
+    assert caught.value.configured == []
+    assert caught.value.env_vars == ["WEB_ROUTER_TEST_UNSET_KEY"], "with nothing configured it names what to set"
+    assert "WEB_ROUTER_TEST_UNSET_KEY" in str(caught.value)

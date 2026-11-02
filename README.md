@@ -870,7 +870,7 @@ map one raises `UnsupportedParameterError` before anything is sent -- the
 There is no `auto` yet. With `provider` unset, the router's default answers
 when it is an answer backend (`WebRouter("linkup").answer(q)`), otherwise the
 one answer backend you hold a key for (in the environment or in
-`provider_config`). With several, the call raises `ProviderNotFoundError`
+`provider_config`). With several, the call raises `NoAnswerProviderError` (a `ProviderNotFoundError`)
 naming them: say which with `provider=`. With none, it names the variables to set.
 
 "Answer" means two other things nearby. `SearchResponse.answer` is an answer a

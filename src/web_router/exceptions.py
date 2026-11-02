@@ -30,6 +30,8 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from web_router.constants import (
+    MSG_ANSWER_NO_DEFAULT,
+    MSG_ANSWER_NONE_CONFIGURED,
     MSG_BENCHMARK_TIMEOUT,
     MSG_BROWSE_TIMEOUT,
     MSG_BROWSER_ACTION_FAILED,
@@ -85,18 +87,35 @@ class ConfigurationError(WebRouterError):
 class ProviderNotFoundError(WebRouterError):
     """A provider was requested by a name that is not registered."""
 
-    def __init__(self, name: str, available: Iterable[str], *, message: str | None = None) -> None:
-        """
-        Args:
-            message: Replaces the "unknown provider" text, for a name that is
-                registered but cannot serve the call -- a router default that
-                ``answer()``, which has no ``auto``, cannot fall back from.
-        """
+    def __init__(self, name: str, available: Iterable[str]) -> None:
         self.name = name
         # Deduplicated: the router looks a default up in both method registries,
         # and a provider serving both would otherwise be listed twice.
         self.available = sorted(set(available))
-        super().__init__(message or MSG_UNKNOWN_PROVIDER.format(name=name, available=", ".join(self.available)))
+        super().__init__(MSG_UNKNOWN_PROVIDER.format(name=name, available=", ".join(self.available)))
+
+
+class NoAnswerProviderError(ProviderNotFoundError):
+    """``answer()`` was called with no provider, and none could be chosen: it has no ``auto`` yet.
+
+    A :class:`ProviderNotFoundError`, so an ``except`` for that still catches it.
+    :attr:`configured` names the answer backends with a key -- several, so which
+    to call is the caller's choice -- and when there are none, :attr:`env_vars`
+    names the variables that would add one.
+    """
+
+    def __init__(self, default: str, available: Iterable[str], configured: Iterable[str], env_vars: Iterable[str]):
+        self.name = default
+        self.available = sorted(set(available))
+        self.configured = sorted(configured)
+        self.env_vars = sorted(env_vars)
+        if self.configured:
+            message = MSG_ANSWER_NO_DEFAULT.format(
+                default=default, count=len(self.configured), available=", ".join(self.configured)
+            )
+        else:
+            message = MSG_ANSWER_NONE_CONFIGURED.format(default=default, env_vars=", ".join(self.env_vars) or "none")
+        WebRouterError.__init__(self, message)
 
 
 class ProviderNotInstalledError(WebRouterError):
