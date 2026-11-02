@@ -82,6 +82,17 @@ _MAPPED_RESULT_FIELDS = frozenset({"url", "name", "content"})
 _MAPPED_SOURCE_FIELDS = frozenset({"url", "name", "snippet"})
 
 
+def _citation(source: dict[str, Any], *, field: str | None = None) -> Citation:
+    """One Linkup source -- a research run's or an answer's -- as a citation; unmapped fields go to ``extra``."""
+    return Citation(
+        url=source.get("url", ""),
+        title=source.get("name") or "",
+        snippet=source.get("snippet") or "",
+        field=field,
+        extra={k: v for k, v in source.items() if k not in _MAPPED_SOURCE_FIELDS},
+    )
+
+
 class LinkupProvider(HttpSearchProvider):
     """Routes searches to the Linkup Search API.
 
@@ -257,15 +268,7 @@ class LinkupResearchProvider(HttpResearchProvider):
             provider=self.name,
             query=request.query,
             answer=output.get("answer"),
-            citations=[
-                Citation(
-                    url=source.get("url", ""),
-                    title=source.get("name") or "",
-                    snippet=source.get("snippet") or "",
-                    extra={k: v for k, v in source.items() if k not in _MAPPED_SOURCE_FIELDS},
-                )
-                for source in output.get("sources") or []
-            ],
+            citations=[_citation(source) for source in output.get("sources") or []],
             request_id=str(payload.get("id") or "") or None,
             raw=[payload],
         )
@@ -316,13 +319,7 @@ class LinkupAnswerProvider(HttpAnswerProvider):
             query=request.query,
             answer=answer,
             citations=[
-                Citation(
-                    url=source.get("url", ""),
-                    title=source.get("name") or "",
-                    snippet=source.get("snippet") or "",
-                    field=cited_marker(answer, position),
-                    extra={k: v for k, v in source.items() if k not in _MAPPED_SOURCE_FIELDS},
-                )
+                _citation(source, field=cited_marker(answer, position))
                 for position, source in enumerate(payload.get("sources") or [], start=1)
             ],
             raw=[payload],
