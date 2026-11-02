@@ -1051,7 +1051,8 @@ Open PRs as drafts: `gh pr create --draft --body-file <file>`, with the body fol
 `.github/pull_request_template.md` (same headings, comments removed). Draft PRs do not request
 the code owners' review yet. Mark ready only after Qodo's "Code Review by Qodo" comment covers the
 latest commit and every finding has a reply in its thread, starting with `@qodo`:
-`Fixed in <sha>: <what>` or `Not fixing: <reason>`.
+`Fixed in <sha>: <what>` or `Not fixing: <reason>`. Qodo does not review drafts on its own, so a
+`/agentic_review` comment on the PR is a good way to ask for one, after a push too.
 
 A change users would notice adds a line under `## [Unreleased]` in `CHANGELOG.md`; anything else
 (CI, docs, tests, refactors) takes the `skip-changelog` label. The Changelog check fails the PR otherwise.

@@ -282,7 +282,8 @@ time.
 - Direct commits to `main` are blocked; work on a branch and open a PR.
 - Open the PR as a draft. Mark it ready once Qodo's review covers the latest commit and each
   finding has a reply (`Fixed in <sha>: <what>` or `Not fixing: <reason>`); the maintainers are
-  asked to review only then.
+  asked to review only then. Qodo does not review drafts on its own; a `/agentic_review` comment
+  asks it to.
 
 Every unit test must work without an API key. Anything that needs one belongs
 behind `@pytest.mark.integration`.
