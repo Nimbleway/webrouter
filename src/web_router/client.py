@@ -16,8 +16,8 @@ site-specific extraction that turns one page into a record -- and
 the catalogue it is picked from; the three share one registry, and all three
 need ``provider`` named, since a template's name belongs to one vendor.
 
-:meth:`WebRouter.research` is the third method and the one that behaves
-differently: an agentic run takes minutes rather than milliseconds, so it waits
+:meth:`WebRouter.research` behaves differently (:meth:`WebRouter.answer`, one
+cited answer, does not): an agentic run takes minutes rather than milliseconds, so it waits
 for the answer -- or hands back a :class:`~web_router.ResearchJob` through
 :meth:`WebRouter.submit_research` when you would rather not sit on it.
 :meth:`WebRouter.browse` and :meth:`WebRouter.submit_browse` are the same shape
@@ -45,6 +45,7 @@ from typing import Any, Generic, TypeVar
 from pydantic import BaseModel
 
 from web_router._benchmark import Stragglers, afan_out, fan_out, members_of
+from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.constants import (
     AUTO_CLIENT_OPTION,
     BENCHMARK_EXCLUDED,
@@ -71,6 +72,7 @@ from web_router.evals.judge import Judge
 from web_router.evals.types import EvaluationReport
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
 from web_router.providers.base import (
+    AnswerProvider,
     AsyncBrowserHandle,
     BrowseJob,
     BrowseProvider,
@@ -81,8 +83,10 @@ from web_router.providers.base import (
     ResearchProvider,
     SearchProvider,
     TemplateProvider,
+    _BaseProvider,
 )
 from web_router.registry import (
+    available_answer_providers,
     available_browse_providers,
     available_browser_providers,
     available_extract_providers,
@@ -162,6 +166,7 @@ class _BaseRouter(Generic[_HandleT]):
             + available_extract_providers()
             + available_template_providers()
             + available_research_providers()
+            + available_answer_providers()
             + available_browser_providers()
             + available_browse_providers()
         )
@@ -181,6 +186,7 @@ class _BaseRouter(Generic[_HandleT]):
         self._extract_instances: dict[str, ExtractProvider] = {}
         self._template_instances: dict[str, TemplateProvider] = {}
         self._research_instances: dict[str, ResearchProvider] = {}
+        self._answer_instances: dict[str, AnswerProvider] = {}
         self._browser_instances: dict[str, BrowserProvider] = {}
         self._browse_instances: dict[str, BrowseProvider] = {}
         # Every session this router opened that has not been seen released, so
@@ -191,7 +197,7 @@ class _BaseRouter(Generic[_HandleT]):
         # across threads, each with its own loop, and nothing awaits while it
         # is held, so it can never stall an event loop.
         self._handles_lock = threading.Lock()
-        # One lock for the six instance caches: evaluate() calls benchmark()
+        # One lock for the instance caches: evaluate() calls benchmark()
         # from worker threads, so two rows can race the same check-then-create
         # and the loser's client would never be closed. Nothing awaits while it
         # is held.
@@ -464,16 +470,13 @@ class _BaseRouter(Generic[_HandleT]):
         with self._handles_lock, suppress(ValueError):
             self._browser_handles.remove(handle)
 
-    def _all_instances(
-        self,
-    ) -> list[
-        SearchProvider | ExtractProvider | TemplateProvider | ResearchProvider | BrowserProvider | BrowseProvider
-    ]:
+    def _all_instances(self) -> list[_BaseProvider]:
         return [
             *self._instances.values(),
             *self._extract_instances.values(),
             *self._template_instances.values(),
             *self._research_instances.values(),
+            *self._answer_instances.values(),
             *self._browser_instances.values(),
             *self._browse_instances.values(),
         ]
@@ -504,7 +507,7 @@ def _async_client_holders(config: dict[str, dict[str, Any]]) -> set[str]:
     }
 
 
-class WebRouter(_BaseRouter[BrowserHandle]):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
     """Synchronous router.
 
     Example:
@@ -1080,7 +1083,7 @@ class WebRouter(_BaseRouter[BrowserHandle]):
         self.close()
 
 
-class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle]):
+class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
     """Asynchronous router.
 
     Example:

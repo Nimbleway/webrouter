@@ -405,3 +405,64 @@ def test_each_task_request_is_clamped_to_what_the_caller_has_left(monkeypatch: p
 
     assert timeouts[0] == pytest.approx(5, abs=0.5)
     assert timeouts[1] == BROWSE_HTTP_TIMEOUT
+
+
+def _answer_backend(method: str, status: int = 200, body: dict[str, Any] | None = None) -> tuple[Any, list[Any]]:
+    """An HTTP answer backend on ``method`` whose API answers ``status`` with ``body``, and the requests it got."""
+    import httpx as _httpx
+
+    from web_router.providers._http import HttpAnswerProvider
+    from web_router.types_answer import AnswerRequest, AnswerResponse
+
+    seen: list[_httpx.Request] = []
+
+    class Backend(HttpAnswerProvider):
+        name = "answer-backend"
+        base_url = "https://answer.example"
+        answer_path = "/answer"
+        http_method = method  # type: ignore[assignment]
+
+        def _build_payload(self, request: AnswerRequest) -> dict[str, str]:
+            return {"q": request.query}
+
+        def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
+            return AnswerResponse(provider=self.name, query=request.query, answer=str(payload["answer"]))
+
+    def handle(request: _httpx.Request) -> _httpx.Response:
+        seen.append(request)
+        return _httpx.Response(status, json=body if body is not None else {"answer": "yes"})
+
+    return Backend(transport=_httpx.MockTransport(handle)), seen
+
+
+def test_an_answer_backend_on_get_sends_its_payload_as_query_parameters() -> None:
+    from web_router.types_answer import AnswerRequest
+
+    provider, seen = _answer_backend("GET")
+
+    assert provider.answer(AnswerRequest(query="is it")).answer == "yes"
+    assert seen[0].method == "GET" and seen[0].url.params["q"] == "is it" and not seen[0].content
+
+
+async def test_an_answer_backend_on_post_sends_its_payload_as_a_json_body() -> None:
+    import json as _json
+
+    from web_router.types_answer import AnswerRequest
+
+    provider, seen = _answer_backend("POST")
+
+    assert provider.answer(AnswerRequest(query="is it")).answer == "yes"
+    assert (await provider.aanswer(AnswerRequest(query="is it"))).answer == "yes"
+    for request in seen:
+        assert request.method == "POST" and not request.url.params
+        assert _json.loads(request.content) == {"q": "is it"}
+
+
+@pytest.mark.parametrize("status", [400, 503])
+def test_an_answer_backends_error_status_is_a_provider_error_naming_it(status: int) -> None:
+    from web_router.types_answer import AnswerRequest
+
+    provider, _ = _answer_backend("POST", status, {"error": "refused"})
+
+    with pytest.raises(ProviderError, match=str(status)):
+        provider.answer(AnswerRequest(query="is it"))

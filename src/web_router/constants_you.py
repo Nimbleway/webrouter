@@ -1,4 +1,4 @@
-"""You.com research: its endpoints, effort mapping and status table.
+"""You.com research and answer: their endpoints, effort mapping, status table and answer fields.
 
 Kept apart from :mod:`web_router.constants`, which every other provider's
 settings share, so that file stops growing. The env var and the provider's
@@ -7,7 +7,10 @@ place in ``auto`` stay there, beside every other backend's.
 
 from __future__ import annotations
 
+import re
+
 from web_router.types import ResearchEffort, ResearchState
+from web_router.types_answer import Recency
 
 # Verified live on 2026-10-16. Research lives on api.you.com, not on the
 # ydc-index.io host search uses: there the same path answers 403. POST with
@@ -43,3 +46,42 @@ YOU_RESEARCH_STATES: dict[str, ResearchState] = {
     "failed": "failed",
     "cancelled": "cancelled",
 }
+
+# Verified live on 2026-11-01. An answer is POST /v1/answer on api.you.com,
+# the research host, answering in about two seconds with `answer` (markdown,
+# citing as `[[1, 2]]`), `citations` -- only the sources the answer cites, in
+# the order the markers count them from 1, each `{source, excerpts}` -- and
+# `results.web`, every page considered, which carries the cited pages' titles.
+# No request id. A query over 400 characters is a 422 naming the limit.
+
+YOU_ANSWER_PATH = "/v1/answer"
+
+YOU_ANSWER_PARAM_NAMES: dict[str, str] = {
+    "include_domains": "include_domains",
+    "exclude_domains": "exclude_domains",
+    "country": "country",
+}
+"""Normalized parameter -> You.com field. Each was seen to apply live: an emergency-number question answered 999 for
+GB and 911 for US.
+
+``locale`` is left unmapped: ``language`` was accepted, but ``FR`` changed neither
+the answer nor its sources, so nothing showed it doing what ``locale`` means.
+"""
+
+MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE = (
+    "You.com answers with one domain list, not both: send include_domains or exclude_domains."
+)
+"""Both domain lists answered 422 ``mutually_exclusive`` when sent together, so the pair is refused before the call."""
+
+YOU_ANSWER_FRESHNESS_FIELD = "freshness"
+
+YOU_ANSWER_RECENCY: dict[Recency, str] = {
+    "day": "day",
+    "week": "week",
+    "month": "month",
+    "year": "year",
+}
+"""You.com's own values, one for one. Live, ``week`` kept every result to the last two weeks' pages."""
+
+YOU_ANSWER_MARKER = re.compile(r"\[\[(\d+(?:,\s*\d+)*)\]\]")
+"""A citation marker in the answer: ``[[1, 2]]``, numbering ``citations`` from 1."""

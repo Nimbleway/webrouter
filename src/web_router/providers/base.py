@@ -86,6 +86,7 @@ from web_router.exceptions import (
     UnsupportedFormatError,
     UnsupportedParameterError,
     WebRouterError,
+    describe,
 )
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.providers._utils import job_deadline
@@ -156,6 +157,24 @@ class _BaseProvider(abc.ABC):
         self.api_key = api_key
         self.options = kwargs
 
+    def _wrapped(self, call: Callable[[], _ResultT], message: str, **fields: Any) -> _ResultT:
+        """Run ``call``; a router error passes through, anything else becomes a ``ProviderError`` saying ``message``."""
+        try:
+            return call()
+        except WebRouterError:
+            raise
+        except Exception as exc:
+            raise ProviderError(self.name, message.format(error=describe(exc), **fields), original=exc) from exc
+
+    async def _awrapped(self, awaitable: Awaitable[_ResultT], message: str, **fields: Any) -> _ResultT:
+        """Async counterpart of :meth:`_wrapped`."""
+        try:
+            return await awaitable
+        except WebRouterError:
+            raise
+        except Exception as exc:
+            raise ProviderError(self.name, message.format(error=describe(exc), **fields), original=exc) from exc
+
     def _reject_unmapped(self, request: NormalizedRequest) -> None:
         unmapped = request.specified_parameters() - self.supported_parameters
         if unmapped:
@@ -195,22 +214,12 @@ class SearchProvider(_BaseProvider):
     def search(self, request: SearchRequest) -> SearchResponse:
         """Validate the request, run it, and wrap any backend failure."""
         self.validate(request)
-        try:
-            return self._search(request)
-        except WebRouterError:
-            raise
-        except Exception as exc:
-            raise ProviderError(self.name, MSG_SEARCH_FAILED.format(error=exc), original=exc) from exc
+        return self._wrapped(lambda: self._search(request), MSG_SEARCH_FAILED)
 
     async def asearch(self, request: SearchRequest) -> SearchResponse:
         """Async counterpart of :meth:`search`."""
         self.validate(request)
-        try:
-            return await self._asearch(request)
-        except WebRouterError:
-            raise
-        except Exception as exc:
-            raise ProviderError(self.name, MSG_SEARCH_FAILED.format(error=exc), original=exc) from exc
+        return await self._awrapped(self._asearch(request), MSG_SEARCH_FAILED)
 
     def validate(self, request: SearchRequest) -> None:
         """Raise :class:`UnsupportedParameterError` for any option this backend does not map."""
@@ -357,7 +366,7 @@ class ExtractProvider(_BaseProvider):
         return [list(urls)] if self.batches_urls else [[url] for url in urls]
 
     def _failure(self, exc: BaseException) -> ProviderError:
-        return ProviderError(self.name, MSG_EXTRACT_FAILED.format(error=exc), original=exc)
+        return ProviderError(self.name, MSG_EXTRACT_FAILED.format(error=describe(exc)), original=exc)
 
 
 class _Collected:
@@ -511,22 +520,12 @@ class TemplateProvider(_BaseProvider):
     def run(self, request: TemplateRequest) -> TemplateResponse:
         """Validate the request, run the template, and wrap any backend failure."""
         self.validate(request)
-        try:
-            return self._run(request)
-        except WebRouterError:
-            raise
-        except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATE_FAILED.format(error=exc), original=exc) from exc
+        return self._wrapped(lambda: self._run(request), MSG_TEMPLATE_FAILED)
 
     async def arun(self, request: TemplateRequest) -> TemplateResponse:
         """Async counterpart of :meth:`run`."""
         self.validate(request)
-        try:
-            return await self._arun(request)
-        except WebRouterError:
-            raise
-        except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATE_FAILED.format(error=exc), original=exc) from exc
+        return await self._awrapped(self._arun(request), MSG_TEMPLATE_FAILED)
 
     def templates(self, *, limit: int | None = None, offset: int | None = None) -> TemplatePage:
         """List one page of this backend's templates, wrapping any backend failure.
@@ -534,39 +533,19 @@ class TemplateProvider(_BaseProvider):
         ``limit`` and ``offset`` left unset are not sent, so the backend pages
         as it would for any client of its own.
         """
-        try:
-            return self._list(limit=limit, offset=offset)
-        except WebRouterError:
-            raise
-        except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATES_FAILED.format(error=exc), original=exc) from exc
+        return self._wrapped(lambda: self._list(limit=limit, offset=offset), MSG_TEMPLATES_FAILED)
 
     async def atemplates(self, *, limit: int | None = None, offset: int | None = None) -> TemplatePage:
         """Async counterpart of :meth:`templates`."""
-        try:
-            return await self._alist(limit=limit, offset=offset)
-        except WebRouterError:
-            raise
-        except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATES_FAILED.format(error=exc), original=exc) from exc
+        return await self._awrapped(self._alist(limit=limit, offset=offset), MSG_TEMPLATES_FAILED)
 
     def template(self, name: str) -> Template:
         """Describe one template by name, wrapping any backend failure -- an unknown name included."""
-        try:
-            return self._get(name)
-        except WebRouterError:
-            raise
-        except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATE_GET_FAILED.format(name=name, error=exc), original=exc) from exc
+        return self._wrapped(lambda: self._get(name), MSG_TEMPLATE_GET_FAILED, name=name)
 
     async def atemplate(self, name: str) -> Template:
         """Async counterpart of :meth:`template`."""
-        try:
-            return await self._aget(name)
-        except WebRouterError:
-            raise
-        except Exception as exc:
-            raise ProviderError(self.name, MSG_TEMPLATE_GET_FAILED.format(name=name, error=exc), original=exc) from exc
+        return await self._awrapped(self._aget(name), MSG_TEMPLATE_GET_FAILED, name=name)
 
     def validate(self, request: TemplateRequest) -> None:
         """Raise for any option this backend does not map, or format it cannot return beside the record."""
@@ -794,20 +773,10 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
     # -- Helpers -------------------------------------------------------------
 
     def _guarded(self, call: Callable[[], _ResultT]) -> _ResultT:
-        try:
-            return call()
-        except WebRouterError:
-            raise
-        except Exception as exc:
-            raise ProviderError(self.name, self._failed_message.format(error=exc), original=exc) from exc
+        return self._wrapped(call, self._failed_message)
 
     async def _aguarded(self, awaitable: Awaitable[_ResultT]) -> _ResultT:
-        try:
-            return await awaitable
-        except WebRouterError:
-            raise
-        except Exception as exc:
-            raise ProviderError(self.name, self._failed_message.format(error=exc), original=exc) from exc
+        return await self._awrapped(awaitable, self._failed_message)
 
 
 class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
@@ -1504,7 +1473,7 @@ class BrowserProvider(_BaseProvider):
             return False
 
     def _failure(self, exc: Exception) -> ProviderError:
-        return ProviderError(self.name, MSG_BROWSER_FAILED.format(error=exc), original=exc)
+        return ProviderError(self.name, MSG_BROWSER_FAILED.format(error=describe(exc)), original=exc)
 
     def _guarded(self, call: Callable[[], _ResultT]) -> _ResultT:
         try:
@@ -1922,3 +1891,6 @@ def _is_timeout(error: ProviderError) -> bool:
             return True
         current = current.__cause__ or current.__context__
     return False
+
+
+from web_router.providers.answer import *  # noqa: E402, F403 -- answer()'s base, re-exported

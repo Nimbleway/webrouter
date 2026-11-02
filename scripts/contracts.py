@@ -17,6 +17,7 @@ import os
 import sys
 import typing
 from collections.abc import Callable, Iterable, Iterator
+from datetime import date
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin
 
@@ -24,6 +25,7 @@ from pydantic import BaseModel, ValidationError
 
 from web_router import registry
 from web_router.constants import (
+    ANSWER_ENV_BY_PROVIDER,
     AUTO_EXTRACT_KEYLESS,
     AUTO_KEYLESS,
     BROWSE_ENV_BY_PROVIDER,
@@ -34,6 +36,7 @@ from web_router.constants import (
     TEMPLATE_ENV_BY_PROVIDER,
 )
 from web_router.exceptions import WebRouterError
+from web_router.providers._clock import pinned_today
 from web_router.types import (
     BrowseRequest,
     BrowserRequest,
@@ -43,6 +46,7 @@ from web_router.types import (
     TemplateRequest,
     Viewport,
 )
+from web_router.types_answer import AnswerRequest
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACTS_DIR = ROOT / "contracts"
@@ -51,6 +55,9 @@ HAND_FIELDS = ("source", "verified", "vendor_options")
 
 PROBE_KEY = "contract-probe-key"
 """The throwaway credential; checked to appear in no written contract."""
+
+PROBE_TODAY = date(2026, 1, 15)
+"""The date a request counted back from today is built on, so a contract's dates never go stale."""
 
 PROBE_ENV = {
     "BRIGHTDATA_ZONE": "contract-probe-zone",
@@ -117,6 +124,14 @@ METHODS: dict[str, _Method] = {
         registry.get_research_provider_class,
         lambda **kw: ResearchRequest(query="probe query", **kw),
         RESEARCH_ENV_BY_PROVIDER,
+        (),
+    ),
+    "answer": _Method(
+        AnswerRequest,
+        registry.available_answer_providers,
+        registry.get_answer_provider_class,
+        lambda **kw: AnswerRequest(query="probe query", **kw),
+        ANSWER_ENV_BY_PROVIDER,
         (),
     ),
     "browser": _Method(
@@ -248,7 +263,7 @@ def _transport(cls: type) -> dict[str, Any]:
         raise SystemExit(f"{cls.__qualname__}: no endpoint; declare it as a *_path class attribute")
     transport: dict[str, Any] = {"kind": "http", "base_url": cls.base_url, "paths": paths}
     # The class verb is what a search or an extract is sent with; other calls choose theirs.
-    if "search_path" in paths or "extract_path" in paths:
+    if "search_path" in paths or "extract_path" in paths or "answer_path" in paths:
         transport["method"] = cls.http_method
     transport["auth_header"] = cls.api_key_header if cls.env_api_key else None
     return transport
@@ -269,25 +284,26 @@ def generate(method: str, name: str) -> dict[str, Any]:
     cls = spec.get_class(name)
     provider = cls(api_key=PROBE_KEY)
     try:
-        options = _options(spec.model)
-        contract: dict[str, Any] = {
-            "provider": name,
-            "method": method,
-            "class": f"{cls.__module__}.{cls.__qualname__}",
-            "transport": _transport(cls),
-            "credentials": _credentials(spec, name),
-            "keyless": _keyless(spec, name),
-            "always_sent": dict(sorted(_payload(provider, method, spec.request()).items())),
-            "options": {
-                option: {
-                    _label(option, value): _probe(provider, method, option, value)
-                    for value in _values(spec.model, option)
-                }
-                for option in options
-                if option in cls.supported_parameters
-            },
-            "not_mapped": sorted(option for option in options if option not in cls.supported_parameters),
-        }
+        with pinned_today(PROBE_TODAY):
+            options = _options(spec.model)
+            contract: dict[str, Any] = {
+                "provider": name,
+                "method": method,
+                "class": f"{cls.__module__}.{cls.__qualname__}",
+                "transport": _transport(cls),
+                "credentials": _credentials(spec, name),
+                "keyless": _keyless(spec, name),
+                "always_sent": dict(sorted(_payload(provider, method, spec.request()).items())),
+                "options": {
+                    option: {
+                        _label(option, value): _probe(provider, method, option, value)
+                        for value in _values(spec.model, option)
+                    }
+                    for option in options
+                    if option in cls.supported_parameters
+                },
+                "not_mapped": sorted(option for option in options if option not in cls.supported_parameters),
+            }
     finally:
         provider.close()
     if method == "extract":

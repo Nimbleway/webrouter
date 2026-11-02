@@ -1,9 +1,8 @@
-"""Parallel providers, over the Search API and the Task API.
+"""Parallel providers, over the Search API, the Task API and the Chat API.
 
 Talks to the REST endpoints directly rather than through ``parallel-web``:
 web-router uses a handful of fields of these APIs, which an SDK dependency would
-not simplify. Install with the ``search`` extra or
-the ``research`` extra. Reads ``PARALLEL_API_KEY`` unless a key
+not simplify. Install with the ``search``, ``research`` or ``answer`` extra. Reads ``PARALLEL_API_KEY`` unless a key
 is passed explicitly.
 
 Search is slim by design: only ``max_results`` is mapped. Everything else is
@@ -31,7 +30,17 @@ from web_router.constants import (
     PARALLEL_TASK_STATUS_PATH,
     PROVIDER_PARALLEL,
 )
-from web_router.providers._http import HttpResearchProvider, HttpSearchProvider
+from web_router.constants_parallel import (
+    PARALLEL_ANSWER_API_KEY_HEADER,
+    PARALLEL_ANSWER_API_KEY_PREFIX,
+    PARALLEL_ANSWER_BASIS_EXTRA,
+    PARALLEL_ANSWER_MODEL,
+    PARALLEL_ANSWER_PATH,
+    PARALLEL_ANSWER_ROLE,
+    PARALLEL_ANSWER_TRUNCATED,
+    PARALLEL_ANSWER_WHOLE_FIELD,
+)
+from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
 from web_router.providers._utils import as_snippet, build_payload
 from web_router.types import (
     Citation,
@@ -43,9 +52,44 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
 )
+from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "excerpts", "publish_date"})
 _MAPPED_BASIS_FIELDS = frozenset({"field", "citations"})
+
+
+def _citations_from_basis(
+    basis: list[dict[str, Any]], *, whole_field: str | None = None, basis_extra: frozenset[str] | None = None
+) -> list[Citation]:
+    """Flatten Parallel's per-field basis into one citation per cited source.
+
+    Each basis entry says which output field it supports and why; what it
+    carries besides belongs to the whole entry rather than to any one source,
+    so every citation drawn from it carries it in ``extra`` -- every unmapped
+    key, or only ``basis_extra``. An entry for ``whole_field`` backs the whole
+    output, so its citations have ``field=None``. Empty excerpts are dropped.
+    """
+    return [
+        Citation(
+            url=cited.get("url", ""),
+            title=cited.get("title") or "",
+            snippet="\n\n".join(excerpt for excerpt in cited.get("excerpts") or [] if excerpt),
+            field=None if entry.get("field") == whole_field else entry.get("field"),
+            extra={
+                **{
+                    key: value
+                    for key, value in entry.items()
+                    if key not in _MAPPED_BASIS_FIELDS
+                    and (basis_extra is None or (key in basis_extra and value is not None))
+                },
+                **{key: value for key, value in cited.items() if key not in _MAPPED_CITATION_FIELDS},
+            },
+        )
+        for entry in basis
+        for cited in entry.get("citations") or []
+    ]
+
+
 _MAPPED_CITATION_FIELDS = frozenset({"url", "title", "excerpts"})
 
 
@@ -214,17 +258,52 @@ class ParallelResearchProvider(HttpResearchProvider):
         reasoning and confidence belong to the whole entry rather than to any
         one source, so every citation drawn from it carries them.
         """
-        return [
-            Citation(
-                url=cited.get("url", ""),
-                title=cited.get("title") or "",
-                snippet="\n\n".join(excerpt for excerpt in cited.get("excerpts") or [] if excerpt),
-                field=basis.get("field"),
-                extra={
-                    **{key: value for key, value in basis.items() if key not in _MAPPED_BASIS_FIELDS},
-                    **{key: value for key, value in cited.items() if key not in _MAPPED_CITATION_FIELDS},
-                },
-            )
-            for basis in output.get("basis") or []
-            for cited in basis.get("citations") or []
-        ]
+        return _citations_from_basis(output.get("basis") or [])
+
+
+class ParallelAnswerProvider(HttpAnswerProvider):
+    """Answers a question through Parallel's Chat API (beta), with the ``lite`` model.
+
+    One ``POST /v1beta/chat/completions``: the answer is the message content,
+    and its sources are the top-level ``basis`` -- per answer field, the
+    citations behind it with their excerpts, a ``reasoning`` and a
+    ``confidence``. A citation backing the answer as a whole has
+    ``field=None``; the basis's ``confidence`` rides in its ``extra``, and the
+    reasoning stays in ``raw``. A ``finish_reason`` of ``length`` is
+    ``partial``.
+
+    The Chat API takes no source filters, so every option is refused. Another
+    model goes through ``provider_options``; ``speed`` returns no ``basis``.
+    """
+
+    name: ClassVar[str] = PROVIDER_PARALLEL
+    supported_parameters: ClassVar[frozenset[str]] = frozenset()
+
+    base_url: ClassVar[str] = PARALLEL_BASE_URL
+    answer_path: ClassVar[str] = PARALLEL_ANSWER_PATH
+    env_api_key: ClassVar[str] = ENV_PARALLEL_API_KEY
+    api_key_header: ClassVar[str] = PARALLEL_ANSWER_API_KEY_HEADER
+    api_key_prefix: ClassVar[str] = PARALLEL_ANSWER_API_KEY_PREFIX
+
+    def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
+        return build_payload(
+            request,
+            model=PARALLEL_ANSWER_MODEL,
+            messages=[{"role": PARALLEL_ANSWER_ROLE, "content": request.query}],
+        )
+
+    def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
+        choice = (payload.get("choices") or [{}])[0]
+        return AnswerResponse(
+            provider=self.name,
+            query=request.query,
+            answer=(choice.get("message") or {}).get("content") or "",
+            citations=_citations_from_basis(
+                payload.get("basis") or [],
+                whole_field=PARALLEL_ANSWER_WHOLE_FIELD,
+                basis_extra=PARALLEL_ANSWER_BASIS_EXTRA,
+            ),
+            outcome="partial" if choice.get("finish_reason") == PARALLEL_ANSWER_TRUNCATED else "complete",
+            request_id=payload.get("id"),
+            raw=[payload],
+        )

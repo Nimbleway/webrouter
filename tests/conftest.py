@@ -11,6 +11,7 @@ import pytest
 
 from web_router.exceptions import ProviderError
 from web_router.providers.base import (
+    AnswerProvider,
     BrowseProvider,
     BrowserProvider,
     ExtractProvider,
@@ -19,12 +20,14 @@ from web_router.providers.base import (
     TemplateProvider,
 )
 from web_router.registry import (
+    register_answer_provider,
     register_browse_provider,
     register_browser_provider,
     register_extract_provider,
     register_provider,
     register_research_provider,
     register_template_provider,
+    unregister_answer_provider,
     unregister_browse_provider,
     unregister_browser_provider,
     unregister_extract_provider,
@@ -64,6 +67,7 @@ from web_router.types import (
     TemplateRequest,
     TemplateResponse,
 )
+from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
 
 # Load .env before collection, so the integration tests' skipif conditions see
 # the keys. Unit tests never read them. Absent in CI, which is the point: no
@@ -348,6 +352,49 @@ def fake_research_provider() -> Any:
     register_research_provider("fake", FakeResearchProvider)
     yield FakeResearchProvider
     unregister_research_provider("fake")
+
+
+class FakeAnswerProvider(AnswerProvider):
+    """An in-memory answer provider so router tests never touch the network."""
+
+    name = "fake"
+    supported_parameters = ANSWER_PARAMETERS
+
+    answer_text = "the answer"
+    raises: Exception | None = None
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.requests: list[AnswerRequest] = []
+        self.closed = False
+
+    def _answer(self, request: AnswerRequest) -> AnswerResponse:
+        self.requests.append(request)
+        if self.raises is not None:
+            raise self.raises
+        return AnswerResponse(
+            provider=self.name,
+            query=request.query,
+            answer=self.answer_text,
+            citations=[Citation(url="https://example.com", title="Example")],
+            raw=[{"answer": self.answer_text}],
+        )
+
+    async def _aanswer(self, request: AnswerRequest) -> AnswerResponse:
+        return self._answer(request)
+
+    def close(self) -> None:
+        self.closed = True
+
+    async def aclose(self) -> None:
+        self.closed = True
+
+
+@pytest.fixture
+def fake_answer_provider() -> Any:
+    register_answer_provider("fake", FakeAnswerProvider)
+    yield FakeAnswerProvider
+    unregister_answer_provider("fake")
 
 
 FAKE_CDP_URL = "wss://connect.example.test/?apiKey=SEKRIT-cdp-0123456789&sessionId={session_id}"
