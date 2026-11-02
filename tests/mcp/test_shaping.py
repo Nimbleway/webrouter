@@ -415,6 +415,23 @@ def test_a_listing_row_says_what_a_run_must_pass_without_the_schemas() -> None:
     assert empty["required_inputs"] == [], "an empty schema is a published one that requires nothing"
 
 
+def test_a_listing_row_shows_the_first_sample_that_names_an_input() -> None:
+    samples = [TemplateSample(output={"title": "Widget"}), TemplateSample(input={"url": "https://example.com/p/1"})]
+    fixed_page = [TemplateSample(output={"title": "Widget"})]
+    page = TemplatePage(
+        provider="fake",
+        templates=[
+            Template(provider="fake", name="keyed", input_schema={"required": ["url"]}, samples=samples),
+            Template(provider="fake", name="fixed", input_schema={}, samples=fixed_page),
+        ],
+    )
+
+    keyed, fixed = shape_templates(page, "templates-0001", budget=20_000)["templates"]
+
+    assert keyed["sample_inputs"] == {"url": "https://example.com/p/1"}, "not the input-less sample before it"
+    assert fixed["sample_inputs"] == {}, "a fixed page's sample takes no inputs, and says so"
+
+
 @pytest.mark.parametrize("rows", [1, 5])
 def test_a_sample_input_too_large_for_the_listing_is_left_out_whole(rows: int) -> None:
     huge = TemplateSample(input={"url": "https://example.com/" + "x" * 24_000})

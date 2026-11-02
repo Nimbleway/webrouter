@@ -348,15 +348,18 @@ def _template_listing_row(template: Template) -> dict[str, Any]:
 
     ``required_inputs`` is the schema's own ``required`` list, so it is empty
     for a template whose inputs are all optional and ``None`` for one with
-    no published schema; ``sample_inputs`` is the first recorded input as the
-    backend published it, never one made up here.
+    no published schema; ``sample_inputs`` is the first recorded input that
+    names any, as the backend published it, never one made up here.
     """
     schema = template.input_schema
     required = schema.get("required") if isinstance(schema, dict) else None
     return {
         **_template_row(template),
         "required_inputs": list(required) if isinstance(required, list) else ([] if isinstance(schema, dict) else None),
-        "sample_inputs": template.samples[0].input if template.samples else None,
+        "sample_inputs": next(
+            (sample.input for sample in template.samples if sample.input),
+            template.samples[0].input if template.samples else None,
+        ),
     }
 
 
