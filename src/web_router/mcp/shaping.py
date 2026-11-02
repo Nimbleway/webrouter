@@ -355,7 +355,7 @@ def _template_listing_row(template: Template) -> dict[str, Any]:
     required = schema.get("required") if isinstance(schema, dict) else None
     return {
         **_template_row(template),
-        "required_inputs": list(required) if isinstance(required, list) else ([] if schema else None),
+        "required_inputs": list(required) if isinstance(required, list) else ([] if isinstance(schema, dict) else None),
         "sample_inputs": template.samples[0].input if template.samples else None,
     }
 

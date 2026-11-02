@@ -400,17 +400,19 @@ def test_a_listing_row_says_what_a_run_must_pass_without_the_schemas() -> None:
             Template(provider="fake", name="keyed", input_schema=schema, samples=[sample], published=True),
             Template(provider="fake", name="optional", input_schema={"type": "object"}, published=True),
             Template(provider="fake", name="draft"),
+            Template(provider="fake", name="empty", input_schema={}, published=True),
         ],
     )
 
     shaped = shape_templates(page, "templates-0001", budget=20_000)
 
-    keyed, optional, draft = shaped["templates"]
+    keyed, optional, draft, empty = shaped["templates"]
     assert keyed["required_inputs"] == ["asin", "zip_code"]
     assert keyed["sample_inputs"] == {"asin": "B000000000", "zip_code": "10001"}
     assert "input_schema" not in keyed and "samples" not in keyed, "the schemas and the records are `template`'s"
     assert optional["required_inputs"] == [] and optional["sample_inputs"] is None
     assert draft["required_inputs"] is None, "no published schema, so nothing to read the inputs from"
+    assert empty["required_inputs"] == [], "an empty schema is a published one that requires nothing"
 
 
 @pytest.mark.parametrize("rows", [1, 5])
