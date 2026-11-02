@@ -22,7 +22,9 @@ Choosing a tool:
   reaching for anything below.
 - answer returns a backend's own short written answer to one question, with
   its sources, in a few seconds and for one billed call. Use it for a closed
-  question; check the answer against its sources when it matters.
+  question; check the answer against its sources when it matters. It has no
+  automatic choice of backend yet: with more than one answer backend
+  configured, name one with provider.
 - research and browse run for minutes and BILL FOR THE RUN. Start one only
   when the question truly needs it, say so before you do, and never start a
   second run while the first is going — poll research_status or browse_status

@@ -351,11 +351,16 @@ def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> d
 
 
 def shape_answer(response: AnswerResponse, handle: str, *, budget: int) -> dict[str, Any]:
-    """A written answer and its sources, cut to fit -- the answer first, with its own share of the budget."""
+    """A written answer and its sources, cut to fit -- the answer first, with its own share of the budget.
+
+    The sources the answer cites (``field`` set) come before the ones it only
+    read, so a cut, which drops from the end, drops an uncited page before a cited one.
+    """
     answer = truncate(response.answer, int(budget * MCP_ANSWER_SHARE)) if response.answer else response.answer
+    cited_first = sorted(response.citations, key=lambda citation: citation.field is None)
     citations = [
         {"url": citation.url, "title": citation.title, "field": citation.field, "snippet": citation.snippet}
-        for citation in response.citations
+        for citation in cited_first
     ]
     payload: dict[str, Any] = {
         "provider": response.provider,

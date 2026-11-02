@@ -876,7 +876,7 @@ async def test_answer_round_trip_and_fetch_raw(tools: WebRouterTools, fake_answe
 
 
 def test_answer_needs_no_provider_argument(tools: WebRouterTools, no_keys: None) -> None:
-    """With one answer backend configured the router uses it, so the model need not name it."""
+    """`provider` is not required: the router resolves it (one configured backend is used; see test_client)."""
     assert _tool(tools, MCP_TOOL_ANSWER).input_schema["required"] == ["query"]
 
 
