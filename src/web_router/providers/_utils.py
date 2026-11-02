@@ -7,7 +7,6 @@ import time
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
-from datetime import date
 from typing import Any
 
 from pydantic import BaseModel
@@ -321,29 +320,6 @@ def job_budget(default: float) -> float:
 # wrappers, so there is one budget whichever name a provider reads it by.
 research_deadline = job_deadline
 research_budget = job_budget
-
-
-_PINNED_TODAY: ContextVar[date | None] = ContextVar("web_router_pinned_today", default=None)
-
-
-def today() -> date:
-    """Today's date, for an option counted back from it -- ``recency`` on a backend that takes a start date.
-
-    Read through here rather than ``date.today()`` so :func:`pinned_today` can
-    fix it: a provider contract records the dates a request sends, and must not
-    go stale overnight.
-    """
-    return _PINNED_TODAY.get() or date.today()
-
-
-@contextmanager
-def pinned_today(day: date) -> Iterator[None]:
-    """Make :func:`today` return ``day`` inside the block."""
-    token = _PINNED_TODAY.set(day)
-    try:
-        yield
-    finally:
-        _PINNED_TODAY.reset(token)
 
 
 def cited_marker(answer: str, number: object) -> str | None:

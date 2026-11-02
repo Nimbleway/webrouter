@@ -36,7 +36,7 @@ from web_router.constants import (
     TEMPLATE_ENV_BY_PROVIDER,
 )
 from web_router.exceptions import WebRouterError
-from web_router.providers._utils import pinned_today
+from web_router.providers._clock import pinned_today
 from web_router.types import (
     BrowseRequest,
     BrowserRequest,

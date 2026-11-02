@@ -54,13 +54,14 @@ from web_router.constants_linkup import (
     LINKUP_ANSWER_PARAM_NAMES,
     LINKUP_ANSWER_RECENCY_DAYS,
 )
+from web_router.providers._clock import today
 from web_router.providers._http import (
     HttpAnswerProvider,
     HttpExtractProvider,
     HttpResearchProvider,
     HttpSearchProvider,
 )
-from web_router.providers._utils import as_snippet, build_payload, cited_marker, error_detail, today
+from web_router.providers._utils import as_snippet, build_payload, cited_marker, error_detail
 from web_router.types import (
     EXTRACT_PARAMETERS,
     Citation,
