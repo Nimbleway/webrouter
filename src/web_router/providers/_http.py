@@ -42,7 +42,7 @@ import abc
 import contextlib
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Generic, Literal, TypeVar
 from urllib.parse import quote
 
 import httpx
@@ -84,6 +84,9 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
 )
+
+_RequestT = TypeVar("_RequestT", SearchRequest, AnswerRequest)
+_ResponseT = TypeVar("_ResponseT", SearchResponse, AnswerResponse)
 
 
 class _HttpProvider(_BaseProvider):
@@ -223,64 +226,55 @@ class _HttpProvider(_BaseProvider):
         self.close()
 
 
-class HttpSearchProvider(_HttpProvider, SearchProvider):
-    """A search backend over a plain HTTP endpoint."""
+class _HttpOneCallProvider(_HttpProvider, Generic[_RequestT, _ResponseT]):
+    """A backend that answers in one HTTP call; ``path_attribute`` names the method's own path attribute."""
 
-    search_path: ClassVar[str]
+    path_attribute: ClassVar[str]
 
     # -- What subclasses implement -------------------------------------------
 
     @abc.abstractmethod
-    def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
+    def _build_payload(self, request: _RequestT) -> dict[str, Any]:
         """Translate a normalized request into this API's request body or query."""
 
     @abc.abstractmethod
-    def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
+    def _to_response(self, request: _RequestT, payload: dict[str, Any]) -> _ResponseT:
         """Translate this API's response into a normalized one."""
 
     # -- The HTTP plumbing ---------------------------------------------------
 
-    def _search(self, request: SearchRequest) -> SearchResponse:
-        response = self._client.request(self.http_method, self.search_path, **self._call_kwargs(request))
+    def _call(self, request: _RequestT) -> _ResponseT:
+        path = getattr(self, self.path_attribute)
+        return self._to_response(
+            request, self._payload(self._client.request(self.http_method, path, **self._call_kwargs(request)))
+        )
+
+    async def _acall(self, request: _RequestT) -> _ResponseT:
+        path = getattr(self, self.path_attribute)
+        response = await self._async_client.request(self.http_method, path, **self._call_kwargs(request))
         return self._to_response(request, self._payload(response))
 
-    async def _asearch(self, request: SearchRequest) -> SearchResponse:
-        response = await self._async_client.request(self.http_method, self.search_path, **self._call_kwargs(request))
-        return self._to_response(request, self._payload(response))
-
-    def _call_kwargs(self, request: SearchRequest) -> dict[str, Any]:
+    def _call_kwargs(self, request: _RequestT) -> dict[str, Any]:
         payload = self._build_payload(request)
         return {"json": payload} if self.http_method == "POST" else {"params": payload}
 
 
-class HttpAnswerProvider(_HttpProvider, AnswerProvider):
-    """An answer backend over a plain HTTP endpoint: one POST, one answer."""
+class HttpSearchProvider(_HttpOneCallProvider[SearchRequest, SearchResponse], SearchProvider):
+    """A search backend over a plain HTTP endpoint."""
+
+    search_path: ClassVar[str]
+    path_attribute = "search_path"
+    _search = _HttpOneCallProvider._call
+    _asearch = _HttpOneCallProvider._acall
+
+
+class HttpAnswerProvider(_HttpOneCallProvider[AnswerRequest, AnswerResponse], AnswerProvider):
+    """An answer backend over a plain HTTP endpoint: one call, one answer."""
 
     answer_path: ClassVar[str]
-
-    # -- What subclasses implement -------------------------------------------
-
-    @abc.abstractmethod
-    def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
-        """Translate a normalized request into this API's request body."""
-
-    @abc.abstractmethod
-    def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
-        """Translate this API's response into a normalized one."""
-
-    # -- The HTTP plumbing ---------------------------------------------------
-
-    def _answer(self, request: AnswerRequest) -> AnswerResponse:
-        response = self._client.request(self.http_method, self.answer_path, **self._call_kwargs(request))
-        return self._to_response(request, self._payload(response))
-
-    async def _aanswer(self, request: AnswerRequest) -> AnswerResponse:
-        response = await self._async_client.request(self.http_method, self.answer_path, **self._call_kwargs(request))
-        return self._to_response(request, self._payload(response))
-
-    def _call_kwargs(self, request: AnswerRequest) -> dict[str, Any]:
-        payload = self._build_payload(request)
-        return {"json": payload} if self.http_method == "POST" else {"params": payload}
+    path_attribute = "answer_path"
+    _answer = _HttpOneCallProvider._call
+    _aanswer = _HttpOneCallProvider._acall
 
 
 class HttpExtractProvider(_HttpProvider, ExtractProvider):
