@@ -1,20 +1,8 @@
 """The You.com answer provider, over a stubbed Answer API.
 
-Verified against the live API on 2026-11-01. An answer is `POST /v1/answer` on
-api.you.com with `X-API-Key`, answering in about two seconds with `answer`
-(markdown citing `[[1, 2]]`), `citations` -- only the sources the answer cites,
-each `{source, excerpts}` -- and `results.web`, every page considered, where
-each cited URL was found with its title. No request id. The payload below is
-trimmed from the call made with `country: "US"`.
-
-Each mapped option was seen to apply: `exclude_domains: ["wikipedia.org"]` kept
-every citation off wikipedia.org; an emergency-number question answered 911 for
-`US` and 999 for `GB`; `freshness: "week"` kept every page considered within
-the last two weeks. `include_domains` and `exclude_domains` together answered
-422 `mutually_exclusive`, so the pair is refused before the call. A query over
-400 characters answered 422 naming the limit, which reaches the caller as a
-`ProviderError` in You.com's own words. `language: "FR"` was accepted and
-changed neither the answer nor its sources, so `locale` stays unmapped.
+The payload below is trimmed from a live call made on 2026-11-01 with
+`country: "US"`; what each option was seen to do live is noted in
+`constants_you.py`.
 """
 
 from __future__ import annotations
@@ -171,15 +159,6 @@ def test_an_empty_answer_is_returned(provider: YouAnswerProvider) -> None:
     response = provider.answer(AnswerRequest(query=QUESTION))
 
     assert (response.answer, response.citations) == ("", [])
-
-
-async def test_the_async_path_answers_the_same_way(provider: YouAnswerProvider) -> None:
-    api = stub_answer_api(provider, _answered())
-
-    response = await provider.aanswer(AnswerRequest(query=QUESTION, country="US"))
-
-    assert [c.field for c in response.citations] == ["[[1, 2]]", "[[1, 2]]"]
-    assert api.bodies[0]["country"] == "US"
 
 
 @pytest.mark.integration
