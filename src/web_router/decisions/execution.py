@@ -51,13 +51,15 @@ def classify(
     output_schema: JsonSchema | None = None,
 ) -> Route:
     """The labels step, then Route assembly: see :meth:`~web_router.WebRouter.classify`."""
-    if router.decider is None:
+    # WebRouter no longer takes a decider; this path stays for a router that carries one.
+    decider = getattr(router, "decider", None)
+    if decider is None:
         raise ConfigurationError(MSG_ROUTE_NO_DECIDER)
     given = [urls] if isinstance(urls, str) else list(urls or [])
     found = given or urls_in(query)
     chains = _default_chains(router)
     labels, values, fallback, latency = _labels(
-        router.decider, query, given=bool(given), output_schema=output_schema, passthrough=router._decider_passthrough
+        decider, query, given=bool(given), output_schema=output_schema, passthrough=passthrough_types(decider)
     )
     method, chain, reason = route_from_labels(query, values, chains, urls=found, output_schema=output_schema)
     # The raw tool label, before an unsure one took its default, so the advice can say where it leaned.

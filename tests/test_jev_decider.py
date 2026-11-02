@@ -10,21 +10,9 @@ from typing import Any
 import httpx
 import pytest
 
-from web_router import WebRouter
 from web_router.constants_decisions import ROUTE_QUESTIONS
 from web_router.decisions import Answer, JevDecider, create_decider
-from web_router.exceptions import ConfigurationError, ProviderError, ProviderNotInstalledError
-
-
-def test_jev_by_name_is_still_built_owned_and_keyed(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
-    with pytest.raises(ConfigurationError, match="TYPESAFE_API_KEY"):
-        WebRouter(decider="jev")
-    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
-    jev = WebRouter(decider="jev")
-    assert isinstance(jev.decider, JevDecider)
-    jev.close()
-    assert jev.decider._client.is_closed
+from web_router.exceptions import ProviderError, ProviderNotInstalledError
 
 
 def test_a_missing_dependency_is_reported_as_an_extra_to_install(monkeypatch: pytest.MonkeyPatch) -> None:
