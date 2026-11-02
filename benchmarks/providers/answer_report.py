@@ -167,8 +167,9 @@ def _overall_table(overall: dict[str, Any], providers: list[str]) -> list[str]:
     out.append("")
     if any(overall[p]["leaked"] for p in providers):
         out.append(
-            "*Leaked* rows cite one of the set's own pages (the dataset, its paper or a copy), so their answer may "
-            "come from the answer key; they are not graded and not in accuracy.\n"
+            "*Leaked* rows have one of the set's own pages (the dataset, its paper or a copy) among their sources, "
+            "cited or only read, so their answer may come from the answer key; they are not graded and not in "
+            "accuracy.\n"
         )
     return out
 
