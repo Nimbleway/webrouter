@@ -142,6 +142,7 @@ from web_router.types import (
     TemplatePage,
     TemplateRequest,
     TemplateResponse,
+    TemplateSample,
     Viewport,
 )
 
@@ -218,6 +219,7 @@ __all__ = [
     "TemplateProvider",
     "TemplateRequest",
     "TemplateResponse",
+    "TemplateSample",
     "UnsupportedFormatError",
     "UnsupportedParameterError",
     "Viewport",
