@@ -8,6 +8,7 @@
     "paths": {
       "answer_path": "/v1beta/chat/completions"
     },
+    "method": "POST",
     "auth_header": "Authorization"
   },
   "credentials": [

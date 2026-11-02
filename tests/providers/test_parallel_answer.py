@@ -15,13 +15,12 @@ refused. A `finish_reason` of `length` was not seen live; it is read as
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any
 
-import httpx
 import pytest
 
+from tests.providers._answer_stub import stub_answer_api
 from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.parallel import ParallelAnswerProvider
 from web_router.types import AnswerRequest
@@ -61,28 +60,6 @@ def _answered(finish_reason: str = "stop", text: str = TEXT, field: str = "answe
     }
 
 
-class _Api:
-    def __init__(self, payload: dict[str, Any]) -> None:
-        self.payload = payload
-        self.calls: list[tuple[str, str]] = []
-        self.bodies: list[dict[str, Any]] = []
-        self.headers: list[httpx.Headers] = []
-
-    def handle(self, request: httpx.Request) -> httpx.Response:
-        self.calls.append((request.method, request.url.path))
-        self.bodies.append(json.loads(request.content or b"{}"))
-        self.headers.append(request.headers)
-        return httpx.Response(200, json=self.payload)
-
-
-def _stub(provider: ParallelAnswerProvider, payload: dict[str, Any]) -> _Api:
-    api = _Api(payload)
-    transport = httpx.MockTransport(api.handle)
-    provider._sync = httpx.Client(**provider._client_kwargs, transport=transport)
-    provider._async = httpx.AsyncClient(**provider._client_kwargs, transport=transport)
-    return api
-
-
 @pytest.fixture
 def provider(monkeypatch: pytest.MonkeyPatch) -> ParallelAnswerProvider:
     monkeypatch.setenv("PARALLEL_API_KEY", "test-key")
@@ -90,7 +67,7 @@ def provider(monkeypatch: pytest.MonkeyPatch) -> ParallelAnswerProvider:
 
 
 def test_an_answer_is_one_chat_completion_with_the_lite_model(provider: ParallelAnswerProvider) -> None:
-    api = _stub(provider, _answered())
+    api = stub_answer_api(provider, _answered())
 
     provider.answer(AnswerRequest(query=QUESTION))
 
@@ -100,7 +77,7 @@ def test_an_answer_is_one_chat_completion_with_the_lite_model(provider: Parallel
 
 
 def test_the_answer_and_its_basis_are_normalized(provider: ParallelAnswerProvider) -> None:
-    _stub(provider, _answered())
+    stub_answer_api(provider, _answered())
 
     response = provider.answer(AnswerRequest(query=QUESTION))
 
@@ -119,13 +96,13 @@ def test_the_answer_and_its_basis_are_normalized(provider: ParallelAnswerProvide
 
 
 def test_a_basis_for_another_field_names_it(provider: ParallelAnswerProvider) -> None:
-    _stub(provider, _answered(field="score"))
+    stub_answer_api(provider, _answered(field="score"))
 
     assert provider.answer(AnswerRequest(query=QUESTION)).citations[0].field == "score"
 
 
 def test_a_generation_cut_short_is_partial(provider: ParallelAnswerProvider) -> None:
-    _stub(provider, _answered(finish_reason="length"))
+    stub_answer_api(provider, _answered(finish_reason="length"))
 
     assert provider.answer(AnswerRequest(query=QUESTION)).outcome == "partial"
 
@@ -143,7 +120,7 @@ def test_a_generation_cut_short_is_partial(provider: ParallelAnswerProvider) -> 
 def test_every_option_is_refused_since_the_chat_api_takes_no_filter(
     provider: ParallelAnswerProvider, option: dict[str, Any]
 ) -> None:
-    api = _stub(provider, _answered())
+    api = stub_answer_api(provider, _answered())
 
     with pytest.raises(UnsupportedParameterError, match=next(iter(option))):
         provider.answer(AnswerRequest(query=QUESTION, **option))
@@ -152,7 +129,7 @@ def test_every_option_is_refused_since_the_chat_api_takes_no_filter(
 
 
 def test_another_model_goes_through_provider_options(provider: ParallelAnswerProvider) -> None:
-    api = _stub(provider, _answered())
+    api = stub_answer_api(provider, _answered())
 
     provider.answer(AnswerRequest(query=QUESTION, provider_options={"model": "base"}))
 
@@ -160,7 +137,9 @@ def test_another_model_goes_through_provider_options(provider: ParallelAnswerPro
 
 
 def test_an_empty_answer_is_returned(provider: ParallelAnswerProvider) -> None:
-    _stub(provider, {"id": "x", "choices": [{"finish_reason": "stop", "message": {"content": None}}], "basis": []})
+    stub_answer_api(
+        provider, {"id": "x", "choices": [{"finish_reason": "stop", "message": {"content": None}}], "basis": []}
+    )
 
     response = provider.answer(AnswerRequest(query=QUESTION))
 
@@ -168,7 +147,7 @@ def test_an_empty_answer_is_returned(provider: ParallelAnswerProvider) -> None:
 
 
 async def test_the_async_path_answers_the_same_way(provider: ParallelAnswerProvider) -> None:
-    _stub(provider, _answered())
+    stub_answer_api(provider, _answered())
 
     response = await provider.aanswer(AnswerRequest(query=QUESTION))
 

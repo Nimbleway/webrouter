@@ -325,7 +325,7 @@ All verified live on 2026-11-01, every mapped option seen to apply.
   `field`, and its title comes from the pages You.com considered. It takes one
   domain list, not both: asking for both raises before the call. `language` was
   accepted but showed no effect, so `locale` is not mapped.
-- `parallel` answers in about seven seconds with the `lite` model, the fastest
+- `parallel` answers in about six seconds (median 6.3 s over 300 questions) with the `lite` model, the fastest
   whose `basis` ties its sources to the answer (`speed` returned none). Each
   citation carries the basis's `confidence` in `extra`; its reasoning stays in
   `raw`. Its Chat API is in beta and takes no source filter, so every option
