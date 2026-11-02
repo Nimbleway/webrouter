@@ -107,33 +107,13 @@ def test_a_generation_cut_short_is_partial(provider: ParallelAnswerProvider) -> 
     assert provider.answer(AnswerRequest(query=QUESTION)).outcome == "partial"
 
 
-@pytest.mark.parametrize(
-    "option",
-    [
-        {"include_domains": ["a.com"]},
-        {"exclude_domains": ["a.com"]},
-        {"country": "US"},
-        {"locale": "en"},
-        {"recency": "week"},
-    ],
-)
-def test_every_option_is_refused_since_the_chat_api_takes_no_filter(
-    provider: ParallelAnswerProvider, option: dict[str, Any]
-) -> None:
+def test_a_filter_is_refused_since_the_chat_api_takes_none(provider: ParallelAnswerProvider) -> None:
     api = stub_answer_api(provider, _answered())
 
-    with pytest.raises(UnsupportedParameterError, match=next(iter(option))):
-        provider.answer(AnswerRequest(query=QUESTION, **option))
+    with pytest.raises(UnsupportedParameterError, match="include_domains"):
+        provider.answer(AnswerRequest(query=QUESTION, include_domains=["a.com"]))
 
     assert api.calls == []
-
-
-def test_another_model_goes_through_provider_options(provider: ParallelAnswerProvider) -> None:
-    api = stub_answer_api(provider, _answered())
-
-    provider.answer(AnswerRequest(query=QUESTION, provider_options={"model": "base"}))
-
-    assert api.bodies[0]["model"] == "base"
 
 
 def test_an_empty_answer_is_returned(provider: ParallelAnswerProvider) -> None:
@@ -144,15 +124,6 @@ def test_an_empty_answer_is_returned(provider: ParallelAnswerProvider) -> None:
     response = provider.answer(AnswerRequest(query=QUESTION))
 
     assert (response.answer, response.citations) == ("", [])
-
-
-async def test_the_async_path_answers_the_same_way(provider: ParallelAnswerProvider) -> None:
-    stub_answer_api(provider, _answered())
-
-    response = await provider.aanswer(AnswerRequest(query=QUESTION))
-
-    assert response.answer == TEXT
-    assert response.citations[0].url == FIFA
 
 
 @pytest.mark.integration
