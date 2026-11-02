@@ -139,9 +139,10 @@ def test_every_backend_refuses_every_option_it_does_not_map_before_sending(name:
     the request went out fails here too.
     """
     provider = get_answer_provider_class(name)(api_key="contract-probe-key")
-    if isinstance(provider, _HttpProvider):
-        transport = httpx.MockTransport(_refuse_every_call)
-        provider._sync = httpx.Client(**provider._client_kwargs, transport=transport)
+    if not isinstance(provider, _HttpProvider):
+        pytest.fail(f"{name} is not an HTTP backend: give this test a trap for its transport too")
+    transport = httpx.MockTransport(_refuse_every_call)
+    provider._sync = httpx.Client(**provider._client_kwargs, transport=transport)
     try:
         with pytest.raises(UnsupportedParameterError, match=option):
             provider.answer(_request(**{option: PROBE_VALUES[option]}))

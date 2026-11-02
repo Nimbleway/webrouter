@@ -405,3 +405,33 @@ def test_each_task_request_is_clamped_to_what_the_caller_has_left(monkeypatch: p
 
     assert timeouts[0] == pytest.approx(5, abs=0.5)
     assert timeouts[1] == BROWSE_HTTP_TIMEOUT
+
+
+def test_an_answer_backend_on_get_sends_its_payload_as_query_parameters() -> None:
+    import httpx as _httpx
+
+    from web_router.providers._http import HttpAnswerProvider
+    from web_router.types import AnswerRequest, AnswerResponse
+
+    seen: list[_httpx.Request] = []
+
+    class GetAnswer(HttpAnswerProvider):
+        name = "get-answer"
+        base_url = "https://answer.example"
+        answer_path = "/answer"
+        http_method = "GET"
+
+        def _build_payload(self, request: AnswerRequest) -> dict[str, str]:
+            return {"q": request.query}
+
+        def _to_response(self, request: AnswerRequest, payload: dict[str, object]) -> AnswerResponse:
+            return AnswerResponse(provider=self.name, query=request.query, answer=str(payload["answer"]))
+
+    def handle(request: _httpx.Request) -> _httpx.Response:
+        seen.append(request)
+        return _httpx.Response(200, json={"answer": "yes"})
+
+    provider = GetAnswer(transport=_httpx.MockTransport(handle))
+
+    assert provider.answer(AnswerRequest(query="is it")).answer == "yes"
+    assert seen[0].method == "GET" and seen[0].url.params["q"] == "is it" and not seen[0].content

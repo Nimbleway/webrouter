@@ -49,6 +49,7 @@ from pydantic import BaseModel
 
 from web_router._benchmark import Stragglers, afan_out, fan_out, members_of
 from web_router.constants import (
+    ANSWER_ENV_BY_PROVIDER,
     AUTO_CLIENT_OPTION,
     BENCHMARK_EXCLUDED,
     BENCHMARK_EXTRACT_TIMEOUT,
@@ -59,6 +60,7 @@ from web_router.constants import (
     EVALS_CONCURRENCY,
     MAX_INHERITS_FROM_AUTO,
     MSG_ANSWER_NO_DEFAULT,
+    MSG_ANSWER_NONE_CONFIGURED,
     MSG_BENCHMARK_EXTRACT_NO_PROVIDERS,
     MSG_BENCHMARK_NO_PROVIDERS,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
@@ -323,12 +325,20 @@ class _BaseRouter(Generic[_HandleT]):
         available = available_answer_providers()
         if self.default_provider in available:
             return self.default_provider
-        configured = configured_answer_providers()
+        # A key passed in code configures a backend as surely as one in the environment.
+        in_code = {name for name, config in self._config.items() if name in available and config.get("api_key")}
+        configured = sorted(set(configured_answer_providers()) | in_code)
         if len(configured) == 1:
             return configured[0]
-        message = MSG_ANSWER_NO_DEFAULT.format(
-            default=self.default_provider, count=len(configured), available=", ".join(available) or "none"
-        )
+        if configured:
+            message = MSG_ANSWER_NO_DEFAULT.format(
+                default=self.default_provider, count=len(configured), available=", ".join(configured)
+            )
+        else:
+            env_vars = sorted({var for name in available for var in ANSWER_ENV_BY_PROVIDER.get(name, ())})
+            message = MSG_ANSWER_NONE_CONFIGURED.format(
+                default=self.default_provider, env_vars=", ".join(env_vars) or "none"
+            )
         raise ProviderNotFoundError(self.default_provider, available, message=message)
 
     def get_browser_provider(self, name: str | Provider | BrowserProvider | None = None) -> BrowserProvider:

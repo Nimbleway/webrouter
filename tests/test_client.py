@@ -520,7 +520,7 @@ def test_a_bare_answer_with_two_configured_backends_asks_which(
     try:
         _configure(monkeypatch, "fake", "other")
 
-        with pytest.raises(ProviderNotFoundError, match="2 answer backends configured") as caught:
+        with pytest.raises(ProviderNotFoundError, match="2 answer backends are configured") as caught:
             WebRouter().answer("q")
         assert {"fake", "other"} <= set(caught.value.available)
     finally:
@@ -530,7 +530,7 @@ def test_a_bare_answer_with_two_configured_backends_asks_which(
 def test_a_bare_answer_with_nothing_configured_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
     _configure(monkeypatch)
 
-    with pytest.raises(ProviderNotFoundError, match="no 'auto' yet"):
+    with pytest.raises(ProviderNotFoundError, match="no answer backend has a key"):
         WebRouter().answer("q")
 
 
@@ -566,3 +566,13 @@ async def test_async_answer_awaits_the_backend_and_closes_it(fake_answer_provide
     assert response.answer == "the answer"
     assert provider.requests[0].locale == "en"  # type: ignore[attr-defined]
     assert provider.closed  # type: ignore[attr-defined]
+
+
+def test_a_key_passed_in_code_configures_an_answer_backend(
+    fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure(monkeypatch)
+
+    router = WebRouter(provider_config={"fake": {"api_key": "in-code"}})
+
+    assert router.answer("q").provider == "fake"

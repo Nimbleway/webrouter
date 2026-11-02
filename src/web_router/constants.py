@@ -2660,15 +2660,20 @@ MSG_RESEARCH_FAILED = "research failed: {error}"
 MSG_ANSWER_FAILED = "answer failed: {error}"
 
 MSG_ANSWER_NO_DEFAULT = (
-    "answer() has no 'auto' yet: the router's default ({default!r}) does not serve it, and with {count} "
-    "answer backends configured there is no single one to use. Name one with provider=. "
-    "Answer backends: {available}."
+    "answer() has no 'auto' yet: the router's default ({default!r}) does not serve it, and {count} answer "
+    "backends are configured, so there is no single one to use. Name one with provider=: {available}."
 )
 """Raised as :class:`~web_router.exceptions.ProviderNotFoundError` when no answer backend could be chosen.
 
 ``answer()`` falls back to the one configured backend when the router's default
-does not serve it; with none or several configured, which to call is the caller's choice.
+does not serve it; with several configured, which to call is the caller's choice.
 """
+
+MSG_ANSWER_NONE_CONFIGURED = (
+    "answer() has no 'auto' yet: the router's default ({default!r}) does not serve it, and no answer backend "
+    "has a key. Set one of {env_vars}, or pass one through provider_config."
+)
+"""The same refusal with nothing configured: what to set, rather than a list of names that cannot run."""
 
 MSG_JOB_FAILED = "job failed: {error}"
 

@@ -271,14 +271,16 @@ class HttpAnswerProvider(_HttpProvider, AnswerProvider):
     # -- The HTTP plumbing ---------------------------------------------------
 
     def _answer(self, request: AnswerRequest) -> AnswerResponse:
-        response = self._client.request(self.http_method, self.answer_path, json=self._build_payload(request))
+        response = self._client.request(self.http_method, self.answer_path, **self._call_kwargs(request))
         return self._to_response(request, self._payload(response))
 
     async def _aanswer(self, request: AnswerRequest) -> AnswerResponse:
-        response = await self._async_client.request(
-            self.http_method, self.answer_path, json=self._build_payload(request)
-        )
+        response = await self._async_client.request(self.http_method, self.answer_path, **self._call_kwargs(request))
         return self._to_response(request, self._payload(response))
+
+    def _call_kwargs(self, request: AnswerRequest) -> dict[str, Any]:
+        payload = self._build_payload(request)
+        return {"json": payload} if self.http_method == "POST" else {"params": payload}
 
 
 class HttpExtractProvider(_HttpProvider, ExtractProvider):

@@ -258,7 +258,7 @@ def _transport(cls: type) -> dict[str, Any]:
         raise SystemExit(f"{cls.__qualname__}: no endpoint; declare it as a *_path class attribute")
     transport: dict[str, Any] = {"kind": "http", "base_url": cls.base_url, "paths": paths}
     # The class verb is what a search or an extract is sent with; other calls choose theirs.
-    if "search_path" in paths or "extract_path" in paths:
+    if "search_path" in paths or "extract_path" in paths or "answer_path" in paths:
         transport["method"] = cls.http_method
     transport["auth_header"] = cls.api_key_header if cls.env_api_key else None
     return transport
