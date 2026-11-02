@@ -1053,6 +1053,9 @@ the code owners' review yet. Mark ready only after Qodo's "Code Review by Qodo" 
 latest commit and every finding has a reply in its thread, starting with `@qodo`:
 `Fixed in <sha>: <what>` or `Not fixing: <reason>`.
 
+A change users would notice adds a line under `## [Unreleased]` in `CHANGELOG.md`; anything else
+(CI, docs, tests, refactors) takes the `skip-changelog` label. The Changelog check fails the PR otherwise.
+
 ## Secrets
 
 Never commit API keys, write them into tests, or paste them into code. Keys come
