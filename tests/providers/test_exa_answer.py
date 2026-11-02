@@ -15,13 +15,12 @@ reachable through `provider_options`.
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any
 
-import httpx
 import pytest
 
+from tests.providers._answer_stub import stub_answer_api
 from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.exa import ExaAnswerProvider
 from web_router.types import AnswerRequest
@@ -51,28 +50,6 @@ ANSWERED: dict[str, Any] = {
 }
 
 
-class _Api:
-    def __init__(self, payload: dict[str, Any]) -> None:
-        self.payload = payload
-        self.calls: list[tuple[str, str]] = []
-        self.bodies: list[dict[str, Any]] = []
-        self.headers: list[httpx.Headers] = []
-
-    def handle(self, request: httpx.Request) -> httpx.Response:
-        self.calls.append((request.method, request.url.path))
-        self.bodies.append(json.loads(request.content or b"{}"))
-        self.headers.append(request.headers)
-        return httpx.Response(200, json=self.payload)
-
-
-def _stub(provider: ExaAnswerProvider, payload: dict[str, Any]) -> _Api:
-    api = _Api(payload)
-    transport = httpx.MockTransport(api.handle)
-    provider._sync = httpx.Client(**provider._client_kwargs, transport=transport)
-    provider._async = httpx.AsyncClient(**provider._client_kwargs, transport=transport)
-    return api
-
-
 @pytest.fixture
 def provider(monkeypatch: pytest.MonkeyPatch) -> ExaAnswerProvider:
     monkeypatch.setenv("EXA_API_KEY", "test-key")
@@ -80,7 +57,7 @@ def provider(monkeypatch: pytest.MonkeyPatch) -> ExaAnswerProvider:
 
 
 def test_an_answer_is_one_post_with_the_query_alone(provider: ExaAnswerProvider) -> None:
-    api = _stub(provider, ANSWERED)
+    api = stub_answer_api(provider, ANSWERED)
 
     provider.answer(AnswerRequest(query=QUESTION))
 
@@ -90,7 +67,7 @@ def test_an_answer_is_one_post_with_the_query_alone(provider: ExaAnswerProvider)
 
 
 def test_the_answer_its_citations_and_their_markers_are_normalized(provider: ExaAnswerProvider) -> None:
-    _stub(provider, ANSWERED)
+    stub_answer_api(provider, ANSWERED)
 
     response = provider.answer(AnswerRequest(query=QUESTION))
 
@@ -108,7 +85,7 @@ def test_the_answer_its_citations_and_their_markers_are_normalized(provider: Exa
 
 def test_a_cited_pages_text_is_its_snippet_when_exa_returns_it(provider: ExaAnswerProvider) -> None:
     cited = {**ANSWERED["citations"][0], "text": "The final was played at Lusail Stadium on 18 December 2022."}
-    _stub(provider, {**ANSWERED, "citations": [cited]})
+    stub_answer_api(provider, {**ANSWERED, "citations": [cited]})
 
     response = provider.answer(AnswerRequest(query=QUESTION, provider_options={"text": True}))
 
@@ -118,7 +95,7 @@ def test_a_cited_pages_text_is_its_snippet_when_exa_returns_it(provider: ExaAnsw
 
 def test_a_structured_answer_is_not_read_as_prose(provider: ExaAnswerProvider) -> None:
     """With an outputSchema through provider_options, `answer` is an object; it stays in `raw`."""
-    _stub(provider, {**ANSWERED, "answer": {"winner": "Argentina"}})
+    stub_answer_api(provider, {**ANSWERED, "answer": {"winner": "Argentina"}})
 
     response = provider.answer(AnswerRequest(query=QUESTION))
 
@@ -140,7 +117,7 @@ def test_a_structured_answer_is_not_read_as_prose(provider: ExaAnswerProvider) -
 def test_every_option_is_refused_since_none_was_seen_to_apply(
     provider: ExaAnswerProvider, option: dict[str, Any]
 ) -> None:
-    api = _stub(provider, ANSWERED)
+    api = stub_answer_api(provider, ANSWERED)
 
     with pytest.raises(UnsupportedParameterError, match=next(iter(option))):
         provider.answer(AnswerRequest(query=QUESTION, **option))
@@ -149,7 +126,7 @@ def test_every_option_is_refused_since_none_was_seen_to_apply(
 
 
 async def test_the_async_path_answers_the_same_way(provider: ExaAnswerProvider) -> None:
-    _stub(provider, ANSWERED)
+    stub_answer_api(provider, ANSWERED)
 
     response = await provider.aanswer(AnswerRequest(query=QUESTION))
 

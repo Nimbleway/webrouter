@@ -303,8 +303,8 @@ response shapes of which the tests are modelled on. See
 
 `[answer]` installs these. One question, answered in one call: the backend
 searches and writes the answer itself. No keyless tier, since every backend
-bills the call, and no `auto` yet -- its order waits on a comparison of the
-backends' answers. See [Asking for an answer](#asking-for-an-answer).
+bills the call, and no `auto` yet; see [Asking for an answer](#asking-for-an-answer)
+for what an unnamed call does.
 
 | Pass | Name | Provider | Credentials | Options mapped | Citations tied to claims |
 | --- | --- | --- | --- | --- | --- |
@@ -331,12 +331,21 @@ All verified live on 2026-11-01, every mapped option seen to apply.
   citation carries the basis's `confidence` in `extra`; its reasoning stays in
   `raw`. Its Chat API is in beta and takes no source filter, so every option
   is refused.
-- `exa` answers in about 1.4 seconds and cites inline as `[1]`, numbering its
+- `exa` answers in about 1.3 seconds (median over 300 questions) and cites inline as `[1]`, numbering its
   citations from 1; it states its cost under `raw[0]["costDollars"]` ($0.005 an
   answer). Its Answer API has no source filter, so every option is refused.
 - `linkup` answers in about a second (median 0.9 s over 300 questions) and lists every page it read, tied to no
   sentence. `recency` is its `fromDate`, and Linkup filters on the date it holds
   for a page, which is not always the publication date.
+
+**Choosing one.** On 300 SimpleQA questions graded by one judge, all five land
+at 94-95% and their intervals overlap, so accuracy does not separate them --
+the [answer scan](benchmarks/providers/README.md#comparing-answer-backends)
+reruns it. They differ in speed (Linkup, Exa, You.com and Perplexity in one to
+two seconds, Parallel in about six), in the options they map (above), in
+whether the answer ties each source to a sentence, and in cost: Perplexity and
+Exa state theirs in the response; [`PRICING.md`](benchmarks/providers/PRICING.md)
+lists the rest.
 
 ### Research
 
@@ -2025,10 +2034,10 @@ Keys are read from the environment, or passed explicitly through
 | --- | --- | --- |
 | Nimble | `NIMBLE_API_KEY` | search, extract, research |
 | Tavily | `TAVILY_API_KEY` | search, extract |
-| Exa | `EXA_API_KEY` | search, extract |
+| Exa | `EXA_API_KEY` | search, extract, answer |
 | You.com | `YOU_API_KEY` | search, research, answer |
 | Brave | `BRAVE_SEARCH_API_KEY` | search |
-| Parallel | `PARALLEL_API_KEY` | search, research |
+| Parallel | `PARALLEL_API_KEY` | search, research, answer |
 | Perplexity | `PERPLEXITY_API_KEY` | search, research, answer |
 | Linkup | `LINKUP_API_KEY` | search, extract, research, answer |
 | WebIQ | `WEBIQ_API_KEY` | search, extract |

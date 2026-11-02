@@ -20,6 +20,3 @@ EXA_ANSWER_PATH = "/answer"
 
 EXA_ANSWER_CITATION_TEXT_FIELD = "text"
 """The cited page's text, present only when asked for; read as the snippet when it is there."""
-
-EXA_ANSWER_MARKER = "[{position}]"
-"""How the answer cites a source: its place in ``citations``, counted from 1, in brackets."""

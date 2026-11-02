@@ -29,9 +29,9 @@ from web_router.constants import (
     EXA_SEARCH_PATH,
     PROVIDER_EXA,
 )
-from web_router.constants_exa import EXA_ANSWER_CITATION_TEXT_FIELD, EXA_ANSWER_MARKER, EXA_ANSWER_PATH
+from web_router.constants_exa import EXA_ANSWER_CITATION_TEXT_FIELD, EXA_ANSWER_PATH
 from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, best_text, build_payload
+from web_router.providers._utils import as_snippet, best_text, build_payload, cited_marker
 from web_router.types import (
     EXTRACT_PARAMETERS,
     AnswerRequest,
@@ -187,7 +187,7 @@ class ExaAnswerProvider(HttpAnswerProvider):
                     url=cited.get("url", ""),
                     title=cited.get("title") or "",
                     snippet=as_snippet(cited.get(EXA_ANSWER_CITATION_TEXT_FIELD) or ""),
-                    field=marker if (marker := EXA_ANSWER_MARKER.format(position=position)) in text else None,
+                    field=cited_marker(text, position),
                     extra={k: v for k, v in cited.items() if k not in _MAPPED_ANSWER_FIELDS},
                 )
                 for position, cited in enumerate(payload.get("citations") or [], start=1)

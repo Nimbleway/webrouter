@@ -8,6 +8,7 @@
     "paths": {
       "answer_path": "/answer"
     },
+    "method": "POST",
     "auth_header": "x-api-key"
   },
   "credentials": [
