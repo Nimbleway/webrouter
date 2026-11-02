@@ -101,8 +101,13 @@ def _member(
     raises: Exception | None = None,
     *,
     supported: frozenset[str] = NORMALIZED_PARAMETERS,
+    empty: bool = False,
+    answer: str | None = None,
 ) -> type:
-    """Register a fake chain member that answers, or fails in a given way, mapping ``supported``."""
+    """Register a fake chain member that answers, or fails in a given way, mapping ``supported``.
+
+    ``empty`` answers with no results, beside ``answer`` when one is given.
+    """
     from tests.conftest import FakeProvider
 
     class Member(FakeProvider):  # type: ignore[misc, valid-type]
@@ -116,7 +121,8 @@ def _member(
             return SearchResponse(
                 provider=member_name,
                 query=request.query,
-                results=[SearchResult(url=f"https://{member_name}.example", content="hi")],
+                results=[] if empty else [SearchResult(url=f"https://{member_name}.example", content="hi")],
+                answer=answer,
             )
 
     register_provider(member_name, Member)
@@ -549,8 +555,12 @@ def _extract_member(
     raises: Exception | None = None,
     *,
     formats: frozenset[ExtractFormat] = frozenset({"markdown", "html", "text"}),
+    blank: frozenset[str] = frozenset(),
 ) -> type:
-    """Register a fake extract chain member that answers, or fails in a given way, returning ``formats``."""
+    """Register a fake extract chain member that answers, or fails in a given way, returning ``formats``.
+
+    A URL in ``blank`` comes back as a document with no text.
+    """
     from tests.conftest import FakeExtractProvider
 
     class Member(FakeExtractProvider):  # type: ignore[misc, valid-type]
@@ -564,7 +574,10 @@ def _extract_member(
                 raise raises
             return ExtractResponse(
                 provider=member_name,
-                documents=[ExtractedDocument(url=url, content="hi", format=self.format_of(request)) for url in urls],
+                documents=[
+                    ExtractedDocument(url=url, content="" if url in blank else "hi", format=self.format_of(request))
+                    for url in urls
+                ],
             )
 
     register_extract_provider(member_name, Member)
@@ -1031,3 +1044,106 @@ def test_a_default_chain_override_that_takes_nothing_still_works_with_a_key_in_c
     monkeypatch.setattr(AutoProvider, "default_chain", staticmethod(lambda: ((PROVIDER_BRAVE, {}),)))
 
     assert AutoProvider(members_config={PROVIDER_PERPLEXITY: {"api_key": "k"}}).members == (PROVIDER_BRAVE,)
+
+
+# -- An empty answer falls through as a failure does --------------------------
+
+
+def test_a_search_with_no_results_falls_through_to_the_next(chain_members: _Recorder) -> None:
+    _member(chain_members, "first", empty=True)
+    _member(chain_members, "second")
+
+    provider = AutoProvider(chain=(("first", {}), ("second", {})))
+    try:
+        response = provider.search(SearchRequest(query="hi"))
+    finally:
+        provider.close()
+
+    assert chain_members.called == ["first", "second"]
+    assert response.provider == "second"
+
+
+def test_a_search_with_an_answer_and_no_results_is_not_empty(chain_members: _Recorder) -> None:
+    _member(chain_members, "first", empty=True, answer="42")
+    _member(chain_members, "second")
+
+    provider = AutoProvider(chain=(("first", {}), ("second", {})))
+    try:
+        response = provider.search(SearchRequest(query="hi"))
+    finally:
+        provider.close()
+
+    assert chain_members.called == ["first"]
+    assert response.answer == "42"
+
+
+async def test_an_empty_search_falls_through_the_same_way_async(chain_members: _Recorder) -> None:
+    _member(chain_members, "first", empty=True)
+    _member(chain_members, "second")
+
+    provider = AutoProvider(chain=(("first", {}), ("second", {})))
+    try:
+        response = await provider.asearch(SearchRequest(query="hi"))
+    finally:
+        await provider.aclose()
+
+    assert response.provider == "second"
+
+
+def test_an_extract_of_blank_documents_falls_through_to_the_next(extract_chain_members: _Recorder) -> None:
+    _extract_member(extract_chain_members, "first", blank=frozenset({"https://example.com"}))
+    _extract_member(extract_chain_members, "second")
+
+    provider = AutoExtractProvider(chain=(("first", {}), ("second", {})))
+    try:
+        response = provider.extract(ExtractRequest(urls=["https://example.com"]))
+    finally:
+        provider.close()
+
+    assert extract_chain_members.called == ["first", "second"]
+    assert response.provider == "second"
+
+
+def test_an_extract_with_one_document_of_text_is_kept(extract_chain_members: _Recorder) -> None:
+    _extract_member(extract_chain_members, "first", blank=frozenset({"https://a.example"}))
+    _extract_member(extract_chain_members, "second")
+
+    provider = AutoExtractProvider(chain=(("first", {}), ("second", {})))
+    try:
+        response = provider.extract(ExtractRequest(urls=["https://a.example", "https://b.example"]))
+    finally:
+        provider.close()
+
+    assert response.provider == "first" and "second" not in extract_chain_members.called
+
+
+def test_when_every_member_is_empty_the_first_empty_answer_is_returned(chain_members: _Recorder) -> None:
+    """An empty result is an answer, not a failure: it names who gave it rather than raising."""
+    _member(chain_members, "first", empty=True)
+    _member(chain_members, "second", empty=True)
+    _member(chain_members, "third", raises=ProviderError("third", "rate limited"))
+
+    provider = AutoProvider(chain=(("first", {}), ("second", {}), ("third", {})))
+    try:
+        response = provider.search(SearchRequest(query="hi"))
+    finally:
+        provider.close()
+
+    assert chain_members.called == ["first", "second", "third"]
+    assert response.provider == "first" and not response.results
+
+
+@pytest.mark.parametrize("method", ["search", "extract"])
+def test_fallback_on_empty_off_returns_the_first_empty_answer(
+    chain_members: _Recorder, extract_chain_members: _Recorder, method: str
+) -> None:
+    _member(chain_members, "first", empty=True)
+    _member(chain_members, "second")
+    _extract_member(extract_chain_members, "first", blank=frozenset({"https://example.com"}))
+    _extract_member(extract_chain_members, "second")
+
+    config = {"auto": {"chain": ["first", "second"], "fallback_on_empty": False}}
+    with WebRouter(provider_config=config) as router:
+        response = router.search("hi") if method == "search" else router.extract("https://example.com")
+
+    assert response.provider == "first"

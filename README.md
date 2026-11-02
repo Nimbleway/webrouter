@@ -403,7 +403,18 @@ router.search("...", search_depth="deep")
 ```
 
 Among the members that can serve the call, a failure — a missing key, a refused
-request, a rate limit — moves on to the next, as it always has.
+request, a rate limit — moves on to the next, as it always has. So does an
+empty answer: a search with no results and no answer, or an extract whose every
+document is blank. When every member answers empty, you get the first empty
+answer, not an error. A call that ends empty has tried every member that can
+serve it, one after another, and each one you hold a key for bills for it. To
+stop at the first answer, empty or not:
+
+```python
+router = WebRouter(provider_config={"auto": {"fallback_on_empty": False}})
+```
+
+That switch is the library's only; the MCP server always falls through.
 
 For `extract` the same goes for the format, which every backend, `auto`
 included, **pins** to `markdown` when you name none, rather than each applying

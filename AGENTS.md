@@ -84,7 +84,9 @@ src/web_router/
 │   │                   then grade
 │   ├── run.py          the loop: benchmark per question, judge per row, score
 │   └── prompts/        the SimpleQA grader prompt, vendored verbatim
-├── constants.py        every endpoint, env var name, timeout and message template
+├── constants.py        shared env var registries, timeouts and message templates;
+│                       a provider's own go in constants_<provider>.py (older
+│                       providers' are still here)
 ├── constants_you.py    You.com research's endpoints, efforts and status table,
 │                       kept apart so constants.py stops growing
 ├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
@@ -198,6 +200,13 @@ make format    # ruff format and autofix
 make test      # unit tests only, no network
 make test-browser  # tests that launch a real local Chromium; skip without one
 ```
+
+Cloud Agent VMs already set `core.hooksPath`, so `pre-commit install` exits
+rather than replacing those hooks. Leave `core.hooksPath` as it is and run
+`uv run pre-commit run --all-files` when the hooks themselves should run.
+
+A `local` browser needs Chromium. `make install` does not install it.
+`make setup` does (`uv run playwright install chromium`).
 
 Use `uv run <cmd>`, never a bare `python` or `pip`. Dependencies live in
 `pyproject.toml`; after editing it run `make lock && make requirements` and
@@ -356,7 +365,8 @@ model that needs an exception type or a message template cannot live in
 `types.py` — put it in a subpackage's own `types.py` (as `evals/types.py`
 does) or annotate the field as `Exception` and say why in its docstring (as
 `BenchmarkRun.error` does). Do not "fix" this by importing lazily inside a
-validator.
+validator. A `constants_<provider>.py` sits at the same level as `constants`:
+it may import `types` and nothing else of ours.
 
 **Never override the public method in a provider.** `search`/`asearch`,
 `extract`/`aextract`, `run`/`templates`/`template`,
@@ -396,9 +406,10 @@ the one implicit thing in this package; use `job_budget(default)` —
 already read — and do not read it directly.
 
 **Translate a backend's run status through a table, never by hand.** Each job
-provider declares its own status table in `constants.py` and reads it through
-`JobProvider.state_of` (a browser provider through `BrowserProvider.state_of`,
+provider declares its own status table in `constants_<provider>.py` and reads it
+through `JobProvider.state_of` (a browser provider through `BrowserProvider.state_of`,
 which shares its translation), which raises on a status the table does not list.
+Older providers' status tables are still in `constants.py`.
 An unrecognized status means the backend changed under us, and treating it as
 "still running" would poll a finished job until the timeout.
 
@@ -415,7 +426,9 @@ cannot return the format asked for, the pinned `markdown` default included, so
 Exa serves only `text`. With no member left, search raises
 `UnsupportedParameterError` and extract `UnsupportedFormatError`, each naming
 what every member lacked; among the members that can serve the call, a failure
-falls through as it always has, and a member whose extra is not installed
+falls through as it always has, and so does an empty answer (no results and no
+answer, or every document blank) unless `fallback_on_empty=False`; when every
+member is empty the first empty answer is returned. A member whose extra is not installed
 cannot be read, so it is kept and fails that way. The MCP server reads search,
 extract and browser `auto` as the chain it would try, so a union never
 advertises an option no reachable member maps. Its research chain passes over
@@ -593,10 +606,11 @@ bump the pin only with `make test-browser` green.
 
 **A browser provider's `provider_options` cannot override a mapped option.**
 Build the payload with `build_browser_payload`, from a table in
-`constants.py` saying where each mapped option goes in the body. A row is one
-of three shapes, and stays data: a path, for a value sent as it is; a
-`BrowserField`, for one option that sets several fields (`proxy_country`
-turning a vendor's proxy on as well as naming the country) with
+`constants_<provider>.py` (older providers' are still in `constants.py`) saying
+where each mapped option goes in the body. A row is one of three shapes, and
+stays data: a path, for a value sent as it is; a `BrowserField`, for one
+option that sets several fields (`proxy_country` turning a vendor's proxy on
+as well as naming the country) with
 `REQUEST_VALUE` marking where the caller's value lands and an optional `case`;
 or, for `stealth`, a lookup from each level to the fields it sets. It merges
 `provider_options` beneath every field a row produces, at every depth, and
@@ -696,7 +710,8 @@ back at all. Do not move that handling into a provider — it is what makes a
 one-URL-per-call backend behave like a batching one.
 
 **No hardcoded literals in logic.** Endpoints, environment variable names,
-timeouts, header names and message templates belong in `constants.py`.
+timeouts, header names and message templates belong in `constants.py`; a
+provider's own go in its `constants_<provider>.py`.
 
 **Unset means unset.** Request fields left as `None` must not be sent to the
 provider, so each API keeps its own defaults instead of inheriting ours. Use
@@ -787,7 +802,7 @@ in its existing module, as `nimble.py` does.
    template and the backend's reason; an unknown name raises
    `TemplateNotFoundError`; never return an empty record.
 2. Put the endpoints, the record's field names and the status values in
-   `constants.py`.
+   `constants_<provider>.py`.
 3. Register the class in `_BUILTIN_TEMPLATE_PROVIDERS` in `registry.py` and
    add the provider to `TEMPLATE_ENV_BY_PROVIDER` in `constants.py`. There is
    no `auto` to join.
@@ -812,7 +827,7 @@ The same shape as the two below, against `ResearchProvider` or
    should raise `UnsupportedParameterError` rather than hand back prose under
    the name of a schema.
 2. Put the endpoints, the effort mapping and the run-status table in
-   `constants.py`; read the status table through `state_of`.
+   `constants_<provider>.py`; read the status table through `state_of`.
 3. Register the class in `_BUILTIN_RESEARCH_PROVIDERS` in `registry.py` and add
    the provider to `RESEARCH_ENV_BY_PROVIDER` in `constants.py`.
 4. Add `tests/providers/test_<name>_research.py` covering the mapping, the
@@ -842,8 +857,8 @@ The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
    without its proxy.
 2. Put `cdp_url` in the `SecretStr` field and nowhere a `repr` reaches, and an
    interactive live view in `control_url` the same way. Put the
-   endpoints, env var and the session-status table in `constants.py`; read the
-   status table through `state_of`.
+   endpoints and the session-status table in `constants_<provider>.py`; read
+   the status table through `state_of`.
 3. Register the class in `_BUILTIN_BROWSER_PROVIDERS` in `registry.py` and add
    the provider to `BROWSER_ENV_BY_PROVIDER` in `constants.py`. Add each
    variable to `.env.example`. A REST vendor is plain httpx and registers
@@ -886,8 +901,8 @@ plain httpx — or `BrowseProvider` for an SDK.
    serialization because a task payload can carry a session URL. Keep
    live-view, session and recording-control URLs out of plain fields; they
    stay in `raw`.
-3. Put the endpoints and the task-status table in `constants.py`; read the
-   table through `state_of`. Register the class in `_BUILTIN_BROWSE_PROVIDERS`
+3. Put the endpoints and the task-status table in `constants_<provider>.py`;
+   read the table through `state_of`. Register the class in `_BUILTIN_BROWSE_PROVIDERS`
    in `registry.py`, add the provider to `BROWSE_ENV_BY_PROVIDER`, and each
    variable to `.env.example`.
 4. Add `tests/providers/test_<name>_browse.py` covering the mapping, the
@@ -902,7 +917,7 @@ plain httpx — or `BrowseProvider` for an SDK.
    — copy `perplexity.py`, it is the shortest. For an API with an SDK worth using,
    subclass `SearchProvider` and implement `_search`/`_asearch`. Either way set
    `name` and `supported_parameters` (start at `{"max_results"}`), and put the
-   endpoint, env var and parameter mappings in `constants.py`. A keyless
+   endpoint and parameter mappings in `constants_<provider>.py`. A keyless
    endpoint sets `env_api_key = None` and sends no auth header.
 2. Map the payload onto `SearchResponse`. Use `_utils.best_text()` to pick the
    result body — providers disagree wildly about which field carries it.
