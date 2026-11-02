@@ -822,13 +822,38 @@ payload in `raw`.
 the sources it rests on, in one call. It sits between `search()`, which returns
 the pages, and `research()`, a job of minutes.
 
+Three steps to a first answer:
+
+1. Install with the `answer` extra: `pip install -e "/path/to/webrouter[answer]"`
+   (`make setup` in a clone installs every extra).
+2. Set one answer backend's key in your environment or `.env`, for example
+   `PERPLEXITY_API_KEY` -- the [answer table](#answer) lists each one's variable.
+3. Ask:
+
 ```python
-response = router.answer("who won the 2022 world cup final", provider="linkup")
+from web_router import WebRouter
+
+with WebRouter() as router:
+    response = router.answer("who won the 2022 world cup final")  # the one backend you hold a key for
 
 print(response.answer)
 for citation in response.citations:
-    print(citation.url, citation.field or "")
+    print(citation.field or "-", citation.url)
 ```
+
+```text
+Argentina won, beating France 4-2 on penalties after a 3-3 draw through extra time.[2]
+- https://football.fandom.com/wiki/2022_FIFA_World_Cup_Final
+[2] https://www.world-cup-schedule.com/blog/who-won-2022-world-cup-argentina-france-final
+...
+```
+
+With more than one key set, name the backend: `router.answer(q, provider="linkup")`.
+Which one: they score alike on accuracy (see [Choosing one](#answer)), so pick
+on what you need -- Linkup is the fastest (about a second); Perplexity, You.com
+and Linkup take source filters (domains, recency); Perplexity, You.com, Exa and
+Linkup tie each source to a sentence. [`examples/answer.py`](examples/answer.py)
+runs the whole flow, errors included.
 
 Nothing here writes, joins or edits the answer: it is the backend's, as it came.
 An empty one comes back as `""` rather than an error, with its sources and
