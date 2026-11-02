@@ -59,8 +59,8 @@
     "https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search"
   ],
   "verified": {
-    "include_domains": "live: tests/test_integration_surface.py::test_an_answers_sources_honor_the_domain_filter",
-    "exclude_domains": "live: tests/test_integration_surface.py::test_an_answers_sources_leave_out_excluded_domains",
+    "include_domains": "live: tests/test_integration_answer.py::test_an_answers_sources_honor_the_domain_filter",
+    "exclude_domains": "live: tests/test_integration_answer.py::test_an_answers_sources_leave_out_excluded_domains",
     "recency": "live: checked by hand 2026-11-01, see tests/providers/test_linkup_answer.py; Linkup's sources carry no date, so no test can assert the window"
   },
   "vendor_options": {
