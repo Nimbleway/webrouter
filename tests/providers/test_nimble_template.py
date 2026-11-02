@@ -455,15 +455,7 @@ def test_live_catalogue_and_run() -> None:
 
         name = os.getenv("NIMBLE_TEMPLATE")
         candidates = [router.template(name, provider="nimble")] if name else [t for t in page.templates if t.published]
-        chosen = next(
-            (
-                (t, s["input"])
-                for t in candidates
-                for s in (t.extra.get("samples") or [])
-                if isinstance(s.get("input"), dict)
-            ),
-            None,
-        )
+        chosen = next(((t, s.input) for t in candidates for s in t.samples if s.input), None)
         if chosen is None:
             pytest.skip("no published template on this account publishes a sample input to run with")
         template, inputs = chosen
