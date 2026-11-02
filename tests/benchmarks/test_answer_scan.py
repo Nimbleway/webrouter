@@ -22,7 +22,7 @@ SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "ans
 
 @pytest.fixture(scope="module")
 def scan() -> Iterator[ModuleType]:
-    # Imports the search scan and the shared helpers as siblings, as it does when run from its folder.
+    # Imports the shared helpers as siblings, as it does when run from its folder.
     sys.path.insert(0, str(SCRIPT.parent))
     try:
         spec = importlib.util.spec_from_file_location("answer_scan", SCRIPT)
@@ -32,8 +32,8 @@ def scan() -> Iterator[ModuleType]:
         yield module
     finally:
         sys.path.remove(str(SCRIPT.parent))
-        sys.modules.pop("_common", None)
-        sys.modules.pop("run", None)
+        for name in ("_common", "_questions", "_report_tables"):
+            sys.modules.pop(name, None)
 
 
 SETUP = {

@@ -14,6 +14,8 @@ from typing import Any
 import pytest
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "run.py"
+SIBLINGS = ("_common", "_questions", "_report_tables")
+"""What the scan imports from its folder, under plain names, so they are forgotten once it is."""
 
 
 @pytest.fixture(scope="module")
@@ -29,7 +31,19 @@ def scan() -> Iterator[ModuleType]:
         yield module
     finally:
         sys.path.remove(str(SCRIPT.parent))
-        sys.modules.pop("_common", None)
+        for name in SIBLINGS:
+            sys.modules.pop(name, None)
+
+
+@pytest.fixture(scope="module")
+def questions(scan: ModuleType) -> ModuleType:
+    """The question sets and their loading, which the scan shares with the answer scan."""
+    return sys.modules["_questions"]
+
+
+@pytest.fixture(scope="module")
+def common(scan: ModuleType) -> ModuleType:
+    return sys.modules["_common"]
 
 
 def _row(provider: str, question: str, grade: str | None, topic: str = "Science", **extra: Any) -> dict[str, Any]:
@@ -139,14 +153,14 @@ def test_a_backend_that_failed_most_of_a_topic_cannot_lead_it(scan: ModuleType) 
     assert summary["by_topic"]["Science"]["leaders"] == ["steady"]
 
 
-def test_p95_is_the_nearest_rank_evaluate_uses(scan: ModuleType) -> None:
-    assert scan._pct([float(i) for i in range(1, 13)], 0.95) == 12.0
+def test_p95_is_the_nearest_rank_evaluate_uses(common: ModuleType) -> None:
+    assert common._pct([float(i) for i in range(1, 13)], 0.95) == 12.0
 
 
-def test_a_plain_string_metadata_cell_gives_no_tags_rather_than_an_error(scan: ModuleType) -> None:
-    assert scan._tags({"metadata": "not a mapping"}) == {}
-    assert scan._tags({"metadata": {"topic": "Art"}}) == {"topic": "Art"}
-    assert scan._tags({"topic": "Art"}) == {"topic": "Art"}
+def test_a_plain_string_metadata_cell_gives_no_tags_rather_than_an_error(questions: ModuleType) -> None:
+    assert questions.question_tags({"metadata": "not a mapping"}) == {}
+    assert questions.question_tags({"metadata": {"topic": "Art"}}) == {"topic": "Art"}
+    assert questions.question_tags({"topic": "Art"}) == {"topic": "Art"}
 
 
 def test_scans_that_repeat_a_backend_or_ask_other_questions_are_refused(scan: ModuleType, tmp_path: Path) -> None:
@@ -236,10 +250,12 @@ def test_a_backend_that_answered_every_question_wrong_is_ranked_last_not_dropped
     assert "no order to suggest" not in scan.markdown(only_wrong)
 
 
-def test_a_sealqa_scan_breaks_accuracy_down_by_its_own_labels_and_names_what_it_withheld(scan: ModuleType) -> None:
+def test_a_sealqa_scan_breaks_accuracy_down_by_its_own_labels_and_names_what_it_withheld(
+    scan: ModuleType, questions: ModuleType
+) -> None:
     labels = {"freshness": "fast-changing", "search_results": "conflicting"}
     rows = [_row("nimble", f"q{i}", "correct", withheld=1 if i == 0 else 0, **labels) for i in range(12)]
-    setup = {**SETUP, "providers": ["nimble"], "questions": "sealqa-hard", "breakdowns": scan.SEALQA_BREAKDOWNS}
+    setup = {**SETUP, "providers": ["nimble"], "questions": "sealqa-hard", "breakdowns": questions.SEALQA_BREAKDOWNS}
     summary = scan.summarize(rows, setup)
 
     assert summary["by_freshness"]["fast-changing"]["questions"] == 12
@@ -268,27 +284,29 @@ def test_a_scan_from_before_question_sets_combines_with_a_simpleqa_one(scan: Mod
         scan.combine([old, _scan(tmp_path / "seal", ["exa"], questions="sealqa-0")])
 
 
-def test_your_own_csv_needs_its_path(scan: ModuleType) -> None:
+def test_your_own_csv_needs_its_path(scan: ModuleType, questions: ModuleType) -> None:
     with pytest.raises(SystemExit, match="--dataset"):
-        scan.load_questions(scan.parse_args(["--questions", "csv"]))
+        questions.load_questions(scan.parse_args(["--questions", "csv"]))
 
 
-def test_your_own_csv_is_read_with_the_columns_you_name(scan: ModuleType, tmp_path: Path) -> None:
+def test_your_own_csv_is_read_with_the_columns_you_name(
+    scan: ModuleType, questions: ModuleType, tmp_path: Path
+) -> None:
     path = tmp_path / "mine.csv"
     path.write_text("q,gold,topic\nWho?,Alice,People\n", encoding="utf-8")
     args = scan.parse_args(
         ["--questions", "csv", "--dataset", str(path), "--question-column", "q", "--answer-column", "gold"]
     )
-    dataset = scan.load_questions(args)
+    dataset = questions.load_questions(args)
 
     assert [(q.question, q.answer, q.metadata["topic"]) for q in dataset.questions] == [("Who?", "Alice", "People")]
 
 
-def test_scans_of_two_different_csvs_do_not_combine(scan: ModuleType, tmp_path: Path) -> None:
+def test_scans_of_two_different_csvs_do_not_combine(scan: ModuleType, questions: ModuleType, tmp_path: Path) -> None:
     def identity(text: str) -> dict[str, Any]:
         path = tmp_path / f"{len(text)}.csv"
         path.write_text(text, encoding="utf-8")
-        return scan.csv_identity(scan.parse_args(["--questions", "csv", "--dataset", str(path)]))
+        return questions.csv_identity(scan.parse_args(["--questions", "csv", "--dataset", str(path)]))
 
     mine, theirs = identity("problem,answer\nWho?,Alice\n"), identity("problem,answer\nWhere?,Paris\n")
     assert (
