@@ -14,6 +14,7 @@ import pytest
 
 from tests.conftest import FakeBrowseProvider, FakeResearchProvider
 from tests.mcp.conftest import FAKE
+from tests.providers._answer_stub import stub_answer_api
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
     ENV_BRAVE_API_KEY,
@@ -875,9 +876,20 @@ async def test_answer_round_trip_and_fetch_raw(tools: WebRouterTools, fake_answe
     assert raw["raw"] == [{"answer": "the answer"}]
 
 
-def test_answer_needs_no_provider_argument(tools: WebRouterTools, no_keys: None) -> None:
-    """`provider` is not required: the router resolves it (one configured backend is used; see test_client)."""
-    assert _tool(tools, MCP_TOOL_ANSWER).input_schema["required"] == ["query"]
+async def test_answer_needs_no_provider_argument(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """With one answer backend configured, `provider` is offered but not required, and a bare query goes to it."""
+    monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
+    session = WebRouterTools(AsyncWebRouter())
+    schema = _tool(session, MCP_TOOL_ANSWER).input_schema
+    assert schema["properties"]["provider"]["enum"] == [PROVIDER_LINKUP]
+    assert "provider" not in schema["required"]
+
+    linkup = session.router.get_answer_provider(PROVIDER_LINKUP)
+    api = stub_answer_api(linkup, {"answer": "Argentina.[1]", "sources": [{"url": "https://example.com", "name": "x"}]})
+    payload = _payload(await call_tool(session, MCP_TOOL_ANSWER, {"query": "who won"}))
+
+    assert payload["provider"] == PROVIDER_LINKUP
+    assert len(api.calls) == 1
 
 
 def test_answer_says_so_when_nothing_can_serve_it(
