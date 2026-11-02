@@ -379,8 +379,8 @@ public `answer()` on the same questions, each backend's own answer graded by an
 `evaluate()` judge -- nothing synthesized, since the backend wrote the answer
 -- so its `report.md` is a third place a judged accuracy appears, and it names
 the judge. `--baseline` sets a search scan of the same questions, seed and judge
-beside it, and is refused otherwise. A row citing one of the set's withheld
-pages is *leaked*, never graded and out of accuracy, because an answer backend
+beside it, and is refused otherwise. A row whose sources include one of the
+set's withheld pages, cited or only read, is *leaked*, never graded and out of accuracy, because an answer backend
 has read the answer key before anything could be withheld. It shows a cost only
 where the backend's response states one, never an estimate. `PRICING.md` beside it is a
 dated, sourced reference for reading results against list prices; no code

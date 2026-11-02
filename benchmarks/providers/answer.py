@@ -21,8 +21,8 @@ judge writing its answer.
 
 SealQA keeps its own pages (the dataset, the paper, copies) from the judge. An
 answer backend has read them before it answers, so nothing can be withheld: a
-row whose citations include one is marked ``leaked`` and left out of accuracy,
-and the report counts them.
+row whose sources include one, cited or only read, is marked ``leaked`` and
+left out of accuracy, and the report counts them.
 
 Writes into ``--out`` what ``run.py`` writes: ``run.json``, ``rows.jsonl``,
 ``summary.json`` and ``report.md``. ``--combine`` merges finished answer scans
@@ -53,7 +53,6 @@ from web_router import AsyncWebRouter
 from web_router.evals import Dataset, OpenAIJudge
 from web_router.exceptions import WebRouterError
 from web_router.registry import configured_answer_providers
-from web_router.types_answer import AnswerResponse
 
 DEFAULT_CONCURRENCY = 3
 """Questions at once; every backend is asked each question together, so this many calls reach each backend."""
@@ -66,16 +65,6 @@ JUDGE_PROBE = ("What is 2 + 2?", "4", "4")
 """One question the judge must grade before any backend is asked, so a judge that cannot run costs no answer."""
 MSG_JUDGE_FAILED = "The judge could not grade a test answer, so no backend was asked: {error}"
 MSG_NO_PROVIDERS = "No answer backend is configured: set a key for one (see .env.example), or name one with --providers"
-
-
-def _backing(response: AnswerResponse) -> list[Any]:
-    """The citations the answer rests on: the ones it marks, when it marks any, else every one it lists.
-
-    A backend that lists every page it read beside the few it cites would
-    otherwise count as leaked for a page it read and never used.
-    """
-    marked = [citation for citation in response.citations if citation.field]
-    return marked or list(response.citations)
 
 
 async def answer_row(
@@ -110,7 +99,7 @@ async def answer_row(
         latency=time.perf_counter() - started,
         answer=response.answer,
         citations=len(response.citations),
-        leaked=any(dataset.withholds(citation.url) for citation in _backing(response)),
+        leaked=any(dataset.withholds(citation.url) for citation in response.citations),
         cost_usd=stated_cost(response),
         **stated_tokens(response),
     )

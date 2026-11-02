@@ -261,15 +261,16 @@ async def test_a_judge_failure_mid_scan_is_the_rows_and_keeps_the_answer(scan: M
     assert summary["overall"]["linkup"]["failed"] == 1
 
 
-async def test_only_the_cited_sources_decide_a_leak_when_the_answer_marks_them(scan: ModuleType) -> None:
+async def test_a_page_read_but_not_cited_is_a_leak_too(scan: ModuleType) -> None:
+    """Any page a backend returns decides a leak, whether or not it marks which ones it cites."""
     read_only = Citation(url="https://huggingface.co/datasets/vtllms/sealqa")
     cited = Citation(url="https://en.wikipedia.org/x", field="[2]")
     response = AnswerResponse(provider="linkup", query="q", answer="Argentina [2]", citations=[read_only, cited])
 
     row = await scan.answer_row(_Router(response), _Judge(), SEALQA, "linkup", "q", "a")
 
-    assert row["leaked"] is False
-    assert row["grade"] == "correct"
+    assert row["leaked"] is True
+    assert row["grade"] is None
 
 
 def test_citations_per_answer_counts_answered_rows_only(scan: ModuleType) -> None:
