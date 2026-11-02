@@ -98,3 +98,15 @@ def test_a_baseline_with_other_csv_columns_is_refused(answer_scan: ModuleType, t
 
     with pytest.raises(SystemExit, match="question_column"):
         answer_scan.setup_of(answer_scan.parse_args([*csv, "--baseline", str(baseline)]))
+
+
+def test_answer_scans_beside_different_search_scans_do_not_combine(answer_scan: ModuleType, tmp_path: Path) -> None:
+    for name, baseline in (("a", "results/search-a"), ("b", "results/search-b")):
+        folder = tmp_path / name
+        folder.mkdir()
+        setup = {**SETUP, "baseline": baseline, "providers": [name]}
+        (folder / "run.json").write_text(json.dumps(setup), encoding="utf-8")
+        (folder / "rows.jsonl").write_text(json.dumps(_row(name, "q0", "correct")) + "\n", encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="baseline"):
+        answer_scan.combine([tmp_path / "a", tmp_path / "b"])

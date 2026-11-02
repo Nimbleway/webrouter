@@ -26,7 +26,7 @@ left out of accuracy, and the report counts them.
 
 Writes into ``--out`` what ``run.py`` writes: ``run.json``, ``rows.jsonl``,
 ``summary.json`` and ``report.md``. ``--combine`` merges finished answer scans
-of the same questions and judge.
+of the same questions, judge and baseline.
 """
 
 from __future__ import annotations
@@ -58,8 +58,18 @@ DEFAULT_CONCURRENCY = 3
 """Questions at once; every backend is asked each question together, so this many calls reach each backend."""
 OUT_PREFIX = "answer-"
 
-COMBINE_KEYS = ("questions", "dataset_sha256", "question_column", "answer_column", "withheld", "limit", "seed", "judge")
-"""What two answer scans must share for their rows to sit in one table."""
+COMBINE_KEYS = (
+    "questions",
+    "dataset_sha256",
+    "question_column",
+    "answer_column",
+    "withheld",
+    "limit",
+    "seed",
+    "judge",
+    "baseline",
+)
+"""What two answer scans must share for their rows to sit in one table -- the search scan beside them too."""
 
 JUDGE_PROBE = ("What is 2 + 2?", "4", "4")
 """One question the judge must grade before any backend is asked, so a judge that cannot run costs no answer."""

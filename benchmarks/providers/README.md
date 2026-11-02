@@ -201,7 +201,7 @@ ungraded and out of accuracy, and counted in the report. Cost is shown only
 where the backend states it in its response (Perplexity's `usage.cost`), as a
 mean over the answers that stated one; everything else is in
 [`PRICING.md`](PRICING.md). `--combine` merges answer scans of the same
-questions and judge.
+questions, judge and baseline.
 
 ## Keeping results
 
