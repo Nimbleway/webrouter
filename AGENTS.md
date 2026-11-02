@@ -1045,6 +1045,14 @@ plumbing — never the network, and never `OPENAI_API_KEY` or
 - Docstrings on public API; skip them on self-evident private helpers.
 - Prefer a lookup table in `constants.py` over a chain of `if`.
 
+## Pull requests
+
+Open PRs as drafts: `gh pr create --draft --body-file <file>`, with the body following
+`.github/pull_request_template.md` (same headings, comments removed). Draft PRs do not request
+the code owners' review yet. Mark ready only after Qodo's "Code Review by Qodo" comment covers the
+latest commit and every finding has a reply in its thread, starting with `@qodo`:
+`Fixed in <sha>: <what>` or `Not fixing: <reason>`.
+
 ## Secrets
 
 Never commit API keys, write them into tests, or paste them into code. Keys come

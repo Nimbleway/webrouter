@@ -280,6 +280,9 @@ time.
   `skip-changelog` label instead (release bumps too). New lines must sit under
   `## [Unreleased]`, not under a released version.
 - Direct commits to `main` are blocked; work on a branch and open a PR.
+- Open the PR as a draft. Mark it ready once Qodo's review covers the latest commit and each
+  finding has a reply (`Fixed in <sha>: <what>` or `Not fixing: <reason>`); the maintainers are
+  asked to review only then.
 
 Every unit test must work without an API key. Anything that needs one belongs
 behind `@pytest.mark.integration`.
