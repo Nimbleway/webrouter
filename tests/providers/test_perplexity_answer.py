@@ -25,7 +25,7 @@ import pytest
 
 from tests.providers._answer_stub import stub_answer_api
 from tests.providers._perplexity_answer_payload import RESPONSE_ID, TEXT, answered
-from web_router.exceptions import UnsupportedParameterError
+from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.perplexity import PerplexityAnswerProvider
 from web_router.types_answer import AnswerRequest, Recency
 
@@ -129,6 +129,15 @@ def test_an_incomplete_response_is_partial(provider: PerplexityAnswerProvider) -
     stub_answer_api(provider, answered(status="incomplete"))
 
     assert provider.answer(AnswerRequest(query=QUESTION)).outcome == "partial"
+
+
+@pytest.mark.parametrize("status", ["failed", "cancelled"])
+def test_a_failed_or_cancelled_answer_is_an_error(provider: PerplexityAnswerProvider, status: str) -> None:
+    payload = {**answered(text="", status=status), "error": {"message": "upstream model error"}}
+    stub_answer_api(provider, payload)
+
+    with pytest.raises(ProviderError, match=f"answer {status}: upstream model error"):
+        provider.answer(AnswerRequest(query=QUESTION))
 
 
 def test_an_empty_answer_is_returned_with_its_sources(provider: PerplexityAnswerProvider) -> None:

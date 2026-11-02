@@ -53,3 +53,8 @@ PERPLEXITY_ANSWER_RECENCY: dict[Recency, str] = {
     "year": "year",
 }
 """Perplexity's own values, one for one. It also has ``hour``, which no other backend offers."""
+
+PERPLEXITY_ANSWER_STOPPED = frozenset({"failed", "cancelled"})
+"""Statuses that end an answer with nothing to return, raised as an error rather than read as an empty answer."""
+
+MSG_PERPLEXITY_ANSWER_STOPPED = "the answer {status}: {detail}"

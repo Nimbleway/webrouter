@@ -39,6 +39,7 @@ from web_router.constants import (
 )
 from web_router.constants_perplexity import (
     MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE,
+    MSG_PERPLEXITY_ANSWER_STOPPED,
     PERPLEXITY_ANSWER_COUNTRY_FIELD,
     PERPLEXITY_ANSWER_DOMAIN_FIELD,
     PERPLEXITY_ANSWER_EFFORT,
@@ -47,8 +48,10 @@ from web_router.constants_perplexity import (
     PERPLEXITY_ANSWER_LOCATION_FIELD,
     PERPLEXITY_ANSWER_RECENCY,
     PERPLEXITY_ANSWER_RECENCY_FIELD,
+    PERPLEXITY_ANSWER_STOPPED,
     PERPLEXITY_ANSWER_TOOL,
 )
+from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
 from web_router.providers._utils import build_payload, compact, error_detail
 from web_router.providers.answer import cited_marker, refuse_domain_pair
@@ -242,6 +245,10 @@ class PerplexityAnswerProvider(HttpAnswerProvider):
         return {"type": PERPLEXITY_ANSWER_TOOL, **tool} if tool else None
 
     def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
+        status = payload.get("status")
+        if status in PERPLEXITY_ANSWER_STOPPED:
+            detail = error_detail(payload.get("error")) or status
+            raise ProviderError(self.name, MSG_PERPLEXITY_ANSWER_STOPPED.format(status=status, detail=detail))
         output = payload.get("output") or []
         answer = _text(output)
         return AnswerResponse(
