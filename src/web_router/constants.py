@@ -12,6 +12,7 @@ from typing import Any, Literal, get_args
 
 from web_router.types import (
     BROWSE_PARAMETERS,
+    MAX_RESULTS_DESCRIPTION,
     NORMALIZED_PARAMETERS,
     REQUEST_VALUE,
     BrowserField,
@@ -26,7 +27,6 @@ from web_router.types import (
     ResearchEffort,
     ResearchState,
     SearchDepth,
-    SearchRequest,
     StealthLevel,
 )
 
@@ -3823,7 +3823,7 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "max_results": {
         "type": "integer",
         "minimum": 1,
-        "description": SearchRequest.model_fields["max_results"].description,
+        "description": MAX_RESULTS_DESCRIPTION,
     },
     "search_depth": {
         "type": "string",

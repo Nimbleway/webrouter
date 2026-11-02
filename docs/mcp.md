@@ -218,11 +218,9 @@ handle's own — `url`, `wait_until`, `ref`, `selector`, `text`, `submit`, `key`
 `full_page`, `format`, `timeout`. Anything the library refuses, this refuses in
 the library's own words.
 
-Over MCP the model chooses `max_results`, not you. Its description steers it to
-5 to 10 for most questions and to 1 only when the user asked for a single link,
-but it stays the model's call. A host that wants the number fixed should use
-the library's [agent integrations](../README.md#wrapping-search-for-your-own-agent),
-which keep it out of the model's hands.
+Over MCP the model chooses `max_results`, not you. Its description steers it
+away from a single result, but the choice stays the model's. A host that wants
+the number fixed should [wrap `search` itself](../README.md#wrapping-search-for-your-own-agent).
 
 ### `research` never blocks the session
 

@@ -1464,37 +1464,28 @@ never collide with OpenAI's built-in `web_search` either.
 
 ## Wrapping `search` for your own agent
 
-The three integrations above never let the model choose how many results come
-back: it supplies the query, and `max_results` is yours, fixed when the tool
-is built. A model left to choose will sometimes ask for one result, get one
-page, and answer thinly, so a wrapper you write yourself should do the same.
-Keep `max_results` out of the schema the model sees and pin 5 to 10 in the
-handler:
+The integrations above already fix `max_results` when the tool is built, so the
+model never picks it. A model that may pick it will sometimes ask for one
+result and answer thinly. For a framework with no integration, do the same:
+keep `max_results` out of the schema the model sees and pin 5 to 10 yourself.
+`WebRouterTools` gives you that schema and the compact rendering, whatever
+sends them:
 
 ```python
 from web_router import WebRouter
+from web_router.integrations.anthropic import WebRouterTools
 
-router = WebRouter()
-
-SEARCH_TOOL = {
-    "name": "web_search",
-    "description": "Search the web. Returns ranked pages with their text.",
-    "input_schema": {
-        "type": "object",
-        "properties": {"query": {"type": "string", "description": "What to search for."}},
-        "required": ["query"],
-    },
-}
+tools = WebRouterTools(WebRouter(), methods=["search"], max_results=8)
+schema = tools.definitions()[0]["input_schema"]  # only `query`
 
 
 def web_search(query: str) -> str:
-    return router.search(query, max_results=8).model_dump_json()
+    return tools.call("web_router_search", {"query": query}).content
 ```
 
 If you do expose `max_results`, its description in `SearchRequest`'s JSON
-schema says when more results matter: 5 to 10 for most questions, more for
-news, comparisons or a question with several parts, and 1 only when the user
-asked for a single link. The MCP server shows the model the same text.
+schema tells the model when to ask for more. The MCP server shows it the same
+text.
 
 ## Agent benchmark
 
