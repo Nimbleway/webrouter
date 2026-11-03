@@ -94,7 +94,10 @@ def default_answer_provider(default: str, config: Mapping[str, Mapping[str, Any]
     available = available_answer_providers()
     if default in available:
         return default
-    in_code = {name for name, entry in config.items() if name in available and entry.get("api_key")}
+    # `auto` holds no key of its own: one set under it configures nothing.
+    in_code = {
+        name for name, entry in config.items() if name in available and name != PROVIDER_AUTO and entry.get("api_key")
+    }
     configured = sorted(set(configured_answer_providers()) | in_code)
     if len(configured) == 1:
         return configured[0]

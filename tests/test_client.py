@@ -580,6 +580,16 @@ def test_a_key_passed_in_code_configures_an_answer_backend(
     assert router.answer("q").provider == "fake"
 
 
+def test_a_key_set_under_auto_is_not_an_answer_backend(
+    fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure(monkeypatch, "fake")
+
+    router = WebRouter("nimble", provider_config={"auto": {"api_key": "stray"}})
+
+    assert router.answer("q").provider == "fake", "the one real answer backend, not 'two configured'"
+
+
 def test_the_no_default_refusal_is_its_own_error_and_still_a_provider_not_found(
     fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
 ) -> None:
