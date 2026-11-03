@@ -3844,9 +3844,12 @@ The three template tools share one registry, and the browser tools' method is
 # what it is given straight through rather than translating anything.
 
 
-def _described(model: type[BaseModel], field: str) -> str | None:
+def _described(model: type[BaseModel], field: str) -> str:
     """The request model's own description of ``field``, so the MCP schema says what the library's does."""
-    return model.model_fields[field].description
+    description = model.model_fields[field].description
+    if description is None:
+        raise ValueError(f"{model.__name__}.{field} has no description for the MCP schema")
+    return description
 
 
 MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
