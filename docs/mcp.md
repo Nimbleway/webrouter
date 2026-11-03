@@ -219,6 +219,10 @@ handle's own — `url`, `wait_until`, `ref`, `selector`, `text`, `submit`, `key`
 `full_page`, `format`, `timeout`. Anything the library refuses, this refuses in
 the library's own words.
 
+Over MCP the model chooses `max_results`, not you. Its description steers it
+away from a single result, but the choice stays the model's. A host that wants
+the number fixed should [wrap `search` itself](../README.md#wrapping-search-for-your-own-agent).
+
 ### `research` never blocks the session
 
 A research run takes minutes and an MCP client talks over one pipe. So

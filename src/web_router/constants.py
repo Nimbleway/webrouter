@@ -10,23 +10,30 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Literal, get_args
 
+from pydantic import BaseModel
+
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
     REQUEST_VALUE,
+    BrowseRequest,
     BrowserField,
     BrowserFieldRow,
+    BrowserRequest,
     BrowserState,
     ExtractFormat,
+    ExtractRequest,
     FieldPath,
     JobState,
     PageFormat,
     PageLoadState,
     Provider,
     ResearchEffort,
+    ResearchRequest,
     ResearchState,
     SearchDepth,
+    SearchRequest,
     StealthLevel,
 )
 
@@ -3833,9 +3840,18 @@ The three template tools share one registry, and the browser tools' method is
 # Argument names are the library's own keyword names, so the MCP layer passes
 # what it is given straight through rather than translating anything.
 
+
+def _described(model: type[BaseModel], field: str) -> str:
+    """The request model's own description of ``field``, so the MCP schema says what the library's does."""
+    description = model.model_fields[field].description
+    if description is None:
+        raise ValueError(f"{model.__name__}.{field} has no description for the MCP schema")
+    return description
+
+
 MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": "What to search for."},
-    "max_results": {"type": "integer", "minimum": 1, "description": "Upper bound on results returned."},
+    "max_results": {"type": "integer", "minimum": 1, "description": _described(SearchRequest, "max_results")},
     "search_depth": {
         "type": "string",
         "enum": list(get_args(SearchDepth)),
@@ -3847,15 +3863,15 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "include_domains": {
         "type": "array",
         "items": {"type": "string"},
-        "description": "Restrict results to these domains.",
+        "description": _described(SearchRequest, "include_domains"),
     },
     "exclude_domains": {
         "type": "array",
         "items": {"type": "string"},
-        "description": "Drop results from these domains.",
+        "description": _described(SearchRequest, "exclude_domains"),
     },
-    "country": {"type": "string", "description": "Country code for geo-targeting, e.g. 'US'."},
-    "locale": {"type": "string", "description": "Language code, e.g. 'en'."},
+    "country": {"type": "string", "description": _described(SearchRequest, "country")},
+    "locale": {"type": "string", "description": _described(SearchRequest, "locale")},
 }
 
 MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
@@ -3863,7 +3879,7 @@ MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
         "type": "array",
         "items": {"type": "string"},
         "minItems": 1,
-        "description": "The URLs to fetch, in the order the documents come back.",
+        "description": _described(ExtractRequest, "urls"),
     },
     "format": {
         "type": "string",
@@ -3904,7 +3920,7 @@ MCP_RUN_TEMPLATE_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_RESEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
-    "query": {"type": "string", "description": "The question, or the instructions for the run."},
+    "query": {"type": "string", "description": _described(ResearchRequest, "query")},
     "output_schema": {
         "type": "object",
         "description": "JSON Schema the answer must conform to. Omit it to get prose instead.",
@@ -3925,12 +3941,12 @@ MCP_RESEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "include_domains": {
         "type": "array",
         "items": {"type": "string"},
-        "description": "Restrict sources to these domains.",
+        "description": _described(ResearchRequest, "include_domains"),
     },
     "exclude_domains": {
         "type": "array",
         "items": {"type": "string"},
-        "description": "Keep these domains out of the sources.",
+        "description": _described(ResearchRequest, "exclude_domains"),
     },
 }
 
@@ -3948,12 +3964,12 @@ MCP_BROWSE_PROPERTIES: dict[str, dict[str, Any]] = {
         "type": "object",
         "description": "JSON Schema the answer must conform to. Omit it to get prose instead.",
     },
-    "max_steps": {"type": "integer", "minimum": 1, "description": "Upper bound on the actions the agent may take."},
+    "max_steps": {"type": "integer", "minimum": 1, "description": _described(BrowseRequest, "max_steps")},
     "allowed_domains": {
         "type": "array",
         "items": {"type": "string"},
         "minItems": 1,
-        "description": "Keep the agent on these domains.",
+        "description": _described(BrowseRequest, "allowed_domains"),
     },
 }
 
@@ -4033,7 +4049,7 @@ MCP_BROWSER_OPEN_PROPERTIES: dict[str, dict[str, Any]] = {
             "refuses it rather than using another."
         ),
     },
-    "solve_captchas": {"type": "boolean", "description": "Ask the backend to solve CAPTCHAs it meets."},
+    "solve_captchas": {"type": "boolean", "description": _described(BrowserRequest, "solve_captchas")},
 }
 
 _MCP_SESSION_ID_PROPERTY: dict[str, Any] = {"type": "string", "description": "The session_id `browser_open` returned."}
