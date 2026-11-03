@@ -297,7 +297,12 @@ vendor, so `provider` is required on all three calls.
 Nimble is the only backend with a template catalogue so far. Verified live on
 2026-10-22: a listing, a description and a run on a public test page, the
 response shapes of which the tests are modelled on. See
-[Running a template](#running-a-template).
+[Running a template](#running-a-template). Listing and describing bill
+nothing; a run bills one template run on Nimble's account, at one flat rate
+for every template, whatever the site -- the rate is on
+[Nimble's pricing page](https://www.nimbleway.com/pricing), and
+[`benchmarks/providers/PRICING.md`](benchmarks/providers/PRICING.md) records
+it dated and sourced, since the library itself never states a price.
 
 ### Answer
 
@@ -787,10 +792,13 @@ response.data  # {'title': ..., 'price': ..., ...}, shaped by output_schema
 `input_schema` names: a URL for some templates, an id, a slug or a search term
 for others, and nothing at all for a template whose page is fixed. That is why
 this is a method of its own rather than an option on `extract`, which is keyed
-by URL. Read the schema -- or the `samples` the backend publishes under
-`template.extra` -- before running a template you have not run before; the
-backend refuses inputs that do not match, and an unknown name raises
-`TemplateNotFoundError`.
+by URL. Read the schema -- or `template.samples`, the runs the backend
+recorded, each an input and the record it returned -- before running a
+template you have not run before; the backend refuses inputs that do not
+match, and an unknown name raises `TemplateNotFoundError`. A listing carries
+the same: Nimble's catalogue rows hold the published version whole, so
+`page.templates[i].input_schema` and `.samples` are filled without a second
+call.
 
 `format` asks for the page beside the record, as `markdown` or `html`:
 

@@ -11,7 +11,9 @@ import inspect
 from typing import get_args
 
 import pytest
+from pydantic import BaseModel
 
+import web_router
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants import ENV_BY_PROVIDER
 from web_router.exceptions import ProviderError, UnsupportedParameterError
@@ -273,3 +275,18 @@ def test_provider_repr_never_leaks_a_credential(name: str, monkeypatch: pytest.M
         assert secret not in repr(provider.options)
     finally:
         provider.close()
+
+
+def test_every_public_model_is_importable_from_the_package_root() -> None:
+    """A model that types a public field, such as ``Template.samples``, is one a caller has to name."""
+    models = {
+        name
+        for name, value in vars(web_router.types).items()
+        if not name.startswith("_")
+        and inspect.isclass(value)
+        and issubclass(value, BaseModel)
+        and value.__module__ == "web_router.types"
+    }
+
+    # The shared base of the request models: no caller builds one.
+    assert models - {"NormalizedRequest"} <= set(web_router.__all__)

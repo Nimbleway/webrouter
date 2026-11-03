@@ -155,6 +155,7 @@ from web_router.types import (
     TemplatePage,
     TemplateRequest,
     TemplateResponse,
+    TemplateSample,
     Viewport,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
@@ -238,6 +239,7 @@ __all__ = [
     "TemplateProvider",
     "TemplateRequest",
     "TemplateResponse",
+    "TemplateSample",
     "UnsupportedFormatError",
     "UnsupportedParameterError",
     "Viewport",

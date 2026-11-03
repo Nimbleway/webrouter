@@ -217,6 +217,20 @@ You.com's keyless MCP is priced in its own section above.
 | DeepSeek | markdown | $0.75 per 1k successful fetches | [search and fetch](https://api-docs.deepseek.com/guides/search) |
 | Linkup | markdown (default) or html (`includeRawContent`), `mode=standard`, no rendering | $0.001 per call ($1 per 1k); `renderJs` or `mode=pro` $0.005, both $0.01; a `schema` adds $0.001 | [fetch overview](https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md) |
 
+## Templates (Extract Templates)
+
+Not benchmarked; listed because a run bills on the vendor's account, and
+because the `run_template` MCP tool and the README point here for the figure.
+
+| Backend | What web-router sends | Price | Source |
+|---|---|---|---|
+| Nimble | `extract.templates.run`, one template and its inputs, one page | **$3.00 per 1k runs**, one flat rate for every template, whatever the site or the driver it needs; successes only. Listing and describing templates are free. | [docs pricing](https://docs.nimbleway.com/nimble-sdk/admin/pricing) ("Extract Templates", checked 2026-10-28); [pricing page](https://www.nimbleway.com/pricing) ("Extract Template API", same figure) |
+
+**One rate, not per template (checked 2026-10-28).** The template API
+publishes no price per template -- not in a listing, not in a description --
+because there is none: every run is the same $3.00 per 1k, on both of
+Nimble's pricing pages.
+
 ## Answer
 
 What one `answer()` costs at list price, checked 2026-11-01. The answer scan

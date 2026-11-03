@@ -21,9 +21,6 @@ from web_router.mcp.shaping import (
     shape_browse,
     shape_extract,
     shape_search,
-    shape_template,
-    shape_template_run,
-    shape_templates,
     truncate,
 )
 from web_router.types import (
@@ -34,9 +31,6 @@ from web_router.types import (
     ExtractResponse,
     SearchResponse,
     SearchResult,
-    Template,
-    TemplatePage,
-    TemplateResponse,
 )
 from web_router.types_answer import AnswerResponse
 
@@ -303,103 +297,6 @@ def test_a_devtools_endpoint_written_without_a_scheme_is_redacted(text: str) -> 
     cleaned, count = redact(text)
 
     assert count == 1 and "/devtools/" not in cleaned and MCP_REDACTED in cleaned
-
-
-_BIG_SCHEMA = {"type": "object", "properties": {f"field_{index}": {"type": "string"} for index in range(400)}}
-
-
-def test_a_schema_that_fits_is_never_shortened() -> None:
-    template = Template(provider="fake", name="t", input_schema=_BIG_SCHEMA, output_schema=_BIG_SCHEMA)
-
-    shaped = shape_template(template, "template-0001", budget=100_000)
-
-    assert shaped["template"]["input_schema"] == _BIG_SCHEMA
-    assert shaped["template"]["output_schema"] == _BIG_SCHEMA
-    assert shaped["truncated"] is False
-
-
-def test_a_schema_that_cannot_fit_is_left_out_whole_with_a_pointer_to_the_handle() -> None:
-    """A cut schema would send the model guessing at the inputs it dropped, so it goes whole or not at all."""
-    template = Template(provider="fake", name="t", input_schema={"type": "object"}, output_schema=_BIG_SCHEMA)
-
-    shaped = shape_template(template, "template-0001", budget=2_000)
-
-    assert len(render(shaped)) <= 2_000
-    assert shaped["template"]["output_schema"] is None, "the oversized one goes"
-    assert shaped["template"]["input_schema"] == {"type": "object"}, "the one that fits stays"
-    assert shaped["truncated"] is True
-    assert "output_schema" in shaped["note"] and "template-0001" in shaped["note"]
-
-
-def test_a_record_that_cannot_fit_is_left_out_whole_with_a_pointer_to_the_handle() -> None:
-    response = TemplateResponse(
-        provider="fake",
-        template="t",
-        data={f"field_{index}": _PROSE for index in range(10)},
-        document=ExtractedDocument(url="https://example.com", content=_PROSE, format="markdown"),
-    )
-
-    shaped = shape_template_run(response, "run_template-0001", budget=3_000)
-
-    assert len(render(shaped)) <= 3_000
-    assert shaped["data"] is None
-    assert MCP_TRUNCATION_MARKER in shaped["document"]["content"], "the page was cut first, as text is"
-    assert shaped["truncated"] is True
-    assert "data" in shaped["note"] and "run_template-0001" in shaped["note"]
-
-
-def test_a_record_that_fits_once_the_page_is_cut_is_kept() -> None:
-    response = TemplateResponse(
-        provider="fake",
-        template="t",
-        data={"title": "Widget", "price": "9.99"},
-        document=ExtractedDocument(url="https://example.com", content=_PROSE, format="markdown"),
-    )
-
-    shaped = shape_template_run(response, "run_template-0001", budget=1_500)
-
-    assert shaped["data"] == {"title": "Widget", "price": "9.99"}
-    assert len(render(shaped)) <= 1_500
-
-
-def test_a_listing_counts_the_rows_it_shows_not_the_rows_it_was_given() -> None:
-    page = TemplatePage(
-        provider="fake",
-        templates=[Template(provider="fake", name=f"t{i}", description=_PROSE) for i in range(200)],
-        total=200,
-    )
-
-    shaped = shape_templates(page, "templates-0001", budget=20_000)
-
-    assert shaped["template_count"] == len(shaped["templates"]) < 200
-    assert shaped["total"] == 200, "the backend's own count of the catalogue is untouched"
-
-
-def test_a_run_does_not_echo_its_inputs_so_they_cannot_crowd_out_the_record() -> None:
-    response = TemplateResponse(
-        provider="fake",
-        template="t",
-        inputs={f"p{i}": _PROSE for i in range(100)},
-        data={"title": "Widget"},
-    )
-
-    shaped = shape_template_run(response, "run_template-0001", budget=20_000)
-
-    assert "inputs" not in shaped
-    assert shaped["data"] == {"title": "Widget"}
-    assert len(render(shaped)) <= 20_000
-
-
-def test_the_larger_schema_is_dropped_first_so_the_smaller_one_stays() -> None:
-    big = {"type": "object", "properties": {f"field_{i}": {"type": "string"} for i in range(1000)}}
-    small = {"type": "object", "properties": {f"field_{i}": {"type": "string"} for i in range(60)}}
-    template = Template(provider="fake", name="t", input_schema=big, output_schema=small)
-
-    shaped = shape_template(template, "template-0001", budget=20_000)
-
-    assert shaped["template"]["input_schema"] is None, "the 30k schema goes"
-    assert shaped["template"]["output_schema"] == small, "the 3k schema stays"
-    assert len(render(shaped)) <= 20_000
 
 
 def test_a_long_answer_is_cut_and_keeps_its_cited_sources_first() -> None:

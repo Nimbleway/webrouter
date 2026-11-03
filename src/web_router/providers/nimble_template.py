@@ -42,7 +42,23 @@ from web_router.types import (
     TemplatePage,
     TemplateRequest,
     TemplateResponse,
+    TemplateSample,
 )
+
+
+def _sample_input(sample: object) -> dict[str, Any] | None:
+    """A recorded sample's input, or ``None`` when the sample is malformed and is skipped.
+
+    A missing or null input is a fixed page's, which takes none, so it is
+    ``{}``; anything else that is not a mapping, even an empty one, is not
+    an input the backend published.
+    """
+    if not isinstance(sample, dict):
+        return None
+    inputs = sample.get("input")
+    if inputs is None:
+        return {}
+    return inputs if isinstance(inputs, dict) else None
 
 
 class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
@@ -195,7 +211,12 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
         )
 
     def _to_template(self, item: dict[str, Any]) -> Template:
-        """One template as Nimble describes it: the published version carries everything a run needs."""
+        """One template as Nimble describes it: the published version carries everything a run needs.
+
+        A listing's rows carry the published version too, schemas and samples
+        included, so a page of the catalogue describes each template as fully
+        as ``_get`` does.
+        """
         version = item.get("published_version") or {}
         metadata = version.get("metadata") or {}
         return Template(
@@ -206,6 +227,11 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
             entity_type=metadata.get("entity_type"),
             input_schema=version.get("input_schema"),
             output_schema=version.get("output_schema"),
+            samples=[
+                TemplateSample(input=inputs, output=sample.get("output"))
+                for sample in version.get("samples") or []
+                if (inputs := _sample_input(sample)) is not None
+            ],
             version=_as_int(version.get("version_number")),
             published=bool(version),
             created_at=item.get("created_at"),
@@ -214,7 +240,6 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
                 {
                     **{k: v for k, v in item.items() if k not in _TEMPLATE_MAPPED},
                     **{k: v for k, v in metadata.items() if k not in _TEMPLATE_METADATA_MAPPED},
-                    "samples": version.get("samples"),
                 }
             ),
             raw=item,
