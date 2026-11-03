@@ -267,7 +267,10 @@ def test_an_answer_rendering_cuts_each_snippet_and_says_when_the_backend_stopped
         provider="fake",
         query="q",
         answer="a long answer " * 50,
-        citations=[Citation(url="https://example.com", snippet="x" * 100)],
+        citations=[
+            Citation(url="https://example.com", snippet="x" * 100),
+            Citation(url="https://b.example", field="[2]"),
+        ],
         outcome="partial",
     )
 
@@ -276,3 +279,5 @@ def test_an_answer_rendering_cuts_each_snippet_and_says_when_the_backend_stopped
     assert rendered["answer"] == response.answer, "the backend's answer is never cut"
     assert rendered["citations"][0]["snippet"] == "x" * 10 + " ... [truncated]"
     assert rendered["outcome"] == "partial"
+    assert "field" not in rendered["citations"][0], "a citation with no marker renders as before"
+    assert rendered["citations"][1]["field"] == "[2]", "the model can tell which source backs [2]"

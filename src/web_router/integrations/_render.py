@@ -17,7 +17,7 @@ from web_router.constants import (
     INTEGRATION_RESULT_CHARS,
     INTEGRATION_TRUNCATION_MARKER,
 )
-from web_router.types import ExtractResponse, SearchResponse
+from web_router.types import Citation, ExtractResponse, SearchResponse
 from web_router.types_answer import AnswerResponse
 
 
@@ -54,19 +54,26 @@ def render_extract(response: ExtractResponse, document_chars: int = INTEGRATION_
 def render_answer(response: AnswerResponse, result_chars: int = INTEGRATION_RESULT_CHARS) -> str:
     """A written answer whole, then its citations in order, each snippet cut to ``result_chars``.
 
-    The answer is the backend's and short, so it is never cut. ``outcome`` is
-    there only when the backend said it stopped early.
+    The answer is the backend's and short, so it is never cut. A citation the
+    answer marks inline carries its marker as ``field``, so the model can tell
+    which source backs ``[2]``. ``outcome`` is there only when the backend said
+    it stopped early.
     """
     payload: dict[str, Any] = {
         "answer": response.answer,
-        "citations": [
-            {"title": citation.title, "url": citation.url, "snippet": cut_to_budget(citation.snippet, result_chars)}
-            for citation in response.citations
-        ],
+        "citations": [_citation(citation, result_chars) for citation in response.citations],
     }
     if response.outcome != "complete":
         payload["outcome"] = response.outcome
     return json.dumps(payload, indent=INTEGRATION_JSON_INDENT, ensure_ascii=False, default=str)
+
+
+def _citation(citation: Citation, result_chars: int) -> dict[str, Any]:
+    row: dict[str, Any] = {"title": citation.title, "url": citation.url}
+    if citation.field is not None:
+        row["field"] = citation.field
+    row["snippet"] = cut_to_budget(citation.snippet, result_chars)
+    return row
 
 
 def cut_to_budget(text: str, limit: int) -> str:
