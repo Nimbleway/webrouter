@@ -1047,6 +1047,18 @@ plumbing — never the network, and never `OPENAI_API_KEY` or
 - Docstrings on public API; skip them on self-evident private helpers.
 - Prefer a lookup table in `constants.py` over a chain of `if`.
 
+## Pull requests
+
+Open PRs as drafts: `gh pr create --draft --body-file <file>`, with the body following
+`.github/pull_request_template.md` (same headings, comments removed). Draft PRs do not request
+the code owners' review yet. Mark ready only after Qodo's "Code Review by Qodo" comment covers the
+latest commit and every finding has a reply in its thread, starting with `@qodo`:
+`Fixed in <sha>: <what>` or `Not fixing: <reason>`. Qodo does not review drafts on its own, so a
+`/agentic_review` comment on the draft is a good way to ask for one.
+
+A change users would notice adds a line under `## [Unreleased]` in `CHANGELOG.md`; anything else
+(CI, docs, tests, refactors) takes the `skip-changelog` label. The Changelog check fails the PR otherwise.
+
 ## Files for feedback
 
 Don't commit drafts, decks, PDFs or images for feedback; open a

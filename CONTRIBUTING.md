@@ -32,10 +32,10 @@ make test-integration # tests that hit real provider APIs (needs credentials)
 make test-browser     # tests that launch a real local Chromium
 ```
 
-Pre-commit runs the same lint/format/type checks on staged files. This
-repository has no CI, so `make check` on your machine is the gate a reviewer
-relies on. After editing `pyproject.toml`, run `make lock && make requirements`
-and commit the results.
+Pre-commit runs the same lint/format/type checks on staged files. CI runs them
+again on every pull request, with the unit tests; run `make check` before you push
+so a red CI does not cost a review round. After editing `pyproject.toml`, run
+`make lock && make requirements` and commit the results.
 
 `requires-python` is `>=3.10` — the floor the package supports. `.python-version` pins 3.12, which is just the interpreter `uv` uses
 for local development, not a requirement.
@@ -280,6 +280,10 @@ time.
   `skip-changelog` label instead (release bumps too). New lines must sit under
   `## [Unreleased]`, not under a released version.
 - Direct commits to `main` are blocked; work on a branch and open a PR.
+- Open the PR as a draft. Mark it ready once Qodo's review covers the latest commit and each
+  finding has a reply starting with `@qodo` (`Fixed in <sha>: <what>` or
+  `Not fixing: <reason>`); the maintainers are asked to review only then. Qodo does not review
+  drafts on its own; a `/agentic_review` comment asks it to.
 - Don't commit drafts, decks, PDFs or images for feedback; open a
   [Discussion](https://github.com/WebContextLayer/webrouter/discussions) and attach them.
 
