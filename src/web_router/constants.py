@@ -1039,6 +1039,7 @@ MSG_INTEGRATION_UNKNOWN_TOOL = "web-router has no tool named {name!r}; it serves
 MSG_INTEGRATION_BAD_INPUT: dict[str, str] = {
     "search": "{tool} did not run: it needs a non-empty string `query`.",
     "extract": "{tool} did not run: it needs `urls`, a list of 1 to {max_urls} URL strings.",
+    "answer": "{tool} did not run: it needs a non-empty string `query`.",
 }
 """What the model reads when its own tool input is malformed -- its mistake to fix, so an error result, not a raise.
 
@@ -1065,6 +1066,12 @@ INTEGRATION_ROUTING_GUIDE_METHODS: dict[str, str] = {
         "is clearly the right page but its text is cut off or lacks the detail you need -- a table, a list, a "
         "figure, a date. Pass only URLs a search returned, up to five at a time. It does not find pages; "
         "search does."
+    ),
+    "answer": (
+        "{answer} returns a backend's written answer to one question, with the pages it rests on, in a few "
+        "seconds; each call is billed. Use it for a self-contained question that a short answer settles, "
+        "asked one question at a time. The answer is the backend's own reading, not a source: a fact your "
+        "answer depends on is supported by the pages it cites."
     ),
 }
 """One paragraph per method, in the order of ``INTEGRATION_METHODS``. ``{search}`` and ``{extract}`` are tool names."""

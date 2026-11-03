@@ -1518,6 +1518,9 @@ agent = create_agent("openai:gpt-4.1", tools=tools)
 Or build them one at a time — `WebRouterSearch(router=..., provider=...,
 max_results=..., search_depth=...)` and `WebRouterExtract(...)` — and pass
 `async_router=AsyncWebRouter()` to serve `agent.ainvoke` without a worker thread.
+`WebRouterAnswer(router=..., provider="linkup")` adds `web_answer`, a backend's
+written answer to one question with its sources. It is not among
+`web_router_tools()`: every answer backend needs a key and bills each call.
 
 **The model supplies the query or the URLs; you supply everything else.** The
 provider, `max_results`, `search_depth` and the domain filters are fixed when
@@ -1568,6 +1571,14 @@ back as an error result it can fix; a backend failure does too; your own setup
 mistake raises. The tools are named `web_router_search` and
 `web_router_extract`, never `web_search`, so an agent that also holds Claude's
 built-in search cannot confuse the two.
+
+**Answer is opt-in.** `methods=["search", "extract", "answer"]` adds
+`web_router_answer`: one question in, the backend's written answer and its
+citations out, each snippet cut to `result_chars`. It goes to `answer_provider`,
+else to `provider` when that backend answers, else to the router's default
+answer backend, and the tools raise `NoAnswerProviderError` when they are built
+if there is none to use. It sends only the question; the search options are not
+passed to it.
 
 `routing_guide()` (or `tools.guide()`, for exactly the tools you expose) is a
 first version of the judgment half: cheapest tool first, one fact per search,

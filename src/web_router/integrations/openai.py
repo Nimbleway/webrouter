@@ -61,7 +61,7 @@ class ToolResult(_tools.ToolResult):
 
 
 class WebRouterTools(_tools.WebRouterTools[ToolResult]):
-    """web-router's search and extract as OpenAI function tools, with the executor that runs them.
+    """web-router's search, extract and answer as OpenAI function tools, with the executor that runs them.
 
     Options are the caller's, fixed here and sent unchanged on every call. A
     backend failure, and arguments the model got wrong, come back as an error

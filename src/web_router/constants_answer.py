@@ -14,6 +14,11 @@ from web_router.types_answer import Recency
 
 __all__ = [
     "ANSWER_MARKER",
+    "INTEGRATION_ANSWER_QUERY_DESCRIPTION",
+    "INTEGRATION_ANSWER_TOOL_DESCRIPTION",
+    "INTEGRATION_ANSWER_TOOL_NAME",
+    "INTEGRATION_OPT_IN_METHODS",
+    "LANGCHAIN_ANSWER_TOOL_NAME",
     "MCP_ANSWER_PROPERTIES",
     "MCP_DESC_ANSWER",
     "MSG_ANSWER_FAILED",
@@ -72,3 +77,25 @@ MCP_DESC_ANSWER = (
     "source the answer cites inline carries that marker (e.g. '[2]') in its `field`. There is no "
     "automatic choice of backend yet: with more than one configured, name one with `provider`."
 )
+
+# The answer tool for an agent framework (web_router.integrations). Its guide
+# paragraph and bad-input message sit in constants.py, in the dicts beside
+# search's and extract's.
+
+INTEGRATION_ANSWER_TOOL_NAME = "web_router_answer"
+
+LANGCHAIN_ANSWER_TOOL_NAME = "web_answer"
+
+INTEGRATION_ANSWER_TOOL_DESCRIPTION = (
+    "Answer one question. A backend searches and writes a short answer itself, and returns it with the "
+    "pages it rests on, in a few seconds. Each call is billed. Input is the question."
+)
+
+INTEGRATION_ANSWER_QUERY_DESCRIPTION = "The question to answer, on its own: one fact or one short question."
+
+INTEGRATION_OPT_IN_METHODS: tuple[str, ...] = ("answer",)
+"""The tools exposed only when asked for by name, after ``INTEGRATION_METHODS`` in the guide.
+
+Search and extract run keyless; every answer backend needs a key and bills
+each call, and with no ``auto`` there is no backend to pick unasked.
+"""
