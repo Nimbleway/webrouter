@@ -56,7 +56,7 @@ CONTENT = [
 ]
 
 
-def _stream(content: list[str], finish: str = "stop", request_id: str = "860830f9-9150-4b00-ad39-ab0370bdaf7a") -> str:
+def _stream(content: list[str], finish: str = "stop", request_id: str = "00000000-0000-4000-8000-000000000001") -> str:
     def event(delta: dict[str, Any], finish_reason: str | None) -> str:
         chunk = {"id": request_id, "object": "chat.completion.chunk", "model": "brave-pro"}
         chunk["choices"] = [{"delta": delta, "finish_reason": finish_reason}]
@@ -114,7 +114,7 @@ def test_the_answer_is_the_streamed_text_without_brave_s_tags(provider: BraveAns
 
     assert response.answer == SENTENCE
     assert response.outcome == "complete"
-    assert response.request_id == "860830f9-9150-4b00-ad39-ab0370bdaf7a"
+    assert response.request_id == "00000000-0000-4000-8000-000000000001"
     assert response.raw is not None and "X-Request-Total-Cost" in json.dumps(response.raw), (
         "the stated cost stays in raw"
     )
