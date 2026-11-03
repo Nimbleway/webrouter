@@ -26,7 +26,6 @@ from web_router.constants import (
 )
 from web_router.constants_answer import (
     AUTO_ANSWER_PREFERRED,
-    AUTO_ANSWER_SUPPORTED_PARAMETERS,
     MSG_AUTO_ANSWER_EXHAUSTED,
     MSG_AUTO_ANSWER_NO_MEMBER,
 )
@@ -41,14 +40,20 @@ from web_router.providers._chain import (
     _quoted,
 )
 from web_router.providers.answer import AnswerProvider
-from web_router.types_answer import AnswerRequest, AnswerResponse
+from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
 
 
 class AutoAnswerProvider(AnswerProvider):
-    """Answers through the first configured backend that answers, cheapest first."""
+    """Answers through the first configured backend that answers, cheapest first.
+
+    Declares every answer option, since which ones a call can use depends on the
+    chain -- a backend added with :func:`register_answer_provider` may map one
+    no built-in does. :meth:`_eligible` then sends a request only to members
+    that map what it sets, and refuses it before asking anyone when none does.
+    """
 
     name: ClassVar[str] = PROVIDER_AUTO
-    supported_parameters: ClassVar[frozenset[str]] = AUTO_ANSWER_SUPPORTED_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = ANSWER_PARAMETERS
 
     def __init__(
         self,

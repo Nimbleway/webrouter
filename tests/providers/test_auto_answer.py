@@ -9,15 +9,15 @@ import pytest
 from tests.conftest import FakeAnswerProvider
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants import ANSWER_ENV_BY_PROVIDER
-from web_router.constants_answer import AUTO_ANSWER_PREFERRED, AUTO_ANSWER_SUPPORTED_PARAMETERS
+from web_router.constants_answer import AUTO_ANSWER_PREFERRED
 from web_router.exceptions import NoAnswerProviderError, ProviderError, UnsupportedParameterError
 from web_router.registry_answer import get_answer_provider_class, register_answer_provider, unregister_answer_provider
-from web_router.types_answer import AnswerRequest, AnswerResponse
+from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
 
 CHEAPEST, SECOND, THIRD = AUTO_ANSWER_PREFERRED[:3]
 
 
-def _backend(backend: str, *, supported: frozenset[str] = AUTO_ANSWER_SUPPORTED_PARAMETERS) -> type[FakeAnswerProvider]:
+def _backend(backend: str, *, supported: frozenset[str] = ANSWER_PARAMETERS) -> type[FakeAnswerProvider]:
     return type(f"Fake_{backend}", (FakeAnswerProvider,), {"name": backend, "supported_parameters": supported})
 
 
@@ -116,16 +116,27 @@ async def test_aanswer_falls_through_the_same_way(keys: None, monkeypatch: pytes
         assert (await router.answer("q")).provider == SECOND
 
 
-def test_auto_declares_exactly_what_some_member_maps() -> None:
+def test_the_preferred_order_names_every_built_in_answer_backend() -> None:
     from web_router.registry_answer import _BUILTIN_ANSWER_PROVIDERS
 
-    members = [get_answer_provider_class(name) for name in _BUILTIN_ANSWER_PROVIDERS if name != "auto"]
+    assert set(AUTO_ANSWER_PREFERRED) == set(_BUILTIN_ANSWER_PROVIDERS) - {"auto"}
 
-    assert frozenset().union(*(cls.supported_parameters for cls in members)) == AUTO_ANSWER_SUPPORTED_PARAMETERS
-    assert set(AUTO_ANSWER_PREFERRED) == {cls.name for cls in members}
+
+def test_an_option_only_an_added_backend_maps_reaches_it(keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in AUTO_ANSWER_PREFERRED:
+        register_answer_provider(name, _backend(name, supported=frozenset()))
+    monkeypatch.setitem(ANSWER_ENV_BY_PROVIDER, "custom", ("WEB_ROUTER_TEST_CUSTOM_KEY",))
+    monkeypatch.setenv("WEB_ROUTER_TEST_CUSTOM_KEY", "k")
+    register_answer_provider("custom", _backend("custom", supported=frozenset({"locale"})))
+    try:
+        assert WebRouter().answer("q", locale="en").provider == "custom"
+    finally:
+        unregister_answer_provider("custom")
 
 
 def test_an_option_no_answer_backend_maps_is_refused_before_any_is_asked(keys: None) -> None:
+    for name in AUTO_ANSWER_PREFERRED:  # as every built-in: none maps locale
+        register_answer_provider(name, _backend(name, supported=ANSWER_PARAMETERS - {"locale"}))
     router = WebRouter()
 
     with pytest.raises(UnsupportedParameterError, match="locale"):

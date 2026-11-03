@@ -15,7 +15,6 @@ from web_router.types_answer import Recency
 __all__ = [
     "ANSWER_MARKER",
     "AUTO_ANSWER_PREFERRED",
-    "AUTO_ANSWER_SUPPORTED_PARAMETERS",
     "INTEGRATION_ANSWER_QUERY_DESCRIPTION",
     "INTEGRATION_ANSWER_TOOL_DESCRIPTION",
     "INTEGRATION_ANSWER_TOOL_NAME",
@@ -94,15 +93,6 @@ faster of the two in the answer scan), Linkup about $6, and Parallel, last, has
 no price checked there and was the slowest. The five scored alike on accuracy
 (94-95% on 300 SimpleQA questions), so cost decides. Changing the order is its
 own decision, not a tweak.
-"""
-
-AUTO_ANSWER_SUPPORTED_PARAMETERS: frozenset[str] = frozenset(
-    {"include_domains", "exclude_domains", "country", "recency"}
-)
-"""Every option some member maps. A request goes only to the members that map every option it sets.
-
-``locale`` is absent: no answer backend maps it. A test holds this equal to the
-union of the members' own sets.
 """
 
 MSG_AUTO_ANSWER_NO_MEMBER = "no configured answer backend takes this request: {skipped}"
