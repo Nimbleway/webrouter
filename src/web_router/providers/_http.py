@@ -61,8 +61,8 @@ from web_router.constants import (
 )
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._utils import compact, error_detail, job_budget, research_budget, resolve_api_key
+from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
-    AnswerProvider,
     BrowseProvider,
     BrowserProvider,
     ExtractProvider,

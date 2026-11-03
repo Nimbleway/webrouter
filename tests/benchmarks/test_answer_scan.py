@@ -26,7 +26,7 @@ def test_a_failed_and_a_leaked_answer_are_both_left_out_of_accuracy(answer_scan:
     assert (score["served"], score["correct"], score["failed"], score["leaked"]) == (10, 9, 1, 1)
     assert score["accuracy"] == 0.9
     report = answer_scan.markdown(summary)
-    assert "*Leaked* rows cite one of the set's own pages" in report
+    assert "*Leaked* rows have one of the set's own pages" in report
 
 
 def test_only_a_stated_cost_is_shown_and_never_an_estimate(answer_scan: ModuleType) -> None:

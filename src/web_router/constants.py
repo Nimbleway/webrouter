@@ -12,7 +12,6 @@ from typing import Any, Literal, get_args
 
 from pydantic import BaseModel
 
-from web_router.constants_answer import *  # noqa: F403 -- answer()'s messages and MCP text, re-exported
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
 from web_router.types import (
     BROWSE_PARAMETERS,

@@ -1,18 +1,18 @@
-"""The answer method's base class, re-exported from :mod:`web_router.providers.base`.
+"""The answer method's base class and the helpers its backends share.
 
-Kept apart so ``base.py`` stops growing; import it from ``web_router.providers.base`` as before.
+Kept apart so ``base.py`` stops growing.
 """
 
 from __future__ import annotations
 
 import abc
 
-from web_router.constants import ANSWER_MARKER, MSG_ANSWER_FAILED
+from web_router.constants_answer import ANSWER_MARKER, MSG_ANSWER_FAILED
 from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.base import _BaseProvider
 from web_router.types_answer import AnswerRequest, AnswerResponse
 
-__all__ = ["AnswerProvider", "cited_marker", "refuse_domain_pair"]
+__all__ = ["AnswerProvider"]
 
 _DOMAIN_LISTS = frozenset({"include_domains", "exclude_domains"})
 
