@@ -208,6 +208,23 @@ def test_the_answer_backend_is_the_one_named_else_the_search_one_when_it_answers
     assert WebRouterTools(WebRouter(), methods=["answer"], answer_provider="FAKE").answer_provider == "fake"
 
 
+def test_the_default_answer_backend_is_chosen_once_when_the_tools_are_built(
+    fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from web_router.constants import ANSWER_ENV_BY_PROVIDER
+
+    _no_answer_keys(monkeypatch)
+    monkeypatch.setitem(ANSWER_ENV_BY_PROVIDER, "fake", ("WEB_ROUTER_TEST_FAKE_KEY",))
+    monkeypatch.setenv("WEB_ROUTER_TEST_FAKE_KEY", "k")
+    tools = WebRouterTools(WebRouter("down"), methods=["answer"])
+
+    monkeypatch.setitem(ANSWER_ENV_BY_PROVIDER, "other", ("WEB_ROUTER_TEST_OTHER_KEY",))
+    monkeypatch.setenv("WEB_ROUTER_TEST_OTHER_KEY", "k")
+
+    assert tools.answer_provider == "fake"
+    assert not tools.call("web_router_answer", {"query": "q"}).is_error, "a key added later changes nothing"
+
+
 def test_a_router_with_no_answer_backend_raises_when_the_answer_tool_is_built(
     fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
 ) -> None:

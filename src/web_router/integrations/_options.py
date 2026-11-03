@@ -6,7 +6,7 @@ from web_router.client import AsyncWebRouter, WebRouter
 from web_router.constants import MSG_INTEGRATION_NO_EXTRACT_PROVIDER
 from web_router.exceptions import ConfigurationError
 from web_router.registry import available_extract_providers
-from web_router.registry_answer import available_answer_providers
+from web_router.registry_answer import available_answer_providers, default_answer_provider
 from web_router.types import Provider, provider_name
 
 
@@ -44,10 +44,11 @@ def answer_provider_for(
     provider: str | Provider | None,
     answer_provider: str | Provider | None,
     router: WebRouter | AsyncWebRouter,
-) -> str | None:
+) -> str:
     """The answer tool's backend: the one named, else the search one when it answers, else the router's default.
 
-    The router resolves its default here, so one that has no answer backend to
+    The router's default is resolved here, once, so every call goes to the same
+    backend however the keys change, and a router with no answer backend to
     use raises :class:`~web_router.exceptions.NoAnswerProviderError` when the
     tools are built rather than on the agent's first question.
     """
@@ -56,5 +57,4 @@ def answer_provider_for(
     name = tool_provider(provider)
     if name in available_answer_providers():
         return name
-    router.get_answer_provider(None)
-    return None
+    return default_answer_provider(router.default_provider, router._config)
