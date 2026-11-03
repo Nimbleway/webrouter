@@ -1045,6 +1045,11 @@ plumbing — never the network, and never `OPENAI_API_KEY` or
 - Docstrings on public API; skip them on self-evident private helpers.
 - Prefer a lookup table in `constants.py` over a chain of `if`.
 
+## Files for feedback
+
+Don't commit drafts, decks, PDFs or images for feedback; open a
+[Discussion](https://github.com/WebContextLayer/webrouter/discussions) and attach them.
+
 ## Secrets
 
 Never commit API keys, write them into tests, or paste them into code. Keys come
