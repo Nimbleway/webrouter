@@ -108,6 +108,13 @@ def test_a_router_with_no_answer_backend_raises_when_the_answer_tool_is_built(
     assert WebRouterTools(WebRouter("down"), methods=["search"]).names == ("web_router_search",), "asked for only"
 
 
+def test_the_answer_tool_on_auto_with_no_answer_key_raises_when_it_is_built(monkeypatch: pytest.MonkeyPatch) -> None:
+    _no_answer_keys(monkeypatch)
+
+    with pytest.raises(NoAnswerProviderError):
+        WebRouterTools(WebRouter(), methods=["answer"])
+
+
 def test_an_answer_backend_failure_is_an_error_result_the_model_reads(
     fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
 ) -> None:

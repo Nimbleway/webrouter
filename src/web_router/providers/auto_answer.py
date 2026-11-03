@@ -152,6 +152,14 @@ class AutoAnswerProvider(AnswerProvider):
             raise _exhausted(self.name, failures, MSG_AUTO_ANSWER_EXHAUSTED)
         raise refused[0]
 
+    def require_members(self) -> None:
+        """Raise :class:`NoAnswerProviderError`, naming the variables to set, when the chain is empty."""
+        from web_router.registry_answer import available_answer_providers
+
+        if not self._chain:
+            env_vars = {var for names in ANSWER_ENV_BY_PROVIDER.values() for var in names}
+            raise NoAnswerProviderError(self.name, available_answer_providers(), [], env_vars)
+
     def _eligible(self, request: AnswerRequest) -> list[tuple[int, str]]:
         """The chain members that map every option this request sets, in order.
 
@@ -160,11 +168,9 @@ class AutoAnswerProvider(AnswerProvider):
             UnsupportedParameterError: no member maps everything set, naming
                 what each one lacked. Nothing has been asked.
         """
-        from web_router.registry_answer import available_answer_providers, get_answer_provider_class
+        from web_router.registry_answer import get_answer_provider_class
 
-        if not self._chain:
-            env_vars = {var for names in ANSWER_ENV_BY_PROVIDER.values() for var in names}
-            raise NoAnswerProviderError(self.name, available_answer_providers(), [], env_vars)
+        self.require_members()
         wanted = request.specified_parameters()
         eligible: list[tuple[int, str]] = []
         skipped: list[str] = []
