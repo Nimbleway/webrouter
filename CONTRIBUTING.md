@@ -281,9 +281,9 @@ time.
   `## [Unreleased]`, not under a released version.
 - Direct commits to `main` are blocked; work on a branch and open a PR.
 - Open the PR as a draft. Mark it ready once Qodo's review covers the latest commit and each
-  finding has a reply (`Fixed in <sha>: <what>` or `Not fixing: <reason>`); the maintainers are
-  asked to review only then. Qodo does not review drafts on its own; a `/agentic_review` comment
-  asks it to.
+  finding has a reply starting with `@qodo` (`Fixed in <sha>: <what>` or
+  `Not fixing: <reason>`); the maintainers are asked to review only then. Qodo does not review
+  drafts on its own; a `/agentic_review` comment asks it to.
 - Don't commit drafts, decks, PDFs or images for feedback; open a
   [Discussion](https://github.com/WebContextLayer/webrouter/discussions) and attach them.
 

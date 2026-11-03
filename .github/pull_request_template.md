@@ -17,6 +17,6 @@
 
 - [ ] Tests added or updated
 - [ ] README support table and docs updated if provider capabilities or the public API changed
-- [ ] Opened as a draft, marked ready only after Qodo (the AI review bot that comments on every PR here)
-      posted its review for the latest commit, and every finding has a reply:
+- [ ] Opened as a draft, marked ready only after Qodo (the AI review bot on this repo)
+      posted its review for the latest commit, and every finding has a reply starting with `@qodo`:
       `Fixed in <sha>: <what>` or `Not fixing: <reason>` (on a draft, a `/agentic_review` comment asks Qodo to review)
