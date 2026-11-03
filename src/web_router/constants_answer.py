@@ -16,6 +16,11 @@ __all__ = [
     "ANSWER_MARKER",
     "AUTO_ANSWER_PREFERRED",
     "AUTO_ANSWER_SUPPORTED_PARAMETERS",
+    "INTEGRATION_ANSWER_QUERY_DESCRIPTION",
+    "INTEGRATION_ANSWER_TOOL_DESCRIPTION",
+    "INTEGRATION_ANSWER_TOOL_NAME",
+    "INTEGRATION_OPT_IN_METHODS",
+    "LANGCHAIN_ANSWER_TOOL_NAME",
     "MCP_ANSWER_PROPERTIES",
     "MCP_DESC_ANSWER",
     "MSG_ANSWER_FAILED",
@@ -104,3 +109,24 @@ MSG_AUTO_ANSWER_NO_MEMBER = "no configured answer backend takes this request: {s
 """Raised as :class:`~web_router.exceptions.UnsupportedParameterError` when every member was passed over."""
 
 MSG_AUTO_ANSWER_EXHAUSTED = "every answer backend failed: {failures}"
+# The answer tool for an agent framework (web_router.integrations). Its guide
+# paragraph and bad-input message sit in constants.py, in the dicts beside
+# search's and extract's.
+
+INTEGRATION_ANSWER_TOOL_NAME = "web_router_answer"
+
+LANGCHAIN_ANSWER_TOOL_NAME = "web_answer"
+
+INTEGRATION_ANSWER_TOOL_DESCRIPTION = (
+    "Answer one question. A backend searches and writes a short answer itself, and returns it with the "
+    "pages it rests on, in a few seconds. Each call is billed. Input is the question."
+)
+
+INTEGRATION_ANSWER_QUERY_DESCRIPTION = "The question to answer, on its own: one fact or one short question."
+
+INTEGRATION_OPT_IN_METHODS: tuple[str, ...] = ("answer",)
+"""The tools exposed only when asked for by name, after ``INTEGRATION_METHODS`` in the guide.
+
+Search and extract run keyless; every answer backend needs a key and bills
+each call, and with no ``auto`` there is no backend to pick unasked.
+"""

@@ -44,7 +44,7 @@ class ToolResult(_tools.ToolResult):
 
 
 class WebRouterTools(_tools.WebRouterTools[ToolResult]):
-    """web-router's search and extract as Claude custom tools, with the executor that runs them.
+    """web-router's search, extract and answer as Claude custom tools, with the executor that runs them.
 
     Options are the caller's, fixed here and sent unchanged on every call. A
     backend failure comes back as an error result the model can react to;
