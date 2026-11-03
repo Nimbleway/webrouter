@@ -1,8 +1,8 @@
-"""The answer method's messages and MCP tool text, re-exported from :mod:`web_router.constants`.
+"""The answer method's messages and MCP tool text.
 
-Kept apart so ``constants.py`` stops growing; import them from ``web_router.constants`` as
-before. Imports ``types_answer`` (which imports only ``types``), as AGENTS.md allows a
-``constants_*`` module to. The answer backends' variable table stays in ``constants.py``,
+Kept apart so ``constants.py`` stops growing; import them from here by name. Imports
+``types_answer`` (which imports only ``types``), as AGENTS.md allows a ``constants_*``
+module to. The answer backends' variable table stays in ``constants.py``,
 beside every method's.
 """
 

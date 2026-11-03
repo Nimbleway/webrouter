@@ -64,8 +64,8 @@ from web_router.exceptions import (
     UnsupportedParameterError,
     WebRouterError,
 )
+from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
-    AnswerProvider,
     AsyncBrowserHandle,
     BrowseJob,
     BrowseProvider,
@@ -78,34 +78,36 @@ from web_router.providers.base import (
     TemplateProvider,
 )
 from web_router.registry import (
-    available_answer_providers,
     available_browse_providers,
     available_browser_providers,
     available_extract_providers,
     available_providers,
     available_research_providers,
     available_template_providers,
-    configured_answer_providers,
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
     configured_providers,
     configured_research_providers,
     configured_template_providers,
-    register_answer_provider,
     register_browse_provider,
     register_browser_provider,
     register_extract_provider,
     register_provider,
     register_research_provider,
     register_template_provider,
-    unregister_answer_provider,
     unregister_browse_provider,
     unregister_browser_provider,
     unregister_extract_provider,
     unregister_provider,
     unregister_research_provider,
     unregister_template_provider,
+)
+from web_router.registry_answer import (
+    available_answer_providers,
+    configured_answer_providers,
+    register_answer_provider,
+    unregister_answer_provider,
 )
 from web_router.types import (
     BROWSE_PARAMETERS,

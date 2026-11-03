@@ -134,14 +134,12 @@ from web_router.mcp.shaping import (
 from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider
 from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
 from web_router.registry import (
-    configured_answer_providers,
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
     configured_providers,
     configured_research_providers,
     configured_template_providers,
-    get_answer_provider_class,
     get_browse_provider_class,
     get_browser_provider_class,
     get_extract_provider_class,
@@ -149,6 +147,7 @@ from web_router.registry import (
     get_research_provider_class,
     get_template_provider_class,
 )
+from web_router.registry_answer import configured_answer_providers, get_answer_provider_class
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
