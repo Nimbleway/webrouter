@@ -37,6 +37,7 @@ from web_router.constants_brave import (
     BRAVE_FINISH_LENGTH,
     BRAVE_SSE_DATA_PREFIX,
     BRAVE_SSE_DONE,
+    MSG_BRAVE_ANSWER_STREAM_CUT,
     MSG_BRAVE_ANSWER_STREAM_ERROR,
 )
 from web_router.exceptions import ProviderError
@@ -135,7 +136,12 @@ class BraveAnswerProvider(HttpAnswerProvider):
         )
 
     def _payload(self, response: httpx.Response) -> dict[str, Any]:
-        """The stream's events in order, each decoded; an event that reports an error raises."""
+        """The stream's events in order, each decoded.
+
+        An event that reports an error raises, and so does a stream that ends
+        before ``[DONE]``: a connection dropped mid-answer is a failure, not a
+        short answer.
+        """
         self._raise_for_status(response)
         events: list[dict[str, Any]] = []
         for line in response.text.splitlines():
@@ -143,12 +149,12 @@ class BraveAnswerProvider(HttpAnswerProvider):
                 continue
             data = line[len(BRAVE_SSE_DATA_PREFIX) :].strip()
             if data == BRAVE_SSE_DONE:
-                break
+                return {"events": events}
             event = json.loads(data)
             if event.get("error"):
                 raise ProviderError(self.name, MSG_BRAVE_ANSWER_STREAM_ERROR.format(error=event["error"]))
             events.append(event)
-        return {"events": events}
+        raise ProviderError(self.name, MSG_BRAVE_ANSWER_STREAM_CUT.format(count=len(events)))
 
     def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
         events = payload.get("events") or []

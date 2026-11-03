@@ -145,6 +145,14 @@ def test_an_error_event_in_the_stream_is_a_provider_error(provider: BraveAnswerP
         provider.answer(AnswerRequest(query=QUESTION))
 
 
+def test_a_stream_that_ends_before_done_is_a_provider_error(provider: BraveAnswerProvider) -> None:
+    cut = _stream(CONTENT).split("data: [DONE]")[0]
+    _stub(provider, cut)
+
+    with pytest.raises(ProviderError, match=r"before \[DONE\]"):
+        provider.answer(AnswerRequest(query=QUESTION))
+
+
 def test_an_http_error_names_the_status(provider: BraveAnswerProvider) -> None:
     _stub(provider, '{"error": "OPTION_NOT_IN_PLAN"}', status=402)
 

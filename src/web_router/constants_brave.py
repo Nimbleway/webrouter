@@ -37,3 +37,5 @@ BRAVE_FINISH_LENGTH = "length"
 """The ``finish_reason`` of an answer cut off at its token limit: ``partial``."""
 
 MSG_BRAVE_ANSWER_STREAM_ERROR = "the answer stream reported an error: {error}"
+
+MSG_BRAVE_ANSWER_STREAM_CUT = "the answer stream ended before [DONE], after {count} events"
