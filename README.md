@@ -317,6 +317,7 @@ for what an unnamed call does.
 | `Provider.PARALLEL` | `parallel` | [Parallel Chat API (beta), `lite`](https://docs.parallel.ai/chat-api) | `PARALLEL_API_KEY` | none: the Chat API takes no source filter | no: its `basis` backs the answer as a whole |
 | `Provider.EXA` | `exa` | [Exa Answer API](https://docs.exa.ai/reference/answer) | `EXA_API_KEY` | none: no source filter, and `userLocation` showed no clear effect | yes: `[N]` markers, in `citation.field` |
 | `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | yes: `[N]` markers, in `citation.field` |
+| `Provider.BRAVE` | `brave` | [Brave Answers API](https://brave.com/search/api/) | `BRAVE_ANSWER_API_KEY` (the Answers plan; not the search key) | none: no source filter, and `language` showed no effect | yes: each citation's span in the answer, in `citation.extra` |
 
 All verified live on 2026-11-01, every mapped option seen to apply. The
 medians and stated costs below are from the answer scan of 300 SimpleQA
@@ -344,6 +345,12 @@ questions on 2026-11-01, graded by `openai:gpt-4o`.
   asked for inline citations, so the answer marks the ones it rests on as `[N]`, numbering them from 1, and a
   page read but never cited has no `field`. `recency` is its `fromDate`, and Linkup filters on the date it holds
   for a page, which is not always the publication date.
+- `brave` answers in two to three seconds and was verified live on 2026-11-03, outside the scan. It returns its
+  sources only on a streamed call, so the router streams it and reads the whole stream before answering. The
+  answer is the text with Brave's `<citation>` and `<usage>` tags taken out; each tag is a citation, in order,
+  with its `number` and its `start_index` / `end_index` into the answer in `extra`, and Brave writes no marker
+  into the text, so `field` is unset. Its `<usage>` tag, in `raw`, states the call's cost: $0.054 for one
+  question, almost all of it input tokens, about ten times the others. Every option is refused.
 
 **Choosing one.** On 300 SimpleQA questions graded by one judge, all five land
 at 94-95% and their intervals overlap, so accuracy does not separate them --

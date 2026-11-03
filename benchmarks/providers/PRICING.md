@@ -244,6 +244,7 @@ carries one; this table is for reading the others.
 | Parallel | Chat API (beta), `model=lite` | Not checked here; see the vendor's page | [pricing](https://parallel.ai/pricing) |
 | You.com | `/v1/answer` on `api.you.com` | $5 per 1k; its response states no cost | [changelog](https://you.com/docs/additional-resources/changelog/2026/8/5.md) |
 | Perplexity | `/v1/responses`, `effort=fast` | Tokens plus tools: $0.001 a web search, and the `fast` model's tokens. Its response states the total under `usage.cost`: $0.0012 an answer on average over the answer scan of 300 SimpleQA questions on 2026-11-01 | [presets](https://docs.perplexity.ai/docs/agent-api/presets.md), [pricing](https://docs.perplexity.ai/getting-started/pricing) |
+| Brave | `/res/v1/chat/completions`, `model=brave`, streamed with `enable_citations` | $4 per 1k plus tokens ($5 per million). Its stream states the cost in a `<usage>` tag: $0.054 for one question on 2026-11-03 (9,887 input tokens), not measured over the scan | [Brave Search API](https://brave.com/search/api/) |
 
 ## Research
 
