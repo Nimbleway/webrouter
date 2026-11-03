@@ -38,7 +38,9 @@ def keys(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 def test_auto_tries_the_configured_backends_cheapest_first(keys: None) -> None:
     router = WebRouter()
 
-    assert router.get_answer_provider().members == AUTO_ANSWER_PREFERRED  # type: ignore[attr-defined]
+    # Spelled out, not read from AUTO_ANSWER_PREFERRED: a reorder there must fail here.
+    cheapest_first = ("perplexity", "exa", "you", "linkup", "parallel")
+    assert router.get_answer_provider().members == cheapest_first  # type: ignore[attr-defined]
     assert router.answer("q").provider == CHEAPEST, "unnamed, the router's default `auto` serves the call"
 
 
