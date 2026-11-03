@@ -158,6 +158,20 @@ def test_a_sample_input_too_large_for_the_listing_is_left_out_whole(rows: int) -
     assert "sample_inputs" in shaped["note"] and "templates-0001" in shaped["note"]
 
 
+@pytest.mark.parametrize("rows", [50, 500])
+def test_many_oversized_sample_inputs_share_one_note_so_the_rows_still_fit(rows: int) -> None:
+    sample = TemplateSample(input={"url": "https://x/" + "a" * 250})
+    templates = [Template(provider="fake", name=f"t{i}", samples=[sample]) for i in range(rows)]
+
+    shaped = shape_templates(TemplatePage(provider="fake", templates=templates), "templates-0001", budget=8_000)
+
+    assert len(render(shaped)) <= 8_000
+    assert shaped["template_count"] > 1, "the notes do not crowd out the rows"
+    assert all(row["sample_inputs"] is None for row in shaped["templates"])
+    assert shaped["note"].count("sample_inputs") == 1 and "templates-0001" in shaped["note"]
+    assert len(shaped["note"]) < 600, "one note for the page, whatever its row count"
+
+
 def test_a_listing_with_small_sample_inputs_is_not_truncated() -> None:
     sample = TemplateSample(input={"url": "https://example.com/p/1"})
     page = TemplatePage(provider="fake", templates=[Template(provider="fake", name="t", samples=[sample])])

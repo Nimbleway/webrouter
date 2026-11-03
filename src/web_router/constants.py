@@ -4417,6 +4417,13 @@ MCP_MSG_OVERSIZED = (
 )
 """A field that is never shortened -- a schema, a record -- did not fit even on its own."""
 
+MCP_MSG_SAMPLES_OMITTED = (
+    "sample_inputs of {count} templates were too large for a listing row and were left out whole. "
+    "Call template for one template's samples, or fetch_raw with handle {handle!r} for the backend's "
+    "untouched payload."
+)
+"""Sample inputs left out of a catalogue page, said once for the page so the note does not grow with its rows."""
+
 MCP_MSG_RESEARCH_PENDING = (
     "The run did not finish in the {wait:g}s this tool waits, and is still going. Poll "
     "research_status with handle {handle!r} -- calling research again would start, and bill for, "
