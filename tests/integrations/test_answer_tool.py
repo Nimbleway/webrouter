@@ -8,9 +8,11 @@ from collections.abc import Iterator
 import pytest
 
 from tests.conftest import FakeExtractProvider, FakeProvider
+from tests.integrations.test_openai import STRICT_KEYWORDS, _keywords
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants import ANSWER_ENV_BY_PROVIDER
 from web_router.exceptions import NoAnswerProviderError, ProviderError
+from web_router.integrations import openai
 from web_router.integrations._render import render_answer
 from web_router.integrations.anthropic import WebRouterTools, routing_guide
 from web_router.registry import (
@@ -162,3 +164,13 @@ def test_an_answer_rendering_cuts_each_snippet_and_says_when_the_backend_stopped
     assert rendered["outcome"] == "partial"
     assert "field" not in rendered["citations"][0], "a citation with no marker renders as before"
     assert rendered["citations"][1]["field"] == "[2]", "the model can tell which source backs [2]"
+
+
+def test_the_openai_answer_tool_is_strict_on_both_apis() -> None:
+    tools = openai.WebRouterTools(WebRouter(), methods=["answer"], provider="fake")
+    chat = [d["function"] for d in tools.chat_definitions()]
+
+    for definitions in (tools.definitions(), chat):
+        assert [d["name"] for d in definitions] == ["web_router_answer"]
+        assert all(d["strict"] is True and d["parameters"]["additionalProperties"] is False for d in definitions)
+        assert all(_keywords(d["parameters"]) <= STRICT_KEYWORDS for d in definitions)
