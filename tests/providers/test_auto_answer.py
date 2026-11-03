@@ -109,6 +109,13 @@ def test_a_chain_keyed_by_method_sets_answers_order_alone(keys: None) -> None:
     assert router.answer("q").provider == THIRD
 
 
+def test_a_plain_list_chain_shared_by_every_method_keeps_only_its_answer_backends(keys: None) -> None:
+    router = WebRouter(provider_config={"auto": {"chain": ["tavily", THIRD, "nimble"]}})
+
+    assert router.get_answer_provider().members == (THIRD,)  # type: ignore[attr-defined]
+    assert router.answer("q").provider == THIRD
+
+
 async def test_aanswer_falls_through_the_same_way(keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(get_answer_provider_class(CHEAPEST), "raises", ProviderError(CHEAPEST, "HTTP 503"))
 

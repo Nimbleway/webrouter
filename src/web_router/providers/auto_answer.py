@@ -78,6 +78,13 @@ class AutoAnswerProvider(AnswerProvider):
         self._members_config, self._chain = _members_and_chain(
             chain, members_config, AUTO_CHAIN_ANSWER, self.default_chain
         )
+        if chain is not None and not isinstance(chain, Mapping):
+            # A plain list is every method's chain, so names that serve search
+            # but not answer() are this method's to skip, not an error.
+            from web_router.registry_answer import available_answer_providers
+
+            answering = set(available_answer_providers())
+            self._chain = tuple(member for member in self._chain if member[0] in answering)
         self.fallback_on_empty = fallback_on_empty
         self._members: dict[int, AnswerProvider] = {}
 
