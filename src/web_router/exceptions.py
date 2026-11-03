@@ -31,8 +31,6 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from web_router.constants import (
-    MSG_ANSWER_NO_DEFAULT,
-    MSG_ANSWER_NONE_CONFIGURED,
     MSG_BENCHMARK_TIMEOUT,
     MSG_BROWSE_TIMEOUT,
     MSG_BROWSER_ACTION_FAILED,
@@ -51,6 +49,7 @@ from web_router.constants import (
     MSG_UNSUPPORTED_PARAMETERS_ADVICE,
     MSG_UNSUPPORTED_VALUES,
 )
+from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
 
 
 def describe(exc: BaseException) -> str:

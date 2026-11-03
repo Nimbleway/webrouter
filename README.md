@@ -242,10 +242,11 @@ the most useful thing to contribute — see
 
 > Brave, Exa, Parallel and Perplexity were added to broaden the catalogue and
 > are intentionally minimal. Brave maps no `search_depth` because its API has no
-> content-depth control at all. For **Exa and Perplexity the endpoint and auth
-> are verified, but the response mapping is taken from documentation and has not
-> been confirmed against a real response** — no working key for either was
-> available. Their integration tests exist and skip themselves until one is.
+> content-depth control at all. Perplexity's response mapping was verified live
+> on 2026-11-03. For **Exa the endpoint and auth are verified, but the response
+> mapping is taken from documentation and has not been confirmed against a real
+> response** — no working key was available. Its integration tests exist and skip
+> themselves until one is.
 
 ### Extract
 
@@ -274,12 +275,10 @@ and Bright Data needs the zone that routes the request beside its token. Neither
 has a default worth guessing, so a missing one is an error naming the variable
 to set.
 
-> **Oxylabs, Bright Data and Firecrawl are mapped from documentation** — no
-> account for any of them was available, so the endpoint, auth and response
-> shape have not been confirmed against a real response (only Bright Data's
-> envelope, and the headers of a fetch it could not make, were seen live). Their integration tests
-> exist and skip themselves until credentials are. Nimble, Tavily, Jina and Linkup
-> were verified live; Exa's extract mapping is from documentation too.
+> Nimble, Tavily, Jina, Linkup, Firecrawl, Oxylabs and Bright Data were verified
+> live — the last two on 2026-11-03. **Exa's extract mapping is taken from
+> documentation** and has not been confirmed against a real response; its
+> integration tests skip themselves until a working key is available.
 
 ### Templates
 
@@ -297,7 +296,12 @@ vendor, so `provider` is required on all three calls.
 Nimble is the only backend with a template catalogue so far. Verified live on
 2026-10-22: a listing, a description and a run on a public test page, the
 response shapes of which the tests are modelled on. See
-[Running a template](#running-a-template).
+[Running a template](#running-a-template). Listing and describing bill
+nothing; a run bills one template run on Nimble's account, at one flat rate
+for every template, whatever the site -- the rate is on
+[Nimble's pricing page](https://www.nimbleway.com/pricing), and
+[`benchmarks/providers/PRICING.md`](benchmarks/providers/PRICING.md) records
+it dated and sourced, since the library itself never states a price.
 
 ### Answer
 
@@ -314,7 +318,9 @@ for what an unnamed call does.
 | `Provider.EXA` | `exa` | [Exa Answer API](https://docs.exa.ai/reference/answer) | `EXA_API_KEY` | none: no source filter, and `userLocation` showed no clear effect | yes: `[N]` markers, in `citation.field` |
 | `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | yes: `[N]` markers, in `citation.field` |
 
-All verified live on 2026-11-01, every mapped option seen to apply.
+All verified live on 2026-11-01, every mapped option seen to apply. The
+medians and stated costs below are from the answer scan of 300 SimpleQA
+questions on 2026-11-01, graded by `openai:gpt-4o`.
 
 - `perplexity` answers in about two seconds (median 1.9 s over 300 questions) and cites inline as `[2]`; a
   citation whose marker appears in the answer carries it in `field`, and the
@@ -785,10 +791,13 @@ response.data  # {'title': ..., 'price': ..., ...}, shaped by output_schema
 `input_schema` names: a URL for some templates, an id, a slug or a search term
 for others, and nothing at all for a template whose page is fixed. That is why
 this is a method of its own rather than an option on `extract`, which is keyed
-by URL. Read the schema -- or the `samples` the backend publishes under
-`template.extra` -- before running a template you have not run before; the
-backend refuses inputs that do not match, and an unknown name raises
-`TemplateNotFoundError`.
+by URL. Read the schema -- or `template.samples`, the runs the backend
+recorded, each an input and the record it returned -- before running a
+template you have not run before; the backend refuses inputs that do not
+match, and an unknown name raises `TemplateNotFoundError`. A listing carries
+the same: Nimble's catalogue rows hold the published version whole, so
+`page.templates[i].input_schema` and `.samples` are filled without a second
+call.
 
 `format` asks for the page beside the record, as `markdown` or `html`:
 
@@ -850,7 +859,7 @@ Argentina won, beating France 4-2 on penalties after a 3-3 draw through extra ti
 
 With more than one key set, name the backend: `router.answer(q, provider="linkup")`.
 Which one: they score alike on accuracy (see [Choosing one](#answer)), so pick
-on what you need -- Linkup is the fastest (about a second); Perplexity, You.com
+on what you need -- Linkup had the lowest median latency in that scan (0.9 s); Perplexity, You.com
 and Linkup take source filters (domains, recency); Perplexity, You.com, Exa and
 Linkup tie each source to a sentence. [`examples/answer.py`](examples/answer.py)
 runs the whole flow, errors included.
@@ -1597,6 +1606,31 @@ strict, so OpenAI holds the model's arguments to the schema. OpenAI has no
 error flag on a tool's output, so an error's text says on its own that the
 call failed or did not run. The tools keep their `web_router_` names, so they
 never collide with OpenAI's built-in `web_search` either.
+
+## Wrapping `search` for your own agent
+
+The integrations above already fix `max_results` when the tool is built, so the
+model never picks it. A model that may pick it will sometimes ask for one
+result and answer thinly. For a framework with no integration, do the same:
+keep `max_results` out of the schema the model sees and pin 5 to 10 yourself.
+`WebRouterTools` gives you that schema and the compact rendering, whatever
+sends them:
+
+```python
+from web_router import WebRouter
+from web_router.integrations.anthropic import WebRouterTools
+
+tools = WebRouterTools(WebRouter(), methods=["search"], max_results=8)
+schema = tools.definitions()[0]["input_schema"]  # only `query`
+
+
+def web_search(query: str) -> str:
+    return tools.call("web_router_search", {"query": query}).content
+```
+
+If you do expose `max_results`, its description in `SearchRequest`'s JSON
+schema tells the model when to ask for more. The MCP server shows it the same
+text.
 
 ## Agent benchmark
 

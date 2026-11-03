@@ -10,24 +10,30 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Literal, get_args
 
-from web_router.constants_answer import *  # noqa: F403 -- answer()'s messages and MCP text, re-exported
+from pydantic import BaseModel
+
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
     REQUEST_VALUE,
+    BrowseRequest,
     BrowserField,
     BrowserFieldRow,
+    BrowserRequest,
     BrowserState,
     ExtractFormat,
+    ExtractRequest,
     FieldPath,
     JobState,
     PageFormat,
     PageLoadState,
     Provider,
     ResearchEffort,
+    ResearchRequest,
     ResearchState,
     SearchDepth,
+    SearchRequest,
     StealthLevel,
 )
 
@@ -3176,8 +3182,7 @@ KEENABLE_PARAM_NAMES = {"max_results": "max_results"}
 
 # --- Oxylabs ----------------------------------------------------------------
 # Extract only: Oxylabs' Web Scraper API fetches a URL, it does not rank the web.
-# Mapped from documentation -- no account was available to verify it live. See
-# tests/providers/test_oxylabs.py.
+# Verified live on 2026-11-03. See tests/providers/test_oxylabs.py.
 
 OXYLABS_BASE_URL = "https://realtime.oxylabs.io"
 OXYLABS_EXTRACT_PATH = "/v1/queries"
@@ -3206,8 +3211,7 @@ OXYLABS_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "html"
 
 # --- Bright Data ------------------------------------------------------------
 # Extract only: the Web Unlocker fetches a URL through Bright Data's network.
-# Mapped from documentation; only the failed-fetch envelope below has been seen
-# live. See tests/providers/test_brightdata.py.
+# Verified live on 2026-11-03. See tests/providers/test_brightdata.py.
 
 BRIGHTDATA_BASE_URL = "https://api.brightdata.com"
 BRIGHTDATA_EXTRACT_PATH = "/request"
@@ -3836,9 +3840,18 @@ The three template tools share one registry, and the browser tools' method is
 # Argument names are the library's own keyword names, so the MCP layer passes
 # what it is given straight through rather than translating anything.
 
+
+def _described(model: type[BaseModel], field: str) -> str:
+    """The request model's own description of ``field``, so the MCP schema says what the library's does."""
+    description = model.model_fields[field].description
+    if description is None:
+        raise ValueError(f"{model.__name__}.{field} has no description for the MCP schema")
+    return description
+
+
 MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": "What to search for."},
-    "max_results": {"type": "integer", "minimum": 1, "description": "Upper bound on results returned."},
+    "max_results": {"type": "integer", "minimum": 1, "description": _described(SearchRequest, "max_results")},
     "search_depth": {
         "type": "string",
         "enum": list(get_args(SearchDepth)),
@@ -3850,15 +3863,15 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "include_domains": {
         "type": "array",
         "items": {"type": "string"},
-        "description": "Restrict results to these domains.",
+        "description": _described(SearchRequest, "include_domains"),
     },
     "exclude_domains": {
         "type": "array",
         "items": {"type": "string"},
-        "description": "Drop results from these domains.",
+        "description": _described(SearchRequest, "exclude_domains"),
     },
-    "country": {"type": "string", "description": "Country code for geo-targeting, e.g. 'US'."},
-    "locale": {"type": "string", "description": "Language code, e.g. 'en'."},
+    "country": {"type": "string", "description": _described(SearchRequest, "country")},
+    "locale": {"type": "string", "description": _described(SearchRequest, "locale")},
 }
 
 MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
@@ -3866,7 +3879,7 @@ MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
         "type": "array",
         "items": {"type": "string"},
         "minItems": 1,
-        "description": "The URLs to fetch, in the order the documents come back.",
+        "description": _described(ExtractRequest, "urls"),
     },
     "format": {
         "type": "string",
@@ -3907,7 +3920,7 @@ MCP_RUN_TEMPLATE_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_RESEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
-    "query": {"type": "string", "description": "The question, or the instructions for the run."},
+    "query": {"type": "string", "description": _described(ResearchRequest, "query")},
     "output_schema": {
         "type": "object",
         "description": "JSON Schema the answer must conform to. Omit it to get prose instead.",
@@ -3928,12 +3941,12 @@ MCP_RESEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "include_domains": {
         "type": "array",
         "items": {"type": "string"},
-        "description": "Restrict sources to these domains.",
+        "description": _described(ResearchRequest, "include_domains"),
     },
     "exclude_domains": {
         "type": "array",
         "items": {"type": "string"},
-        "description": "Keep these domains out of the sources.",
+        "description": _described(ResearchRequest, "exclude_domains"),
     },
 }
 
@@ -3951,12 +3964,12 @@ MCP_BROWSE_PROPERTIES: dict[str, dict[str, Any]] = {
         "type": "object",
         "description": "JSON Schema the answer must conform to. Omit it to get prose instead.",
     },
-    "max_steps": {"type": "integer", "minimum": 1, "description": "Upper bound on the actions the agent may take."},
+    "max_steps": {"type": "integer", "minimum": 1, "description": _described(BrowseRequest, "max_steps")},
     "allowed_domains": {
         "type": "array",
         "items": {"type": "string"},
         "minItems": 1,
-        "description": "Keep the agent on these domains.",
+        "description": _described(BrowseRequest, "allowed_domains"),
     },
 }
 
@@ -4036,7 +4049,7 @@ MCP_BROWSER_OPEN_PROPERTIES: dict[str, dict[str, Any]] = {
             "refuses it rather than using another."
         ),
     },
-    "solve_captchas": {"type": "boolean", "description": "Ask the backend to solve CAPTCHAs it meets."},
+    "solve_captchas": {"type": "boolean", "description": _described(BrowserRequest, "solve_captchas")},
 }
 
 _MCP_SESSION_ID_PROPERTY: dict[str, Any] = {"type": "string", "description": "The session_id `browser_open` returned."}
@@ -4219,26 +4232,32 @@ MCP_DESC_EXTRACT = (
 MCP_DESC_TEMPLATES = (
     "List a vendor's templates: saved, site-specific extractions, each turning one kind of "
     "page -- a retailer's product page, a job listing, a search results page -- into a record with "
-    "fixed fields. Returns in about a second, with each template's name, site and what it extracts. "
+    "fixed fields. Returns in about a second, with each template's name, site, what it extracts, "
+    "the names of the inputs a run must pass (`required_inputs`) and one input the vendor recorded "
+    "a run with (`sample_inputs`), so a URL-keyed template is told from an id-keyed one here. "
     "Call it before `run_template` to find a template for the site at hand; a catalogue can be "
-    "long, so page with `limit` and `offset`. Then `template` for the inputs one takes."
+    "long, so page with `limit` and `offset`. Then `template` for the full schemas and samples."
 )
 
 MCP_DESC_TEMPLATE = (
     "Describe one Extract Template: its input_schema, which says exactly what `run_template` must "
-    "pass as `inputs`, and its output_schema, which says what the record will hold. Returns in "
-    "about a second. Read it before running a template you have not run in this conversation. "
-    "Names, inputs and fields are the vendor's own: the same page differs between vendors."
+    "pass as `inputs`, its output_schema, which says what the record will hold, and its `samples`, "
+    "runs the vendor recorded -- an input and the record it returned -- to copy a first run from. "
+    "Returns in about a second and bills nothing. Read it before running a template you have not "
+    "run in this conversation. Names, inputs and fields are the vendor's own: the same page differs "
+    "between vendors."
 )
 
 MCP_DESC_RUN_TEMPLATE = (
     "Run an Extract Template on one page and get its record back -- the page's fields, parsed by a "
     "saved extraction built for that site, rather than prose to read through. Returns in about a "
-    "second and bills one fetch; `provider` is required, since a template's name belongs to one "
-    "vendor. Use it when `templates` lists a template for the site and item you "
-    "have; use `extract` for a page no template covers, and `search` to find pages. `inputs` are the "
-    "template's own inputs, from `template`: a URL for some templates, an id, a slug or a search "
-    "term for others. A run the backend could not complete is an error, never an empty record."
+    "second and bills one template run on the vendor's account, at the vendor's per-run template "
+    "rate; on Nimble that is one flat rate for every template, whatever the site, listed on its "
+    "pricing page. `provider` is required, since a template's name belongs to one vendor. Use it "
+    "when `templates` lists a template for the site and item you have; use `extract` for a page no "
+    "template covers, and `search` to find pages. `inputs` are the template's own inputs, from "
+    "`template`: a URL for some templates, an id, a slug or a search term for others. A run the "
+    "backend could not complete is an error, never an empty record."
 )
 
 MCP_DESC_RESEARCH = (
@@ -4433,6 +4452,13 @@ MCP_MSG_OVERSIZED = (
     "to fit a context window. Call fetch_raw with handle {handle!r} for the backend's untouched payload."
 )
 """A field that is never shortened -- a schema, a record -- did not fit even on its own."""
+
+MCP_MSG_SAMPLES_OMITTED = (
+    "sample_inputs of {count} templates were too large for a listing row and were left out whole. "
+    "Call template for one template's samples, or fetch_raw with handle {handle!r} for the backend's "
+    "untouched payload."
+)
+"""Sample inputs left out of a catalogue page, said once for the page so the note does not grow with its rows."""
 
 MCP_MSG_RESEARCH_PENDING = (
     "The run did not finish in the {wait:g}s this tool waits, and is still going. Poll "

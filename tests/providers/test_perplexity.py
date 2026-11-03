@@ -1,9 +1,8 @@
 """Perplexity provider tests.
 
-The response mapping here is derived from Perplexity's documentation, not from a
-live call -- no key was available during development. The integration test below
-is the check that matters; run it once a key exists. See CONTRIBUTING.md on
-verifying against the live API.
+The response mapping was verified live on 2026-11-03: every result carries a
+URL and text, and ``max_results`` is respected, through the integration test
+below and the search checks in tests/test_integration_surface.py.
 """
 
 from __future__ import annotations

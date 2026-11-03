@@ -284,6 +284,8 @@ time.
   finding has a reply (`Fixed in <sha>: <what>` or `Not fixing: <reason>`); the maintainers are
   asked to review only then. Qodo does not review drafts on its own; a `/agentic_review` comment
   asks it to.
+- Don't commit drafts, decks, PDFs or images for feedback; open a
+  [Discussion](https://github.com/WebContextLayer/webrouter/discussions) and attach them.
 
 Every unit test must work without an API key. Anything that needs one belongs
 behind `@pytest.mark.integration`.

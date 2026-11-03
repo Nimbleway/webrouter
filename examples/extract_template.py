@@ -56,9 +56,7 @@ def describe(router: WebRouter, name: str) -> dict[str, object]:
     print(f"  inputs:  {json.dumps(template.input_schema)}")
     print(f"  returns: {list((template.output_schema or {}).get('properties', {}))}")
 
-    samples = template.extra.get("samples") or []
-    sample_input = samples[0].get("input") if samples else None
-    return dict(sample_input) if isinstance(sample_input, dict) else {}
+    return dict(template.samples[0].input) if template.samples else {}
 
 
 def run(router: WebRouter, name: str, inputs: dict[str, object]) -> None:

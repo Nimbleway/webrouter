@@ -1,9 +1,9 @@
 """Oxylabs provider tests.
 
-The mapping here is derived from Oxylabs' documentation, not from a live call --
-no account was available during development. The integration test below is the
-check that matters; run it once credentials are available. See CONTRIBUTING.md
-on verifying against the live API.
+The endpoint, HTTP Basic auth and response mapping were verified live on
+2026-11-03: content, markdown, html, URL order, and an unfetchable URL reported
+as a failure, through the integration test below and the extract checks in
+tests/test_integration_surface.py.
 """
 
 from __future__ import annotations

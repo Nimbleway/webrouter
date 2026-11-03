@@ -17,7 +17,7 @@ import httpx
 import pytest
 
 from web_router.exceptions import ProviderError, TemplateNotFoundError, UnsupportedFormatError
-from web_router.types import TemplateRequest
+from web_router.types import TemplateRequest, TemplateSample
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
 
@@ -264,7 +264,8 @@ def test_a_published_template_is_described_from_its_version(provider: NimbleTemp
     assert template.created_at is not None and template.updated_at is not None
     assert template.extra["display_name"] == "Books - Book Detail"
     assert template.extra["tags"] == ["books", "ecommerce"]
-    assert template.extra["samples"] == [{"input": {"url": URL}, "output": RECORD}]
+    assert template.samples == [TemplateSample(input={"url": URL}, output=RECORD)]
+    assert "samples" not in template.extra, "a sample has a field of its own"
     assert template.extra["privacy"] == "private", "a field the SDK model does not declare is still kept"
     assert template.raw == item
 
@@ -288,6 +289,39 @@ def test_a_listing_is_a_page_with_its_place_in_the_catalogue(provider: NimbleTem
     assert (page.total, page.limit, page.offset) == (250, 100, 0)
     assert len(page) == 2
     assert page.raw == payload
+    # Nimble's listing carries each published version whole, so a row is as full as a describe.
+    assert page.templates[0].input_schema == _version()["input_schema"]
+    assert page.templates[0].samples[0].input == {"url": URL}
+    assert page.templates[1].samples == []
+
+
+def test_a_malformed_sample_is_skipped_and_a_sample_with_no_input_takes_none(
+    provider: NimbleTemplateProvider,
+) -> None:
+    item = _item(
+        _version(
+            samples=[
+                {"input": {"url": URL}},
+                "not a sample",
+                {"input": "https://example.com"},
+                {"input": [["url", URL]]},
+                {"input": []},
+                {"input": ""},
+                {"input": 0},
+                {"input": False},
+                {"output": RECORD},
+                {"input": None, "output": RECORD},
+            ]
+        )
+    )
+
+    template = provider._to_template(item)
+
+    assert template.samples == [
+        TemplateSample(input={"url": URL}, output=None),
+        TemplateSample(input={}, output=RECORD),
+        TemplateSample(input={}, output=RECORD),
+    ]
 
 
 # -- Through the SDK client ---------------------------------------------------
@@ -437,15 +471,7 @@ def test_live_catalogue_and_run() -> None:
 
         name = os.getenv("NIMBLE_TEMPLATE")
         candidates = [router.template(name, provider="nimble")] if name else [t for t in page.templates if t.published]
-        chosen = next(
-            (
-                (t, s["input"])
-                for t in candidates
-                for s in (t.extra.get("samples") or [])
-                if isinstance(s.get("input"), dict)
-            ),
-            None,
-        )
+        chosen = next(((t, s.input) for t in candidates for s in t.samples if s.input), None)
         if chosen is None:
             pytest.skip("no published template on this account publishes a sample input to run with")
         template, inputs = chosen

@@ -143,6 +143,13 @@ class NormalizedRequest(BaseModel):
         return {name for name in self.normalized_parameters() if getattr(self, name) is not None}
 
 
+MAX_RESULTS_DESCRIPTION = (
+    "How many results to return; unset, the backend's own default. For an agent: 5 to 10 for most questions,"
+    " more for news or a question with several parts, and 1 only when the user asked for a single link."
+)
+"""What a model reads about ``max_results``, in this schema and the MCP server's."""
+
+
 class SearchRequest(NormalizedRequest):
     """A normalized search request.
 
@@ -153,7 +160,7 @@ class SearchRequest(NormalizedRequest):
     always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
 
     query: Annotated[str, Field(min_length=1, description="The search query.")]
-    max_results: Annotated[int | None, Field(default=None, ge=1, description="Upper bound on results returned.")] = None
+    max_results: Annotated[int | None, Field(default=None, ge=1, description=MAX_RESULTS_DESCRIPTION)] = None
     search_depth: SearchDepth | None = Field(default=None, description="How much page content to retrieve.")
     include_domains: list[str] | None = Field(default=None, description="Restrict results to these domains.")
     exclude_domains: list[str] | None = Field(default=None, description="Drop results from these domains.")
@@ -498,12 +505,29 @@ TEMPLATE_PARAMETERS: frozenset[str] = TemplateRequest.normalized_parameters()
 """Every optional parameter a template provider may declare support for."""
 
 
+class TemplateSample(BaseModel):
+    """One run the backend recorded for a template: inputs it accepted, and the record they produced.
+
+    The shortest route to running a template you have not run before: copy
+    :attr:`input` and change the values. Published by the backend, never made
+    up here; a template with none has an empty :attr:`Template.samples`.
+    """
+
+    # Unknown keys are a provider bug: a sample is exactly an input and an output.
+    model_config = ConfigDict(extra="forbid")
+
+    input: dict[str, Any] = Field(default_factory=dict, description="Inputs a run accepted, shaped by input_schema.")
+    output: Any = Field(default=None, description="The record that run returned, shaped by output_schema.")
+
+
 class Template(BaseModel):
     """One Extract Template a backend holds, as the backend describes it.
 
     What a caller needs to run it is :attr:`input_schema`, and what comes back
     is shaped by :attr:`output_schema`. Both are ``None`` for a template that
-    has no published version yet, which cannot be run.
+    has no published version yet, which cannot be run. :attr:`samples` are
+    runs the backend recorded, an input and the record it produced, when it
+    publishes any.
     """
 
     # Unknown keys are a provider bug: anything unmapped belongs in `extra`.
@@ -523,6 +547,10 @@ class Template(BaseModel):
     output_schema: dict[str, Any] | None = Field(
         default=None,
         description="JSON Schema of the record a run returns. None for a template with no published version.",
+    )
+    samples: list[TemplateSample] = Field(
+        default_factory=list,
+        description="Runs the backend recorded, each an input and the record it returned; empty when it has none.",
     )
     version: int | None = Field(default=None, description="The published version's number, when there is one.")
     published: bool = Field(default=False, description="Whether a version is published, so the template can be run.")

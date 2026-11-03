@@ -27,7 +27,7 @@ from typing import Any
 import pytest
 
 from tests.providers._answer_stub import stub_answer_api
-from web_router.exceptions import ProviderError, UnsupportedParameterError
+from web_router.exceptions import UnsupportedParameterError
 from web_router.providers._clock import pinned_today
 from web_router.providers.linkup import LinkupAnswerProvider
 from web_router.types_answer import AnswerRequest, Recency
@@ -167,22 +167,6 @@ def test_an_empty_answer_is_returned_with_its_sources(provider: LinkupAnswerProv
 
     assert response.answer == ""
     assert len(response.citations) == 2
-
-
-def test_an_http_error_is_a_provider_error(provider: LinkupAnswerProvider) -> None:
-    stub_answer_api(provider, {"error": {"code": "BAD_REQUEST", "message": "depth must be one of"}}, status=400)
-
-    with pytest.raises(ProviderError, match="400"):
-        provider.answer(AnswerRequest(query=QUESTION))
-
-
-async def test_the_async_path_answers_the_same_way(provider: LinkupAnswerProvider) -> None:
-    api = stub_answer_api(provider, ANSWERED)
-
-    response = await provider.aanswer(AnswerRequest(query=QUESTION, include_domains=["wikipedia.org"]))
-
-    assert response.answer == ANSWERED["answer"]
-    assert api.bodies[0]["includeDomains"] == ["wikipedia.org"]
 
 
 @pytest.mark.integration

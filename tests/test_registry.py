@@ -4,7 +4,6 @@ import pytest
 
 from web_router.exceptions import ProviderNotFoundError
 from web_router.registry import (
-    available_answer_providers,
     available_browse_providers,
     available_browser_providers,
     available_extract_providers,
@@ -18,6 +17,7 @@ from web_router.registry import (
     get_research_provider_class,
     get_template_provider_class,
 )
+from web_router.registry_answer import available_answer_providers
 from web_router.types import Provider, provider_name
 
 
