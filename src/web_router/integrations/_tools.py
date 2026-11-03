@@ -17,24 +17,14 @@ from typing import Any, Generic, TypeVar
 
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.constants import (
-    INTEGRATION_ANSWER_QUERY_DESCRIPTION,
-    INTEGRATION_ANSWER_TOOL_DESCRIPTION,
-    INTEGRATION_ANSWER_TOOL_NAME,
-    INTEGRATION_DEFAULT_METHODS,
     INTEGRATION_DOCUMENT_CHARS,
     INTEGRATION_EXTRACT_MAX_URLS,
-    INTEGRATION_EXTRACT_TOOL_DESCRIPTION,
-    INTEGRATION_EXTRACT_TOOL_NAME,
-    INTEGRATION_EXTRACT_URLS_DESCRIPTION,
     INTEGRATION_METHODS,
     INTEGRATION_MSG_TOOL_ERROR,
     INTEGRATION_RESULT_CHARS,
     INTEGRATION_ROUTING_GUIDE_INTRO,
     INTEGRATION_ROUTING_GUIDE_METHODS,
     INTEGRATION_ROUTING_GUIDE_OUTRO,
-    INTEGRATION_SEARCH_QUERY_DESCRIPTION,
-    INTEGRATION_SEARCH_TOOL_DESCRIPTION,
-    INTEGRATION_SEARCH_TOOL_NAME,
     MSG_INTEGRATION_BAD_INPUT,
     MSG_INTEGRATION_UNKNOWN_METHOD,
     MSG_INTEGRATION_UNKNOWN_TOOL,
@@ -42,64 +32,9 @@ from web_router.constants import (
 from web_router.exceptions import ProviderError
 from web_router.integrations._options import answer_provider_for, extract_provider_for, tool_provider
 from web_router.integrations._render import render_answer, render_extract, render_search
+from web_router.integrations._specs import KNOWN_METHODS, TOOLS, ToolSpec
 from web_router.types import ExtractFormat, ExtractResponse, Provider, SearchDepth, SearchResponse
 from web_router.types_answer import AnswerResponse
-
-
-@dataclass(frozen=True)
-class ToolSpec:
-    """One tool as every vendor describes it: a name, what it does, and the JSON Schema of its input."""
-
-    name: str
-    description: str
-    schema: dict[str, Any]
-
-
-TOOLS: dict[str, ToolSpec] = {
-    "search": ToolSpec(
-        name=INTEGRATION_SEARCH_TOOL_NAME,
-        description=INTEGRATION_SEARCH_TOOL_DESCRIPTION,
-        schema={
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "minLength": 1, "description": INTEGRATION_SEARCH_QUERY_DESCRIPTION}
-            },
-            "required": ["query"],
-            "additionalProperties": False,
-        },
-    ),
-    "extract": ToolSpec(
-        name=INTEGRATION_EXTRACT_TOOL_NAME,
-        description=INTEGRATION_EXTRACT_TOOL_DESCRIPTION,
-        schema={
-            "type": "object",
-            "properties": {
-                "urls": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "minItems": 1,
-                    "maxItems": INTEGRATION_EXTRACT_MAX_URLS,
-                    "description": INTEGRATION_EXTRACT_URLS_DESCRIPTION,
-                }
-            },
-            "required": ["urls"],
-            "additionalProperties": False,
-        },
-    ),
-    "answer": ToolSpec(
-        name=INTEGRATION_ANSWER_TOOL_NAME,
-        description=INTEGRATION_ANSWER_TOOL_DESCRIPTION,
-        schema={
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "minLength": 1, "description": INTEGRATION_ANSWER_QUERY_DESCRIPTION}
-            },
-            "required": ["query"],
-            "additionalProperties": False,
-        },
-    ),
-}
-"""The tools by method, in the order of ``INTEGRATION_METHODS``."""
 
 
 @dataclass
@@ -140,7 +75,7 @@ class WebRouterTools(Generic[ResultT]):
         self,
         router: WebRouter | AsyncWebRouter | None = None,
         *,
-        methods: Sequence[str] = INTEGRATION_DEFAULT_METHODS,
+        methods: Sequence[str] = INTEGRATION_METHODS,
         provider: str | Provider | None = None,
         extract_provider: str | Provider | None = None,
         answer_provider: str | Provider | None = None,
@@ -177,11 +112,11 @@ class WebRouterTools(Generic[ResultT]):
             NoAnswerProviderError: The answer tool is exposed, no backend is
                 named, and the router has no single answer backend to use.
         """
-        unknown = [m for m in methods if m not in INTEGRATION_METHODS]
+        unknown = [m for m in methods if m not in KNOWN_METHODS]
         if unknown:
-            raise ValueError(MSG_INTEGRATION_UNKNOWN_METHOD.format(known=INTEGRATION_METHODS, method=unknown[0]))
+            raise ValueError(MSG_INTEGRATION_UNKNOWN_METHOD.format(known=KNOWN_METHODS, method=unknown[0]))
         self.router = router if router is not None else WebRouter()
-        self.methods = tuple(m for m in INTEGRATION_METHODS if m in methods)
+        self.methods = tuple(m for m in KNOWN_METHODS if m in methods)
         self.provider = tool_provider(provider)
         self.extract_provider = (
             extract_provider_for(provider, extract_provider, self.router)
@@ -266,7 +201,7 @@ class WebRouterTools(Generic[ResultT]):
         return f"<{type(self).__name__} methods={self.methods} provider={self.provider!r}>"
 
 
-def routing_guide(methods: Sequence[str] = INTEGRATION_DEFAULT_METHODS) -> str:
+def routing_guide(methods: Sequence[str] = INTEGRATION_METHODS) -> str:
     """The system prompt that tells an agent when to reach for which web-router tool.
 
     One paragraph per method in ``methods``, cheapest first, between a line on
@@ -275,7 +210,7 @@ def routing_guide(methods: Sequence[str] = INTEGRATION_DEFAULT_METHODS) -> str:
     guide reads the same for both.
     """
     names = {method: spec.name for method, spec in TOOLS.items()}
-    paragraphs = [INTEGRATION_ROUTING_GUIDE_METHODS[m].format(**names) for m in INTEGRATION_METHODS if m in methods]
+    paragraphs = [INTEGRATION_ROUTING_GUIDE_METHODS[m].format(**names) for m in KNOWN_METHODS if m in methods]
     return "\n\n".join([INTEGRATION_ROUTING_GUIDE_INTRO, *paragraphs, INTEGRATION_ROUTING_GUIDE_OUTRO])
 
 
