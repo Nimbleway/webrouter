@@ -1,0 +1,62 @@
+{
+  "provider": "parallel",
+  "method": "answer",
+  "class": "web_router.providers.parallel.ParallelAnswerProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.parallel.ai",
+    "paths": {
+      "answer_path": "/v1beta/chat/completions"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "PARALLEL_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.messages": [
+      {
+        "content": "probe query",
+        "role": "user"
+      }
+    ],
+    "body.model": "lite"
+  },
+  "options": {},
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "recency"
+  ],
+  "source": [
+    "https://docs.parallel.ai/api-reference/chat-api-beta/chat-completions.md",
+    "https://docs.parallel.ai/chat-api"
+  ],
+  "verified": {},
+  "vendor_options": {
+    "model: speed": {
+      "status": "not_supported",
+      "note": "Faster, but live its basis was empty: no sources tied to the answer."
+    },
+    "model: base, core": {
+      "status": "passthrough",
+      "note": "Slower research models with basis; send model through provider_options."
+    },
+    "response_format": {
+      "status": "not_supported",
+      "note": "Structured output; answer has no output_schema in this release."
+    },
+    "previous_interaction_id": {
+      "status": "passthrough",
+      "note": "Continues an earlier exchange; answer() asks one question."
+    },
+    "stream": {
+      "status": "not_supported",
+      "note": "answer() returns the finished answer."
+    }
+  }
+}

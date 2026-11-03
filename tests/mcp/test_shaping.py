@@ -17,6 +17,7 @@ from web_router.mcp.shaping import (
     max_response_chars,
     redact,
     render,
+    shape_answer,
     shape_browse,
     shape_extract,
     shape_search,
@@ -25,11 +26,13 @@ from web_router.mcp.shaping import (
 from web_router.types import (
     BrowseResponse,
     BrowseStep,
+    Citation,
     ExtractedDocument,
     ExtractResponse,
     SearchResponse,
     SearchResult,
 )
+from web_router.types_answer import AnswerResponse
 
 _PROSE = "alpha beta gamma delta " * 200
 
@@ -294,3 +297,17 @@ def test_a_devtools_endpoint_written_without_a_scheme_is_redacted(text: str) -> 
     cleaned, count = redact(text)
 
     assert count == 1 and "/devtools/" not in cleaned and MCP_REDACTED in cleaned
+
+
+def test_a_long_answer_is_cut_and_keeps_its_cited_sources_first() -> None:
+    uncited = [Citation(url=f"https://read.example/{i}", snippet=_PROSE) for i in range(30)]
+    cited = Citation(url="https://cited.example", snippet=_PROSE, field="[31]")
+    response = AnswerResponse(provider="perplexity", query="q", answer=_PROSE * 3, citations=[*uncited, cited])
+
+    shaped = shape_answer(response, "answer-0001", budget=4000)
+
+    assert len(render(shaped)) <= 4000
+    assert shaped["answer"].endswith(MCP_TRUNCATION_MARKER)
+    assert shaped["truncated"] is True
+    assert shaped["citation_count"] == 31, "the count is the backend's, whatever the cut left"
+    assert shaped["citations"][0]["url"] == "https://cited.example", "a cited source outlives the cut"

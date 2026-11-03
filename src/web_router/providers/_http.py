@@ -21,7 +21,8 @@ To add a search backend::
 
 An extract backend is the same shape, against :class:`HttpExtractProvider`,
 with ``extract_path`` in place of ``search_path`` and a list of URLs passed
-alongside the request.
+alongside the request. An answer backend is the search shape again, against
+:class:`HttpAnswerProvider`, with ``answer_path``.
 
 A browse backend, against :class:`HttpBrowseProvider`, implements the job's
 ``_start`` and ``_fetch`` over the request helpers it is given, as a research
@@ -41,7 +42,7 @@ import abc
 import contextlib
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Generic, Literal, TypeVar
 from urllib.parse import quote
 
 import httpx
@@ -61,6 +62,7 @@ from web_router.constants import (
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._utils import compact, error_detail, job_budget, research_budget, resolve_api_key
 from web_router.providers.base import (
+    AnswerProvider,
     BrowseProvider,
     BrowserProvider,
     ExtractProvider,
@@ -80,6 +82,10 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
 )
+from web_router.types_answer import AnswerRequest, AnswerResponse
+
+_RequestT = TypeVar("_RequestT", SearchRequest, AnswerRequest)
+_ResponseT = TypeVar("_ResponseT", SearchResponse, AnswerResponse)
 
 
 class _HttpProvider(_BaseProvider):
@@ -219,34 +225,55 @@ class _HttpProvider(_BaseProvider):
         self.close()
 
 
-class HttpSearchProvider(_HttpProvider, SearchProvider):
-    """A search backend over a plain HTTP endpoint."""
+class _HttpOneCallProvider(_HttpProvider, Generic[_RequestT, _ResponseT]):
+    """A backend that answers in one HTTP call; ``path_attribute`` names the method's own path attribute."""
 
-    search_path: ClassVar[str]
+    path_attribute: ClassVar[str]
 
     # -- What subclasses implement -------------------------------------------
 
     @abc.abstractmethod
-    def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
+    def _build_payload(self, request: _RequestT) -> dict[str, Any]:
         """Translate a normalized request into this API's request body or query."""
 
     @abc.abstractmethod
-    def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
+    def _to_response(self, request: _RequestT, payload: dict[str, Any]) -> _ResponseT:
         """Translate this API's response into a normalized one."""
 
     # -- The HTTP plumbing ---------------------------------------------------
 
-    def _search(self, request: SearchRequest) -> SearchResponse:
-        response = self._client.request(self.http_method, self.search_path, **self._call_kwargs(request))
+    def _call(self, request: _RequestT) -> _ResponseT:
+        path = getattr(self, self.path_attribute)
+        return self._to_response(
+            request, self._payload(self._client.request(self.http_method, path, **self._call_kwargs(request)))
+        )
+
+    async def _acall(self, request: _RequestT) -> _ResponseT:
+        path = getattr(self, self.path_attribute)
+        response = await self._async_client.request(self.http_method, path, **self._call_kwargs(request))
         return self._to_response(request, self._payload(response))
 
-    async def _asearch(self, request: SearchRequest) -> SearchResponse:
-        response = await self._async_client.request(self.http_method, self.search_path, **self._call_kwargs(request))
-        return self._to_response(request, self._payload(response))
-
-    def _call_kwargs(self, request: SearchRequest) -> dict[str, Any]:
+    def _call_kwargs(self, request: _RequestT) -> dict[str, Any]:
         payload = self._build_payload(request)
         return {"json": payload} if self.http_method == "POST" else {"params": payload}
+
+
+class HttpSearchProvider(_HttpOneCallProvider[SearchRequest, SearchResponse], SearchProvider):
+    """A search backend over a plain HTTP endpoint."""
+
+    search_path: ClassVar[str]
+    path_attribute = "search_path"
+    _search = _HttpOneCallProvider._call
+    _asearch = _HttpOneCallProvider._acall
+
+
+class HttpAnswerProvider(_HttpOneCallProvider[AnswerRequest, AnswerResponse], AnswerProvider):
+    """An answer backend over a plain HTTP endpoint: one call, one answer."""
+
+    answer_path: ClassVar[str]
+    path_attribute = "answer_path"
+    _answer = _HttpOneCallProvider._call
+    _aanswer = _HttpOneCallProvider._acall
 
 
 class HttpExtractProvider(_HttpProvider, ExtractProvider):

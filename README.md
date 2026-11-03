@@ -1,6 +1,6 @@
 # web-router
 
-**One interface over many web search, extraction, research and browser APIs.**
+**One interface over many web search, extraction, answer, research and browser APIs.**
 
 > **Alpha.** You have early access to `web-router` under your agreement with
 > Nimble. Please don't share the code or this repository. Issues and pull
@@ -10,8 +10,8 @@
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Twelve search backends, seven extract backends, a template catalogue,
-three agentic research backends (plus Exa's, retired upstream), five
+Twelve search backends, seven extract backends, a template catalogue, five
+answer backends, three agentic research backends (plus Exa's, retired upstream), five
 browser-session backends and three browser agents. One call each. Switching
 between them is one argument.
 Maintained by [Nimble](https://nimbleway.com), one of the backends it routes to.
@@ -26,6 +26,8 @@ WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
 WebRouter().extract("https://example.com")  # page contents, also keyless
 
 WebRouter().run_template("walmart_pdp", {"product_id": "..."}, provider="nimble")  # one page, one record
+
+WebRouter(Provider.LINKUP).answer("...")  # a written answer with its sources, in one call
 
 WebRouter(Provider.NIMBLE).research("...")  # an agentic run: minutes, not milliseconds
 
@@ -301,6 +303,55 @@ for every template, whatever the site -- the rate is on
 [Nimble's pricing page](https://www.nimbleway.com/pricing), and
 [`benchmarks/providers/PRICING.md`](benchmarks/providers/PRICING.md) records
 it dated and sourced, since the library itself never states a price.
+
+### Answer
+
+`[answer]` installs these. One question, answered in one call: the backend
+searches and writes the answer itself. No keyless tier, since every backend
+bills the call, and no `auto` yet; see [Asking for an answer](#asking-for-an-answer)
+for what an unnamed call does.
+
+| Pass | Name | Provider | Credentials | Options mapped | Citations tied to claims |
+| --- | --- | --- | --- | --- | --- |
+| `Provider.PERPLEXITY` | `perplexity` | [Perplexity Agent API, `fast` effort](https://docs.perplexity.ai/docs/agent-api/quickstart) | `PERPLEXITY_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[N]` markers, in `citation.field` |
+| `Provider.YOU` | `you` | [You.com Answer API](https://you.com/docs/guides/answer.md) | `YOU_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[[1, 2]]` markers, in `citation.field` |
+| `Provider.PARALLEL` | `parallel` | [Parallel Chat API (beta), `lite`](https://docs.parallel.ai/chat-api) | `PARALLEL_API_KEY` | none: the Chat API takes no source filter | no: its `basis` backs the answer as a whole |
+| `Provider.EXA` | `exa` | [Exa Answer API](https://docs.exa.ai/reference/answer) | `EXA_API_KEY` | none: no source filter, and `userLocation` showed no clear effect | yes: `[N]` markers, in `citation.field` |
+| `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | yes: `[N]` markers, in `citation.field` |
+
+All verified live on 2026-11-01, every mapped option seen to apply.
+
+- `perplexity` answers in about two seconds (median 1.9 s over 300 questions) and cites inline as `[2]`; a
+  citation whose marker appears in the answer carries it in `field`, and the
+  response states its own cost under `raw[0]["usage"]["cost"]` (about $0.0012
+  an answer over 300 questions). `country` is its `user_location`: an emergency-number question
+  answered 999 for `GB` and 911 for `US`.
+- `you` answers in about two seconds (median 1.7 s over 300 questions). Its `citations` are only the sources the
+  answer cites, marked `[[1, 2]]`; each carries in `field` the whole marker
+  group that first names it (`[[1, 2]]`, where other backends give one `[N]`), and its title comes from the pages You.com considered. It takes one
+  domain list, not both: asking for both raises before the call. `language` was
+  accepted but showed no effect, so `locale` is not mapped.
+- `parallel` answers in about six seconds (median 6.3 s over 300 questions) with the `lite` model, the fastest
+  whose `basis` ties its sources to the answer (`speed` returned none). Each
+  citation carries the basis's `confidence` in `extra`; its reasoning stays in
+  `raw`. Its Chat API is in beta and takes no source filter, so every option
+  is refused.
+- `exa` answers in about 1.3 seconds (median over 300 questions) and cites inline as `[1]`, numbering its
+  citations from 1; it states its cost under `raw[0]["costDollars"]` ($0.005 an
+  answer). Its Answer API has no source filter, so every option is refused.
+- `linkup` answers in about a second (median 0.9 s over 300 questions) and lists every page it read; it is
+  asked for inline citations, so the answer marks the ones it rests on as `[N]`, numbering them from 1, and a
+  page read but never cited has no `field`. `recency` is its `fromDate`, and Linkup filters on the date it holds
+  for a page, which is not always the publication date.
+
+**Choosing one.** On 300 SimpleQA questions graded by one judge, all five land
+at 94-95% and their intervals overlap, so accuracy does not separate them --
+the [answer scan](benchmarks/providers/README.md#comparing-answer-backends)
+reruns it. They differ in speed (Linkup, Exa, You.com and Perplexity in one to
+two seconds, Parallel in about six), in the options they map (above), in
+whether the answer ties each source to a sentence, and in cost: Perplexity and
+Exa state theirs in the response; [`PRICING.md`](benchmarks/providers/PRICING.md)
+lists the rest.
 
 ### Research
 
@@ -773,10 +824,72 @@ the backend reports them; `limit` and `offset` left unset leave the paging to
 the backend. Every call tags its answer with `provider` and keeps the untouched
 payload in `raw`.
 
+## Asking for an answer
+
+`answer()` asks one question and returns the backend's own written answer with
+the sources it rests on, in one call. It sits between `search()`, which returns
+the pages, and `research()`, a job of minutes.
+
+Three steps to a first answer:
+
+1. Install with the `answer` extra: `pip install -e "/path/to/webrouter[answer]"`
+   (`make setup` in a clone installs every extra).
+2. Set one answer backend's key in your environment or `.env`, for example
+   `PERPLEXITY_API_KEY` -- the [answer table](#answer) lists each one's variable.
+3. Ask:
+
+```python
+from web_router import WebRouter
+
+with WebRouter() as router:
+    response = router.answer("who won the 2022 world cup final")  # the one backend you hold a key for
+
+print(response.answer)
+for citation in response.citations:
+    print(citation.field or "-", citation.url)
+```
+
+```text
+Argentina won, beating France 4-2 on penalties after a 3-3 draw through extra time.[2]
+- https://football.fandom.com/wiki/2022_FIFA_World_Cup_Final
+[2] https://www.world-cup-schedule.com/blog/who-won-2022-world-cup-argentina-france-final
+...
+```
+
+With more than one key set, name the backend: `router.answer(q, provider="linkup")`.
+Which one: they score alike on accuracy (see [Choosing one](#answer)), so pick
+on what you need -- Linkup is the fastest (about a second); Perplexity, You.com
+and Linkup take source filters (domains, recency); Perplexity, You.com, Exa and
+Linkup tie each source to a sentence. [`examples/answer.py`](examples/answer.py)
+runs the whole flow, errors included.
+
+Nothing here writes, joins or edits the answer: it is the backend's, as it came.
+An empty one comes back as `""` rather than an error, with its sources and
+`raw`, so "the backend had nothing" reads differently from a failure. Where a
+backend marks which source backs which sentence, the marker is in
+`citation.field`; where it does not (Parallel), every citation backs the answer
+as a whole. `outcome` is `partial` only when the backend says it stopped early.
+
+The options are `include_domains`, `exclude_domains`, `country`, `locale` and
+`recency` (`"day"`, `"week"`, `"month"` or `"year"`). Windows count whole days;
+where the router sets the start date itself (Linkup), it counts back from
+today's date in UTC. A backend that does not
+map one raises `UnsupportedParameterError` before anything is sent -- the
+[answer table](#answer) says which backend maps what.
+
+There is no `auto` yet. With `provider` unset, the router's default answers
+when it is an answer backend (`WebRouter("linkup").answer(q)`), otherwise the
+one answer backend you hold a key for (in the environment or in
+`provider_config`). With several, the call raises `NoAnswerProviderError` (a `ProviderNotFoundError`)
+naming them: say which with `provider=`. With none, it names the variables to set.
+
+"Answer" means two other things nearby. `SearchResponse.answer` is an answer a
+search backend volunteered beside its results, unasked (You.com's knowledge
+panel); `answer()` is one you asked for, with its sources.
+
 ## Researching a question
 
-`research()` is the third method, and the one that behaves differently enough to
-be worth a section. A search answers in a second. A research run reasons over
+`research()` behaves differently enough to be worth a section. A search answers in a second. A research run reasons over
 several turns — searching, reading, cross-checking — and answers in minutes.
 
 ```python
@@ -788,8 +901,8 @@ for citation in response.citations:
 ```
 
 The line between this and `search` is not "does it reason". It is **whether the
-work fits inside one request/response**. A synthesized answer that comes back in
-one call is a search — `SearchResponse.answer` already holds one. A run that
+work fits inside one request/response**. A written answer that comes back in
+one call is `answer()`. A run that
 takes minutes, can be polled, can be cancelled and bills by the unit of effort is
 a job, and it needs a different shape.
 
@@ -1261,7 +1374,7 @@ the transcript is a separate endpoint this provider does not read.
 
 The package ships a **self-hosted stdio MCP server**, so an agent can call these
 methods as tools -- `search`, `extract`, `templates` / `template` /
-`run_template` and `research` -- plus `browse` / `browse_status` for a hosted browser
+`run_template`, `answer` and `research` -- plus `browse` / `browse_status` for a hosted browser
 agent's task, shaped like `research` / `research_status`: the tool waits 25
 seconds, then hands back a handle to poll. It runs in your own process and reads your own keys from
 your own environment — each key goes only to the backend it belongs to, which is
@@ -1363,6 +1476,29 @@ routes past `local` to a billed vendor. The browser opens only `http(s)` pages:
 metadata addresses and the session's own debugging endpoint are refused, and a
 page that lands on one is sent back to `about:blank`. See
 [docs/mcp.md](docs/mcp.md#driving-a-browser).
+
+## Integrating a framework
+
+Which backend serves a call stays the caller's choice. The shipped integrations
+are the [MCP server](#the-mcp-server), [LangChain](#langchain),
+[Claude](#claude-agents), and [OpenAI](#openai-agents).
+
+`auto` uses every key held; see the [`Provider.AUTO`](#search) row in the search table.
+
+### Framework checklist
+
+When integrating web-router:
+
+- [ ] Accept a `search_provider` or `extract_provider` parameter
+- [ ] Default to `"auto"` (web-router's default provider)
+- [ ] Pass it to `WebRouter(search_provider)` or `AsyncWebRouter(...)`
+- [ ] Use `router.search()` or `router.extract()` in your implementation
+- [ ] Let `WebRouterError` propagate or wrap it in your own exception
+- [ ] Document credential environment variables (`NIMBLE_API_KEY`, etc.)
+- [ ] Document the `auto` behavior above
+
+Error types are in [Errors](#errors). Adding a backend, or keeping one private,
+is [Adding a provider](CONTRIBUTING.md#adding-a-provider).
 
 ## LangChain
 
@@ -1957,12 +2093,12 @@ Keys are read from the environment, or passed explicitly through
 | --- | --- | --- |
 | Nimble | `NIMBLE_API_KEY` | search, extract, research |
 | Tavily | `TAVILY_API_KEY` | search, extract |
-| Exa | `EXA_API_KEY` | search, extract |
-| You.com | `YOU_API_KEY` | search, research |
+| Exa | `EXA_API_KEY` | search, extract, answer |
+| You.com | `YOU_API_KEY` | search, research, answer |
 | Brave | `BRAVE_SEARCH_API_KEY` | search |
-| Parallel | `PARALLEL_API_KEY` | search, research |
-| Perplexity | `PERPLEXITY_API_KEY` | search, research |
-| Linkup | `LINKUP_API_KEY` | search, extract, research |
+| Parallel | `PARALLEL_API_KEY` | search, research, answer |
+| Perplexity | `PERPLEXITY_API_KEY` | search, research, answer |
+| Linkup | `LINKUP_API_KEY` | search, extract, research, answer |
 | WebIQ | `WEBIQ_API_KEY` | search, extract |
 | Keenable | `KEENABLE_API_KEY` *(optional for `auto`, which uses its keyless tier without one)* | search, extract |
 | DeepSeek | `DEEPSEEK_API_KEY` | search, extract |

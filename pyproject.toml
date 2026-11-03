@@ -79,6 +79,12 @@ research = [
     "nimble-python>=1.5.0,<2",
     "httpx>=0.27",
 ]
+# One question, answered in one call with a written answer and its sources.
+# Every answer backend publishes no SDK worth the dependency for one POST, so
+# httpx alone.
+answer = [
+    "httpx>=0.27",
+]
 # Page actions on an open browser session -- goto, snapshot, click and the rest
 # -- driven over the session's CDP URL. Only driving a session needs
 # Playwright: opening one on a vendor takes httpx, which `all` installs, and on
@@ -99,7 +105,7 @@ browser = [
 # server lists its browser_* tools only when it is present, so
 # `web-router[mcp,browser]` is what turns them on.
 mcp = [
-    "web-router[search,extract,research]",
+    "web-router[search,extract,research,answer]",
     "mcp>=1.2",
     # The server's entry point loads the project .env, so keys reach it
     # without being exported; the library itself never reads dotfiles.
@@ -132,7 +138,7 @@ aws = [
     "web-router[search]",
     "botocore>=1.35",
 ]
-all = ["web-router[search,extract,research,browser,aws]"]
+all = ["web-router[search,extract,research,answer,browser,aws]"]
 
 [project.scripts]
 web-router-mcp = "web_router.mcp.server:main"

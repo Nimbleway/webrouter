@@ -6,7 +6,7 @@ Guidance for AI coding agents working in this repository. Humans: see
 ## What this project is
 
 `web-router` is a Python package that puts one typed interface in front of many
-web APIs, across six methods.
+web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
 Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus two that need no credential: `you-mcp`, and `auto`, the default, which
@@ -32,6 +32,16 @@ one vendor, so `provider` is required.
 **`research`** — an agentic run: the backend reasons over several turns and
 answers in minutes rather than milliseconds. Nimble, Parallel, Perplexity,
 Linkup, You.com, and `auto`. It has no keyless tier, because every backend bills for the run.
+
+**`answer`** — one question, answered in one call: the backend searches and
+writes the answer itself, and the response carries it with the sources it rests
+on. Between `search`, which returns pages, and `research`, a job of minutes.
+Nothing here composes or edits the answer. No keyless tier, since every backend
+bills the call, and no `auto` until its order is chosen: with no `provider`,
+the router's default serves it when that is an answer backend, else the one
+configured answer backend -- a key in `provider_config` counts -- and
+otherwise the call raises `ProviderNotFoundError`, naming the configured
+backends when there are several and the variables to set when there are none.
 
 **`open_browser`** — a browser session: not an answer but a handle, carrying a
 CDP URL the caller drives with Playwright, browser-use or Stagehand, and
@@ -70,12 +80,15 @@ src/web_router/
 │                       BrowserRequest/Session/State + Viewport,
 │                       BrowseRequest/Response/Progress + BrowseStep
 │                       — the normalized contract, one request model per method
+├── types_answer.py     AnswerRequest/Response + Recency: answer()'s contract, apart so
+│                       types.py stops growing; it imports types, never the reverse
 ├── client.py           WebRouter, AsyncWebRouter — the public facade
 │                       (search, extract, templates + template + run_template,
-│                        research + submit_research,
+│                        answer, research + submit_research,
 │                        browse + submit_browse, open_browser, benchmark and
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
+├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
 ├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
@@ -87,6 +100,7 @@ src/web_router/
 ├── constants.py        shared env var registries, timeouts and message templates;
 │                       a provider's own go in constants_<provider>.py (older
 │                       providers' are still here)
+├── constants_answer.py answer()'s messages and MCP tool text, re-exported from constants
 ├── constants_you.py    You.com research's endpoints, efforts and status table,
 │                       kept apart so constants.py stops growing
 ├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
@@ -111,12 +125,14 @@ src/web_router/
 │                       Chat Completions, + local executor) — no SDK, no extra
 └── providers/
     ├── base.py         SearchProvider / ExtractProvider / TemplateProvider /
-    │                   ResearchProvider / BrowseProvider / BrowserProvider ABCs over a shared
+    │                   ResearchProvider / BrowseProvider /
+    │                   BrowserProvider ABCs over a shared
     │                   base; the generic JobProvider / Job core that
     │                   ResearchProvider / ResearchJob and BrowseProvider /
     │                   BrowseJob specialize; BrowserHandle / AsyncBrowserHandle
+    ├── answer.py       AnswerProvider, answer()'s base, re-exported from base.py
     ├── _http.py        HttpSearchProvider / HttpExtractProvider /
-    │                   HttpResearchProvider / HttpBrowseProvider /
+    │                   HttpResearchProvider / HttpAnswerProvider / HttpBrowseProvider /
     │                   HttpBrowserProvider — for APIs with no SDK
     ├── _utils.py       payload assembly, key and setting resolution, dict
     │                   coercion, body selection, the job budget
@@ -168,8 +184,9 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         tests/mcp/ the server, tests/max_extract/ the race
                         (its conftest holds the fake members). test_contract.py,
                         test_extract_contract.py, test_template_contract.py,
-                        test_research_contract.py, test_browse_contract.py and
-                        test_browser_contract.py guard the six shared
+                        test_research_contract.py, test_answer_contract.py,
+                        test_browse_contract.py and
+                        test_browser_contract.py guard the seven shared
                         contracts; test_job_core.py the job core under
                         research and browse;
                         test_browser_actions.py the page actions, against
@@ -187,8 +204,10 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         questions through evaluate(), by topic and answer
                         type; extract.py: every extract backend on the same
                         URLs through benchmark_extract(), by category, with
-                        the URL sets under urls/ — scripts; each run's
-                        report stays under results/
+                        the URL sets under urls/; answer.py: every answer
+                        backend on the same questions, each backend's own
+                        answer graded, beside a search scan — scripts; each
+                        run's report stays under results/
 ```
 
 ## Commands
@@ -326,7 +345,7 @@ and named in the report. When the judge shares an agent's family
 the report's setup names that platform, because that judge is not independent
 of what it grades. Its winners-by-axis verdicts come from a paired bootstrap
 over the rows; they say whether a gap is noise, not how good an answer is. It adds no
-method and no report type to the package. Its `report.md` is one of the two
+method and no report type to the package. Its `report.md` is one of the three
 places outside `evals/` a judged accuracy appears, and it names the judge the
 same way. The only cost it reports is Anthropic's own list-cost figure for a Claude
 session, never an estimate, and it says that a web-router backend's charges
@@ -355,7 +374,15 @@ sets under `urls/` are `url,category` lists only, no ground truth, and
 depth (`tavily@deep`, one `evaluate()` per depth) or a vendor mode from
 `modes.json` (`tavily:ultra-fast`), sent through `provider_options` by a
 wrapper that calls the backend's public `asearch`; mark a mode `verified` only
-after a live call shows it changing the response. `PRICING.md` beside it is a
+after a live call shows it changing the response. `answer.py` is the answer scan: every configured answer backend through the
+public `answer()` on the same questions, each backend's own answer graded by the
+same judge as the search scan -- nothing synthesized, since the backend wrote the answer
+-- so its `report.md` is a third place a judged accuracy appears, and it names
+the judge. `--baseline` sets a search scan of the same questions, seed and judge
+beside it, and is refused otherwise. A row whose sources include one of the
+set's withheld pages, cited or only read, is *leaked*, never graded and out of accuracy, because an answer backend
+has read the answer key before anything could be withheld. It shows a cost only
+where the backend's response states one, never an estimate. `PRICING.md` beside it is a
 dated, sourced reference for reading results against list prices; no code
 reads it, and the library still never shows a price.
 
@@ -366,18 +393,19 @@ model that needs an exception type or a message template cannot live in
 does) or annotate the field as `Exception` and say why in its docstring (as
 `BenchmarkRun.error` does). Do not "fix" this by importing lazily inside a
 validator. A `constants_<provider>.py` sits at the same level as `constants`:
-it may import `types` and nothing else of ours.
+it may import `types` (and `types_answer`, which imports only `types`) and
+nothing else of ours.
 
 **Never override the public method in a provider.** `search`/`asearch`,
-`extract`/`aextract`, `run`/`templates`/`template`,
+`extract`/`aextract`, `run`/`templates`/`template`, `answer`/`aanswer`,
 `submit`/`research`/`browse`/`poll`/`cancel` and
 `open`/`release`/`status` (each with its `a` twin) live on the base
 classes and enforce validation, error wrapping, and — for extract — the URL
 fan-out, for research and browse the whole wait-and-poll cycle, and for a
 browser the idempotent release. Providers implement `_search`, `_asearch`, `_extract`,
-`_aextract`, `_run`, `_arun`, `_list`, `_alist`, `_get`, `_aget`, `_start`,
+`_aextract`, `_answer`, `_aanswer`, `_run`, `_arun`, `_list`, `_alist`, `_get`, `_aget`, `_start`,
 `_astart`, `_fetch`, `_afetch`, `_open`, `_aopen`,
-`_release`, `_arelease`, which are pure translation. The six contract test
+`_release`, `_arelease`, which are pure translation. The seven contract test
 modules enforce this.
 
 **A job is the base class's problem.** Research is a job, browse is another,
@@ -835,6 +863,32 @@ The same shape as the two below, against `ResearchProvider` or
    `@pytest.mark.integration` live test.
 5. Update the README support table and `CHANGELOG.md`.
 
+## Adding an answer provider
+
+Search's shape, against `HttpAnswerProvider` — one POST, one answer — or
+`AnswerProvider` for an SDK.
+
+1. Implement `_build_payload` and `_to_response` and declare `answer_path`
+   (or `_answer`/`_aanswer` on `AnswerProvider`). Set `name` and
+   `supported_parameters`, declaring an option only after a live call showed
+   the backend honouring it. The answer is the backend's own: never edit,
+   join or summarize it. An empty one is returned as `""`, not raised. Put an
+   inline citation marker (`[2]`, `[[1, 2]]`) in `Citation.field`, set
+   `outcome` to `partial` only when the backend says it stopped early, and
+   keep every payload in `raw`. A combination the vendor forbids — both
+   domain lists where it takes one — raises `UnsupportedParameterError`
+   before the call.
+2. Put the endpoint and field names in `constants_<provider>.py`.
+3. Register the class in `_BUILTIN_ANSWER_PROVIDERS` in `registry.py` and add
+   the provider to `ANSWER_ENV_BY_PROVIDER` in `constants.py`. There is no
+   `auto` to join yet.
+4. Add `tests/providers/test_<name>_answer.py` covering the payload, each
+   mapped option and the response against a recorded payload, plus a skipping
+   `@pytest.mark.integration` live test. `tests/test_answer_contract.py`
+   already holds every unmapped option to a refusal before anything is sent.
+5. Start its contract with `make contracts PROVIDER=answer/<name>`, and update
+   the README support table and `CHANGELOG.md`.
+
 ## Adding a browser provider
 
 The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
@@ -1007,7 +1061,7 @@ every one, beside `CHROME_PATH`, which is a path for `local` rather than a
 secret; `WEB_ROUTER_ENV_FILE`, the path of the `.env` the MCP server loads, is
 not a secret either and comes from the real environment only, since no file can
 set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
-`RESEARCH_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
+`RESEARCH_ENV_BY_PROVIDER`, `ANSWER_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
 `auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
 Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
@@ -1024,7 +1078,8 @@ template method's table, and names Nimble's key again: one key, four classes.
 
 **The library never loads `.env` itself.** Only these entry points do:
 `tests/conftest.py`, for the live tests, `benchmarks/agent/run.py`,
-`benchmarks/providers/run.py` and `benchmarks/providers/extract.py`, scripts
+`benchmarks/providers/run.py`, `benchmarks/providers/extract.py` and
+`benchmarks/providers/answer.py`, scripts
 run from the repo, and the MCP server —
 its `main()` at startup and its `load_env` tool at runtime, both through
 `mcp/env.py` — because an application started by a client, often installed
