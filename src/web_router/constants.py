@@ -3176,8 +3176,7 @@ KEENABLE_PARAM_NAMES = {"max_results": "max_results"}
 
 # --- Oxylabs ----------------------------------------------------------------
 # Extract only: Oxylabs' Web Scraper API fetches a URL, it does not rank the web.
-# Mapped from documentation -- no account was available to verify it live. See
-# tests/providers/test_oxylabs.py.
+# Verified live on 2026-11-03. See tests/providers/test_oxylabs.py.
 
 OXYLABS_BASE_URL = "https://realtime.oxylabs.io"
 OXYLABS_EXTRACT_PATH = "/v1/queries"
@@ -3206,8 +3205,7 @@ OXYLABS_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "html"
 
 # --- Bright Data ------------------------------------------------------------
 # Extract only: the Web Unlocker fetches a URL through Bright Data's network.
-# Mapped from documentation; only the failed-fetch envelope below has been seen
-# live. See tests/providers/test_brightdata.py.
+# Verified live on 2026-11-03. See tests/providers/test_brightdata.py.
 
 BRIGHTDATA_BASE_URL = "https://api.brightdata.com"
 BRIGHTDATA_EXTRACT_PATH = "/request"

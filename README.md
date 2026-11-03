@@ -242,10 +242,11 @@ the most useful thing to contribute — see
 
 > Brave, Exa, Parallel and Perplexity were added to broaden the catalogue and
 > are intentionally minimal. Brave maps no `search_depth` because its API has no
-> content-depth control at all. For **Exa and Perplexity the endpoint and auth
-> are verified, but the response mapping is taken from documentation and has not
-> been confirmed against a real response** — no working key for either was
-> available. Their integration tests exist and skip themselves until one is.
+> content-depth control at all. Perplexity's response mapping was verified live
+> on 2026-11-03. For **Exa the endpoint and auth are verified, but the response
+> mapping is taken from documentation and has not been confirmed against a real
+> response** — no working key was available. Its integration tests exist and skip
+> themselves until one is.
 
 ### Extract
 
@@ -274,12 +275,10 @@ and Bright Data needs the zone that routes the request beside its token. Neither
 has a default worth guessing, so a missing one is an error naming the variable
 to set.
 
-> **Oxylabs, Bright Data and Firecrawl are mapped from documentation** — no
-> account for any of them was available, so the endpoint, auth and response
-> shape have not been confirmed against a real response (only Bright Data's
-> envelope, and the headers of a fetch it could not make, were seen live). Their integration tests
-> exist and skip themselves until credentials are. Nimble, Tavily, Jina and Linkup
-> were verified live; Exa's extract mapping is from documentation too.
+> Nimble, Tavily, Jina, Linkup, Firecrawl, Oxylabs and Bright Data were verified
+> live — the last two on 2026-11-03. **Exa's extract mapping is taken from
+> documentation** and has not been confirmed against a real response; its
+> integration tests skip themselves until a working key is available.
 
 ### Templates
 

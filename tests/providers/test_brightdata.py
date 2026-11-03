@@ -1,9 +1,9 @@
 """Bright Data provider tests.
 
-The envelope shape and the headers of a failed fetch were seen live on
-2026-10-16; the rest of the mapping is derived from Bright Data's documentation.
-The integration test below is the check that matters; run it once credentials
-are available. See CONTRIBUTING.md on verifying against the live API.
+The mapping was verified live on 2026-11-03: content, markdown, html, URL
+order, and an unfetchable URL reported as a failure rather than an empty
+document, through the integration test below and the extract checks in
+tests/test_integration_surface.py.
 """
 
 from __future__ import annotations
