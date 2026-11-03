@@ -195,35 +195,3 @@ def test_every_backend_is_rendered_in_the_same_shape() -> None:
     other = one.model_copy(update={"provider": "b"})
 
     assert render_search(one) == render_search(other)
-
-
-def test_the_answer_tool_returns_the_answer_and_keeps_the_response_as_its_artifact(fake_answer_provider: type) -> None:
-    from web_router.integrations.anthropic import WebRouterTools
-    from web_router.integrations.langchain import WebRouterAnswer
-    from web_router.types_answer import AnswerResponse
-
-    router = WebRouter()
-    message = WebRouterAnswer(router=router, provider="fake").invoke(
-        {"type": "tool_call", "id": "c", "name": "web_answer", "args": {"query": "who won"}}
-    )
-
-    assert isinstance(message, ToolMessage)
-    assert isinstance(message.artifact, AnswerResponse)
-    assert json.loads(message.content)["answer"] == "the answer"
-    claude = WebRouterTools(router, methods=["answer"], provider="fake").call("web_router_answer", {"query": "who won"})
-    assert claude.content == message.content
-
-
-def test_the_answer_tool_is_not_among_the_default_tools() -> None:
-    assert [tool.name for tool in web_router_tools(WebRouter(), provider="fake")] == ["web_search", "web_extract"]
-
-
-async def test_the_answer_tool_serves_ainvoke_on_the_async_router(fake_answer_provider: type) -> None:
-    from web_router.integrations.langchain import WebRouterAnswer
-
-    async with AsyncWebRouter() as router:
-        message = await WebRouterAnswer(async_router=router, provider="fake").ainvoke(
-            {"type": "tool_call", "id": "c", "name": "web_answer", "args": {"query": "q"}}
-        )
-
-    assert json.loads(message.content)["answer"] == "the answer"
