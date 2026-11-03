@@ -96,7 +96,7 @@ class ProviderNotFoundError(WebRouterError):
 
 
 class NoAnswerProviderError(ProviderNotFoundError):
-    """``answer()`` was called with no provider, and none could be chosen: it has no ``auto`` yet.
+    """``answer()`` was called with no provider, and none could be chosen, or ``auto`` had no backend to try.
 
     A :class:`ProviderNotFoundError`, so an ``except`` for that still catches it.
     :attr:`configured` names the answer backends with a key -- several, so which

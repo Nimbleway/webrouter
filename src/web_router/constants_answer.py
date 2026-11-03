@@ -14,11 +14,15 @@ from web_router.types_answer import Recency
 
 __all__ = [
     "ANSWER_MARKER",
+    "AUTO_ANSWER_PREFERRED",
+    "AUTO_ANSWER_SUPPORTED_PARAMETERS",
     "MCP_ANSWER_PROPERTIES",
     "MCP_DESC_ANSWER",
     "MSG_ANSWER_FAILED",
     "MSG_ANSWER_NONE_CONFIGURED",
     "MSG_ANSWER_NO_DEFAULT",
+    "MSG_AUTO_ANSWER_EXHAUSTED",
+    "MSG_AUTO_ANSWER_NO_MEMBER",
 ]
 
 MSG_ANSWER_FAILED = "answer failed: {error}"
@@ -27,8 +31,8 @@ ANSWER_MARKER = "[{number}]"
 """An inline citation as most answer backends write it: the source's number in brackets, ``[2]``."""
 
 MSG_ANSWER_NO_DEFAULT = (
-    "answer() has no 'auto' yet: the router's default ({default!r}) does not serve it, and {count} answer "
-    "backends are configured, so there is no single one to use. Name one with provider=: {available}."
+    "answer() has no backend to use: the router's default ({default!r}) does not serve it, and {count} answer "
+    "backends are configured. Name one with provider=, or provider='auto' to try them cheapest first: {available}."
 )
 """Raised as :class:`~web_router.exceptions.ProviderNotFoundError` when no answer backend could be chosen.
 
@@ -37,8 +41,8 @@ does not serve it; with several configured, which to call is the caller's choice
 """
 
 MSG_ANSWER_NONE_CONFIGURED = (
-    "answer() has no 'auto' yet: the router's default ({default!r}) does not serve it, and no answer backend "
-    "has a key. Set one of {env_vars}, or pass one through provider_config."
+    "answer() has no backend to use: no answer backend has a key. Set one of {env_vars}, or pass one through "
+    "provider_config."
 )
 """The same refusal with nothing configured: what to set, rather than a list of names that cannot run."""
 
@@ -69,6 +73,34 @@ MCP_DESC_ANSWER = (
     "question whose answer is a sentence or two; use `search` when you need the pages themselves, "
     "`extract` when you have the URL, and `research` for a question that needs an investigation. "
     "The answer is the backend's own, unedited -- check it against the sources when it matters. A "
-    "source the answer cites inline carries that marker (e.g. '[2]') in its `field`. There is no "
-    "automatic choice of backend yet: with more than one configured, name one with `provider`."
+    "source the answer cites inline carries that marker (e.g. '[2]') in its `field`. Leave `provider` "
+    "unset to try the configured backends cheapest first; one that fails is passed over, and each one tried bills."
 )
+
+# answer()'s `auto`: the configured answer backends, cheapest first.
+
+# Names, not the PROVIDER_* constants: constants.py imports this module.
+AUTO_ANSWER_PREFERRED: tuple[str, ...] = ("perplexity", "exa", "you", "linkup", "parallel")
+"""The order ``auto`` tries the answer backends you hold a key for: cheapest first, at list price.
+
+Prices from ``benchmarks/providers/PRICING.md``, checked 2026-11-01: Perplexity
+states about $1.20 per 1k answers, Exa and You.com list $5 (Exa first, the
+faster of the two in the answer scan), Linkup about $6, and Parallel, last, has
+no price checked there and was the slowest. The five scored alike on accuracy
+(94-95% on 300 SimpleQA questions), so cost decides. Changing the order is its
+own decision, not a tweak.
+"""
+
+AUTO_ANSWER_SUPPORTED_PARAMETERS: frozenset[str] = frozenset(
+    {"include_domains", "exclude_domains", "country", "recency"}
+)
+"""Every option some member maps. A request goes only to the members that map every option it sets.
+
+``locale`` is absent: no answer backend maps it. A test holds this equal to the
+union of the members' own sets.
+"""
+
+MSG_AUTO_ANSWER_NO_MEMBER = "no configured answer backend takes this request: {skipped}"
+"""Raised as :class:`~web_router.exceptions.UnsupportedParameterError` when every member was passed over."""
+
+MSG_AUTO_ANSWER_EXHAUSTED = "every answer backend failed: {failures}"

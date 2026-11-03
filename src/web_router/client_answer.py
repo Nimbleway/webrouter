@@ -30,10 +30,11 @@ class _AnswerLookup:
         """Return the named answer provider, constructing and caching it on first use.
 
         The answer counterpart of :meth:`~web_router.WebRouter.get_provider`, with
-        the same ownership rule. ``answer()`` has no ``auto`` yet, so with no name
-        it uses the router's default when that serves answers, else the one
-        configured answer backend -- a key in ``provider_config`` counts -- and
-        otherwise raises :class:`~web_router.ProviderNotFoundError`.
+        the same ownership rule. With no name it uses the router's default when
+        that serves answers -- ``auto``, the configured backends cheapest first,
+        included -- else the one configured answer backend (a key in
+        ``provider_config`` counts), and otherwise raises
+        :class:`~web_router.ProviderNotFoundError`.
         """
         if isinstance(name, AnswerProvider):
             return name
@@ -71,9 +72,10 @@ class SyncAnswer(_AnswerLookup):
         backend does not map raises :class:`~web_router.UnsupportedParameterError`
         before anything is sent.
 
-        There is no ``auto`` yet. With ``provider`` unset the router's default
-        serves the call when it is an answer backend, else the one answer
-        backend configured; with none or several configured, name one.
+        With ``provider`` unset the router's default serves the call when it is
+        an answer backend. On the usual default, ``auto``, that is the answer
+        backends you hold a key for, cheapest first: one that fails or answers
+        with nothing is passed over for the next, and each one tried bills.
         """
         request = self._answer_request(
             query,
