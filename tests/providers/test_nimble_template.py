@@ -305,7 +305,12 @@ def test_a_malformed_sample_is_skipped_and_a_sample_with_no_input_takes_none(
                 "not a sample",
                 {"input": "https://example.com"},
                 {"input": [["url", URL]]},
+                {"input": []},
+                {"input": ""},
+                {"input": 0},
+                {"input": False},
                 {"output": RECORD},
+                {"input": None, "output": RECORD},
             ]
         )
     )
@@ -314,6 +319,7 @@ def test_a_malformed_sample_is_skipped_and_a_sample_with_no_input_takes_none(
 
     assert template.samples == [
         TemplateSample(input={"url": URL}, output=None),
+        TemplateSample(input={}, output=RECORD),
         TemplateSample(input={}, output=RECORD),
     ]
 

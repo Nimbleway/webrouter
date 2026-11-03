@@ -46,6 +46,21 @@ from web_router.types import (
 )
 
 
+def _sample_input(sample: object) -> dict[str, Any] | None:
+    """A recorded sample's input, or ``None`` when the sample is malformed and is skipped.
+
+    A missing or null input is a fixed page's, which takes none, so it is
+    ``{}``; anything else that is not a mapping, even an empty one, is not
+    an input the backend published.
+    """
+    if not isinstance(sample, dict):
+        return None
+    inputs = sample.get("input")
+    if inputs is None:
+        return {}
+    return inputs if isinstance(inputs, dict) else None
+
+
 class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
     """Lists, describes and runs Nimble Extract Templates.
 
@@ -213,11 +228,9 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
             input_schema=version.get("input_schema"),
             output_schema=version.get("output_schema"),
             samples=[
-                TemplateSample(input=sample.get("input") or {}, output=sample.get("output"))
+                TemplateSample(input=inputs, output=sample.get("output"))
                 for sample in version.get("samples") or []
-                # A sample with no input is a fixed page's, which takes none;
-                # one whose input is not a mapping is malformed and skipped.
-                if isinstance(sample, dict) and isinstance(sample.get("input") or {}, dict)
+                if (inputs := _sample_input(sample)) is not None
             ],
             version=_as_int(version.get("version_number")),
             published=bool(version),
