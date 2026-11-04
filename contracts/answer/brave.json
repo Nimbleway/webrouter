@@ -1,0 +1,68 @@
+{
+  "provider": "brave",
+  "method": "answer",
+  "class": "web_router.providers.brave.BraveAnswerProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.search.brave.com",
+    "paths": {
+      "answer_path": "/res/v1/chat/completions"
+    },
+    "method": "POST",
+    "auth_header": "X-Subscription-Token"
+  },
+  "credentials": [
+    "BRAVE_ANSWER_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.enable_citations": true,
+    "body.messages": [
+      {
+        "content": "probe query",
+        "role": "user"
+      }
+    ],
+    "body.model": "brave",
+    "body.stream": true
+  },
+  "options": {},
+  "not_mapped": [
+    "country",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "recency"
+  ],
+  "source": [
+    "https://github.com/brave/brave-search-skills/blob/main/skills/answers/SKILL.md",
+    "https://brave.com/search/api/"
+  ],
+  "verified": {},
+  "vendor_options": {
+    "country": {
+      "status": "passthrough",
+      "note": "Brave documents it for search results; not checked live, so country is not mapped to it."
+    },
+    "language": {
+      "status": "passthrough",
+      "note": "'es' answered in English and an unknown value was accepted live, so locale is not mapped to it."
+    },
+    "safesearch": {
+      "status": "passthrough",
+      "note": "off, moderate or strict; no normalized field."
+    },
+    "max_completion_tokens": {
+      "status": "passthrough",
+      "note": "Caps the answer; a cut-off answer is partial."
+    },
+    "web_search_options": {
+      "status": "passthrough",
+      "note": "search_context_size low, medium or high; no normalized field."
+    },
+    "enable_research": {
+      "status": "not_supported",
+      "note": "Brave's multi-search research mode; it cannot run with enable_citations, and research() is its own method."
+    }
+  }
+}

@@ -14,6 +14,7 @@ from web_router.constants import (
     ANSWER_ENV_BY_PROVIDER,
     EXTRA_ANSWER,
     PROVIDER_AUTO,
+    PROVIDER_BRAVE,
     PROVIDER_EXA,
     PROVIDER_LINKUP,
     PROVIDER_PARALLEL,
@@ -34,6 +35,7 @@ _BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupAnswerProvider", EXTRA_ANSWER),
     PROVIDER_YOU: ("web_router.providers.you", "YouAnswerProvider", EXTRA_ANSWER),
     PROVIDER_EXA: ("web_router.providers.exa", "ExaAnswerProvider", EXTRA_ANSWER),
+    PROVIDER_BRAVE: ("web_router.providers.brave", "BraveAnswerProvider", EXTRA_ANSWER),
 }
 
 _CUSTOM_ANSWER_PROVIDERS: dict[str, type[AnswerProvider]] = {}
