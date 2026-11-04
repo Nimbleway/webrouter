@@ -3,9 +3,8 @@
 Kept apart from :mod:`web_router.providers.auto`, which it follows. As for
 search, each request goes only to the members that map every option it sets --
 read from their classes, so one passed over is never built or called -- and a
-member that fails, or answers with nothing, is passed over for the next. As
-for research there is no keyless tier: every answer backend bills the call, so
-with no key there is no chain, and the call says which variables would add one.
+member that fails, or answers with nothing, is passed over for the next. There
+is no keyless tier: with no key there is no chain, and the call says what to set.
 
 A member that refuses a value before sending -- Perplexity and You.com take one
 domain list, never both -- is passed over too, since nothing was asked of it.
@@ -33,7 +32,8 @@ from web_router.exceptions import NoAnswerProviderError, UnsupportedParameterErr
 from web_router.providers._chain import (
     _RECOVERABLE,
     _ChainSpec,
-    _exhausted,
+    _empty_answer,
+    _held_or_raise,
     _keyed_chain,
     _member_options,
     _members_and_chain,
@@ -134,7 +134,7 @@ class AutoAnswerProvider(AnswerProvider):
             if not (self.fallback_on_empty and _empty_answer(response)):
                 return response
             held = response if held is None else held
-        return self._held_or_raise(held, failures, refused)
+        return _held_or_raise(held, self.name, failures, MSG_AUTO_ANSWER_EXHAUSTED, refused)
 
     async def _aanswer(self, request: AnswerRequest) -> AnswerResponse:
         failures: dict[str, WebRouterError] = {}
@@ -152,17 +152,7 @@ class AutoAnswerProvider(AnswerProvider):
             if not (self.fallback_on_empty and _empty_answer(response)):
                 return response
             held = response if held is None else held
-        return self._held_or_raise(held, failures, refused)
-
-    def _held_or_raise(
-        self, held: AnswerResponse | None, failures: dict[str, WebRouterError], refused: list[UnsupportedParameterError]
-    ) -> AnswerResponse:
-        """The first empty answer when one came back; else every failure; else the refusal when all refused."""
-        if held is not None:
-            return held
-        if failures:
-            raise _exhausted(self.name, failures, MSG_AUTO_ANSWER_EXHAUSTED)
-        raise refused[0]
+        return _held_or_raise(held, self.name, failures, MSG_AUTO_ANSWER_EXHAUSTED, refused)
 
     def require_members(self) -> None:
         """Raise :class:`NoAnswerProviderError`, naming the variables to set, when the chain is empty."""
@@ -208,8 +198,3 @@ class AutoAnswerProvider(AnswerProvider):
     async def aclose(self) -> None:
         for member in self._members.values():
             await member.aclose()
-
-
-def _empty_answer(response: AnswerResponse) -> bool:
-    """A blank answer: nothing a caller could use."""
-    return not (response.answer or "").strip()
