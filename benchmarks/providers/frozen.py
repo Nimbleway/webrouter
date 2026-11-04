@@ -103,6 +103,18 @@ MSG_OTHER_QUESTIONS = "{set}: {run} asked different questions from {first}; only
 MSG_OTHER_SETUP = "{set}: {run} differs on {key} ({theirs!r}, not {ours!r}); only scans of the same setup combine"
 MSG_REPEATED_ROW = "{set}: {provider} ({mode}) has question {question_id} more than once"
 MSG_ID_COLLISION = "{questions}: two different questions share question_id {question_id}"
+MSG_OTHER_ANSWERS = (
+    "{set}: {run} has another gold answer for question {question_id} than {first};"
+    " only scans graded on the same answers combine"
+)
+MSG_MISSING_ROWS = (
+    "{set}: {provider} ({mode}) has no row for {count} of {total} questions, e.g. {question_id};"
+    " was the scan cut short?"
+)
+MSG_ANSWERS_CHANGED = (
+    "{set}: the gold answers in {questions} no longer match the ones the scans were graded on;"
+    " the dataset changed upstream"
+)
 
 
 def normalise_question(text: str) -> str:
@@ -171,12 +183,19 @@ def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict
     first: tuple[str, dict[str, Any], set[str]] | None = None
     for run in spec["runs"]:
         setup, source = _read_run(results / run)
-        ids = {question_id(str(r["question"])) for r in source}
+        golds = {question_id(str(r["question"])): str(r.get("target", "")) for r in source}
+        ids = set(golds)
         if first is None:
             first = (run, setup, ids)
+            first_golds = golds
         else:
             if ids != first[2]:
                 raise SystemExit(MSG_OTHER_QUESTIONS.format(set=set_name, run=run, first=first[0]))
+            changed = sorted(qid for qid in ids if golds[qid] != first_golds[qid])
+            if changed:
+                raise SystemExit(
+                    MSG_OTHER_ANSWERS.format(set=set_name, run=run, question_id=changed[0], first=first[0])
+                )
             for key in SHARED_KEYS:
                 if setup.get(key) != first[1].get(key):
                     raise SystemExit(
@@ -192,8 +211,24 @@ def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict
         if key in seen:
             raise SystemExit(MSG_REPEATED_ROW.format(set=set_name, provider=key[0], mode=key[1], question_id=key[2]))
         seen.add(key)
-    rows.sort(key=lambda r: (r["question_id"], r["provider"], r["mode"]))
     assert first is not None
+    by_backend: dict[tuple[str, str], set[str]] = {}
+    for provider, mode, qid in seen:
+        by_backend.setdefault((provider, mode), set()).add(qid)
+    for (provider, mode), answered in sorted(by_backend.items()):
+        missing = sorted(first[2] - answered)
+        if missing:
+            raise SystemExit(
+                MSG_MISSING_ROWS.format(
+                    set=set_name,
+                    provider=provider,
+                    mode=mode,
+                    count=len(missing),
+                    total=len(first[2]),
+                    question_id=missing[0],
+                )
+            )
+    rows.sort(key=lambda r: (r["question_id"], r["provider"], r["mode"]))
     setup = first[1]
     entry = {
         "questions": spec["questions"],
@@ -204,11 +239,18 @@ def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict
         "max_results": setup.get("max_results"),
         "judge": setup.get("judge"),
         "question_count": len(first[2]),
+        "answers_sha256": answers_digest(first_golds),
         "row_count": len(rows),
         "providers": sorted({r["provider"] for r in rows}),
         "runs": runs,
     }
     return rows, entry
+
+
+def answers_digest(golds: Mapping[str, str]) -> str:
+    """SHA-256 of the gold answers by question id, so ``join`` can tell when a dataset changed under them."""
+    lines = "".join(f"{qid}\t{normalise_question(gold)}\n" for qid, gold in sorted(golds.items()))
+    return hashlib.sha256(lines.encode("utf-8")).hexdigest()
 
 
 def gzip_jsonl(rows: Iterable[Mapping[str, Any]]) -> bytes:
@@ -260,7 +302,10 @@ def question_index(questions: Iterable[Any], name: str) -> dict[str, Any]:
     index: dict[str, Any] = {}
     for question in questions:
         qid = question_id(question.question)
-        if qid in index and normalise_question(index[qid].question) != normalise_question(question.question):
+        if qid in index and (
+            normalise_question(index[qid].question) != normalise_question(question.question)
+            or normalise_question(str(index[qid].answer)) != normalise_question(str(question.answer))
+        ):
             raise SystemExit(MSG_ID_COLLISION.format(questions=name, question_id=qid))
         index[qid] = question
     return index
@@ -275,6 +320,15 @@ def require_resolved(set_name: str, rows: Iterable[Mapping[str, Any]], index: Ma
             MSG_UNRESOLVED.format(set=set_name, count=len(missing), questions=questions, example=missing[0])
         )
     return len(ids)
+
+
+def require_same_answers(
+    set_name: str, entry: Mapping[str, Any], rows: Iterable[Mapping[str, Any]], index: Mapping[str, Any]
+) -> None:
+    """``SystemExit`` when the dataset's gold answers for the set's questions are not the ones its scans used."""
+    golds = {row["question_id"]: str(index[row["question_id"]].answer) for row in rows}
+    if answers_digest(golds) != entry["answers_sha256"]:
+        raise SystemExit(MSG_ANSWERS_CHANGED.format(set=set_name, questions=entry["questions"]))
 
 
 def joined_row(row: Mapping[str, Any], question: Any, labels: Iterable[str]) -> dict[str, Any]:
@@ -306,9 +360,12 @@ def join(folder: Path, out: Path, local: Mapping[str, Path]) -> dict[str, int]:
     written: dict[str, int] = {}
     for set_name, entry in manifest["sets"].items():
         questions = entry["questions"]
-        index = indexes.setdefault(questions, load_index(questions, local))
+        if questions not in indexes:
+            indexes[questions] = load_index(questions, local)
+        index = indexes[questions]
         rows = read_rows(folder / (set_name + SUFFIX))
         require_resolved(set_name, rows, index, questions)
+        require_same_answers(set_name, entry, rows, index)
         labels = LABELS.get(questions, ())
         lines = [json.dumps(joined_row(r, index[r["question_id"]], labels), ensure_ascii=False) for r in rows]
         (out / (set_name + ".jsonl")).write_text("\n".join(lines) + "\n", encoding="utf-8")

@@ -21,6 +21,7 @@
       "max_results": 5,
       "judge": "openai:gpt-4o",
       "question_count": 254,
+      "answers_sha256": "b885250eac2a179e125b6971f2776222ab01a7479d2a6ecbe33b64748c714b0d",
       "row_count": 2540,
       "providers": [
         "brave",
@@ -64,6 +65,7 @@
       "max_results": 5,
       "judge": "openai:gpt-4o",
       "question_count": 254,
+      "answers_sha256": "b885250eac2a179e125b6971f2776222ab01a7479d2a6ecbe33b64748c714b0d",
       "row_count": 508,
       "providers": [
         "nimble",
@@ -91,6 +93,7 @@
       "max_results": 5,
       "judge": "openai:gpt-4o",
       "question_count": 300,
+      "answers_sha256": "6477e76a09f9bbfacab53597a6364d46945697fc2c8d0bb53777cba931ad3197",
       "row_count": 3600,
       "providers": [
         "brave",
@@ -152,6 +155,7 @@
       "max_results": null,
       "judge": "openai:gpt-4o",
       "question_count": 300,
+      "answers_sha256": "6477e76a09f9bbfacab53597a6364d46945697fc2c8d0bb53777cba931ad3197",
       "row_count": 1500,
       "providers": [
         "exa",

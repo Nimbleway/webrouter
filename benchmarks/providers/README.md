@@ -250,8 +250,11 @@ then provider and mode:
 
 `frozen/manifest.json` records, per set, the question set and dataset, the
 seed and sample size, the search size, the judge (`openai:gpt-4o` for all four),
-the row and question counts, and the scans it was built from with their start
-times.
+the row and question counts, the scans it was built from with their start
+times, and `answers_sha256`, a hash of the gold answers the scans were graded
+on. `join` refuses a set when the downloaded dataset's answers no longer match
+it, and `build` refuses scans graded on different answers, or a backend that
+has no row for some question.
 
 Whoever holds the scans rebuilds the folder with
 `frozen.py build path/to/results`, which resolves every `question_id` against

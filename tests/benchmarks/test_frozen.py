@@ -122,7 +122,9 @@ def test_a_setup_label_splits_into_provider_and_mode(frozen: ModuleType) -> None
 # Building from scans
 
 
-def _scan(folder: Path, providers: list[str], questions: list[str], **setup: Any) -> None:
+def _scan(
+    folder: Path, providers: list[str], questions: list[str], gold: str = "secret gold {q}", **setup: Any
+) -> None:
     folder.mkdir(parents=True)
     run = {"questions": "simpleqa", "limit": 2, "seed": 0, "max_results": 5, "judge": "j", "providers": providers}
     (folder / "run.json").write_text(json.dumps({**run, **setup}), encoding="utf-8")
@@ -130,7 +132,7 @@ def _scan(folder: Path, providers: list[str], questions: list[str], **setup: Any
         {
             "provider": p,
             "question": q,
-            "target": "secret gold",
+            "target": gold.format(q=q),
             "answer": "secret answer",
             "latency": 1.23456,
             "grade": "correct",
@@ -188,16 +190,67 @@ def test_join_puts_the_questions_back_and_refuses_an_id_it_cannot_resolve(
     _scan(tmp_path / "results" / "a", ["tavily"], ["q1", "q2"])
     _one_set(frozen, monkeypatch, ["a"])
     frozen.build(tmp_path / "results", tmp_path / "frozen", {}, check_join=False)
-    both = [Question(question=q, answer=f"gold {q}", metadata={"metadata": {"topic": "Art"}}) for q in ("q1", "q2")]
+    both = [
+        Question(question=q, answer=f"secret gold {q}", metadata={"metadata": {"topic": "Art"}}) for q in ("q1", "q2")
+    ]
 
     monkeypatch.setattr(frozen, "load_index", lambda questions, local: frozen.question_index(both, questions))
     assert frozen.join(tmp_path / "frozen", tmp_path / "out", {}) == {"tiny": 2}
     joined = [json.loads(line) for line in (tmp_path / "out" / "tiny.jsonl").read_text().splitlines()]
     assert {(r["question"], r["gold_answer"], r["topic"]) for r in joined} == {
-        ("q1", "gold q1", "Art"),
-        ("q2", "gold q2", "Art"),
+        ("q1", "secret gold q1", "Art"),
+        ("q2", "secret gold q2", "Art"),
     }
 
     monkeypatch.setattr(frozen, "load_index", lambda questions, local: frozen.question_index(both[:1], questions))
     with pytest.raises(SystemExit, match="1 question_id"):
+        frozen.join(tmp_path / "frozen", tmp_path / "out", {})
+
+
+def test_scans_graded_on_other_answers_or_cut_short_are_not_one_set(
+    frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _scan(tmp_path / "a", ["tavily"], ["q1", "q2"])
+    _scan(tmp_path / "b", ["exa"], ["q1", "q2"], gold="another gold {q}")
+    _one_set(frozen, monkeypatch, ["a", "b"])
+    with pytest.raises(SystemExit, match="another gold answer"):
+        frozen.freeze_set("tiny", tmp_path)
+
+    _scan(tmp_path / "c", ["exa", "brave"], ["q1", "q2"])
+    rows = (tmp_path / "c" / "rows.jsonl").read_text().splitlines()
+    (tmp_path / "c" / "rows.jsonl").write_text("\n".join(rows[:-1]) + "\n")  # brave never answered q2
+    _one_set(frozen, monkeypatch, ["a", "c"])
+    with pytest.raises(SystemExit, match="cut short"):
+        frozen.freeze_set("tiny", tmp_path)
+
+
+def test_one_id_with_two_gold_answers_is_refused(frozen: ModuleType) -> None:
+    twice = [Question(question="q1", answer="Paris"), Question(question=" q1 ", answer="Lyon")]
+    with pytest.raises(SystemExit, match="share question_id"):
+        frozen.question_index(twice, "simpleqa")
+
+
+def test_join_downloads_each_dataset_once_and_refuses_changed_answers(
+    frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _scan(tmp_path / "results" / "a", ["tavily"], ["q1", "q2"])
+    sets = {
+        "one": {"questions": "simpleqa", "method": "search", "runs": ["a"]},
+        "two": {"questions": "simpleqa", "method": "search", "runs": ["a"]},
+    }
+    monkeypatch.setattr(frozen, "FROZEN_SETS", sets)
+    frozen.build(tmp_path / "results", tmp_path / "frozen", {}, check_join=False)
+    calls: list[str] = []
+
+    def load(questions: str, answers: str) -> dict[str, Any]:
+        calls.append(questions)
+        both = [Question(question=q, answer=answers.format(q=q)) for q in ("q1", "q2")]
+        return frozen.question_index(both, questions)
+
+    monkeypatch.setattr(frozen, "load_index", lambda questions, local: load(questions, "secret gold {q}"))
+    assert frozen.join(tmp_path / "frozen", tmp_path / "out", {}) == {"one": 2, "two": 2}
+    assert calls == ["simpleqa"]
+
+    monkeypatch.setattr(frozen, "load_index", lambda questions, local: load(questions, "changed {q}"))
+    with pytest.raises(SystemExit, match="changed upstream"):
         frozen.join(tmp_path / "frozen", tmp_path / "out", {})
