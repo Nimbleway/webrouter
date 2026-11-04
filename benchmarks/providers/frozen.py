@@ -197,7 +197,8 @@ def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict
         runs.append({"run": run, "started": setup.get("started"), "providers": setup["providers"], "rows": len(source)})
     assert first is not None
     check_no_repeats(set_name, rows)
-    check_complete(set_name, rows, set(first[2]))
+    asked = {split_label(label)[0] for run in runs for label in run["providers"]}
+    check_complete(set_name, rows, set(first[2]), asked)
     rows.sort(key=lambda r: (r["question_id"], r["provider"], r["mode"]))
     return rows, manifest_entry(spec, first, rows, runs)
 
@@ -215,10 +216,6 @@ def read_rows(path: Path) -> list[dict[str, Any]]:
     """A frozen file's rows."""
     with gzip.open(path, "rt", encoding="utf-8") as handle:
         return [json.loads(line) for line in handle if line.strip()]
-
-
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def read_sums(folder: Path) -> dict[str, str]:
@@ -243,7 +240,7 @@ def verify(folder: Path = FROZEN_DIR) -> dict[str, str]:
     for name, expected in sorted(sums.items()):
         if name not in present:
             raise SystemExit(MSG_FILE_MISSING.format(name=name, folder=folder))
-        actual = sha256(folder / name)
+        actual = hashlib.sha256((folder / name).read_bytes()).hexdigest()
         if actual != expected:
             raise SystemExit(MSG_SUMS_MISMATCH.format(name=name, actual=actual, expected=expected))
     manifest = json.loads((folder / MANIFEST_FILE).read_text(encoding="utf-8"))
@@ -276,9 +273,8 @@ def join(folder: Path, out: Path, local: Mapping[str, Path]) -> dict[str, int]:
     """Each frozen set with its questions put back, written to ``out``; rows per set, or ``SystemExit`` on a miss."""
     verify(folder)
     manifest = json.loads((folder / MANIFEST_FILE).read_text(encoding="utf-8"))
-    out.mkdir(parents=True, exist_ok=True)
     indexes: dict[str, dict[str, Any]] = {}
-    written: dict[str, int] = {}
+    joined: dict[str, list[str]] = {}
     for set_name, entry in manifest["sets"].items():
         questions = entry["questions"]
         if questions not in indexes:
@@ -288,10 +284,14 @@ def join(folder: Path, out: Path, local: Mapping[str, Path]) -> dict[str, int]:
         require_resolved(set_name, rows, index, questions)
         require_same_answers(set_name, entry, rows, index)
         labels = LABELS.get(questions, ())
-        lines = [json.dumps(joined_row(r, index[r["question_id"]], labels), ensure_ascii=False) for r in rows]
+        joined[set_name] = [
+            json.dumps(joined_row(r, index[r["question_id"]], labels), ensure_ascii=False) for r in rows
+        ]
+    # Written only once every set resolved, so a failed join leaves nothing half done.
+    out.mkdir(parents=True, exist_ok=True)
+    for set_name, lines in joined.items():
         (out / (set_name + ".jsonl")).write_text("\n".join(lines) + "\n", encoding="utf-8")
-        written[set_name] = len(rows)
-    return written
+    return {set_name: len(lines) for set_name, lines in joined.items()}
 
 
 def build(results: Path, folder: Path, local: Mapping[str, Path], *, check_join: bool = True) -> dict[str, Any]:

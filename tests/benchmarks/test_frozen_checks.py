@@ -105,3 +105,10 @@ def test_verify_refuses_a_manifest_whose_failed_rows_are_not_the_rows(
     (tmp_path / "frozen" / frozen.SUMS_FILE).write_text("".join(f"{d}  {name}\n" for name, d in sums.items()))
     with pytest.raises(SystemExit, match="failed rows per backend"):
         frozen.verify(tmp_path / "frozen")
+
+
+def test_a_backend_the_scans_asked_but_that_has_no_row_is_refused(frozen_checks: ModuleType) -> None:
+    row = {"provider": "tavily", "mode": "default", "question_id": "abc"}
+    frozen_checks.check_complete("tiny", [row], {"abc"}, ["tavily"])
+    with pytest.raises(SystemExit, match="exa was asked"):
+        frozen_checks.check_complete("tiny", [row], {"abc"}, ["tavily", "exa"])

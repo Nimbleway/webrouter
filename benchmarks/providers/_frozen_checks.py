@@ -32,6 +32,7 @@ MSG_OTHER_ANSWERS = (
     " only scans graded on the same answers combine"
 )
 MSG_REPEATED_ROW = "{set}: {provider} ({mode}) has question {question_id} more than once"
+MSG_NO_ROWS = "{set}: {provider} was asked in the scans but has no row; the scan stopped before it ran"
 MSG_MISSING_ROWS = (
     "{set}: {provider} ({mode}) has no row for {count} of {total} questions, e.g. {question_id};"
     " was the scan cut short?"
@@ -141,11 +142,15 @@ def check_no_repeats(set_name: str, rows: Iterable[Mapping[str, Any]]) -> None:
         seen.add(key)
 
 
-def check_complete(set_name: str, rows: Iterable[Mapping[str, Any]], question_ids: set[str]) -> None:
-    """``SystemExit`` when a backend has no row for some of the set's questions."""
+def check_complete(
+    set_name: str, rows: Iterable[Mapping[str, Any]], question_ids: set[str], asked: Iterable[str] = ()
+) -> None:
+    """``SystemExit`` when a backend the scans asked has no row, or no row for some of the set's questions."""
     by_backend: dict[tuple[str, str], set[str]] = {}
     for row in rows:
         by_backend.setdefault((row["provider"], row["mode"]), set()).add(row["question_id"])
+    for provider in sorted(set(asked) - {provider for provider, _ in by_backend}):
+        raise SystemExit(MSG_NO_ROWS.format(set=set_name, provider=provider))
     for (provider, mode), missing in sorted((key, sorted(question_ids - ids)) for key, ids in by_backend.items()):
         if missing:
             raise SystemExit(
