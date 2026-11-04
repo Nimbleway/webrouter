@@ -145,6 +145,7 @@ src/web_router/
     │                   coercion, body selection
     ├── _deadline.py    the per-call deadline, its budgets, and the mixin
     │                   that holds a provider's call to it
+    ├── _clamp.py       a transport's own timeout, clamped to the deadline's time left
     ├── _page.py        the page actions both browser handles delegate to,
     │                   once over CDP through Playwright; snapshot refs
     ├── _png.py         a screenshot as PNG: converts what a backend returns as

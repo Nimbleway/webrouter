@@ -60,7 +60,8 @@ from web_router.constants import (
     RESEARCH_HTTP_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError, ProviderError
-from web_router.providers._deadline import clamped, job_budget, research_budget
+from web_router.providers._clamp import clamped
+from web_router.providers._deadline import job_budget, research_budget
 from web_router.providers._utils import compact, error_detail, resolve_api_key
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
