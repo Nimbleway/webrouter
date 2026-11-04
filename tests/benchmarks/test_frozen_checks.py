@@ -70,6 +70,13 @@ def test_one_id_with_two_gold_answers_is_refused(frozen_checks: ModuleType) -> N
         frozen_checks.question_index(twice, "simpleqa")
 
 
+def test_a_scan_that_graded_one_question_against_two_answers_is_refused(frozen_checks: ModuleType) -> None:
+    rows = [{"question": "q1", "target": "Paris"}, {"question": "q1", "target": "Lyon"}]
+    with pytest.raises(SystemExit, match="two gold answers"):
+        frozen_checks.read_golds("tiny", "a", rows)
+    assert frozen_checks.read_golds("tiny", "a", rows[:1] * 2) == {frozen_checks.question_id("q1"): "Paris"}
+
+
 def test_a_scan_row_with_no_gold_answer_is_named_as_the_fault(
     frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

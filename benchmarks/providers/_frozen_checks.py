@@ -20,6 +20,7 @@ QUESTION_ID_CHARS = 16
 MSG_UNRESOLVED = "{set}: {count} question_id(s) do not resolve in {questions}, e.g. {example}"
 MSG_ID_COLLISION = "{questions}: two different questions share question_id {question_id}"
 MSG_NO_GOLD = "{set}: {run} has a row with no gold answer (`target`) for question {question_id}; the scan is damaged"
+MSG_TWO_GOLDS = "{set}: {run} graded question {question_id} against two gold answers; the scan is damaged"
 MSG_ANSWERS_CHANGED = (
     "{set}: the gold answers in {questions} no longer match the ones the scans were graded on;"
     " the dataset changed upstream"
@@ -96,7 +97,11 @@ def require_same_answers(
 
 def read_golds(set_name: str, run: str, source: Iterable[Mapping[str, Any]]) -> dict[str, str]:
     """A scan's gold answers by question id, or ``SystemExit`` on a row with none."""
-    golds = {question_id(str(r["question"])): r.get("target") for r in source}
+    golds: dict[str, Any] = {}
+    for r in source:
+        qid = question_id(str(r["question"]))
+        if golds.setdefault(qid, r.get("target")) != r.get("target"):
+            raise SystemExit(MSG_TWO_GOLDS.format(set=set_name, run=run, question_id=qid))
     blank = sorted(qid for qid, gold in golds.items() if gold in (None, ""))
     if blank:
         raise SystemExit(MSG_NO_GOLD.format(set=set_name, run=run, question_id=blank[0]))
