@@ -118,7 +118,7 @@ mcp = [
 # Bring your own `Judge` subclass and this extra is not needed.
 evals = [
     "web-router[search]",
-    "openai>=1.0,<3",
+    "openai>=1.0,<4",
     "anthropic>=1.8,<2",
     # SealQA is published as Parquet; read only inside Dataset.sealqa().
     "pyarrow>=15",
