@@ -214,6 +214,7 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
                     self._refuse_past_deadline()
                     body = listing.send(self._client.post(self.search_path, json=body, **self._clamped()))
         self._refuse_filters(request)
+        self._refuse_past_deadline()
         return super()._search(request)
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
@@ -225,10 +226,11 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
                     self._refuse_past_deadline()
                     body = listing.send(await self._async_client.post(self.search_path, json=body, **self._clamped()))
         self._refuse_filters(request)
+        self._refuse_past_deadline()
         return await super()._asearch(request)
 
     def _refuse_past_deadline(self) -> None:
-        """Raise before another ``tools/list`` page once a deadline in force has passed.
+        """Raise before another ``tools/list`` page or the ``tools/call`` once a deadline in force has passed.
 
         Each page is clamped to the time left, but never below the floor a
         timeout needs, so without this a long listing would keep paging past it.

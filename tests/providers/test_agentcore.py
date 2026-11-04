@@ -374,3 +374,27 @@ def test_the_tool_list_stops_paging_once_the_deadline_has_passed(monkeypatch: py
         _provider(httpx.MockTransport(handle)).search(SearchRequest(query="hi"))
 
     assert len(seen) == 1, "no page was asked for after the deadline"
+
+
+def test_no_tool_call_is_sent_once_the_listing_ran_past_the_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
+    from types import SimpleNamespace
+
+    from web_router.exceptions import DeadlineExceededError
+    from web_router.providers import _utils, base
+    from web_router.providers._utils import call_deadline
+
+    clock = SimpleNamespace(now=0.0)
+    fake_time = SimpleNamespace(monotonic=lambda: clock.now, sleep=lambda seconds: None)
+    monkeypatch.setattr(base, "time", fake_time)
+    monkeypatch.setattr(_utils, "time", fake_time)
+    methods: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        methods.append(json.loads(request.content)["method"])
+        clock.now = 5.0
+        return _reply(_tools(TOOL))  # the last page, answered after the deadline
+
+    with call_deadline(3.0), pytest.raises(DeadlineExceededError, match="3s deadline"):
+        _provider(httpx.MockTransport(handle)).search(SearchRequest(query="hi"))
+
+    assert methods == ["tools/list"], "no tools/call was sent after the deadline"
