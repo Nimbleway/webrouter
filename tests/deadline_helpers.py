@@ -41,8 +41,8 @@ class _Clock:
         self.now += seconds
 
 
-@pytest.fixture
-def clock(monkeypatch: pytest.MonkeyPatch) -> _Clock:
+def install_clock(monkeypatch: pytest.MonkeyPatch) -> _Clock:
+    """A fake clock in place of the real one, for the ``clock`` fixture in ``tests/conftest.py``."""
     fake = _Clock()
     monkeypatch.setattr(base, "time", fake)
     monkeypatch.setattr(_deadline, "time", fake)

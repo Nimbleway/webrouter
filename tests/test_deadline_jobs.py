@@ -9,7 +9,6 @@ import pytest
 
 from tests.conftest import FakeBrowseProvider, FakeExtractProvider, FakeProvider, FakeResearchProvider
 from tests.deadline_helpers import DEADLINE, TINY, URLS, _Clock
-from tests.deadline_helpers import clock as clock  # a fixture: imported by name so pytest finds it here
 from web_router import WebRouter
 from web_router.exceptions import (
     BrowseTimeoutError,

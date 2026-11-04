@@ -9,7 +9,6 @@ import pytest
 
 from tests.conftest import FakeProvider
 from tests.deadline_helpers import DEADLINE, TINY, _Clock
-from tests.deadline_helpers import clock as clock  # a fixture: imported by name so pytest finds it here
 from web_router.exceptions import DeadlineExceededError, ProviderError
 from web_router.providers._deadline import call_deadline, job_budget
 from web_router.providers.auto import AutoProvider
