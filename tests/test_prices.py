@@ -72,6 +72,15 @@ def test_estimate_is_the_cost_of_one_call() -> None:
     assert prices.estimate("linkup", "extract") == pytest.approx(0.001)
 
 
+def test_deep_search_with_full_content_costs_more_than_fast() -> None:
+    # Deep sends full_content (Nimble) or full_page (You.com), billed per page on top of the depth price.
+    for provider in ("nimble", "you"):
+        deep = prices.estimate(provider, "search", "deep")
+        fast = prices.estimate(provider, "search", "fast")
+        assert deep is not None and fast is not None
+        assert deep > fast
+
+
 def test_a_call_that_sets_no_mode_gets_the_default_row() -> None:
     assert prices.estimate("nimble", "search") == prices.estimate("nimble", "search", "fast")
     assert prices.price("parallel", "research") == prices.price("parallel", "research", "medium")
