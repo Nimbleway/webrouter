@@ -58,15 +58,18 @@ def _resolve_key(api_key: str | None, *, allow_keyless: bool, provider: str) -> 
         return None
 
 
-def _timeout(configured: float | None, sdk_default: float) -> float | None:
-    """The per-call ``timeout`` to send: the provider's own, clamped to the time a deadline in force leaves.
+def _clamped(payload: dict[str, Any], sdk_default: float) -> dict[str, Any]:
+    """``payload`` with its ``timeout`` clamped to the time a deadline in force leaves.
 
     Tavily takes its timeout per call, so this is where a deadline reaches it.
-    With none in force it is the provider's own, ``None`` leaving the SDK's.
+    Applied after ``provider_options`` is merged in, so a longer timeout there
+    cannot outlast the deadline; unset, the SDK's own default is clamped. With
+    no deadline the payload is returned as built.
     """
-    if current_deadline() is None:
-        return configured
-    return job_budget(configured if configured is not None else sdk_default)
+    if current_deadline() is not None:
+        configured = payload.get("timeout")
+        payload["timeout"] = job_budget(float(configured) if configured is not None else sdk_default)
+    return payload
 
 
 class TavilyProvider(SearchProvider):
@@ -123,13 +126,14 @@ class TavilyProvider(SearchProvider):
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``search()`` keyword arguments."""
         depth = TAVILY_PARAMS_BY_DEPTH.get(request.search_depth) if request.search_depth else None
-        return build_payload(
+        payload = build_payload(
             request,
             TAVILY_PARAM_NAMES,
             query=request.query,
-            timeout=_timeout(self._timeout, TAVILY_SDK_SEARCH_TIMEOUT),
+            timeout=self._timeout,
             **(depth or {}),
         )
+        return _clamped(payload, TAVILY_SDK_SEARCH_TIMEOUT)
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         results = []
@@ -214,12 +218,13 @@ class TavilyExtractProvider(ExtractProvider):
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``extract()`` keyword arguments."""
-        return build_payload(
+        payload = build_payload(
             request,
             urls=urls,
             format=TAVILY_EXTRACT_FORMATS[self.format_of(request)],
-            timeout=_timeout(self._timeout, TAVILY_SDK_EXTRACT_TIMEOUT),
+            timeout=self._timeout,
         )
+        return _clamped(payload, TAVILY_SDK_EXTRACT_TIMEOUT)
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         body_format = self.format_of(request)

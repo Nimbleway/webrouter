@@ -70,7 +70,7 @@ from web_router.constants_agentcore import (
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._mcp import McpSearchMixin
-from web_router.providers._utils import as_snippet, build_payload, compact
+from web_router.providers._utils import as_snippet, build_payload, compact, current_deadline
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 _HOST = re.compile(AGENTCORE_HOST_PATTERN)
@@ -211,6 +211,7 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
             body = next(listing)
             with contextlib.suppress(StopIteration):
                 while True:
+                    self._refuse_past_deadline()
                     body = listing.send(self._client.post(self.search_path, json=body, **self._clamped()))
         self._refuse_filters(request)
         return super()._search(request)
@@ -221,9 +222,20 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
             body = next(listing)
             with contextlib.suppress(StopIteration):
                 while True:
+                    self._refuse_past_deadline()
                     body = listing.send(await self._async_client.post(self.search_path, json=body, **self._clamped()))
         self._refuse_filters(request)
         return await super()._asearch(request)
+
+    def _refuse_past_deadline(self) -> None:
+        """Raise before another ``tools/list`` page once a deadline in force has passed.
+
+        Each page is clamped to the time left, but never below the floor a
+        timeout needs, so without this a long listing would keep paging past it.
+        """
+        deadline = current_deadline()
+        if deadline is not None:
+            self._refuse_late(deadline)
 
     def _needs_tool(self, request: SearchRequest) -> bool:
         """Whether this call must list the gateway's tools first, once the request and the gateway pass."""

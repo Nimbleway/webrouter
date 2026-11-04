@@ -355,10 +355,11 @@ class ExtractProvider(_BaseProvider):
         collected = _Collected(self.name, request.urls)
         next_start = 0.0
         for urls in self._batches(request.urls):
-            if self.min_start_interval:
-                time.sleep(max(0.0, next_start - time.monotonic()))
-                next_start = time.monotonic() + self.min_start_interval
             try:
+                if self.min_start_interval:
+                    self._wait_to_start(deadline, next_start - time.monotonic())
+                    time.sleep(max(0.0, next_start - time.monotonic()))
+                    next_start = time.monotonic() + self.min_start_interval
                 if deadline is not None:
                     self._refuse_late(deadline)
                 collected.add(urls, self._extract(request, urls))
@@ -393,6 +394,7 @@ class ExtractProvider(_BaseProvider):
             async with limit:
                 if self.min_start_interval:
                     async with spacing:
+                        self._wait_to_start(deadline, next_start - time.monotonic())
                         await asyncio.sleep(max(0.0, next_start - time.monotonic()))
                         next_start = time.monotonic() + self.min_start_interval
                 if deadline is None:
@@ -412,6 +414,16 @@ class ExtractProvider(_BaseProvider):
             else:
                 collected.fail(urls, self._failure(outcome))
         return collected.resolved()
+
+    def _wait_to_start(self, deadline: Deadline | None, wait: float) -> None:
+        """Raise :class:`DeadlineExceededError` for a call whose rate-limit wait would reach the deadline.
+
+        Never sleeps past it: a call that cannot start in time is a failure of
+        its URLs now, rather than a sleep that holds the whole extract after
+        the deadline.
+        """
+        if deadline is not None and wait > 0 and wait >= deadline.left():
+            raise DeadlineExceededError(self.name, deadline.seconds)
 
     async def _aextract_within(self, deadline: Deadline, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         """One call of :meth:`aextract`, cancelled at ``deadline``; a timeout at it raised as the deadline's.
@@ -559,9 +571,11 @@ class _Collected:
 
         failures = self.failures or [ExtractFailure(url=url, error=MSG_EXTRACT_NO_DOCUMENT) for url in self.requested]
         detail = "; ".join(f"{failure.url}: {failure.error}" for failure in failures)
-        late = [error for _, error in self.errors if isinstance(error, DeadlineExceededError)]
-        if late and len(late) == len(self.errors):
-            return DeadlineExceededError(self.provider, late[0].seconds)
+        late = [(urls, error) for urls, error in self.errors if isinstance(error, DeadlineExceededError)]
+        if late and sum(len(urls) for urls, _ in late) == len(self.failures):
+            # Every URL that failed ran out of time; one that failed for a
+            # reason of its own keeps the summary below, which names each.
+            return DeadlineExceededError(self.provider, late[0][1].seconds)
         original = next((error.original for _, error in self.errors if isinstance(error, ProviderError)), None)
         return ProviderError(self.provider, MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail), original=original)
 

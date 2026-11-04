@@ -349,3 +349,28 @@ def test_live_search_with_domains_and_dates(monkeypatch: pytest.MonkeyPatch) -> 
 
     assert response.results
     assert all("python.org" in result.url for result in response.results if result.url)
+
+
+def test_the_tool_list_stops_paging_once_the_deadline_has_passed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each page is clamped, but never below the timeout floor, so the next one is refused outright."""
+    from types import SimpleNamespace
+
+    from web_router.exceptions import DeadlineExceededError
+    from web_router.providers import _utils, base
+    from web_router.providers._utils import call_deadline
+
+    clock = SimpleNamespace(now=0.0)
+    fake_time = SimpleNamespace(monotonic=lambda: clock.now, sleep=lambda seconds: None)
+    monkeypatch.setattr(base, "time", fake_time)
+    monkeypatch.setattr(_utils, "time", fake_time)
+    seen: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        clock.now = 5.0
+        return _reply({**_tools("other___Thing"), "nextCursor": f"page-{len(seen) + 1}"})
+
+    with call_deadline(3.0), pytest.raises(DeadlineExceededError, match="3s deadline"):
+        _provider(httpx.MockTransport(handle)).search(SearchRequest(query="hi"))
+
+    assert len(seen) == 1, "no page was asked for after the deadline"

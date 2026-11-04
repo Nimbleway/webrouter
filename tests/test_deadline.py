@@ -51,6 +51,7 @@ from web_router.registry import (
 from web_router.types import (
     BrowseRequest,
     ExtractedDocument,
+    ExtractFailure,
     ExtractRequest,
     ExtractResponse,
     ResearchProgress,
@@ -610,3 +611,79 @@ def test_max_carries_the_deadline_onto_its_worker_threads() -> None:
         unregister_extract_provider("member")
 
     assert seen == [(False, True)]
+
+
+# -- What a caller's options and a backend's pacing cannot stretch ------------------
+
+
+def test_a_longer_tavily_timeout_in_provider_options_does_not_outlast_the_deadline(clock: _Clock) -> None:
+    from web_router.providers.tavily import TavilyExtractProvider
+
+    options = {"timeout": 120}
+    search = TavilyProvider(api_key="test-key")
+    extract = TavilyExtractProvider(api_key="test-key")
+
+    with call_deadline(DEADLINE):
+        assert search._build_payload(SearchRequest(query="q", provider_options=options))["timeout"] == DEADLINE
+        assert (
+            extract._build_payload(ExtractRequest(urls=URLS[:1], provider_options=options), URLS[:1])["timeout"]
+            == DEADLINE
+        )
+    assert search._build_payload(SearchRequest(query="q", provider_options=options))["timeout"] == 120
+
+
+class _Spaced(_AcmeExtract):
+    """A backend limited per second: two calls start at least two seconds apart, as DeepSeek's fetches do."""
+
+    min_start_interval = 2.0
+
+
+def _answers(request: httpx.Request) -> httpx.Response:
+    return httpx.Response(200, json={})
+
+
+def test_a_spaced_extract_never_sleeps_past_the_deadline(clock: _Clock) -> None:
+    provider = _Spaced(transport=httpx.MockTransport(_answers))
+
+    with call_deadline(DEADLINE):
+        response = provider.extract(ExtractRequest(urls=URLS))
+
+    assert [document.url for document in response.documents] == URLS[:2]
+    assert [failure.url for failure in response.failures] == [URLS[2]]
+    assert "3s deadline" in response.failures[0].error
+    assert clock.now == 2.0, "the third call's wait would have reached the deadline, so it was never slept"
+
+
+async def test_an_async_spaced_extract_never_sleeps_past_the_deadline() -> None:
+    _Spaced.min_start_interval = 1.0
+    try:
+        provider = _Spaced(transport=httpx.MockTransport(_answers))
+        started = asyncio.get_running_loop().time()
+        with call_deadline(TINY):
+            response = await provider.aextract(ExtractRequest(urls=URLS))
+        elapsed = asyncio.get_running_loop().time() - started
+    finally:
+        _Spaced.min_start_interval = 2.0
+
+    assert [document.url for document in response.documents] == URLS[:1]
+    assert [failure.url for failure in response.failures] == URLS[1:]
+    assert elapsed < 0.5, "the spaced calls failed at once rather than sleeping a second each"
+
+
+class _ReportsBlocked(_AcmeExtract):
+    """A backend that answers 200 for the first URL and reports it blocked, as Tavily's ``failed_results`` do."""
+
+    def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
+        return ExtractResponse(provider=self.name, failures=[ExtractFailure(url=urls[0], error="blocked")])
+
+
+def test_an_extract_that_failed_for_other_reasons_too_is_not_reported_as_only_the_deadline(clock: _Clock) -> None:
+    """One URL reported blocked, the other cut off by the deadline: nothing came back, and both are named."""
+    provider = _ReportsBlocked(transport=_hangs_until_timeout(clock, [], slow=URLS[1]))
+
+    with call_deadline(DEADLINE), pytest.raises(ProviderError) as caught:
+        provider.extract(ExtractRequest(urls=URLS[:2]))
+
+    message = str(caught.value)
+    assert f"{URLS[0]}: blocked" in message
+    assert URLS[1] in message and "3s deadline" in message
