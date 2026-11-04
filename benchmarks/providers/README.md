@@ -387,8 +387,10 @@ How a choice is scored:
   ranks nothing, or names any backend that is not a candidate, which falls
   back to the static order. Those router
   failures also have their own column, and the first exception each router
-  raises on a set is printed to stderr. A question no backend served is a
-  miss.
+  raises on a set is printed to stderr. A row whose `error` is `judge` or
+  `leaked` is not a failed attempt: the backend answered, so it serves the
+  question, ungraded -- never correct, no fallback, counted in its own column.
+  A question no backend served is a miss.
 - **Accuracy** is correct out of every question; grades and latency come only
   from rows that did not fail.
 - **Cost** is the cost the row states (`answer`), else the list price from

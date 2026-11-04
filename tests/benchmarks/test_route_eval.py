@@ -305,7 +305,7 @@ def test_a_router_that_raises_is_counted_apart_and_its_first_error_printed_once(
     err = capsys.readouterr().err
     assert err.count("ValueError: model unreachable") == 1 and "broken_router:pick" in err
     report = route_eval.markdown([summary], 0.05, {})
-    assert "Router failed held out" in report and "| 10 | 10 |" in report
+    assert "Router failed held out" in report and "| 10 | 10 | 0 |" in report
 
 
 def test_the_static_order_is_autos_own_chain_keyless_tier_before_the_appended_backends(
@@ -339,3 +339,13 @@ def test_an_unrecorded_latency_is_unknown_not_zero(route_eval: ModuleType) -> No
     known = route_eval.Outcome(True, "a", 2.0, 0.01, False, False, 0.0)
     s = route_eval.score([outcome, known])
     assert s["mean_latency_s"] == 2.0 and s["latency_unknown"] == 1
+
+
+@pytest.mark.parametrize("error", ["judge", "leaked"])
+def test_a_row_the_judge_did_not_grade_still_served_the_question(route_eval: ModuleType, error: str) -> None:
+    q = _question(route_eval, _row("tavily", None, latency=1.0, error=error), _row("perplexity", "correct"))
+    outcome = route_eval.replay(lambda _: ["tavily", "perplexity"], q, route_eval.static_router("search"))
+    assert outcome.served_by == "tavily" and not outcome.fallback, "the backend answered; only grading failed"
+    assert outcome.ungraded and not outcome.correct
+    assert outcome.cost_usd == pytest.approx(0.008), "an answered call is billed"
+    assert route_eval.score([outcome])["ungraded"] == 1

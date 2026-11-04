@@ -41,7 +41,7 @@ from typing import Any
 
 from _common import _p, _pct, _s, _wilson
 from _report_tables import grade_stats
-from frozen import FROZEN_DIR, SUFFIX, read_rows
+from frozen import FROZEN_DIR, JUDGE_ERROR, LEAKED_ERROR, SUFFIX, read_rows
 
 from web_router import prices
 from web_router.constants import AUTO_APPENDED, AUTO_KEYLESS, AUTO_PREFERRED
@@ -71,6 +71,8 @@ STATIC_ORDER: dict[str, tuple[str, ...]] = {
 For search that is the preferred backends, then the keyless tier, then the
 backends appended since the last reordering.
 """
+SERVED_ERRORS = frozenset({JUDGE_ERROR, LEAKED_ERROR})
+"""Error classes where the backend answered and only the grading did not happen: served, but ungraded."""
 KEYLESS = frozenset(name for name, options in AUTO_KEYLESS if not options.get("allow_keyless"))
 """Backends that are only ever keyless (``you-mcp``): a ranking keeps them last, as ``auto`` does."""
 
@@ -113,6 +115,8 @@ class Outcome:
     overhead_s: float
     router_error: str | None = None
     """The exception the router raised, as ``Type: message``; ``None`` when it raised nothing."""
+    ungraded: bool = False
+    """The backend served, but the judge failed or the answer leaked the set's own pages: never correct."""
 
 
 Router = Callable[[Question], Any]
@@ -314,7 +318,9 @@ def _decision(decision: Any) -> tuple[list[str], float]:
 def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
     """One question through a router, walked as ``auto`` walks its chain.
 
-    A router that raises, ranks nothing, or names any backend that is not a
+    A row whose backend answered but went ungraded (the judge failed, or the
+    answer leaked the set's own pages) serves the question: no fallback, not
+    correct, counted as ungraded. A router that raises, ranks nothing, or names any backend that is not a
     candidate falls back to the static order and counts as failed. A failed row is passed over -- its time to failure
     charged, its cost not, since a failed call is not billed by most backends --
     and the next one tried; the first choice not serving is a fallback. A
@@ -339,12 +345,13 @@ def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
     for i, provider in enumerate(ranked):
         row = q.rows[provider]
         latency = None if latency is None or row["latency_s"] is None else latency + row["latency_s"]
-        if row["error"] is None:
+        if row["error"] is None or row["error"] in SERVED_ERRORS:
             price = cost_of(row)
             total = None if price is None else cost + price
             fallback = router_failed or i > 0
-            correct = row["grade"] == "correct"
-            return Outcome(correct, provider, latency, total, fallback, router_failed, overhead, error)
+            ungraded = row["error"] is not None
+            correct = not ungraded and row["grade"] == "correct"
+            return Outcome(correct, provider, latency, total, fallback, router_failed, overhead, error, ungraded)
     return Outcome(False, None, latency, total, True, router_failed, overhead, error)
 
 
@@ -367,6 +374,7 @@ def score(outcomes: Sequence[Outcome]) -> dict[str, Any]:
         "fallbacks": sum(o.fallback for o in outcomes),
         "router_failed": sum(o.router_failed for o in outcomes),
         "unserved": sum(o.served_by is None for o in outcomes),
+        "ungraded": sum(o.ungraded for o in outcomes),
         "mean_overhead_s": statistics.fmean(o.overhead_s for o in outcomes) if outcomes else None,
     }
 
@@ -496,9 +504,9 @@ def markdown(summaries: Sequence[dict[str, Any]], floor: float, pairs: Mapping[s
         out.append(
             "| Router | Accuracy in-sample | Accuracy held out | 95% CI held out | Regret vs oracle (in / out) "
             "| Regret vs static (in / out) | Mean cost held out | Mean latency held out | Fallbacks held out "
-            "| Router failed held out | Router overhead | Held out vs static |"
+            "| Router failed held out | Ungraded held out | Router overhead | Held out vs static |"
         )
-        out.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
+        out.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
         for spec, r in s["routers"].items():
             i, h = r["in_sample"], r["held_out"]
             ci = h["accuracy_ci95"]
@@ -509,7 +517,8 @@ def markdown(summaries: Sequence[dict[str, Any]], floor: float, pairs: Mapping[s
                 f"| {_pts(i['regret_static'])} / {_pts(h['regret_static'])} "
                 f"| {_usd(h['mean_cost_usd'], h['cost_unknown'])} "
                 f"| {_unknown(_s(h['mean_latency_s']), h['latency_unknown'])} "
-                f"| {h['fallbacks']} | {h['router_failed']} | {_ms(h['mean_overhead_s'])} | {r['verdict']} |"
+                f"| {h['fallbacks']} | {h['router_failed']} | {h['ungraded']} "
+                f"| {_ms(h['mean_overhead_s'])} | {r['verdict']} |"
             )
         out.append("")
         out.append(
