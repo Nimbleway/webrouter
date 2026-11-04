@@ -197,8 +197,9 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         test_browse_contract.py and
                         test_browser_contract.py guard the seven shared
                         contracts; test_job_core.py the job core under
-                        research and browse; test_deadline.py the
-                        per-call deadline on every method;
+                        research and browse; test_deadline_*.py the
+                        per-call deadline on every method, over the fakes
+                        in deadline_helpers.py;
                         test_browser_actions.py the page actions, against
                         fixtures/browser/; test_auto_browser.py and
                         test_auto_browse.py the two billed `auto` chains;
