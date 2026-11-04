@@ -42,7 +42,7 @@ say.
 |---|---|---|---|---|---|---|
 | `lite` | `nimble@lite` | `search_depth=lite` | Titles, URLs, snippets | $1.10 per 1k | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
 | `fast` (default) | `nimble`, `nimble@fast` | `search_depth=standard` (the default) | ~2K characters per result | $5 per 1k; standard depth | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
-| `deep` | `nimble@deep` (standard), `nimble:full-content@lite` | `+ full_content=true` | The whole page, scraped live | $15 per 1k; estimate is the derived upper bound: Nimble states $5 per 1k at standard depth plus $1 per 1k URLs for `full_content`, which web-router always sends at this depth, and an unset `max_results` gets Nimble's default of 10 results, so $5 + 10 × $1 = $15 per 1k (derived, not stated by Nimble) | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
+| `deep` | `nimble@deep` (standard), `nimble:full-content@lite` | `+ full_content=true` | The whole page, scraped live | $15 per 1k; estimate is the derived upper bound: Nimble states $5 per 1k at standard depth plus $1 per 1k URLs for `full_content`, which web-router always sends at this depth, and Nimble does not state its default result count, so this assumes 10 results: $5 + 10 × $1 = $15 per 1k (derived, not stated by Nimble) | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
 <!-- /prices -->
 
 **Standard is $5.00 (checked 2026-10-02).** nimbleway.com/pricing headlines
