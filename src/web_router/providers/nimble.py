@@ -12,7 +12,7 @@ explicitly, or use a caller's own ``AsyncNimble`` passed as ``async_client``.
 from __future__ import annotations
 
 import math
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeVar
 
 import httpx
 from nimble_python import AsyncNimble, Nimble
@@ -73,6 +73,8 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
 )
+
+_ClientT = TypeVar("_ClientT", Nimble, AsyncNimble)
 
 
 class _NimbleClients(_BaseProvider):
@@ -140,21 +142,14 @@ class _NimbleClients(_BaseProvider):
             raise ConfigurationError(MSG_NIMBLE_ASYNC_CLIENT_ONLY)
         return self._client
 
-    def _deadline_client(self) -> Nimble:
-        """The sync client for one call, its every limit clamped to the time a deadline in force leaves.
+    @staticmethod
+    def _within_deadline(client: _ClientT) -> _ClientT:
+        """``client`` for one call, its every limit clamped to the time a deadline in force leaves.
 
         The client itself with no deadline. Under one the SDK's retries are
         off as well: a retry starts a new request with the full clamped limit,
         so two of them would hold the caller past the deadline.
         """
-        client = self._sync_client
-        if current_deadline() is None:
-            return client
-        return client.with_options(timeout=clamp_timeout(client.timeout), max_retries=0)
-
-    def _adeadline_client(self) -> AsyncNimble:
-        """Async counterpart of :meth:`_deadline_client`."""
-        client = self._async_client
         if current_deadline() is None:
             return client
         return client.with_options(timeout=clamp_timeout(client.timeout), max_retries=0)
@@ -189,11 +184,11 @@ class NimbleProvider(_NimbleClients, SearchProvider):
     supported_parameters: ClassVar[frozenset[str]] = NORMALIZED_PARAMETERS
 
     def _search(self, request: SearchRequest) -> SearchResponse:
-        raw = self._deadline_client().search(**self._build_payload(request))
+        raw = self._within_deadline(self._sync_client).search(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
-        raw = await self._adeadline_client().search(**self._build_payload(request))
+        raw = await self._within_deadline(self._async_client).search(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
@@ -236,11 +231,11 @@ class NimbleExtractProvider(_NimbleClients, ExtractProvider):
     default_format: ClassVar[ExtractFormat] = NIMBLE_EXTRACT_DEFAULT_FORMAT
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        raw = self._deadline_client().extract.run(**self._build_payload(request, urls))
+        raw = self._within_deadline(self._sync_client).extract.run(**self._build_payload(request, urls))
         return self._to_response(request, urls, model_to_dict(raw))
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        raw = await self._adeadline_client().extract.run(**self._build_payload(request, urls))
+        raw = await self._within_deadline(self._async_client).extract.run(**self._build_payload(request, urls))
         return self._to_response(request, urls, model_to_dict(raw))
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:

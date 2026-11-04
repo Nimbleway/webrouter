@@ -62,6 +62,7 @@ from web_router.constants import (
 )
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._utils import (
+    call_budget,
     compact,
     current_deadline,
     error_detail,
@@ -510,7 +511,7 @@ def clamp_timeout(configured: float | httpx.Timeout | None) -> float | httpx.Tim
 
 
 def _clamp(limit: float | None) -> float:
-    return job_budget(math.inf if limit is None else limit)
+    return call_budget(math.inf if limit is None else limit)
 
 
 ReleaseMethod = Literal["POST", "PUT", "DELETE"]

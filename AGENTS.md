@@ -451,8 +451,10 @@ run, answer — refuses to start past it and raises `DeadlineExceededError` when
 the clamp cut it off, through `_bounded`/`_abounded` on the base class, which
 also cancel an async call at the deadline; an extract keeps the documents that
 came back in time. A transport that sets its own timeout — the HTTP base's
-`_clamped()`, Nimble's `_deadline_client()`, Tavily's per-call `timeout` — sends
-nothing new when no deadline is in force. `auto` holds nothing back for later
+`_clamped()`, Nimble's `_within_deadline()`, Tavily's per-call `timeout` — sends
+nothing new when no deadline is in force, and clamps through `call_budget`, whose
+floor is a millisecond rather than a job's half second, so it is never handed
+more than the time left. `auto` holds nothing back for later
 members: each runs under its own timeout clamped to what is left, and none
 starts once nothing is. A billed submit is clamped as on its own and never cut
 shorter for a member after it. A worker thread does not inherit the variable,

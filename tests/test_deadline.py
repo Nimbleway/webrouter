@@ -32,7 +32,7 @@ from web_router.exceptions import (
     ResearchTimeoutError,
 )
 from web_router.providers import _utils, base
-from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, HttpSearchProvider
+from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, HttpSearchProvider, clamp_timeout
 from web_router.providers._utils import call_deadline, current_deadline, job_budget, job_deadline
 from web_router.providers.auto import AutoProvider, AutoResearchProvider
 from web_router.providers.max import MaxExtractProvider
@@ -325,7 +325,7 @@ def test_a_nimble_search_is_clamped_and_untouched_without_a_deadline(
         provider.search(SearchRequest(query="q"))
     assert client.options[0]["timeout"].read == DEADLINE
 
-    assert provider._deadline_client() is client, "with no deadline the client is used as it was configured"
+    assert provider._within_deadline(client) is client, "with no deadline the client is used as it was configured"
 
 
 async def test_an_async_nimble_template_run_is_cancelled_at_the_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -687,3 +687,17 @@ def test_an_extract_that_failed_for_other_reasons_too_is_not_reported_as_only_th
     message = str(caught.value)
     assert f"{URLS[0]}: blocked" in message
     assert URLS[1] in message and "3s deadline" in message
+
+
+def test_a_one_call_transport_never_gets_more_than_the_time_left(clock: _Clock) -> None:
+    """Not the 0.5s floor a job's polls keep: with 0.2s left and a 30s timeout, the request gets 0.2s at most."""
+    seen: list[float] = []
+    provider = _Acme(transport=_hangs_until_timeout(clock, seen), timeout=30.0)
+
+    with call_deadline(DEADLINE):
+        clock.now = DEADLINE - 0.2
+        with pytest.raises(DeadlineExceededError):
+            provider.search(SearchRequest(query="q"))
+
+    assert seen and seen[0] <= 0.2 + 1e-9
+    assert clamp_timeout(30.0) == 30.0, "with no deadline the provider's own timeout stands"

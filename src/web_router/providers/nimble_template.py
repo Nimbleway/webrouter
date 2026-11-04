@@ -78,12 +78,12 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
 
     def _run(self, request: TemplateRequest) -> TemplateResponse:
         with _unknown_template_named(self.name, request.template):
-            raw = self._deadline_client().extract.templates.run(**self._build_payload(request))
+            raw = self._within_deadline(self._sync_client).extract.templates.run(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
 
     async def _arun(self, request: TemplateRequest) -> TemplateResponse:
         with _unknown_template_named(self.name, request.template):
-            raw = await self._adeadline_client().extract.templates.run(**self._build_payload(request))
+            raw = await self._within_deadline(self._async_client).extract.templates.run(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
 
     def _list(self, *, limit: int | None, offset: int | None) -> TemplatePage:

@@ -1148,6 +1148,15 @@ JOB_POLL_BACKOFF = 1.5
 JOB_TIMEOUT = 600.0
 """How long waiting on a job gives up after, for a method that sets no default of its own."""
 
+MIN_CALL_BUDGET = 0.001
+"""Floor on a one-call method's transport timeout under a deadline -- a search, an extract, an answer, a template run.
+
+Unlike :data:`MIN_JOB_BUDGET`, tiny: a call is refused before it is sent once
+no time is left, so the floor exists only to keep a transport from being
+handed zero ("no timeout") in the instant before the deadline, never to give
+it time past it.
+"""
+
 MIN_JOB_BUDGET = 0.5
 """Floor on the time one call inside a job is allowed.
 

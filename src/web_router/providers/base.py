@@ -193,11 +193,11 @@ class _BaseProvider(abc.ABC):
         self._refuse_late(deadline)
         try:
             return self._wrapped(call, message, **fields)
-        except ProviderError as exc:
-            late = self._late(deadline, exc)
+        except Exception as exc:
+            late = self._at_deadline(deadline, exc)
             if late is None:
                 raise
-            raise late from exc
+            raise late from late.__cause__
 
     async def _abounded(self, call: Callable[[], Awaitable[_ResultT]], message: str, **fields: Any) -> _ResultT:
         """Async counterpart of :meth:`_bounded`, which also cancels the call at the deadline.
@@ -211,18 +211,32 @@ class _BaseProvider(abc.ABC):
         self._refuse_late(deadline)
         try:
             return await _within(deadline, self._awrapped(call(), message, **fields))
-        except _DeadlineReached as exc:
-            raise DeadlineExceededError(self.name, deadline.seconds) from exc.__cause__
-        except ProviderError as exc:
-            late = self._late(deadline, exc)
+        except Exception as exc:
+            late = self._at_deadline(deadline, exc)
             if late is None:
                 raise
-            raise late from exc
+            raise late from late.__cause__
 
     def _refuse_late(self, deadline: Deadline) -> None:
         """Raise :class:`DeadlineExceededError` for a call about to start after its deadline."""
         if deadline.left() <= 0:
             raise DeadlineExceededError(self.name, deadline.seconds)
+
+    def _at_deadline(self, deadline: Deadline, exc: Exception) -> DeadlineExceededError | None:
+        """What a failed call under ``deadline`` raises instead of ``exc``, or ``None`` to raise ``exc`` itself.
+
+        The one place a deadline is told from a failure: :func:`_within`
+        cutting the call off, or a request timing out at the deadline, is
+        :class:`DeadlineExceededError`, its ``__cause__`` the timeout; a
+        router error of another kind, the deadline's own included, stands.
+        """
+        if isinstance(exc, _DeadlineReached):
+            late = DeadlineExceededError(self.name, deadline.seconds)
+            late.__cause__ = exc.__cause__
+            return late
+        if isinstance(exc, WebRouterError) and not isinstance(exc, ProviderError):
+            return None
+        return self._late(deadline, exc)
 
     def _late(self, deadline: Deadline | None, exc: BaseException) -> DeadlineExceededError | None:
         """The deadline error ``exc`` amounts to, or ``None`` when it is the backend's own failure.
@@ -435,18 +449,11 @@ class ExtractProvider(_BaseProvider):
         self._refuse_late(deadline)
         try:
             return await _within(deadline, self._aextract(request, urls))
-        except _DeadlineReached as exc:
-            raise DeadlineExceededError(self.name, deadline.seconds) from exc.__cause__
-        except DeadlineExceededError:
-            raise
-        except WebRouterError as exc:
-            if isinstance(exc, ProviderError) and (late := self._late(deadline, exc)):
-                raise late from exc
-            raise
         except Exception as exc:
-            if late := self._late(deadline, exc):
-                raise late from exc
-            raise
+            late = self._at_deadline(deadline, exc)
+            if late is None:
+                raise
+            raise late from late.__cause__
 
     def validate(self, request: ExtractRequest) -> None:
         """Raise for any option this backend does not map, or format it cannot return."""

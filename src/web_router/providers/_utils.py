@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from web_router.constants import (
     BROWSER_FIELD_CASES,
     BROWSER_SECONDS_PARAMETERS,
+    MIN_CALL_BUDGET,
     MIN_JOB_BUDGET,
     MSG_BROWSER_FIELD_CASE_NOT_TEXT,
     MSG_BROWSER_FIELD_COLLISION,
@@ -374,6 +375,21 @@ def job_budget(default: float) -> float:
     if deadline is None:
         return default
     return max(MIN_JOB_BUDGET, min(default, deadline.left()))
+
+
+def call_budget(default: float) -> float:
+    """How long one request of a one-call method may take: ``default``, or less when a deadline leaves less.
+
+    Never more than ``default`` and never more than the time left. Unlike
+    :func:`job_budget`, floored only at
+    :data:`~web_router.constants.MIN_CALL_BUDGET`, so a transport is never
+    handed zero or less, yet never given time past the deadline; a call with
+    no time left is refused before it is sent.
+    """
+    deadline = _DEADLINE.get()
+    if deadline is None:
+        return default
+    return max(MIN_CALL_BUDGET, min(default, deadline.left()))
 
 
 # The names the research providers were written against. Aliases rather than

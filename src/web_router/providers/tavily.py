@@ -30,7 +30,14 @@ from web_router.constants import (
     TAVILY_SDK_SEARCH_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.providers._utils import best_text, build_payload, compact, current_deadline, job_budget, resolve_api_key
+from web_router.providers._utils import (
+    best_text,
+    build_payload,
+    call_budget,
+    compact,
+    current_deadline,
+    resolve_api_key,
+)
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,
@@ -68,7 +75,7 @@ def _clamped(payload: dict[str, Any], sdk_default: float) -> dict[str, Any]:
     """
     if current_deadline() is not None:
         configured = payload.get("timeout")
-        payload["timeout"] = job_budget(float(configured) if configured is not None else sdk_default)
+        payload["timeout"] = call_budget(float(configured) if configured is not None else sdk_default)
     return payload
 
 
