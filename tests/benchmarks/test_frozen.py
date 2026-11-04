@@ -44,6 +44,20 @@ def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleT
             assert len(row["question_id"]) == 16
 
 
+def test_the_manifest_counts_each_backends_failed_rows_as_the_rows_hold_them(frozen: ModuleType) -> None:
+    manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
+    for set_name, entry in manifest["sets"].items():
+        rows = frozen.read_rows(frozen.FROZEN_DIR / (set_name + frozen.SUFFIX))
+        counted: dict[str, dict[str, int]] = {}
+        for row in rows:
+            by_mode = counted.setdefault(row["provider"], {})
+            by_mode[row["mode"]] = by_mode.get(row["mode"], 0) + (row["error"] is not None)
+        assert entry["failed_rows"] == counted, set_name
+        failed = [r for r in rows if r["error"] is not None]
+        assert all(r["grade"] is None for r in failed if r["error"] != "judge"), "a failed row carries no grade"
+    assert manifest["sets"]["sealqa-hard-254"]["failed_rows"]["you-mcp"] == {"default": 254}
+
+
 def test_the_four_sets_route_eval_needs_are_frozen_at_their_sizes(frozen: ModuleType) -> None:
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
     sizes = {name: (e["question_count"], e["row_count"]) for name, e in manifest["sets"].items()}

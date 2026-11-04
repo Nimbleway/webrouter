@@ -39,10 +39,12 @@ from _frozen_checks import (
     Scan,
     answers_digest,
     check_complete,
+    check_failed_rows,
     check_no_repeats,
     check_same_answers,
     check_same_questions,
     check_same_setup,
+    failed_rows,
     question_id,
     question_index,
     read_golds,
@@ -154,7 +156,7 @@ def _read_run(folder: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
 
 
 def manifest_entry(spec: Mapping[str, Any], first: Scan, rows: list[dict[str, Any]], runs: list[Any]) -> dict[str, Any]:
-    """A set's entry in ``manifest.json``: its setup, sizes, backends and the scans it is made of."""
+    """A set's entry in ``manifest.json``: its setup, sizes, backends, their failed rows and the scans it is made of."""
     setup = first[1]
     return {
         "questions": spec["questions"],
@@ -168,6 +170,7 @@ def manifest_entry(spec: Mapping[str, Any], first: Scan, rows: list[dict[str, An
         "answers_sha256": answers_digest(first[2]),
         "row_count": len(rows),
         "providers": sorted({r["provider"] for r in rows}),
+        "failed_rows": failed_rows(rows),
         "runs": runs,
     }
 
@@ -229,7 +232,10 @@ def read_sums(folder: Path) -> dict[str, str]:
 
 
 def verify(folder: Path = FROZEN_DIR) -> dict[str, str]:
-    """Every frozen file checked against ``SHA256SUMS``, both ways: the digests, or ``SystemExit`` on a fault."""
+    """Every frozen file checked against ``SHA256SUMS``, both ways, and the manifest's failed rows against the rows.
+
+    The digests, or ``SystemExit`` on a fault.
+    """
     sums = read_sums(folder)
     present = {path.name for path in folder.iterdir() if path.name != SUMS_FILE and path.is_file()}
     for name in sorted(present - set(sums)):
@@ -240,6 +246,9 @@ def verify(folder: Path = FROZEN_DIR) -> dict[str, str]:
         actual = sha256(folder / name)
         if actual != expected:
             raise SystemExit(MSG_SUMS_MISMATCH.format(name=name, actual=actual, expected=expected))
+    manifest = json.loads((folder / MANIFEST_FILE).read_text(encoding="utf-8"))
+    for set_name, entry in manifest["sets"].items():
+        check_failed_rows(set_name, entry, read_rows(folder / (set_name + SUFFIX)))
     return sums
 
 
@@ -333,7 +342,9 @@ def main(argv: list[str] | None = None) -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     joining = commands.add_parser("join", help="verify, then put the questions back from the public datasets")
     joining.add_argument("--out", type=Path, default=JOINED_DIR, help=f"where to write (default: {JOINED_DIR})")
-    commands.add_parser("verify", help="check every frozen file against SHA256SUMS")
+    commands.add_parser(
+        "verify", help="check every frozen file against SHA256SUMS, and the failed-row counts against the rows"
+    )
     building = commands.add_parser("build", help="write the frozen folder anew from scan folders")
     building.add_argument("results", type=Path, help="the folder holding the scans named in FROZEN_SETS")
     building.add_argument("--no-join-check", action="store_true", help="skip resolving ids against the datasets")

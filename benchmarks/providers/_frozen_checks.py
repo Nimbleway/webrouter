@@ -1,7 +1,8 @@
 """How the frozen results name a question, and the checks ``frozen.py`` runs on scans and datasets.
 
 ``build`` refuses scans that are not one set: other questions, other gold
-answers, another setup, a row twice or a row missing. ``build`` and ``join``
+answers, another setup, a row twice or a row missing. ``verify`` refuses a
+manifest whose failed-row counts are not the rows'. ``build`` and ``join``
 refuse a dataset that does not hold every question, or whose gold answers
 changed. Each check raises ``SystemExit`` naming the set and the first fault,
 so nothing is written past it.
@@ -33,6 +34,10 @@ MSG_REPEATED_ROW = "{set}: {provider} ({mode}) has question {question_id} more t
 MSG_MISSING_ROWS = (
     "{set}: {provider} ({mode}) has no row for {count} of {total} questions, e.g. {question_id};"
     " was the scan cut short?"
+)
+MSG_FAILED_ROWS = (
+    "{set}: manifest.json names {stated} failed rows per backend, but the rows hold {counted};"
+    " rebuild the folder rather than editing it"
 )
 
 Scan = tuple[str, dict[str, Any], dict[str, str]]
@@ -148,3 +153,19 @@ def check_complete(set_name: str, rows: Iterable[Mapping[str, Any]], question_id
                     question_id=missing[0],
                 )
             )
+
+
+def failed_rows(rows: Iterable[Mapping[str, Any]]) -> dict[str, dict[str, int]]:
+    """How many rows failed (``error`` set) for each backend, as provider -> mode -> count; a backend with none is 0."""
+    counts: dict[str, dict[str, int]] = {}
+    for row in sorted(rows, key=lambda r: (r["provider"], r["mode"])):
+        by_mode = counts.setdefault(row["provider"], {})
+        by_mode[row["mode"]] = by_mode.get(row["mode"], 0) + (row["error"] is not None)
+    return counts
+
+
+def check_failed_rows(set_name: str, entry: Mapping[str, Any], rows: Iterable[Mapping[str, Any]]) -> None:
+    """``SystemExit`` when a set's manifest entry counts other failed rows per backend than its rows hold."""
+    counted = failed_rows(rows)
+    if entry.get("failed_rows") != counted:
+        raise SystemExit(MSG_FAILED_ROWS.format(set=set_name, stated=entry.get("failed_rows"), counted=counted))

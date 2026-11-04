@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 from types import ModuleType
 
@@ -75,3 +77,24 @@ def test_a_scan_row_with_no_gold_answer_is_named_as_the_fault(
     _one_set(frozen, monkeypatch, ["a"])
     with pytest.raises(SystemExit, match="no gold answer"):
         frozen.freeze_set("tiny", tmp_path)
+
+
+def test_verify_refuses_a_manifest_whose_failed_rows_are_not_the_rows(
+    frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _scan(tmp_path / "results" / "a", ["tavily", "exa"], ["q1", "q2"])
+    rows = [json.loads(line) for line in (tmp_path / "results" / "a" / "rows.jsonl").read_text().splitlines()]
+    rows[0] |= {"error": "HTTP 500", "grade": None}
+    (tmp_path / "results" / "a" / "rows.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    _one_set(frozen, monkeypatch, ["a"])
+    manifest = frozen.build(tmp_path / "results", tmp_path / "frozen", {}, check_join=False)
+    assert manifest["sets"]["tiny"]["failed_rows"] == {"exa": {"default": 0}, "tavily": {"default": 1}}
+    frozen.verify(tmp_path / "frozen")
+
+    manifest["sets"]["tiny"]["failed_rows"]["tavily"]["default"] = 0
+    data = (json.dumps(manifest, indent=2) + "\n").encode()
+    (tmp_path / "frozen" / frozen.MANIFEST_FILE).write_bytes(data)
+    sums = frozen.read_sums(tmp_path / "frozen") | {frozen.MANIFEST_FILE: hashlib.sha256(data).hexdigest()}
+    (tmp_path / "frozen" / frozen.SUMS_FILE).write_text("".join(f"{d}  {name}\n" for name, d in sums.items()))
+    with pytest.raises(SystemExit, match="failed rows per backend"):
+        frozen.verify(tmp_path / "frozen")

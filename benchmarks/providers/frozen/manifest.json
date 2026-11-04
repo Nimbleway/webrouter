@@ -35,6 +35,38 @@
         "you",
         "you-mcp"
       ],
+      "failed_rows": {
+        "brave": {
+          "default": 0
+        },
+        "exa": {
+          "default": 0
+        },
+        "linkup": {
+          "default": 0
+        },
+        "nimble": {
+          "default": 0
+        },
+        "parallel": {
+          "default": 0
+        },
+        "perplexity": {
+          "default": 0
+        },
+        "tavily": {
+          "default": 0
+        },
+        "webiq": {
+          "default": 0
+        },
+        "you": {
+          "default": 0
+        },
+        "you-mcp": {
+          "default": 254
+        }
+      },
       "runs": [
         {
           "run": "sealqa-hard-254",
@@ -71,6 +103,14 @@
         "nimble",
         "webiq"
       ],
+      "failed_rows": {
+        "nimble": {
+          "default": 0
+        },
+        "webiq": {
+          "default": 0
+        }
+      },
       "runs": [
         {
           "run": "sealqa-hard-254-twin",
@@ -109,6 +149,44 @@
         "you",
         "you-mcp"
       ],
+      "failed_rows": {
+        "brave": {
+          "default": 0
+        },
+        "deepseek": {
+          "default": 48
+        },
+        "exa": {
+          "default": 0
+        },
+        "keenable": {
+          "default": 1
+        },
+        "linkup": {
+          "default": 0
+        },
+        "nimble": {
+          "default": 0
+        },
+        "parallel": {
+          "default": 0
+        },
+        "perplexity": {
+          "default": 0
+        },
+        "tavily": {
+          "default": 0
+        },
+        "webiq": {
+          "default": 0
+        },
+        "you": {
+          "default": 0
+        },
+        "you-mcp": {
+          "default": 200
+        }
+      },
       "runs": [
         {
           "run": "simpleqa-300-v2",
@@ -164,6 +242,23 @@
         "perplexity",
         "you"
       ],
+      "failed_rows": {
+        "exa": {
+          "default": 0
+        },
+        "linkup": {
+          "default": 0
+        },
+        "parallel": {
+          "default": 1
+        },
+        "perplexity": {
+          "default": 0
+        },
+        "you": {
+          "default": 1
+        }
+      },
       "runs": [
         {
           "run": "answer-simpleqa-300",

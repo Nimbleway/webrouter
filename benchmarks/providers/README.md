@@ -219,7 +219,8 @@ It checks every file against `frozen/SHA256SUMS`, downloads SimpleQA and
 SealQA (no key needed), puts each row's question, gold answer and the
 dataset's labels back, and writes one `<set>.jsonl` per set to
 `results/frozen-joined/`. It stops if any row's `question_id` does not resolve.
-`frozen.py verify` runs the checksum step alone, and the unit tests run it too.
+`frozen.py verify` runs the checksum step and the failed-row counts alone, and
+the unit tests run it too.
 
 The committed rows carry no question or answer text, only a `question_id`:
 the questions stay with the public datasets they come from, and `join` is how
@@ -243,16 +244,17 @@ then provider and mode:
 | `provider` | The backend, as web-router names it |
 | `method` | `search` (one search, then the judge writes the answer from its results) or `answer` (the backend's own answer) |
 | `mode` | The vendor mode and depth the scan asked for, as `run.py` spells them (`ultra-fast`, `@deep`, `full-content@lite`); `default` when it asked for none, which is the backend's own default for that method. Every row in the current sets is `default` |
-| `grade` | `correct`, `incorrect` or `not_attempted`, from the judge; `null` when the row failed before it was graded |
-| `latency_s` | Seconds around the search or `answer()` call alone, to the millisecond |
+| `grade` | `correct`, `incorrect` or `not_attempted`, from the judge; `null` when the row failed before it was graded. Count grades only from rows with `error: null` |
+| `latency_s` | Seconds around the search or `answer()` call alone, to the millisecond. On a failed row it is the time to the failure (`0.0` for a call refused before it was sent), so count latency only from rows with `error: null` |
 | `cost_usd` | The cost the backend stated in its response, `answer` rows only, where it states one; otherwise `null` |
-| `error` | `null`, or the class of what went wrong: `timeout`, `rate_limit`, `quota`, `invalid_request` (refused before sending, such as a query too long for the backend), `http_4xx`, `http_5xx`, `other`, `judge` (the judge failed, not the backend) or `leaked` (an answer citing the set's own pages, left ungraded). The message itself is never kept |
+| `error` | `null`, or the class of what went wrong: `timeout`, `rate_limit`, `quota`, `invalid_request` (refused before sending, such as a query too long for the backend), `http_4xx`, `http_5xx`, `other`, `judge` (the judge failed, not the backend) or `leaked` (an answer citing the set's own pages, left ungraded). The message itself is never kept. The class says how that call ended in this run, not how good the backend is; route-eval skips failed rows |
 
 `frozen/manifest.json` records, per set, the question set and dataset, the
 seed and sample size, the search size, the judge (`openai:gpt-4o` for all four),
-the row and question counts, the scans it was built from with their start
-times, and `answers_sha256`, a hash of the gold answers the scans were graded
-on. `join` refuses a set when the downloaded dataset's answers no longer match
+the row and question counts, `failed_rows` (how many rows failed, `error` not
+`null`, per backend and mode; `verify` checks it against the rows), the scans
+it was built from with their start times, and `answers_sha256`, a hash of the
+gold answers the scans were graded on. `join` refuses a set when the downloaded dataset's answers no longer match
 it, and `build` refuses scans graded on different answers, or a backend that
 has no row for some question.
 
