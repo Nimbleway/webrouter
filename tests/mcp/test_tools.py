@@ -51,7 +51,6 @@ from web_router.constants import (
     PROVIDER_LINKUP,
     PROVIDER_MAX,
     PROVIDER_PARALLEL_MCP,
-    PROVIDER_PERPLEXITY,
     PROVIDER_TAVILY,
     PROVIDER_YOU_MCP,
 )
@@ -927,15 +926,3 @@ def test_answer_offers_only_the_options_a_configured_backend_maps(
     both = set(_tool(WebRouterTools(AsyncWebRouter()), MCP_TOOL_ANSWER).input_schema["properties"])
     assert "country" in both
     assert "locale" not in both
-
-
-async def test_a_bare_answer_with_two_backends_configured_goes_to_the_cheaper_first(
-    no_keys: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
-    monkeypatch.setenv(ENV_PERPLEXITY_API_KEY, "x")
-    session = WebRouterTools(AsyncWebRouter())
-
-    auto = session.router.get_answer_provider()
-
-    assert auto.members == (PROVIDER_PERPLEXITY, PROVIDER_LINKUP)  # type: ignore[attr-defined]

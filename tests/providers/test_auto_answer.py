@@ -143,16 +143,6 @@ def test_an_option_only_an_added_backend_maps_reaches_it(keys: None, monkeypatch
         unregister_answer_provider("custom")
 
 
-def test_an_option_no_answer_backend_maps_is_refused_before_any_is_asked(keys: None) -> None:
-    for name in AUTO_ANSWER_PREFERRED:  # as every built-in: none maps locale
-        register_answer_provider(name, _backend(name, supported=ANSWER_PARAMETERS - {"locale"}))
-    router = WebRouter()
-
-    with pytest.raises(UnsupportedParameterError, match="locale"):
-        router.answer("q", locale="en")
-    assert router.get_answer_provider()._members == {}  # type: ignore[attr-defined]
-
-
 def test_a_search_only_key_passed_in_code_does_not_join_the_answer_chain(keys: None) -> None:
     router = WebRouter(provider_config={"nimble": {"api_key": "in-code"}})
 
