@@ -11,6 +11,7 @@ pytest.importorskip("mcp", reason="mcp extra not installed")
 
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
+    ANSWER_ENV_BY_PROVIDER,
     BROWSE_ENV_BY_PROVIDER,
     BROWSER_ENV_BY_PROVIDER,
     ENV_APPDATA,
@@ -32,6 +33,7 @@ _EVERY_ENV_VAR = sorted(
     | {name for names in RESEARCH_ENV_BY_PROVIDER.values() for name in names}
     | {name for names in BROWSE_ENV_BY_PROVIDER.values() for name in names}
     | {name for names in BROWSER_ENV_BY_PROVIDER.values() for name in names}
+    | {name for names in ANSWER_ENV_BY_PROVIDER.values() for name in names}
 )
 
 
