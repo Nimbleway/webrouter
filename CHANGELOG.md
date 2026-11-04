@@ -8,6 +8,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- `web_router.prices` (experimental): the estimated list price of every (provider, method, mode) web-router calls, shipped as `web_router/data/prices.json`. `estimate(provider, method, mode=None)` returns the cost in US dollars of one request, page, run or browser-minute, and `None` when the vendor publishes no price, bills by tokens, or the mode has no row; `price()` returns the whole row (`unit`, `note`, `source_url`, `checked`, and latency fields left empty for now) and `prices()` every row. A mode is the `search_depth` or `effort` value, or a vendor mode written `:name`; unset, it is the call that sets none. `benchmarks/providers/PRICING.md`'s tables are now generated from the same file with `make prices`.
+
 ### Fixed
 
 ## [0.9.0] - 2026-11-04
