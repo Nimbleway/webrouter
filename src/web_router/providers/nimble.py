@@ -44,16 +44,9 @@ from web_router.constants import (
     RESEARCH_HTTP_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.providers._deadline import current_deadline, research_budget
 from web_router.providers._http import clamp_timeout
-from web_router.providers._utils import (
-    best_text,
-    build_payload,
-    compact,
-    current_deadline,
-    model_to_dict,
-    research_budget,
-    resolve_api_key,
-)
+from web_router.providers._utils import best_text, build_payload, compact, model_to_dict, resolve_api_key
 from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider, _BaseProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,

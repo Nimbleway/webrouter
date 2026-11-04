@@ -142,7 +142,9 @@ src/web_router/
     │                   HttpResearchProvider / HttpAnswerProvider / HttpBrowseProvider /
     │                   HttpBrowserProvider — for APIs with no SDK
     ├── _utils.py       payload assembly, key and setting resolution, dict
-    │                   coercion, body selection, the per-call deadline
+    │                   coercion, body selection
+    ├── _deadline.py    the per-call deadline, its budgets, and the mixin
+    │                   that holds a provider's call to it
     ├── _page.py        the page actions both browser handles delegate to,
     │                   once over CDP through Playwright; snapshot refs
     ├── _png.py         a screenshot as PNG: converts what a backend returns as
@@ -438,7 +440,7 @@ from `_start`, and implements nothing else.
 **A call's deadline reaches the backend through a context variable.**
 `research(timeout=...)` and `browse(timeout=...)`, like any job-shaped call, set
 it before the run is submitted, not after, and `call_deadline(seconds)` in
-`providers/_utils.py` sets one around any call; every HTTP and SDK call inside
+`providers/_deadline.py` sets one around any call; every HTTP and SDK call inside
 clamps its own timeout down to whatever is left — never up. It is a
 `ContextVar` rather than a parameter on `_search`/`_start`/`_fetch` because the
 budget belongs to the *call*, not to the request, and would otherwise have to be
@@ -448,7 +450,7 @@ the one implicit thing in this package; read it through `job_budget(default)`
 already read) or `current_deadline()`, never directly, and a block inside
 another only ever tightens it. A one-call method — search, extract, a template
 run, answer — refuses to start past it and raises `DeadlineExceededError` when
-the clamp cut it off, through `_bounded`/`_abounded` on the base class, which
+the clamp cut it off, through `_bounded`/`_abounded`, which the base class mixes in from `_deadline.py`, which
 also cancel an async call at the deadline; an extract keeps the documents that
 came back in time. A transport that sets its own timeout — the HTTP base's
 `_clamped()`, Nimble's `_within_deadline()`, Tavily's per-call `timeout` — sends

@@ -356,13 +356,13 @@ def test_the_tool_list_stops_paging_once_the_deadline_has_passed(monkeypatch: py
     from types import SimpleNamespace
 
     from web_router.exceptions import DeadlineExceededError
-    from web_router.providers import _utils, base
-    from web_router.providers._utils import call_deadline
+    from web_router.providers import _deadline, base
+    from web_router.providers._deadline import call_deadline
 
     clock = SimpleNamespace(now=0.0)
     fake_time = SimpleNamespace(monotonic=lambda: clock.now, sleep=lambda seconds: None)
     monkeypatch.setattr(base, "time", fake_time)
-    monkeypatch.setattr(_utils, "time", fake_time)
+    monkeypatch.setattr(_deadline, "time", fake_time)
     seen: list[httpx.Request] = []
 
     def handle(request: httpx.Request) -> httpx.Response:
@@ -380,13 +380,13 @@ def test_no_tool_call_is_sent_once_the_listing_ran_past_the_deadline(monkeypatch
     from types import SimpleNamespace
 
     from web_router.exceptions import DeadlineExceededError
-    from web_router.providers import _utils, base
-    from web_router.providers._utils import call_deadline
+    from web_router.providers import _deadline, base
+    from web_router.providers._deadline import call_deadline
 
     clock = SimpleNamespace(now=0.0)
     fake_time = SimpleNamespace(monotonic=lambda: clock.now, sleep=lambda seconds: None)
     monkeypatch.setattr(base, "time", fake_time)
-    monkeypatch.setattr(_utils, "time", fake_time)
+    monkeypatch.setattr(_deadline, "time", fake_time)
     methods: list[str] = []
 
     def handle(request: httpx.Request) -> httpx.Response:

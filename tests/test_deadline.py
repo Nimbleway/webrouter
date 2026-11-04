@@ -1,7 +1,7 @@
 """Per-call deadlines: every method stops at the deadline set around it, and ``auto`` spends what is left.
 
 There is no public parameter for a deadline yet; these set one the way the
-router will, with :func:`~web_router.providers._utils.call_deadline`. The sync
+router will, with :func:`~web_router.providers._deadline.call_deadline`. The sync
 tests run on a fake clock -- a backend that "hangs" moves it on by the timeout
 its request was given, as a clamped read timeout would -- and the async ones on
 a deadline of a few hundredths of a second, so nothing here waits for real.
@@ -31,9 +31,9 @@ from web_router.exceptions import (
     ProviderError,
     ResearchTimeoutError,
 )
-from web_router.providers import _utils, base
+from web_router.providers import _deadline, base
+from web_router.providers._deadline import call_deadline, current_deadline, job_budget, job_deadline
 from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, HttpSearchProvider, clamp_timeout
-from web_router.providers._utils import call_deadline, current_deadline, job_budget, job_deadline
 from web_router.providers.auto import AutoProvider, AutoResearchProvider
 from web_router.providers.max import MaxExtractProvider
 from web_router.providers.nimble import NimbleProvider
@@ -87,7 +87,7 @@ class _Clock:
 def clock(monkeypatch: pytest.MonkeyPatch) -> _Clock:
     fake = _Clock()
     monkeypatch.setattr(base, "time", fake)
-    monkeypatch.setattr(_utils, "time", fake)
+    monkeypatch.setattr(_deadline, "time", fake)
     return fake
 
 
@@ -705,7 +705,7 @@ def test_a_one_call_transport_never_gets_more_than_the_time_left(clock: _Clock) 
 
 def test_a_members_own_shorter_timeout_is_its_failure_and_auto_moves_on(clock: _Clock, calls: _Calls) -> None:
     """0.4s left and a member whose own timeout is 0.1s: it timed out on its own, so the next member is tried."""
-    from web_router.providers._utils import call_budget
+    from web_router.providers._deadline import call_budget
 
     class Quick(FakeProvider):
         def _search(self, request: SearchRequest) -> SearchResponse:

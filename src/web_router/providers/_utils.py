@@ -3,11 +3,7 @@
 from __future__ import annotations
 
 import os
-import time
-from collections.abc import Callable, Iterator, Mapping
-from contextlib import contextmanager
-from contextvars import ContextVar
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from pydantic import BaseModel
@@ -15,8 +11,6 @@ from pydantic import BaseModel
 from web_router.constants import (
     BROWSER_FIELD_CASES,
     BROWSER_SECONDS_PARAMETERS,
-    MIN_CALL_BUDGET,
-    MIN_JOB_BUDGET,
     MSG_BROWSER_FIELD_CASE_NOT_TEXT,
     MSG_BROWSER_FIELD_COLLISION,
     MSG_BROWSER_NO_FIELD_FOR_VALUE,
@@ -26,6 +20,12 @@ from web_router.constants import (
     SNIPPET_LIMIT,
 )
 from web_router.exceptions import ConfigurationError
+
+# The deadline's names that lived here before it had a module of its own.
+from web_router.providers._deadline import job_budget as job_budget
+from web_router.providers._deadline import job_deadline as job_deadline
+from web_router.providers._deadline import research_budget as research_budget
+from web_router.providers._deadline import research_deadline as research_deadline
 from web_router.types import (
     REQUEST_VALUE,
     BrowserField,
@@ -270,129 +270,3 @@ def as_snippet(text: str) -> str:
     head = text[:SNIPPET_LIMIT]
     cut = head.rfind(" ")
     return (head[:cut] if cut > 0 else head).rstrip() + "\u2026"
-
-
-@dataclass(frozen=True)
-class Deadline:
-    """The instant the call in flight must answer by, and the budget that set it.
-
-    ``at`` is on :func:`time.monotonic`'s clock; ``seconds`` is what the budget
-    was when it was set, kept so an error can name the deadline the caller
-    gave rather than whatever fraction of it was left.
-    """
-
-    at: float
-    seconds: float
-
-    def left(self) -> float:
-        """Seconds until :attr:`at`; zero or less once it has passed."""
-        return self.at - time.monotonic()
-
-
-_DEADLINE: ContextVar[Deadline | None] = ContextVar("web_router_deadline", default=None)
-"""When the call currently in flight -- a search, an extract, a research run -- must be given up on.
-
-A context variable rather than a parameter on ``_search``, ``_start`` and the
-rest, which is the one place this package reaches for something implicit. The
-reason is that the budget is not a property of the *request* -- two callers
-can wait different lengths for the same question -- and it has to reach the
-HTTP and SDK calls at the bottom without appearing in the signature of every
-provider between here and there. Being a ``ContextVar`` rather than an
-attribute is what makes it correct under concurrency: one router shared by
-several tasks gives each of them its own budget, and an async task inherits
-the one belonging to whoever awaited it. A worker thread does not: whoever
-hands a call to one runs it in :func:`contextvars.copy_context`.
-"""
-
-
-@contextmanager
-def call_deadline(seconds: float | None) -> Iterator[None]:
-    """Give every provider call made inside this block at most ``seconds`` from now.
-
-    The one way in for a per-call time limit on any method; experimental, as
-    everything is before 1.0. ``None`` adds no limit. A block inside another
-    can only tighten the deadline, never extend it: the earlier of the two
-    holds, and an error names the budget that set it.
-
-    What happens at the deadline depends on the method. A search, extract,
-    template run or answer raises
-    :class:`~web_router.exceptions.DeadlineExceededError`; an extract keeps
-    the documents that came back in time and reports the URLs that did not as
-    failures. ``auto`` tries a next member only while time is left. Research
-    and browse wait no longer than the deadline and raise their own timeout
-    error, which carries the job id; the call that submits a billed run is
-    clamped as any other, and nothing is cut short to leave time for another
-    member.
-    """
-    with _tightened(None if seconds is None else Deadline(at=time.monotonic() + seconds, seconds=seconds)):
-        yield
-
-
-@contextmanager
-def job_deadline(deadline: float | None) -> Iterator[None]:
-    """Apply the monotonic instant ``deadline`` to every provider call made inside this block.
-
-    As :func:`call_deadline`, for a caller that already holds the instant --
-    the job core, which measures its own wait from the same one.
-    """
-    with _tightened(None if deadline is None else Deadline(at=deadline, seconds=max(0.0, deadline - time.monotonic()))):
-        yield
-
-
-@contextmanager
-def _tightened(deadline: Deadline | None) -> Iterator[None]:
-    """Hold ``deadline`` for this block, unless the one already in force comes first."""
-    current = _DEADLINE.get()
-    if deadline is not None and (current is None or deadline.at < current.at):
-        current = deadline
-    token = _DEADLINE.set(current)
-    try:
-        yield
-    finally:
-        _DEADLINE.reset(token)
-
-
-def current_deadline() -> Deadline | None:
-    """The deadline in force for the call in flight, or ``None`` when it has none."""
-    return _DEADLINE.get()
-
-
-def job_budget(default: float) -> float:
-    """How long a single call may take: the caller's remaining time, or ``default``.
-
-    Never longer than ``default``, so a generous job timeout cannot stretch
-    one request beyond what the provider's own timeout allows, and never longer
-    than what the caller has left, so a backend that does the whole run inside
-    one request -- Perplexity's deep research model -- cannot hold a caller who
-    asked for thirty seconds for the two minutes its HTTP timeout permits.
-
-    Floored rather than allowed to reach zero: the waiting loop checks the
-    deadline before it polls, so a call reaching here has time left, and a
-    timeout of zero means "no timeout" to both httpx and the SDKs -- the exact
-    opposite of what is being asked for.
-    """
-    deadline = _DEADLINE.get()
-    if deadline is None:
-        return default
-    return max(MIN_JOB_BUDGET, min(default, deadline.left()))
-
-
-def call_budget(default: float) -> float:
-    """How long one request of a one-call method may take: ``default``, or less when a deadline leaves less.
-
-    Never more than ``default`` and never more than the time left. Unlike
-    :func:`job_budget`, floored only at
-    :data:`~web_router.constants.MIN_CALL_BUDGET`, so a transport is never
-    handed zero or less, yet never given time past the deadline; a call with
-    no time left is refused before it is sent.
-    """
-    deadline = _DEADLINE.get()
-    if deadline is None:
-        return default
-    return max(MIN_CALL_BUDGET, min(default, deadline.left()))
-
-
-# The names the research providers were written against. Aliases rather than
-# wrappers, so there is one budget whichever name a provider reads it by.
-research_deadline = job_deadline
-research_budget = job_budget

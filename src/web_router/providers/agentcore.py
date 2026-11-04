@@ -68,9 +68,10 @@ from web_router.constants_agentcore import (
     MSG_AGENTCORE_TOOL,
 )
 from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.providers._deadline import current_deadline
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._mcp import McpSearchMixin
-from web_router.providers._utils import as_snippet, build_payload, compact, current_deadline
+from web_router.providers._utils import as_snippet, build_payload, compact
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 _HOST = re.compile(AGENTCORE_HOST_PATTERN)

@@ -38,7 +38,7 @@ from web_router.exceptions import (
     ProviderNotInstalledError,
     WebRouterError,
 )
-from web_router.providers._utils import current_deadline
+from web_router.providers._deadline import current_deadline
 from web_router.types import ExtractResponse, SearchResponse
 from web_router.types import provider_name as _lookup_name
 from web_router.types_answer import AnswerResponse

@@ -30,14 +30,8 @@ from web_router.constants import (
     TAVILY_SDK_SEARCH_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.providers._utils import (
-    best_text,
-    build_payload,
-    call_budget,
-    compact,
-    current_deadline,
-    resolve_api_key,
-)
+from web_router.providers._deadline import call_budget, current_deadline
+from web_router.providers._utils import best_text, build_payload, compact, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,

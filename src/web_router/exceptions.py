@@ -268,7 +268,7 @@ class DeadlineExceededError(WebRouterError):
     Experimental, as every public name is before 1.0. Raised by a search, an
     extract that brought nothing back in time, a template run or an answer
     whose per-call deadline ran out -- see
-    :func:`web_router.providers._utils.call_deadline`. Research and browse keep
+    :func:`web_router.providers._deadline.call_deadline`. Research and browse keep
     their own timeout errors, which carry the job id to resume.
 
     Not a :class:`ProviderError`, for the reason :class:`BenchmarkTimeoutError`
