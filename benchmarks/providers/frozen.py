@@ -30,10 +30,25 @@ import io
 import json
 import re
 import sys
-import unicodedata
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
+
+from _common import COMBINE_KEYS, DEPTH_MARK, split_label
+from _frozen_checks import (
+    Scan,
+    answers_digest,
+    check_complete,
+    check_no_repeats,
+    check_same_answers,
+    check_same_questions,
+    check_same_setup,
+    question_id,
+    question_index,
+    read_golds,
+    require_resolved,
+    require_same_answers,
+)
 
 HERE = Path(__file__).resolve().parent
 FROZEN_DIR = HERE / "frozen"
@@ -48,10 +63,6 @@ FIELDS = ("set", "question_id", "provider", "method", "mode", "grade", "latency_
 GRADES = ("correct", "incorrect", "not_attempted")
 DEFAULT_MODE = "default"
 """A row's ``mode`` when the scan asked for none: the backend's own default for that method."""
-DEPTH_MARK = "@"
-MODE_MARK = ":"
-"""How a search scan's setup names a mode: ``provider:vendor-mode@depth``, as ``run.py`` parses it."""
-QUESTION_ID_CHARS = 16
 LATENCY_DIGITS = 3
 
 FROZEN_SETS: dict[str, dict[str, Any]] = {
@@ -67,21 +78,10 @@ FROZEN_SETS: dict[str, dict[str, Any]] = {
 """Each frozen set: the question set its scans sampled, the method they called, and the scan folders it is made of.
 
 A set made of several scans is one scan with backends added later, as
-``run.py --combine`` merges them: the scans must have asked the same questions
-with the same seed, search size and judge.
+``run.py --combine`` merges them: the scans must share what ``--combine``
+requires for their method (``COMBINE_KEYS``), the same questions and the same
+gold answers; a key a scan predates reads as missing.
 """
-SHARED_KEYS = (
-    "questions",
-    "dataset_sha256",
-    "question_column",
-    "answer_column",
-    "withheld",
-    "limit",
-    "seed",
-    "max_results",
-    "judge",
-)
-"""What the scans of one set must share, as ``run.py --combine`` requires; a key a scan predates reads as missing."""
 RUN_DEFAULTS = {"questions": "simpleqa"}
 """A ``run.json`` from before ``--questions`` existed asked SimpleQA."""
 
@@ -108,34 +108,6 @@ ERROR_NAMES = (*(name for name, _ in ERROR_CLASSES), OTHER_ERROR, JUDGE_ERROR, L
 MSG_SUMS_MISMATCH = "{name}: SHA-256 {actual} does not match SHA256SUMS ({expected}); the file changed or is damaged"
 MSG_SUMS_MISSING = "{name} is in {folder} but not in SHA256SUMS"
 MSG_FILE_MISSING = "{name} is in SHA256SUMS but not in {folder}"
-MSG_UNRESOLVED = "{set}: {count} question_id(s) do not resolve in {questions}, e.g. {example}"
-MSG_OTHER_QUESTIONS = "{set}: {run} asked different questions from {first}; only scans of the same questions combine"
-MSG_OTHER_SETUP = "{set}: {run} differs on {key} ({theirs!r}, not {ours!r}); only scans of the same setup combine"
-MSG_REPEATED_ROW = "{set}: {provider} ({mode}) has question {question_id} more than once"
-MSG_ID_COLLISION = "{questions}: two different questions share question_id {question_id}"
-MSG_OTHER_ANSWERS = (
-    "{set}: {run} has another gold answer for question {question_id} than {first};"
-    " only scans graded on the same answers combine"
-)
-MSG_NO_GOLD = "{set}: {run} has a row with no gold answer (`target`) for question {question_id}; the scan is damaged"
-MSG_MISSING_ROWS = (
-    "{set}: {provider} ({mode}) has no row for {count} of {total} questions, e.g. {question_id};"
-    " was the scan cut short?"
-)
-MSG_ANSWERS_CHANGED = (
-    "{set}: the gold answers in {questions} no longer match the ones the scans were graded on;"
-    " the dataset changed upstream"
-)
-
-
-def normalise_question(text: str) -> str:
-    """A question's text as its id is computed: Unicode NFKC, whitespace collapsed to one space, ends stripped."""
-    return " ".join(unicodedata.normalize("NFKC", text).split())
-
-
-def question_id(text: str) -> str:
-    """A stable id for a question: the first 16 hex characters of the SHA-256 of its normalised text."""
-    return hashlib.sha256(normalise_question(text).encode("utf-8")).hexdigest()[:QUESTION_ID_CHARS]
 
 
 def error_class(row: Mapping[str, Any]) -> str | None:
@@ -152,8 +124,7 @@ def error_class(row: Mapping[str, Any]) -> str | None:
 
 def split_setup(setup: str) -> tuple[str, str]:
     """A scan's backend label as ``(provider, mode)``: ``tavily:ultra-fast@deep`` is ``tavily``, ``ultra-fast@deep``."""
-    spec, _, depth = setup.partition(DEPTH_MARK)
-    provider, _, vendor_mode = spec.partition(MODE_MARK)
+    provider, vendor_mode, depth = split_label(setup)
     mode = vendor_mode + (DEPTH_MARK + depth if depth else "")
     return provider, mode or DEFAULT_MODE
 
@@ -182,69 +153,10 @@ def _read_run(folder: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     return setup, rows
 
 
-def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """A set's frozen rows, sorted, and its manifest entry, from its scan folders under ``results``.
-
-    Refuses scans that asked different questions or ran a different setup, and
-    a backend that answered one question twice.
-    """
-    spec = FROZEN_SETS[set_name]
-    rows: list[dict[str, Any]] = []
-    runs: list[dict[str, Any]] = []
-    first: tuple[str, dict[str, Any], set[str]] | None = None
-    for run in spec["runs"]:
-        setup, source = _read_run(results / run)
-        golds = {question_id(str(r["question"])): r.get("target") for r in source}
-        blank = sorted(qid for qid, gold in golds.items() if gold in (None, ""))
-        if blank:
-            raise SystemExit(MSG_NO_GOLD.format(set=set_name, run=run, question_id=blank[0]))
-        ids = set(golds)
-        if first is None:
-            first = (run, setup, ids)
-            first_golds = golds
-        else:
-            if ids != first[2]:
-                raise SystemExit(MSG_OTHER_QUESTIONS.format(set=set_name, run=run, first=first[0]))
-            changed = sorted(qid for qid in ids if golds[qid] != first_golds[qid])
-            if changed:
-                raise SystemExit(
-                    MSG_OTHER_ANSWERS.format(set=set_name, run=run, question_id=changed[0], first=first[0])
-                )
-            for key in SHARED_KEYS:
-                if setup.get(key) != first[1].get(key):
-                    raise SystemExit(
-                        MSG_OTHER_SETUP.format(
-                            set=set_name, run=run, key=key, theirs=setup.get(key), ours=first[1].get(key)
-                        )
-                    )
-        rows += [frozen_row(set_name, spec["method"], r) for r in source]
-        runs.append({"run": run, "started": setup.get("started"), "providers": setup["providers"], "rows": len(source)})
-    seen: set[tuple[str, str, str]] = set()
-    for row in rows:
-        key = (row["provider"], row["mode"], row["question_id"])
-        if key in seen:
-            raise SystemExit(MSG_REPEATED_ROW.format(set=set_name, provider=key[0], mode=key[1], question_id=key[2]))
-        seen.add(key)
-    assert first is not None
-    by_backend: dict[tuple[str, str], set[str]] = {}
-    for provider, mode, qid in seen:
-        by_backend.setdefault((provider, mode), set()).add(qid)
-    for (provider, mode), answered in sorted(by_backend.items()):
-        missing = sorted(first[2] - answered)
-        if missing:
-            raise SystemExit(
-                MSG_MISSING_ROWS.format(
-                    set=set_name,
-                    provider=provider,
-                    mode=mode,
-                    count=len(missing),
-                    total=len(first[2]),
-                    question_id=missing[0],
-                )
-            )
-    rows.sort(key=lambda r: (r["question_id"], r["provider"], r["mode"]))
+def manifest_entry(spec: Mapping[str, Any], first: Scan, rows: list[dict[str, Any]], runs: list[Any]) -> dict[str, Any]:
+    """A set's entry in ``manifest.json``: its setup, sizes, backends and the scans it is made of."""
     setup = first[1]
-    entry = {
+    return {
         "questions": spec["questions"],
         "dataset": setup.get("dataset"),
         "method": spec["method"],
@@ -253,18 +165,38 @@ def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict
         "max_results": setup.get("max_results"),
         "judge": setup.get("judge"),
         "question_count": len(first[2]),
-        "answers_sha256": answers_digest(first_golds),
+        "answers_sha256": answers_digest(first[2]),
         "row_count": len(rows),
         "providers": sorted({r["provider"] for r in rows}),
         "runs": runs,
     }
-    return rows, entry
 
 
-def answers_digest(golds: Mapping[str, str]) -> str:
-    """SHA-256 of the gold answers by question id, so ``join`` can tell when a dataset changed under them."""
-    lines = "".join(f"{qid}\t{normalise_question(gold)}\n" for qid, gold in sorted(golds.items()))
-    return hashlib.sha256(lines.encode("utf-8")).hexdigest()
+def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """A set's frozen rows, sorted, and its manifest entry, from its scan folders under ``results``.
+
+    Refuses scans that asked other questions, graded on other answers or ran
+    another setup, a backend that answered one question twice, and one that
+    has no row for some question.
+    """
+    spec = FROZEN_SETS[set_name]
+    rows: list[dict[str, Any]] = []
+    runs: list[dict[str, Any]] = []
+    first: Scan | None = None
+    for run in spec["runs"]:
+        setup, source = _read_run(results / run)
+        scan = (run, setup, read_golds(set_name, run, source))
+        first = first or scan
+        check_same_questions(set_name, scan, first)
+        check_same_answers(set_name, scan, first)
+        check_same_setup(set_name, scan, first, COMBINE_KEYS[spec["method"]])
+        rows += [frozen_row(set_name, spec["method"], r) for r in source]
+        runs.append({"run": run, "started": setup.get("started"), "providers": setup["providers"], "rows": len(source)})
+    assert first is not None
+    check_no_repeats(set_name, rows)
+    check_complete(set_name, rows, set(first[2]))
+    rows.sort(key=lambda r: (r["question_id"], r["provider"], r["mode"]))
+    return rows, manifest_entry(spec, first, rows, runs)
 
 
 def gzip_jsonl(rows: Iterable[Mapping[str, Any]]) -> bytes:
@@ -309,40 +241,6 @@ def verify(folder: Path = FROZEN_DIR) -> dict[str, str]:
         if actual != expected:
             raise SystemExit(MSG_SUMS_MISMATCH.format(name=name, actual=actual, expected=expected))
     return sums
-
-
-def question_index(questions: Iterable[Any], name: str) -> dict[str, Any]:
-    """question_id -> the dataset's :class:`~web_router.evals.Question`; refuses two questions on one id."""
-    index: dict[str, Any] = {}
-    for question in questions:
-        qid = question_id(question.question)
-        if qid in index and (
-            normalise_question(index[qid].question) != normalise_question(question.question)
-            or normalise_question(str(index[qid].answer)) != normalise_question(str(question.answer))
-        ):
-            raise SystemExit(MSG_ID_COLLISION.format(questions=name, question_id=qid))
-        index[qid] = question
-    return index
-
-
-def require_resolved(set_name: str, rows: Iterable[Mapping[str, Any]], index: Mapping[str, Any], questions: str) -> int:
-    """How many question ids ``rows`` holds, or ``SystemExit`` naming one the dataset does not hold."""
-    ids = {row["question_id"] for row in rows}
-    missing = sorted(ids - set(index))
-    if missing:
-        raise SystemExit(
-            MSG_UNRESOLVED.format(set=set_name, count=len(missing), questions=questions, example=missing[0])
-        )
-    return len(ids)
-
-
-def require_same_answers(
-    set_name: str, entry: Mapping[str, Any], rows: Iterable[Mapping[str, Any]], index: Mapping[str, Any]
-) -> None:
-    """``SystemExit`` when the dataset's gold answers for the set's questions are not the ones its scans used."""
-    golds = {row["question_id"]: str(index[row["question_id"]].answer) for row in rows}
-    if answers_digest(golds) != entry["answers_sha256"]:
-        raise SystemExit(MSG_ANSWERS_CHANGED.format(set=set_name, questions=entry["questions"]))
 
 
 def joined_row(row: Mapping[str, Any], question: Any, labels: Iterable[str]) -> dict[str, Any]:

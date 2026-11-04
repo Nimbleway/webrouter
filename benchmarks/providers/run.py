@@ -48,7 +48,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
-from _common import APART, DEFAULT_OUT, MIN_GROUP, Sink, _p, _s, _wilson, combine_scans, scan_main
+from _common import (
+    APART,
+    DEFAULT_OUT,
+    DEPTH_MARK,
+    MIN_GROUP,
+    MODE_MARK,
+    SEARCH_COMBINE_KEYS,
+    Sink,
+    _p,
+    _s,
+    _wilson,
+    combine_scans,
+    scan_main,
+    split_label,
+)
 from _questions import (
     MSG_CANNOT_COMBINE,
     MSG_OTHER_QUESTIONS,
@@ -69,25 +83,11 @@ from web_router.registry import configured_providers
 from web_router.types import SearchDepth, SearchRequest, SearchResponse
 
 MODES_FILE = Path(__file__).resolve().parent / "modes.json"
-DEPTH_MARK = "@"
-MODE_MARK = ":"
 DEPTHS = ("lite", "fast", "deep")
 MSG_UNKNOWN_DEPTH = "{setup!r}: depth must be one of {depths}"
 MSG_UNKNOWN_MODE = "{setup!r}: no mode {mode!r} for {provider} in modes.json (it has: {known})"
 DEFAULT_MAX_RESULTS = 5
 DEFAULT_CONCURRENCY = 8
-COMBINE_KEYS = (
-    "questions",
-    "dataset_sha256",
-    "question_column",
-    "answer_column",
-    "withheld",
-    "limit",
-    "seed",
-    "max_results",
-    "judge",
-)
-"""What two scans must share for their rows to sit in one table: the same questions, search size and judge."""
 
 
 class VendorMode(SearchProvider):
@@ -115,8 +115,7 @@ class VendorMode(SearchProvider):
 
 def parse_setup(setup: str, modes: dict[str, dict[str, Any]]) -> tuple[str, str | None, dict[str, Any]]:
     """``provider[:mode][@depth]`` as the backend, the normalized depth and the vendor options."""
-    spec, _, depth = setup.partition(DEPTH_MARK)
-    provider, _, mode = spec.partition(MODE_MARK)
+    provider, mode, depth = split_label(setup)
     if depth and depth not in DEPTHS:
         raise SystemExit(MSG_UNKNOWN_DEPTH.format(setup=setup, depths=", ".join(DEPTHS)))
     options: dict[str, Any] = {}
@@ -351,7 +350,7 @@ def combine(folders: list[Path]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Rows and setup of several scans as one -- say, backends added later on the same questions."""
     return combine_scans(
         folders,
-        keys=COMBINE_KEYS,
+        keys=SEARCH_COMBINE_KEYS,
         identity=lambda row: (row["question"], row["target"]),
         cannot_combine=MSG_CANNOT_COMBINE,
         other_rows=MSG_OTHER_QUESTIONS,

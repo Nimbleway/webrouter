@@ -2,28 +2,16 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
-from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
 from typing import Any
 
 import pytest
 
+from tests.benchmarks.conftest import frozen_scan as _scan
+from tests.benchmarks.conftest import one_frozen_set as _one_set
 from web_router.evals import Question
-
-FROZEN_SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "frozen.py"
-
-
-@pytest.fixture(scope="module")
-def frozen() -> Iterator[ModuleType]:
-    spec = importlib.util.spec_from_file_location("frozen_results", FROZEN_SCRIPT)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    yield module
-
 
 # The committed files
 
@@ -53,7 +41,7 @@ def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleT
             assert row["method"] == entry["method"]
             assert row["grade"] in (*frozen.GRADES, None)
             assert row["error"] in (*frozen.ERROR_NAMES, None)
-            assert len(row["question_id"]) == frozen.QUESTION_ID_CHARS
+            assert len(row["question_id"]) == 16
 
 
 def test_the_four_sets_route_eval_needs_are_frozen_at_their_sizes(frozen: ModuleType) -> None:
@@ -79,15 +67,7 @@ def test_a_changed_file_fails_verification(frozen: ModuleType, tmp_path: Path) -
         frozen.verify(tmp_path)
 
 
-# Ids, errors and modes
-
-
-def test_a_question_id_ignores_spacing_and_unicode_form_but_not_wording(frozen: ModuleType) -> None:
-    qid = frozen.question_id("Who won the 1998 World Cup?")
-    assert qid == frozen.question_id("  Who won the\u00a01998   World Cup?\n")
-    assert qid == frozen.question_id("Who won the \uff11998 World Cup?"), "NFKC folds a full-width digit"
-    assert qid != frozen.question_id("Who won the 2002 World Cup?")
-    assert len(qid) == 16 and set(qid) <= set("0123456789abcdef")
+# Errors and modes
 
 
 @pytest.mark.parametrize(
@@ -122,34 +102,6 @@ def test_a_setup_label_splits_into_provider_and_mode(frozen: ModuleType) -> None
 # Building from scans
 
 
-def _scan(
-    folder: Path, providers: list[str], questions: list[str], gold: str = "secret gold {q}", **setup: Any
-) -> None:
-    folder.mkdir(parents=True)
-    run = {"questions": "simpleqa", "limit": 2, "seed": 0, "max_results": 5, "judge": "j", "providers": providers}
-    (folder / "run.json").write_text(json.dumps({**run, **setup}), encoding="utf-8")
-    rows = [
-        {
-            "provider": p,
-            "question": q,
-            "target": gold.format(q=q),
-            "answer": "secret answer",
-            "latency": 1.23456,
-            "grade": "correct",
-            "error": None,
-            "failed_at": None,
-        }
-        for q in questions
-        for p in providers
-    ]
-    (folder / "rows.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
-
-
-def _one_set(frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, runs: list[str]) -> None:
-    sets = {"tiny": {"questions": "simpleqa", "method": "search", "runs": runs}}
-    monkeypatch.setattr(frozen, "FROZEN_SETS", sets)
-
-
 def test_a_build_keeps_no_text_and_writes_the_same_bytes_twice(
     frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -168,24 +120,6 @@ def test_a_build_keeps_no_text_and_writes_the_same_bytes_twice(
     rows = frozen.read_rows(tmp_path / "one" / "tiny.jsonl.gz")
     assert b"secret" not in raw and not any("secret" in json.dumps(r) for r in rows)
     assert rows[0]["latency_s"] == 1.235 and rows[0]["mode"] == "default"
-
-
-def test_scans_of_other_questions_or_another_judge_are_not_one_set(
-    frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    _scan(tmp_path / "a", ["tavily"], ["q1", "q2"])
-    _scan(tmp_path / "b", ["exa"], ["q1", "q3"])
-    _scan(tmp_path / "c", ["exa"], ["q1", "q2"], judge="another")
-    _scan(tmp_path / "d", ["exa"], ["q1", "q2"], withheld=["other-site.example"])
-    _one_set(frozen, monkeypatch, ["a", "b"])
-    with pytest.raises(SystemExit, match="asked different questions"):
-        frozen.freeze_set("tiny", tmp_path)
-    _one_set(frozen, monkeypatch, ["a", "c"])
-    with pytest.raises(SystemExit, match="differs on judge"):
-        frozen.freeze_set("tiny", tmp_path)
-    _one_set(frozen, monkeypatch, ["a", "d"])
-    with pytest.raises(SystemExit, match="differs on withheld"):
-        frozen.freeze_set("tiny", tmp_path)
 
 
 def test_join_puts_the_questions_back_and_refuses_an_id_it_cannot_resolve(
@@ -209,29 +143,6 @@ def test_join_puts_the_questions_back_and_refuses_an_id_it_cannot_resolve(
     monkeypatch.setattr(frozen, "load_index", lambda questions, local: frozen.question_index(both[:1], questions))
     with pytest.raises(SystemExit, match="1 question_id"):
         frozen.join(tmp_path / "frozen", tmp_path / "out", {})
-
-
-def test_scans_graded_on_other_answers_or_cut_short_are_not_one_set(
-    frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    _scan(tmp_path / "a", ["tavily"], ["q1", "q2"])
-    _scan(tmp_path / "b", ["exa"], ["q1", "q2"], gold="another gold {q}")
-    _one_set(frozen, monkeypatch, ["a", "b"])
-    with pytest.raises(SystemExit, match="another gold answer"):
-        frozen.freeze_set("tiny", tmp_path)
-
-    _scan(tmp_path / "c", ["exa", "brave"], ["q1", "q2"])
-    rows = (tmp_path / "c" / "rows.jsonl").read_text().splitlines()
-    (tmp_path / "c" / "rows.jsonl").write_text("\n".join(rows[:-1]) + "\n")  # brave never answered q2
-    _one_set(frozen, monkeypatch, ["a", "c"])
-    with pytest.raises(SystemExit, match="cut short"):
-        frozen.freeze_set("tiny", tmp_path)
-
-
-def test_one_id_with_two_gold_answers_is_refused(frozen: ModuleType) -> None:
-    twice = [Question(question="q1", answer="Paris"), Question(question=" q1 ", answer="Lyon")]
-    with pytest.raises(SystemExit, match="share question_id"):
-        frozen.question_index(twice, "simpleqa")
 
 
 def test_join_downloads_each_dataset_once_and_refuses_changed_answers(
@@ -269,12 +180,3 @@ def test_build_refuses_a_dataset_whose_answers_changed_under_the_scans(
     monkeypatch.setattr(frozen, "load_index", lambda questions, local: frozen.question_index(changed, questions))
     with pytest.raises(SystemExit, match="changed upstream"):
         frozen.build(tmp_path / "results", tmp_path / "frozen", {})
-
-
-def test_a_scan_row_with_no_gold_answer_is_named_as_the_fault(
-    frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    _scan(tmp_path / "a", ["tavily"], ["q1", "q2"], gold="")
-    _one_set(frozen, monkeypatch, ["a"])
-    with pytest.raises(SystemExit, match="no gold answer"):
-        frozen.freeze_set("tiny", tmp_path)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -17,6 +18,9 @@ ANSWER_SIBLINGS = ("_common", "_questions", "_report_tables", "answer_report")
 """What the answer scan imports from its folder, under plain names, so they are forgotten once it is."""
 EXTRACT_SIBLINGS = ("_common", "cli", "extract_report", "urls")
 """What the extract scan imports from its folder, under plain names, so they are forgotten once it is."""
+FROZEN_SCRIPT = EXTRACT_SCRIPT.with_name("frozen.py")
+FROZEN_SIBLINGS = ("_common", "_frozen_checks")
+"""What ``frozen.py`` imports from its folder, under plain names, so they are forgotten once it is."""
 EXTRACT_SETUP = {
     "urls": "general",
     "urls_title": "the general mix",
@@ -116,3 +120,55 @@ def answer_scan_row(provider: str, question: str, grade: str | None, **extra: An
         "answer_type": "Date",
         **extra,
     }
+
+
+@pytest.fixture(scope="module")
+def frozen() -> Iterator[ModuleType]:
+    # Imports the combine keys and its checks as siblings, as it does when run from its folder.
+    sys.path.insert(0, str(FROZEN_SCRIPT.parent))
+    try:
+        spec = importlib.util.spec_from_file_location("frozen_results", FROZEN_SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        yield module
+    finally:
+        sys.path.remove(str(FROZEN_SCRIPT.parent))
+        for name in FROZEN_SIBLINGS:
+            sys.modules.pop(name, None)
+
+
+@pytest.fixture(scope="module")
+def frozen_checks(frozen: ModuleType) -> ModuleType:
+    """The checks ``frozen.py`` runs, as it imported them."""
+    return sys.modules["_frozen_checks"]
+
+
+def frozen_scan(
+    folder: Path, providers: list[str], questions: list[str], gold: str = "secret gold {q}", **setup: Any
+) -> None:
+    """A finished search scan's folder, every backend graded correct on every question."""
+    folder.mkdir(parents=True)
+    run = {"questions": "simpleqa", "limit": 2, "seed": 0, "max_results": 5, "judge": "j", "providers": providers}
+    (folder / "run.json").write_text(json.dumps({**run, **setup}), encoding="utf-8")
+    rows = [
+        {
+            "provider": p,
+            "question": q,
+            "target": gold.format(q=q),
+            "answer": "secret answer",
+            "latency": 1.23456,
+            "grade": "correct",
+            "error": None,
+            "failed_at": None,
+        }
+        for q in questions
+        for p in providers
+    ]
+    (folder / "rows.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+
+
+def one_frozen_set(frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, runs: list[str]) -> None:
+    """``FROZEN_SETS`` as the one search set ``tiny``, made of the scan folders ``runs``."""
+    sets = {"tiny": {"questions": "simpleqa", "method": "search", "runs": runs}}
+    monkeypatch.setattr(frozen, "FROZEN_SETS", sets)
