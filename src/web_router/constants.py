@@ -466,7 +466,10 @@ TAVILY_EXTRACT_RESULT_FIELD = "raw_content"
 TAVILY_SDK_SEARCH_TIMEOUT = 60.0
 TAVILY_SDK_EXTRACT_TIMEOUT = 30.0
 TAVILY_EXTRACT_MIN_TIMEOUT = 1.0
-"""The shortest ``timeout`` Tavily's extract accepts; with less time left, the deadline is reached before sending."""
+"""The shortest ``timeout`` Tavily's extract accepts; with less time left, the call fails before sending."""
+MSG_TAVILY_TOO_LITTLE_TIME = (
+    "{left:.2f}s is left before the deadline, under the {minimum:.0f}s Tavily's extract accepts; nothing was sent"
+)
 """The ``timeout`` tavily-python's ``search`` and ``extract`` default to, in seconds.
 
 Sent only under a per-call deadline, clamped to the time left, when the

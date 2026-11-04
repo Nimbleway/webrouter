@@ -20,6 +20,7 @@ from tavily import AsyncTavilyClient, TavilyClient
 
 from web_router.constants import (
     ENV_TAVILY_API_KEY,
+    MSG_TAVILY_TOO_LITTLE_TIME,
     PROVIDER_TAVILY,
     TAVILY_EXTRACT_DEFAULT_FORMAT,
     TAVILY_EXTRACT_FORMATS,
@@ -30,7 +31,7 @@ from web_router.constants import (
     TAVILY_SDK_EXTRACT_TIMEOUT,
     TAVILY_SDK_SEARCH_TIMEOUT,
 )
-from web_router.exceptions import ConfigurationError, DeadlineExceededError
+from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._deadline import call_budget, current_deadline
 from web_router.providers._utils import best_text, build_payload, compact, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
@@ -67,15 +68,17 @@ def _clamped(payload: dict[str, Any], sdk_default: float, minimum: float = 0.0) 
     Applied after ``provider_options`` is merged in, so a longer timeout there
     cannot outlast the deadline; unset, the SDK's own default is clamped. With
     no deadline the payload is returned as built. Less time left than
-    ``minimum``, the shortest timeout the endpoint accepts, is the deadline
-    reached: nothing is sent, rather than a request Tavily would refuse.
+    ``minimum``, the shortest timeout the endpoint accepts, is Tavily's own
+    limit, so this member fails before sending -- not the deadline, which
+    has not passed: an ``auto`` chain goes on to its next member.
     """
-    deadline = current_deadline()
-    if deadline is not None:
+    if current_deadline() is not None:
         configured = payload.get("timeout")
         payload["timeout"] = call_budget(float(configured) if configured is not None else sdk_default)
         if payload["timeout"] < minimum:
-            raise DeadlineExceededError(PROVIDER_TAVILY, deadline.seconds)
+            raise ProviderError(
+                PROVIDER_TAVILY, MSG_TAVILY_TOO_LITTLE_TIME.format(left=payload["timeout"], minimum=minimum)
+            )
     return payload
 
 

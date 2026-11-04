@@ -216,12 +216,14 @@ def test_a_longer_tavily_timeout_in_provider_options_does_not_outlast_the_deadli
 
 
 def test_a_tavily_extract_with_less_than_a_second_left_sends_nothing(clock: _Clock) -> None:
-    # Tavily's extract accepts a timeout of 1 to 60 s; a shorter one would come back a validation error.
+    # Tavily's extract accepts a timeout of 1 to 60 s. Under that is Tavily's own limit, not the deadline,
+    # so it fails as a member does and an auto chain goes on to the next one.
     from web_router.providers.tavily import TavilyExtractProvider
 
     extract = TavilyExtractProvider(api_key="test-key")
-    with call_deadline(0.5), pytest.raises(DeadlineExceededError):
+    with call_deadline(0.5), pytest.raises(ProviderError, match="nothing was sent") as raised:
         extract._build_payload(ExtractRequest(urls=URLS[:1]), URLS[:1])
+    assert not isinstance(raised.value, DeadlineExceededError)
     with call_deadline(DEADLINE):
         assert extract._build_payload(ExtractRequest(urls=URLS[:1]), URLS[:1])["timeout"] == DEADLINE
 
