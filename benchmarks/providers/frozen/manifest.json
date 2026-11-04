@@ -274,6 +274,524 @@
         }
       ],
       "resolved": 300
+    },
+    "tools-effort-60": {
+      "questions": "tools-effort",
+      "dataset": "SimpleQA, SealQA Seal-Hard and FRAMES, sampled",
+      "method": "mixed",
+      "limit": 60,
+      "seed": null,
+      "max_results": 5,
+      "judge": "openai:gpt-4o",
+      "question_count": 60,
+      "answers_sha256": "237587a0a70012af4fdbf4fc4f01ad7162e582e78070f7f1eb3e0493a16c12e1",
+      "row_count": 1150,
+      "providers": [
+        "brave",
+        "exa",
+        "linkup",
+        "nimble",
+        "parallel",
+        "perplexity",
+        "you"
+      ],
+      "failed_rows": {
+        "brave": {
+          "default": 22
+        },
+        "exa": {
+          "default": 0
+        },
+        "linkup": {
+          "default": 0,
+          "low": 0,
+          "top3": 0
+        },
+        "nimble": {
+          "default": 1,
+          "high": 0,
+          "low": 0,
+          "medium": 0,
+          "top3": 0
+        },
+        "parallel": {
+          "default": 0,
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "medium": 0
+        },
+        "perplexity": {
+          "default": 0,
+          "low": 56,
+          "medium": 41,
+          "top3": 0
+        },
+        "you": {
+          "default": 1
+        }
+      },
+      "runs": [
+        {
+          "run": "tools-effort-60",
+          "started": "2026-11-04T15:57:10+00:00",
+          "rows": 1100,
+          "reused": "answer-simpleqa-300"
+        }
+      ],
+      "cost_usd": "stated by the response where it states one, else the list price in web_router.prices",
+      "sample": [
+        {
+          "question_id": "a5a7f54a0913deeb",
+          "group": "easy",
+          "source": "simpleqa",
+          "index": 3155,
+          "urls": []
+        },
+        {
+          "question_id": "32ad377a70f49efc",
+          "group": "easy",
+          "source": "simpleqa",
+          "index": 3445,
+          "urls": []
+        },
+        {
+          "question_id": "05dc2e9a742478c8",
+          "group": "easy",
+          "source": "simpleqa",
+          "index": 331,
+          "urls": []
+        },
+        {
+          "question_id": "94c8a1f5ef64e4ab",
+          "group": "easy",
+          "source": "simpleqa",
+          "index": 2121,
+          "urls": []
+        },
+        {
+          "question_id": "7e77065498b8172e",
+          "group": "easy",
+          "source": "simpleqa",
+          "index": 4188,
+          "urls": []
+        },
+        {
+          "question_id": "af8aaa4d8870e5f4",
+          "group": "easy",
+          "source": "simpleqa",
+          "index": 3980,
+          "urls": []
+        },
+        {
+          "question_id": "7f255f9fff634d85",
+          "group": "easy",
+          "source": "simpleqa",
+          "index": 3317,
+          "urls": []
+        },
+        {
+          "question_id": "66c9af24dca536c2",
+          "group": "easy",
+          "source": "simpleqa",
+          "index": 2484,
+          "urls": []
+        },
+        {
+          "question_id": "a67add2b942d2840",
+          "group": "easy",
+          "source": "simpleqa",
+          "index": 3904,
+          "urls": []
+        },
+        {
+          "question_id": "8c5cb29cbf8c243b",
+          "group": "easy",
+          "source": "simpleqa",
+          "index": 2933,
+          "urls": []
+        },
+        {
+          "question_id": "04323176416272e8",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 216,
+          "urls": []
+        },
+        {
+          "question_id": "7925955b87439434",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 98,
+          "urls": []
+        },
+        {
+          "question_id": "919f19f699eb49ff",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 194,
+          "urls": []
+        },
+        {
+          "question_id": "c42af40fb77f7217",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 227,
+          "urls": []
+        },
+        {
+          "question_id": "2a710db3a65da0f8",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 107,
+          "urls": []
+        },
+        {
+          "question_id": "b6e3f71f00a741a6",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 10,
+          "urls": []
+        },
+        {
+          "question_id": "41eb61aaf82df235",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 66,
+          "urls": []
+        },
+        {
+          "question_id": "0d807beb6e2c4f87",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 247,
+          "urls": []
+        },
+        {
+          "question_id": "0fc3e12e6df95281",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 130,
+          "urls": []
+        },
+        {
+          "question_id": "fb76b1d418d200aa",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 124,
+          "urls": []
+        },
+        {
+          "question_id": "efefd0c39dc3d304",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 103,
+          "urls": []
+        },
+        {
+          "question_id": "68705513344fe267",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 235,
+          "urls": []
+        },
+        {
+          "question_id": "be6430776215911a",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 200,
+          "urls": []
+        },
+        {
+          "question_id": "8b97a64daaf12bea",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 212,
+          "urls": []
+        },
+        {
+          "question_id": "a62c023c593b8047",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 77,
+          "urls": []
+        },
+        {
+          "question_id": "0d2e8e1d9174595a",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 122,
+          "urls": []
+        },
+        {
+          "question_id": "5668b93dd088a2ca",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 91,
+          "urls": []
+        },
+        {
+          "question_id": "d246c498c8d08a3f",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 149,
+          "urls": []
+        },
+        {
+          "question_id": "b95d990d560f936a",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 228,
+          "urls": []
+        },
+        {
+          "question_id": "f39b83a91b3d5a8d",
+          "group": "hard",
+          "source": "sealqa-hard",
+          "index": 232,
+          "urls": []
+        },
+        {
+          "question_id": "924b53ef70ccdb87",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 57,
+          "urls": []
+        },
+        {
+          "question_id": "48030558e9c4d338",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 93,
+          "urls": []
+        },
+        {
+          "question_id": "6a474de12e1b7dc9",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 86,
+          "urls": []
+        },
+        {
+          "question_id": "cc8bc6c0cf61428e",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 369,
+          "urls": []
+        },
+        {
+          "question_id": "626feeab6b319abf",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 173,
+          "urls": []
+        },
+        {
+          "question_id": "8c2bb2e9f613cc13",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 753,
+          "urls": []
+        },
+        {
+          "question_id": "c09989f4b15966e8",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 685,
+          "urls": []
+        },
+        {
+          "question_id": "79564a96ad02a357",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 315,
+          "urls": []
+        },
+        {
+          "question_id": "5f315b0a12f0b951",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 257,
+          "urls": []
+        },
+        {
+          "question_id": "4f6203e017905053",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 620,
+          "urls": []
+        },
+        {
+          "question_id": "5a51a31dcc553677",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 217,
+          "urls": []
+        },
+        {
+          "question_id": "1cb721cff5a98bbb",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 621,
+          "urls": []
+        },
+        {
+          "question_id": "aa55ab78904a3b36",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 36,
+          "urls": []
+        },
+        {
+          "question_id": "bc0d40422552aed4",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 595,
+          "urls": []
+        },
+        {
+          "question_id": "de43e532562e81f8",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 697,
+          "urls": []
+        },
+        {
+          "question_id": "fae9e2af9cc472b7",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 162,
+          "urls": []
+        },
+        {
+          "question_id": "a2ed9ca9f06e4e43",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 441,
+          "urls": []
+        },
+        {
+          "question_id": "7cc2ac621f83d625",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 653,
+          "urls": []
+        },
+        {
+          "question_id": "4c1012ac51fb5ec2",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 402,
+          "urls": []
+        },
+        {
+          "question_id": "5b443c2c71fff8dd",
+          "group": "synthesis",
+          "source": "frames",
+          "index": 740,
+          "urls": []
+        },
+        {
+          "question_id": "c66d23e084f76029",
+          "group": "url-given",
+          "source": "simpleqa",
+          "index": 1789,
+          "urls": [
+            "https://en.wikipedia.org/wiki/Eritrea#Government_and_politics"
+          ]
+        },
+        {
+          "question_id": "1262fcb28dbcfcfc",
+          "group": "url-given",
+          "source": "simpleqa",
+          "index": 4134,
+          "urls": [
+            "https://vgmdb.net/album/81324"
+          ]
+        },
+        {
+          "question_id": "65724d77a6ed8517",
+          "group": "url-given",
+          "source": "simpleqa",
+          "index": 1140,
+          "urls": [
+            "https://en.wikipedia.org/wiki/Jon_Kleinberg"
+          ]
+        },
+        {
+          "question_id": "dce8d53a92af4717",
+          "group": "url-given",
+          "source": "simpleqa",
+          "index": 2308,
+          "urls": [
+            "https://en.wikipedia.org/wiki/Bakshi_Ghulam_Mohammad#:~:text=The%20famous%20Kashmir%20Conspiracy%20Case,constructive%20work%20in%20the%20state."
+          ]
+        },
+        {
+          "question_id": "bf9eeba84579089c",
+          "group": "url-given",
+          "source": "simpleqa",
+          "index": 1144,
+          "urls": [
+            "https://es.wikipedia.org/wiki/Tarso_(Antioquia)"
+          ]
+        },
+        {
+          "question_id": "4dd856e74b7af401",
+          "group": "url-given",
+          "source": "frames",
+          "index": 521,
+          "urls": [
+            "https://en.wikipedia.org/wiki/Will_Carling",
+            "https://en.wikipedia.org/wiki/Chris_Oti",
+            "https://en.wikipedia.org/wiki/Andy_Mullins_(rugby_union)"
+          ]
+        },
+        {
+          "question_id": "d9bf0f6062ae3008",
+          "group": "url-given",
+          "source": "frames",
+          "index": 380,
+          "urls": [
+            "https://en.wikipedia.org/wiki/Attempted_assassination_of_Ronald_Reagan",
+            "https://en.wikipedia.org/wiki/Kentucky_Derby"
+          ]
+        },
+        {
+          "question_id": "f04000add167702e",
+          "group": "url-given",
+          "source": "frames",
+          "index": 557,
+          "urls": [
+            "https://en.wikipedia.org/wiki/List_of_South_Korean_idol_groups_(1990s)",
+            "https://en.wikipedia.org/wiki/Baby_Vox#Studio_albums",
+            "https://en.wikipedia.org/wiki/Come_Come_Come_Baby"
+          ]
+        },
+        {
+          "question_id": "0ae0a3c24159f091",
+          "group": "url-given",
+          "source": "frames",
+          "index": 455,
+          "urls": [
+            "https://en.wikipedia.org/wiki/Galileo%27s_middle_finger#Exhibition_history",
+            "https://en.wikipedia.org/wiki/Laurentian_Library#Architecture",
+            "https://en.wikipedia.org/wiki/Literary_and_Philosophical_Society_of_Newcastle_upon_Tyne#"
+          ]
+        },
+        {
+          "question_id": "29b02080b7aa0623",
+          "group": "url-given",
+          "source": "frames",
+          "index": 514,
+          "urls": [
+            "https://en.wikipedia.org/wiki/Marshall_McLuhan",
+            "https://en.wikipedia.org/wiki/Videodrome",
+            "https://en.wikipedia.org/wiki/Jack_Creley"
+          ]
+        }
+      ],
+      "resolved": 60
     }
   }
 }

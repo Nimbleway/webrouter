@@ -281,8 +281,8 @@ their questions, in one command:
 uv run --all-extras python benchmarks/providers/frozen.py join
 ```
 
-It checks every file against `frozen/SHA256SUMS`, downloads SimpleQA and
-SealQA (no key needed), puts each row's question, gold answer and the
+It checks every file against `frozen/SHA256SUMS`, downloads SimpleQA,
+SealQA and FRAMES (no key needed), puts each row's question, gold answer and the
 dataset's labels back, and writes one `<set>.jsonl` per set to
 `results/frozen-joined/`. It stops if any row's `question_id` does not resolve.
 `frozen.py verify` runs the checksum step and the failed-row counts alone, and
@@ -291,7 +291,7 @@ the unit tests run it too.
 The committed rows carry no question or answer text, only a `question_id`:
 the questions stay with the public datasets they come from, and `join` is how
 they come back. SimpleQA is from `openai/simple-evals` (MIT) and SealQA from
-`vtllms/sealqa` (Apache-2.0); the rows carry ids, grades and timings, no
+`vtllms/sealqa` (Apache-2.0) and FRAMES from `google/frames-benchmark` (Apache-2.0); the rows carry ids, grades and timings, no
 dataset text. Experimental until 1.0: the schema may change, and
 `frozen/manifest.json` names the version a file follows.
 
@@ -301,6 +301,7 @@ dataset text. Experimental until 1.0: the schema may change, and
 | `sealqa-hard-254-twin` | 254 | 508 | The same questions again on two backends: the run-to-run noise floor |
 | `simpleqa-300-v2` | 300 | 3600 | 300 SimpleQA questions (seed 0), ten backends, with Keenable and DeepSeek added later on the same questions |
 | `answer-simpleqa-300` | 300 | 1500 | The same 300 SimpleQA questions through `answer()`, five backends |
+| `tools-effort-60` | 60 | 1150 | [The tool and effort set](#the-tool-and-effort-set): 60 questions through search then read, extract, `answer()` and `research()` at each effort; the easy questions' answer rows are copied from `answer-simpleqa-300`. Most Perplexity research rows failed during the run (56 of 60 `low`, 41 of 60 `medium`), and 22 of 60 Brave answers; `failed_rows` in the manifest has every count, and route-eval leaves them out |
 
 Each `frozen/<set>.jsonl.gz` is gzipped JSON lines, sorted by `question_id`,
 then provider and mode:
@@ -308,17 +309,17 @@ then provider and mode:
 | Field | What it holds |
 | --- | --- |
 | `set` | The set's name, as above |
-| `question_id` | The first 16 hex characters of the SHA-256 of the question's text, normalised: Unicode NFKC, whitespace collapsed to one space, ends stripped |
+| `question_id` | The first 16 hex characters of the SHA-256 of the question's text, normalised: Unicode NFKC, whitespace collapsed to one space, ends stripped. A question given its pages (`tools-effort-60`'s url-given group) hashes its text and its URLs, one space apart |
 | `provider` | The backend, as web-router names it |
-| `method` | `search` (one search, then the judge writes the answer from its results) or `answer` (the backend's own answer) |
-| `mode` | The vendor mode and depth the scan asked for, as `run.py` spells them (`ultra-fast`, `@deep`, `full-content@lite`); `default` when it asked for none, which is the backend's own default for that method. Every row in the current sets is `default` |
+| `method` | `search` (one search, then the judge writes the answer from its results) or `answer` (the backend's own answer); in `tools-effort-60` also `search+extract` (a search, its top three pages read with Nimble extract, then the judge's answer; a page that could not be read is replaced by its search snippet, so the row is graded on what was read), `extract` (the given pages read, then the judge's answer) and `research` (the backend's report, graded) |
+| `mode` | The vendor mode and depth the scan asked for, as `run.py` spells them (`ultra-fast`, `@deep`, `full-content@lite`); `default` when it asked for none, which is the backend's own default for that method. In `tools-effort-60`, a research row's mode is its effort (`low` ... `max`) and a `search+extract` row's is `top3`; every other row is `default` |
 | `grade` | `correct`, `incorrect` or `not_attempted`, from the judge; `null` when the row failed before it was graded. Count grades only from rows with `error: null` |
 | `latency_s` | Seconds around the search or `answer()` call alone, to the millisecond. On a failed row it is the time to the failure (`0.0` for a call refused before it was sent), so count latency only from rows with `error: null` |
-| `cost_usd` | The cost the backend stated in its response, `answer` rows only, where it states one; otherwise `null` |
+| `cost_usd` | The cost the backend stated in its response, `answer` rows only, where it states one; otherwise `null`. In `tools-effort-60` it is the stated cost, else the list price from `web_router.prices` (a `search+extract` row adds its search and its reads), else `null` The answer rows copied from `answer-simpleqa-300` are filled the same way. A failed page read's cost and time (about $0.001 each) are not in this run's `search+extract` and `extract` rows; later runs include them |
 | `error` | `null`, or the class of what went wrong: `timeout`, `rate_limit`, `quota`, `invalid_request` (refused before sending, such as a query too long for the backend), `http_4xx`, `http_5xx`, `other`, `judge` (the judge failed, not the backend), `budget` (`tools-effort-60`: the backend answered, and the run's budget refused grading it) or `leaked` (an answer citing the set's own pages, left ungraded). The message itself is never kept. The class says how that call ended in this run, not how good the backend is; route-eval skips failed rows |
 
 `frozen/manifest.json` records, per set, the question set and dataset, the
-seed and sample size, the search size, the judge (`openai:gpt-4o` for all four),
+seed and sample size, the search size, the judge (`openai:gpt-4o` for every set),
 the row and question counts, `failed_rows` (how many rows failed, `error` not
 `null`, per backend and mode; `verify` checks it against the rows), the scans
 it was built from with their start times, and `answers_sha256`, a hash of the

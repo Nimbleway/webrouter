@@ -73,6 +73,12 @@ DEFAULT_MODE = "default"
 """A row's ``mode`` when the scan asked for none: the backend's own default for that method."""
 LATENCY_DIGITS = 3
 
+MIXED = "mixed"
+"""A set whose rows call several methods (``tools_effort.py``'s): each row names its own, and its run.json its sample.
+
+Such a set is added to ``FROZEN_SETS`` as ``{"questions": "tools-effort", "method": "mixed", "runs": [folder]}``,
+after the set it reuses answer rows from.
+"""
 FROZEN_SETS: dict[str, dict[str, Any]] = {
     "sealqa-hard-254": {"questions": "sealqa-hard", "method": "search", "runs": ["sealqa-hard-254"]},
     "sealqa-hard-254-twin": {"questions": "sealqa-hard", "method": "search", "runs": ["sealqa-hard-254-twin"]},
@@ -82,6 +88,8 @@ FROZEN_SETS: dict[str, dict[str, Any]] = {
         "runs": ["simpleqa-300-v2", "simpleqa-300-keenable", "simpleqa-300-deepseek"],
     },
     "answer-simpleqa-300": {"questions": "simpleqa", "method": "answer", "runs": ["answer-simpleqa-300"]},
+    # After answer-simpleqa-300, whose rows it reuses for its easy questions.
+    "tools-effort-60": {"questions": MIXED_QUESTIONS, "method": MIXED, "runs": ["tools-effort-60"]},
 }
 """Each frozen set: the question set its scans sampled, the method they called, and the scan folders it is made of.
 
@@ -89,12 +97,6 @@ A set made of several scans is one scan with backends added later, as
 ``run.py --combine`` merges them: the scans must share what ``--combine``
 requires for their method (``COMBINE_KEYS``), the same questions and the same
 gold answers; a key a scan predates reads as missing.
-"""
-MIXED = "mixed"
-"""A set whose rows call several methods (``tools_effort.py``'s): each row names its own, and its run.json its sample.
-
-Such a set is added to ``FROZEN_SETS`` as ``{"questions": "tools-effort", "method": "mixed", "runs": [folder]}``,
-after the set it reuses answer rows from.
 """
 MSG_MIXED_UNPLANNED = (
     "{set}: {count} rows are not in the run's plan, e.g. {example}; only the planned (question, method, backend,"
