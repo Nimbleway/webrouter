@@ -10,7 +10,13 @@ import pytest
 from tests.conftest import FakeBrowseProvider, FakeExtractProvider, FakeResearchProvider
 from tests.deadline_helpers import DEADLINE, TINY, URLS, _Clock
 from tests.deadline_helpers import clock as clock  # a fixture: imported by name so pytest finds it here
-from web_router.exceptions import BrowseTimeoutError, ConfigurationError, ProviderError, ResearchTimeoutError
+from web_router.exceptions import (
+    BrowseTimeoutError,
+    ConfigurationError,
+    DeadlineExceededError,
+    ProviderError,
+    ResearchTimeoutError,
+)
 from web_router.providers._deadline import call_deadline, current_deadline, job_budget, job_deadline
 from web_router.providers.auto import AutoResearchProvider
 from web_router.providers.max import MaxExtractProvider
@@ -159,3 +165,35 @@ def test_max_carries_the_deadline_onto_its_worker_threads() -> None:
         unregister_extract_provider("member")
 
     assert seen == [(False, True)]
+
+
+# -- A billed run is not started once the deadline has passed ------------------------
+
+
+class _NeverStarts(FakeResearchProvider):
+    def _start(self, request: ResearchRequest) -> ResearchProgress:
+        raise AssertionError("a billed run must not start past the deadline")  # pragma: no cover
+
+
+def test_research_is_not_submitted_once_an_enclosing_deadline_has_passed(clock: _Clock) -> None:
+    with call_deadline(DEADLINE):
+        clock.now = DEADLINE
+        with pytest.raises(DeadlineExceededError, match="3s deadline"):
+            _NeverStarts().research(ResearchRequest(query="q"), timeout=600)
+
+
+async def test_async_research_is_not_submitted_once_an_enclosing_deadline_has_passed(clock: _Clock) -> None:
+    with call_deadline(DEADLINE):
+        clock.now = DEADLINE
+        with pytest.raises(DeadlineExceededError, match="3s deadline"):
+            await _NeverStarts().aresearch(ResearchRequest(query="q"), timeout=600)
+
+
+def test_a_runs_own_short_timeout_still_submits_it(clock: _Clock) -> None:
+    """Only the caller's deadline refuses a run: its own timeout of zero still sends it, then times out."""
+    provider = _NeverDone()
+
+    with pytest.raises(ResearchTimeoutError):
+        provider.research(ResearchRequest(query="q"), timeout=0)
+
+    assert provider.requests, "the run was submitted"

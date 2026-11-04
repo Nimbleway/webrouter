@@ -263,6 +263,30 @@ class _DeadlineMixin:
         except Exception as exc:
             self._reraise_late(deadline, exc)
 
+    def _refuse_past_deadline(self) -> None:
+        """Raise :class:`DeadlineExceededError` when a deadline in force has already passed.
+
+        Before a step a clamp alone cannot hold: AgentCore's next ``tools/list``
+        page, each clamped but never below the floor a timeout needs, or a
+        research or browse run, whose start is billed.
+        """
+        deadline = current_deadline()
+        if deadline is not None:
+            self._refuse_late(deadline)
+
+    @contextmanager
+    def _submit_window(
+        self, deadline: float | None, timeout: float | None
+    ) -> Iterator[tuple[float | None, float | None]]:
+        """:func:`_job_window` for a run about to be submitted, refused when an enclosing deadline has passed.
+
+        Checked before the run's own deadline is held, so only the caller's
+        refuses it: a run's own timeout, however short, still submits it.
+        """
+        self._refuse_past_deadline()
+        with _job_window(deadline, timeout) as bound:
+            yield bound
+
     def _refuse_late(self, deadline: Deadline) -> None:
         """Raise :class:`DeadlineExceededError` for a call about to start after its deadline."""
         if deadline.left() <= 0:

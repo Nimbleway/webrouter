@@ -68,7 +68,6 @@ from web_router.constants_agentcore import (
     MSG_AGENTCORE_TOOL,
 )
 from web_router.exceptions import ConfigurationError, ProviderError
-from web_router.providers._deadline import current_deadline
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._mcp import McpSearchMixin
 from web_router.providers._utils import as_snippet, build_payload, compact
@@ -229,16 +228,6 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
         self._refuse_filters(request)
         self._refuse_past_deadline()
         return await super()._asearch(request)
-
-    def _refuse_past_deadline(self) -> None:
-        """Raise before another ``tools/list`` page or the ``tools/call`` once a deadline in force has passed.
-
-        Each page is clamped to the time left, but never below the floor a
-        timeout needs, so without this a long listing would keep paging past it.
-        """
-        deadline = current_deadline()
-        if deadline is not None:
-            self._refuse_late(deadline)
 
     def _needs_tool(self, request: SearchRequest) -> bool:
         """Whether this call must list the gateway's tools first, once the request and the gateway pass."""

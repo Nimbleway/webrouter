@@ -772,7 +772,7 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
 
     def _run(self, request: _RequestT, timeout: float | None) -> _ResponseT:
         """Submit the run and wait up to ``timeout`` for its answer."""
-        with _job_window(_deadline_for(timeout), timeout) as (deadline, timeout):
+        with self._submit_window(_deadline_for(timeout), timeout) as (deadline, timeout):
             # The budget starts here, not inside result(): a backend that does
             # the whole run inside the call that starts it would otherwise spend
             # its own HTTP timeout before the caller's had begun.
@@ -780,7 +780,7 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
 
     async def _arun(self, request: _RequestT, timeout: float | None) -> _ResponseT:
         """Async counterpart of :meth:`_run`."""
-        with _job_window(_deadline_for(timeout), timeout) as (deadline, timeout):
+        with self._submit_window(_deadline_for(timeout), timeout) as (deadline, timeout):
             job = await self.asubmit(request)
             return await job._await_until(deadline, timeout)
 
