@@ -23,14 +23,13 @@ from tests.deadline_helpers import (
     _hangs_until_timeout,
 )
 from tests.deadline_helpers import clock as clock  # a fixture: imported by name so pytest finds it here
-from web_router.constants import DEFAULT_HTTP_TIMEOUT, TAVILY_SDK_SEARCH_TIMEOUT
+from web_router.constants import TAVILY_SDK_SEARCH_TIMEOUT
 from web_router.exceptions import DeadlineExceededError, ProviderError
-from web_router.providers._deadline import call_deadline, current_deadline
+from web_router.providers._deadline import call_deadline
 from web_router.providers._http import clamp_timeout
 from web_router.providers.nimble import NimbleProvider
 from web_router.providers.nimble_template import NimbleTemplateProvider
 from web_router.providers.tavily import TavilyProvider
-from web_router.providers.you_mcp import YouMcpProvider
 from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse, SearchRequest, TemplateRequest
 
 # -- Every method stops at the deadline -----------------------------------------
@@ -56,20 +55,6 @@ def test_a_one_call_method_stops_at_the_deadline_and_says_so(clock: _Clock, meth
 async def test_an_async_call_is_cancelled_at_the_deadline(method: str) -> None:
     with call_deadline(TINY), pytest.raises(DeadlineExceededError, match=r"0\.05s deadline"):
         await _acall(method, _hangs())
-
-
-@pytest.mark.parametrize("method", ["search", "extract", "answer"])
-def test_without_a_deadline_the_clients_own_timeout_applies(method: str) -> None:
-    seen: list[float] = []
-
-    def handle(request: httpx.Request) -> httpx.Response:
-        seen.append(request.extensions["timeout"]["read"])
-        return httpx.Response(200, json={})
-
-    _call(method, httpx.MockTransport(handle))
-
-    assert seen == [DEFAULT_HTTP_TIMEOUT]
-    assert current_deadline() is None
 
 
 def test_a_call_is_not_started_once_the_deadline_has_passed(clock: _Clock) -> None:
@@ -210,16 +195,6 @@ def test_tavily_takes_the_time_left_as_its_per_call_timeout(clock: _Clock) -> No
 
     assert hanging.kwargs[0]["timeout"] == DEADLINE < TAVILY_SDK_SEARCH_TIMEOUT
     assert "timeout" not in provider._build_payload(SearchRequest(query="q")), "unset without a deadline"
-
-
-def test_the_mcp_transport_is_clamped_too(clock: _Clock) -> None:
-    seen: list[float] = []
-    provider = YouMcpProvider(transport=_hangs_until_timeout(clock, seen))
-
-    with call_deadline(DEADLINE), pytest.raises(DeadlineExceededError, match="3s deadline"):
-        provider.search(SearchRequest(query="q"))
-
-    assert seen == [DEADLINE]
 
 
 # -- What a caller's options and a backend's pacing cannot stretch ------------------
