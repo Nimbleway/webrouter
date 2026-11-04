@@ -349,3 +349,12 @@ def test_a_row_the_judge_did_not_grade_still_served_the_question(route_eval: Mod
     assert outcome.ungraded and not outcome.correct
     assert outcome.cost_usd == pytest.approx(0.008), "an answered call is billed"
     assert route_eval.score([outcome])["ungraded"] == 1
+
+
+def test_backend_stats_leave_an_unrecorded_latency_out_of_the_median(route_eval: ModuleType) -> None:
+    questions = [
+        _question(route_eval, _row("brave", "correct", latency=None, qid="q1")),
+        _question(route_eval, _row("brave", "correct", latency=2.0, qid="q2")),
+    ]
+    stats = route_eval.backend_stats(questions)["brave"]
+    assert stats["latency_p50"] == 2.0 and stats["correct"] == 2

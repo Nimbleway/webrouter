@@ -216,7 +216,8 @@ def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
     out = {}
     for provider, rows in sorted(rows_by.items()):
         graded = [{"grade": r["grade"] if r["error"] is None else None, "latency": r["latency_s"]} for r in rows]
-        stats = grade_stats(graded)
+        known = [g["latency"] for g in graded if g["grade"] is not None and g["latency"] is not None]
+        stats = grade_stats(graded, known)
         costs = [cost_of(r) for r in rows if r["error"] is None]
         out[provider] = {
             **stats,
