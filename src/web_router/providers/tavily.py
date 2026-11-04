@@ -20,14 +20,19 @@ from tavily import AsyncTavilyClient, TavilyClient
 
 from web_router.constants import (
     ENV_TAVILY_API_KEY,
+    MSG_TAVILY_TOO_LITTLE_TIME,
     PROVIDER_TAVILY,
     TAVILY_EXTRACT_DEFAULT_FORMAT,
     TAVILY_EXTRACT_FORMATS,
+    TAVILY_EXTRACT_MIN_TIMEOUT,
     TAVILY_EXTRACT_RESULT_FIELD,
     TAVILY_PARAM_NAMES,
     TAVILY_PARAMS_BY_DEPTH,
+    TAVILY_SDK_EXTRACT_TIMEOUT,
+    TAVILY_SDK_SEARCH_TIMEOUT,
 )
-from web_router.exceptions import ConfigurationError
+from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.providers._deadline import call_budget, current_deadline
 from web_router.providers._utils import best_text, build_payload, compact, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
@@ -54,6 +59,27 @@ def _resolve_key(api_key: str | None, *, allow_keyless: bool, provider: str) -> 
         return resolve_api_key(api_key, env_var=ENV_TAVILY_API_KEY, provider=provider)
     except ConfigurationError:
         return None
+
+
+def _clamped(payload: dict[str, Any], sdk_default: float, minimum: float = 0.0) -> dict[str, Any]:
+    """``payload`` with its ``timeout`` clamped to the time a deadline in force leaves.
+
+    Tavily takes its timeout per call, so this is where a deadline reaches it.
+    Applied after ``provider_options`` is merged in, so a longer timeout there
+    cannot outlast the deadline; unset, the SDK's own default is clamped. With
+    no deadline the payload is returned as built. Less time left than
+    ``minimum``, the shortest timeout the endpoint accepts, is Tavily's own
+    limit, so this member fails before sending -- not the deadline, which
+    has not passed: an ``auto`` chain goes on to its next member.
+    """
+    if current_deadline() is not None:
+        configured = payload.get("timeout")
+        payload["timeout"] = call_budget(float(configured) if configured is not None else sdk_default)
+        if payload["timeout"] < minimum:
+            raise ProviderError(
+                PROVIDER_TAVILY, MSG_TAVILY_TOO_LITTLE_TIME.format(left=payload["timeout"], minimum=minimum)
+            )
+    return payload
 
 
 class TavilyProvider(SearchProvider):
@@ -110,13 +136,14 @@ class TavilyProvider(SearchProvider):
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``search()`` keyword arguments."""
         depth = TAVILY_PARAMS_BY_DEPTH.get(request.search_depth) if request.search_depth else None
-        return build_payload(
+        payload = build_payload(
             request,
             TAVILY_PARAM_NAMES,
             query=request.query,
             timeout=self._timeout,
             **(depth or {}),
         )
+        return _clamped(payload, TAVILY_SDK_SEARCH_TIMEOUT)
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         results = []
@@ -201,12 +228,13 @@ class TavilyExtractProvider(ExtractProvider):
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``extract()`` keyword arguments."""
-        return build_payload(
+        payload = build_payload(
             request,
             urls=urls,
             format=TAVILY_EXTRACT_FORMATS[self.format_of(request)],
             timeout=self._timeout,
         )
+        return _clamped(payload, TAVILY_SDK_EXTRACT_TIMEOUT, TAVILY_EXTRACT_MIN_TIMEOUT)
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         body_format = self.format_of(request)

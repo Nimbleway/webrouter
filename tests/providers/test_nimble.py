@@ -14,7 +14,7 @@ pytest.importorskip("nimble_python", reason="nimble extra not installed")
 
 from nimble_python import AsyncNimble
 
-from web_router.providers._utils import research_deadline
+from web_router.providers._deadline import research_deadline
 from web_router.providers.nimble import NimbleExtractProvider, NimbleProvider, NimbleResearchProvider
 from web_router.providers.nimble_template import NimbleTemplateProvider
 

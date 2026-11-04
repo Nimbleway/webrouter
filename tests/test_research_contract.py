@@ -32,7 +32,7 @@ from web_router.constants import (
 )
 from web_router.exceptions import ProviderError, ResearchTimeoutError, UnsupportedParameterError
 from web_router.providers import base
-from web_router.providers._utils import research_budget
+from web_router.providers._deadline import research_budget
 from web_router.providers.base import ResearchProvider
 from web_router.registry import (
     available_research_providers,

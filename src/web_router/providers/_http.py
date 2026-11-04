@@ -60,7 +60,9 @@ from web_router.constants import (
     RESEARCH_HTTP_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError, ProviderError
-from web_router.providers._utils import compact, error_detail, job_budget, research_budget, resolve_api_key
+from web_router.providers._clamp import clamped
+from web_router.providers._deadline import job_budget, research_budget
+from web_router.providers._utils import compact, error_detail, resolve_api_key
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     BrowseProvider,
@@ -159,6 +161,10 @@ class _HttpProvider(_BaseProvider):
         self._sync: httpx.Client | None = None
         self._async: httpx.AsyncClient | None = None
 
+    def _clamped(self) -> dict[str, Any]:
+        """A one-call request's timeout under a deadline; see :func:`~web_router.providers._deadline.clamped`."""
+        return clamped(self._client_kwargs["timeout"])
+
     def _resolve_key(self, api_key: str | None) -> str | None:
         if not self.env_api_key:
             return None
@@ -244,13 +250,13 @@ class _HttpOneCallProvider(_HttpProvider, Generic[_RequestT, _ResponseT]):
 
     def _call(self, request: _RequestT) -> _ResponseT:
         path = getattr(self, self.path_attribute)
-        return self._to_response(
-            request, self._payload(self._client.request(self.http_method, path, **self._call_kwargs(request)))
-        )
+        kwargs = {**self._call_kwargs(request), **self._clamped()}
+        return self._to_response(request, self._payload(self._client.request(self.http_method, path, **kwargs)))
 
     async def _acall(self, request: _RequestT) -> _ResponseT:
         path = getattr(self, self.path_attribute)
-        response = await self._async_client.request(self.http_method, path, **self._call_kwargs(request))
+        kwargs = {**self._call_kwargs(request), **self._clamped()}
+        response = await self._async_client.request(self.http_method, path, **kwargs)
         return self._to_response(request, self._payload(response))
 
     def _call_kwargs(self, request: _RequestT) -> dict[str, Any]:
@@ -303,13 +309,13 @@ class HttpExtractProvider(_HttpProvider, ExtractProvider):
     # -- The HTTP plumbing ---------------------------------------------------
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        response = self._client.request(self.http_method, self.extract_path, **self._call_kwargs(request, urls))
+        kwargs = {**self._call_kwargs(request, urls), **self._clamped()}
+        response = self._client.request(self.http_method, self.extract_path, **kwargs)
         return self._to_response(request, urls, self._payload(response))
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        response = await self._async_client.request(
-            self.http_method, self.extract_path, **self._call_kwargs(request, urls)
-        )
+        kwargs = {**self._call_kwargs(request, urls), **self._clamped()}
+        response = await self._async_client.request(self.http_method, self.extract_path, **kwargs)
         return self._to_response(request, urls, self._payload(response))
 
     def _call_kwargs(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:

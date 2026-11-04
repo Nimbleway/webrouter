@@ -549,3 +549,11 @@ def jpeg(width: int, height: int) -> bytes:
     out = io.BytesIO()
     image.new("RGB", (width, height), "white").save(out, format="JPEG")
     return out.getvalue()
+
+
+@pytest.fixture
+def clock(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A fake clock for the deadline tests; imported here so a bare conftest load stays light."""
+    from tests.deadline_helpers import install_clock
+
+    return install_clock(monkeypatch)

@@ -211,8 +211,10 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
             body = next(listing)
             with contextlib.suppress(StopIteration):
                 while True:
-                    body = listing.send(self._client.post(self.search_path, json=body))
+                    self._refuse_past_deadline()
+                    body = listing.send(self._client.post(self.search_path, json=body, **self._clamped()))
         self._refuse_filters(request)
+        self._refuse_past_deadline()
         return super()._search(request)
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
@@ -221,8 +223,10 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
             body = next(listing)
             with contextlib.suppress(StopIteration):
                 while True:
-                    body = listing.send(await self._async_client.post(self.search_path, json=body))
+                    self._refuse_past_deadline()
+                    body = listing.send(await self._async_client.post(self.search_path, json=body, **self._clamped()))
         self._refuse_filters(request)
+        self._refuse_past_deadline()
         return await super()._asearch(request)
 
     def _needs_tool(self, request: SearchRequest) -> bool:

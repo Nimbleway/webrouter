@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from web_router.constants import MSG_JOB_FAILED, MSG_JOB_NOT_RESUMABLE
 from web_router.exceptions import ProviderError, UnsupportedParameterError, WebRouterError
 from web_router.providers import base
-from web_router.providers._utils import job_budget
+from web_router.providers._deadline import job_budget
 from web_router.providers.base import Job, JobProvider
 from web_router.types import JobState, NormalizedRequest
 

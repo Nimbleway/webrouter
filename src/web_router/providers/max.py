@@ -27,6 +27,7 @@ better, as the whole answer the call would have had anyway.
 
 from __future__ import annotations
 
+import contextvars
 import math
 import threading
 from collections.abc import Mapping
@@ -201,7 +202,9 @@ class MaxExtractProvider(AutoExtractProvider):
     ) -> list[_Runner]:
         """Submit every runner's call; returns the empty list of runners left to start."""
         for provider_name, member in runners:
-            future = pool.submit(member.extract, delegated)
+            # In a copy of the caller's context, so a deadline set around the
+            # call reaches the member on its worker thread.
+            future = pool.submit(contextvars.copy_context().run, member.extract, delegated)
             with self._quiet:
                 self._inflight.add(future)
             # Registered outside the lock: a call already finished runs its
