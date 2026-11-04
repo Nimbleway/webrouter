@@ -71,6 +71,7 @@ KEYLESS = frozenset(name for name, options in AUTO_KEYLESS if not options.get("a
 MSG_UNKNOWN_SET = "{name}: no frozen set by that name (there are: {known})"
 MSG_NO_JOINED = "{path} not found: run frozen.py join first, or leave --joined out"
 MSG_BAD_ROUTER = "{spec!r}: a router is static, oracle, always:<backend>, module:attr or path/file.py:attr"
+MSG_ROUTER_RAISED = "{spec} raised on {set_name}, first time shown, scored as a router failure: {error}"
 MSG_EMPTY_SPLIT = (
     "{name}: --test-fraction {test_fraction} splits {questions} questions into {train} in-sample and {test} held "
     "out; both must be non-empty"
@@ -103,6 +104,8 @@ class Outcome:
     """The router's first choice did not serve: it failed, returned nothing usable, or its backend's row failed."""
     router_failed: bool
     overhead_s: float
+    router_error: str | None = None
+    """The exception the router raised, as ``Type: message``; ``None`` when it raised nothing."""
 
 
 Router = Callable[[Question], Any]
@@ -312,11 +315,13 @@ def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
     are charged on every question.
     """
     started = time.perf_counter()
+    error: str | None = None
     try:
         ranked, cost = _decision(router(q))
         router_failed = False
-    except Exception:  # a router that raises is scored as failed, not fatal to the replay
+    except Exception as exc:  # a router that raises is scored as failed, not fatal to the replay
         ranked, cost, router_failed = [], 0.0, True
+        error = f"{type(exc).__name__}: {exc}"
     overhead = time.perf_counter() - started
     ranked = [p for p in dict.fromkeys(ranked) if p in q.rows]
     if not ranked:
@@ -331,8 +336,9 @@ def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
             price = cost_of(row)
             total = None if price is None else cost + price
             fallback = router_failed or i > 0
-            return Outcome(row["grade"] == "correct", provider, latency, total, fallback, router_failed, overhead)
-    return Outcome(False, None, latency, total, True, router_failed, overhead)
+            correct = row["grade"] == "correct"
+            return Outcome(correct, provider, latency, total, fallback, router_failed, overhead, error)
+    return Outcome(False, None, latency, total, True, router_failed, overhead, error)
 
 
 def score(outcomes: Sequence[Outcome]) -> dict[str, Any]:
@@ -401,10 +407,14 @@ def evaluate_set(
         fit = getattr(router, "fit", None)
         if callable(fit):
             fit(train)
-        routers[spec] = {
-            "in_sample": score([replay(router, q, fallback_order) for q in train]),
-            "held_out": score([replay(router, q, fallback_order) for q in test]),
+        outcomes = {
+            part: [replay(router, q, fallback_order) for q in qs]
+            for part, qs in (("in_sample", train), ("held_out", test))
         }
+        first = next((o.router_error for part in outcomes.values() for o in part if o.router_error), None)
+        if first is not None:
+            print(MSG_ROUTER_RAISED.format(spec=spec, set_name=name, error=first), file=sys.stderr)
+        routers[spec] = {part: score(found) for part, found in outcomes.items()}
     for part in ("in_sample", "held_out"):
         best, base = routers[ORACLE][part]["accuracy"], routers[STATIC][part]["accuracy"]
         for result in routers.values():
@@ -473,9 +483,9 @@ def markdown(summaries: Sequence[dict[str, Any]], floor: float, pairs: Mapping[s
         out.append(
             "| Router | Accuracy in-sample | Accuracy held out | 95% CI held out | Regret vs oracle (in / out) "
             "| Regret vs static (in / out) | Mean cost held out | Mean latency held out | Fallbacks held out "
-            "| Router overhead | Held out vs static |"
+            "| Router failed held out | Router overhead | Held out vs static |"
         )
-        out.append("|---|---|---|---|---|---|---|---|---|---|---|")
+        out.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
         for spec, r in s["routers"].items():
             i, h = r["in_sample"], r["held_out"]
             ci = h["accuracy_ci95"]
@@ -485,7 +495,7 @@ def markdown(summaries: Sequence[dict[str, Any]], floor: float, pairs: Mapping[s
                 f"| {_pts(i['regret_oracle'])} / {_pts(h['regret_oracle'])} "
                 f"| {_pts(i['regret_static'])} / {_pts(h['regret_static'])} "
                 f"| {_usd(h['mean_cost_usd'], h['cost_unknown'])} | {_s(h['mean_latency_s'])} "
-                f"| {h['fallbacks']} | {_ms(h['mean_overhead_s'])} | {r['verdict']} |"
+                f"| {h['fallbacks']} | {h['router_failed']} | {_ms(h['mean_overhead_s'])} | {r['verdict']} |"
             )
         out.append("")
         out.append(

@@ -384,8 +384,10 @@ How a choice is scored:
   whose row did not fail serves the question. A failed row (`error` not null)
   is passed over: its time to failure is charged, its cost is not, and the
   question counts as a **fallback** -- as it does when the router raises or
-  names no candidate, which falls back to the static order. A question no
-  backend served is a miss.
+  names no candidate, which falls back to the static order. Those router
+  failures also have their own column, and the first exception each router
+  raises on a set is printed to stderr. A question no backend served is a
+  miss.
 - **Accuracy** is correct out of every question; grades and latency come only
   from rows that did not fail.
 - **Cost** is the cost the row states (`answer`), else the list price from

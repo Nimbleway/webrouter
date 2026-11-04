@@ -287,3 +287,22 @@ def test_the_report_shows_n_a_for_numbers_an_empty_score_cannot_have(route_eval:
         "recommended_order": [],
     }
     assert "| n/a | baseline |" in route_eval.markdown([summary], 0.01, {})
+
+
+def test_a_router_that_raises_is_counted_apart_and_its_first_error_printed_once(
+    route_eval: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _tiny_set(tmp_path / "frozen")
+    (tmp_path / "broken_router.py").write_text(
+        "def pick(prompt, candidates):\n    raise ValueError('model unreachable')\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    summary = route_eval.evaluate_set("tiny", ["broken_router:pick"], floor=0.05, folder=tmp_path / "frozen")
+    sys.modules.pop("broken_router", None)
+
+    held_out = summary["routers"]["broken_router:pick"]["held_out"]
+    assert held_out["router_failed"] == held_out["questions"] == 10
+    err = capsys.readouterr().err
+    assert err.count("ValueError: model unreachable") == 1 and "broken_router:pick" in err
+    report = route_eval.markdown([summary], 0.05, {})
+    assert "Router failed held out" in report and "| 10 | 10 |" in report
