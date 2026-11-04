@@ -83,6 +83,9 @@ an extract provider.
 
 Whatever the method, finish with `make contracts`, which regenerates the
 provider contracts; [AGENTS.md](AGENTS.md#provider-contracts) says how to start one.
+Add the backend's list price to `src/web_router/data/prices.json`, from the
+vendor's own pricing page (`unknown` if it publishes none), and run
+`make prices`; [AGENTS.md](AGENTS.md#provider-prices) has the rules.
 
 ### A search provider
 

@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts check build clean
+.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts prices check build clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -44,6 +44,9 @@ test-browser: ## Run tests that launch a real local browser (skip when none is i
 
 contracts: ## Regenerate the committed contracts; PROVIDER=search/brave starts a new one
 	uv run python -m scripts.contracts $(if $(PROVIDER),--new $(PROVIDER))
+
+prices: ## Regenerate PRICING.md's price tables from src/web_router/data/prices.json
+	uv run python -m scripts.prices
 
 cov: ## Unit tests with a coverage report
 	uv run pytest -m "not integration and not browser" --cov --cov-report=term-missing

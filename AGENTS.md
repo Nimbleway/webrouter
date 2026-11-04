@@ -107,6 +107,11 @@ src/web_router/
 │                       kept apart for the same reason
 ├── constants_kernel.py Kernel's endpoints, field table and session states,
 │                       kept apart for the same reason
+├── prices.py           estimated list prices per (provider, method, mode), read
+│                       from data/prices.json; PRICING.md's tables are made from it
+├── data/prices.json    the price list itself (experimental), shipped in the wheel
+├── constants_prices.py the price list's data path, unit divisors, messages and
+│                       PRICING.md wording, kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── registry_answer.py  the answer backends' table, and the backend an
@@ -385,8 +390,13 @@ beside it, and is refused otherwise. A row whose sources include one of the
 set's withheld pages, cited or only read, is *leaked*, never graded and out of accuracy, because an answer backend
 has read the answer key before anything could be withheld. It shows a cost only
 where the backend's response states one, never an estimate. `PRICING.md` beside it is a
-dated, sourced reference for reading results against list prices; no code
-reads it, and the library still never shows a price.
+dated, sourced reference for reading results against list prices. Its tables
+are generated from `src/web_router/data/prices.json`, which `web_router.prices`
+reads to estimate a call's cost before it runs: edit the JSON, never a table,
+and run `make prices`; its prose is hand-written. A price comes only from the
+vendor's own page, cited in `source_url` and dated in `checked`; one the vendor
+does not publish is `unknown` and one billed by tokens is `token_billed`, never
+estimated. The library still never puts a price in a response.
 
 **`constants.py` imports `types.py`, so `types.py` imports nothing of ours.**
 The import graph is `types` ← `constants` ← `exceptions` ← everything else. A
@@ -813,6 +823,15 @@ mapping change, `make contracts` regenerates every committed contract, keeping w
 was written by hand. `tests/test_provider_contracts.py` fails when a committed
 contract is stale, or its hand-written fields are partial or hold a `TODO`, and when a
 built-in provider has no contract at all.
+
+## Provider prices
+
+Every built-in (provider, method) has a row in `src/web_router/data/prices.json`,
+and `tests/test_prices.py` fails for one that does not (`auto`, `max` and
+`local` are exempt). A new backend adds its rows from the vendor's own pricing
+page -- `unit` `unknown` when none is published, `token_billed` when it bills by
+tokens, never a guess -- then `make prices` rewrites PRICING.md's tables to
+match.
 
 ## Adding a template provider
 
