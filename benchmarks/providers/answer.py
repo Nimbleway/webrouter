@@ -38,7 +38,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from _common import DEFAULT_OUT, Sink, combine_scans, scan_main
+from _common import ANSWER_COMBINE_KEYS, DEFAULT_OUT, Sink, combine_scans, scan_main
 from _questions import (
     MSG_CANNOT_COMBINE,
     MSG_OTHER_QUESTIONS,
@@ -57,19 +57,6 @@ from web_router.registry_answer import configured_answer_providers
 DEFAULT_CONCURRENCY = 3
 """Questions at once; every backend is asked each question together, so this many calls reach each backend."""
 OUT_PREFIX = "answer-"
-
-COMBINE_KEYS = (
-    "questions",
-    "dataset_sha256",
-    "question_column",
-    "answer_column",
-    "withheld",
-    "limit",
-    "seed",
-    "judge",
-    "baseline",
-)
-"""What two answer scans must share for their rows to sit in one table -- the search scan beside them too."""
 
 JUDGE_PROBE = ("What is 2 + 2?", "4", "4")
 """One question the judge must grade before any backend is asked, so a judge that cannot run costs no answer."""
@@ -205,7 +192,7 @@ def combine(folders: list[Path]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Rows and setup of several answer scans as one -- say, backends added later on the same questions."""
     return combine_scans(
         folders,
-        keys=COMBINE_KEYS,
+        keys=ANSWER_COMBINE_KEYS,
         identity=lambda row: (row["question"], row["target"]),
         cannot_combine=MSG_CANNOT_COMBINE,
         other_rows=MSG_OTHER_QUESTIONS,

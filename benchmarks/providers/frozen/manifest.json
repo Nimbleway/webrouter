@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "fields": [
+    "set",
+    "question_id",
+    "provider",
+    "method",
+    "mode",
+    "grade",
+    "latency_s",
+    "cost_usd",
+    "error"
+  ],
+  "sets": {
+    "sealqa-hard-254": {
+      "questions": "sealqa-hard",
+      "dataset": "SealQA Seal-Hard (vtllms/sealqa, pinned)",
+      "method": "search",
+      "limit": 254,
+      "seed": 0,
+      "max_results": 5,
+      "judge": "openai:gpt-4o",
+      "question_count": 254,
+      "answers_sha256": "b885250eac2a179e125b6971f2776222ab01a7479d2a6ecbe33b64748c714b0d",
+      "row_count": 2540,
+      "providers": [
+        "brave",
+        "exa",
+        "linkup",
+        "nimble",
+        "parallel",
+        "perplexity",
+        "tavily",
+        "webiq",
+        "you",
+        "you-mcp"
+      ],
+      "failed_rows": {
+        "brave": {
+          "default": 0
+        },
+        "exa": {
+          "default": 0
+        },
+        "linkup": {
+          "default": 0
+        },
+        "nimble": {
+          "default": 0
+        },
+        "parallel": {
+          "default": 0
+        },
+        "perplexity": {
+          "default": 0
+        },
+        "tavily": {
+          "default": 0
+        },
+        "webiq": {
+          "default": 0
+        },
+        "you": {
+          "default": 0
+        },
+        "you-mcp": {
+          "default": 254
+        }
+      },
+      "runs": [
+        {
+          "run": "sealqa-hard-254",
+          "started": "2026-10-07T12:01:00+00:00",
+          "providers": [
+            "perplexity",
+            "nimble",
+            "linkup",
+            "tavily",
+            "brave",
+            "parallel",
+            "you",
+            "webiq",
+            "exa",
+            "you-mcp"
+          ],
+          "rows": 2540
+        }
+      ],
+      "resolved": 254
+    },
+    "sealqa-hard-254-twin": {
+      "questions": "sealqa-hard",
+      "dataset": "SealQA Seal-Hard (vtllms/sealqa, pinned)",
+      "method": "search",
+      "limit": 254,
+      "seed": 0,
+      "max_results": 5,
+      "judge": "openai:gpt-4o",
+      "question_count": 254,
+      "answers_sha256": "b885250eac2a179e125b6971f2776222ab01a7479d2a6ecbe33b64748c714b0d",
+      "row_count": 508,
+      "providers": [
+        "nimble",
+        "webiq"
+      ],
+      "failed_rows": {
+        "nimble": {
+          "default": 0
+        },
+        "webiq": {
+          "default": 0
+        }
+      },
+      "runs": [
+        {
+          "run": "sealqa-hard-254-twin",
+          "started": "2026-10-07T12:11:33+00:00",
+          "providers": [
+            "webiq",
+            "nimble"
+          ],
+          "rows": 508
+        }
+      ],
+      "resolved": 254
+    },
+    "simpleqa-300-v2": {
+      "questions": "simpleqa",
+      "dataset": "SimpleQA (openai/simple-evals)",
+      "method": "search",
+      "limit": 300,
+      "seed": 0,
+      "max_results": 5,
+      "judge": "openai:gpt-4o",
+      "question_count": 300,
+      "answers_sha256": "6477e76a09f9bbfacab53597a6364d46945697fc2c8d0bb53777cba931ad3197",
+      "row_count": 3600,
+      "providers": [
+        "brave",
+        "deepseek",
+        "exa",
+        "keenable",
+        "linkup",
+        "nimble",
+        "parallel",
+        "perplexity",
+        "tavily",
+        "webiq",
+        "you",
+        "you-mcp"
+      ],
+      "failed_rows": {
+        "brave": {
+          "default": 0
+        },
+        "deepseek": {
+          "default": 48
+        },
+        "exa": {
+          "default": 0
+        },
+        "keenable": {
+          "default": 1
+        },
+        "linkup": {
+          "default": 0
+        },
+        "nimble": {
+          "default": 0
+        },
+        "parallel": {
+          "default": 0
+        },
+        "perplexity": {
+          "default": 0
+        },
+        "tavily": {
+          "default": 0
+        },
+        "webiq": {
+          "default": 0
+        },
+        "you": {
+          "default": 0
+        },
+        "you-mcp": {
+          "default": 200
+        }
+      },
+      "runs": [
+        {
+          "run": "simpleqa-300-v2",
+          "started": "2026-10-06T20:26:21+00:00",
+          "providers": [
+            "perplexity",
+            "nimble",
+            "linkup",
+            "tavily",
+            "brave",
+            "parallel",
+            "you",
+            "webiq",
+            "exa",
+            "you-mcp"
+          ],
+          "rows": 3000
+        },
+        {
+          "run": "simpleqa-300-keenable",
+          "started": "2026-10-13T11:58:09+00:00",
+          "providers": [
+            "keenable"
+          ],
+          "rows": 300
+        },
+        {
+          "run": "simpleqa-300-deepseek",
+          "started": "2026-10-19T08:13:49+00:00",
+          "providers": [
+            "deepseek"
+          ],
+          "rows": 300
+        }
+      ],
+      "resolved": 300
+    },
+    "answer-simpleqa-300": {
+      "questions": "simpleqa",
+      "dataset": "SimpleQA (openai/simple-evals)",
+      "method": "answer",
+      "limit": 300,
+      "seed": 0,
+      "max_results": null,
+      "judge": "openai:gpt-4o",
+      "question_count": 300,
+      "answers_sha256": "6477e76a09f9bbfacab53597a6364d46945697fc2c8d0bb53777cba931ad3197",
+      "row_count": 1500,
+      "providers": [
+        "exa",
+        "linkup",
+        "parallel",
+        "perplexity",
+        "you"
+      ],
+      "failed_rows": {
+        "exa": {
+          "default": 0
+        },
+        "linkup": {
+          "default": 0
+        },
+        "parallel": {
+          "default": 1
+        },
+        "perplexity": {
+          "default": 0
+        },
+        "you": {
+          "default": 1
+        }
+      },
+      "runs": [
+        {
+          "run": "answer-simpleqa-300",
+          "started": "2026-11-01T14:46:48+00:00",
+          "providers": [
+            "linkup",
+            "perplexity",
+            "you",
+            "parallel",
+            "exa"
+          ],
+          "rows": 1500
+        }
+      ],
+      "resolved": 300
+    }
+  }
+}

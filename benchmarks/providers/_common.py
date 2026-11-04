@@ -31,6 +31,35 @@ APART = {None: "best", False: "not shown apart", True: "behind"}
 """The recommended order's last column: whether this run tells a backend from the best one."""
 MSG_OUT_NOT_EMPTY = "{path} already exists; pass a new --out folder rather than mixing two runs in one."
 MSG_REPEATED_BACKEND = "{folder} has {providers} again; each backend may appear in only one of the scans combined"
+DEPTH_MARK = "@"
+MODE_MARK = ":"
+"""How a search scan names a backend in one of its modes: ``provider[:vendor-mode][@depth]``."""
+SEARCH_COMBINE_KEYS = (
+    "questions",
+    "dataset_sha256",
+    "question_column",
+    "answer_column",
+    "withheld",
+    "limit",
+    "seed",
+    "max_results",
+    "judge",
+)
+"""What two search scans must share for their rows to sit in one table: the same questions, search size and judge."""
+ANSWER_COMBINE_KEYS = (
+    "questions",
+    "dataset_sha256",
+    "question_column",
+    "answer_column",
+    "withheld",
+    "limit",
+    "seed",
+    "judge",
+    "baseline",
+)
+"""What two answer scans must share for their rows to sit in one table -- the search scan beside them too."""
+COMBINE_KEYS = {"search": SEARCH_COMBINE_KEYS, "answer": ANSWER_COMBINE_KEYS}
+"""The keys above by the method a scan called."""
 
 Rows = list[dict[str, Any]]
 """One dict per input and backend, as ``rows.jsonl`` holds them."""
@@ -66,6 +95,13 @@ def _p(value: float | None) -> str:
 
 def _s(value: float | None) -> str:
     return "n/a" if value is None else f"{value:.1f}s"
+
+
+def split_label(label: str) -> tuple[str, str, str]:
+    """``provider[:vendor-mode][@depth]`` as its three parts, each ``""`` when the label names none."""
+    spec, _, depth = label.partition(DEPTH_MARK)
+    provider, _, mode = spec.partition(MODE_MARK)
+    return provider, mode, depth
 
 
 def combine_scans(
