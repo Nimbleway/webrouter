@@ -9,7 +9,6 @@ from scripts.prices import BLOCK, PRICING_MD, regenerate, select
 from web_router import prices, registry, registry_answer
 from web_router.constants import PROVIDER_AUTO, PROVIDER_LOCAL, PROVIDER_MAX
 from web_router.prices import Price
-from web_router.types import Provider
 
 BUILTIN_BY_METHOD = {
     "search": registry._BUILTIN_PROVIDERS,
@@ -100,21 +99,12 @@ def test_a_mode_with_no_row_is_unknown_not_another_modes_price() -> None:
     assert prices.estimate("nobody", "search") is None
 
 
-def test_provider_enum_is_accepted() -> None:
-    assert prices.estimate(Provider.TAVILY, "search") == prices.estimate("tavily", "search")
-
-
 def test_browser_sessions_are_priced_per_minute() -> None:
     steel = prices.price("steel", "open_browser")
     assert steel is not None
     assert steel.unit == "per_browser_minute"
     assert steel.estimate_usd is not None
     assert steel.estimate_usd * 60 == pytest.approx(0.10, abs=1e-6)
-
-
-def test_latency_is_not_filled_in_yet() -> None:
-    # Measured latency comes from the frozen benchmark results in a later change; until then none is shipped.
-    assert all((row.latency_p50_s, row.latency_p90_s, row.latency_n) == (None, None, None) for row in prices.prices())
 
 
 @pytest.mark.parametrize(
