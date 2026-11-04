@@ -46,6 +46,8 @@ from frozen import FROZEN_DIR, SUFFIX, read_rows
 from web_router import prices
 from web_router.constants import AUTO_APPENDED, AUTO_KEYLESS, AUTO_PREFERRED
 from web_router.constants_answer import AUTO_ANSWER_PREFERRED
+from web_router.providers.auto import AutoProvider
+from web_router.providers.auto_answer import AutoAnswerProvider
 
 DEFAULT_SETS = ("sealqa-hard-254", "simpleqa-300-v2")
 DEFAULT_ROUTERS = ("always:webiq",)
@@ -61,10 +63,14 @@ ALWAYS = "always:"
 BASELINE = "baseline"
 
 STATIC_ORDER: dict[str, tuple[str, ...]] = {
-    "search": tuple(dict.fromkeys((*AUTO_PREFERRED, *AUTO_APPENDED, *(name for name, _ in AUTO_KEYLESS)))),
-    "answer": AUTO_ANSWER_PREFERRED,
+    "search": tuple(name for name, _ in AutoProvider.default_chain(frozenset((*AUTO_PREFERRED, *AUTO_APPENDED)))),
+    "answer": tuple(name for name, _ in AutoAnswerProvider.default_chain(frozenset(AUTO_ANSWER_PREFERRED))),
 }
-"""Today's ``auto`` order per method: what a router must beat."""
+"""Today's ``auto`` order per method, built as ``auto`` builds it with a key for every backend: what a router must beat.
+
+For search that is the preferred backends, then the keyless tier, then the
+backends appended since the last reordering.
+"""
 KEYLESS = frozenset(name for name, options in AUTO_KEYLESS if not options.get("allow_keyless"))
 """Backends that are only ever keyless (``you-mcp``): a ranking keeps them last, as ``auto`` does."""
 

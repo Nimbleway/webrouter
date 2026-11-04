@@ -306,3 +306,15 @@ def test_a_router_that_raises_is_counted_apart_and_its_first_error_printed_once(
     assert err.count("ValueError: model unreachable") == 1 and "broken_router:pick" in err
     report = route_eval.markdown([summary], 0.05, {})
     assert "Router failed held out" in report and "| 10 | 10 |" in report
+
+
+def test_the_static_order_is_autos_own_chain_keyless_tier_before_the_appended_backends(
+    route_eval: ModuleType,
+) -> None:
+    from web_router.constants import AUTO_APPENDED, AUTO_PREFERRED
+    from web_router.providers.auto import AutoProvider
+
+    every_key = frozenset((*AUTO_PREFERRED, *AUTO_APPENDED))
+    assert route_eval.STATIC_ORDER["search"] == tuple(n for n, _ in AutoProvider.default_chain(every_key))
+    order = route_eval.STATIC_ORDER["search"]
+    assert order.index("you-mcp") < order.index("keenable") < order.index("deepseek")
