@@ -224,7 +224,9 @@ the unit tests run it too.
 
 The committed rows carry no question or answer text, only a `question_id`:
 the questions stay with the public datasets they come from, and `join` is how
-they come back. Experimental until 1.0: the schema may change, and
+they come back. SimpleQA is from `openai/simple-evals` (MIT) and SealQA from
+`vtllms/sealqa` (Apache-2.0); the rows carry ids, grades and timings, no
+dataset text. Experimental until 1.0: the schema may change, and
 `frozen/manifest.json` names the version a file follows.
 
 | Set | Questions | Rows | What it is |
