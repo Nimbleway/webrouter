@@ -84,15 +84,16 @@ MCP_DESC_ANSWER = (
 # answer()'s `auto`: the configured answer backends, cheapest first.
 
 # Names, not the PROVIDER_* constants: constants.py imports this module.
-AUTO_ANSWER_PREFERRED: tuple[str, ...] = ("perplexity", "exa", "you", "linkup", "parallel")
+AUTO_ANSWER_PREFERRED: tuple[str, ...] = ("perplexity", "exa", "you", "linkup", "parallel", "brave")
 """The order ``auto`` tries the answer backends you hold a key for: cheapest first, at list price.
 
 Prices from ``benchmarks/providers/PRICING.md``, checked 2026-11-01: Perplexity
 states about $1.20 per 1k answers, Exa and You.com list $5 (Exa first, the
-faster of the two in the answer scan), Linkup about $6, and Parallel, last, has
-no price checked there and was the slowest. The five scored alike on accuracy
-(94-95% on 300 SimpleQA questions), so cost decides. Changing the order is its
-own decision, not a tweak.
+faster of the two in the answer scan), Linkup about $6, then Parallel, which has
+no price checked there and was the slowest. Those five scored alike on accuracy
+(94-95% on 300 SimpleQA questions), so cost decides. Brave is last: its stream
+stated $0.054 for one question on 2026-11-03, about ten times the others.
+Changing the order is its own decision, not a tweak.
 """
 
 MSG_AUTO_ANSWER_NO_MEMBER = "no configured answer backend takes this request: {skipped}"

@@ -888,7 +888,7 @@ map one raises `UnsupportedParameterError` before anything is sent -- the
 With `provider` unset, the router's default answers when it is an answer
 backend. On the usual default, `auto`, that is every answer backend you hold a
 key for (in the environment or in `provider_config`), cheapest first at list
-price: Perplexity, Exa, You.com, Linkup, then Parallel. A backend that does not
+price: Perplexity, Exa, You.com, Linkup, Parallel, then Brave. A backend that does not
 map an option you set is passed over without being called; one that fails, or
 answers with nothing, is passed over for the next, and each one tried bills.
 `provider_config={"auto": {"chain": {"answer": [...]}}}` sets the order. With no
