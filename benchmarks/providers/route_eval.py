@@ -459,9 +459,8 @@ def evaluate_set(
 
 def _usd(value: float | None, unknown: int = 0) -> str:
     if value is None:
-        return "unknown"
-    text = f"${value:.4f}"
-    return text + (f" ({unknown} unknown)" if unknown else "")
+        return f"unknown ({unknown})" if unknown else "unknown"
+    return _unknown(f"${value:.4f}", unknown)
 
 
 def _unknown(text: str, unknown: int) -> str:

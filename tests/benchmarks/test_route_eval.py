@@ -358,3 +358,9 @@ def test_backend_stats_leave_an_unrecorded_latency_out_of_the_median(route_eval:
     ]
     stats = route_eval.backend_stats(questions)["brave"]
     assert stats["latency_p50"] == 2.0 and stats["correct"] == 2
+
+
+def test_a_cost_unknown_on_every_question_still_shows_how_many(route_eval: ModuleType) -> None:
+    assert route_eval._usd(None, 127) == "unknown (127)"
+    assert route_eval._usd(0.005, 6) == "$0.0050 (6 unknown)"
+    assert route_eval._usd(None) == "unknown"
