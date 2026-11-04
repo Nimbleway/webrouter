@@ -56,7 +56,9 @@ back (`verified`, `observed`); a mode that is accepted but changes nothing
 scores the same as the default and costs a run for nothing.
 
 [`PRICING.md`](PRICING.md) lists every mode's list price with its source and
-the date it was checked, for reading accuracy against cost. No code reads it.
+the date it was checked, for reading accuracy against cost. Its tables are
+generated from `src/web_router/data/prices.json`, the list `web_router.prices`
+reads; change a price there and run `make prices`.
 
 ## Adding backends to a finished scan
 

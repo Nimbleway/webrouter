@@ -301,7 +301,8 @@ nothing; a run bills one template run on Nimble's account, at one flat rate
 for every template, whatever the site -- the rate is on
 [Nimble's pricing page](https://www.nimbleway.com/pricing), and
 [`benchmarks/providers/PRICING.md`](benchmarks/providers/PRICING.md) records
-it dated and sourced, since the library itself never states a price.
+it dated and sourced, from the price list `web_router.prices` reads (see
+[Estimated prices](#estimated-prices-experimental)).
 
 ### Answer
 
@@ -1929,6 +1930,34 @@ unannounced — and never closes it. Its credential is the one used: an
 Other options passed beside it, such as `timeout`, apply to a copy that shares
 its connection pool, and research keeps the client's own timeouts, clamping
 only the read limit to the run's budget.
+
+### Estimated prices (experimental)
+
+`web_router.prices` is the price list the library ships: the published list
+price of every (provider, method, mode) web-router calls, each with the vendor
+page it comes from and the date it was checked. It is experimental and may
+change before 1.0. The figures are estimates -- pay-as-you-go list prices, not
+your plan's or a negotiated rate, and a call can bill more than its row (content
+add-ons, tokens) -- and the router never puts one in a response.
+
+```python
+from web_router import prices
+
+prices.estimate("tavily", "search")  # 0.008: one request at the default depth
+prices.estimate("tavily", "search", "fast")  # 0.016: search_depth="fast"
+prices.estimate("linkup", "research", "max")  # 2.5: one run at effort="max"
+prices.estimate("perplexity", "research")  # None: billed by tokens
+row = prices.price("exa", "search")  # the whole row: unit, note, source_url, checked
+```
+
+`estimate()` is the cost of one request, page, run or browser-minute, and
+`None` when the vendor publishes no price (`unit="unknown"`), bills by tokens
+(`unit="token_billed"`), or the list has no row for that mode -- never another
+mode's price. A mode is web-router's own `search_depth` or `effort` value, or a
+vendor mode sent through `provider_options` written with a leading `:`
+(`":ultra-fast"`); leave it unset for a call that sets none.
+[`PRICING.md`](benchmarks/providers/PRICING.md) shows the same list as tables,
+with the notes behind each figure.
 
 ### Classifying a query before running it (spike)
 
