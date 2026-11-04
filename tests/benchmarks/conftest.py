@@ -19,7 +19,7 @@ ANSWER_SIBLINGS = ("_common", "_questions", "_report_tables", "answer_report")
 EXTRACT_SIBLINGS = ("_common", "cli", "extract_report", "urls")
 """What the extract scan imports from its folder, under plain names, so they are forgotten once it is."""
 FROZEN_SCRIPT = EXTRACT_SCRIPT.with_name("frozen.py")
-FROZEN_SIBLINGS = ("_common", "_frozen_checks")
+FROZEN_SIBLINGS = ("_common", "_frozen_checks", "_tools_effort_plan")
 """What ``frozen.py`` imports from its folder, under plain names, so they are forgotten once it is."""
 EXTRACT_SETUP = {
     "urls": "general",
@@ -120,6 +120,36 @@ def answer_scan_row(provider: str, question: str, grade: str | None, **extra: An
         "answer_type": "Date",
         **extra,
     }
+
+
+TOOLS_EFFORT_SCRIPT = EXTRACT_SCRIPT.with_name("tools_effort.py")
+TOOLS_EFFORT_SIBLINGS = (
+    "_common",
+    "_frozen_checks",
+    "_tools_effort_plan",
+    "_questions",
+    "_report_tables",
+    "answer_report",
+)
+"""What the tool and effort runner imports from its folder, under plain names, so they are forgotten once it is."""
+
+
+@pytest.fixture(scope="module")
+def tools_effort() -> Iterator[ModuleType]:
+    # Imports the plan, the checks and the cost reader as siblings, as it does when run from its folder.
+    sys.path.insert(0, str(TOOLS_EFFORT_SCRIPT.parent))
+    try:
+        spec = importlib.util.spec_from_file_location("tools_effort", TOOLS_EFFORT_SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        # Registered while it loads: its dataclasses look their module up by name.
+        sys.modules["tools_effort"] = module
+        spec.loader.exec_module(module)
+        yield module
+    finally:
+        sys.path.remove(str(TOOLS_EFFORT_SCRIPT.parent))
+        for name in ("tools_effort", *TOOLS_EFFORT_SIBLINGS):
+            sys.modules.pop(name, None)
 
 
 @pytest.fixture(scope="module")

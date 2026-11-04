@@ -51,8 +51,13 @@ def normalise_question(text: str) -> str:
     return " ".join(unicodedata.normalize("NFKC", text).split())
 
 
-def question_id(text: str) -> str:
-    """A stable id for a question: the first 16 hex characters of the SHA-256 of its normalised text."""
+def question_id(text: str, urls: Iterable[str] = ()) -> str:
+    """A stable id for a question: the first 16 hex characters of the SHA-256 of its normalised text.
+
+    A question asked with the pages to read gets its own id: its text and its
+    URLs, one space apart, are hashed together.
+    """
+    text = " ".join((text, *urls))
     return hashlib.sha256(normalise_question(text).encode("utf-8")).hexdigest()[:QUESTION_ID_CHARS]
 
 
@@ -134,9 +139,9 @@ def check_same_setup(set_name: str, scan: Scan, first: Scan, keys: Iterable[str]
 
 
 def check_no_repeats(set_name: str, rows: Iterable[Mapping[str, Any]]) -> None:
-    """``SystemExit`` when a backend has a row for one question twice."""
-    seen: set[tuple[str, str, str]] = set()
-    for key in ((row["provider"], row["mode"], row["question_id"]) for row in rows):
+    """``SystemExit`` when a backend has a row for one question twice, by the same method."""
+    seen: set[tuple[str, str, str, str]] = set()
+    for key in ((row["provider"], row["mode"], row["question_id"], row.get("method", "")) for row in rows):
         if key in seen:
             raise SystemExit(MSG_REPEATED_ROW.format(set=set_name, provider=key[0], mode=key[1], question_id=key[2]))
         seen.add(key)

@@ -205,6 +205,72 @@ mean over the answers that stated one; everything else is in
 [`PRICING.md`](PRICING.md). `--combine` merges answer scans of the same
 questions, judge and baseline.
 
+## The tool and effort set
+
+The scans above compare backends within one method. `tools_effort.py` asks
+which method, and which research effort, a question is worth: 60 questions,
+each through every path a router could pick, every row graded by the same
+judge as the published sets.
+
+| Group | Questions | Source |
+| --- | --- | --- |
+| easy | 10 | SimpleQA: the first 10 of the seed-0 sample behind `simpleqa-300-v2` |
+| hard | 20 | SealQA Seal-Hard, sampled with seed 0 |
+| synthesis | 20 | FRAMES: the first 20 of the agent benchmark's 300-question seed-2 sample |
+| url-given | 10 | 5 more of those SimpleQA questions, each given its first source URL, and 5 more FRAMES questions, given their Wikipedia links |
+
+| Path | Backends | Per question |
+| --- | --- | --- |
+| `search+extract` | Search on Nimble, Perplexity and Linkup (5 results); the top 3 pages read with Nimble extract; the judge answers from the snippets and the pages. The search is sent the question alone: a url-given question's URLs are for reading, and the `extract` path reads them | 3 rows |
+| `extract` | Nimble extract of the given pages; the judge answers from them | 1 row, url-given questions only |
+| `answer` | Perplexity, You.com, Parallel, Exa, Linkup and Brave, each backend's own answer | 6 rows; the easy questions reuse `answer-simpleqa-300`'s rows and ask only Brave |
+| `research` | Nimble `low`/`medium`/`high`, Parallel `low`/`medium`/`high`/`max`, Linkup `low`, Perplexity `low`/`medium` | 10 rows |
+
+```bash
+uv run --all-extras python benchmarks/providers/tools_effort.py --dry-run
+uv run --all-extras python benchmarks/providers/tools_effort.py --budget 125
+```
+
+`--dry-run` prints the plan -- questions per group, rows and calls per path,
+backend and mode, and the worst-case and expected cost of each -- and calls
+nothing; it needs no key and no download. The run itself downloads SimpleQA,
+SealQA and FRAMES (`--dataset NAME=PATH` reads a local copy instead) and needs
+`OPENAI_API_KEY` for the judge and each backend's key; it names any that is
+missing before it calls anything.
+
+**Budget.** `--budget` (default $125) is a hard cap on everything the run
+spends, the judge included. Before a row starts, its worst case is reserved;
+before each call, the call's worst case is drawn from that reservation, and
+topped up when the call's prompt makes it dearer. A row that would take what
+is spent plus what is reserved past the cap is refused, and the run stops
+there: rows in flight finish, and nothing else is sent. A call is charged what
+its response states, else its list price from `web_router.prices`, else a
+fallback written in the script (`UNPRICED`, `FALLBACK`) -- never $0; a call that
+fails is charged its worst case, as it may have billed. A call that bills more than its
+reserved worst case (a token-billed backend stating a dearer cost) is still
+charged what it billed, so spend can pass the cap by at most what the rows in
+flight overrun; the next row is then refused. The judge is charged
+gpt-4o's list price on the tokens OpenAI reports, its one check before a run included
+(skipped when no row is left). The running total is printed
+after every row.
+
+**Resuming.** Rows are appended to `results/tools-effort-60/rows.jsonl` as they
+finish, and every call's cost to `spend.jsonl` beside it. Run the same command
+again -- after a crash, Ctrl-C or a budget stop -- and it skips every row
+already written, failed ones included, and counts what was spent before
+against the same `--budget`; raise `--budget` to go on past a stop. A row
+whose backend answered but whose grading the budget refused is kept, ungraded,
+with error `budget`, so a resume never buys that answer twice; a row refused
+before anything was paid for is asked again. A row that raises (a bug, a file
+that cannot be written) stops new rows too, and is raised once the rows in
+flight finish.
+`run.json` names the questions by id, and a resumed run refuses a folder that
+asked other questions, used another judge or set another `--research-timeout`.
+
+A research run may take `--research-timeout` seconds (default 1200, twice
+`research()`'s default: a Linkup run can take a quarter of an hour), and
+`--concurrency` rows (default 6) run at once. Experimental until 1.0.
+
 ## Frozen results
 
 The scans route-eval and the latency priors rest on are committed, one row per
@@ -249,7 +315,7 @@ then provider and mode:
 | `grade` | `correct`, `incorrect` or `not_attempted`, from the judge; `null` when the row failed before it was graded. Count grades only from rows with `error: null` |
 | `latency_s` | Seconds around the search or `answer()` call alone, to the millisecond. On a failed row it is the time to the failure (`0.0` for a call refused before it was sent), so count latency only from rows with `error: null` |
 | `cost_usd` | The cost the backend stated in its response, `answer` rows only, where it states one; otherwise `null` |
-| `error` | `null`, or the class of what went wrong: `timeout`, `rate_limit`, `quota`, `invalid_request` (refused before sending, such as a query too long for the backend), `http_4xx`, `http_5xx`, `other`, `judge` (the judge failed, not the backend) or `leaked` (an answer citing the set's own pages, left ungraded). The message itself is never kept. The class says how that call ended in this run, not how good the backend is; route-eval skips failed rows |
+| `error` | `null`, or the class of what went wrong: `timeout`, `rate_limit`, `quota`, `invalid_request` (refused before sending, such as a query too long for the backend), `http_4xx`, `http_5xx`, `other`, `judge` (the judge failed, not the backend), `budget` (`tools-effort-60`: the backend answered, and the run's budget refused grading it) or `leaked` (an answer citing the set's own pages, left ungraded). The message itself is never kept. The class says how that call ended in this run, not how good the backend is; route-eval skips failed rows |
 
 `frozen/manifest.json` records, per set, the question set and dataset, the
 seed and sample size, the search size, the judge (`openai:gpt-4o` for all four),

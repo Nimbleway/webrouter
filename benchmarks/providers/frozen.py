@@ -11,6 +11,10 @@ back, from the public datasets the scans sampled.
     uv run --all-extras python benchmarks/providers/frozen.py verify
     uv run --all-extras python benchmarks/providers/frozen.py build path/to/results
 
+A set made by ``tools_effort.py`` is ``mixed``: its rows call several methods,
+each naming its own, and its manifest entry keeps the run's sample, where each
+question sits in the public set it came from.
+
 ``join`` checks every file against ``frozen/SHA256SUMS``, downloads SimpleQA
 and SealQA, and writes each set with its question, gold answer and labels to
 ``results/frozen-joined/`` (gitignored); it fails if any ``question_id`` does
@@ -51,6 +55,8 @@ from _frozen_checks import (
     require_resolved,
     require_same_answers,
 )
+from _tools_effort_plan import QUESTIONS as MIXED_QUESTIONS
+from _tools_effort_plan import REUSED_ANSWER_SET, expected_keys
 
 HERE = Path(__file__).resolve().parent
 FROZEN_DIR = HERE / "frozen"
@@ -84,6 +90,19 @@ A set made of several scans is one scan with backends added later, as
 requires for their method (``COMBINE_KEYS``), the same questions and the same
 gold answers; a key a scan predates reads as missing.
 """
+MIXED = "mixed"
+"""A set whose rows call several methods (``tools_effort.py``'s): each row names its own, and its run.json its sample.
+
+Such a set is added to ``FROZEN_SETS`` as ``{"questions": "tools-effort", "method": "mixed", "runs": [folder]}``,
+after the set it reuses answer rows from.
+"""
+MSG_MIXED_UNPLANNED = (
+    "{set}: {count} rows are not in the run's plan, e.g. {example}; only the planned (question, method, backend,"
+    " mode) rows are frozen"
+)
+MSG_MIXED_INCOMPLETE = (
+    "{set}: {count} planned rows are missing, e.g. {example}; was the run cut short? Run it again to finish it"
+)
 RUN_DEFAULTS = {"questions": "simpleqa"}
 """A ``run.json`` from before ``--questions`` existed asked SimpleQA."""
 
@@ -105,7 +124,9 @@ JUDGE_ERROR = "judge"
 JUDGE_STAGES = frozenset({"judge", "synthesis", "grading"})
 """``failed_at`` values that mean the judge failed, not the backend: the answer scan's and the search scan's."""
 LEAKED_ERROR = "leaked"
-ERROR_NAMES = (*(name for name, _ in ERROR_CLASSES), OTHER_ERROR, JUDGE_ERROR, LEAKED_ERROR)
+BUDGET_ERROR = "budget"
+"""A row whose backend answered but whose grading the run's budget refused (``tools_effort.py``): kept, ungraded."""
+ERROR_NAMES = (*(name for name, _ in ERROR_CLASSES), OTHER_ERROR, JUDGE_ERROR, LEAKED_ERROR, BUDGET_ERROR)
 
 MSG_SUMS_MISMATCH = "{name}: SHA-256 {actual} does not match SHA256SUMS ({expected}); the file changed or is damaged"
 MSG_SUMS_MISSING = "{name} is in {folder} but not in SHA256SUMS"
@@ -119,6 +140,8 @@ def error_class(row: Mapping[str, Any]) -> str | None:
     message = row.get("error")
     if not message:
         return None
+    if row.get("failed_at") == BUDGET_ERROR:
+        return BUDGET_ERROR
     if row.get("failed_at") in JUDGE_STAGES:
         return JUDGE_ERROR
     return next((name for name, pattern in ERROR_CLASSES if pattern.search(str(message))), OTHER_ERROR)
@@ -175,7 +198,82 @@ def manifest_entry(spec: Mapping[str, Any], first: Scan, rows: list[dict[str, An
     }
 
 
-def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def mixed_row(set_name: str, row: Mapping[str, Any]) -> dict[str, Any]:
+    """One row of a mixed run as a frozen row: it names its question id, method and mode itself."""
+    latency, cost = row.get("latency"), row.get("cost_usd")
+    return {
+        "set": set_name,
+        "question_id": row["question_id"],
+        "provider": row["provider"],
+        "method": row["path"],
+        "mode": row["mode"],
+        "grade": row.get("grade") if row.get("grade") in GRADES else None,
+        "latency_s": None if latency is None else round(float(latency), LATENCY_DIGITS),
+        "cost_usd": None if cost is None else float(cost),
+        "error": error_class(row),
+    }
+
+
+def reused_row(set_name: str, row: Mapping[str, Any]) -> dict[str, Any]:
+    """An answer row copied into a mixed set, its cost filled as the set's own: stated, else the list price."""
+    # Imported here so verify and the tests of the other sets need no price list.
+    from web_router import prices
+
+    cost = row["cost_usd"]
+    if cost is None and row["error"] is None:
+        cost = prices.estimate(row["provider"], row["method"])
+    return {**row, "set": set_name, "cost_usd": cost}
+
+
+def freeze_mixed(
+    set_name: str, results: Path, built: Mapping[str, list[dict[str, Any]]]
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """A mixed set's frozen rows and manifest entry: its run's rows, and the answer rows it reuses from ``built``.
+
+    Refuses a row twice, a row its sample does not plan, and a run that has not fetched every row it plans.
+    """
+    spec = FROZEN_SETS[set_name]
+    (run,) = spec["runs"]
+    setup, source = _read_run(results / run)
+    expected = expected_keys(setup["sample"])
+    rows = [mixed_row(set_name, r) for r in source]
+    rows += [
+        reused_row(set_name, r)
+        for r in built[REUSED_ANSWER_SET]
+        if (r["question_id"], r["method"], r["provider"], r["mode"]) in expected
+    ]
+    check_no_repeats(set_name, rows)
+    found = {(r["question_id"], r["method"], r["provider"], r["mode"]) for r in rows}
+    unplanned = sorted(found - expected)
+    if unplanned:
+        raise SystemExit(MSG_MIXED_UNPLANNED.format(set=set_name, count=len(unplanned), example=unplanned[0]))
+    missing = sorted(expected - found)
+    if missing:
+        raise SystemExit(MSG_MIXED_INCOMPLETE.format(set=set_name, count=len(missing), example=missing[0]))
+    rows.sort(key=lambda r: (r["question_id"], r["method"], r["provider"], r["mode"]))
+    entry = {
+        "questions": MIXED_QUESTIONS,
+        "dataset": setup.get("dataset"),
+        "method": MIXED,
+        "limit": len(setup["sample"]),
+        "seed": None,
+        "max_results": setup.get("max_results"),
+        "judge": setup.get("judge"),
+        "question_count": len(setup["sample"]),
+        "answers_sha256": setup["answers_sha256"],
+        "row_count": len(rows),
+        "providers": sorted({r["provider"] for r in rows}),
+        "failed_rows": failed_rows(rows),
+        "runs": [{"run": run, "started": setup.get("started"), "rows": len(source), "reused": REUSED_ANSWER_SET}],
+        "cost_usd": "stated by the response where it states one, else the list price in web_router.prices",
+        "sample": setup["sample"],
+    }
+    return rows, entry
+
+
+def freeze_set(
+    set_name: str, results: Path, built: Mapping[str, list[dict[str, Any]]] | None = None
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """A set's frozen rows, sorted, and its manifest entry, from its scan folders under ``results``.
 
     Refuses scans that asked other questions, graded on other answers or ran
@@ -183,6 +281,8 @@ def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict
     has no row for some question.
     """
     spec = FROZEN_SETS[set_name]
+    if spec["method"] == MIXED:
+        return freeze_mixed(set_name, results, built or {})
     rows: list[dict[str, Any]] = []
     runs: list[dict[str, Any]] = []
     first: Scan | None = None
@@ -256,7 +356,11 @@ def joined_row(row: Mapping[str, Any], question: Any, labels: Iterable[str]) -> 
     return {**row, "question": question.question, "gold_answer": question.answer, **{k: meta.get(k) for k in labels}}
 
 
-LABELS = {"simpleqa": ("topic", "answer_type"), "sealqa-hard": ("topic", "freshness", "search_results")}
+LABELS = {
+    "simpleqa": ("topic", "answer_type"),
+    "sealqa-hard": ("topic", "freshness", "search_results"),
+    MIXED_QUESTIONS: ("group", "source", "urls"),
+}
 """The labels ``join`` adds from each dataset: the breakdowns the scan reports used."""
 
 
@@ -269,6 +373,30 @@ def load_index(questions: str, local: Mapping[str, Path]) -> dict[str, Any]:
     return question_index(dataset.questions, questions)
 
 
+def sample_index(sample: list[Mapping[str, Any]], local: Mapping[str, Path]) -> dict[str, Any]:
+    """A mixed set's questions by id, each found at its row in the public set it came from, with its pages."""
+    from web_router.evals import Dataset, Question
+
+    full = {name: Dataset.for_set(name, path=local.get(name)) for name in sorted({e["source"] for e in sample})}
+    index: dict[str, Any] = {}
+    for entry in sample:
+        found = full[entry["source"]].questions
+        question = found[entry["index"]] if entry["index"] < len(found) else None
+        urls = entry.get("urls") or []
+        if question is None or question_id(question.question, urls) != entry["question_id"]:
+            continue  # left out, so require_resolved names it
+        labels = {"group": entry["group"], "source": entry["source"], "urls": urls}
+        index[entry["question_id"]] = Question(question=question.question, answer=question.answer, metadata=labels)
+    return index
+
+
+def set_index(entry: Mapping[str, Any], local: Mapping[str, Path]) -> dict[str, Any]:
+    """The questions a set's rows name, by id: from its public set, or a mixed set's from its sample."""
+    if entry["method"] == MIXED:
+        return sample_index(entry["sample"], local)
+    return load_index(entry["questions"], local)
+
+
 def join(folder: Path, out: Path, local: Mapping[str, Path]) -> dict[str, int]:
     """Each frozen set with its questions put back, written to ``out``; rows per set, or ``SystemExit`` on a miss."""
     verify(folder)
@@ -278,7 +406,7 @@ def join(folder: Path, out: Path, local: Mapping[str, Path]) -> dict[str, int]:
     for set_name, entry in manifest["sets"].items():
         questions = entry["questions"]
         if questions not in indexes:
-            indexes[questions] = load_index(questions, local)
+            indexes[questions] = set_index(entry, local)
         index = indexes[questions]
         rows = read_rows(folder / (set_name + SUFFIX))
         require_resolved(set_name, rows, index, questions)
@@ -303,10 +431,12 @@ def build(results: Path, folder: Path, local: Mapping[str, Path], *, check_join:
     folder.mkdir(parents=True, exist_ok=True)
     manifest: dict[str, Any] = {"schema_version": SCHEMA_VERSION, "fields": list(FIELDS), "sets": {}}
     files: dict[str, bytes] = {}
+    built: dict[str, list[dict[str, Any]]] = {}
     for set_name in FROZEN_SETS:
-        rows, entry = freeze_set(set_name, results)
+        rows, entry = freeze_set(set_name, results, built)
+        built[set_name] = rows
         if check_join:
-            index = load_index(entry["questions"], local)
+            index = set_index(entry, local)
             entry["resolved"] = require_resolved(set_name, rows, index, entry["questions"])
             require_same_answers(set_name, entry, rows, index)
         manifest["sets"][set_name] = entry
