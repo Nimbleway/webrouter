@@ -396,7 +396,8 @@ How a choice is scored:
   mean is over the questions whose cost is known, and the count unknown is
   shown.
 - **Latency** adds the failed attempts before the one that served, and the
-  router's own time. The router's own time (**overhead**) and any cost it
+  router's own time. A question where any attempt's latency is unrecorded is
+  left out of the mean and counted as unknown, as cost is. The router's own time (**overhead**) and any cost it
   states are charged on every question, so a slow or paid router does not look
   free.
 - **Regret** is the oracle's accuracy, or the static order's, minus the

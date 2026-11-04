@@ -104,7 +104,8 @@ class Outcome:
 
     correct: bool
     served_by: str | None
-    latency_s: float
+    latency_s: float | None
+    """``None`` when any attempt's latency is unknown: the total is then unknown too."""
     cost_usd: float | None
     fallback: bool
     """The router's first choice did not serve: it failed, returned nothing usable, or its backend's row failed."""
@@ -333,11 +334,11 @@ def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
     if not ranked or any(p not in q.rows for p in ranked):
         router_failed = True
         ranked = fallback_order(q)
-    latency = overhead
+    latency: float | None = overhead
     total: float | None = cost
     for i, provider in enumerate(ranked):
         row = q.rows[provider]
-        latency += row["latency_s"] or 0.0
+        latency = None if latency is None or row["latency_s"] is None else latency + row["latency_s"]
         if row["error"] is None:
             price = cost_of(row)
             total = None if price is None else cost + price
@@ -352,7 +353,7 @@ def score(outcomes: Sequence[Outcome]) -> dict[str, Any]:
     n = len(outcomes)
     correct = sum(o.correct for o in outcomes)
     known = [o.cost_usd for o in outcomes if o.cost_usd is not None]
-    latencies = [o.latency_s for o in outcomes]
+    latencies = [o.latency_s for o in outcomes if o.latency_s is not None]
     return {
         "questions": n,
         "correct": correct,
@@ -362,6 +363,7 @@ def score(outcomes: Sequence[Outcome]) -> dict[str, Any]:
         "cost_unknown": n - len(known),
         "mean_latency_s": statistics.fmean(latencies) if latencies else None,
         "latency_p95_s": _pct(latencies, 0.95),
+        "latency_unknown": n - len(latencies),
         "fallbacks": sum(o.fallback for o in outcomes),
         "router_failed": sum(o.router_failed for o in outcomes),
         "unserved": sum(o.served_by is None for o in outcomes),
@@ -453,6 +455,10 @@ def _usd(value: float | None, unknown: int = 0) -> str:
     return text + (f" ({unknown} unknown)" if unknown else "")
 
 
+def _unknown(text: str, unknown: int) -> str:
+    return text + (f" ({unknown} unknown)" if unknown else "")
+
+
 def _ms(value: float | None) -> str:
     return "n/a" if value is None else f"{value * 1000:.2f} ms"
 
@@ -473,7 +479,8 @@ def markdown(summaries: Sequence[dict[str, Any]], floor: float, pairs: Mapping[s
         "Accuracy is correct out of every question, a question no backend served counting as a miss. Regret is "
         "in accuracy points (positive: behind). Cost is the backend's stated cost, else its list price from "
         "`web_router.prices` (an estimate); the mean is over the questions whose cost is known, and the count "
-        "unknown is shown. Latency adds every failed attempt before the one that served, and the router's own time.\n"
+        "unknown is shown. Latency adds every failed attempt before the one that served, and the router's own time; "
+        "a question with any attempt's latency unrecorded is left out of the mean and counted unknown.\n"
     )
     for s in summaries:
         out.append(
@@ -500,7 +507,8 @@ def markdown(summaries: Sequence[dict[str, Any]], floor: float, pairs: Mapping[s
                 f"| {_p(ci[0]) + '-' + _p(ci[1]) if ci else 'n/a'} "
                 f"| {_pts(i['regret_oracle'])} / {_pts(h['regret_oracle'])} "
                 f"| {_pts(i['regret_static'])} / {_pts(h['regret_static'])} "
-                f"| {_usd(h['mean_cost_usd'], h['cost_unknown'])} | {_s(h['mean_latency_s'])} "
+                f"| {_usd(h['mean_cost_usd'], h['cost_unknown'])} "
+                f"| {_unknown(_s(h['mean_latency_s']), h['latency_unknown'])} "
                 f"| {h['fallbacks']} | {h['router_failed']} | {_ms(h['mean_overhead_s'])} | {r['verdict']} |"
             )
         out.append("")

@@ -330,3 +330,12 @@ def test_one_unknown_id_in_a_ranking_is_a_router_failure_not_silently_dropped(ro
     outcome = route_eval.replay(lambda _: ["tavily", "made-up"], q, route_eval.static_router("search"))
     assert outcome.router_failed and outcome.fallback
     assert outcome.served_by == "perplexity", "the whole ranking is set aside for the static order"
+
+
+def test_an_unrecorded_latency_is_unknown_not_zero(route_eval: ModuleType) -> None:
+    q = _question(route_eval, _row("brave", "correct", latency=None))
+    outcome = route_eval.replay(lambda _: ["brave"], q, route_eval.static_router("search"))
+    assert outcome.latency_s is None
+    known = route_eval.Outcome(True, "a", 2.0, 0.01, False, False, 0.0)
+    s = route_eval.score([outcome, known])
+    assert s["mean_latency_s"] == 2.0 and s["latency_unknown"] == 1
