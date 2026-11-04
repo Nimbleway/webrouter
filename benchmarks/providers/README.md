@@ -383,8 +383,9 @@ How a choice is scored:
 - The router's ranking is walked as `auto` walks its chain. The first backend
   whose row did not fail serves the question. A failed row (`error` not null)
   is passed over: its time to failure is charged, its cost is not, and the
-  question counts as a **fallback** -- as it does when the router raises or
-  names no candidate, which falls back to the static order. Those router
+  question counts as a **fallback** -- as it does when the router raises,
+  ranks nothing, or names any backend that is not a candidate, which falls
+  back to the static order. Those router
   failures also have their own column, and the first exception each router
   raises on a set is printed to stderr. A question no backend served is a
   miss.

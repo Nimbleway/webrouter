@@ -313,8 +313,8 @@ def _decision(decision: Any) -> tuple[list[str], float]:
 def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
     """One question through a router, walked as ``auto`` walks its chain.
 
-    A router that raises or names no candidate falls back to the static order
-    and counts as failed. A failed row is passed over -- its time to failure
+    A router that raises, ranks nothing, or names any backend that is not a
+    candidate falls back to the static order and counts as failed. A failed row is passed over -- its time to failure
     charged, its cost not, since a failed call is not billed by most backends --
     and the next one tried; the first choice not serving is a fallback. A
     question nobody served is a miss. The router's own time and stated cost
@@ -329,8 +329,8 @@ def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
         ranked, cost, router_failed = [], 0.0, True
         error = f"{type(exc).__name__}: {exc}"
     overhead = time.perf_counter() - started
-    ranked = [p for p in dict.fromkeys(ranked) if p in q.rows]
-    if not ranked:
+    ranked = list(dict.fromkeys(ranked))
+    if not ranked or any(p not in q.rows for p in ranked):
         router_failed = True
         ranked = fallback_order(q)
     latency = overhead

@@ -323,3 +323,10 @@ def test_the_static_order_is_autos_own_chain_keyless_tier_before_the_appended_ba
 def test_the_oracle_sorts_an_unknown_latency_last_rather_than_failing(route_eval: ModuleType) -> None:
     q = _question(route_eval, _row("brave", "correct", latency=None), _row("perplexity", "correct", latency=2.0))
     assert route_eval.oracle_router("search")(q)[:2] == ["perplexity", "brave"], "same price; the known time first"
+
+
+def test_one_unknown_id_in_a_ranking_is_a_router_failure_not_silently_dropped(route_eval: ModuleType) -> None:
+    q = _question(route_eval, _row("tavily", "correct"), _row("perplexity", "incorrect"))
+    outcome = route_eval.replay(lambda _: ["tavily", "made-up"], q, route_eval.static_router("search"))
+    assert outcome.router_failed and outcome.fallback
+    assert outcome.served_by == "perplexity", "the whole ranking is set aside for the static order"
