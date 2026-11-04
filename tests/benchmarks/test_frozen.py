@@ -176,11 +176,15 @@ def test_scans_of_other_questions_or_another_judge_are_not_one_set(
     _scan(tmp_path / "a", ["tavily"], ["q1", "q2"])
     _scan(tmp_path / "b", ["exa"], ["q1", "q3"])
     _scan(tmp_path / "c", ["exa"], ["q1", "q2"], judge="another")
+    _scan(tmp_path / "d", ["exa"], ["q1", "q2"], withheld=["other-site.example"])
     _one_set(frozen, monkeypatch, ["a", "b"])
     with pytest.raises(SystemExit, match="asked different questions"):
         frozen.freeze_set("tiny", tmp_path)
     _one_set(frozen, monkeypatch, ["a", "c"])
     with pytest.raises(SystemExit, match="differs on judge"):
+        frozen.freeze_set("tiny", tmp_path)
+    _one_set(frozen, monkeypatch, ["a", "d"])
+    with pytest.raises(SystemExit, match="differs on withheld"):
         frozen.freeze_set("tiny", tmp_path)
 
 
@@ -265,3 +269,12 @@ def test_build_refuses_a_dataset_whose_answers_changed_under_the_scans(
     monkeypatch.setattr(frozen, "load_index", lambda questions, local: frozen.question_index(changed, questions))
     with pytest.raises(SystemExit, match="changed upstream"):
         frozen.build(tmp_path / "results", tmp_path / "frozen", {})
+
+
+def test_a_scan_row_with_no_gold_answer_is_named_as_the_fault(
+    frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _scan(tmp_path / "a", ["tavily"], ["q1", "q2"], gold="")
+    _one_set(frozen, monkeypatch, ["a"])
+    with pytest.raises(SystemExit, match="no gold answer"):
+        frozen.freeze_set("tiny", tmp_path)

@@ -70,7 +70,17 @@ A set made of several scans is one scan with backends added later, as
 ``run.py --combine`` merges them: the scans must have asked the same questions
 with the same seed, search size and judge.
 """
-SHARED_KEYS = ("questions", "limit", "seed", "max_results", "judge")
+SHARED_KEYS = (
+    "questions",
+    "dataset_sha256",
+    "question_column",
+    "answer_column",
+    "withheld",
+    "limit",
+    "seed",
+    "max_results",
+    "judge",
+)
 """What the scans of one set must share, as ``run.py --combine`` requires; a key a scan predates reads as missing."""
 RUN_DEFAULTS = {"questions": "simpleqa"}
 """A ``run.json`` from before ``--questions`` existed asked SimpleQA."""
@@ -107,6 +117,7 @@ MSG_OTHER_ANSWERS = (
     "{set}: {run} has another gold answer for question {question_id} than {first};"
     " only scans graded on the same answers combine"
 )
+MSG_NO_GOLD = "{set}: {run} has a row with no gold answer (`target`) for question {question_id}; the scan is damaged"
 MSG_MISSING_ROWS = (
     "{set}: {provider} ({mode}) has no row for {count} of {total} questions, e.g. {question_id};"
     " was the scan cut short?"
@@ -183,7 +194,10 @@ def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict
     first: tuple[str, dict[str, Any], set[str]] | None = None
     for run in spec["runs"]:
         setup, source = _read_run(results / run)
-        golds = {question_id(str(r["question"])): str(r.get("target", "")) for r in source}
+        golds = {question_id(str(r["question"])): r.get("target") for r in source}
+        blank = sorted(qid for qid, gold in golds.items() if gold in (None, ""))
+        if blank:
+            raise SystemExit(MSG_NO_GOLD.format(set=set_name, run=run, question_id=blank[0]))
         ids = set(golds)
         if first is None:
             first = (run, setup, ids)
