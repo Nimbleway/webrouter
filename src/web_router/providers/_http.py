@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import abc
 import contextlib
+import math
 from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any, ClassVar, Generic, Literal, TypeVar
@@ -60,7 +61,14 @@ from web_router.constants import (
     RESEARCH_HTTP_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError, ProviderError
-from web_router.providers._utils import compact, error_detail, job_budget, research_budget, resolve_api_key
+from web_router.providers._utils import (
+    compact,
+    current_deadline,
+    error_detail,
+    job_budget,
+    research_budget,
+    resolve_api_key,
+)
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     BrowseProvider,
@@ -159,6 +167,16 @@ class _HttpProvider(_BaseProvider):
         self._sync: httpx.Client | None = None
         self._async: httpx.AsyncClient | None = None
 
+    def _clamped(self) -> dict[str, Any]:
+        """A one-call request's timeout under a deadline: the client's own, clamped to the time left.
+
+        Empty with no deadline in force, so the client's timeout applies as it
+        always has. A job's requests clamp their own longer default instead.
+        """
+        if current_deadline() is None:
+            return {}
+        return {"timeout": clamp_timeout(self._client_kwargs["timeout"])}
+
     def _resolve_key(self, api_key: str | None) -> str | None:
         if not self.env_api_key:
             return None
@@ -244,13 +262,13 @@ class _HttpOneCallProvider(_HttpProvider, Generic[_RequestT, _ResponseT]):
 
     def _call(self, request: _RequestT) -> _ResponseT:
         path = getattr(self, self.path_attribute)
-        return self._to_response(
-            request, self._payload(self._client.request(self.http_method, path, **self._call_kwargs(request)))
-        )
+        kwargs = {**self._call_kwargs(request), **self._clamped()}
+        return self._to_response(request, self._payload(self._client.request(self.http_method, path, **kwargs)))
 
     async def _acall(self, request: _RequestT) -> _ResponseT:
         path = getattr(self, self.path_attribute)
-        response = await self._async_client.request(self.http_method, path, **self._call_kwargs(request))
+        kwargs = {**self._call_kwargs(request), **self._clamped()}
+        response = await self._async_client.request(self.http_method, path, **kwargs)
         return self._to_response(request, self._payload(response))
 
     def _call_kwargs(self, request: _RequestT) -> dict[str, Any]:
@@ -303,13 +321,13 @@ class HttpExtractProvider(_HttpProvider, ExtractProvider):
     # -- The HTTP plumbing ---------------------------------------------------
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        response = self._client.request(self.http_method, self.extract_path, **self._call_kwargs(request, urls))
+        kwargs = {**self._call_kwargs(request, urls), **self._clamped()}
+        response = self._client.request(self.http_method, self.extract_path, **kwargs)
         return self._to_response(request, urls, self._payload(response))
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        response = await self._async_client.request(
-            self.http_method, self.extract_path, **self._call_kwargs(request, urls)
-        )
+        kwargs = {**self._call_kwargs(request, urls), **self._clamped()}
+        response = await self._async_client.request(self.http_method, self.extract_path, **kwargs)
         return self._to_response(request, urls, self._payload(response))
 
     def _call_kwargs(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
@@ -472,6 +490,27 @@ class HttpBrowseProvider(_HttpProvider, BrowseProvider):
     def _budget(self) -> float:
         """This request's timeout: the caller's remaining wait, when there is one, never more than the client's."""
         return job_budget(self._browse_timeout)
+
+
+def clamp_timeout(configured: float | httpx.Timeout | None) -> float | httpx.Timeout:
+    """``configured`` with every limit clamped to the time the deadline in force leaves; never raised.
+
+    For a transport whose timeout is its own -- an ``httpx`` client's, an
+    SDK's -- rather than a job's: a part left unlimited is limited to the time
+    left. Only meaningful under a deadline, where every part comes back finite.
+    """
+    if isinstance(configured, httpx.Timeout):
+        return httpx.Timeout(
+            connect=_clamp(configured.connect),
+            read=_clamp(configured.read),
+            write=_clamp(configured.write),
+            pool=_clamp(configured.pool),
+        )
+    return _clamp(configured)
+
+
+def _clamp(limit: float | None) -> float:
+    return job_budget(math.inf if limit is None else limit)
 
 
 ReleaseMethod = Literal["POST", "PUT", "DELETE"]

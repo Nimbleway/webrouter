@@ -14,6 +14,7 @@ handle failures uniformly regardless of which backend served the request:
     ├── ResearchTimeoutError        a research run outlasted the time allowed for it
     ├── BrowseTimeoutError          a browse task outlasted the time allowed for it
     ├── BenchmarkTimeoutError       one benchmark row outlasted the comparison's timeout
+    ├── DeadlineExceededError       a call outlasted its per-call deadline
     ├── ProviderError               the backend itself failed
     └── BrowserActionError          a page action on an open browser session failed
         ├── StaleElementError           a snapshot ref no longer names an element
@@ -34,6 +35,8 @@ from web_router.constants import (
     MSG_BENCHMARK_TIMEOUT,
     MSG_BROWSE_TIMEOUT,
     MSG_BROWSER_ACTION_FAILED,
+    MSG_DEADLINE_EXCEEDED,
+    MSG_DEADLINE_TRIED,
     MSG_MISSING_PARAMETERS,
     MSG_MISSING_PARAMETERS_ADVICE,
     MSG_MISSING_SETTING,
@@ -257,6 +260,29 @@ class BenchmarkTimeoutError(WebRouterError):
         self.provider = provider
         self.timeout = timeout
         super().__init__(MSG_BENCHMARK_TIMEOUT.format(provider=provider, timeout=timeout))
+
+
+class DeadlineExceededError(WebRouterError):
+    """A call had not answered by the deadline set for it.
+
+    Experimental, as every public name is before 1.0. Raised by a search, an
+    extract that brought nothing back in time, a template run or an answer
+    whose per-call deadline ran out -- see
+    :func:`web_router.providers._utils.call_deadline`. Research and browse keep
+    their own timeout errors, which carry the job id to resume.
+
+    Not a :class:`ProviderError`, for the reason :class:`BenchmarkTimeoutError`
+    is not: it is the budget speaking, not the backend failing, so ``auto``
+    does not take it as a reason to try the next member -- there is no time
+    left to try one in. The backend's own timeout, when there was one, is on
+    ``__cause__``.
+    """
+
+    def __init__(self, provider: str, seconds: float, *, tried: str | None = None) -> None:
+        self.provider = provider
+        self.seconds = seconds
+        message = MSG_DEADLINE_EXCEEDED.format(provider=provider, seconds=seconds)
+        super().__init__(message + (MSG_DEADLINE_TRIED.format(failures=tried) if tried else ""))
 
 
 class ProviderError(WebRouterError):

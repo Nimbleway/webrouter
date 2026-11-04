@@ -461,6 +461,15 @@ TAVILY_EXTRACT_FORMATS: dict[ExtractFormat, str] = {
 TAVILY_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
 
 TAVILY_EXTRACT_RESULT_FIELD = "raw_content"
+
+TAVILY_SDK_SEARCH_TIMEOUT = 60.0
+TAVILY_SDK_EXTRACT_TIMEOUT = 30.0
+"""The ``timeout`` tavily-python's ``search`` and ``extract`` default to, in seconds.
+
+Sent only under a per-call deadline, clamped to the time left, when the
+provider was given no ``timeout`` of its own; otherwise nothing is sent and
+the SDK keeps its default.
+"""
 """Where Tavily puts the page body, whichever format it was asked for."""
 
 # --- You.com MCP, the keyless route -----------------------------------------
@@ -2932,6 +2941,11 @@ MSG_REDIRECTS_WITH_CREDENTIAL = (
     "to another host would hand that host your API key. Point base_url at the host you mean to "
     "call instead."
 )
+
+MSG_DEADLINE_EXCEEDED = "Provider {provider!r} had not answered within the call's {seconds:g}s deadline."
+
+MSG_DEADLINE_TRIED = " Before it ran out: {failures}."
+"""Follows :data:`MSG_DEADLINE_EXCEEDED` when an ``auto`` chain or an extract tried something first."""
 
 MSG_BENCHMARK_TIMEOUT = (
     "Provider {provider!r} had not answered the comparison's call after {timeout:g}s. The comparison "

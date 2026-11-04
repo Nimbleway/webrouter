@@ -26,9 +26,11 @@ from web_router.constants import (
     TAVILY_EXTRACT_RESULT_FIELD,
     TAVILY_PARAM_NAMES,
     TAVILY_PARAMS_BY_DEPTH,
+    TAVILY_SDK_EXTRACT_TIMEOUT,
+    TAVILY_SDK_SEARCH_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.providers._utils import best_text, build_payload, compact, resolve_api_key
+from web_router.providers._utils import best_text, build_payload, compact, current_deadline, job_budget, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,
@@ -54,6 +56,17 @@ def _resolve_key(api_key: str | None, *, allow_keyless: bool, provider: str) -> 
         return resolve_api_key(api_key, env_var=ENV_TAVILY_API_KEY, provider=provider)
     except ConfigurationError:
         return None
+
+
+def _timeout(configured: float | None, sdk_default: float) -> float | None:
+    """The per-call ``timeout`` to send: the provider's own, clamped to the time a deadline in force leaves.
+
+    Tavily takes its timeout per call, so this is where a deadline reaches it.
+    With none in force it is the provider's own, ``None`` leaving the SDK's.
+    """
+    if current_deadline() is None:
+        return configured
+    return job_budget(configured if configured is not None else sdk_default)
 
 
 class TavilyProvider(SearchProvider):
@@ -114,7 +127,7 @@ class TavilyProvider(SearchProvider):
             request,
             TAVILY_PARAM_NAMES,
             query=request.query,
-            timeout=self._timeout,
+            timeout=_timeout(self._timeout, TAVILY_SDK_SEARCH_TIMEOUT),
             **(depth or {}),
         )
 
@@ -205,7 +218,7 @@ class TavilyExtractProvider(ExtractProvider):
             request,
             urls=urls,
             format=TAVILY_EXTRACT_FORMATS[self.format_of(request)],
-            timeout=self._timeout,
+            timeout=_timeout(self._timeout, TAVILY_SDK_EXTRACT_TIMEOUT),
         )
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:

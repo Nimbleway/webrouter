@@ -50,6 +50,7 @@ from web_router.constants import (
     JOB_TIMEOUT,
     JOB_TIMEOUT_ERROR_SUFFIXES,
     MAX_CONCURRENT_EXTRACTS,
+    MIN_JOB_BUDGET,
     MSG_BROWSE_FAILED,
     MSG_BROWSE_NOT_RESUMABLE,
     MSG_BROWSER_CO_REQUIRED,
@@ -80,6 +81,7 @@ from web_router.constants import (
 )
 from web_router.exceptions import (
     BrowseTimeoutError,
+    DeadlineExceededError,
     MissingParameterError,
     ProviderError,
     ResearchTimeoutError,
@@ -89,7 +91,7 @@ from web_router.exceptions import (
     describe,
 )
 from web_router.providers._page import AsyncPage, SyncPage
-from web_router.providers._utils import job_deadline
+from web_router.providers._utils import Deadline, current_deadline, job_deadline
 from web_router.types import (
     BrowseProgress,
     BrowseRequest,
@@ -175,6 +177,70 @@ class _BaseProvider(abc.ABC):
         except Exception as exc:
             raise ProviderError(self.name, message.format(error=describe(exc), **fields), original=exc) from exc
 
+    def _bounded(self, call: Callable[[], _ResultT], message: str, **fields: Any) -> _ResultT:
+        """:meth:`_wrapped` under the deadline in force: not started once it has passed, and a timeout at it named so.
+
+        A call that answers in one request -- a search, a template run, an
+        answer -- goes through here. Its transport clamps each request to the
+        time left (see :func:`~web_router.providers._utils.job_budget`), so
+        a request that stalls fails as the deadline arrives, and that failure
+        is raised as :class:`DeadlineExceededError` rather than as the
+        backend's own read timeout.
+        """
+        deadline = current_deadline()
+        if deadline is None:
+            return self._wrapped(call, message, **fields)
+        self._refuse_late(deadline)
+        try:
+            return self._wrapped(call, message, **fields)
+        except ProviderError as exc:
+            late = self._late(deadline, exc)
+            if late is None:
+                raise
+            raise late from exc
+
+    async def _abounded(self, call: Callable[[], Awaitable[_ResultT]], message: str, **fields: Any) -> _ResultT:
+        """Async counterpart of :meth:`_bounded`, which also cancels the call at the deadline.
+
+        Takes a callable rather than an awaitable, so a call refused before it
+        starts never creates a coroutine nobody awaits.
+        """
+        deadline = current_deadline()
+        if deadline is None:
+            return await self._awrapped(call(), message, **fields)
+        self._refuse_late(deadline)
+        try:
+            return await _within(deadline, self._awrapped(call(), message, **fields))
+        except _DeadlineReached as exc:
+            raise DeadlineExceededError(self.name, deadline.seconds) from exc.__cause__
+        except ProviderError as exc:
+            late = self._late(deadline, exc)
+            if late is None:
+                raise
+            raise late from exc
+
+    def _refuse_late(self, deadline: Deadline) -> None:
+        """Raise :class:`DeadlineExceededError` for a call about to start after its deadline."""
+        if deadline.left() <= 0:
+            raise DeadlineExceededError(self.name, deadline.seconds)
+
+    def _late(self, deadline: Deadline | None, exc: BaseException) -> DeadlineExceededError | None:
+        """The deadline error ``exc`` amounts to, or ``None`` when it is the backend's own failure.
+
+        A request that timed out with no more than
+        :data:`~web_router.constants.MIN_JOB_BUDGET` left was cut off by the
+        clamp, not by the backend's own timeout: that is the deadline, and
+        saying so is the difference between "try another backend" and "there
+        is no time to".
+        """
+        if deadline is None or deadline.left() > MIN_JOB_BUDGET:
+            return None
+        if not (_is_timeout(exc) if isinstance(exc, ProviderError) else _timed_out(exc)):
+            return None
+        late = DeadlineExceededError(self.name, deadline.seconds)
+        late.__cause__ = exc
+        return late
+
     def _reject_unmapped(self, request: NormalizedRequest) -> None:
         unmapped = request.specified_parameters() - self.supported_parameters
         if unmapped:
@@ -214,12 +280,12 @@ class SearchProvider(_BaseProvider):
     def search(self, request: SearchRequest) -> SearchResponse:
         """Validate the request, run it, and wrap any backend failure."""
         self.validate(request)
-        return self._wrapped(lambda: self._search(request), MSG_SEARCH_FAILED)
+        return self._bounded(lambda: self._search(request), MSG_SEARCH_FAILED)
 
     async def asearch(self, request: SearchRequest) -> SearchResponse:
         """Async counterpart of :meth:`search`."""
         self.validate(request)
-        return await self._awrapped(self._asearch(request), MSG_SEARCH_FAILED)
+        return await self._abounded(lambda: self._asearch(request), MSG_SEARCH_FAILED)
 
     def validate(self, request: SearchRequest) -> None:
         """Raise :class:`UnsupportedParameterError` for any option this backend does not map."""
@@ -285,6 +351,7 @@ class ExtractProvider(_BaseProvider):
     def extract(self, request: ExtractRequest) -> ExtractResponse:
         """Validate the request, fetch every URL, and wrap any backend failure."""
         self.validate(request)
+        deadline = current_deadline()
         collected = _Collected(self.name, request.urls)
         next_start = 0.0
         for urls in self._batches(request.urls):
@@ -292,13 +359,17 @@ class ExtractProvider(_BaseProvider):
                 time.sleep(max(0.0, next_start - time.monotonic()))
                 next_start = time.monotonic() + self.min_start_interval
             try:
+                if deadline is not None:
+                    self._refuse_late(deadline)
                 collected.add(urls, self._extract(request, urls))
-            except ProviderError as exc:
+            except DeadlineExceededError as exc:
                 collected.fail(urls, exc)
+            except ProviderError as exc:
+                collected.fail(urls, self._late(deadline, exc) or exc)
             except WebRouterError:
                 raise
             except Exception as exc:
-                collected.fail(urls, self._failure(exc))
+                collected.fail(urls, self._late(deadline, exc) or self._failure(exc))
         return collected.resolved()
 
     async def aextract(self, request: ExtractRequest) -> ExtractResponse:
@@ -306,9 +377,12 @@ class ExtractProvider(_BaseProvider):
 
         The calls run concurrently, up to
         :data:`~web_router.constants.MAX_CONCURRENT_EXTRACTS` at a time, their
-        starts at least :attr:`min_start_interval` apart.
+        starts at least :attr:`min_start_interval` apart. Under a deadline each
+        call is cancelled when it arrives, and its URLs reported as failures
+        beside the documents that came back in time.
         """
         self.validate(request)
+        deadline = current_deadline()
         batches = self._batches(request.urls)
         limit = asyncio.Semaphore(MAX_CONCURRENT_EXTRACTS)
         spacing = asyncio.Lock()
@@ -321,7 +395,9 @@ class ExtractProvider(_BaseProvider):
                     async with spacing:
                         await asyncio.sleep(max(0.0, next_start - time.monotonic()))
                         next_start = time.monotonic() + self.min_start_interval
-                return await self._aextract(request, urls)
+                if deadline is None:
+                    return await self._aextract(request, urls)
+                return await self._aextract_within(deadline, request, urls)
 
         outcomes = await asyncio.gather(*(_one(urls) for urls in batches), return_exceptions=True)
 
@@ -329,13 +405,36 @@ class ExtractProvider(_BaseProvider):
         for urls, outcome in zip(batches, outcomes, strict=True):
             if isinstance(outcome, ExtractResponse):
                 collected.add(urls, outcome)
-            elif isinstance(outcome, ProviderError):
+            elif isinstance(outcome, (ProviderError, DeadlineExceededError)):
                 collected.fail(urls, outcome)
             elif isinstance(outcome, WebRouterError) or not isinstance(outcome, Exception):
                 raise outcome
             else:
                 collected.fail(urls, self._failure(outcome))
         return collected.resolved()
+
+    async def _aextract_within(self, deadline: Deadline, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+        """One call of :meth:`aextract`, cancelled at ``deadline``; a timeout at it raised as the deadline's.
+
+        Told apart here, as the call fails, not once every call has: by then
+        the deadline has passed for all of them, and a backend that refused
+        early would read as one the deadline cut off.
+        """
+        self._refuse_late(deadline)
+        try:
+            return await _within(deadline, self._aextract(request, urls))
+        except _DeadlineReached as exc:
+            raise DeadlineExceededError(self.name, deadline.seconds) from exc.__cause__
+        except DeadlineExceededError:
+            raise
+        except WebRouterError as exc:
+            if isinstance(exc, ProviderError) and (late := self._late(deadline, exc)):
+                raise late from exc
+            raise
+        except Exception as exc:
+            if late := self._late(deadline, exc):
+                raise late from exc
+            raise
 
     def validate(self, request: ExtractRequest) -> None:
         """Raise for any option this backend does not map, or format it cannot return."""
@@ -383,7 +482,7 @@ class _Collected:
         self.failures: list[ExtractFailure] = []
         self.payloads: list[dict[str, Any]] = []
         self.request_id: str | None = None
-        self.errors: list[tuple[list[str], ProviderError]] = []
+        self.errors: list[tuple[list[str], ProviderError | DeadlineExceededError]] = []
 
     def add(self, urls: list[str], response: ExtractResponse) -> None:
         self.served_by = self.served_by or response.provider
@@ -411,7 +510,7 @@ class _Collected:
             ExtractFailure(url=url, error=MSG_EXTRACT_NO_DOCUMENT) for url in urls if url not in mentioned
         )
 
-    def fail(self, urls: list[str], error: ProviderError) -> None:
+    def fail(self, urls: list[str], error: ProviderError | DeadlineExceededError) -> None:
         """Record a call that raised as a failure against each URL it carried."""
         self.errors.append((urls, error))
         self.failures.extend(ExtractFailure(url=url, error=str(error)) for url in urls)
@@ -445,12 +544,13 @@ class _Collected:
             return self.documents
         return sorted(self.documents, key=lambda document: position[document.url])
 
-    def _exhausted(self) -> ProviderError:
+    def _exhausted(self) -> ProviderError | DeadlineExceededError:
         """Say why nothing came back.
 
         When everything that failed came from a single call, that call's own
         error is raised untouched -- so extracting one URL through a backend
-        with a bad credential reports the 401, not a summary of one.
+        with a bad credential reports the 401, not a summary of one. When
+        every call ran out of time, the deadline is what is raised.
         """
         if len(self.errors) == 1:
             urls, error = self.errors[0]
@@ -459,7 +559,10 @@ class _Collected:
 
         failures = self.failures or [ExtractFailure(url=url, error=MSG_EXTRACT_NO_DOCUMENT) for url in self.requested]
         detail = "; ".join(f"{failure.url}: {failure.error}" for failure in failures)
-        original = self.errors[0][1].original if self.errors else None
+        late = [error for _, error in self.errors if isinstance(error, DeadlineExceededError)]
+        if late and len(late) == len(self.errors):
+            return DeadlineExceededError(self.provider, late[0].seconds)
+        original = next((error.original for _, error in self.errors if isinstance(error, ProviderError)), None)
         return ProviderError(self.provider, MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail), original=original)
 
 
@@ -520,12 +623,12 @@ class TemplateProvider(_BaseProvider):
     def run(self, request: TemplateRequest) -> TemplateResponse:
         """Validate the request, run the template, and wrap any backend failure."""
         self.validate(request)
-        return self._wrapped(lambda: self._run(request), MSG_TEMPLATE_FAILED)
+        return self._bounded(lambda: self._run(request), MSG_TEMPLATE_FAILED)
 
     async def arun(self, request: TemplateRequest) -> TemplateResponse:
         """Async counterpart of :meth:`run`."""
         self.validate(request)
-        return await self._awrapped(self._arun(request), MSG_TEMPLATE_FAILED)
+        return await self._abounded(lambda: self._arun(request), MSG_TEMPLATE_FAILED)
 
     def templates(self, *, limit: int | None = None, offset: int | None = None) -> TemplatePage:
         """List one page of this backend's templates, wrapping any backend failure.
@@ -761,12 +864,14 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
             # The budget starts here, not inside result(): a backend that does
             # the whole run inside the call that starts it would otherwise spend
             # its own HTTP timeout before the caller's had begun.
+            deadline, timeout = _binding(deadline, timeout)
             return self.submit(request)._wait_until(deadline, timeout)
 
     async def _arun(self, request: _RequestT, timeout: float | None) -> _ResponseT:
         """Async counterpart of :meth:`_run`."""
         deadline = _deadline_for(timeout)
         with job_deadline(deadline):
+            deadline, timeout = _binding(deadline, timeout)
             job = await self.asubmit(request)
             return await job._await_until(deadline, timeout)
 
@@ -869,6 +974,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         wait = self._timeout(timeout)
         deadline = _deadline_for(wait)
         with job_deadline(deadline):
+            deadline, wait = _binding(deadline, wait)
             return self._wait_until(deadline, wait)
 
     async def aresult(self, *, timeout: float | _Default | None = _Default.TIMEOUT) -> _ResponseT:
@@ -876,6 +982,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         wait = self._timeout(timeout)
         deadline = _deadline_for(wait)
         with job_deadline(deadline):
+            deadline, wait = _binding(deadline, wait)
             return await self._await_until(deadline, wait)
 
     def _timeout(self, timeout: float | _Default | None) -> float | None:
@@ -1876,15 +1983,57 @@ def _deadline_for(timeout: float | None) -> float | None:
     return None if timeout is None else time.monotonic() + timeout
 
 
+def _binding(deadline: float | None, timeout: float | None) -> tuple[float | None, float | None]:
+    """The deadline a job waits to, and the timeout its error names: its own, or an enclosing call's that comes first.
+
+    Called inside :func:`~web_router.providers._utils.job_deadline`, which has
+    already kept whichever of the two is earlier.
+    """
+    current = current_deadline()
+    if current is None or (deadline is not None and current.at >= deadline):
+        return deadline, timeout
+    return current.at, current.seconds
+
+
 def _passed(deadline: float | None) -> bool:
     """Whether a call with this deadline has run out of time. Never, with no deadline."""
     return deadline is not None and time.monotonic() >= deadline
 
 
+class _DeadlineReached(Exception):
+    """:func:`_within`'s own signal that the deadline cut a call off, apart from any timeout the call raised itself."""
+
+
+async def _within(deadline: Deadline, awaitable: Awaitable[_ResultT]) -> _ResultT:
+    """Await ``awaitable``, cancelling it when ``deadline`` arrives.
+
+    The transports clamp every request to the time left as well, but a call
+    can make several requests, or sleep between them; this is what holds an
+    async call to the deadline whatever it does inside.
+
+    Raises:
+        _DeadlineReached: the deadline arrived first, with the cancellation's
+            ``TimeoutError`` as its cause.
+    """
+    try:
+        return await asyncio.wait_for(awaitable, timeout=max(0.0, deadline.left()))
+    except asyncio.TimeoutError as exc:
+        # From 3.11 wait_for's own timeout and one the call raised itself are
+        # the same class; only the clock tells them apart.
+        if deadline.left() > 0:
+            raise
+        raise _DeadlineReached from exc
+
+
 def _is_timeout(error: ProviderError) -> bool:
     """Whether a provider's failure was a request that timed out, anywhere down its chain of causes."""
+    return _timed_out(error.original or error.__cause__)
+
+
+def _timed_out(exc: BaseException | None) -> bool:
+    """Whether ``exc``, or anything down its chain of causes, is a request that timed out."""
     seen: set[int] = set()
-    current: BaseException | None = error.original or error.__cause__
+    current: BaseException | None = exc
     while current is not None and id(current) not in seen:
         seen.add(id(current))
         if any(cls.__name__.endswith(JOB_TIMEOUT_ERROR_SUFFIXES) for cls in type(current).__mro__):

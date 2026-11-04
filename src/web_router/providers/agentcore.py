@@ -211,7 +211,7 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
             body = next(listing)
             with contextlib.suppress(StopIteration):
                 while True:
-                    body = listing.send(self._client.post(self.search_path, json=body))
+                    body = listing.send(self._client.post(self.search_path, json=body, **self._clamped()))
         self._refuse_filters(request)
         return super()._search(request)
 
@@ -221,7 +221,7 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
             body = next(listing)
             with contextlib.suppress(StopIteration):
                 while True:
-                    body = listing.send(await self._async_client.post(self.search_path, json=body))
+                    body = listing.send(await self._async_client.post(self.search_path, json=body, **self._clamped()))
         self._refuse_filters(request)
         return await super()._asearch(request)
 

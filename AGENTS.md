@@ -142,7 +142,7 @@ src/web_router/
     │                   HttpResearchProvider / HttpAnswerProvider / HttpBrowseProvider /
     │                   HttpBrowserProvider — for APIs with no SDK
     ├── _utils.py       payload assembly, key and setting resolution, dict
-    │                   coercion, body selection, the job budget
+    │                   coercion, body selection, the per-call deadline
     ├── _page.py        the page actions both browser handles delegate to,
     │                   once over CDP through Playwright; snapshot refs
     ├── _png.py         a screenshot as PNG: converts what a backend returns as
@@ -195,7 +195,8 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         test_browse_contract.py and
                         test_browser_contract.py guard the seven shared
                         contracts; test_job_core.py the job core under
-                        research and browse;
+                        research and browse; test_deadline.py the
+                        per-call deadline on every method;
                         test_browser_actions.py the page actions, against
                         fixtures/browser/; test_auto_browser.py and
                         test_auto_browse.py the two billed `auto` chains;
@@ -434,16 +435,28 @@ loop, a sleep or a timeout in a provider. A backend that answers inside the
 request that started it sets `resumable = False`, returns a completed progress
 from `_start`, and implements nothing else.
 
-**A job's budget reaches the backend through a context variable.**
-`research(timeout=...)` and `browse(timeout=...)`, like any job-shaped call, set it before the run is
-submitted, not after, and every HTTP and SDK call inside that run clamps its own
-timeout down to whatever is left — never up. It is a `ContextVar` in
-`providers/_utils.py` rather than a parameter on `_start`/`_fetch` because the
+**A call's deadline reaches the backend through a context variable.**
+`research(timeout=...)` and `browse(timeout=...)`, like any job-shaped call, set
+it before the run is submitted, not after, and `call_deadline(seconds)` in
+`providers/_utils.py` sets one around any call; every HTTP and SDK call inside
+clamps its own timeout down to whatever is left — never up. It is a
+`ContextVar` rather than a parameter on `_search`/`_start`/`_fetch` because the
 budget belongs to the *call*, not to the request, and would otherwise have to be
 threaded through every provider signature between the router and httpx. It is
-the one implicit thing in this package; use `job_budget(default)` —
-`research_budget` is the same function under the name the research providers
-already read — and do not read it directly.
+the one implicit thing in this package; read it through `job_budget(default)`
+(`research_budget` is the same function under the name the research providers
+already read) or `current_deadline()`, never directly, and a block inside
+another only ever tightens it. A one-call method — search, extract, a template
+run, answer — refuses to start past it and raises `DeadlineExceededError` when
+the clamp cut it off, through `_bounded`/`_abounded` on the base class, which
+also cancel an async call at the deadline; an extract keeps the documents that
+came back in time. A transport that sets its own timeout — the HTTP base's
+`_clamped()`, Nimble's `_deadline_client()`, Tavily's per-call `timeout` — sends
+nothing new when no deadline is in force. `auto` holds nothing back for later
+members: each runs under its own timeout clamped to what is left, and none
+starts once nothing is. A billed submit is clamped as on its own and never cut
+shorter for a member after it. A worker thread does not inherit the variable,
+so whoever hands a call to one runs it in `contextvars.copy_context()`.
 
 **Translate a backend's run status through a table, never by hand.** Each job
 provider declares its own status table in `constants_<provider>.py` and reads it

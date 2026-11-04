@@ -7,6 +7,7 @@ import time
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel
@@ -270,29 +271,89 @@ def as_snippet(text: str) -> str:
     return (head[:cut] if cut > 0 else head).rstrip() + "\u2026"
 
 
-_JOB_DEADLINE: ContextVar[float | None] = ContextVar("web_router_job_deadline", default=None)
-"""When the job-shaped call currently in flight -- a research run, say -- must be given up on.
+@dataclass(frozen=True)
+class Deadline:
+    """The instant the call in flight must answer by, and the budget that set it.
 
-A context variable rather than a parameter on ``_start`` and ``_fetch``, which
-is the one place this package reaches for something implicit. The reason is
-that the budget is not a property of the *request* -- two callers can wait
-different lengths for the same question -- and it has to reach the HTTP and SDK
-calls at the bottom without appearing in the signature of every provider
-between here and there. Being a ``ContextVar`` rather than an attribute is what
-makes it correct under concurrency: one router shared by several tasks gives
-each of them its own budget, and an async task inherits the one belonging to
-whoever awaited it.
+    ``at`` is on :func:`time.monotonic`'s clock; ``seconds`` is what the budget
+    was when it was set, kept so an error can name the deadline the caller
+    gave rather than whatever fraction of it was left.
+    """
+
+    at: float
+    seconds: float
+
+    def left(self) -> float:
+        """Seconds until :attr:`at`; zero or less once it has passed."""
+        return self.at - time.monotonic()
+
+
+_DEADLINE: ContextVar[Deadline | None] = ContextVar("web_router_deadline", default=None)
+"""When the call currently in flight -- a search, an extract, a research run -- must be given up on.
+
+A context variable rather than a parameter on ``_search``, ``_start`` and the
+rest, which is the one place this package reaches for something implicit. The
+reason is that the budget is not a property of the *request* -- two callers
+can wait different lengths for the same question -- and it has to reach the
+HTTP and SDK calls at the bottom without appearing in the signature of every
+provider between here and there. Being a ``ContextVar`` rather than an
+attribute is what makes it correct under concurrency: one router shared by
+several tasks gives each of them its own budget, and an async task inherits
+the one belonging to whoever awaited it. A worker thread does not: whoever
+hands a call to one runs it in :func:`contextvars.copy_context`.
 """
 
 
 @contextmanager
+def call_deadline(seconds: float | None) -> Iterator[None]:
+    """Give every provider call made inside this block at most ``seconds`` from now.
+
+    The one way in for a per-call time limit on any method; experimental, as
+    everything is before 1.0. ``None`` adds no limit. A block inside another
+    can only tighten the deadline, never extend it: the earlier of the two
+    holds, and an error names the budget that set it.
+
+    What happens at the deadline depends on the method. A search, extract,
+    template run or answer raises
+    :class:`~web_router.exceptions.DeadlineExceededError`; an extract keeps
+    the documents that came back in time and reports the URLs that did not as
+    failures. ``auto`` tries a next member only while time is left. Research
+    and browse wait no longer than the deadline and raise their own timeout
+    error, which carries the job id; the call that submits a billed run is
+    clamped as any other, and nothing is cut short to leave time for another
+    member.
+    """
+    with _tightened(None if seconds is None else Deadline(at=time.monotonic() + seconds, seconds=seconds)):
+        yield
+
+
+@contextmanager
 def job_deadline(deadline: float | None) -> Iterator[None]:
-    """Apply ``deadline`` to every provider call made inside this block."""
-    token = _JOB_DEADLINE.set(deadline)
+    """Apply the monotonic instant ``deadline`` to every provider call made inside this block.
+
+    As :func:`call_deadline`, for a caller that already holds the instant --
+    the job core, which measures its own wait from the same one.
+    """
+    with _tightened(None if deadline is None else Deadline(at=deadline, seconds=max(0.0, deadline - time.monotonic()))):
+        yield
+
+
+@contextmanager
+def _tightened(deadline: Deadline | None) -> Iterator[None]:
+    """Hold ``deadline`` for this block, unless the one already in force comes first."""
+    current = _DEADLINE.get()
+    if deadline is not None and (current is None or deadline.at < current.at):
+        current = deadline
+    token = _DEADLINE.set(current)
     try:
         yield
     finally:
-        _JOB_DEADLINE.reset(token)
+        _DEADLINE.reset(token)
+
+
+def current_deadline() -> Deadline | None:
+    """The deadline in force for the call in flight, or ``None`` when it has none."""
+    return _DEADLINE.get()
 
 
 def job_budget(default: float) -> float:
@@ -309,10 +370,10 @@ def job_budget(default: float) -> float:
     timeout of zero means "no timeout" to both httpx and the SDKs -- the exact
     opposite of what is being asked for.
     """
-    deadline = _JOB_DEADLINE.get()
+    deadline = _DEADLINE.get()
     if deadline is None:
         return default
-    return max(MIN_JOB_BUDGET, min(default, deadline - time.monotonic()))
+    return max(MIN_JOB_BUDGET, min(default, deadline.left()))
 
 
 # The names the research providers were written against. Aliases rather than
