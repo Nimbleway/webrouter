@@ -44,6 +44,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from web_router.constants_prices import (
     MSG_PRICE_DEFAULTS,
     MSG_PRICE_DUPLICATE,
+    MSG_PRICE_NEGATIVE,
     MSG_PRICE_SHAPE,
     MSG_PRICE_SOURCE,
     PER_ONE,
@@ -102,6 +103,8 @@ class Price(BaseModel):
         if unpriced != (self.price_usd is None):
             expected = "null" if unpriced else "a number"
             raise ValueError(MSG_PRICE_SHAPE.format(key=self.key, expected=expected, unit=self.unit))
+        if self.price_usd is not None and self.price_usd < 0:
+            raise ValueError(MSG_PRICE_NEGATIVE.format(key=self.key, price=self.price_usd))
         billed = self.unit == "token_billed" or bool(self.price_usd)
         if billed and (self.source_url is None or self.checked is None):
             raise ValueError(MSG_PRICE_SOURCE.format(key=self.key))

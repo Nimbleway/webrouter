@@ -23,6 +23,7 @@ PER_ONE: dict[str, float] = {
 """What ``price_usd`` is divided by to give the cost of one unit: one request, page, run or browser-minute."""
 
 MSG_PRICE_SHAPE = "price row {key}: price_usd must be {expected} for unit {unit!r}"
+MSG_PRICE_NEGATIVE = "price row {key}: price_usd must not be negative, got {price}"
 MSG_PRICE_SOURCE = "price row {key}: a priced row needs source_url and checked"
 MSG_PRICE_DUPLICATE = "price rows repeat (provider, method, mode): {keys}"
 MSG_PRICE_DEFAULTS = "price rows for {pair} name more than one default call: {modes}"

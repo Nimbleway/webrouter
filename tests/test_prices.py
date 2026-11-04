@@ -112,6 +112,7 @@ def test_browser_sessions_are_priced_per_minute() -> None:
     [
         {"unit": "unknown"},
         {"price_usd": None},
+        {"price_usd": -1},
         {"source_url": None},
         {"checked": None},
         {"unit": "per_hour"},
