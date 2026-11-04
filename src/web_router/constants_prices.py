@@ -26,6 +26,10 @@ MSG_PRICE_SHAPE = "price row {key}: price_usd must be {expected} for unit {unit!
 MSG_PRICE_NEGATIVE = "price row {key}: price_usd must not be negative, got {price}"
 MSG_PRICE_SOURCE = "price row {key}: a priced row needs source_url and checked"
 MSG_PRICE_DUPLICATE = "price rows repeat (provider, method, mode): {keys}"
+MSG_PRICE_LATENCY = (
+    "price row {key}: latency needs p50 <= p90, n >= 1, runs and measured together, or none of them; "
+    "run `make latency` rather than editing them"
+)
 MSG_PRICE_DEFAULTS = "price rows for {pair} name more than one default call: {modes}"
 
 # How `make prices` writes a row into PRICING.md.
@@ -43,3 +47,4 @@ EMPTY = "—"
 """A table cell with nothing to say."""
 
 MSG_PRICING_STALE = "PRICING.md's tables are stale: run `make prices`."
+MSG_LATENCY_STALE = "prices.json's latency fields are stale: run `make latency`."

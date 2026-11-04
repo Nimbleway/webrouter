@@ -831,7 +831,10 @@ and `tests/test_prices.py` fails for one that does not (`auto`, `max` and
 `local` are exempt). A new backend adds its rows from the vendor's own pricing
 page -- `unit` `unknown` when none is published, `token_billed` when it bills by
 tokens, never a guess -- then `make prices` rewrites PRICING.md's tables to
-match.
+match. The `latency_*` fields are not edited by hand: `make latency` writes
+them from the frozen results in `benchmarks/providers/frozen/` (search and
+answer only, null elsewhere), and `tests/test_prices.py` fails while they are
+stale. New frozen results mean running it again.
 
 ## Adding a template provider
 

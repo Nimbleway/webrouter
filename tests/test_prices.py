@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 from pydantic import ValidationError
 
+from scripts import latency
 from scripts.prices import BLOCK, PRICING_MD, regenerate, select
 from web_router import prices, registry, registry_answer
 from web_router.constants import PROVIDER_AUTO, PROVIDER_LOCAL, PROVIDER_MAX
@@ -157,3 +160,122 @@ def test_every_row_appears_in_exactly_one_pricing_md_table() -> None:
     text = PRICING_MD.read_text(encoding="utf-8")
     shown = [row.key for match in BLOCK.finditer(text) for row in select(match["spec"], prices.prices())]
     assert sorted(shown, key=str) == sorted((row.key for row in prices.prices()), key=str)
+
+
+# Latency: measured from the frozen benchmark results by `make latency`.
+
+
+def test_latency_fields_match_the_frozen_results() -> None:
+    filled, _ = latency.frozen_latency()
+    current = latency.PRICES_JSON.read_text(encoding="utf-8")
+    assert latency.regenerate(current, filled) == current, "prices.json's latency is stale: run `make latency`."
+
+
+def test_estimate_latency_reads_the_row() -> None:
+    measured = prices.estimate_latency("webiq", "search")
+    assert measured is not None
+    p50, p90 = measured
+    assert 0 < p50 <= p90
+    row = prices.price("webiq", "search")
+    assert row is not None and row.latency_n is not None and row.latency_n > 0
+    assert row.latency_runs is not None and "sealqa-hard-254-twin" in row.latency_runs
+    # The call that sets no mode reads the default row's latency.
+    assert prices.estimate_latency("nimble", "search") == prices.estimate_latency("nimble", "search", "fast")
+
+
+def test_latency_is_unknown_where_nothing_measured_it() -> None:
+    assert prices.estimate_latency("nimble", "search", "deep") is None
+    assert prices.estimate_latency("tavily", "extract") is None
+    assert prices.estimate_latency("parallel", "research") is None
+    assert prices.estimate_latency("nobody", "search") is None
+    measured = {row.method for row in prices.prices() if row.latency_n is not None}
+    assert measured <= {"search", "answer"}
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [("default", None), ("@deep", "deep"), ("ultra-fast", ":ultra-fast"), ("ultra-fast@deep", ":ultra-fast@deep")],
+)
+def test_a_frozen_mode_maps_to_the_price_lists_mode(mode: str, expected: str | None) -> None:
+    assert latency.price_mode(mode, default="default", depth_mark="@") == expected
+
+
+def _frozen(
+    provider: str, mode: str, latency_s: float, error: str | None = None, set_name: str = "a"
+) -> dict[str, object]:
+    return {
+        "set": set_name,
+        "provider": provider,
+        "method": "search",
+        "mode": mode,
+        "latency_s": latency_s,
+        "error": error,
+    }
+
+
+def test_measure_pools_sets_skips_failures_and_reports_unmatched() -> None:
+    _pct = latency._benchmarks()[1]._pct
+    runs = {
+        ("a", "tavily", "default"): ("run-a", date(2026, 10, 1)),
+        ("b", "tavily", "@lite"): ("run-b", date(2026, 10, 9)),
+        ("a", "tavily", "ultra-fast@deep"): ("run-a", date(2026, 10, 1)),
+    }
+    rows = [
+        _frozen("tavily", "default", 1.0),
+        _frozen("tavily", "default", 9.0, error="timeout"),
+        _frozen("tavily", "@lite", 3.0, set_name="b"),
+        _frozen("tavily", "@lite", 2.0, set_name="b"),
+        _frozen("tavily", "ultra-fast@deep", 0.5),
+    ]
+    filled, unmatched = latency.measure(rows, runs, pct=_pct, default="default", depth_mark="@")
+    # `tavily` (no mode) and `tavily@lite` are the same row, so they pool; the timeout does not count.
+    assert filled == {
+        ("tavily", "search", "lite"): {
+            "latency_p50_s": 2.0,
+            "latency_p90_s": 3.0,
+            "latency_n": 3,
+            "latency_runs": ["run-a", "run-b"],
+            "latency_measured": "2026-10-09",
+        }
+    }
+    assert unmatched == {("tavily", "search", "ultra-fast@deep")}
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"latency_p50_s": 1.0},
+        {
+            "latency_p50_s": 2.0,
+            "latency_p90_s": 1.0,
+            "latency_n": 5,
+            "latency_runs": ["r"],
+            "latency_measured": "2026-10-01",
+        },
+        {
+            "latency_p50_s": 1.0,
+            "latency_p90_s": 2.0,
+            "latency_n": 0,
+            "latency_runs": ["r"],
+            "latency_measured": "2026-10-01",
+        },
+        {
+            "latency_p50_s": 1.0,
+            "latency_p90_s": 2.0,
+            "latency_n": 5,
+            "latency_runs": [],
+            "latency_measured": "2026-10-01",
+        },
+        {"latency_p50_s": 1.0, "latency_p90_s": 2.0, "latency_n": 5, "latency_runs": ["r"]},
+    ],
+)
+def test_a_malformed_latency_is_refused(fields: dict[str, object]) -> None:
+    with pytest.raises(ValidationError):
+        Price.model_validate(_row(**fields))
+
+
+def test_a_whole_latency_is_accepted() -> None:
+    row = Price.model_validate(
+        _row(latency_p50_s=1.0, latency_p90_s=2.0, latency_n=5, latency_runs=["r"], latency_measured="2026-10-01")
+    )
+    assert row.latency_runs == ("r",)

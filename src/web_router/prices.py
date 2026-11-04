@@ -26,8 +26,16 @@ or, prefixed ``:``, a vendor mode sent through ``provider_options`` as named in
 nothing lands on one of those, that row carries ``default`` and answers
 ``mode=None``.
 
-Each row also has room for latency (``latency_p50_s``, ``latency_p90_s``,
-``latency_n``); those stay ``None`` until a benchmark fills them.
+A row also carries measured latency where a benchmark has it: the median and
+90th-percentile seconds of the calls that succeeded (``latency_p50_s``,
+``latency_p90_s``), how many there were (``latency_n``), the benchmark runs they
+pooled (``latency_runs``) and the date of the newest one (``latency_measured``).
+They come from the frozen results in ``benchmarks/providers/frozen/``, written
+by ``make latency``, and cover search and answer only; elsewhere they are
+``None``, unknown, never guessed. :func:`estimate_latency` reads them.
+
+    >>> prices.estimate_latency("exa", "answer")      # (p50, p90) seconds
+    (1.317, 1.618)
 """
 
 from __future__ import annotations
@@ -44,6 +52,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from web_router.constants_prices import (
     MSG_PRICE_DEFAULTS,
     MSG_PRICE_DUPLICATE,
+    MSG_PRICE_LATENCY,
     MSG_PRICE_NEGATIVE,
     MSG_PRICE_SHAPE,
     MSG_PRICE_SOURCE,
@@ -83,8 +92,15 @@ class Price(BaseModel):
     does: str | None = None
     """What the mode returns or does; for PRICING.md only."""
     latency_p50_s: float | None = None
+    """Median seconds of one successful call in the benchmark runs below; ``None`` when unmeasured."""
     latency_p90_s: float | None = None
+    """90th-percentile seconds, nearest rank."""
     latency_n: int | None = None
+    """How many successful calls the two figures are over."""
+    latency_runs: tuple[str, ...] | None = None
+    """The benchmark runs pooled for them, by name, as ``benchmarks/providers/frozen/manifest.json`` lists them."""
+    latency_measured: date | None = None
+    """The day the newest of those runs started."""
 
     @property
     def key(self) -> tuple[str, str, str | None]:
@@ -108,7 +124,24 @@ class Price(BaseModel):
         billed = self.unit == "token_billed" or bool(self.price_usd)
         if billed and (self.source_url is None or self.checked is None):
             raise ValueError(MSG_PRICE_SOURCE.format(key=self.key))
+        self._check_latency()
         return self
+
+    def _check_latency(self) -> None:
+        fields = (self.latency_p50_s, self.latency_p90_s, self.latency_n, self.latency_runs, self.latency_measured)
+        if all(value is None for value in fields):
+            return
+        p50, p90, n = self.latency_p50_s, self.latency_p90_s, self.latency_n
+        if (
+            p50 is None
+            or p90 is None
+            or n is None
+            or not self.latency_runs
+            or self.latency_measured is None
+            or not 0 <= p50 <= p90
+            or n < 1
+        ):
+            raise ValueError(MSG_PRICE_LATENCY.format(key=self.key))
 
 
 def _validate(rows: tuple[Price, ...]) -> None:
@@ -159,3 +192,15 @@ def estimate(provider: str | Provider, method: str, mode: str | None = None) -> 
     """
     row = price(provider, method, mode)
     return None if row is None else row.estimate_usd
+
+
+def estimate_latency(provider: str | Provider, method: str, mode: str | None = None) -> tuple[float, float] | None:
+    """Measured ``(p50, p90)`` seconds of one successful call, or ``None`` when unmeasured or not in the list.
+
+    Experimental. The figures are benchmark medians and 90th percentiles, not a
+    promise: a backend's latency drifts from run to run and with the query.
+    """
+    row = price(provider, method, mode)
+    if row is None or row.latency_p50_s is None or row.latency_p90_s is None:
+        return None
+    return row.latency_p50_s, row.latency_p90_s
