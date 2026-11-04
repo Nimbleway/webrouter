@@ -7,9 +7,10 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import FakeBrowseProvider, FakeExtractProvider, FakeResearchProvider
+from tests.conftest import FakeBrowseProvider, FakeExtractProvider, FakeProvider, FakeResearchProvider
 from tests.deadline_helpers import DEADLINE, TINY, URLS, _Clock
 from tests.deadline_helpers import clock as clock  # a fixture: imported by name so pytest finds it here
+from web_router import WebRouter
 from web_router.exceptions import (
     BrowseTimeoutError,
     ConfigurationError,
@@ -22,11 +23,21 @@ from web_router.providers.auto import AutoResearchProvider
 from web_router.providers.max import MaxExtractProvider
 from web_router.registry import (
     register_extract_provider,
+    register_provider,
     register_research_provider,
     unregister_extract_provider,
+    unregister_provider,
     unregister_research_provider,
 )
-from web_router.types import BrowseRequest, ExtractRequest, ExtractResponse, ResearchProgress, ResearchRequest
+from web_router.types import (
+    BrowseRequest,
+    ExtractRequest,
+    ExtractResponse,
+    ResearchProgress,
+    ResearchRequest,
+    SearchRequest,
+    SearchResponse,
+)
 
 # -- Research and browse wait no longer than the deadline -----------------------
 
@@ -197,3 +208,27 @@ def test_a_runs_own_short_timeout_still_submits_it(clock: _Clock) -> None:
         provider.research(ResearchRequest(query="q"), timeout=0)
 
     assert provider.requests, "the run was submitted"
+
+
+# -- A benchmark hands the deadline to its worker threads --------------------------
+
+
+def test_a_benchmark_carries_the_deadline_onto_each_members_thread() -> None:
+    seen: dict[str, tuple[bool, bool]] = {}
+
+    class Member(FakeProvider):
+        def _search(self, request: SearchRequest) -> SearchResponse:
+            seen[self.name] = (threading.current_thread() is threading.main_thread(), current_deadline() is not None)
+            return super()._search(request)
+
+    names = ("bench_first", "bench_second")
+    for name in names:
+        register_provider(name, type(name, (Member,), {"name": name}))
+    try:
+        with WebRouter(names[0]) as router, call_deadline(60):
+            router.benchmark("q", providers=list(names))
+    finally:
+        for name in names:
+            unregister_provider(name)
+
+    assert seen == dict.fromkeys(names, (False, True))
