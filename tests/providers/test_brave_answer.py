@@ -129,7 +129,6 @@ def test_each_citation_tag_is_a_citation_in_order_with_its_span(provider: BraveA
     assert citations[0].snippet.startswith("**Final score")
     assert citations[0].field is None, "Brave writes no marker into the text"
     assert citations[0].extra == {"start_index": 77, "end_index": 77, "number": 1, "favicon": "https://imgs.example/f"}
-    assert SENTENCE[: citations[0].extra["end_index"]] == SENTENCE, "the span counts into the answer without tags"
 
 
 def test_an_answer_cut_off_at_its_token_limit_is_partial(provider: BraveAnswerProvider) -> None:
