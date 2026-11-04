@@ -34,9 +34,10 @@ Writes into ``--out``: ``run.json`` (the setup), ``rows.jsonl`` (one line per
 question and backend) and ``report.md`` with ``summary.json``, the same
 numbers for charts. ``--combine`` merges finished scans of the same questions
 and judge -- backends added later -- into one report without searching again.
-Nothing is estimated: accuracy is the judge's grade and
-latency is timed around the search; there is no cost column, because no
-backend here states one.
+Accuracy is the judge's grade and latency is timed around the search; there
+is no cost column, because no backend here states one. The recommended order
+alone reads list prices (``web_router.prices``, estimates), to break ties
+inside route-eval's noise floor.
 """
 
 from __future__ import annotations
@@ -74,8 +75,9 @@ from _questions import (
     question_tags,
 )
 from _report_tables import breakdown, breakdown_tables, search_score
+from route_eval import noise_floor, rank_backends
 
-from web_router import AsyncWebRouter
+from web_router import AsyncWebRouter, prices
 from web_router.constants import BENCHMARK_EXCLUDED, PROVIDER_AUTO
 from web_router.evals import OpenAIJudge
 from web_router.providers.base import SearchProvider
@@ -146,18 +148,21 @@ def summarize(rows: list[dict[str, Any]], setup: dict[str, Any]) -> dict[str, An
 
 
 def recommended_order(summary: dict[str, Any]) -> list[tuple[str, bool | None]]:
-    """The plain backends by correct answers out of every question, each with whether this run shows it behind the best.
+    """The plain backends in route-eval's order, each with whether this run shows it behind the most accurate.
 
-    Ranked on correct over all questions asked, a failed search counting as a
-    miss, not on accuracy over the searches served: a chain member that fails
-    most searches is no member to put first, however well it answered the few
-    it served. A ``provider@depth`` or ``provider:mode`` setup is left out: an
-    ``auto`` member is a backend, sent whatever depth the request asks for, not
-    a mode. So is ``auto`` itself, if a scan named it: as a member it would be a
-    second ``auto`` on the default order, reaching unranked backends first. So
-    is a backend that served nothing; one that served searches and got every
-    answer wrong is ranked, last. A backend is behind only when its 95%
-    interval stops short of the best one's; ``None`` marks the best itself.
+    Ranked by ``route_eval.rank_backends``, the one ranking the repo prints:
+    correct over all questions asked, a failed search counting as a miss, not
+    accuracy over the searches served -- a chain member that fails most
+    searches is no member to put first, however well it answered the few it
+    served. Within route-eval's noise floor the cheaper backend at list price
+    goes first, then the faster; the keyless tier goes last. A
+    ``provider@depth`` or ``provider:mode`` setup is left out: an ``auto``
+    member is a backend, sent whatever depth the request asks for, not a mode.
+    So is ``auto`` itself, if a scan named it: as a member it would be a second
+    ``auto`` on the default order, reaching unranked backends first. So is a
+    backend that served nothing; one that served searches and got every answer
+    wrong is ranked, last. A backend is behind only when its 95% interval stops
+    short of the most accurate one's; ``None`` marks the first.
     """
     overall = summary["overall"]
     plain = [
@@ -165,10 +170,18 @@ def recommended_order(summary: dict[str, Any]) -> list[tuple[str, bool | None]]:
         for p in summary["setup"]["providers"]
         if DEPTH_MARK not in p and MODE_MARK not in p and p != PROVIDER_AUTO and overall[p]["served"]
     ]
-    ranked = sorted(plain, key=lambda p: -_answered(overall[p]))
-    if not ranked:
+    if not plain:
         return []
-    floor = _answered_ci(overall[ranked[0]])[0]
+    stats = {
+        p: {
+            "accuracy": _answered(overall[p]),
+            "cost_usd": prices.estimate(p, "search"),
+            "latency_p50": overall[p]["latency_p50"],
+        }
+        for p in plain
+    }
+    ranked = rank_backends(stats, noise_floor()[0])
+    floor = _answered_ci(overall[max(plain, key=lambda p: _answered(overall[p]))])[0]
     return [(ranked[0], None)] + [(p, _answered_ci(overall[p])[1] < floor) for p in ranked[1:]]
 
 
@@ -195,8 +208,11 @@ def _recommendation(summary: dict[str, Any]) -> list[str]:
         "miss -- so a backend that fails often ranks by what it got right, not by its accuracy on the few it served. "
         "A `provider@depth` or `provider:mode` setup is left out, "
         "because a chain member is a backend -- `auto` sends it whatever depth the request asks for -- not a mode. "
-        "A backend is *behind* only when its 95% interval stops short of the best one's; the others are not shown "
-        "apart by this run, and another could order them differently.\n"
+        f"Backends within the noise floor ({noise_floor()[0]:.1%}, the spread between two runs of the same SealQA "
+        "questions; see `route_eval.py`) are ordered cheapest first at list price (`web_router.prices`, an "
+        "estimate; an unknown or $0 price never moves one up), then fastest; the keyless tier goes last. "
+        "A backend is *behind* only when its 95% interval stops short of the most accurate one's; the others are "
+        "not shown apart by this run, and another could order them differently.\n"
     )
     lines.append("| Order | Backend | Correct of all questions | 95% CI | Failed | Against the best |")
     lines.append("|---|---|---|---|---|---|")

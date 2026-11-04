@@ -218,7 +218,10 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         URLs through benchmark_extract(), by category, with
                         the URL sets under urls/; answer.py: every answer
                         backend on the same questions, each backend's own
-                        answer graded, beside a search scan — scripts; each
+                        answer graded, beside a search scan; frozen.py and
+                        frozen/: the committed per-question results;
+                        route_eval.py: a router replayed over them and
+                        scored against the static order — scripts; each
                         run's report stays under results/
 ```
 
@@ -371,7 +374,12 @@ and `--max-turns` stands in for the session budget OpenAI does not have.
 search backend through `evaluate()` on the same SimpleQA questions and breaks
 the judged accuracy down by SimpleQA's topic and answer type — the evidence a
 routing rule or the routing guide's advice should rest on. Its `report.md`
-names the judge, it states no cost, and `--combine` merges scans only when
+names the judge and has no cost column; its recommended order alone reads list
+prices from `web_router.prices`, as estimates, to break ties, because it is
+`route_eval.py`'s ranking -- one ranking, so the repository never suggests two
+orders. `route_eval.py` replays a router over the frozen results offline and
+scores it against the static order, held out and in-sample, against the twin
+run's noise floor; an unknown price stays unknown there, never $0. `--combine` merges scans only when
 their questions, search size and judge match. Keep a scan's report to compare
 the next one against: only runs graded by the same judge compare. `extract.py`
 beside it is the extract scan: every configured extract backend through

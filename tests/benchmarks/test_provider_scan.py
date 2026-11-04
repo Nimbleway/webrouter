@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "run.py"
-SIBLINGS = ("_common", "_questions", "_report_tables")
+SIBLINGS = ("_common", "_questions", "_report_tables", "route_eval", "frozen", "_frozen_checks")
 """What the scan imports from its folder, under plain names, so they are forgotten once it is."""
 
 
@@ -390,3 +390,19 @@ def test_a_depth_that_fails_keeps_the_depths_before_it_in_the_sink(
         ("fake@lite", "Where?", "Places"),
         ("fake@lite", "Who?", "People"),
     ]
+
+
+def test_the_recommended_order_is_route_evals_ranking_cost_breaking_ties_inside_the_noise_floor(
+    scan: ModuleType,
+) -> None:
+    """One ranking in the repo: webiq answers one more of 100 than perplexity, inside the floor, at no listed price."""
+    counts = {"webiq": 90, "perplexity": 89, "brave": 70, "you-mcp": 100}
+    rows = [
+        _row(p, f"q{i}", "correct" if i < correct else "incorrect") for p, correct in counts.items() for i in range(100)
+    ]
+    summary = scan.summarize(rows, {**SETUP, "providers": list(counts)})
+
+    order = [p for p, _ in scan.recommended_order(summary)]
+    assert order == ["perplexity", "webiq", "brave", "you-mcp"], "priced first inside the floor; keyless last"
+    section = scan.markdown(summary).split("## Recommended auto order")[1].split("\n## ")[0]
+    assert "noise floor" in section and "list price" in section
