@@ -130,6 +130,7 @@ from web_router.mcp.shaping import (
 )
 from web_router.mcp.shaping_templates import shape_template, shape_template_run, shape_templates
 from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider
+from web_router.providers.auto_answer import AutoAnswerProvider
 from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
 from web_router.registry import (
     configured_browse_providers,
@@ -206,6 +207,12 @@ def _search_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
     return provider.members if isinstance(provider, AutoProvider) else ()
 
 
+def _answer_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
+    """The members the router's own answer ``name`` would try, read as :func:`_search_chain` reads its own."""
+    provider = router.get_answer_provider(name)
+    return provider.members if isinstance(provider, AutoAnswerProvider) else ()
+
+
 def _extract_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
     """The members the router's own extract ``name`` would try, read as :func:`_browser_chain` reads its own.
 
@@ -230,6 +237,7 @@ def _browser_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
 _CHAIN_OF: dict[str, Callable[[AsyncWebRouter, str], tuple[str, ...]]] = {
     MCP_TOOL_SEARCH: _search_chain,
     MCP_TOOL_EXTRACT: _extract_chain,
+    MCP_TOOL_ANSWER: _answer_chain,
     MCP_TOOL_BROWSER_OPEN: _browser_chain,
 }
 """The tools whose delegating providers declare what some member serves, and how each one's members are read.
@@ -862,7 +870,8 @@ def _usable(tool: str) -> bool:
     of their own -- they need whatever their chain does. For search and extract
     that chain ends in a keyless backend and always works; for research and
     browse every backend bills, so ``auto`` alone means nothing here can
-    actually run. Answer has no ``auto``, so it is usable exactly when a key is there.
+    actually run. Answer's ``auto`` is not listed among its backends, so it is usable exactly when a
+    key is there.
     """
     return any(provider not in DELEGATING_PROVIDERS for provider in _CONFIGURED[tool]())
 

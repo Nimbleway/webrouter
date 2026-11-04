@@ -706,6 +706,7 @@ AUTO_CHAIN_EXTRACT = "extract"
 AUTO_CHAIN_RESEARCH = "research"
 AUTO_CHAIN_BROWSER = "browser"
 AUTO_CHAIN_BROWSE = "browse"
+AUTO_CHAIN_ANSWER = "answer"
 
 AUTO_CHAIN_METHODS: frozenset[str] = frozenset(
     {
@@ -714,6 +715,7 @@ AUTO_CHAIN_METHODS: frozenset[str] = frozenset(
         AUTO_CHAIN_RESEARCH,
         AUTO_CHAIN_BROWSER,
         AUTO_CHAIN_BROWSE,
+        AUTO_CHAIN_ANSWER,
     }
 )
 """The keys a ``chain`` may name to set one method's order alone: ``{"search": [...]}``.
@@ -4190,7 +4192,7 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_TEMPLATES: (MCP_ARG_PROVIDER,),
     MCP_TOOL_TEMPLATE: ("name", MCP_ARG_PROVIDER),
     MCP_TOOL_RUN_TEMPLATE: ("template", MCP_ARG_PROVIDER),
-    # Not `provider`, though answer has no `auto`: with one answer backend configured the router uses it.
+    # Not `provider`: unnamed, the router's default answers -- `auto`, the configured backends cheapest first.
     MCP_TOOL_ANSWER: ("query",),
     MCP_TOOL_RESEARCH: ("query",),
     MCP_TOOL_RESEARCH_STATUS: (MCP_ARG_HANDLE,),

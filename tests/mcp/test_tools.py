@@ -880,14 +880,19 @@ async def test_answer_round_trip_and_fetch_raw(tools: WebRouterTools, fake_answe
 
 
 async def test_answer_needs_no_provider_argument(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    """With one answer backend configured, `provider` is offered but not required, and a bare query goes to it."""
+    """With one answer backend configured, `provider` is offered but not required, and a bare query goes to it.
+
+    Unnamed, the router's `auto` serves the call, and its only member is that backend.
+    """
     monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
     session = WebRouterTools(AsyncWebRouter())
     schema = _tool(session, MCP_TOOL_ANSWER).input_schema
     assert schema["properties"]["provider"]["enum"] == [PROVIDER_LINKUP]
     assert "provider" not in schema["required"]
 
-    linkup = session.router.get_answer_provider(PROVIDER_LINKUP)
+    auto = session.router.get_answer_provider()
+    assert auto.members == (PROVIDER_LINKUP,)  # type: ignore[attr-defined]
+    linkup = auto._member(0)  # type: ignore[attr-defined]
     api = stub_answer_api(linkup, {"answer": "Argentina.[1]", "sources": [{"url": "https://example.com", "name": "x"}]})
     payload = _payload(await call_tool(session, MCP_TOOL_ANSWER, {"query": "who won"}))
 
@@ -921,16 +926,3 @@ def test_answer_offers_only_the_options_a_configured_backend_maps(
     both = set(_tool(WebRouterTools(AsyncWebRouter()), MCP_TOOL_ANSWER).input_schema["properties"])
     assert "country" in both
     assert "locale" not in both
-
-
-async def test_a_bare_answer_with_two_backends_configured_is_an_error_naming_them(
-    no_keys: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
-    monkeypatch.setenv(ENV_PERPLEXITY_API_KEY, "x")
-
-    result = await call_tool(WebRouterTools(AsyncWebRouter()), MCP_TOOL_ANSWER, {"query": "who won"})
-
-    assert result.is_error
-    assert "linkup" in result.content[0].text
-    assert "perplexity" in result.content[0].text

@@ -307,8 +307,8 @@ it dated and sourced, since the library itself never states a price.
 
 `[answer]` installs these. One question, answered in one call: the backend
 searches and writes the answer itself. No keyless tier, since every backend
-bills the call, and no `auto` yet; see [Asking for an answer](#asking-for-an-answer)
-for what an unnamed call does.
+bills the call; `auto` tries the ones you hold a key for, cheapest first. See
+[Asking for an answer](#asking-for-an-answer) for what an unnamed call does.
 
 | Pass | Name | Provider | Credentials | Options mapped | Citations tied to claims |
 | --- | --- | --- | --- | --- | --- |
@@ -885,11 +885,17 @@ today's date in UTC. A backend that does not
 map one raises `UnsupportedParameterError` before anything is sent -- the
 [answer table](#answer) says which backend maps what.
 
-There is no `auto` yet. With `provider` unset, the router's default answers
-when it is an answer backend (`WebRouter("linkup").answer(q)`), otherwise the
-one answer backend you hold a key for (in the environment or in
-`provider_config`). With several, the call raises `NoAnswerProviderError` (a `ProviderNotFoundError`)
-naming them: say which with `provider=`. With none, it names the variables to set.
+With `provider` unset, the router's default answers when it is an answer
+backend. On the usual default, `auto`, that is every answer backend you hold a
+key for (in the environment or in `provider_config`), cheapest first at list
+price: Perplexity, Exa, You.com, Linkup, Parallel, then Brave. A backend that does not
+map an option you set is passed over without being called; one that fails, or
+answers with nothing, is passed over for the next, and each one tried bills.
+`provider_config={"auto": {"chain": {"answer": [...]}}}` sets the order. With no
+key, the call raises `NoAnswerProviderError` (a `ProviderNotFoundError`) naming
+the variables to set. On a router whose default is not an answer backend
+(`WebRouter("nimble")`), the one answer backend you hold a key for serves the
+call; with several, name one, or pass `provider="auto"`.
 
 "Answer" means two other things nearby. `SearchResponse.answer` is an answer a
 search backend volunteered beside its results, unasked (You.com's knowledge

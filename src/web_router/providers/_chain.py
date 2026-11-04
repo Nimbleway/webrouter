@@ -39,6 +39,7 @@ from web_router.exceptions import (
 )
 from web_router.types import ExtractResponse, SearchResponse
 from web_router.types import provider_name as _lookup_name
+from web_router.types_answer import AnswerResponse
 
 _Entry: TypeAlias = "str | tuple[str, Mapping[str, Any]]"
 """One member as a caller writes it: a backend's name, or its name beside the kwargs to build it with."""
@@ -272,18 +273,33 @@ def _empty_extract(response: ExtractResponse) -> bool:
     return not any(document.content.strip() for document in response.documents)
 
 
-_Answer = TypeVar("_Answer", SearchResponse, ExtractResponse)
+def _empty_answer(response: AnswerResponse) -> bool:
+    """A blank written answer: nothing a caller could use."""
+    return not (response.answer or "").strip()
 
 
-def _held_or_raise(held: _Answer | None, provider: str, failures: dict[str, WebRouterError]) -> _Answer:
+_Answer = TypeVar("_Answer", SearchResponse, ExtractResponse, AnswerResponse)
+
+
+def _held_or_raise(
+    held: _Answer | None,
+    provider: str,
+    failures: dict[str, WebRouterError],
+    template: str = AUTO_AGGREGATE_FAILURE,
+    refused: Sequence[WebRouterError] = (),
+) -> _Answer:
     """The first empty answer when one came back, else every member's reason.
 
     An empty result is an answer: it outranks the failures that followed it,
     from members that were never tried before an empty answer fell through.
+    When every member tried refused the request before sending and none
+    failed, the first refusal is raised as it came: nothing was asked.
     """
     if held is not None:
         return held
-    raise _exhausted(provider, failures)
+    if refused and not failures:
+        raise refused[0]
+    raise _exhausted(provider, failures, template)
 
 
 def _no_backend(

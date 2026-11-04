@@ -68,12 +68,12 @@ def test_answer_parameters_tracks_the_model() -> None:
 
 
 def test_every_provider_declares_where_its_credentials_come_from() -> None:
-    """configured_answer_providers() reads this table, so a gap there hides a provider."""
-    assert set(ANSWER_ENV_BY_PROVIDER) == set(available_answer_providers())
+    """configured_answer_providers() reads this table, so a gap there hides a provider. `auto` holds no key."""
+    assert set(ANSWER_ENV_BY_PROVIDER) == set(available_answer_providers()) - {"auto"}
 
 
 def test_no_answer_backend_is_usable_without_a_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Every answer backend bills the call, and there is no `auto` to list instead."""
+    """Every answer backend bills the call, and `auto` is never listed: it is those backends in turn."""
     for env_var in ENV_VARS:
         monkeypatch.delenv(env_var, raising=False)
 
@@ -127,6 +127,7 @@ def _unmapped() -> list[tuple[str, str]]:
     return [
         (name, option)
         for name in available_answer_providers()
+        if name != "auto"  # it sends nothing itself: test_auto_answer.py holds its refusals
         for option in sorted(ANSWER_PARAMETERS - get_answer_provider_class(name).supported_parameters)
     ]
 

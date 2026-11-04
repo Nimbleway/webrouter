@@ -510,9 +510,10 @@ def test_a_bare_answer_uses_the_one_configured_backend(
     assert WebRouter().answer("q").provider == "fake"
 
 
-def test_a_bare_answer_with_two_configured_backends_asks_which(
+def test_a_bare_answer_with_two_configured_backends_goes_to_auto_or_asks_which(
     fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """On the usual default `auto` tries them in turn; on a default that does not answer, the caller picks."""
     from tests.conftest import FakeAnswerProvider
     from web_router import register_answer_provider, unregister_answer_provider
 
@@ -520,8 +521,9 @@ def test_a_bare_answer_with_two_configured_backends_asks_which(
     try:
         _configure(monkeypatch, "fake", "other")
 
+        assert WebRouter().answer("q").provider == "fake", "added backends follow the preferred ones, by name"
         with pytest.raises(ProviderNotFoundError, match="2 answer backends are configured") as caught:
-            WebRouter().answer("q")
+            WebRouter("nimble").answer("q")
         assert {"fake", "other"} <= set(caught.value.available)
     finally:
         unregister_answer_provider("other")
@@ -576,6 +578,16 @@ def test_a_key_passed_in_code_configures_an_answer_backend(
     router = WebRouter(provider_config={"fake": {"api_key": "in-code"}})
 
     assert router.answer("q").provider == "fake"
+
+
+def test_a_key_set_under_auto_is_not_an_answer_backend(
+    fake_answer_provider: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure(monkeypatch, "fake")
+
+    router = WebRouter("nimble", provider_config={"auto": {"api_key": "stray"}})
+
+    assert router.answer("q").provider == "fake", "the one real answer backend, not 'two configured'"
 
 
 def test_the_no_default_refusal_is_its_own_error_and_still_a_provider_not_found(
