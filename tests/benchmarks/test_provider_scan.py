@@ -198,7 +198,7 @@ def test_the_recommended_auto_order_ranks_plain_backends_and_says_which_the_run_
 
     report = scan.markdown(summary)
     section = report.split("## Recommended auto order")[1].split("\n## ")[0]
-    assert "| 1 | `best` |" in section and "| best |" in section
+    assert "| 1 | `best` |" in section and "| best, within the noise floor |" in section
     assert "| 2 | `close` |" in section and "not shown apart" in section
     assert "| 3 | `far` |" in section and "behind" in section
     assert "best@deep" not in section and "best:turbo" not in section and "`silent`" not in section
@@ -395,14 +395,23 @@ def test_a_depth_that_fails_keeps_the_depths_before_it_in_the_sink(
 def test_the_recommended_order_is_route_evals_ranking_cost_breaking_ties_inside_the_noise_floor(
     scan: ModuleType,
 ) -> None:
-    """One ranking in the repo: webiq answers one more of 100 than perplexity, inside the floor, at no listed price."""
-    counts = {"webiq": 90, "perplexity": 89, "brave": 70, "you-mcp": 100}
+    """One ranking in the repo: webiq answers one more of 100 than perplexity, inside the floor, at no listed price.
+
+    You-mcp ties webiq, but is keyless, so it goes last however well it scores.
+    """
+    counts = {"webiq": 90, "perplexity": 89, "brave": 70, "you-mcp": 90}
     rows = [
         _row(p, f"q{i}", "correct" if i < correct else "incorrect") for p, correct in counts.items() for i in range(100)
     ]
     summary = scan.summarize(rows, {**SETUP, "providers": list(counts)})
 
-    order = [p for p, _ in scan.recommended_order(summary)]
-    assert order == ["perplexity", "webiq", "brave", "you-mcp"], "priced first inside the floor; keyless last"
+    order = scan.recommended_order(summary)
+    assert [p for p, _ in order] == ["perplexity", "webiq", "brave", "you-mcp"], "priced first in the floor"
+    labels = dict(order)
+    assert labels["perplexity"] is None and labels["webiq"] is None, (
+        "both are best within the floor: the cheaper one first is not called best over the more accurate one"
+    )
+    assert labels["brave"] is True
+    assert labels["you-mcp"] is None, "as accurate as the best, kept last as keyless, is still marked best"
     section = scan.markdown(summary).split("## Recommended auto order")[1].split("\n## ")[0]
     assert "noise floor" in section and "list price" in section

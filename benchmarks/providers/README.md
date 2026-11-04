@@ -96,8 +96,10 @@ After the overall table the report suggests an order for `auto`'s search
 chain: the plain backends ranked by [route-eval](#route-eval-replaying-a-router)'s
 rule -- correct answers out of every question; within the noise floor, the
 cheaper backend at list price first, then the faster; the keyless tier last --
-each marked *behind* when its 95% interval stops short of the most accurate
-one's and *not shown apart* otherwise. It is the same ranking route-eval
+each within the noise floor of the most accurate one marked *best, within the
+noise floor* wherever the tie-break put it, and of the rest each marked
+*behind* when its 95% interval stops short of the most accurate one's and *not
+shown apart* otherwise. It is the same ranking route-eval
 prints, so the repository never suggests two orders.
 Depth and mode setups (`nimble@deep`, `tavily:ultra-fast`) are left out, since
 a chain member is a backend that `auto` sends whatever depth the request asks

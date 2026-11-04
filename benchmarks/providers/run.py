@@ -90,6 +90,8 @@ MSG_UNKNOWN_DEPTH = "{setup!r}: depth must be one of {depths}"
 MSG_UNKNOWN_MODE = "{setup!r}: no mode {mode!r} for {provider} in modes.json (it has: {known})"
 DEFAULT_MAX_RESULTS = 5
 DEFAULT_CONCURRENCY = 8
+ORDER_LABEL = {**APART, None: "best, within the noise floor"}
+"""The recommended order's last column: ``None`` is every backend the noise floor does not tell from the best."""
 
 
 class VendorMode(SearchProvider):
@@ -161,8 +163,10 @@ def recommended_order(summary: dict[str, Any]) -> list[tuple[str, bool | None]]:
     So is ``auto`` itself, if a scan named it: as a member it would be a second
     ``auto`` on the default order, reaching unranked backends first. So is a
     backend that served nothing; one that served searches and got every answer
-    wrong is ranked, last. A backend is behind only when its 95% interval stops
-    short of the most accurate one's; ``None`` marks the first.
+    wrong is ranked, last. ``None`` marks every backend within the noise floor
+    of the most accurate one -- the best, as far as the floor tells -- wherever
+    the cost tie-break placed it; of the rest, a backend is behind only when its
+    95% interval stops short of the most accurate one's.
     """
     overall = summary["overall"]
     plain = [
@@ -180,9 +184,15 @@ def recommended_order(summary: dict[str, Any]) -> list[tuple[str, bool | None]]:
         }
         for p in plain
     }
-    ranked = rank_backends(stats, noise_floor()[0])
+    spread = noise_floor()[0]
+    ranked = rank_backends(stats, spread)
+    top = max(stats[p]["accuracy"] for p in plain)
     floor = _answered_ci(overall[max(plain, key=lambda p: _answered(overall[p]))])[0]
-    return [(ranked[0], None)] + [(p, _answered_ci(overall[p])[1] < floor) for p in ranked[1:]]
+    # Labelled by accuracy, not position: the cost tie-break may put a less accurate backend first.
+    return [
+        (p, None if top - stats[p]["accuracy"] <= spread + 1e-12 else _answered_ci(overall[p])[1] < floor)
+        for p in ranked
+    ]
 
 
 def _answered(score: dict[str, Any]) -> float:
@@ -211,7 +221,9 @@ def _recommendation(summary: dict[str, Any]) -> list[str]:
         f"Backends within the noise floor ({noise_floor()[0]:.1%}, the spread between two runs of the same SealQA "
         "questions; see `route_eval.py`) are ordered cheapest first at list price (`web_router.prices`, an "
         "estimate; an unknown or $0 price never moves one up), then fastest; the keyless tier goes last. "
-        "A backend is *behind* only when its 95% interval stops short of the most accurate one's; the others are "
+        "Every backend within the noise floor of the most accurate one is *best, within the noise floor*, wherever "
+        "the cost tie-break put it. Of the rest, a backend is *behind* only when its 95% interval stops short of "
+        "the most accurate one's; the others are "
         "not shown apart by this run, and another could order them differently.\n"
     )
     lines.append("| Order | Backend | Correct of all questions | 95% CI | Failed | Against the best |")
@@ -221,7 +233,7 @@ def _recommendation(summary: dict[str, Any]) -> list[str]:
         ci = _answered_ci(s)
         lines.append(
             f"| {rank} | `{p}` | {_p(_answered(s))} ({s['correct']}/{s['questions']}) | {_p(ci[0])}-{_p(ci[1])} "
-            f"| {s['failed']} | {APART[behind]} |"
+            f"| {s['failed']} | {ORDER_LABEL[behind]} |"
         )
     chain = json.dumps({"auto": {"chain": {"search": [p for p, _ in order]}}})
     lines.append(
