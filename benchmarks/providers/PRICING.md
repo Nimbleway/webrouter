@@ -81,12 +81,12 @@ $220, Growth 100,000 for $500.
 <!-- prices: method=search provider=exa -->
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
-| default | `exa` | `type=auto` (the default) | Balances quality and speed | $7 per 1k; plus contents, $1 per 1k pages per content type; with text on 5–10 results, roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:instant` | `exa:instant` (unverified) | `type=instant` | Fastest | $4 per 1k; plus contents, $1 per 1k pages per content type | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:fast` | `exa:fast` (unverified) | `type=fast` | Low latency | $7 per 1k; plus contents, $1 per 1k pages per content type | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:deep-lite` | `exa:deep-lite` (unverified) | `type=deep-lite` | Light research with synthesis, ~4s | $12 per 1k; plus contents, $1 per 1k pages per content type | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:deep` | `exa:deep` (unverified) | `type=deep` | Multi-step research | $12 per 1k; plus contents, $1 per 1k pages per content type | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:deep-reasoning` | not in modes.json | `type=deep-reasoning` | Stronger reasoning | $15 per 1k; plus contents, $1 per 1k pages per content type | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| default | `exa` | `type=auto` (the default) | Balances quality and speed | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `:instant` | `exa:instant` (unverified) | `type=instant` | Fastest | $14 per 1k; estimate is the derived upper bound: Exa states $4 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $9–14 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `:fast` | `exa:fast` (unverified) | `type=fast` | Low latency | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `:deep-lite` | `exa:deep-lite` (unverified) | `type=deep-lite` | Light research with synthesis, ~4s | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `:deep` | `exa:deep` (unverified) | `type=deep` | Multi-step research | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `:deep-reasoning` | not in modes.json | `type=deep-reasoning` | Stronger reasoning | $25 per 1k; estimate is the derived upper bound: Exa states $15 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $20–25 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
 <!-- /prices -->
 
 Contents are billed per page per content type, $1 per 1k each: text, highlights
