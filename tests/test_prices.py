@@ -126,10 +126,13 @@ def test_a_malformed_row_is_refused(fields: dict[str, object]) -> None:
 
 
 def test_a_free_or_unknown_row_needs_no_source() -> None:
-    free = Price.model_validate(_row(price_usd=0, source_url=None, checked=None))
-    unknown = Price.model_validate(_row(price_usd=None, unit="unknown", source_url=None, checked=None))
-    assert (free.price_usd, free.source_url, free.checked) == (0, None, None)
-    assert (unknown.unit, unknown.price_usd, unknown.source_url) == ("unknown", None, None)
+    # The same rows with a price to pay are refused: the exemption is for free and unknown rows only.
+    Price.model_validate(_row(price_usd=0, source_url=None, checked=None))
+    Price.model_validate(_row(price_usd=None, unit="unknown", source_url=None, checked=None))
+    with pytest.raises(ValidationError):
+        Price.model_validate(_row(price_usd=0.01, source_url=None, checked=None))
+    with pytest.raises(ValidationError):
+        Price.model_validate(_row(price_usd=0.01, unit="unknown", source_url=None, checked=None))
 
 
 def test_rows_are_unique_with_one_default_each() -> None:

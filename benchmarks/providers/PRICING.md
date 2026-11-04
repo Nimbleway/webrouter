@@ -245,7 +245,7 @@ You.com's keyless MCP is priced in its own section above.
 | Backend | What web-router sends | Estimated price | Source | Checked |
 |---|---|---|---|---|
 | nimble | html (default) or markdown, no rendering | $1 per 1k; per URL; rendering and higher drivers cost more, per-driver prices not published | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
-| tavily | markdown | $1.60 per 1k; 1 credit per 5 successful URLs; advanced 2 credits per 5; failed URLs are free; Tavily does not say how a partial group of five is billed, so a request with 1–4 URLs may cost a whole credit | [docs.tavily.com](https://docs.tavily.com/documentation/api-credits) | 2026-10-07 |
+| tavily | markdown | $8 per 1k; estimate is the worst case, one credit ($0.008) per URL: Tavily bills 1 credit per 5 successful URLs (advanced 2 per 5) and failed URLs are free, but does not say how a partial group of five is billed, so a request with 1–4 URLs may cost a whole credit; full groups of five cost $1.60 per 1k | [docs.tavily.com](https://docs.tavily.com/documentation/api-credits) | 2026-10-07 |
 | exa | text | $1 per 1k; per page per content type | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
 | firecrawl | markdown (default) or html | $5 per 1k; 1 credit per page; top-ups 1,000–5,000 credits per $5 depending on plan; the estimate takes the top, $5 per 1k | [www.firecrawl.dev](https://www.firecrawl.dev/pricing.md) | 2026-10-07 |
 | brightdata | html (default) or markdown | $1.50 per 1k; pay-as-you-go, successes only | [brightdata.com](https://brightdata.com/pricing/web-unlocker) | 2026-10-07 |
