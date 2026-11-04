@@ -73,14 +73,14 @@ def _router_table(s: Mapping[str, Any]) -> list[str]:
 def _order_table(s: Mapping[str, Any]) -> list[str]:
     out = [
         f"### Recommended order, from every question\n\n{RANKING_RULE}\n",
-        "| Order | Backend | Correct of all questions | Cost per call | p50 latency | Failed |",
-        "|---|---|---|---|---|---|",
+        "| Order | Backend | Correct of all questions | Cost per call | p50 latency | Failed | Left out |",
+        "|---|---|---|---|---|---|---|",
     ]
     for rank, p in enumerate(s["recommended_order"], 1):
         b = s["backends"][p]
         out.append(
             f"| {rank} | `{p}` | {_p(b['accuracy_all'])} ({b['correct']}/{b['questions']}) "
-            f"| {_usd(b['cost_usd'])} | {_s(b['latency_p50'])} | {b['failed']} |"
+            f"| {_usd(b['cost_usd'])} | {_s(b['latency_p50'])} | {b['failed']} | {b['excluded']} |"
         )
     return [*out, ""]
 

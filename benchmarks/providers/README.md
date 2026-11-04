@@ -392,7 +392,11 @@ How a choice is scored:
   question, ungraded -- never correct, no fallback, counted in its own column.
   A question no backend served is a miss.
 - **Accuracy** is correct out of every question; grades and latency come only
-  from rows that did not fail.
+  from rows that did not fail. In the recommended order, a row that failed on
+  the scan's account (`rate_limit` or `quota`, such as every `you-mcp` row on
+  SealQA) is left out of its backend's questions rather than counted a miss: it
+  says the account ran out, not that the backend answered wrong. The replay
+  still passes over such a row, as `auto` would.
 - **Cost** is the cost the row states (`answer`), else the list price from
   `web_router.prices` (an estimate). An unknown price is unknown, never $0: the
   mean is over the questions whose cost is known, and the count unknown is
@@ -422,6 +426,31 @@ first, then the faster, then the name. An unknown or $0 cost never moves a backe
 stays last. `run.py`'s recommended order calls the same ranking. AIQ and the
 cost and latency curves wait for the first real router. `--json PATH` writes
 the numbers as well.
+
+### The default `auto` orders: `make chains`
+
+`auto`'s keyed search order and answer's order are not written by hand. `make
+chains` (`chains.py`, beside `route_eval.py`) writes them to
+`src/web_router/data/chains.json`, each method's recommended order on its
+ranking set, over all of its questions (twice the held-out half's data, so less
+noise). Routers are still scored on the held-out half, so ranking the baseline on
+every question makes it slightly harder for a router to beat there, on purpose:
+
+- **search** ranks on `sealqa-hard-254`. On SimpleQA, the control, every keyed
+  backend scores 81-95% and the previous order already came from it; SealQA
+  hard is where they differ, and the noise floor is measured on its own rerun.
+  Pooling the two would need every member on both, and Keenable and DeepSeek
+  have no SealQA rows.
+- **answer** ranks on `answer-simpleqa-300`, the one answer set.
+
+A member the set has no rows for (Keenable, DeepSeek and AgentCore for search,
+Brave for answer) keeps its place after the ranked ones and is listed as
+`unmeasured`; the keyless search tier stays in `constants.py`, unranked.
+Extract's order is measured on pages returned, not graded, and research's is
+unmeasured, so both stay hand-ordered. `chains.py --check` exits 1 when
+the file is stale, and a unit test runs it, so a change to the frozen results
+or the price list that moves an order fails until `make chains` is run and the
+README's tables follow.
 
 ## Keeping results
 
