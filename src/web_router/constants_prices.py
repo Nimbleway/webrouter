@@ -47,4 +47,6 @@ EMPTY = "—"
 """A table cell with nothing to say."""
 
 MSG_PRICING_STALE = "PRICING.md's tables are stale: run `make prices`."
+LATENCY_METHODS: frozenset[str] = frozenset({"search", "answer"})
+"""The methods `make latency` measures; every other method's latency stays null, unknown."""
 MSG_LATENCY_STALE = "prices.json's latency fields are stale: run `make latency`."

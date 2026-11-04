@@ -201,12 +201,12 @@ def test_a_frozen_mode_maps_to_the_price_lists_mode(mode: str, expected: str | N
 
 
 def _frozen(
-    provider: str, mode: str, latency_s: float, error: str | None = None, set_name: str = "a"
+    provider: str, mode: str, latency_s: float, error: str | None = None, set_name: str = "a", method: str = "search"
 ) -> dict[str, object]:
     return {
         "set": set_name,
         "provider": provider,
-        "method": "search",
+        "method": method,
         "mode": mode,
         "latency_s": latency_s,
         "error": error,
@@ -279,3 +279,25 @@ def test_a_whole_latency_is_accepted() -> None:
         _row(latency_p50_s=1.0, latency_p90_s=2.0, latency_n=5, latency_runs=["r"], latency_measured="2026-10-01")
     )
     assert row.latency_runs == ("r",)
+
+
+def test_measure_reports_an_unmatched_setup_whose_every_call_failed() -> None:
+    _pct = latency._benchmarks()[1]._pct
+    runs = {("a", "tavily", "ultra-fast@deep"): ("run-a", date(2026, 10, 1))}
+    rows = [_frozen("tavily", "ultra-fast@deep", 9.0, error="timeout")]
+    filled, unmatched = latency.measure(rows, runs, pct=_pct, default="default", depth_mark="@")
+    assert filled == {}
+    assert unmatched == {("tavily", "search", "ultra-fast@deep")}
+
+
+def test_measure_leaves_methods_other_than_search_and_answer_alone() -> None:
+    _pct = latency._benchmarks()[1]._pct
+    runs = {("r", "nimble", "default"): ("run-r", date(2026, 10, 1))}
+    rows = [
+        _frozen("nimble", "default", 30.0, set_name="r", method="research"),
+        _frozen("nimble", "default", 2.0, set_name="r", method="extract"),
+    ]
+    assert prices.price("nimble", "research") is not None and prices.price("nimble", "extract") is not None
+    filled, unmatched = latency.measure(rows, runs, pct=_pct, default="default", depth_mark="@")
+    assert filled == {}
+    assert unmatched == set()

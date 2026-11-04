@@ -24,7 +24,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from web_router.constants_prices import MSG_LATENCY_STALE, PRICES_DATA_DIR, PRICES_DATA_FILE
+from web_router.constants_prices import LATENCY_METHODS, MSG_LATENCY_STALE, PRICES_DATA_DIR, PRICES_DATA_FILE
 from web_router.prices import price
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -97,12 +97,15 @@ def measure(
     sources: dict[Key, set[tuple[str, date]]] = {}
     unmatched: set[tuple[str, str, str]] = set()
     for row in rows:
-        if row["error"] is not None or row["latency_s"] is None:
+        if row["method"] not in LATENCY_METHODS:
             continue
         mode = price_mode(row["mode"], default=default, depth_mark=depth_mark)
         priced = price(row["provider"], row["method"], mode)
+        # Matched before the error filter, so a setup whose every call failed is still reported.
         if priced is None:
             unmatched.add((row["provider"], row["method"], row["mode"]))
+            continue
+        if row["error"] is not None or row["latency_s"] is None:
             continue
         samples.setdefault(priced.key, []).append(float(row["latency_s"]))
         sources.setdefault(priced.key, set()).add(runs[(row["set"], row["provider"], row["mode"])])
