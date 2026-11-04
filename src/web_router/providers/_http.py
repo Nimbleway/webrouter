@@ -40,7 +40,6 @@ from __future__ import annotations
 
 import abc
 import contextlib
-import math
 from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any, ClassVar, Generic, Literal, TypeVar
@@ -61,7 +60,7 @@ from web_router.constants import (
     RESEARCH_HTTP_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError, ProviderError
-from web_router.providers._deadline import call_budget, current_deadline, job_budget, research_budget
+from web_router.providers._deadline import clamped, job_budget, research_budget
 from web_router.providers._utils import compact, error_detail, resolve_api_key
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
@@ -162,14 +161,8 @@ class _HttpProvider(_BaseProvider):
         self._async: httpx.AsyncClient | None = None
 
     def _clamped(self) -> dict[str, Any]:
-        """A one-call request's timeout under a deadline: the client's own, clamped to the time left.
-
-        Empty with no deadline in force, so the client's timeout applies as it
-        always has. A job's requests clamp their own longer default instead.
-        """
-        if current_deadline() is None:
-            return {}
-        return {"timeout": clamp_timeout(self._client_kwargs["timeout"])}
+        """A one-call request's timeout under a deadline; see :func:`~web_router.providers._deadline.clamped`."""
+        return clamped(self._client_kwargs["timeout"])
 
     def _resolve_key(self, api_key: str | None) -> str | None:
         if not self.env_api_key:
@@ -484,27 +477,6 @@ class HttpBrowseProvider(_HttpProvider, BrowseProvider):
     def _budget(self) -> float:
         """This request's timeout: the caller's remaining wait, when there is one, never more than the client's."""
         return job_budget(self._browse_timeout)
-
-
-def clamp_timeout(configured: float | httpx.Timeout | None) -> float | httpx.Timeout:
-    """``configured`` with every limit clamped to the time the deadline in force leaves; never raised.
-
-    For a transport whose timeout is its own -- an ``httpx`` client's, an
-    SDK's -- rather than a job's: a part left unlimited is limited to the time
-    left. Only meaningful under a deadline, where every part comes back finite.
-    """
-    if isinstance(configured, httpx.Timeout):
-        return httpx.Timeout(
-            connect=_clamp(configured.connect),
-            read=_clamp(configured.read),
-            write=_clamp(configured.write),
-            pool=_clamp(configured.pool),
-        )
-    return _clamp(configured)
-
-
-def _clamp(limit: float | None) -> float:
-    return call_budget(math.inf if limit is None else limit)
 
 
 ReleaseMethod = Literal["POST", "PUT", "DELETE"]

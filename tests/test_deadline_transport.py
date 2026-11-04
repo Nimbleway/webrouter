@@ -25,8 +25,7 @@ from tests.deadline_helpers import (
 from tests.deadline_helpers import clock as clock  # a fixture: imported by name so pytest finds it here
 from web_router.constants import TAVILY_SDK_SEARCH_TIMEOUT
 from web_router.exceptions import DeadlineExceededError, ProviderError
-from web_router.providers._deadline import call_deadline
-from web_router.providers._http import clamp_timeout
+from web_router.providers._deadline import call_deadline, clamp_timeout
 from web_router.providers.nimble import NimbleProvider
 from web_router.providers.nimble_template import NimbleTemplateProvider
 from web_router.providers.tavily import TavilyProvider
