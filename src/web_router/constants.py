@@ -461,6 +461,7 @@ TAVILY_EXTRACT_FORMATS: dict[ExtractFormat, str] = {
 TAVILY_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
 
 TAVILY_EXTRACT_RESULT_FIELD = "raw_content"
+"""Where Tavily puts the page body, whichever format it was asked for."""
 
 TAVILY_SDK_SEARCH_TIMEOUT = 60.0
 TAVILY_SDK_EXTRACT_TIMEOUT = 30.0
@@ -470,7 +471,6 @@ Sent only under a per-call deadline, clamped to the time left, when the
 provider was given no ``timeout`` of its own; otherwise nothing is sent and
 the SDK keeps its default.
 """
-"""Where Tavily puts the page body, whichever format it was asked for."""
 
 # --- You.com MCP, the keyless route -----------------------------------------
 # A different service from YOU_BASE_URL above: MCP over JSON-RPC rather than
