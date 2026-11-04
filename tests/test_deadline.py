@@ -701,3 +701,47 @@ def test_a_one_call_transport_never_gets_more_than_the_time_left(clock: _Clock) 
 
     assert seen and seen[0] <= 0.2 + 1e-9
     assert clamp_timeout(30.0) == 30.0, "with no deadline the provider's own timeout stands"
+
+
+def test_a_members_own_shorter_timeout_is_its_failure_and_auto_moves_on(clock: _Clock, calls: _Calls) -> None:
+    """0.4s left and a member whose own timeout is 0.1s: it timed out on its own, so the next member is tried."""
+    from web_router.providers._utils import call_budget
+
+    class Quick(FakeProvider):
+        def _search(self, request: SearchRequest) -> SearchResponse:
+            budget = call_budget(0.1)
+            calls.started.append(("quick", clock.now, budget))
+            clock.now += budget
+            raise TimeoutError("read timed out")
+
+    class Answers(FakeProvider):
+        def _search(self, request: SearchRequest) -> SearchResponse:
+            calls.started.append(("answers", clock.now, 0.0))
+            return super()._search(request)
+
+    for name, cls in (("quick", Quick), ("answers", Answers)):
+        cls.name = name
+        register_provider(name, cls)
+        calls.names.append(name)
+    provider = AutoProvider(chain=(("quick", {}), ("answers", {})))
+
+    with call_deadline(DEADLINE):
+        clock.now = DEADLINE - 0.4
+        response = provider.search(SearchRequest(query="q"))
+
+    assert response.provider == "answers"
+    assert [name for name, _, _ in calls.started] == ["quick", "answers"]
+    assert calls.started[0][2] == pytest.approx(0.1), "the member's own timeout, not the time left, set the limit"
+
+
+async def test_an_async_batch_that_reported_only_failures_is_not_hidden_by_the_deadline() -> None:
+    """One call answers with nothing but a failure, another is cut off: the reported failure is still named."""
+    provider = _ReportsBlocked(transport=_hangs(slow=URLS[1]))
+
+    with call_deadline(TINY), pytest.raises(ProviderError) as caught:
+        await provider.aextract(ExtractRequest(urls=URLS[:2]))
+
+    assert not isinstance(caught.value, DeadlineExceededError)
+    message = str(caught.value)
+    assert f"{URLS[0]}: blocked" in message
+    assert URLS[1] in message

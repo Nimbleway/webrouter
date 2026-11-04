@@ -1148,6 +1148,14 @@ JOB_POLL_BACKOFF = 1.5
 JOB_TIMEOUT = 600.0
 """How long waiting on a job gives up after, for a method that sets no default of its own."""
 
+DEADLINE_TOLERANCE = 0.05
+"""Seconds before a deadline within which a request's timeout counts as the deadline's.
+
+A request clamped to the time left times out as the deadline arrives; one that
+timed out earlier than this ran into its own, shorter timeout, which is the
+backend's failure and lets ``auto`` try the next member.
+"""
+
 MIN_CALL_BUDGET = 0.001
 """Floor on a one-call method's transport timeout under a deadline -- a search, an extract, an answer, a template run.
 

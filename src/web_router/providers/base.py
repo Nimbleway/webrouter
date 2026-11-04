@@ -43,6 +43,7 @@ from pydantic import SecretStr
 from web_router.constants import (
     BROWSE_TIMEOUT,
     BROWSER_TIMEOUT,
+    DEADLINE_TOLERANCE,
     EXTRACT_DEFAULT_FORMAT,
     JOB_POLL_BACKOFF,
     JOB_POLL_INTERVAL,
@@ -50,7 +51,6 @@ from web_router.constants import (
     JOB_TIMEOUT,
     JOB_TIMEOUT_ERROR_SUFFIXES,
     MAX_CONCURRENT_EXTRACTS,
-    MIN_JOB_BUDGET,
     MSG_BROWSE_FAILED,
     MSG_BROWSE_NOT_RESUMABLE,
     MSG_BROWSER_CO_REQUIRED,
@@ -241,13 +241,14 @@ class _BaseProvider(abc.ABC):
     def _late(self, deadline: Deadline | None, exc: BaseException) -> DeadlineExceededError | None:
         """The deadline error ``exc`` amounts to, or ``None`` when it is the backend's own failure.
 
-        A request that timed out with no more than
-        :data:`~web_router.constants.MIN_JOB_BUDGET` left was cut off by the
-        clamp, not by the backend's own timeout: that is the deadline, and
-        saying so is the difference between "try another backend" and "there
-        is no time to".
+        Only a timeout the deadline set counts: one that fired as the deadline
+        arrived, within :data:`~web_router.constants.DEADLINE_TOLERANCE`. A
+        request clamped to the time left times out then; one that timed out
+        earlier ran into the backend's own, shorter timeout, which is its
+        failure -- and the difference between "try another backend" and
+        "there is no time to".
         """
-        if deadline is None or deadline.left() > MIN_JOB_BUDGET:
+        if deadline is None or deadline.left() > DEADLINE_TOLERANCE:
             return None
         if not (_is_timeout(exc) if isinstance(exc, ProviderError) else _timed_out(exc)):
             return None
@@ -501,12 +502,15 @@ class _Collected:
         self.failures: list[ExtractFailure] = []
         self.payloads: list[dict[str, Any]] = []
         self.request_id: str | None = None
+        self.reported = 0
+        """Failures a backend reported in an answer, rather than a call that raised."""
         self.errors: list[tuple[list[str], ProviderError | DeadlineExceededError]] = []
 
     def add(self, urls: list[str], response: ExtractResponse) -> None:
         self.served_by = self.served_by or response.provider
         self.documents.extend(response.documents)
         self.failures.extend(response.failures)
+        self.reported += len(response.failures)
         self.payloads.extend(response.raw or [])
         self.request_id = self.request_id or response.request_id
         self._account_for(urls, response)
@@ -525,9 +529,9 @@ class _Collected:
             return
 
         mentioned = {document.url for document in response.documents} | {failure.url for failure in response.failures}
-        self.failures.extend(
-            ExtractFailure(url=url, error=MSG_EXTRACT_NO_DOCUMENT) for url in urls if url not in mentioned
-        )
+        dropped = [ExtractFailure(url=url, error=MSG_EXTRACT_NO_DOCUMENT) for url in urls if url not in mentioned]
+        self.failures.extend(dropped)
+        self.reported += len(dropped)
 
     def fail(self, urls: list[str], error: ProviderError | DeadlineExceededError) -> None:
         """Record a call that raised as a failure against each URL it carried."""
@@ -578,11 +582,12 @@ class _Collected:
 
         failures = self.failures or [ExtractFailure(url=url, error=MSG_EXTRACT_NO_DOCUMENT) for url in self.requested]
         detail = "; ".join(f"{failure.url}: {failure.error}" for failure in failures)
-        late = [(urls, error) for urls, error in self.errors if isinstance(error, DeadlineExceededError)]
-        if late and sum(len(urls) for urls, _ in late) == len(self.failures):
-            # Every URL that failed ran out of time; one that failed for a
-            # reason of its own keeps the summary below, which names each.
-            return DeadlineExceededError(self.provider, late[0][1].seconds)
+        late = [error for _, error in self.errors if isinstance(error, DeadlineExceededError)]
+        if late and len(late) == len(self.errors) and not self.reported:
+            # Every URL that failed ran out of time. One that failed for a
+            # reason of its own -- a call that raised, or a URL a backend
+            # reported in its answer -- keeps the summary below, which names each.
+            return DeadlineExceededError(self.provider, late[0].seconds)
         original = next((error.original for _, error in self.errors if isinstance(error, ProviderError)), None)
         return ProviderError(self.provider, MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail), original=original)
 
