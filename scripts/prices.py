@@ -20,23 +20,13 @@ from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import urlparse
 
+from web_router.constants_prices import EMPTY, MINUTES_PER_HOUR, MSG_PRICING_STALE, UNIT_TEXT
 from web_router.prices import Price, prices
 
 ROOT = Path(__file__).resolve().parent.parent
 PRICING_MD = ROOT / "benchmarks" / "providers" / "PRICING.md"
 
 BLOCK = re.compile(r"(?P<open><!-- prices: (?P<spec>[^>]*?) -->\n)(?P<body>.*?)(?P<close><!-- /prices -->)", re.DOTALL)
-
-UNIT_TEXT = {
-    "per_request": "per request",
-    "per_1k": "per 1k",
-    "per_page": "per page",
-    "per_run": "per run",
-}
-
-MINUTES_PER_HOUR = 60
-
-EMPTY = "—"
 
 
 def _usd(value: float) -> str:
@@ -134,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     fresh = regenerate(current, prices())
     if args.check:
         if fresh != current:
-            print("PRICING.md's tables are stale: run `make prices`.", file=sys.stderr)
+            print(MSG_PRICING_STALE, file=sys.stderr)
             return 1
         return 0
     PRICING_MD.write_text(fresh, encoding="utf-8")

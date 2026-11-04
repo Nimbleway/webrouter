@@ -110,6 +110,8 @@ src/web_router/
 ├── prices.py           estimated list prices per (provider, method, mode), read
 │                       from data/prices.json; PRICING.md's tables are made from it
 ├── data/prices.json    the price list itself (experimental), shipped in the wheel
+├── constants_prices.py the price list's data path, unit divisors, messages and
+│                       PRICING.md wording, kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── registry_answer.py  the answer backends' table, and the backend an

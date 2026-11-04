@@ -41,33 +41,22 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from web_router.constants_prices import (
+    MSG_PRICE_DEFAULTS,
+    MSG_PRICE_DUPLICATE,
+    MSG_PRICE_SHAPE,
+    MSG_PRICE_SOURCE,
+    PER_ONE,
+    PRICES_DATA_DIR,
+    PRICES_DATA_FILE,
+    UNPRICED_UNITS,
+)
 from web_router.types import Provider, provider_name
 
 PriceUnit = Literal["per_request", "per_1k", "per_page", "per_browser_minute", "per_run", "token_billed", "unknown"]
 """What ``price_usd`` is charged per. ``per_1k`` is per 1,000 of whatever the method bills: requests, pages, runs."""
 
 PriceMethod = Literal["search", "extract", "run_template", "answer", "research", "open_browser", "browse"]
-
-UNPRICED_UNITS: frozenset[str] = frozenset({"token_billed", "unknown"})
-"""Units with no fixed price, so no estimate before the call."""
-
-_PER_ONE: dict[str, float] = {
-    "per_request": 1.0,
-    "per_1k": 1000.0,
-    "per_page": 1.0,
-    "per_browser_minute": 1.0,
-    "per_run": 1.0,
-}
-"""What ``price_usd`` is divided by to give the cost of one unit: one request, page, run or browser-minute."""
-
-_DATA_DIR = "data"
-_DATA_FILE = "prices.json"
-"""Under the ``web_router`` package, so it ships in the wheel beside the code."""
-
-MSG_PRICE_SHAPE = "price row {key}: price_usd must be {expected} for unit {unit!r}"
-MSG_PRICE_SOURCE = "price row {key}: a priced row needs source_url and checked"
-MSG_PRICE_DUPLICATE = "price rows repeat (provider, method, mode): {keys}"
-MSG_PRICE_DEFAULTS = "price rows for {pair} name more than one default call: {modes}"
 
 
 class Price(BaseModel):
@@ -105,7 +94,7 @@ class Price(BaseModel):
         """Estimated cost of one request, page, run or browser-minute, or ``None`` with no fixed price."""
         if self.price_usd is None:
             return None
-        return self.price_usd / _PER_ONE[self.unit]
+        return self.price_usd / PER_ONE[self.unit]
 
     @model_validator(mode="after")
     def _check(self) -> Price:
@@ -135,7 +124,7 @@ def _validate(rows: tuple[Price, ...]) -> None:
 @lru_cache(maxsize=1)
 def prices() -> tuple[Price, ...]:
     """Every row of the shipped price list, in file order."""
-    text = (resources.files("web_router") / _DATA_DIR / _DATA_FILE).read_text(encoding="utf-8")
+    text = (resources.files("web_router") / PRICES_DATA_DIR / PRICES_DATA_FILE).read_text(encoding="utf-8")
     rows = tuple(Price.model_validate(row) for row in json.loads(text)["rows"])
     _validate(rows)
     return rows
