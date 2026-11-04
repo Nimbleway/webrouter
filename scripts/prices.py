@@ -126,10 +126,6 @@ def regenerate(text: str, rows: tuple[Price, ...]) -> str:
     return BLOCK.sub(replace, text)
 
 
-def specs(text: str) -> list[str]:
-    return [match["spec"] for match in BLOCK.finditer(text)]
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="exit 1 if PRICING.md's tables are stale")

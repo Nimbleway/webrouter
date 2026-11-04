@@ -82,6 +82,7 @@ $220, Growth 100,000 for $500.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `exa` | `type=auto` (the default) | Balances quality and speed | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `:highlights` | `exa:highlights` | `contents.highlights` instead of text | Query-relevant highlights instead of page text | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
 | `:instant` | `exa:instant` (unverified) | `type=instant` | Fastest | $14 per 1k; estimate is the derived upper bound: Exa states $4 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $9–14 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
 | `:fast` | `exa:fast` (unverified) | `type=fast` | Low latency | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
 | `:deep-lite` | `exa:deep-lite` (unverified) | `type=deep-lite` | Light research with synthesis, ~4s | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
@@ -244,7 +245,7 @@ You.com's keyless MCP is priced in its own section above.
 | Backend | What web-router sends | Estimated price | Source | Checked |
 |---|---|---|---|---|
 | nimble | html (default) or markdown, no rendering | $1 per 1k; per URL; rendering and higher drivers cost more, per-driver prices not published | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
-| tavily | markdown | $1.60 per 1k; 1 credit per 5 URLs; advanced 2 credits per 5 | [docs.tavily.com](https://docs.tavily.com/documentation/api-credits) | 2026-10-07 |
+| tavily | markdown | $1.60 per 1k; 1 credit per 5 successful URLs; advanced 2 credits per 5; failed URLs are free; Tavily does not say how a partial group of five is billed, so a request with 1–4 URLs may cost a whole credit | [docs.tavily.com](https://docs.tavily.com/documentation/api-credits) | 2026-10-07 |
 | exa | text | $1 per 1k; per page per content type | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
 | firecrawl | markdown (default) or html | $5 per 1k; 1 credit per page; top-ups 1,000–5,000 credits per $5 depending on plan; the estimate takes the top, $5 per 1k | [www.firecrawl.dev](https://www.firecrawl.dev/pricing.md) | 2026-10-07 |
 | brightdata | html (default) or markdown | $1.50 per 1k; pay-as-you-go, successes only | [brightdata.com](https://brightdata.com/pricing/web-unlocker) | 2026-10-07 |
@@ -301,6 +302,7 @@ request. Each row is the vendor tier web-router's normalized `effort` maps to
 <!-- prices: method=research -->
 | Backend | Mode | What web-router sends | Estimated price | Source | Checked |
 |---|---|---|---|---|---|
+| nimble | default | no `effort` (the vendor's default) | no effort set: Nimble's own default effort, which it does not price | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
 | nimble | `low` | Web Search Agent `effort=low`, 10 to 30 s | $0.025 per run | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
 | nimble | `medium` | `medium`, 1 to 3 minutes | $0.10 per run | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
 | nimble | `high` | `high`, 5 to 15 minutes | $0.50 per run | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |

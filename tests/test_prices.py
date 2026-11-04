@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from scripts.prices import PRICING_MD, regenerate, select, specs
+from scripts.prices import BLOCK, PRICING_MD, regenerate, select
 from web_router import prices, registry, registry_answer
 from web_router.constants import PROVIDER_AUTO, PROVIDER_LOCAL, PROVIDER_MAX
 from web_router.prices import Price
@@ -60,8 +60,9 @@ def test_every_builtin_backend_answers_a_call_that_sets_no_mode() -> None:
         for provider in table
         if provider not in EXEMPT and prices.price(provider, method) is None
     ]
-    # Nimble's research default effort is the vendor's own, which PRICING.md does not price.
-    assert unanswered == [("nimble", "research")]
+    assert unanswered == []
+    # Nimble's research default effort is the vendor's own: a row, priced unknown.
+    assert prices.estimate("nimble", "research") is None
 
 
 def test_estimate_is_the_cost_of_one_call() -> None:
@@ -102,9 +103,9 @@ def test_browser_sessions_are_priced_per_minute() -> None:
     assert steel.estimate_usd * 60 == pytest.approx(0.10, abs=1e-6)
 
 
-def test_latency_fields_exist_on_every_row() -> None:
-    for row in prices.prices():
-        assert {"latency_p50_s", "latency_p90_s", "latency_n"} <= set(row.model_dump())
+def test_latency_is_not_filled_in_yet() -> None:
+    # Measured latency comes from the frozen benchmark results in a later change; until then none is shipped.
+    assert all((row.latency_p50_s, row.latency_p90_s, row.latency_n) == (None, None, None) for row in prices.prices())
 
 
 @pytest.mark.parametrize(
@@ -125,8 +126,10 @@ def test_a_malformed_row_is_refused(fields: dict[str, object]) -> None:
 
 
 def test_a_free_or_unknown_row_needs_no_source() -> None:
-    Price.model_validate(_row(price_usd=0, source_url=None, checked=None))
-    Price.model_validate(_row(price_usd=None, unit="unknown", source_url=None, checked=None))
+    free = Price.model_validate(_row(price_usd=0, source_url=None, checked=None))
+    unknown = Price.model_validate(_row(price_usd=None, unit="unknown", source_url=None, checked=None))
+    assert (free.price_usd, free.source_url, free.checked) == (0, None, None)
+    assert (unknown.unit, unknown.price_usd, unknown.source_url) == ("unknown", None, None)
 
 
 def test_rows_are_unique_with_one_default_each() -> None:
@@ -142,5 +145,6 @@ def test_pricing_md_tables_match_the_data() -> None:
 
 
 def test_every_row_appears_in_exactly_one_pricing_md_table() -> None:
-    shown = [row.key for spec in specs(PRICING_MD.read_text(encoding="utf-8")) for row in select(spec, prices.prices())]
+    text = PRICING_MD.read_text(encoding="utf-8")
+    shown = [row.key for match in BLOCK.finditer(text) for row in select(match["spec"], prices.prices())]
     assert sorted(shown, key=str) == sorted((row.key for row in prices.prices()), key=str)
