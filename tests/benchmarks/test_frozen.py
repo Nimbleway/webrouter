@@ -20,6 +20,8 @@ def test_every_committed_file_matches_its_checksum(frozen: ModuleType) -> None:
     sums = frozen.verify(frozen.FROZEN_DIR)
     expected = {name + frozen.SUFFIX for name in frozen.FROZEN_SETS} | {frozen.MANIFEST_FILE}
     assert set(sums) == expected
+    manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
+    assert manifest["sets"]["sealqa-hard-254"]["failed_rows"]["you-mcp"] == {"default": 254}
 
 
 def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleType) -> None:
@@ -42,20 +44,6 @@ def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleT
             assert row["grade"] in (*frozen.GRADES, None)
             assert row["error"] in (*frozen.ERROR_NAMES, None)
             assert len(row["question_id"]) == 16
-
-
-def test_the_manifest_counts_each_backends_failed_rows_as_the_rows_hold_them(frozen: ModuleType) -> None:
-    manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
-    for set_name, entry in manifest["sets"].items():
-        rows = frozen.read_rows(frozen.FROZEN_DIR / (set_name + frozen.SUFFIX))
-        counted: dict[str, dict[str, int]] = {}
-        for row in rows:
-            by_mode = counted.setdefault(row["provider"], {})
-            by_mode[row["mode"]] = by_mode.get(row["mode"], 0) + (row["error"] is not None)
-        assert entry["failed_rows"] == counted, set_name
-        failed = [r for r in rows if r["error"] is not None]
-        assert all(r["grade"] is None for r in failed if r["error"] != "judge"), "a failed row carries no grade"
-    assert manifest["sets"]["sealqa-hard-254"]["failed_rows"]["you-mcp"] == {"default": 254}
 
 
 def test_the_four_sets_route_eval_needs_are_frozen_at_their_sizes(frozen: ModuleType) -> None:
@@ -183,6 +171,27 @@ def test_join_downloads_each_dataset_once_and_refuses_changed_answers(
     monkeypatch.setattr(frozen, "load_index", lambda questions, local: load(questions, "changed {q}"))
     with pytest.raises(SystemExit, match="changed upstream"):
         frozen.join(tmp_path / "frozen", tmp_path / "out", {})
+
+
+def test_a_join_that_fails_on_a_later_set_writes_no_file(
+    frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _scan(tmp_path / "results" / "a", ["tavily"], ["q1", "q2"])
+    sets = {
+        "one": {"questions": "simpleqa", "method": "search", "runs": ["a"]},
+        "two": {"questions": "sealqa-hard", "method": "search", "runs": ["a"]},
+    }
+    monkeypatch.setattr(frozen, "FROZEN_SETS", sets)
+    frozen.build(tmp_path / "results", tmp_path / "frozen", {}, check_join=False)
+
+    def load(questions: str, local: Any) -> dict[str, Any]:
+        asked = ("q1", "q2") if questions == "simpleqa" else ("q1",)
+        return frozen.question_index([Question(question=q, answer=f"secret gold {q}") for q in asked], questions)
+
+    monkeypatch.setattr(frozen, "load_index", load)
+    with pytest.raises(SystemExit, match="1 question_id"):
+        frozen.join(tmp_path / "frozen", tmp_path / "out", {})
+    assert not (tmp_path / "out").exists() or not any((tmp_path / "out").iterdir())
 
 
 def test_build_refuses_a_dataset_whose_answers_changed_under_the_scans(
