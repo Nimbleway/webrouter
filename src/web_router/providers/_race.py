@@ -134,10 +134,11 @@ class _Losses:
 
         Raises:
             ProviderError: under :data:`MAX_AGGREGATE_FAILURE`, when nothing came back at all.
-            DeadlineExceededError: instead, when a member ran into the call's deadline.
+            DeadlineExceededError: instead, when every member ran into the call's deadline, as
+                extract's own rule has it; a member that failed for a reason of its own keeps the summary.
         """
         if self.partial is not None:
             return self.partial
-        if any(isinstance(exc, DeadlineExceededError) for exc in self.failures.values()):
+        if self.failures and all(isinstance(exc, DeadlineExceededError) for exc in self.failures.values()):
             raise _deadline_error(self.provider, self.failures)
         raise _exhausted(self.provider, self.failures, MAX_AGGREGATE_FAILURE)

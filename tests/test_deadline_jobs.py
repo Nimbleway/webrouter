@@ -231,3 +231,27 @@ def test_a_benchmark_carries_the_deadline_onto_each_members_thread() -> None:
             unregister_provider(name)
 
     assert seen == dict.fromkeys(names, (False, True))
+
+
+def test_max_extract_says_deadline_only_when_every_member_ran_out_of_time() -> None:
+    # As extract's own rule: a member that failed for a reason of its own keeps the summary naming each loss.
+    from web_router.providers._race import _Losses
+
+    def late() -> Any:
+        raise DeadlineExceededError("a", DEADLINE)
+
+    def broken() -> Any:
+        raise ProviderError("b", "HTTP 500")
+
+    every = _Losses("max")
+    every.record("a", late)
+    every.record("b", late)
+    with pytest.raises(DeadlineExceededError):
+        every.settle()
+
+    mixed = _Losses("max")
+    mixed.record("a", late)
+    mixed.record("b", broken)
+    with pytest.raises(ProviderError) as raised:
+        mixed.settle()
+    assert not isinstance(raised.value, DeadlineExceededError)

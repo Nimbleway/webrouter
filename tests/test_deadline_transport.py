@@ -215,6 +215,17 @@ def test_a_longer_tavily_timeout_in_provider_options_does_not_outlast_the_deadli
     assert search._build_payload(SearchRequest(query="q", provider_options=options))["timeout"] == 120
 
 
+def test_a_tavily_extract_with_less_than_a_second_left_sends_nothing(clock: _Clock) -> None:
+    # Tavily's extract accepts a timeout of 1 to 60 s; a shorter one would come back a validation error.
+    from web_router.providers.tavily import TavilyExtractProvider
+
+    extract = TavilyExtractProvider(api_key="test-key")
+    with call_deadline(0.5), pytest.raises(DeadlineExceededError):
+        extract._build_payload(ExtractRequest(urls=URLS[:1]), URLS[:1])
+    with call_deadline(DEADLINE):
+        assert extract._build_payload(ExtractRequest(urls=URLS[:1]), URLS[:1])["timeout"] == DEADLINE
+
+
 class _Spaced(_AcmeExtract):
     """A backend limited per second: two calls start at least two seconds apart, as DeepSeek's fetches do."""
 
