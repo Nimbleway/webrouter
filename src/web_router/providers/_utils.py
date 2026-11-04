@@ -20,12 +20,6 @@ from web_router.constants import (
     SNIPPET_LIMIT,
 )
 from web_router.exceptions import ConfigurationError
-
-# The deadline's names that lived here before it had a module of its own.
-from web_router.providers._deadline import job_budget as job_budget
-from web_router.providers._deadline import job_deadline as job_deadline
-from web_router.providers._deadline import research_budget as research_budget
-from web_router.providers._deadline import research_deadline as research_deadline
 from web_router.types import (
     REQUEST_VALUE,
     BrowserField,
