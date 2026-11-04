@@ -254,3 +254,14 @@ def test_join_downloads_each_dataset_once_and_refuses_changed_answers(
     monkeypatch.setattr(frozen, "load_index", lambda questions, local: load(questions, "changed {q}"))
     with pytest.raises(SystemExit, match="changed upstream"):
         frozen.join(tmp_path / "frozen", tmp_path / "out", {})
+
+
+def test_build_refuses_a_dataset_whose_answers_changed_under_the_scans(
+    frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _scan(tmp_path / "results" / "a", ["tavily"], ["q1", "q2"])
+    _one_set(frozen, monkeypatch, ["a"])
+    changed = [Question(question=q, answer=f"changed {q}") for q in ("q1", "q2")]
+    monkeypatch.setattr(frozen, "load_index", lambda questions, local: frozen.question_index(changed, questions))
+    with pytest.raises(SystemExit, match="changed upstream"):
+        frozen.build(tmp_path / "results", tmp_path / "frozen", {})

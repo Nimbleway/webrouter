@@ -387,6 +387,7 @@ def build(results: Path, folder: Path, local: Mapping[str, Path], *, check_join:
         if check_join:
             index = load_index(entry["questions"], local)
             entry["resolved"] = require_resolved(set_name, rows, index, entry["questions"])
+            require_same_answers(set_name, entry, rows, index)
         manifest["sets"][set_name] = entry
         files[set_name + SUFFIX] = gzip_jsonl(rows)
     files[MANIFEST_FILE] = (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
