@@ -26,8 +26,6 @@ BRAVE_ANSWER_MODEL = "brave"
 BRAVE_ANSWER_TAGS = ("citation", "usage")
 """The tags Brave writes into the streamed text: a citation after the sentence it backs, and the call's cost."""
 
-BRAVE_SSE_DATA_PREFIX = "data: "
-
 BRAVE_SSE_DONE = "[DONE]"
 
 BRAVE_ANSWER_CITATION_MAPPED = frozenset({"url", "snippet"})

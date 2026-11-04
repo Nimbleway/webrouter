@@ -27,6 +27,7 @@ from web_router.constants import (
     BRAVE_SEARCH_PATH,
     ENV_BRAVE_ANSWER_API_KEY,
     ENV_BRAVE_API_KEY,
+    MCP_SSE_DATA_PREFIX,
     PROVIDER_BRAVE,
 )
 from web_router.constants_brave import (
@@ -35,7 +36,6 @@ from web_router.constants_brave import (
     BRAVE_ANSWER_PATH,
     BRAVE_ANSWER_TAGS,
     BRAVE_FINISH_LENGTH,
-    BRAVE_SSE_DATA_PREFIX,
     BRAVE_SSE_DONE,
     MSG_BRAVE_ANSWER_STREAM_CUT,
     MSG_BRAVE_ANSWER_STREAM_ERROR,
@@ -145,9 +145,9 @@ class BraveAnswerProvider(HttpAnswerProvider):
         self._raise_for_status(response)
         events: list[dict[str, Any]] = []
         for line in response.text.splitlines():
-            if not line.startswith(BRAVE_SSE_DATA_PREFIX):
+            if not line.startswith(MCP_SSE_DATA_PREFIX):
                 continue
-            data = line[len(BRAVE_SSE_DATA_PREFIX) :].strip()
+            data = line[len(MCP_SSE_DATA_PREFIX) :].strip()
             if data == BRAVE_SSE_DONE:
                 return {"events": events}
             event = json.loads(data)
