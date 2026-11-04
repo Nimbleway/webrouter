@@ -41,9 +41,9 @@ from web_router.providers._chain import (
     _held_or_late,
     _held_or_raise,
     _keyed_chain,
+    _late_answer,
     _member_options,
     _members_and_chain,
-    _out_of_time,
     _quoted,
 )
 from web_router.providers.answer import AnswerProvider
@@ -130,8 +130,8 @@ class AutoAnswerProvider(AnswerProvider):
         refused: list[UnsupportedParameterError] = []
         held: AnswerResponse | None = None
         for position, provider_name in self._eligible(request):
-            if _out_of_time():
-                return _held_or_late(held, self.name, failures)
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = self._member(position).answer(request)
             except DeadlineExceededError as exc:
@@ -152,8 +152,8 @@ class AutoAnswerProvider(AnswerProvider):
         refused: list[UnsupportedParameterError] = []
         held: AnswerResponse | None = None
         for position, provider_name in self._eligible(request):
-            if _out_of_time():
-                return _held_or_late(held, self.name, failures)
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = await self._member(position).aanswer(request)
             except DeadlineExceededError as exc:

@@ -13,7 +13,7 @@ from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, NoReturn, TypeVar
 
 from web_router.constants import (
     DEADLINE_TOLERANCE,
@@ -128,10 +128,7 @@ def job_budget(default: float) -> float:
     timeout of zero means "no timeout" to both httpx and the SDKs -- the exact
     opposite of what is being asked for.
     """
-    deadline = _DEADLINE.get()
-    if deadline is None:
-        return default
-    return max(MIN_JOB_BUDGET, min(default, deadline.left()))
+    return _budget(default, MIN_JOB_BUDGET)
 
 
 def call_budget(default: float) -> float:
@@ -143,10 +140,15 @@ def call_budget(default: float) -> float:
     handed zero or less, yet never given time past the deadline; a call with
     no time left is refused before it is sent.
     """
+    return _budget(default, MIN_CALL_BUDGET)
+
+
+def _budget(default: float, floor: float) -> float:
+    """``default``, or the time left when that is less -- but never below ``floor``."""
     deadline = _DEADLINE.get()
     if deadline is None:
         return default
-    return max(MIN_CALL_BUDGET, min(default, deadline.left()))
+    return max(floor, min(default, deadline.left()))
 
 
 # The names the research providers were written against. Aliases rather than
@@ -244,10 +246,7 @@ class _DeadlineMixin:
         try:
             return self._wrapped(call, message, **fields)
         except Exception as exc:
-            late = self._at_deadline(deadline, exc)
-            if late is None:
-                raise
-            raise late from late.__cause__
+            self._reraise_late(deadline, exc)
 
     async def _abounded(self, call: Callable[[], Awaitable[_ResultT]], message: str, **fields: Any) -> _ResultT:
         """Async counterpart of :meth:`_bounded`, which also cancels the call at the deadline.
@@ -262,10 +261,7 @@ class _DeadlineMixin:
         try:
             return await _within(deadline, self._awrapped(call(), message, **fields))
         except Exception as exc:
-            late = self._at_deadline(deadline, exc)
-            if late is None:
-                raise
-            raise late from late.__cause__
+            self._reraise_late(deadline, exc)
 
     def _refuse_late(self, deadline: Deadline) -> None:
         """Raise :class:`DeadlineExceededError` for a call about to start after its deadline."""
@@ -287,6 +283,13 @@ class _DeadlineMixin:
         if isinstance(exc, WebRouterError) and not isinstance(exc, ProviderError):
             return None
         return self._late(deadline, exc)
+
+    def _reraise_late(self, deadline: Deadline, exc: Exception) -> NoReturn:
+        """Raise what a call that failed with ``exc`` under ``deadline`` amounts to: the deadline's error or ``exc``."""
+        late = self._at_deadline(deadline, exc)
+        if late is None:
+            raise exc
+        raise late from late.__cause__
 
     def _late(self, deadline: Deadline | None, exc: BaseException) -> DeadlineExceededError | None:
         """The deadline error ``exc`` amounts to, or ``None`` when it is the backend's own failure.
@@ -324,10 +327,7 @@ class _DeadlineMixin:
         try:
             return self._extract(request, urls)
         except Exception as exc:
-            late = self._at_deadline(deadline, exc)
-            if late is None:
-                raise
-            raise late from late.__cause__
+            self._reraise_late(deadline, exc)
 
     async def _aextract_within(
         self, deadline: Deadline | None, request: ExtractRequest, urls: list[str]
@@ -344,7 +344,4 @@ class _DeadlineMixin:
         try:
             return await _within(deadline, self._aextract(request, urls))
         except Exception as exc:
-            late = self._at_deadline(deadline, exc)
-            if late is None:
-                raise
-            raise late from late.__cause__
+            self._reraise_late(deadline, exc)

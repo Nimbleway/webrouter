@@ -129,11 +129,11 @@ from web_router.providers._chain import (
     _held_or_raise,
     _keyed_chain,
     _keyless_after,
+    _late_answer,
     _member_options,
     _members_and_chain,
     _no_backend,
     _nothing_started,
-    _out_of_time,
     _quoted,
     _valued,
 )
@@ -242,8 +242,8 @@ class AutoProvider(SearchProvider):
         failures: dict[str, WebRouterError] = {}
         held: SearchResponse | None = None
         for position, provider_name in self._eligible(request):
-            if _out_of_time():
-                return _held_or_late(held, self.name, failures)
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = self._member(position).search(request)
             except DeadlineExceededError as exc:
@@ -261,8 +261,8 @@ class AutoProvider(SearchProvider):
         failures: dict[str, WebRouterError] = {}
         held: SearchResponse | None = None
         for position, provider_name in self._eligible(request):
-            if _out_of_time():
-                return _held_or_late(held, self.name, failures)
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = await self._member(position).asearch(request)
             except DeadlineExceededError as exc:
@@ -395,8 +395,8 @@ class AutoExtractProvider(ExtractProvider):
         failures: dict[str, WebRouterError] = {}
         held: ExtractResponse | None = None
         for position, provider_name in self._eligible(self.format_of(request)):
-            if _out_of_time():
-                return _held_or_late(held, self.name, failures)
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = self._member(position).extract(delegated)
             except DeadlineExceededError as exc:
@@ -414,8 +414,8 @@ class AutoExtractProvider(ExtractProvider):
         failures: dict[str, WebRouterError] = {}
         held: ExtractResponse | None = None
         for position, provider_name in self._eligible(self.format_of(request)):
-            if _out_of_time():
-                return _held_or_late(held, self.name, failures)
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = await self._member(position).aextract(delegated)
             except DeadlineExceededError as exc:

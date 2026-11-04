@@ -318,6 +318,16 @@ def _out_of_time() -> bool:
     return deadline is not None and deadline.left() <= 0
 
 
+def _late_answer(held: _Answer | None, provider: str, failures: dict[str, WebRouterError]) -> _Answer | None:
+    """``None`` while time is left for the next member; once it has run out, the first empty answer, else the deadline.
+
+    Checked at the head of each member of a one-call chain.
+    """
+    if not _out_of_time():
+        return None
+    return _held_or_late(held, provider, failures)
+
+
 def _held_or_late(
     held: _Answer | None,
     provider: str,
