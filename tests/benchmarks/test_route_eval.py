@@ -260,3 +260,30 @@ def test_the_committed_sets_replay_offline(route_eval: ModuleType) -> None:
     assert "you-mcp" not in summary["recommended_order"], "it served none of SealQA"
     oracle = summary["routers"]["oracle"]["held_out"]["accuracy"]
     assert all(r["held_out"]["accuracy"] <= oracle for r in summary["routers"].values())
+
+
+@pytest.mark.parametrize("fraction", [0.0, 1.0])
+def test_a_split_that_leaves_either_side_empty_is_refused(
+    route_eval: ModuleType, tmp_path: Path, fraction: float
+) -> None:
+    _tiny_set(tmp_path)
+    with pytest.raises(SystemExit, match="both must be non-empty"):
+        route_eval.evaluate_set("tiny", [], test_fraction=fraction, floor=0.05, folder=tmp_path)
+
+
+def test_the_report_shows_n_a_for_numbers_an_empty_score_cannot_have(route_eval: ModuleType) -> None:
+    empty = {**route_eval.score([]), "regret_oracle": None, "regret_static": None}
+    summary = {
+        "set": "tiny",
+        "method": "search",
+        "questions": 0,
+        "train": 0,
+        "held_out": 0,
+        "seed": 0,
+        "prompts": True,
+        "static_order": [],
+        "routers": {"static": {"in_sample": empty, "held_out": empty, "verdict": "baseline"}},
+        "backends": {},
+        "recommended_order": [],
+    }
+    assert "| n/a | baseline |" in route_eval.markdown([summary], 0.01, {})

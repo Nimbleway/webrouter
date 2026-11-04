@@ -71,6 +71,10 @@ KEYLESS = frozenset(name for name, options in AUTO_KEYLESS if not options.get("a
 MSG_UNKNOWN_SET = "{name}: no frozen set by that name (there are: {known})"
 MSG_NO_JOINED = "{path} not found: run frozen.py join first, or leave --joined out"
 MSG_BAD_ROUTER = "{spec!r}: a router is static, oracle, always:<backend>, module:attr or path/file.py:attr"
+MSG_EMPTY_SPLIT = (
+    "{name}: --test-fraction {test_fraction} splits {questions} questions into {train} in-sample and {test} held "
+    "out; both must be non-empty"
+)
 MSG_NOT_A_CANDIDATE = "{spec!r}: {backend} has no rows in {set_name} (it has: {known})"
 
 
@@ -377,6 +381,12 @@ def evaluate_set(
     """Every router in ``specs``, with ``static`` and ``oracle``, scored in-sample and held out on one set."""
     method, questions = load_set(name, folder, joined)
     train, test = split(questions, seed, test_fraction)
+    if not train or not test:
+        raise SystemExit(
+            MSG_EMPTY_SPLIT.format(
+                name=name, test_fraction=test_fraction, questions=len(questions), train=len(train), test=len(test)
+            )
+        )
     candidates = sorted({p for q in questions for p in q.rows})
     fallback_order = static_router(method)
     names = list(dict.fromkeys((STATIC, ORACLE, *specs)))
@@ -427,6 +437,10 @@ def _usd(value: float | None, unknown: int = 0) -> str:
     return text + (f" ({unknown} unknown)" if unknown else "")
 
 
+def _ms(value: float | None) -> str:
+    return "n/a" if value is None else f"{value * 1000:.2f} ms"
+
+
 def _pts(value: float | None) -> str:
     return "n/a" if value is None else f"{value * 100:+.1f}"
 
@@ -471,7 +485,7 @@ def markdown(summaries: Sequence[dict[str, Any]], floor: float, pairs: Mapping[s
                 f"| {_pts(i['regret_oracle'])} / {_pts(h['regret_oracle'])} "
                 f"| {_pts(i['regret_static'])} / {_pts(h['regret_static'])} "
                 f"| {_usd(h['mean_cost_usd'], h['cost_unknown'])} | {_s(h['mean_latency_s'])} "
-                f"| {h['fallbacks']} | {h['mean_overhead_s'] * 1000:.2f} ms | {r['verdict']} |"
+                f"| {h['fallbacks']} | {_ms(h['mean_overhead_s'])} | {r['verdict']} |"
             )
         out.append("")
         out.append(
