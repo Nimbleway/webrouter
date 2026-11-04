@@ -515,7 +515,10 @@ into `AUTO_APPENDED` or `AUTO_EXTRACT_APPENDED`, after the keyless tier, and
 for research after `AUTO_RESEARCH_PREFERRED`'s original members, so joining
 never moves a call that was already being served; moving it up is a
 reordering. Reordering the defaults is a PR backed by a provider scan, whose
-report prints a suggested order that stays a suggestion until such a PR. A caller reorders through `chain`, each member a
+report prints a suggested order that stays a suggestion until such a PR. That
+change also updates the `layer1-chains` block in
+`docs/spec/layer-1-contract.md`. `tests/test_layer1_contract.py` fails when the
+block and these constants disagree. A caller reorders through `chain`, each member a
 name or `(name, kwargs)` -- built with its own `provider_config` entry, those
 kwargs over it, so a key passed in code reaches a member as it does a named
 backend -- and because `provider_config["auto"]` reaches the
@@ -814,6 +817,19 @@ was written by hand. `tests/test_provider_contracts.py` fails when a committed
 contract is stale, or its hand-written fields are partial or hold a `TODO`, and when a
 built-in provider has no contract at all.
 
+## The Layer 1 spec
+
+`docs/spec/layer-1-contract.md` states the rules the methods obey. The built-in
+names and the `auto` tiers live in the registries and `constants.py`, and in
+that file's `layer1-chains` block. `tests/test_layer1_contract.py` holds the
+block to the code. Adding a backend, or reordering an `auto` tier, updates the
+block in the same change, or that test fails.
+
+The block's `package:` line equals `web_router.__version__`. A release that
+bumps the version bumps that line in the same change. The test keeps the match
+on purpose. Release automation does not edit the spec, so the line is a manual
+step beside `_version.py`.
+
 ## Adding a template provider
 
 Against `TemplateProvider`. A vendor that already extracts gets a third class
@@ -841,6 +857,8 @@ in its existing module, as `nimble.py` does.
    catalogue mapping, and a skipping `@pytest.mark.integration` live test
    that lists, describes and runs one template.
 5. Update the README support table and `CHANGELOG.md`.
+6. Add the name to the `layer1-chains` block in `docs/spec/layer-1-contract.md`.
+   There is no template `auto` tier. See [The Layer 1 spec](#the-layer-1-spec).
 
 ## Adding a research provider
 
@@ -864,6 +882,9 @@ The same shape as the two below, against `ResearchProvider` or
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
 5. Update the README support table and `CHANGELOG.md`.
+6. Add the name to the `layer1-chains` block in `docs/spec/layer-1-contract.md`,
+   on `research.backends` and on `research.preferred` when it joins that tier.
+   See [The Layer 1 spec](#the-layer-1-spec).
 
 ## Adding an answer provider
 
@@ -890,6 +911,9 @@ Search's shape, against `HttpAnswerProvider` — one POST, one answer — or
    already holds every unmapped option to a refusal before anything is sent.
 5. Start its contract with `make contracts PROVIDER=answer/<name>`, and update
    the README support table and `CHANGELOG.md`.
+6. Add the name to `answer.backends` in the `layer1-chains` block in
+   `docs/spec/layer-1-contract.md`. There is no answer `auto` tier yet. See
+   [The Layer 1 spec](#the-layer-1-spec).
 
 ## Adding a browser provider
 
@@ -925,6 +949,9 @@ The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
    `@pytest.mark.integration` live test that opens, asks and releases, and
    asks the backend afterwards through `tests/providers/_browser_live.py`.
 5. Update the README support table and `CHANGELOG.md`.
+6. Add the name to the `layer1-chains` block in `docs/spec/layer-1-contract.md`,
+   on `browser.backends` and on the tier it joins (`browser.preferred` or
+   `browser.keyless`). See [The Layer 1 spec](#the-layer-1-spec).
 
 ## Adding a browse provider
 
@@ -965,6 +992,9 @@ plain httpx — or `BrowseProvider` for an SDK.
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
 5. Update the README support table and `CHANGELOG.md`.
+6. Add the name to the `layer1-chains` block in `docs/spec/layer-1-contract.md`,
+   on `browse.backends` and on `browse.preferred` when it joins that tier. See
+   [The Layer 1 spec](#the-layer-1-spec).
 
 ## Adding a search provider
 
@@ -988,6 +1018,10 @@ plain httpx — or `BrowseProvider` for an SDK.
    normalization against a recorded payload, plus one `@pytest.mark.integration`
    live test that skips without credentials.
 5. Update the README support table and `CHANGELOG.md`.
+6. Add the name to the `layer1-chains` block in `docs/spec/layer-1-contract.md`,
+   on `search.backends` and on the tier it joins (`search.preferred`,
+   `search.keyless`, or `search.appended`). See
+   [The Layer 1 spec](#the-layer-1-spec).
 
 ## Adding an extract provider
 
@@ -1013,6 +1047,10 @@ searches gets a second class in its existing module rather than a new one.
    `tests/test_integration_surface.py`, which run only against providers that
    declare the format under test.
 5. Update the README support tables and `CHANGELOG.md`.
+6. Add the name to the `layer1-chains` block in `docs/spec/layer-1-contract.md`,
+   on `extract.backends` and on the tier it joins (`extract.preferred`,
+   `extract.keyless`, or `extract.appended`). See
+   [The Layer 1 spec](#the-layer-1-spec).
 
 ## Testing
 
