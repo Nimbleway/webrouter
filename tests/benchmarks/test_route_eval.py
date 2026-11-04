@@ -318,3 +318,8 @@ def test_the_static_order_is_autos_own_chain_keyless_tier_before_the_appended_ba
     assert route_eval.STATIC_ORDER["search"] == tuple(n for n, _ in AutoProvider.default_chain(every_key))
     order = route_eval.STATIC_ORDER["search"]
     assert order.index("you-mcp") < order.index("keenable") < order.index("deepseek")
+
+
+def test_the_oracle_sorts_an_unknown_latency_last_rather_than_failing(route_eval: ModuleType) -> None:
+    q = _question(route_eval, _row("brave", "correct", latency=None), _row("perplexity", "correct", latency=2.0))
+    assert route_eval.oracle_router("search")(q)[:2] == ["perplexity", "brave"], "same price; the known time first"

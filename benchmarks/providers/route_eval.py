@@ -259,7 +259,7 @@ def oracle_router(method: str) -> Router:
 
     def route(q: Question) -> list[str]:
         right = [p for p, r in q.rows.items() if r["error"] is None and r["grade"] == "correct"]
-        right.sort(key=lambda p: (_cost_key(cost_of(q.rows[p])), q.rows[p]["latency_s"], p))
+        right.sort(key=lambda p: (_cost_key(cost_of(q.rows[p])), _latency_key(q.rows[p]["latency_s"]), p))
         return right + [p for p in static(q) if p not in right]
 
     return route
