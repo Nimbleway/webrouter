@@ -90,6 +90,8 @@ prefix or a request id.
 """
 OTHER_ERROR = "other"
 JUDGE_ERROR = "judge"
+JUDGE_STAGES = frozenset({"judge", "synthesis", "grading"})
+"""``failed_at`` values that mean the judge failed, not the backend: the answer scan's and the search scan's."""
 LEAKED_ERROR = "leaked"
 ERROR_NAMES = (*(name for name, _ in ERROR_CLASSES), OTHER_ERROR, JUDGE_ERROR, LEAKED_ERROR)
 
@@ -120,7 +122,7 @@ def error_class(row: Mapping[str, Any]) -> str | None:
     message = row.get("error")
     if not message:
         return None
-    if row.get("failed_at") == "judge":
+    if row.get("failed_at") in JUDGE_STAGES:
         return JUDGE_ERROR
     return next((name for name, pattern in ERROR_CLASSES if pattern.search(str(message))), OTHER_ERROR)
 
@@ -264,9 +266,15 @@ def question_index(questions: Iterable[Any], name: str) -> dict[str, Any]:
     return index
 
 
-def unresolved(rows: Iterable[Mapping[str, Any]], index: Mapping[str, Any]) -> list[str]:
-    """The question ids in ``rows`` the dataset does not hold, each once, in order."""
-    return sorted({row["question_id"] for row in rows} - set(index))
+def require_resolved(set_name: str, rows: Iterable[Mapping[str, Any]], index: Mapping[str, Any], questions: str) -> int:
+    """How many question ids ``rows`` holds, or ``SystemExit`` naming one the dataset does not hold."""
+    ids = {row["question_id"] for row in rows}
+    missing = sorted(ids - set(index))
+    if missing:
+        raise SystemExit(
+            MSG_UNRESOLVED.format(set=set_name, count=len(missing), questions=questions, example=missing[0])
+        )
+    return len(ids)
 
 
 def joined_row(row: Mapping[str, Any], question: Any, labels: Iterable[str]) -> dict[str, Any]:
@@ -300,11 +308,7 @@ def join(folder: Path, out: Path, local: Mapping[str, Path]) -> dict[str, int]:
         questions = entry["questions"]
         index = indexes.setdefault(questions, load_index(questions, local))
         rows = read_rows(folder / (set_name + SUFFIX))
-        missing = unresolved(rows, index)
-        if missing:
-            raise SystemExit(
-                MSG_UNRESOLVED.format(set=set_name, count=len(missing), questions=questions, example=missing[0])
-            )
+        require_resolved(set_name, rows, index, questions)
         labels = LABELS.get(questions, ())
         lines = [json.dumps(joined_row(r, index[r["question_id"]], labels), ensure_ascii=False) for r in rows]
         (out / (set_name + ".jsonl")).write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -325,14 +329,7 @@ def build(results: Path, folder: Path, local: Mapping[str, Path], *, check_join:
         rows, entry = freeze_set(set_name, results)
         if check_join:
             index = load_index(entry["questions"], local)
-            missing = unresolved(rows, index)
-            if missing:
-                raise SystemExit(
-                    MSG_UNRESOLVED.format(
-                        set=set_name, count=len(missing), questions=entry["questions"], example=missing[0]
-                    )
-                )
-            entry["resolved"] = len({r["question_id"] for r in rows})
+            entry["resolved"] = require_resolved(set_name, rows, index, entry["questions"])
         manifest["sets"][set_name] = entry
         files[set_name + SUFFIX] = gzip_jsonl(rows)
     files[MANIFEST_FILE] = (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode("utf-8")

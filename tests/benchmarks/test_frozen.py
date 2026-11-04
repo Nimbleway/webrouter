@@ -87,7 +87,7 @@ def test_a_question_id_ignores_spacing_and_unicode_form_but_not_wording(frozen: 
     assert qid == frozen.question_id("  Who won the\u00a01998   World Cup?\n")
     assert qid == frozen.question_id("Who won the \uff11998 World Cup?"), "NFKC folds a full-width digit"
     assert qid != frozen.question_id("Who won the 2002 World Cup?")
-    assert len(qid) == 16 and int(qid, 16) >= 0
+    assert len(qid) == 16 and set(qid) <= set("0123456789abcdef")
 
 
 @pytest.mark.parametrize(
@@ -103,6 +103,8 @@ def test_a_question_id_ignores_spacing_and_unicode_form_but_not_wording(frozen: 
         ({"error": "[x] HTTP 502: <html>Server Error</html>"}, "http_5xx"),
         ({"error": "[x] answer failed: "}, "other"),
         ({"error": "judge said no", "failed_at": "judge"}, "judge"),
+        ({"error": "HTTP 429 from the judge", "failed_at": "grading"}, "judge"),
+        ({"error": "judge timed out", "failed_at": "synthesis"}, "judge"),
         ({"error": None, "leaked": True}, "leaked"),
     ],
 )
