@@ -75,10 +75,11 @@ def test_a_mixed_sets_static_order_searches_then_reads_first(route_eval: ModuleT
 def test_extract_paths_follow_autos_extract_order(route_eval: ModuleType) -> None:
     paths = sys.modules["route_eval_paths"]
     order = route_eval.STATIC_ORDER["extract"]
-    assert len(order) > 1, "auto's extract chain, read from the library"
-    first, second = order[0], order[1]
-    ranked = sorted([f"extract:{second}", f"extract:{first}"], key=lambda p: paths.path_key(p, route_eval.STATIC_ORDER))
-    assert ranked == [f"extract:{first}", f"extract:{second}"]
+    pairs = [(a, b) for i, a in enumerate(order) for b in order[i + 1 :] if a > b]
+    assert pairs, "auto's extract chain, read from the library, has a pair out of alphabetical order"
+    first, second = pairs[0]
+    ranked = sorted([f"extract:{first}", f"extract:{second}"], key=lambda p: paths.path_key(p, route_eval.STATIC_ORDER))
+    assert ranked == [f"extract:{first}", f"extract:{second}"], "auto's order, not the name"
 
 
 def test_the_oracle_takes_the_cheapest_right_path(route_eval: ModuleType, tmp_path: Path) -> None:
