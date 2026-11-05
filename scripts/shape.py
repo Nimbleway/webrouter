@@ -62,8 +62,10 @@ def measure(root: Path = ROOT) -> tuple[dict[str, int], dict[str, int]]:
     functions: dict[str, int] = {}
     for path in source_files(root):
         rel = path.relative_to(root).as_posix()
-        files[rel] = len(path.read_text(encoding="utf-8").splitlines())
-        for qualname, lines in function_lines(ast.parse(path.read_text(encoding="utf-8"), filename=rel)):
+        text = path.read_text(encoding="utf-8")
+        # Newlines only, as editors count: splitlines() also breaks on form feeds and other separators.
+        files[rel] = text.count("\n") + (bool(text) and not text.endswith("\n"))
+        for qualname, lines in function_lines(ast.parse(text, filename=rel)):
             key = f"{rel}::{qualname}"
             functions[key] = max(lines, functions.get(key, 0))
     return files, functions

@@ -120,3 +120,11 @@ def test_a_missing_baseline_is_never_recreated(tmp_path: Path, monkeypatch: pyte
     monkeypatch.setattr(shape, "ROOT", tmp_path)
     assert shape.main() == 1, "recreating it would admit every oversized file and function"
     assert not missing.exists()
+
+
+def test_a_form_feed_is_not_a_line(tmp_path: Path) -> None:
+    package = tmp_path / "src" / "web_router"
+    package.mkdir(parents=True)
+    (package / "paged.py").write_text("X = 1\n\f\nY = 2\n", encoding="utf-8")
+    files, _ = shape.measure(tmp_path)
+    assert files["src/web_router/paged.py"] == 3, "counted as an editor shows it, not as splitlines() does"
