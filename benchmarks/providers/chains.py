@@ -45,21 +45,39 @@ def _round(value: float | None) -> float | None:
     return None if value is None else round(value, 6)
 
 
+def _place(parts: Mapping[str, Sequence[str]], ranked: Sequence[str]) -> dict[str, list[str]]:
+    """The ranked members lead the first part, in rank; every other member keeps its place in its own part."""
+    first, *rest = parts
+    placed = {first: [*ranked, *(p for p in parts[first] if p not in ranked)]}
+    return placed | {part: [p for p in parts[part] if p not in ranked] for part in rest}
+
+
+def _measured(stats: Mapping[str, Mapping[str, Any]], ranked: Sequence[str]) -> dict[str, dict[str, Any]]:
+    """The numbers each ranked member was placed on, in rank."""
+    return {
+        p: {
+            "accuracy": _round(stats[p]["accuracy_all"]),
+            "correct": stats[p]["correct"],
+            "questions": stats[p]["questions"],
+            "account_failures_left_out": stats[p]["excluded"],
+            "cost_usd": _round(stats[p]["cost_usd"]),
+            "latency_p50_s": _round(stats[p]["latency_p50"]),
+        }
+        for p in ranked
+    }
+
+
 def chain_file(
     floor: float,
     current: Mapping[str, Mapping[str, Sequence[str]]],
     *,
     folder: Path = FROZEN_DIR,
 ) -> dict[str, Any]:
-    """What ``chains.json`` should hold, given its present members: each method re-ranked on its set.
+    """What ``chains.json`` should hold, given its present members: each method ranked on every question of its set.
 
-    The members a set ranks come first, in its recommended order over every
-    question of the set -- not the held-out half routers are scored on: twice
-    the data, and a baseline fit to the held-out half too, so slightly harder
-    for a router to beat there, on purpose;
-    every other member keeps its present place relative to the rest, in
-    ``preferred`` or (search) ``appended``. Membership never changes here: a
-    backend joins by hand, and a member the set does not rank stays put.
+    Not the held-out half routers are scored on: twice the data, and a
+    baseline slightly harder for a router to beat there, on purpose.
+    Membership never changes here: a backend joins by hand.
     """
     out: dict[str, Any] = {
         "generated_by": f"{CHAINS_COMMAND} (benchmarks/providers/chains.py); do not edit by hand",
@@ -69,27 +87,18 @@ def chain_file(
     for method, set_name in CHAIN_SETS.items():
         _, questions = load_set(set_name, folder)
         stats = backend_stats(questions)
-        parts = {part: list(current[method][part]) for part in CHAIN_PARTS[method]}
-        members = [p for members in parts.values() for p in members]
+        parts = {part: current[method][part] for part in CHAIN_PARTS[method]}
+        members = [p for present in parts.values() for p in present]
         # Ranked among the chain's own members only: a backend outside the chain must not shift its tiers.
         ranked = recommended({p: s for p, s in stats.items() if p in members}, floor)
-        entry: dict[str, Any] = {"set": set_name, "questions": len(questions)}
-        for i, (part, present) in enumerate(parts.items()):
-            entry[part] = (ranked if i == 0 else []) + [p for p in present if p not in ranked]
-        entry["unmeasured"] = [p for p in members if p not in stats]
-        entry["no_row_served"] = [p for p in members if p in stats and p not in ranked]
-        entry["measured"] = {
-            p: {
-                "accuracy": _round(stats[p]["accuracy_all"]),
-                "correct": stats[p]["correct"],
-                "questions": stats[p]["questions"],
-                "account_failures_left_out": stats[p]["excluded"],
-                "cost_usd": _round(stats[p]["cost_usd"]),
-                "latency_p50_s": _round(stats[p]["latency_p50"]),
-            }
-            for p in ranked
+        out[method] = {
+            "set": set_name,
+            "questions": len(questions),
+            **_place(parts, ranked),
+            "unmeasured": [p for p in members if p not in stats],
+            "no_row_served": [p for p in members if p in stats and p not in ranked],
+            "measured": _measured(stats, ranked),
         }
-        out[method] = entry
     return out
 
 
