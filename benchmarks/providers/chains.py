@@ -7,8 +7,9 @@ after it in their present order.
 
 The latency that breaks a tie, and that the file records as
 ``latency_p50_s``, is the median over the ranking set alone, as route-eval
-ranks any set; ``prices.json``'s ``latency_p50_s`` pools every frozen set that
-covers a backend (``make latency``), so the two figures can differ. Today they
+ranks any set; ``prices.json``'s ``latency_p50_s`` pools the frozen sets that
+cover a backend, each question set once and no mixed set (``make latency``),
+so the two figures can differ. Today they
 put every member in the same order.
 
     make chains                                                        # rewrite the file
