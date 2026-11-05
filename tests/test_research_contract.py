@@ -47,7 +47,7 @@ from web_router.types import (
     ResearchResponse,
 )
 
-ROUTER_ONLY_ARGUMENTS = {"self", "query", "provider"}
+ROUTER_ONLY_ARGUMENTS = {"self", "query", "provider", "budget"}
 
 ENV_VARS = sorted({env_var for env_vars in RESEARCH_ENV_BY_PROVIDER.values() for env_var in env_vars})
 

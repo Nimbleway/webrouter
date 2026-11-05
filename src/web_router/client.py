@@ -42,10 +42,16 @@ from contextlib import AsyncExitStack, ExitStack, suppress
 from types import TracebackType
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel
-
 from web_router._benchmark import Stragglers, afan_out, fan_out, members_of
 from web_router.client_answer import AsyncAnswer, SyncAnswer
+from web_router.client_requests import JsonSchema as JsonSchema
+from web_router.client_requests import (
+    build_browse_request,
+    build_browser_request,
+    build_extract_request,
+    build_research_request,
+    build_search_request,
+)
 from web_router.constants import (
     AUTO_CLIENT_OPTION,
     BENCHMARK_EXCLUDED,
@@ -102,23 +108,20 @@ from web_router.registry import (
     create_template_provider,
 )
 from web_router.registry_answer import available_answer_providers
+from web_router.routing import Budget
+from web_router.routing.budget import budget_scope
 from web_router.types import (
     BenchmarkReport,
     BenchmarkRun,
-    BrowseRequest,
     BrowseResponse,
-    BrowserRequest,
     ExtractBenchmarkReport,
     ExtractBenchmarkRun,
     ExtractFormat,
-    ExtractRequest,
     ExtractResponse,
     Provider,
     ResearchEffort,
-    ResearchRequest,
     ResearchResponse,
     SearchDepth,
-    SearchRequest,
     SearchResponse,
     StealthLevel,
     Template,
@@ -128,9 +131,6 @@ from web_router.types import (
     Viewport,
     provider_name,
 )
-
-JsonSchema = dict[str, Any] | type[BaseModel]
-"""A schema for a structured answer: JSON Schema, or the pydantic model to take one from."""
 
 _HandleT = TypeVar("_HandleT", BrowserHandle, AsyncBrowserHandle)
 
@@ -324,29 +324,6 @@ class _BaseRouter(Generic[_HandleT]):
                 self._browse_instances[key] = create_browse_provider(key, **self._config_for(key))
             return self._browse_instances[key]
 
-    @staticmethod
-    def _build_request(
-        query: str,
-        *,
-        max_results: int | None,
-        search_depth: SearchDepth | None,
-        include_domains: list[str] | None,
-        exclude_domains: list[str] | None,
-        country: str | None,
-        locale: str | None,
-        provider_options: dict[str, Any] | None,
-    ) -> SearchRequest:
-        return SearchRequest(
-            query=query,
-            max_results=max_results,
-            search_depth=search_depth,
-            include_domains=include_domains,
-            exclude_domains=exclude_domains,
-            country=country,
-            locale=locale,
-            provider_options=provider_options or {},
-        )
-
     def _default_benchmark_providers(self) -> list[str]:
         """Every search backend this router can use, less the ones a comparison learns nothing from.
 
@@ -365,89 +342,6 @@ class _BaseRouter(Generic[_HandleT]):
         known = set(available)
         names = set(configured) | {name for name in self._config if name in known}
         return sorted(name for name in names if name not in BENCHMARK_EXCLUDED)
-
-    @staticmethod
-    def _build_extract_request(
-        urls: str | list[str],
-        *,
-        format: ExtractFormat | None,
-        provider_options: dict[str, Any] | None,
-    ) -> ExtractRequest:
-        return ExtractRequest(
-            # One URL is the common case and reads better unwrapped; the
-            # request model carries a list either way, so providers that batch
-            # and providers that do not see the same shape.
-            urls=[urls] if isinstance(urls, str) else list(urls),
-            format=format,
-            provider_options=provider_options or {},
-        )
-
-    @staticmethod
-    def _build_research_request(
-        query: str,
-        *,
-        output_schema: JsonSchema | None,
-        records: list[dict[str, Any]] | None,
-        effort: ResearchEffort | None,
-        include_domains: list[str] | None,
-        exclude_domains: list[str] | None,
-        provider_options: dict[str, Any] | None,
-    ) -> ResearchRequest:
-        return ResearchRequest(
-            query=query,
-            output_schema=_as_json_schema(output_schema),
-            records=records,
-            effort=effort,
-            include_domains=include_domains,
-            exclude_domains=exclude_domains,
-            provider_options=provider_options or {},
-        )
-
-    @staticmethod
-    def _build_browser_request(
-        *,
-        proxy_country: str | None,
-        stealth: StealthLevel | None,
-        solve_captchas: bool | None,
-        profile: str | None,
-        persist_profile: bool | None,
-        timeout: float | None,
-        idle_timeout: float | None,
-        viewport: Viewport | None,
-        headless: bool | None,
-        provider_options: dict[str, Any] | None,
-    ) -> BrowserRequest:
-        return BrowserRequest(
-            proxy_country=proxy_country,
-            stealth=stealth,
-            solve_captchas=solve_captchas,
-            profile=profile,
-            persist_profile=persist_profile,
-            timeout=timeout,
-            idle_timeout=idle_timeout,
-            viewport=viewport,
-            headless=headless,
-            provider_options=provider_options or {},
-        )
-
-    @staticmethod
-    def _build_browse_request(
-        task: str,
-        *,
-        start_url: str | None,
-        output_schema: JsonSchema | None,
-        max_steps: int | None,
-        allowed_domains: list[str] | None,
-        provider_options: dict[str, Any] | None,
-    ) -> BrowseRequest:
-        return BrowseRequest(
-            task=task,
-            start_url=start_url,
-            output_schema=_as_json_schema(output_schema),
-            max_steps=max_steps,
-            allowed_domains=allowed_domains,
-            provider_options=provider_options or {},
-        )
 
     def _track(self, handle: _HandleT) -> _HandleT:
         # Pruned on every open, so a long-lived router that opens thousands of
@@ -515,6 +409,9 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         >>> response = router.search("who won the 2022 world cup", max_results=5)
         >>> response.urls
         >>> router.extract(response.urls[:3], format="markdown")
+
+    ``search``, ``extract``, ``answer``, ``research`` and ``browse`` take ``budget=``, a
+    :class:`~web_router.Budget` (experimental). It is not enforced yet: a call with one runs as one without.
     """
 
     def __init__(
@@ -582,9 +479,10 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         country: str | None = None,
         locale: str | None = None,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
     ) -> SearchResponse:
         """Search the web through ``provider`` (or the router's default)."""
-        request = self._build_request(
+        request = build_search_request(
             query,
             max_results=max_results,
             search_depth=search_depth,
@@ -594,7 +492,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
             locale=locale,
             provider_options=provider_options,
         )
-        return self.get_provider(provider).search(request)
+        with budget_scope(budget):
+            return self.get_provider(provider).search(request)
 
     def benchmark(
         self,
@@ -628,7 +527,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
                 its call is left to finish on its thread -- :meth:`close`
                 waits for it before shutting that provider; ``None`` waits.
         """
-        request = self._build_request(
+        request = build_search_request(
             query,
             max_results=max_results,
             search_depth=search_depth,
@@ -682,7 +581,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
                 default where it cannot; a format a backend cannot return is
                 that row's refusal, never a substitution.
         """
-        request = self._build_extract_request(urls, format=format, provider_options=None)
+        request = build_extract_request(urls, format=format, provider_options=None)
         members = members_of(
             providers,
             default=self._default_extract_benchmark_providers,
@@ -761,6 +660,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         provider: str | Provider | ExtractProvider | None = None,
         format: ExtractFormat | None = None,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
     ) -> ExtractResponse:
         """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
 
@@ -769,8 +669,9 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         not is in :attr:`~web_router.ExtractResponse.failures`. A call where
         nothing came back raises instead.
         """
-        request = self._build_extract_request(urls, format=format, provider_options=provider_options)
-        return self.get_extract_provider(provider).extract(request)
+        request = build_extract_request(urls, format=format, provider_options=provider_options)
+        with budget_scope(budget):
+            return self.get_extract_provider(provider).extract(request)
 
     def templates(
         self,
@@ -839,6 +740,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         exclude_domains: list[str] | None = None,
         timeout: float | None = RESEARCH_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
     ) -> ResearchResponse:
         """Research a question through ``provider`` (or the router's default), and wait.
 
@@ -857,7 +759,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
                 Running out raises :class:`~web_router.ResearchTimeoutError` and
                 leaves the run going rather than cancelling it.
         """
-        request = self._build_research_request(
+        request = build_research_request(
             query,
             output_schema=output_schema,
             records=records,
@@ -866,7 +768,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        return self.get_research_provider(provider).research(request, timeout=timeout)
+        with budget_scope(budget):
+            return self.get_research_provider(provider).research(request, timeout=timeout)
 
     def submit_research(
         self,
@@ -888,7 +791,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         :meth:`~web_router.ResearchJob.result`, so a caller with something else
         to do can go and do it.
         """
-        request = self._build_research_request(
+        request = build_research_request(
             query,
             output_schema=output_schema,
             records=records,
@@ -910,6 +813,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         allowed_domains: list[str] | None = None,
         timeout: float | None = BROWSE_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
     ) -> BrowseResponse:
         """Hand a task to a hosted browser agent through ``provider`` (or the router's default), and wait.
 
@@ -928,7 +832,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
                 Running out raises :class:`~web_router.BrowseTimeoutError` and
                 leaves the task going rather than cancelling it.
         """
-        request = self._build_browse_request(
+        request = build_browse_request(
             task,
             start_url=start_url,
             output_schema=output_schema,
@@ -936,7 +840,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        return self.get_browse_provider(provider).browse(request, timeout=timeout)
+        with budget_scope(budget):
+            return self.get_browse_provider(provider).browse(request, timeout=timeout)
 
     def submit_browse(
         self,
@@ -955,7 +860,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         task; the job polls with :meth:`~web_router.BrowseJob.status` and blocks
         with :meth:`~web_router.BrowseJob.result`.
         """
-        request = self._build_browse_request(
+        request = build_browse_request(
             task,
             start_url=start_url,
             output_schema=output_schema,
@@ -1004,7 +909,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
                 own default, which on some is hours. The only way past that
                 default is to pass a larger ``timeout`` explicitly.
         """
-        request = self._build_browser_request(
+        request = build_browser_request(
             proxy_country=proxy_country,
             stealth=stealth,
             solve_captchas=solve_captchas,
@@ -1103,9 +1008,10 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         country: str | None = None,
         locale: str | None = None,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
     ) -> SearchResponse:
         """Search the web through ``provider`` (or the router's default)."""
-        request = self._build_request(
+        request = build_search_request(
             query,
             max_results=max_results,
             search_depth=search_depth,
@@ -1115,7 +1021,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
             locale=locale,
             provider_options=provider_options,
         )
-        return await self.get_provider(provider).asearch(request)
+        with budget_scope(budget):
+            return await self.get_provider(provider).asearch(request)
 
     async def benchmark(
         self,
@@ -1135,7 +1042,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         As on the sync router, with the rows gathered on the event loop: a row
         that runs out of ``timeout`` is cancelled rather than left running.
         """
-        request = self._build_request(
+        request = build_search_request(
             query,
             max_results=max_results,
             search_depth=search_depth,
@@ -1167,7 +1074,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         As on the sync router, with the rows gathered on the event loop: a row
         that runs out of ``timeout`` is cancelled rather than left running.
         """
-        request = self._build_extract_request(urls, format=format, provider_options=None)
+        request = build_extract_request(urls, format=format, provider_options=None)
         members = members_of(
             providers,
             default=self._default_extract_benchmark_providers,
@@ -1209,6 +1116,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         provider: str | Provider | ExtractProvider | None = None,
         format: ExtractFormat | None = None,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
     ) -> ExtractResponse:
         """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
 
@@ -1216,8 +1124,9 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         the sync router, a partly successful call returns its failures and one
         where nothing came back raises.
         """
-        request = self._build_extract_request(urls, format=format, provider_options=provider_options)
-        return await self.get_extract_provider(provider).aextract(request)
+        request = build_extract_request(urls, format=format, provider_options=provider_options)
+        with budget_scope(budget):
+            return await self.get_extract_provider(provider).aextract(request)
 
     async def templates(
         self,
@@ -1269,6 +1178,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         exclude_domains: list[str] | None = None,
         timeout: float | None = RESEARCH_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
     ) -> ResearchResponse:
         """Research a question through ``provider`` (or the router's default), and await it.
 
@@ -1276,7 +1186,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         rather than holding a thread -- which is what makes running several
         research questions at once reasonable here and not there.
         """
-        request = self._build_research_request(
+        request = build_research_request(
             query,
             output_schema=output_schema,
             records=records,
@@ -1285,7 +1195,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        return await self.get_research_provider(provider).aresearch(request, timeout=timeout)
+        with budget_scope(budget):
+            return await self.get_research_provider(provider).aresearch(request, timeout=timeout)
 
     async def submit_research(
         self,
@@ -1303,7 +1214,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
 
         Await :meth:`~web_router.ResearchJob.aresult` when you want the answer.
         """
-        request = self._build_research_request(
+        request = build_research_request(
             query,
             output_schema=output_schema,
             records=records,
@@ -1325,12 +1236,13 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         allowed_domains: list[str] | None = None,
         timeout: float | None = BROWSE_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
     ) -> BrowseResponse:
         """Hand a task to a hosted browser agent through ``provider`` (or the router's default), and await it.
 
         As on the sync router, except that waiting gives the event loop back.
         """
-        request = self._build_browse_request(
+        request = build_browse_request(
             task,
             start_url=start_url,
             output_schema=output_schema,
@@ -1338,7 +1250,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        return await self.get_browse_provider(provider).abrowse(request, timeout=timeout)
+        with budget_scope(budget):
+            return await self.get_browse_provider(provider).abrowse(request, timeout=timeout)
 
     async def submit_browse(
         self,
@@ -1355,7 +1268,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
 
         Await :meth:`~web_router.BrowseJob.aresult` when you want the answer.
         """
-        request = self._build_browse_request(
+        request = build_browse_request(
             task,
             start_url=start_url,
             output_schema=output_schema,
@@ -1392,7 +1305,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         sync router; again the only way past that default is to pass a larger
         one explicitly.
         """
-        request = self._build_browser_request(
+        request = build_browser_request(
             proxy_country=proxy_country,
             stealth=stealth,
             solve_captchas=solve_captchas,
@@ -1431,15 +1344,3 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         tb: TracebackType | None,
     ) -> None:
         await self.aclose()
-
-
-def _as_json_schema(schema: JsonSchema | None) -> dict[str, Any] | None:
-    """Accept a pydantic model where a JSON Schema is expected.
-
-    Callers describing a structured answer usually have a model already, and
-    the request carries plain JSON Schema so it stays serializable -- so the
-    conversion happens once, here, rather than at every call site.
-    """
-    if schema is None or isinstance(schema, dict):
-        return schema
-    return schema.model_json_schema()

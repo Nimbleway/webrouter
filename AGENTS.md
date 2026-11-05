@@ -92,6 +92,8 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
+├── client_requests.py  the routers' request builders: a method's arguments in, its
+│                       normalized request out; JsonSchema
 ├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,

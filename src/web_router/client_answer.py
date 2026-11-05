@@ -11,6 +11,8 @@ from typing import Any
 
 from web_router.providers.answer import AnswerProvider
 from web_router.registry_answer import create_answer_provider, default_answer_provider
+from web_router.routing import Budget
+from web_router.routing.budget import budget_scope
 from web_router.types import Provider, provider_name
 from web_router.types_answer import AnswerRequest, AnswerResponse, Recency
 
@@ -62,6 +64,7 @@ class SyncAnswer(_AnswerLookup):
         locale: str | None = None,
         recency: Recency | None = None,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
     ) -> AnswerResponse:
         """Ask ``provider`` one question and return its written answer with the sources it rests on.
 
@@ -86,7 +89,8 @@ class SyncAnswer(_AnswerLookup):
             locale=locale,
             recency=recency,
         )
-        return self.get_answer_provider(provider).answer(request)
+        with budget_scope(budget):
+            return self.get_answer_provider(provider).answer(request)
 
 
 class AsyncAnswer(_AnswerLookup):
@@ -101,6 +105,7 @@ class AsyncAnswer(_AnswerLookup):
         locale: str | None = None,
         recency: Recency | None = None,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
     ) -> AnswerResponse:
         """Ask ``provider`` one question and await its written answer, as on the sync router."""
         request = self._answer_request(
@@ -112,4 +117,5 @@ class AsyncAnswer(_AnswerLookup):
             locale=locale,
             recency=recency,
         )
-        return await self.get_answer_provider(provider).aanswer(request)
+        with budget_scope(budget):
+            return await self.get_answer_provider(provider).aanswer(request)
