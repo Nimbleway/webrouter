@@ -78,6 +78,9 @@ if _ENV_FILE.is_file():
 
     load_dotenv(_ENV_FILE)
 
+pytest_plugins = ["tests.benchmarks._tools_effort_fakes"]
+"""The tool and effort runner's fixtures, kept beside its tests rather than in ``tests/benchmarks/conftest.py``."""
+
 
 class FakeProvider(SearchProvider):
     """An in-memory provider so router tests never touch the network."""

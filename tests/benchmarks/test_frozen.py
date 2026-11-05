@@ -65,21 +65,6 @@ def test_the_sets_route_eval_needs_are_frozen_at_their_sizes(frozen: ModuleType)
     }
 
 
-def test_the_tool_and_effort_set_holds_every_planned_row_and_its_rate_limits_are_classed(
-    frozen: ModuleType, frozen_mixed: ModuleType
-) -> None:
-    manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
-    entry = manifest["sets"]["tools-effort-60"]
-    rows = frozen.read_rows(frozen.FROZEN_DIR / ("tools-effort-60" + frozen.SUFFIX))
-    keys = {(r["question_id"], r["method"], r["provider"], r["mode"]) for r in rows}
-
-    assert keys == frozen_mixed.expected_keys(entry["sample"])
-    methods = {m: sum(r["method"] == m for r in rows) for m in ("search+extract", "extract", "answer", "research")}
-    assert methods == {"search+extract": 180, "extract": 10, "answer": 360, "research": 600}
-    limited = {(r["provider"], r["mode"]) for r in rows if r["error"] == "rate_limit"}
-    assert limited <= {("perplexity", "low"), ("perplexity", "medium"), ("brave", "default")}
-
-
 def test_a_changed_file_fails_verification(frozen: ModuleType, tmp_path: Path) -> None:
     for path in frozen.FROZEN_DIR.iterdir():
         (tmp_path / path.name).write_bytes(path.read_bytes())
