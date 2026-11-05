@@ -128,3 +128,34 @@ def test_a_form_feed_is_not_a_line(tmp_path: Path) -> None:
     (package / "paged.py").write_text("X = 1\n\f\nY = 2\n", encoding="utf-8")
     files, _ = shape.measure(tmp_path)
     assert files["src/web_router/paged.py"] == 3, "counted as an editor shows it, not as splitlines() does"
+
+
+def _oversized_tree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, files: dict[str, int]) -> Path:
+    """A tree holding one 401-line file, and a baseline that lists ``files``; returns the baseline path."""
+    package = tmp_path / "src" / "web_router"
+    package.mkdir(parents=True)
+    (package / "big.py").write_text("X = 1\n" * (shape.MAX_FILE_LINES + 1), encoding="utf-8")
+    baseline = tmp_path / "shape_baseline.json"
+    baseline.write_text(shape.render({"files": files, "functions": {}}), encoding="utf-8")
+    monkeypatch.setattr(shape, "BASELINE", baseline)
+    monkeypatch.setattr(shape, "ROOT", tmp_path)
+    return baseline
+
+
+@pytest.mark.parametrize(
+    "files",
+    [pytest.param({}, id="new"), pytest.param({"src/web_router/big.py": shape.MAX_FILE_LINES}, id="grown")],
+)
+def test_the_baseline_is_not_rewritten_when_something_grew(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, files: dict[str, int]
+) -> None:
+    baseline = _oversized_tree(tmp_path, monkeypatch, files)
+    before = baseline.read_text(encoding="utf-8")
+    assert shape.main() == 1, "make shape-baseline must refuse a new or grown entry"
+    assert baseline.read_text(encoding="utf-8") == before
+
+
+def test_the_baseline_records_a_shrink(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    baseline = _oversized_tree(tmp_path, monkeypatch, {"src/web_router/big.py": 500})
+    assert shape.main() == 0
+    assert shape.load_baseline(baseline)["files"] == {"src/web_router/big.py": shape.MAX_FILE_LINES + 1}

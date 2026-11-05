@@ -91,7 +91,7 @@ def render(baseline: dict[str, dict[str, int]]) -> str:
 
 def main() -> int:
     """Rewrite the baseline, refusing to add an entry or grow one."""
-    current = violators()
+    current = violators(ROOT)
     if not BASELINE.exists():
         # Recreating it would admit every oversized file and function at once: restore it from git instead.
         print(
@@ -99,7 +99,7 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    old = load_baseline()
+    old = load_baseline(BASELINE)
     grown = [
         f"{key} ({lines} lines)"
         for kind in ("files", "functions")
