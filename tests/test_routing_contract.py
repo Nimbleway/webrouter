@@ -132,6 +132,7 @@ def test_the_hook_sees_each_attempt_and_its_answer_admits_or_passes_over() -> No
 
 
 def test_a_budget_scope_runs_the_block_unchanged() -> None:
+    ran: list[str] = []
     with budget_scope(Budget(max_cost_usd=0.0)):
-        ran = True
-    assert ran
+        ran.append("inside")
+    assert ran == ["inside"], "the scope runs its block, as it is, until a budget is enforced"
