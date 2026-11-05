@@ -54,6 +54,7 @@ def test_a_set_reports_static_oracle_and_a_router_in_sample_and_held_out(
 
     report = route_eval.markdown([summary], 0.05, {})
     assert "Prompt: unavailable" in report and "Recommended order" in report and "Noise floor: 5.0 points" in report
+    assert "not a significance test" in report, "the floor is rerun noise, not sampling error"
 
 
 def test_a_custom_router_gets_the_prompt_from_a_joined_folder_and_is_fit_on_the_training_split(

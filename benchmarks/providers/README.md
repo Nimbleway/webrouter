@@ -411,7 +411,9 @@ gold labels once scored 75 in-sample and 46 held out. The **noise floor** is
 the widest accuracy gap one backend shows between `sealqa-hard-254` and its
 twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points). A
 held-out margin over the static order no larger than that is *no gain*; it is
-the only twin run, so it serves every set.
+the only twin run, so it serves every set. It is rerun noise, not a
+significance test on the held-out split: a margin above it can still be
+sampling error.
 
 Each set ends with the **recommended order**, ranked on every question of the
 set, since nothing is fit to it: by correct out of every question; within the
