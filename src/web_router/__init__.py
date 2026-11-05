@@ -110,6 +110,7 @@ from web_router.registry_answer import (
     register_answer_provider,
     unregister_answer_provider,
 )
+from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, ToolName
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -192,6 +193,8 @@ __all__ = [
     "BrowserRequest",
     "BrowserSession",
     "BrowserState",
+    "Budget",
+    "Candidate",
     "Citation",
     "ConfigurationError",
     "DeadlineExceededError",
@@ -215,6 +218,7 @@ __all__ = [
     "PageLoadState",
     "PageSnapshot",
     "PageState",
+    "Plan",
     "Provider",
     "ProviderError",
     "ProviderNotFoundError",
@@ -229,6 +233,8 @@ __all__ = [
     "ResearchResponse",
     "ResearchState",
     "ResearchTimeoutError",
+    "RouteDecision",
+    "RouteRequest",
     "Screenshot",
     "SearchDepth",
     "SearchProvider",
@@ -244,6 +250,7 @@ __all__ = [
     "TemplateRequest",
     "TemplateResponse",
     "TemplateSample",
+    "ToolName",
     "UnsupportedFormatError",
     "UnsupportedParameterError",
     "Viewport",
