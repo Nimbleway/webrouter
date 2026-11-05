@@ -48,7 +48,8 @@ def recommended_order(summary: dict[str, Any], spread: float | None = None) -> l
 
     Ranked by ``route_eval_rank.rank_backends``, the one ranking the repo prints
     (:data:`~route_eval_rank.RANKING_RULE`), over the summary's ``ranking``
-    (:func:`ranking_stats`), at list price from ``web_router.prices``. A
+    (:func:`ranking_stats`), at each row's stated cost, else its list price from
+    ``web_router.prices`` (search rows state none, so in practice the list price). A
     backend that served nothing is left out; one that served searches and got
     every answer wrong is ranked, last. ``None`` marks every backend within the
     noise floor of the most accurate one -- the best, as far as the floor tells
@@ -88,7 +89,8 @@ def recommendation(summary: dict[str, Any]) -> list[str]:
         "plain backends in this scan in route-eval's order. A `provider@depth` or `provider:mode` setup is left out, "
         "because a chain member is a backend -- `auto` sends it whatever depth the request asks for -- not a mode. "
         f"The noise floor is {spread:.1%}, the spread between two runs of the same SealQA questions (see "
-        "`route_eval.py`), and cost is the list price in `web_router.prices`, an estimate. "
+        "`route_eval.py`), and cost is a row's stated cost, else its list price in `web_router.prices`, an "
+        "estimate (search backends state none). "
         "A search that failed on a rate-limit or quota error is counted under *Rate limit or quota*, as route-eval "
         "counts it, and nowhere else. "
         f"{RANKING_RULE} "
