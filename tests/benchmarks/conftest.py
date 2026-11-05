@@ -5,7 +5,8 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -36,20 +37,32 @@ EXTRACT_SETUP = {
 """A ``run.json`` as ``setup_of()`` writes it, minus the backends, which each test names."""
 
 
-@pytest.fixture(scope="module")
-def extract_scan() -> Iterator[ModuleType]:
-    # The scan imports what it shares with its neighbour as a sibling, as it does run from its folder.
-    sys.path.insert(0, str(EXTRACT_SCRIPT.parent))
+@contextmanager
+def load_script(path: Path, name: str, siblings: Iterable[str]) -> Iterator[ModuleType]:
+    """A benchmark script loaded as module ``name``, importing its neighbours as siblings as it does from its folder.
+
+    ``siblings`` are what it imports from its folder under plain names; they
+    and ``name`` are forgotten once the block ends.
+    """
+    sys.path.insert(0, str(path.parent))
     try:
-        spec = importlib.util.spec_from_file_location("extract_scan", EXTRACT_SCRIPT)
+        spec = importlib.util.spec_from_file_location(name, path)
         assert spec is not None and spec.loader is not None
         module = importlib.util.module_from_spec(spec)
+        # Registered first: a dataclass looks its module up by name.
+        sys.modules[name] = module
         spec.loader.exec_module(module)
         yield module
     finally:
-        sys.path.remove(str(EXTRACT_SCRIPT.parent))
-        for name in EXTRACT_SIBLINGS:
-            sys.modules.pop(name, None)
+        sys.path.remove(str(path.parent))
+        for sibling in (*siblings, name):
+            sys.modules.pop(sibling, None)
+
+
+@pytest.fixture(scope="module")
+def extract_scan() -> Iterator[ModuleType]:
+    with load_script(EXTRACT_SCRIPT, "extract_scan", EXTRACT_SIBLINGS) as module:
+        yield module
 
 
 def extract_row(
@@ -88,18 +101,8 @@ ANSWER_SETUP = {
 
 @pytest.fixture(scope="module")
 def answer_scan() -> Iterator[ModuleType]:
-    # Imports the shared helpers as siblings, as it does when run from its folder.
-    sys.path.insert(0, str(ANSWER_SCRIPT.parent))
-    try:
-        spec = importlib.util.spec_from_file_location("answer_scan", ANSWER_SCRIPT)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+    with load_script(ANSWER_SCRIPT, "answer_scan", ANSWER_SIBLINGS) as module:
         yield module
-    finally:
-        sys.path.remove(str(ANSWER_SCRIPT.parent))
-        for name in ANSWER_SIBLINGS:
-            sys.modules.pop(name, None)
 
 
 def answer_scan_row(provider: str, question: str, grade: str | None, **extra: Any) -> dict[str, Any]:
@@ -124,18 +127,8 @@ def answer_scan_row(provider: str, question: str, grade: str | None, **extra: An
 
 @pytest.fixture(scope="module")
 def frozen() -> Iterator[ModuleType]:
-    # Imports the combine keys and its checks as siblings, as it does when run from its folder.
-    sys.path.insert(0, str(FROZEN_SCRIPT.parent))
-    try:
-        spec = importlib.util.spec_from_file_location("frozen_results", FROZEN_SCRIPT)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+    with load_script(FROZEN_SCRIPT, "frozen_results", FROZEN_SIBLINGS) as module:
         yield module
-    finally:
-        sys.path.remove(str(FROZEN_SCRIPT.parent))
-        for name in FROZEN_SIBLINGS:
-            sys.modules.pop(name, None)
 
 
 @pytest.fixture(scope="module")
@@ -190,19 +183,8 @@ ROUTE_EVAL_SIBLINGS = (
 
 @pytest.fixture(scope="module")
 def route_eval() -> Iterator[ModuleType]:
-    sys.path.insert(0, str(ROUTE_EVAL_SCRIPT.parent))
-    try:
-        spec = importlib.util.spec_from_file_location("route_eval_under_test", ROUTE_EVAL_SCRIPT)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        # Registered first: its dataclasses look their module up by name.
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
+    with load_script(ROUTE_EVAL_SCRIPT, "route_eval_under_test", ROUTE_EVAL_SIBLINGS) as module:
         yield module
-    finally:
-        sys.path.remove(str(ROUTE_EVAL_SCRIPT.parent))
-        for name in (*ROUTE_EVAL_SIBLINGS, "route_eval_under_test"):
-            sys.modules.pop(name, None)
 
 
 @pytest.fixture(scope="module")
@@ -258,19 +240,9 @@ SCAN_SIBLINGS = (
 
 @pytest.fixture(scope="module")
 def scan() -> Iterator[ModuleType]:
-    # The scan imports what it shares with its neighbour as a sibling, as it does run from its folder.
     # Loaded under its own name: the agent benchmark's script is also called run.py.
-    sys.path.insert(0, str(SCAN_SCRIPT.parent))
-    try:
-        spec = importlib.util.spec_from_file_location("provider_scan", SCAN_SCRIPT)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+    with load_script(SCAN_SCRIPT, "provider_scan", SCAN_SIBLINGS) as module:
         yield module
-    finally:
-        sys.path.remove(str(SCAN_SCRIPT.parent))
-        for name in SCAN_SIBLINGS:
-            sys.modules.pop(name, None)
 
 
 def scan_row(provider: str, question: str, grade: str | None, topic: str = "Science", **extra: Any) -> dict[str, Any]:
