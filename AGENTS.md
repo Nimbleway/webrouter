@@ -383,10 +383,10 @@ and `--max-turns` stands in for the session budget OpenAI does not have.
 search backend through `evaluate()` on the same SimpleQA questions and breaks
 the judged accuracy down by SimpleQA's topic and answer type — the evidence a
 routing rule or the routing guide's advice should rest on. Its `report.md`
-names the judge and has no cost column; its recommended order alone reads list
-prices from `web_router.prices`, as estimates, to break ties, because it is
-route-eval's ranking (`route_eval_rank.py`) -- one ranking, so the repository never suggests two
-orders. `route_eval.py` replays a router over the frozen results offline and
+names the judge and has no cost column. Its recommended order alone reads list
+prices from `web_router.prices`, as estimates, to break ties. That order is
+route-eval's ranking (`route_eval_rank.py`), so the repository suggests only one
+order. `route_eval.py` replays a router over the frozen results offline and
 scores it against the static order, held out and in-sample, against the twin
 run's noise floor; an unknown price stays unknown there, never $0. `--combine` merges scans only when
 their questions, search size and judge match. Keep a scan's report to compare
@@ -468,10 +468,10 @@ the one implicit thing in this package; read it through `job_budget(default)`
 (`research_budget` is the same function under the name the research providers
 already read) or `current_deadline()`, never directly, and a block inside
 another only ever tightens it. A one-call method — search, extract, a template
-run, answer — refuses to start past it and raises `DeadlineExceededError` when
-the clamp cut it off, through `_bounded`/`_abounded`, which the base class mixes in from `_deadline.py`, which
-also cancel an async call at the deadline; an extract keeps the documents that
-came back in time. A transport that sets its own timeout — the HTTP base's
+run, answer — refuses to start past it. The base class mixes in `_bounded` and
+`_abounded` from `_deadline.py`; they raise `DeadlineExceededError` when the
+clamp cut a call off, and cancel an async call at the deadline. An extract keeps
+the documents that came back in time. A transport that sets its own timeout — the HTTP base's
 `_clamped()`, Nimble's `_within_deadline()`, Tavily's per-call `timeout` — sends
 nothing new when no deadline is in force, and clamps through `call_budget`, whose
 floor is a millisecond rather than a job's half second, so it is never handed

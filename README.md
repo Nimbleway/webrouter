@@ -308,7 +308,8 @@ it dated and sourced, from the price list `web_router.prices` reads (see
 
 `[answer]` installs these. One question, answered in one call: the backend
 searches and writes the answer itself. No keyless tier, since every backend
-bills the call; `auto` tries the ones you hold a key for, in the order the answer scan ranks them. See
+bills the call; `auto` tries the ones you hold a key for, in the order `make chains` ranks them on the
+answer benchmark. See
 [Asking for an answer](#asking-for-an-answer) for what an unnamed call does.
 
 | Pass | Name | Provider | Credentials | Options mapped | Citations tied to claims |
@@ -435,22 +436,19 @@ Every backend you hold a key for is a candidate, in a fixed order:
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
 Search's keyed order is generated, not hand-written: `make chains` ranks the
-backends on the committed SealQA hard results by judged accuracy over all 254
-questions, and within the noise floor of a rerun puts the cheaper at list price
-first, then the faster (see [`benchmarks/providers/`](benchmarks/providers/README.md)).
-Ranking on every question, not the held-out half route-eval scores routers on, makes
-this baseline slightly harder for a router to beat there, on purpose. Perplexity
-leads by the narrowest margin: its 48 of 254 sits exactly on the noise floor (3
-questions, 1.2 points) below WebIQ's 51, so one answer fewer for it, or one more
-for WebIQ, on a re-freeze would put Nimble first for every keyed caller. Every
+backends by accuracy on committed benchmark results; only backends too close in
+accuracy to tell apart are ordered by cost, then speed.
+[`benchmarks/providers/`](benchmarks/providers/README.md#the-default-auto-orders-make-chains)
+explains the method, and how close the top backends are. Every
 key you hold comes before the free tier — so a key you hold only for research,
 Perplexity's say, serves your plain searches too. Keenable, DeepSeek and AgentCore have
 no rows in those results, so they come after the keyless tier until a scan places them: with a gateway set up, a plain
 `WebRouter().search()` is still served by a keyless member first, so name `Provider.AGENTCORE` to reach it. For extract, the backends that
 joined later come after the keyless tier, so holding one more key never moves a
 call that was already being served. Research has no free tier, so Linkup and then
-You.com simply follow the others there. Neither of those orders is ranked: extract's is
-measured on pages returned, not graded, and research's is unmeasured and hand-ordered.
+You.com simply follow the others there. None of extract's, research's or browse's orders is
+ranked: extract's is measured on pages returned, not graded, and research's and browse's are
+unmeasured and hand-ordered.
 To choose your own order, pass a `chain`.
 
 **`auto` routes each request to a member that can serve it.** It accepts every
@@ -898,8 +896,8 @@ map one raises `UnsupportedParameterError` before anything is sent -- the
 With `provider` unset, the router's default answers when it is an answer
 backend. On the usual default, `auto`, that is every answer backend you hold a
 key for (in the environment or in `provider_config`), in the order `make chains`
-ranks them on the answer scan's 300 questions -- accuracy first, and within the noise floor the
-cheaper at list price: Perplexity, You.com, Linkup, Parallel, Exa, then Brave, which
+ranks them on 300 benchmark questions -- accuracy first, and where accuracy is too close to tell
+apart, the cheaper at list price: Perplexity, You.com, Linkup, Parallel, Exa, then Brave, which
 the scan has not measured. A backend that does not
 map an option you set is passed over without being called; one that fails, or
 answers with nothing, is passed over for the next, and each one tried bills.

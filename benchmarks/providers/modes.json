@@ -1,5 +1,5 @@
 {
-  "_about": "Vendor search modes the normalized search_depth does not reach, for setups written provider:mode. Each is sent as provider_options, which a search merges last, so it overrides what web-router would send for the same field. Checked against each vendor's docs on 2026-09-30; see PRICING.md for sources. 'verified' is true only when a live call has shown the mode changing what comes back; 'observed' records what the last check saw. Linkup's standard mode was checked live; Exa, Tavily and Parallel modes are unchecked: their accounts were out of credit.",
+  "_about": "Vendor search modes the normalized search_depth does not reach, for setups written provider:mode. Each is sent as provider_options, which a search merges last, so it overrides what web-router would send for the same field. Checked against each vendor's docs on 2026-09-30; see PRICING.md for sources. 'verified' is true only when a live call has shown the mode changing what comes back; 'observed' records what the last check saw. Linkup's standard mode was checked live; Exa, Tavily and Parallel modes are unchecked.",
   "tavily": {
     "fast": {
       "provider_options": {

@@ -13,7 +13,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from _frozen_checks import question_id
+from _frozen_checks import DEFAULT_MODE, question_id
 
 SET_NAME = "tools-effort-60"
 QUESTIONS = "tools-effort"
@@ -36,8 +36,6 @@ MAX_GIVEN_URLS = 5
 SEARCH_EXTRACT, EXTRACT, ANSWER, RESEARCH = "search+extract", "extract", "answer", "research"
 PATHS = (SEARCH_EXTRACT, EXTRACT, ANSWER, RESEARCH)
 """Each path is a frozen row's ``method``."""
-DEFAULT_MODE = "default"
-"""The mode of a call that sets none, as the other frozen sets write it."""
 
 SEARCH_PROVIDERS = ("nimble", "perplexity", "linkup")
 READER = "nimble"

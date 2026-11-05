@@ -9,6 +9,8 @@ import pytest
 from tests.benchmarks.conftest import route_question as _question
 from tests.benchmarks.conftest import route_row as _row
 from tests.benchmarks.conftest import route_stats as _stats
+from web_router import prices
+from web_router._chains import chains
 
 
 def test_a_gap_wider_than_the_noise_floor_ranks_by_accuracy_whatever_the_cost(route_eval_rank: ModuleType) -> None:
@@ -49,8 +51,8 @@ def test_backend_stats_leave_an_unrecorded_latency_out_of_the_median(route_eval_
 
 def test_the_noise_floor_is_the_twin_runs_widest_gap(route_eval_rank: ModuleType) -> None:
     floor, pairs = route_eval_rank.noise_floor()
-    assert pairs, "the twin runs share at least one backend"
-    assert floor == max(abs(a - b) for a, b in pairs.values())
+    assert floor == max(abs(main - rerun) for main, rerun in pairs.values()), "the widest gap between the twin runs"
+    assert floor == pytest.approx(chains()["noise_floor"], abs=1e-6), "the floor chains.json was ranked with"
 
 
 def test_the_best_are_every_backend_within_the_floor_of_the_most_accurate_wherever_cost_put_them(
@@ -78,7 +80,7 @@ def test_backend_stats_count_an_ungraded_row_as_served_as_the_replay_does(
     assert stats["latency_p50"] == 2.0 and stats["cost_usd"] == pytest.approx(0.008), "an answered call is billed"
 
 
-def test_a_row_failed_on_the_account_is_left_out_not_counted_a_miss(route_eval_rank: ModuleType) -> None:
+def test_a_row_failed_on_a_rate_limit_or_quota_is_left_out_not_counted_a_miss(route_eval_rank: ModuleType) -> None:
     questions = [
         _question(route_eval_rank, _row("you-mcp", None, error="rate_limit", qid="q0")),
         _question(route_eval_rank, _row("you-mcp", None, error="quota", qid="q1")),
@@ -88,3 +90,10 @@ def test_a_row_failed_on_the_account_is_left_out_not_counted_a_miss(route_eval_r
     stats = route_eval_rank.backend_stats(questions)["you-mcp"]
     assert stats["excluded"] == 2 and stats["questions"] == 2
     assert stats["accuracy_all"] == 0.5, "the 5xx is still a miss; the rate limit and the quota are not graded"
+
+
+def test_a_vendor_mode_or_depth_row_is_priced_as_the_price_list_keys_it(route_eval_rank: ModuleType) -> None:
+    vendor = route_eval_rank.cost_of(_row("tavily", "correct", mode="ultra-fast"))
+    depth = route_eval_rank.cost_of(_row("tavily", "correct", mode="@deep"))
+    assert vendor is not None and vendor == prices.estimate("tavily", "search", ":ultra-fast")
+    assert depth is not None and depth == prices.estimate("tavily", "search", "deep") and depth != vendor

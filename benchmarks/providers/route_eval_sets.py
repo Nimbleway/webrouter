@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from _tools_effort_plan import DEFAULT_MODE
+from _frozen_checks import DEFAULT_MODE
 from frozen import FROZEN_DIR, SUFFIX, read_rows
 from route_eval_paths import MIXED, is_mixed, path_id
 

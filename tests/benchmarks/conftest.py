@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import gzip
-import importlib.util
 import json
 import sys
-from collections.abc import Iterable, Iterator
-from contextlib import contextmanager
+from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
 from typing import Any
 
 import pytest
+
+from scripts.benchmark_loader import FROZEN_SCRIPT, FROZEN_SIBLINGS, load_script
 
 EXTRACT_SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "extract.py"
 ANSWER_SCRIPT = EXTRACT_SCRIPT.with_name("answer.py")
@@ -20,9 +20,6 @@ ANSWER_SIBLINGS = ("_common", "_questions", "_report_tables", "answer_report")
 """What the answer scan imports from its folder, under plain names, so they are forgotten once it is."""
 EXTRACT_SIBLINGS = ("_common", "cli", "extract_report", "urls")
 """What the extract scan imports from its folder, under plain names, so they are forgotten once it is."""
-FROZEN_SCRIPT = EXTRACT_SCRIPT.with_name("frozen.py")
-FROZEN_SIBLINGS = ("_common", "_frozen_checks", "_frozen_mixed", "_tools_effort_plan")
-"""What ``frozen.py`` imports from its folder, under plain names, so they are forgotten once it is."""
 EXTRACT_SETUP = {
     "urls": "general",
     "urls_title": "the general mix",
@@ -36,28 +33,6 @@ EXTRACT_SETUP = {
     "started": "2026-10-13T00:00:00+00:00",
 }
 """A ``run.json`` as ``setup_of()`` writes it, minus the backends, which each test names."""
-
-
-@contextmanager
-def load_script(path: Path, name: str, siblings: Iterable[str]) -> Iterator[ModuleType]:
-    """A benchmark script loaded as module ``name``, importing its neighbours as siblings as it does from its folder.
-
-    ``siblings`` are what it imports from its folder under plain names; they
-    and ``name`` are forgotten once the block ends.
-    """
-    sys.path.insert(0, str(path.parent))
-    try:
-        spec = importlib.util.spec_from_file_location(name, path)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        # Registered first: a dataclass looks its module up by name.
-        sys.modules[name] = module
-        spec.loader.exec_module(module)
-        yield module
-    finally:
-        sys.path.remove(str(path.parent))
-        for sibling in (*siblings, name):
-            sys.modules.pop(sibling, None)
 
 
 @pytest.fixture(scope="module")

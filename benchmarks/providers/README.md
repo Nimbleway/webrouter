@@ -62,7 +62,7 @@ reads; change a price there and run `make prices`.
 
 ## Adding backends to a finished scan
 
-A backend whose account was out of credit, or one added later, can run on the
+A backend that failed during a run, or one added later, can run on the
 same questions and be merged in, without paying for the others again:
 
 ```bash
@@ -87,7 +87,7 @@ Each run gets its own folder under `benchmarks/providers/results/`
 
 Accuracy is the judge's grade, latency is timed around the search alone, and
 there is no cost column, because no search backend states one. Only the
-recommended order reads a cost: the list price from `web_router.prices`, an
+recommended order (below) reads a cost: the list price from `web_router.prices`, an
 estimate, to break ties.
 
 ## The recommended `auto` order
@@ -280,9 +280,8 @@ A research run may take `--research-timeout` seconds (default 1200, twice
 `--concurrency` rows (default 6) run at once. Experimental until 1.0.
 
 The frozen run's Perplexity research columns (`low` and `medium`) are not
-comparable yet: most of their rows failed during the run (56 and 41 of 60),
-and Brave's answer column, 22 of 60 failed, rests on fewer questions than the
-rest. A later run can fill them. The run that froze `tools-effort-60` kept no
+comparable yet: most of their rows failed during the run, and Brave's answer
+column, where some rows failed too, rests on fewer questions than the rest. A later run can fill them. The run that froze `tools-effort-60` kept no
 latency on its failed rows (`latency_s` is `null` there); the runner now keeps
 the time to the failure.
 
@@ -313,9 +312,9 @@ price row is reported and left out, never given one.
 
 The committed rows carry no question or answer text, only a `question_id`:
 the questions stay with the public datasets they come from, and `join` is how
-they come back. SimpleQA is from `openai/simple-evals` (MIT) and SealQA from
-`vtllms/sealqa` (Apache-2.0) and FRAMES from `google/frames-benchmark` (Apache-2.0); the rows carry ids, grades and timings, no
-dataset text. Experimental until 1.0: the schema may change, and
+they come back. SimpleQA is from `openai/simple-evals` (MIT), SealQA from
+`vtllms/sealqa` (Apache-2.0) and FRAMES from `google/frames-benchmark`
+(Apache-2.0). Experimental until 1.0: the schema may change, and
 `frozen/manifest.json` names the version a file follows.
 
 | Set | Questions | Rows | What it is |
@@ -324,7 +323,7 @@ dataset text. Experimental until 1.0: the schema may change, and
 | `sealqa-hard-254-twin` | 254 | 508 | The same questions again on two backends: the run-to-run noise floor |
 | `simpleqa-300-v2` | 300 | 3600 | 300 SimpleQA questions (seed 0), ten backends, with Keenable and DeepSeek added later on the same questions |
 | `answer-simpleqa-300` | 300 | 1500 | The same 300 SimpleQA questions through `answer()`, five backends |
-| `tools-effort-60` | 60 | 1150 | [The tool and effort set](#the-tool-and-effort-set): 60 questions through search then read, extract, `answer()` and `research()` at each effort; the easy questions' answer rows are copied from `answer-simpleqa-300`. Most Perplexity research rows failed during the run (56 of 60 `low`, 41 of 60 `medium`), and 22 of 60 Brave answers; `failed_rows` in the manifest has every count, and route-eval leaves them out |
+| `tools-effort-60` | 60 | 1150 | [The tool and effort set](#the-tool-and-effort-set): 60 questions through search then read, extract, `answer()` and `research()` at each effort; the easy questions' answer rows are copied from `answer-simpleqa-300`. Most Perplexity research rows and some Brave answers failed during the run; `failed_rows` in the manifest has every count |
 
 Each `frozen/<set>.jsonl.gz` is gzipped JSON lines, sorted by `question_id`,
 then provider and mode:
@@ -338,7 +337,7 @@ then provider and mode:
 | `mode` | The vendor mode and depth the scan asked for, as `run.py` spells them (`ultra-fast`, `@deep`, `full-content@lite`); `default` when it asked for none, which is the backend's own default for that method. In `tools-effort-60`, a research row's mode is its effort (`low` ... `max`) and a `search+extract` row's is `top3`; every other row is `default` |
 | `grade` | `correct`, `incorrect` or `not_attempted`, from the judge; `null` when the row failed before it was graded. Count grades only from rows with `error: null` |
 | `latency_s` | Seconds around the search or `answer()` call alone, to the millisecond. On a failed row it is the time to the failure (`0.0` for a call refused before it was sent), so count latency only from rows with `error: null` |
-| `cost_usd` | The cost the backend stated in its response, `answer` rows only, where it states one; otherwise `null`. In `tools-effort-60` it is the stated cost, else the list price from `web_router.prices` (a `search+extract` row adds its search and its reads), else `null` The answer rows copied from `answer-simpleqa-300` are filled the same way. A failed page read's cost and time (about $0.001 each) are not in this run's `search+extract` and `extract` rows; later runs include them |
+| `cost_usd` | The cost the backend stated in its response, `answer` rows only, where it states one; otherwise `null`. In `tools-effort-60` it is the stated cost, else the list price from `web_router.prices` (a `search+extract` row adds its search and its reads), else `null`. The answer rows copied from `answer-simpleqa-300` are filled the same way. A failed page read's cost and time (about $0.001 each) are not in this run's `search+extract` and `extract` rows; later runs include them |
 | `error` | `null`, or the class of what went wrong: `timeout`, `rate_limit`, `quota`, `invalid_request` (refused before sending, such as a query too long for the backend), `http_4xx`, `http_5xx`, `other`, `judge` (the judge failed, not the backend), `budget` (`tools-effort-60`: the backend answered, and the run's budget refused grading it) or `leaked` (an answer citing the set's own pages, left ungraded). The message itself is never kept. The class says how that call ended in this run, not how good the backend is; route-eval skips failed rows |
 
 `frozen/manifest.json` records, per set, the question set and dataset, the
@@ -401,7 +400,8 @@ How a choice is scored:
   question, ungraded -- never correct, no fallback, counted in its own column.
   A question no backend served is a miss.
 - **Accuracy** is correct out of every question; grades and latency come only
-  from rows that did not fail. In the recommended order, a row that failed
+  from rows that did not fail. In the recommended order (the ranking each set's
+  report ends with, described below), a row that failed
   during the run with a `rate_limit` or `quota` error is left out of its
   backend's questions rather than counted a miss: the call never reached the
   question, so it says nothing about the backend's answer. The replay still
@@ -459,7 +459,10 @@ The rule is the recommended order's, above; `chains.json` states it as `rule`.
 On `sealqa-hard-254`, judged by `openai:gpt-4o`, frozen from the run of
 2026-10-07, WebIQ (51 of 254), Nimble (49) and Perplexity (48) sit within the
 floor of each other, so the priced and faster go first: Perplexity, Nimble,
-then WebIQ, whose price is unknown. Linkup (47) follows, then Tavily (42), Exa
+then WebIQ, whose price is unknown. Perplexity leads by the narrowest margin:
+its 48 sits exactly on the floor (3 questions, 1.2 points) below WebIQ's 51, so
+one answer fewer for it, or one more for WebIQ, in a new frozen run would put
+Nimble first for every keyed caller. Linkup (47) follows, then Tavily (42), Exa
 and Parallel (41 each), Brave (37) and You.com (29). The order this replaced,
 from a SimpleQA scan, was Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ,
 Parallel, Exa, You.com.
@@ -473,8 +476,8 @@ Perplexity, Exa, You.com, Linkup, Parallel, Brave.
 A member the set has no rows for (Keenable, DeepSeek and AgentCore for search,
 Brave for answer) keeps its place after the ranked ones and is listed as
 `unmeasured`; the keyless search tier stays in `constants.py`, unranked.
-Extract's order is measured on pages returned, not graded, and research's is
-unmeasured, so both stay hand-ordered. `chains.py --check` exits 1 when
+Extract's order is measured on pages returned, not graded, and research's and
+browse's are unmeasured, so all three stay hand-ordered. `chains.py --check` exits 1 when
 the file is stale, and a unit test runs it, so a change to the frozen results
 or the price list that moves an order fails until `make chains` is run and the
 README's tables follow. For the full report behind both orders:
@@ -497,8 +500,6 @@ are the same as above.
 
 ```bash
 uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60
-uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60 \
-    --router always:research:nimble:low --router always:answer:exa
 ```
 
 - **Static** is what a caller with no router does today: `search` through
@@ -508,13 +509,12 @@ uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort
   research lowest effort first. The cheapest path would be a weaker
   yardstick: no caller gets it by default.
 - **Oracle** is the path that got each question right, cheapest, then fastest.
-- The example routers are `always:research:parallel:low` and
-  `always:answer:perplexity`.
+- The example routers, scored when no `--router` is given, are
+  `always:research:parallel:low` and `always:answer:perplexity`.
 - A failed row counts as on any set: in the replay it is passed over. In the
   recommended order and the effort table, a row that failed during the run
   with `rate_limit` or `quota` is left out of the count and shown apart, as
-  above: `answer:brave` 22, `research:perplexity:low` 56 and
-  `research:perplexity:medium` 41 of 60, so those paths rest on few questions.
+  above, so a path with many such rows rests on few questions.
 - **Research by effort** closes the set's report: each research backend at
   each effort, correct out of the questions counted, mean cost, median latency
   and the rows left out -- the evidence for mapping a budget to an effort.

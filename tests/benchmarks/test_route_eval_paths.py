@@ -18,7 +18,7 @@ def _path_row(qid: str, path: str, grade: str | None, **extra: Any) -> dict[str,
 
 
 def _perplexity_low(qid: str, i: int) -> dict[str, Any]:
-    """Rate-limited on the first 15 questions, timed out on two, right on the last three."""
+    """A `rate_limit` error on the first 15 questions, timed out on two, right on the last three."""
     if i < 15:
         return _path_row(qid, "research:perplexity:low", None, latency=None, error="rate_limit")
     if i < 17:
@@ -53,6 +53,17 @@ def test_a_mixed_set_keys_each_row_by_its_path(route_eval: ModuleType, tmp_path:
     assert {"research:parallel:low", "research:parallel:high", "answer:perplexity"} <= set(first.rows)
     assert "research:perplexity:low" in first.rows, "a failed row stays a candidate, as on any set"
     assert "extract:nimble" in first.rows and "extract:nimble" not in last.rows, "extract only where pages were given"
+
+
+def test_an_extract_path_is_ranked_on_the_questions_where_it_is_a_candidate(
+    route_eval: ModuleType, tmp_path: Path
+) -> None:
+    _mixed_set(tmp_path)
+    summary = route_eval.evaluate_set("mixed-tiny", [], floor=0.05, folder=tmp_path)
+
+    extract = summary["backends"]["extract:nimble"]
+    assert (extract["correct"], extract["questions"]) == (4, 4), "a question given no pages is not a miss for extract"
+    assert summary["recommended_order"][0] == "extract:nimble", "as right as research:parallel:high, and cheaper"
 
 
 def test_a_set_mixing_methods_that_are_not_paths_is_refused(route_eval: ModuleType, tmp_path: Path) -> None:
@@ -90,7 +101,7 @@ def test_the_oracle_takes_the_cheapest_right_path(route_eval: ModuleType, tmp_pa
     assert route_eval.oracle_router(route_eval.MIXED)(questions[-1])[0] == "research:perplexity:low", "cheapest"
 
 
-def test_a_path_failed_on_the_account_is_passed_over_in_the_replay_as_any_failed_row(
+def test_a_path_failed_on_a_rate_limit_is_passed_over_in_the_replay_as_any_failed_row(
     route_eval: ModuleType, tmp_path: Path
 ) -> None:
     _mixed_set(tmp_path)
@@ -147,7 +158,7 @@ def test_the_report_ends_with_research_by_effort(route_eval: ModuleType, tmp_pat
         ("parallel", "low", 16, 20, 0, 0),
         ("parallel", "high", 20, 20, 0, 0),
         ("perplexity", "low", 3, 5, 2, 15),
-    ], "the rate-limited rows are left out of the count and shown apart; the timeouts are misses"
+    ], "rows failed on a rate-limit error are left out of the count and shown apart; the timeouts are misses"
     report = route_eval.markdown([summary], 0.05, {})
     assert "| Order | Path |" in report and "measured on search rows" in report
     assert report.index("Recommended order") < report.index("Research by effort")

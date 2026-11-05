@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import statistics
 from collections import defaultdict
+from collections.abc import Mapping
 from typing import Any
 
 from _common import MIN_GROUP, _p, _pct, _wilson
@@ -34,6 +35,11 @@ def grade_stats(rows: list[dict[str, Any]], latencies: list[float] | None = None
         "latency_p50": statistics.median(latencies) if latencies else None,
         "latency_p95": _pct(latencies, 0.95),
     }
+
+
+def correct_of_all(score: Mapping[str, Any]) -> float:
+    """Correct answers out of every question asked, a failed row counting as a miss."""
+    return score["correct"] / score["questions"] if score["questions"] else 0.0
 
 
 def search_score(rows: list[dict[str, Any]]) -> dict[str, Any]:

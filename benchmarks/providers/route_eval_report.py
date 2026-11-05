@@ -77,7 +77,7 @@ def _order_table(s: Mapping[str, Any]) -> list[str]:
     out = [
         f"### Recommended order, from every question\n\n{RANKING_RULE}\n",
         f"| Order | {'Path' if s['method'] == MIXED else 'Backend'} | Correct of the questions counted "
-        "| Cost per call | p50 latency | Failed | Left out (account) |",
+        "| Cost per call | p50 latency | Failed | Left out (rate limit or quota) |",
         "|---|---|---|---|---|---|---|",
     ]
     for rank, p in enumerate(s["recommended_order"], 1):

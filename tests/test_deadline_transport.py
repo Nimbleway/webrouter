@@ -22,10 +22,10 @@ from tests.deadline_helpers import (
     _hangs,
     _hangs_until_timeout,
 )
-from web_router.constants import TAVILY_SDK_SEARCH_TIMEOUT
+from web_router.constants import MIN_CALL_BUDGET, MIN_JOB_BUDGET, TAVILY_SDK_SEARCH_TIMEOUT
 from web_router.exceptions import DeadlineExceededError, ProviderError
 from web_router.providers._clamp import clamp_timeout
-from web_router.providers._deadline import call_deadline
+from web_router.providers._deadline import call_budget, call_deadline, job_budget
 from web_router.providers.nimble import NimbleProvider
 from web_router.providers.nimble_template import NimbleTemplateProvider
 from web_router.providers.tavily import TavilyProvider
@@ -292,11 +292,22 @@ def test_a_one_call_transport_never_gets_more_than_the_time_left(clock: _Clock) 
 
     with call_deadline(DEADLINE):
         clock.now = DEADLINE - 0.2
+        unlimited = clamp_timeout(httpx.Timeout(5.0, pool=None))
         with pytest.raises(DeadlineExceededError):
             provider.search(SearchRequest(query="q"))
 
     assert seen and seen[0] <= 0.2 + 1e-9
+    parts = (unlimited.connect, unlimited.read, unlimited.write, unlimited.pool)
+    assert None not in parts and max(parts) <= 0.2 + 1e-9, "a part left unlimited is limited to the time left"
     assert clamp_timeout(30.0) == 30.0, "with no deadline the provider's own timeout stands"
+
+
+def test_a_budget_past_the_deadline_is_its_floor_never_zero(clock: _Clock) -> None:
+    """Zero means "no timeout" to httpx and the SDKs, so a budget is floored, never handed zero or less."""
+    with call_deadline(DEADLINE):
+        clock.now = DEADLINE + 1.0
+        assert job_budget(30.0) == MIN_JOB_BUDGET
+        assert call_budget(30.0) == MIN_CALL_BUDGET
 
 
 async def test_an_async_batch_that_reported_only_failures_is_not_hidden_by_the_deadline() -> None:
