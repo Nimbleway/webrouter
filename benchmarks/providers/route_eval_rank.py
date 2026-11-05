@@ -15,6 +15,7 @@ from typing import Any
 
 from _frozen_checks import JUDGE_ERROR, LEAKED_ERROR
 from _report_tables import grade_stats
+from _tools_effort_plan import DEFAULT_MODE
 from frozen import FROZEN_DIR
 from route_eval_sets import TWIN_SETS, Question, load_set
 
@@ -41,10 +42,11 @@ RANKING_RULE = (
 
 
 def cost_of(row: Mapping[str, Any]) -> float | None:
-    """What a served row cost: the cost the backend stated, else its list price; ``None`` when neither is known."""
+    """What a served row cost: the cost the backend stated, else its list price at the row's mode (a research
+    row's effort); ``None`` when neither is known."""
     if row["cost_usd"] is not None:
         return float(row["cost_usd"])
-    return prices.estimate(row["provider"], row["method"])
+    return prices.estimate(row["provider"], row["method"], None if row["mode"] == DEFAULT_MODE else row["mode"])
 
 
 def _cost_key(cost: float | None) -> tuple[bool, float]:

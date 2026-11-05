@@ -371,7 +371,8 @@ uv run --all-extras python benchmarks/providers/route_eval.py --router mypkg.rou
 ```
 
 By default it scores `sealqa-hard-254` and `simpleqa-300-v2`, SimpleQA being
-the control set where routing should gain nothing. A router is `static`
+the control set where routing should gain nothing, and `tools-effort-60`
+([below](#tool-choice-and-effort)). A router is `static`
 (`auto`'s order today), `oracle` (the backend that got each question right,
 cheapest first: the ceiling), `always:<backend>`, or your own callable as
 `module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
@@ -383,8 +384,8 @@ first. `prompt` is the question's text only when `--joined` names the folder
 was unavailable. The interface is a thin adapter, experimental until 1.0, and
 will move to the routing contract when it lands.
 
-**v1 covers provider order for `search` and `answer` only.** Tool choice and
-effort need a dataset that records them, which the frozen sets do not.
+**It covers provider order for `search` and `answer`, and tool choice and
+research effort on `tools-effort-60`.**
 
 How a choice is scored:
 
@@ -421,11 +422,13 @@ Every router is scored on one seeded split (`--seed 0`, half held out by
 `--test-fraction`), in-sample and held out side by side: on SealQA, routing by
 gold labels once scored 75 in-sample and 46 held out. The **noise floor** is
 the widest accuracy gap one backend shows between `sealqa-hard-254` and its
-twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points). A
-held-out margin over the static order no larger than that is *no gain*; it is
-the only twin run, so it serves every set. It is rerun noise, not a
-significance test on the held-out split: a margin above it can still be
-sampling error.
+twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points); it is
+the only twin run, so it serves every set. It is rerun noise, not sampling
+error, so a held-out verdict needs both: a router is a *gain* only when its
+margin over the static order is wider than the floor and the static order's
+held-out accuracy falls below the router's 95% interval, a *loss* only when
+the margin is under minus the floor and the static order sits above that
+interval, and *no gain* otherwise.
 
 Each set ends with the **recommended order**, ranked on every question of the
 set, since nothing is fit to it: by correct out of every question; within the
@@ -479,6 +482,48 @@ README's tables follow. For the full report behind both orders:
 ```bash
 uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254 --set answer-simpleqa-300
 ```
+
+### Tool choice and effort
+
+On [`tools-effort-60`](#the-tool-and-effort-set), whose rows carry several
+methods, a candidate is a **path**: method, backend and mode, written
+`method:backend[:mode]` -- `search+extract:nimble:top3`, `extract:nimble`,
+`answer:perplexity`, `research:parallel:low` (a research row's mode is its
+effort). A question's candidates are the paths it has rows for, so `extract`
+is one only on the ten questions given their pages. A router takes the same
+`(prompt, candidates)` and returns path ids best first; the replay, the
+scores, the split, the noise floor and the recommended order (here of paths)
+are the same as above.
+
+```bash
+uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60
+uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60 \
+    --router always:research:nimble:low --router always:answer:exa
+```
+
+- **Static** is what a caller with no router does today: `search` through
+  `auto`'s order, then read the top pages -- the first `search+extract` path
+  (Perplexity's, in today's order). The other paths follow only as its
+  fallback order: extract, answer, then research, each by its `auto` order,
+  research lowest effort first. The cheapest path would be a weaker
+  yardstick: no caller gets it by default.
+- **Oracle** is the path that got each question right, cheapest, then fastest.
+- The example routers are `always:research:parallel:low` and
+  `always:answer:perplexity`.
+- A failed row counts as on any set: in the replay it is passed over. In the
+  recommended order and the effort table, a row that failed during the run
+  with `rate_limit` or `quota` is left out of the count and shown apart, as
+  above: `answer:brave` 22, `research:perplexity:low` 56 and
+  `research:perplexity:medium` 41 of 60, so those paths rest on few questions.
+- **Research by effort** closes the set's report: each research backend at
+  each effort, correct out of the questions counted, mean cost, median latency
+  and the rows left out -- the evidence for mapping a budget to an effort.
+
+60 questions is small. Each held-out half is 30, where one question is 3.3
+points and the 95% interval runs some 30 points wide, which is why a verdict
+needs the static order outside it: here neither example router is a gain or a
+loss. The noise floor was measured on search rows; this set has no twin run.
+A set that mixes methods other than these paths is refused by name.
 
 ## Keeping results
 

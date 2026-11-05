@@ -41,12 +41,36 @@ def test_a_set_reports_static_oracle_and_a_router_in_sample_and_held_out(
         assert r["regret_oracle"] == pytest.approx(1.0 - r["accuracy"])
         assert r["regret_static"] == pytest.approx(routers["static"][part]["accuracy"] - r["accuracy"])
     assert routers["static"]["verdict"] == "baseline"
-    nimble_gain = -routers["always:nimble"]["held_out"]["regret_static"]
-    assert routers["always:nimble"]["verdict"] == route_eval.verdict(nimble_gain, 0.05)
+    nimble = routers["always:nimble"]["held_out"]
+    static = routers["static"]["held_out"]["accuracy"]
+    assert routers["always:nimble"]["verdict"] == route_eval.verdict(
+        -nimble["regret_static"], 0.05, static, nimble["accuracy_ci95"]
+    )
 
     report = route_eval.markdown([summary], 0.05, {})
     assert "Prompt: unavailable" in report and "Recommended order" in report and "Noise floor: 5.0 points" in report
     assert "not a significance test" in report, "the floor is rerun noise, not sampling error"
+
+
+def test_one_question_behind_static_on_30_held_out_is_no_loss(route_eval: ModuleType, tmp_path: Path) -> None:
+    def write(right: dict[str, set[str]]) -> None:
+        rows = [
+            _row(p, "correct" if f"q{i:02d}" in right[p] else "incorrect", qid=f"q{i:02d}")
+            for i in range(60)
+            for p in ("perplexity", "nimble")
+        ]
+        _write_set(tmp_path, "tiny", rows)
+
+    write({"perplexity": set(), "nimble": set()})
+    _, questions = route_eval.load_set("tiny", tmp_path)
+    held_out = [q.question_id for q in route_eval.split(questions, route_eval.DEFAULT_SEED, 0.5)[1]]
+    write({"perplexity": set(held_out[:19]), "nimble": set(held_out[:18])})
+
+    routers = route_eval.evaluate_set("tiny", ["always:nimble"], floor=0.0118, folder=tmp_path)["routers"]
+
+    assert routers["static"]["held_out"]["correct"] == 19 and routers["static"]["held_out"]["questions"] == 30
+    assert routers["always:nimble"]["held_out"]["correct"] == 18
+    assert routers["always:nimble"]["verdict"] == route_eval.NO_GAIN_INTERVAL, "3.3 points is one question"
 
 
 def test_a_custom_router_gets_the_prompt_from_a_joined_folder_and_is_fit_on_the_training_split(
@@ -112,11 +136,6 @@ def test_a_split_that_leaves_either_side_empty_is_refused(
     _tiny_set(tmp_path)
     with pytest.raises(SystemExit, match="both parts non-empty"):
         route_eval.evaluate_set("tiny", [], test_fraction=fraction, floor=0.05, folder=tmp_path)
-
-
-def test_the_committed_mixed_set_is_refused_by_name(route_eval: ModuleType) -> None:
-    with pytest.raises(SystemExit, match="tools-effort-60 mixes methods"):
-        route_eval.load_set("tools-effort-60")
 
 
 def test_the_report_shows_n_a_for_numbers_an_empty_score_cannot_have(route_eval: ModuleType) -> None:

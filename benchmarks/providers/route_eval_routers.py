@@ -14,12 +14,20 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from _tools_effort_plan import EXTRACT
+from route_eval_paths import MIXED, RESEARCH, path_router
 from route_eval_rank import _cost_key, _latency_key, cost_of
 from route_eval_sets import Question
 
-from web_router.constants import AUTO_APPENDED, AUTO_PREFERRED
+from web_router.constants import (
+    AUTO_APPENDED,
+    AUTO_EXTRACT_APPENDED,
+    AUTO_EXTRACT_PREFERRED,
+    AUTO_PREFERRED,
+    AUTO_RESEARCH_PREFERRED,
+)
 from web_router.constants_answer import AUTO_ANSWER_PREFERRED
-from web_router.providers.auto import AutoProvider
+from web_router.providers.auto import AutoExtractProvider, AutoProvider
 from web_router.providers.auto_answer import AutoAnswerProvider
 
 STATIC = "static"
@@ -29,20 +37,32 @@ ALWAYS = "always:"
 STATIC_ORDER: dict[str, tuple[str, ...]] = {
     "search": tuple(name for name, _ in AutoProvider.default_chain(frozenset((*AUTO_PREFERRED, *AUTO_APPENDED)))),
     "answer": tuple(name for name, _ in AutoAnswerProvider.default_chain(frozenset(AUTO_ANSWER_PREFERRED))),
+    EXTRACT: tuple(
+        name
+        for name, _ in AutoExtractProvider.default_chain(frozenset((*AUTO_EXTRACT_PREFERRED, *AUTO_EXTRACT_APPENDED)))
+    ),
+    RESEARCH: AUTO_RESEARCH_PREFERRED,
 }
 """Today's ``auto`` order per method, built as ``auto`` builds it with a key for every backend: what a router must beat.
 
 For search that is the preferred backends, then the keyless tier, then the
-backends appended since the last reordering.
+backends appended since the last reordering. Extract and research are only
+read on a mixed set, to order its read and research paths.
 """
 
-MSG_BAD_ROUTER = "{spec!r}: a router is static, oracle, always:<backend>, module:attr or path/file.py:attr"
+MSG_BAD_ROUTER = (
+    "{spec!r}: a router is static, oracle, always:<backend> (always:<path> on a mixed set), module:attr or "
+    "path/file.py:attr"
+)
 
 Router = Callable[[Question], Any]
 """What the replay calls: a question in, a ranking (or ``{"ranked", "cost_usd"}``) out."""
 
 
 def static_router(method: str) -> Router:
+    """Today's ``auto`` order; on a mixed set, search then read, as a caller with no router does."""
+    if method == MIXED:
+        return path_router(STATIC_ORDER)
     order = STATIC_ORDER.get(method, ())
 
     def route(q: Question) -> list[str]:

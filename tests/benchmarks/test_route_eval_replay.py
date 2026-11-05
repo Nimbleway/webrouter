@@ -74,9 +74,15 @@ def test_score_counts_unknown_cost_apart_rather_than_as_zero(route_eval: ModuleT
 
 
 def test_the_verdict_needs_a_margin_wider_than_the_noise_floor(route_eval: ModuleType) -> None:
-    assert route_eval.verdict(0.02, 0.012) == "gain"
-    assert route_eval.verdict(0.01, 0.012) == "no gain (within noise floor)"
-    assert route_eval.verdict(-0.02, 0.012) == "loss"
+    assert route_eval.verdict(0.02, 0.012, 0.5, (0.51, 0.53)) == "gain"
+    assert route_eval.verdict(0.01, 0.012, 0.5, (0.505, 0.515)) == "no gain (within noise floor)"
+    assert route_eval.verdict(-0.02, 0.012, 0.5, (0.47, 0.49)) == "loss"
+    assert route_eval.verdict(None, 0.012, 0.5, None) == "n/a"
+
+
+def test_the_verdict_needs_the_static_order_outside_the_routers_interval(route_eval: ModuleType) -> None:
+    assert route_eval.verdict(0.1, 0.012, 0.5, (0.42, 0.75)) == "no gain (static inside the 95% interval)"
+    assert route_eval.verdict(-0.1, 0.012, 0.5, (0.3, 0.55)) == "no gain (static inside the 95% interval)"
 
 
 def test_the_static_order_is_autos_own_chain_keyless_tier_before_the_appended_backends(
