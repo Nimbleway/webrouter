@@ -64,17 +64,13 @@ def list_price(provider: str, method: str, mode: str | None = None) -> float | N
     return None if (provider, method, mode) in UNPRICED else prices.estimate(provider, method, mode)
 
 
-def _mode(task: Task) -> str | None:
-    return task.mode if task.path == RESEARCH else None
-
-
 def backend_calls(task: Task) -> list[tuple[str, str, str | None]]:
     """The (provider, method, mode) of every backend call a row makes, at most."""
     if task.path == SEARCH_EXTRACT:
         return [(task.provider, "search", None), *[(READER, "extract", None)] * PAGES_READ]
     if task.path == EXTRACT:
         return [(READER, "extract", None)] * len(task.item.urls)
-    return [(task.provider, task.path, _mode(task))]
+    return [(task.provider, task.path, task.mode if task.path == RESEARCH else None)]
 
 
 def judge_calls(task: Task) -> list[str]:

@@ -134,20 +134,17 @@ def open_run(out: Path, setup: dict[str, Any]) -> dict[str, Any]:
     """``run.json`` written for a new run, or checked against the one a resumed run left."""
     out.mkdir(parents=True, exist_ok=True)
     path = out / RUN_FILE
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     if path.is_file():
         before = json.loads(path.read_text(encoding="utf-8"))
         for key in RESUME_KEYS:
             if before.get(key) != setup.get(key):
                 raise SystemExit(MSG_OTHER_RUN.format(path=path, key=key))
-        setup = {**before, "resumed": [*before.get("resumed", []), _now()]}
+        setup = {**before, "resumed": [*before.get("resumed", []), now]}
     else:
-        setup = {**setup, "started": _now()}
+        setup = {**setup, "started": now}
     path.write_text(json.dumps(setup, indent=2) + "\n", encoding="utf-8")
     return setup
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _appender(path: Path) -> Callable[[dict[str, Any]], None]:
