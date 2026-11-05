@@ -28,13 +28,20 @@ from web_router.constants_answer import (
     MSG_AUTO_ANSWER_EXHAUSTED,
     MSG_AUTO_ANSWER_NO_MEMBER,
 )
-from web_router.exceptions import NoAnswerProviderError, UnsupportedParameterError, WebRouterError
+from web_router.exceptions import (
+    DeadlineExceededError,
+    NoAnswerProviderError,
+    UnsupportedParameterError,
+    WebRouterError,
+)
 from web_router.providers._chain import (
     _RECOVERABLE,
     _ChainSpec,
     _empty_answer,
+    _held_or_late,
     _held_or_raise,
     _keyed_chain,
+    _late_answer,
     _member_options,
     _members_and_chain,
     _quoted,
@@ -123,8 +130,12 @@ class AutoAnswerProvider(AnswerProvider):
         refused: list[UnsupportedParameterError] = []
         held: AnswerResponse | None = None
         for position, provider_name in self._eligible(request):
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = self._member(position).answer(request)
+            except DeadlineExceededError as exc:
+                return _held_or_late(held, self.name, failures, exc, provider_name)
             except UnsupportedParameterError as exc:
                 refused.append(exc)
                 continue
@@ -141,8 +152,12 @@ class AutoAnswerProvider(AnswerProvider):
         refused: list[UnsupportedParameterError] = []
         held: AnswerResponse | None = None
         for position, provider_name in self._eligible(request):
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = await self._member(position).aanswer(request)
+            except DeadlineExceededError as exc:
+                return _held_or_late(held, self.name, failures, exc, provider_name)
             except UnsupportedParameterError as exc:
                 refused.append(exc)
                 continue

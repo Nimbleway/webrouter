@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import os
-import time
-from collections.abc import Callable, Iterator, Mapping
-from contextlib import contextmanager
-from contextvars import ContextVar
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from pydantic import BaseModel
@@ -14,7 +11,6 @@ from pydantic import BaseModel
 from web_router.constants import (
     BROWSER_FIELD_CASES,
     BROWSER_SECONDS_PARAMETERS,
-    MIN_JOB_BUDGET,
     MSG_BROWSER_FIELD_CASE_NOT_TEXT,
     MSG_BROWSER_FIELD_COLLISION,
     MSG_BROWSER_NO_FIELD_FOR_VALUE,
@@ -268,54 +264,3 @@ def as_snippet(text: str) -> str:
     head = text[:SNIPPET_LIMIT]
     cut = head.rfind(" ")
     return (head[:cut] if cut > 0 else head).rstrip() + "\u2026"
-
-
-_JOB_DEADLINE: ContextVar[float | None] = ContextVar("web_router_job_deadline", default=None)
-"""When the job-shaped call currently in flight -- a research run, say -- must be given up on.
-
-A context variable rather than a parameter on ``_start`` and ``_fetch``, which
-is the one place this package reaches for something implicit. The reason is
-that the budget is not a property of the *request* -- two callers can wait
-different lengths for the same question -- and it has to reach the HTTP and SDK
-calls at the bottom without appearing in the signature of every provider
-between here and there. Being a ``ContextVar`` rather than an attribute is what
-makes it correct under concurrency: one router shared by several tasks gives
-each of them its own budget, and an async task inherits the one belonging to
-whoever awaited it.
-"""
-
-
-@contextmanager
-def job_deadline(deadline: float | None) -> Iterator[None]:
-    """Apply ``deadline`` to every provider call made inside this block."""
-    token = _JOB_DEADLINE.set(deadline)
-    try:
-        yield
-    finally:
-        _JOB_DEADLINE.reset(token)
-
-
-def job_budget(default: float) -> float:
-    """How long a single call may take: the caller's remaining time, or ``default``.
-
-    Never longer than ``default``, so a generous job timeout cannot stretch
-    one request beyond what the provider's own timeout allows, and never longer
-    than what the caller has left, so a backend that does the whole run inside
-    one request -- Perplexity's deep research model -- cannot hold a caller who
-    asked for thirty seconds for the two minutes its HTTP timeout permits.
-
-    Floored rather than allowed to reach zero: the waiting loop checks the
-    deadline before it polls, so a call reaching here has time left, and a
-    timeout of zero means "no timeout" to both httpx and the SDKs -- the exact
-    opposite of what is being asked for.
-    """
-    deadline = _JOB_DEADLINE.get()
-    if deadline is None:
-        return default
-    return max(MIN_JOB_BUDGET, min(default, deadline - time.monotonic()))
-
-
-# The names the research providers were written against. Aliases rather than
-# wrappers, so there is one budget whichever name a provider reads it by.
-research_deadline = job_deadline
-research_budget = job_budget

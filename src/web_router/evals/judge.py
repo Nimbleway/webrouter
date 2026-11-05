@@ -203,7 +203,8 @@ class OpenAIJudge(Judge):
         response = client.chat.completions.create(**self._request(system, user))
         return str(response.choices[0].message.content or "")
 
-    async def _acomplete(self, system: str, user: str) -> str:
+    async def _acreate(self, system: str, user: str) -> Any:
+        """The raw chat completion, for a caller that needs more of it than the text, such as its token usage."""
         # The same lock, held across no await: loops on several threads may share one judge.
         with self._client_lock:
             if self._async_client is None:
@@ -212,7 +213,10 @@ class OpenAIJudge(Judge):
                     api_key=self.api_key, base_url=self.base_url, timeout=self.timeout
                 )
             client = self._async_client
-        response = await client.chat.completions.create(**self._request(system, user))
+        return await client.chat.completions.create(**self._request(system, user))
+
+    async def _acomplete(self, system: str, user: str) -> str:
+        response = await self._acreate(system, user)
         return str(response.choices[0].message.content or "")
 
     def close(self) -> None:

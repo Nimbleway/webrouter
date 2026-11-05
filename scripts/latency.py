@@ -37,7 +37,7 @@ P50, P90 = 0.5, 0.9
 Key = tuple[str, str, "str | None"]
 
 
-SIBLINGS = ("_common", "_frozen_checks")
+SIBLINGS = ("_common", "_frozen_checks", "_frozen_mixed", "_tools_effort_plan")
 """What ``frozen.py`` imports from its folder by plain name; forgotten once it is loaded, as the tests do."""
 
 
@@ -127,6 +127,8 @@ def frozen_latency() -> tuple[dict[Key, dict[str, Any]], set[tuple[str, str, str
     frozen, common = _benchmarks()
     frozen.verify(frozen.FROZEN_DIR)
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
+    # A mixed set is not one method's scan, and its answer rows are copies of another set's.
+    manifest = {"sets": {name: e for name, e in manifest["sets"].items() if e["method"] != frozen.MIXED}}
     rows = [row for name in manifest["sets"] for row in frozen.read_rows(frozen.FROZEN_DIR / (name + frozen.SUFFIX))]
     return measure(
         rows,

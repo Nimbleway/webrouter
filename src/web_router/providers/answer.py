@@ -40,12 +40,12 @@ class AnswerProvider(_BaseProvider):
     def answer(self, request: AnswerRequest) -> AnswerResponse:
         """Validate the request, ask the backend, and wrap any backend failure."""
         self.validate(request)
-        return self._wrapped(lambda: self._answer(request), MSG_ANSWER_FAILED)
+        return self._bounded(lambda: self._answer(request), MSG_ANSWER_FAILED)
 
     async def aanswer(self, request: AnswerRequest) -> AnswerResponse:
         """Async counterpart of :meth:`answer`."""
         self.validate(request)
-        return await self._awrapped(self._aanswer(request), MSG_ANSWER_FAILED)
+        return await self._abounded(lambda: self._aanswer(request), MSG_ANSWER_FAILED)
 
     def validate(self, request: AnswerRequest) -> None:
         """Raise :class:`UnsupportedParameterError` for any option this backend does not map."""

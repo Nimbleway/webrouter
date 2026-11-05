@@ -11,6 +11,7 @@ to the routers: nothing here is a public name.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import threading
 import time
 from collections.abc import Awaitable, Callable, Sequence
@@ -148,7 +149,9 @@ def _start(
     # its provider was built before it started, so the router closes it.
     pool = ThreadPoolExecutor(max_workers=max(1, len(live)))
     try:
-        return {name: pool.submit(row, name, member) for name, member in live}
+        # Each in a copy of the caller's context, so a deadline set around
+        # the call reaches the member on its worker thread.
+        return {name: pool.submit(contextvars.copy_context().run, row, name, member) for name, member in live}
     finally:
         pool.shutdown(wait=False)
 

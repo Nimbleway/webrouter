@@ -11,6 +11,10 @@ back, from the public datasets the scans sampled.
     uv run --all-extras python benchmarks/providers/frozen.py verify
     uv run --all-extras python benchmarks/providers/frozen.py build path/to/results
 
+A set made by ``tools_effort.py`` is ``mixed``: its rows call several methods,
+each naming its own, and its manifest entry keeps the run's sample, where each
+question sits in the public set it came from.
+
 ``join`` checks every file against ``frozen/SHA256SUMS``, downloads SimpleQA
 and SealQA, and writes each set with its question, gold answer and labels to
 ``results/frozen-joined/`` (gitignored); it fails if any ``question_id`` does
@@ -28,13 +32,12 @@ import gzip
 import hashlib
 import io
 import json
-import re
 import sys
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-from _common import COMBINE_KEYS, DEPTH_MARK, split_label
+from _common import COMBINE_KEYS, DEPTH_MARK, _local, split_label
 from _frozen_checks import (
     Scan,
     answers_digest,
@@ -45,12 +48,16 @@ from _frozen_checks import (
     check_same_questions,
     check_same_setup,
     failed_rows,
+    measures,
     question_id,
     question_index,
     read_golds,
+    read_run,
     require_resolved,
     require_same_answers,
 )
+from _frozen_mixed import MIXED, freeze_mixed, sample_index
+from _tools_effort_plan import QUESTIONS as MIXED_QUESTIONS
 
 HERE = Path(__file__).resolve().parent
 FROZEN_DIR = HERE / "frozen"
@@ -62,10 +69,8 @@ SUFFIX = ".jsonl.gz"
 
 FIELDS = ("set", "question_id", "provider", "method", "mode", "grade", "latency_s", "cost_usd", "error")
 """A frozen row's fields, in order. Nothing else: no question, answer or gold text, no raw message."""
-GRADES = ("correct", "incorrect", "not_attempted")
 DEFAULT_MODE = "default"
 """A row's ``mode`` when the scan asked for none: the backend's own default for that method."""
-LATENCY_DIGITS = 3
 
 FROZEN_SETS: dict[str, dict[str, Any]] = {
     "sealqa-hard-254": {"questions": "sealqa-hard", "method": "search", "runs": ["sealqa-hard-254"]},
@@ -76,6 +81,8 @@ FROZEN_SETS: dict[str, dict[str, Any]] = {
         "runs": ["simpleqa-300-v2", "simpleqa-300-keenable", "simpleqa-300-deepseek"],
     },
     "answer-simpleqa-300": {"questions": "simpleqa", "method": "answer", "runs": ["answer-simpleqa-300"]},
+    # After answer-simpleqa-300, whose rows it reuses for its easy questions.
+    "tools-effort-60": {"questions": MIXED_QUESTIONS, "method": MIXED, "runs": ["tools-effort-60"]},
 }
 """Each frozen set: the question set its scans sampled, the method they called, and the scan folders it is made of.
 
@@ -84,44 +91,9 @@ A set made of several scans is one scan with backends added later, as
 requires for their method (``COMBINE_KEYS``), the same questions and the same
 gold answers; a key a scan predates reads as missing.
 """
-RUN_DEFAULTS = {"questions": "simpleqa"}
-"""A ``run.json`` from before ``--questions`` existed asked SimpleQA."""
-
-ERROR_CLASSES: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("timeout", re.compile(r"timed? ?out|timeout|deadline", re.IGNORECASE)),
-    ("rate_limit", re.compile(r"rate.?limit|too many requests|\bHTTP 429\b", re.IGNORECASE)),
-    ("quota", re.compile(r"\bHTTP 402\b|quota|credits?\b|payment required", re.IGNORECASE)),
-    ("invalid_request", re.compile(r"takes a query of at most|does not support|UnsupportedParameter", re.IGNORECASE)),
-    ("http_4xx", re.compile(r"\bHTTP 4\d\d\b")),
-    ("http_5xx", re.compile(r"\bHTTP 5\d\d\b")),
-)
-"""A backend's error message, by the first pattern it matches; anything else is ``other``.
-
-The message itself is never kept: a vendor's text can quote an account, a key
-prefix or a request id.
-"""
-OTHER_ERROR = "other"
-JUDGE_ERROR = "judge"
-JUDGE_STAGES = frozenset({"judge", "synthesis", "grading"})
-"""``failed_at`` values that mean the judge failed, not the backend: the answer scan's and the search scan's."""
-LEAKED_ERROR = "leaked"
-ERROR_NAMES = (*(name for name, _ in ERROR_CLASSES), OTHER_ERROR, JUDGE_ERROR, LEAKED_ERROR)
-
 MSG_SUMS_MISMATCH = "{name}: SHA-256 {actual} does not match SHA256SUMS ({expected}); the file changed or is damaged"
 MSG_SUMS_MISSING = "{name} is in {folder} but not in SHA256SUMS"
 MSG_FILE_MISSING = "{name} is in SHA256SUMS but not in {folder}"
-
-
-def error_class(row: Mapping[str, Any]) -> str | None:
-    """What went wrong on a row, as a class rather than the vendor's message; ``None`` when nothing did."""
-    if row.get("leaked"):
-        return LEAKED_ERROR
-    message = row.get("error")
-    if not message:
-        return None
-    if row.get("failed_at") in JUDGE_STAGES:
-        return JUDGE_ERROR
-    return next((name for name, pattern in ERROR_CLASSES if pattern.search(str(message))), OTHER_ERROR)
 
 
 def split_setup(setup: str) -> tuple[str, str]:
@@ -134,25 +106,14 @@ def split_setup(setup: str) -> tuple[str, str]:
 def frozen_row(set_name: str, method: str, row: Mapping[str, Any]) -> dict[str, Any]:
     """One scan row as a frozen row: ids, grade, latency, stated cost and error class, nothing written in words."""
     provider, mode = split_setup(str(row["provider"]))
-    latency = row.get("latency")
-    cost = row.get("cost_usd")
     return {
         "set": set_name,
         "question_id": question_id(str(row["question"])),
         "provider": provider,
         "method": method,
         "mode": mode,
-        "grade": row.get("grade") if row.get("grade") in GRADES else None,
-        "latency_s": None if latency is None else round(float(latency), LATENCY_DIGITS),
-        "cost_usd": None if cost is None else float(cost),
-        "error": error_class(row),
+        **measures(row),
     }
-
-
-def _read_run(folder: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    setup = {**RUN_DEFAULTS, **json.loads((folder / "run.json").read_text(encoding="utf-8"))}
-    rows = [json.loads(line) for line in (folder / "rows.jsonl").read_text(encoding="utf-8").splitlines() if line]
-    return setup, rows
 
 
 def manifest_entry(spec: Mapping[str, Any], first: Scan, rows: list[dict[str, Any]], runs: list[Any]) -> dict[str, Any]:
@@ -175,7 +136,9 @@ def manifest_entry(spec: Mapping[str, Any], first: Scan, rows: list[dict[str, An
     }
 
 
-def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def freeze_set(
+    set_name: str, results: Path, built: Mapping[str, list[dict[str, Any]]] | None = None
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """A set's frozen rows, sorted, and its manifest entry, from its scan folders under ``results``.
 
     Refuses scans that asked other questions, graded on other answers or ran
@@ -183,11 +146,13 @@ def freeze_set(set_name: str, results: Path) -> tuple[list[dict[str, Any]], dict
     has no row for some question.
     """
     spec = FROZEN_SETS[set_name]
+    if spec["method"] == MIXED:
+        return freeze_mixed(set_name, spec, results, built or {})
     rows: list[dict[str, Any]] = []
     runs: list[dict[str, Any]] = []
     first: Scan | None = None
     for run in spec["runs"]:
-        setup, source = _read_run(results / run)
+        setup, source = read_run(results / run)
         scan = (run, setup, read_golds(set_name, run, source))
         first = first or scan
         check_same_questions(set_name, scan, first)
@@ -256,7 +221,11 @@ def joined_row(row: Mapping[str, Any], question: Any, labels: Iterable[str]) -> 
     return {**row, "question": question.question, "gold_answer": question.answer, **{k: meta.get(k) for k in labels}}
 
 
-LABELS = {"simpleqa": ("topic", "answer_type"), "sealqa-hard": ("topic", "freshness", "search_results")}
+LABELS = {
+    "simpleqa": ("topic", "answer_type"),
+    "sealqa-hard": ("topic", "freshness", "search_results"),
+    MIXED_QUESTIONS: ("group", "source", "urls"),
+}
 """The labels ``join`` adds from each dataset: the breakdowns the scan reports used."""
 
 
@@ -269,6 +238,13 @@ def load_index(questions: str, local: Mapping[str, Path]) -> dict[str, Any]:
     return question_index(dataset.questions, questions)
 
 
+def set_index(entry: Mapping[str, Any], local: Mapping[str, Path]) -> dict[str, Any]:
+    """The questions a set's rows name, by id: from its public set, or a mixed set's from its sample."""
+    if entry["method"] == MIXED:
+        return sample_index(entry["sample"], local)
+    return load_index(entry["questions"], local)
+
+
 def join(folder: Path, out: Path, local: Mapping[str, Path]) -> dict[str, int]:
     """Each frozen set with its questions put back, written to ``out``; rows per set, or ``SystemExit`` on a miss."""
     verify(folder)
@@ -278,7 +254,7 @@ def join(folder: Path, out: Path, local: Mapping[str, Path]) -> dict[str, int]:
     for set_name, entry in manifest["sets"].items():
         questions = entry["questions"]
         if questions not in indexes:
-            indexes[questions] = load_index(questions, local)
+            indexes[questions] = set_index(entry, local)
         index = indexes[questions]
         rows = read_rows(folder / (set_name + SUFFIX))
         require_resolved(set_name, rows, index, questions)
@@ -303,10 +279,12 @@ def build(results: Path, folder: Path, local: Mapping[str, Path], *, check_join:
     folder.mkdir(parents=True, exist_ok=True)
     manifest: dict[str, Any] = {"schema_version": SCHEMA_VERSION, "fields": list(FIELDS), "sets": {}}
     files: dict[str, bytes] = {}
+    built: dict[str, list[dict[str, Any]]] = {}
     for set_name in FROZEN_SETS:
-        rows, entry = freeze_set(set_name, results)
+        rows, entry = freeze_set(set_name, results, built)
+        built[set_name] = rows
         if check_join:
-            index = load_index(entry["questions"], local)
+            index = set_index(entry, local)
             entry["resolved"] = require_resolved(set_name, rows, index, entry["questions"])
             require_same_answers(set_name, entry, rows, index)
         manifest["sets"][set_name] = entry
@@ -317,16 +295,6 @@ def build(results: Path, folder: Path, local: Mapping[str, Path], *, check_join:
     sums = "".join(f"{hashlib.sha256(data).hexdigest()}  {name}\n" for name, data in sorted(files.items()))
     (folder / SUMS_FILE).write_text(sums, encoding="utf-8")
     return manifest
-
-
-def _local(values: list[str]) -> dict[str, Path]:
-    local: dict[str, Path] = {}
-    for value in values:
-        name, sep, path = value.partition("=")
-        if not sep:
-            raise SystemExit(f"--dataset takes NAME=PATH, such as simpleqa=simple_qa_test_set.csv; got {value!r}")
-        local[name] = Path(path)
-    return local
 
 
 def main(argv: list[str] | None = None) -> None:

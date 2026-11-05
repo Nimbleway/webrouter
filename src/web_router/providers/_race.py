@@ -17,8 +17,8 @@ from collections.abc import Callable
 from concurrent.futures import Future
 
 from web_router.constants import MAX_AGGREGATE_FAILURE
-from web_router.exceptions import WebRouterError
-from web_router.providers._chain import _RECOVERABLE, _exhausted
+from web_router.exceptions import DeadlineExceededError, WebRouterError
+from web_router.providers._chain import _RECOVERABLE, _deadline_error, _exhausted
 from web_router.providers.base import ExtractProvider
 from web_router.types import ExtractRequest, ExtractResponse
 
@@ -120,7 +120,7 @@ class _Losses:
         """
         try:
             response = result()
-        except _RECOVERABLE as exc:
+        except (*_RECOVERABLE, DeadlineExceededError) as exc:
             self.failures[provider_name] = exc
             return None
         if not response.failures:
@@ -134,7 +134,11 @@ class _Losses:
 
         Raises:
             ProviderError: under :data:`MAX_AGGREGATE_FAILURE`, when nothing came back at all.
+            DeadlineExceededError: instead, when every member ran into the call's deadline, as
+                extract's own rule has it; a member that failed for a reason of its own keeps the summary.
         """
         if self.partial is not None:
             return self.partial
+        if self.failures and all(isinstance(exc, DeadlineExceededError) for exc in self.failures.values()):
+            raise _deadline_error(self.provider, self.failures)
         raise _exhausted(self.provider, self.failures, MAX_AGGREGATE_FAILURE)

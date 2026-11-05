@@ -111,6 +111,7 @@ from web_router.constants import (
     PROVIDER_AUTO,
 )
 from web_router.exceptions import (
+    DeadlineExceededError,
     MissingParameterError,
     ProviderError,
     ProviderNotInstalledError,
@@ -124,9 +125,11 @@ from web_router.providers._chain import (
     _empty_extract,
     _empty_search,
     _exhausted,
+    _held_or_late,
     _held_or_raise,
     _keyed_chain,
     _keyless_after,
+    _late_answer,
     _member_options,
     _members_and_chain,
     _no_backend,
@@ -239,8 +242,12 @@ class AutoProvider(SearchProvider):
         failures: dict[str, WebRouterError] = {}
         held: SearchResponse | None = None
         for position, provider_name in self._eligible(request):
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = self._member(position).search(request)
+            except DeadlineExceededError as exc:
+                return _held_or_late(held, self.name, failures, exc, provider_name)
             except _RECOVERABLE as exc:
                 failures[provider_name] = exc
                 continue
@@ -254,8 +261,12 @@ class AutoProvider(SearchProvider):
         failures: dict[str, WebRouterError] = {}
         held: SearchResponse | None = None
         for position, provider_name in self._eligible(request):
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = await self._member(position).asearch(request)
+            except DeadlineExceededError as exc:
+                return _held_or_late(held, self.name, failures, exc, provider_name)
             except _RECOVERABLE as exc:
                 failures[provider_name] = exc
                 continue
@@ -384,8 +395,12 @@ class AutoExtractProvider(ExtractProvider):
         failures: dict[str, WebRouterError] = {}
         held: ExtractResponse | None = None
         for position, provider_name in self._eligible(self.format_of(request)):
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = self._member(position).extract(delegated)
+            except DeadlineExceededError as exc:
+                return _held_or_late(held, self.name, failures, exc, provider_name)
             except _RECOVERABLE as exc:
                 failures[provider_name] = exc
                 continue
@@ -399,8 +414,12 @@ class AutoExtractProvider(ExtractProvider):
         failures: dict[str, WebRouterError] = {}
         held: ExtractResponse | None = None
         for position, provider_name in self._eligible(self.format_of(request)):
+            if (late := _late_answer(held, self.name, failures)) is not None:
+                return late
             try:
                 response = await self._member(position).aextract(delegated)
+            except DeadlineExceededError as exc:
+                return _held_or_late(held, self.name, failures, exc, provider_name)
             except _RECOVERABLE as exc:
                 failures[provider_name] = exc
                 continue

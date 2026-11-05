@@ -463,6 +463,20 @@ TAVILY_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
 TAVILY_EXTRACT_RESULT_FIELD = "raw_content"
 """Where Tavily puts the page body, whichever format it was asked for."""
 
+TAVILY_SDK_SEARCH_TIMEOUT = 60.0
+TAVILY_SDK_EXTRACT_TIMEOUT = 30.0
+TAVILY_EXTRACT_MIN_TIMEOUT = 1.0
+"""The shortest ``timeout`` Tavily's extract accepts; with less time left, the call fails before sending."""
+MSG_TAVILY_TOO_LITTLE_TIME = (
+    "{left:.2f}s is left before the deadline, under the {minimum:.0f}s Tavily's extract accepts; nothing was sent"
+)
+"""The ``timeout`` tavily-python's ``search`` and ``extract`` default to, in seconds.
+
+Sent only under a per-call deadline, clamped to the time left, when the
+provider was given no ``timeout`` of its own; otherwise nothing is sent and
+the SDK keeps its default.
+"""
+
 # --- You.com MCP, the keyless route -----------------------------------------
 # A different service from YOU_BASE_URL above: MCP over JSON-RPC rather than
 # REST, and open without a credential. The search payload it returns is the
@@ -1138,6 +1152,23 @@ JOB_POLL_BACKOFF = 1.5
 
 JOB_TIMEOUT = 600.0
 """How long waiting on a job gives up after, for a method that sets no default of its own."""
+
+DEADLINE_TOLERANCE = 0.05
+"""Seconds before a deadline within which a request's timeout counts as the deadline's.
+
+A request clamped to the time left times out as the deadline arrives; one that
+timed out earlier than this ran into its own, shorter timeout, which is the
+backend's failure and lets ``auto`` try the next member.
+"""
+
+MIN_CALL_BUDGET = 0.001
+"""Floor on a one-call method's transport timeout under a deadline -- a search, an extract, an answer, a template run.
+
+Unlike :data:`MIN_JOB_BUDGET`, tiny: a call is refused before it is sent once
+no time is left, so the floor exists only to keep a transport from being
+handed zero ("no timeout") in the instant before the deadline, never to give
+it time past it.
+"""
 
 MIN_JOB_BUDGET = 0.5
 """Floor on the time one call inside a job is allowed.
@@ -2932,6 +2963,11 @@ MSG_REDIRECTS_WITH_CREDENTIAL = (
     "to another host would hand that host your API key. Point base_url at the host you mean to "
     "call instead."
 )
+
+MSG_DEADLINE_EXCEEDED = "Provider {provider!r} had not answered within the call's {seconds:g}s deadline."
+
+MSG_DEADLINE_TRIED = " Before it ran out: {failures}."
+"""Follows :data:`MSG_DEADLINE_EXCEEDED` when an ``auto`` chain or an extract tried something first."""
 
 MSG_BENCHMARK_TIMEOUT = (
     "Provider {provider!r} had not answered the comparison's call after {timeout:g}s. The comparison "
