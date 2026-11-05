@@ -209,8 +209,9 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         fixtures/browser/; test_auto_browser.py and
                         test_auto_browse.py the two billed `auto` chains;
                         providers/test_http_base.py guards the HTTP plumbing,
-                        and providers/_browser_live.py is the live browser
-                        tests' shared check
+                        providers/_browser_live.py is the live browser
+                        tests' shared check, and test_shape.py the size
+                        limits, against shape_baseline.json
 examples/               runnable scripts, indexed by examples/README.md
 benchmarks/agent/       one agent over FRAMES on its platform's built-in web
                         search and on web-router — Claude on Managed Agents or
@@ -789,6 +790,20 @@ fans URLs out across calls for backends that take one at a time, records each
 URL that failed in `ExtractResponse.failures`, and raises only when nothing came
 back at all. Do not move that handling into a provider — it is what makes a
 one-URL-per-call backend behave like a batching one.
+
+**Keep files and functions small.** A file is at most 400 lines and a function
+or method at most 50, `def` to the end of the body, docstring included, across
+`src/web_router/`, `scripts/` and `benchmarks/`; `tests/test_shape.py` enforces
+it in `make check`. Files and functions already larger are grandfathered in
+`tests/shape_baseline.json` and may only shrink: after shrinking one, run
+`make shape-baseline`, which refuses to add or grow an entry. Never regenerate
+it to admit new code; split the code instead. The large hubs — `client.py`,
+`providers/auto.py`, `types.py`, `constants.py`, `mcp/tools.py` — take no new
+logic: new code goes in its own module, and the hub gains only a one-line
+delegation or a keyword argument.
+
+**Reuse before you write.** Before adding a helper, grep for an existing one
+and use it.
 
 **No hardcoded literals in logic.** Endpoints, environment variable names,
 timeouts, header names and message templates belong in `constants.py`; a
