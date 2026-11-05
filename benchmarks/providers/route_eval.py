@@ -61,7 +61,7 @@ PARTS = ("in_sample", "held_out")
 MSG_ROUTER_RAISED = "{spec} raised on {set_name}, first time shown, scored as a router failure: {error}"
 MSG_EMPTY_SPLIT = (
     "{name}: --test-fraction {test_fraction} splits {questions} questions into {train} in-sample and {test} held "
-    "out; both must be non-empty"
+    "out; the fraction must be between 0 and 1 and both parts non-empty"
 )
 MSG_NOT_A_CANDIDATE = "{spec!r}: {backend} has no rows in {set_name} (it has: {known})"
 
@@ -177,7 +177,7 @@ def verdict(gain: float | None, floor: float) -> str:
 
 
 def _check_split(name: str, test_fraction: float, questions: int, train: int, test: int) -> None:
-    if not train or not test:
+    if not 0 < test_fraction < 1 or not train or not test:
         raise SystemExit(
             MSG_EMPTY_SPLIT.format(name=name, test_fraction=test_fraction, questions=questions, train=train, test=test)
         )

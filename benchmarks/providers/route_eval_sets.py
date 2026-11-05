@@ -20,6 +20,9 @@ TWIN_SETS = ("sealqa-hard-254", "sealqa-hard-254-twin")
 DEFAULT_MODE = "default"
 
 MSG_UNKNOWN_SET = "{name}: no frozen set by that name (there are: {known})"
+MSG_MIXED_SET = (
+    "{name} mixes methods ({methods}): route-eval replays one method's provider order, so it cannot replay this set"
+)
 MSG_NO_JOINED = "{path} not found: run frozen.py join first, or leave --joined out"
 
 
@@ -61,6 +64,8 @@ def load_set(name: str, folder: Path = FROZEN_DIR, joined: Path | None = None) -
             continue
         methods.add(row["method"])
         by_question.setdefault(row["question_id"], {})[row["provider"]] = row
+    if len(methods) != 1:
+        raise SystemExit(MSG_MIXED_SET.format(name=name, methods=", ".join(sorted(methods))))
     (method,) = methods
     questions = [Question(qid, prompts.get(qid), rows) for qid, rows in sorted(by_question.items())]
     return method, questions
