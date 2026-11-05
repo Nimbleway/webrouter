@@ -55,6 +55,10 @@ from web_router.exceptions import (
     NavigationError,
     NoAnswerProviderError,
     PageClosedError,
+    PresetCompatibilityError,
+    PresetError,
+    PresetNotFoundError,
+    PresetValidationError,
     ProviderError,
     ProviderNotFoundError,
     ProviderNotInstalledError,
@@ -65,6 +69,7 @@ from web_router.exceptions import (
     UnsupportedParameterError,
     WebRouterError,
 )
+from web_router.presets import PresetRegistry
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -139,6 +144,11 @@ from web_router.types import (
     PageLoadState,
     PageSnapshot,
     PageState,
+    PresetComponent,
+    PresetMeta,
+    PresetSource,
+    PresetValidation,
+    PresetValidationState,
     Provider,
     ResearchEffort,
     ResearchOutcome,
@@ -146,6 +156,8 @@ from web_router.types import (
     ResearchRequest,
     ResearchResponse,
     ResearchState,
+    ResolvedPreset,
+    ResponseMeta,
     Screenshot,
     SearchDepth,
     SearchRequest,
@@ -160,6 +172,7 @@ from web_router.types import (
     Viewport,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
+from web_router.types_presets import ComponentSettings, Preset, PresetCheck, PresetIssue
 
 __all__ = [
     "ANSWER_PARAMETERS",
@@ -194,6 +207,7 @@ __all__ = [
     "BrowserSession",
     "BrowserState",
     "Citation",
+    "ComponentSettings",
     "ConfigurationError",
     "DeadlineExceededError",
     "ElementNotFoundError",
@@ -213,6 +227,19 @@ __all__ = [
     "PageLoadState",
     "PageSnapshot",
     "PageState",
+    "Preset",
+    "PresetCheck",
+    "PresetCompatibilityError",
+    "PresetComponent",
+    "PresetError",
+    "PresetIssue",
+    "PresetMeta",
+    "PresetNotFoundError",
+    "PresetRegistry",
+    "PresetSource",
+    "PresetValidation",
+    "PresetValidationError",
+    "PresetValidationState",
     "Provider",
     "ProviderError",
     "ProviderNotFoundError",
@@ -227,6 +254,8 @@ __all__ = [
     "ResearchResponse",
     "ResearchState",
     "ResearchTimeoutError",
+    "ResolvedPreset",
+    "ResponseMeta",
     "Screenshot",
     "SearchDepth",
     "SearchProvider",

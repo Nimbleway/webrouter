@@ -13,6 +13,7 @@ Runnable scripts, roughly in the order worth reading them.
 | [`browser_session.py`](browser_session.py) | `open_browser()` on `local`: goto, snapshot, click, type, screenshot, read — sync and async | no |
 | [`browser_vendor.py`](browser_vendor.py) | The same session through `auto` on a cloud vendor, and your own Playwright over `cdp_url` | any browser key |
 | [`browse.py`](browse.py) | `browse()`: a task handed to a hosted browser agent, waited on or submitted | any browse key |
+| [`presets.py`](presets.py) | Presets: a router's own and a per-call one, what each response says about them and a locked setting refused before the call | no |
 | [`main.py`](main.py) | Guided tour of search and extract in one file | no |
 | [`routing.py`](routing.py) | Defaults, per-call overrides, `provider_config`, `provider_options` | no |
 | [`error_handling.py`](error_handling.py) | Every exception and what to do about each | no |

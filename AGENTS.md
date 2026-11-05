@@ -89,6 +89,12 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
+├── presets.py          PresetRegistry (router.presets): loading, lookup by exact
+│                       id@version, the precedence resolver and validate()
+├── types_presets.py    Preset / ComponentSettings (a preset's definition) and the
+│                       PresetCheck validate() returns; imports types, never the reverse
+├── constants_presets.py presets' field tables (derived from the request models),
+│                       reference pattern and messages
 ├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
@@ -420,6 +426,38 @@ vendor's own page, cited in `source_url` and dated in `checked`; one the vendor
 does not publish is `unknown` and one billed by tokens is `token_billed`, never
 estimated. The library still never puts a price in a response.
 
+**A preset is the method's own arguments, saved; it is never a second way in.**
+`presets.py` resolves one call's settings before its request is built --
+argument, then per-call preset, then the router's preset, then the method's
+default -- and the request then takes the path it always took, so validation,
+`supported_parameters` and the provider's minimum apply to a preset's value
+exactly as to the same argument. A section may hold only `PRESET_FIELDS`,
+derived from each request model less `PRESET_NATIVE_INPUTS`; a field added to a
+request model is presettable with no second edit, and a new native input goes
+into that table. A section locks every default its `overridable` list leaves
+out, as the spec has it, and a lock holds through every layer above it: a
+preset that repeats a locked value does not release it. Every refusal -- an
+unknown or malformed reference, a per-call preset for another method, a
+setting the method does not take, a bad value, a locked setting replaced -- is
+raised before a provider is called. A backend's own refusal of a setting a
+preset supplied keeps its type and fields and gains the presets' names
+(`PresetResolution.explained`). A call with no preset that applies must
+build the request it built before presets existed, and its response carries
+`meta=None`. `PresetMeta.effective` holds only what a preset supplied, never a
+caller's argument, and shows `provider_options` by its keys alone. A preset
+error or `validate()` issue never repeats a `provider_options` value; of the
+settings a caller passed, it names a value only when the value cannot be a key
+-- a registered backend name, or one of a setting's fixed choices such as a
+format -- and the only references it names are well-formed
+`namespace.name@x.y.z` ones. A loaded `id@version` never changes: the registry keeps its own
+deep copy and hands out copies, and pinned metadata is copied on every read.
+Jobs and browser handles pin their resolved presets when they are created
+(`Job._pin`, `_Handle._pin`); a job's reads `pending` until it completes, and
+its answer carries them whether read through `result()`, `status()` or
+`progress`, stamped afresh on each read. A
+research or browse `timeout` is how long the caller waits and stays out of
+presets, since its default must stay the number on the signature.
+
 **`constants.py` imports `types.py`, so `types.py` imports nothing of ours.**
 The import graph is `types` ← `constants` ← `exceptions` ← everything else. A
 model that needs an exception type or a message template cannot live in
@@ -427,8 +465,8 @@ model that needs an exception type or a message template cannot live in
 does) or annotate the field as `Exception` and say why in its docstring (as
 `BenchmarkRun.error` does). Do not "fix" this by importing lazily inside a
 validator. A `constants_<provider>.py` sits at the same level as `constants`:
-it may import `types` (and `types_answer`, which imports only `types`) and
-nothing else of ours.
+it may import `types` (and `types_answer` or `types_presets`, each of which imports
+only `types`) and nothing else of ours.
 
 **Never override the public method in a provider.** `search`/`asearch`,
 `extract`/`aextract`, `run`/`templates`/`template`, `answer`/`aanswer`,

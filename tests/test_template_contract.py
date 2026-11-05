@@ -31,7 +31,7 @@ from web_router.types import (
     TemplateResponse,
 )
 
-ROUTER_ONLY_ARGUMENTS = {"self", "template", "inputs", "provider"}
+ROUTER_ONLY_ARGUMENTS = {"self", "template", "inputs", "provider", "preset"}
 
 FORMATS: tuple[ExtractFormat, ...] = get_args(ExtractFormat)
 

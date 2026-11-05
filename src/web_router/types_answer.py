@@ -10,7 +10,7 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from web_router.types import Citation, NormalizedRequest, ResearchOutcome
+from web_router.types import META_DESCRIPTION, Citation, NormalizedRequest, ResearchOutcome, ResponseMeta
 
 __all__ = ["ANSWER_ALWAYS_SENT", "ANSWER_PARAMETERS", "AnswerRequest", "AnswerResponse", "Recency"]
 
@@ -65,6 +65,7 @@ class AnswerResponse(BaseModel):
         description="Whether the backend finished the answer or said it stopped early.",
     )
     request_id: str | None = Field(default=None, description="The backend's own id for the call, when it gives one.")
+    meta: ResponseMeta | None = Field(default=None, description=META_DESCRIPTION)
     raw: list[dict[str, Any]] | None = Field(
         default=None,
         description="The provider's untouched payloads, one per call the answer took.",

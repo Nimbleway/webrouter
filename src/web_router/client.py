@@ -71,6 +71,7 @@ from web_router.evals.datasets import Dataset
 from web_router.evals.judge import Judge
 from web_router.evals.types import EvaluationReport
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
+from web_router.presets import PresetRegistry
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -128,6 +129,7 @@ from web_router.types import (
     Viewport,
     provider_name,
 )
+from web_router.types_presets import Preset
 
 JsonSchema = dict[str, Any] | type[BaseModel]
 """A schema for a structured answer: JSON Schema, or the pydantic model to take one from."""
@@ -147,6 +149,7 @@ class _BaseRouter(Generic[_HandleT]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
+        preset: str | Preset | None = None,
     ) -> None:
         """
         Args:
@@ -156,6 +159,12 @@ class _BaseRouter(Generic[_HandleT]):
                 name -- ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is
                 the only place credentials are passed explicitly; everything
                 else comes from the environment.
+            preset: The router's own preset, ``id@version`` or a
+                :class:`~web_router.Preset`: applied to every call it applies
+                to, beneath a call's own ``preset=`` and its arguments. A
+                reference is looked up on each call, so its definition can be
+                loaded into :attr:`presets` after the router is built. See
+                :mod:`web_router.presets`.
         """
         name = provider_name(provider)
         # Either registry is enough to name a default: a router defaulted to a
@@ -179,6 +188,8 @@ class _BaseRouter(Generic[_HandleT]):
         self._config: dict[str, dict[str, Any]] = {
             provider_name(key): dict(config) for key, config in (provider_config or {}).items()
         }
+        self.presets = PresetRegistry(client=preset, default_provider=name, provider_config=self._config)
+        """The presets this router can use. Load definitions with :meth:`~web_router.PresetRegistry.load`."""
         self._instances: dict[str, SearchProvider] = {}
         # Keyed separately from the search instances: one name resolves to a
         # different class per method, and a vendor serving all three is three
@@ -522,6 +533,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
+        preset: str | Preset | None = None,
         decider: str | Any | None = None,
         decider_config: dict[str, Any] | None = None,
     ) -> None:
@@ -549,7 +561,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
                 or for ``decider_config`` with a decider that is not a name;
                 or for a decider whose ``passthrough`` is not an exception class or a tuple of them.
         """
-        super().__init__(provider, provider_config=provider_config)
+        super().__init__(provider, provider_config=provider_config, preset=preset)
         async_only = sorted(_async_client_holders(self._config))
         if async_only:
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
@@ -582,10 +594,16 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         country: str | None = None,
         locale: str | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> SearchResponse:
-        """Search the web through ``provider`` (or the router's default)."""
-        request = self._build_request(
-            query,
+        """Search the web through ``provider`` (or the router's default).
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
+        """
+        plan = self.presets.resolve(
+            "search",
+            preset,
+            provider=provider,
             max_results=max_results,
             search_depth=search_depth,
             include_domains=include_domains,
@@ -594,7 +612,10 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
             locale=locale,
             provider_options=provider_options,
         )
-        return self.get_provider(provider).search(request)
+        request = self._build_request(query, **plan.options)
+        with plan.explained():
+            response = self.get_provider(plan.provider).search(request)
+        return plan.stamp(response)
 
     def benchmark(
         self,
@@ -761,6 +782,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         provider: str | Provider | ExtractProvider | None = None,
         format: ExtractFormat | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> ExtractResponse:
         """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
 
@@ -768,9 +790,16 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         :attr:`~web_router.ExtractResponse.documents` and everything that did
         not is in :attr:`~web_router.ExtractResponse.failures`. A call where
         nothing came back raises instead.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
-        request = self._build_extract_request(urls, format=format, provider_options=provider_options)
-        return self.get_extract_provider(provider).extract(request)
+        plan = self.presets.resolve(
+            "extract", preset, provider=provider, format=format, provider_options=provider_options
+        )
+        request = self._build_extract_request(urls, **plan.options)
+        with plan.explained():
+            response = self.get_extract_provider(plan.provider).extract(request)
+        return plan.stamp(response)
 
     def templates(
         self,
@@ -808,6 +837,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         provider: str | Provider | TemplateProvider,
         format: ExtractFormat | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> TemplateResponse:
         """Run one of ``provider``'s templates on one page and return its record.
 
@@ -821,11 +851,20 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         one set of inputs: a backend whose templates run as jobs over many
         inputs would answer through its synchronous endpoint, under that
         endpoint's own time cap.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
+        plan = self.presets.resolve("templates", preset, format=format, provider_options=provider_options)
+        options = plan.options
         request = TemplateRequest(
-            template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
+            template=template,
+            inputs=dict(inputs or {}),
+            format=options["format"],
+            provider_options=options["provider_options"] or {},
         )
-        return self.get_template_provider(provider).run(request)
+        with plan.explained():
+            response = self.get_template_provider(provider).run(request)
+        return plan.stamp(response)
 
     def research(
         self,
@@ -839,6 +878,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         exclude_domains: list[str] | None = None,
         timeout: float | None = RESEARCH_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> ResearchResponse:
         """Research a question through ``provider`` (or the router's default), and wait.
 
@@ -856,17 +896,22 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
             timeout: Seconds to wait. ``None`` waits as long as the run takes.
                 Running out raises :class:`~web_router.ResearchTimeoutError` and
                 leaves the run going rather than cancelling it.
+            preset: A saved configuration for this call; see :mod:`web_router.presets`.
         """
-        request = self._build_research_request(
-            query,
+        plan = self.presets.resolve(
+            "research",
+            preset,
+            provider=provider,
             output_schema=output_schema,
-            records=records,
             effort=effort,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        return self.get_research_provider(provider).research(request, timeout=timeout)
+        request = self._build_research_request(query, records=records, **plan.options)
+        with plan.explained():
+            response = self.get_research_provider(plan.provider).research(request, timeout=timeout)
+        return plan.stamp(response)
 
     def submit_research(
         self,
@@ -879,6 +924,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         include_domains: list[str] | None = None,
         exclude_domains: list[str] | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> ResearchJob:
         """Start a research run and hand back the job, without waiting for it.
 
@@ -887,17 +933,24 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         :meth:`~web_router.ResearchJob.status` and blocks with
         :meth:`~web_router.ResearchJob.result`, so a caller with something else
         to do can go and do it.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
-        request = self._build_research_request(
-            query,
+        plan = self.presets.resolve(
+            "research",
+            preset,
+            provider=provider,
             output_schema=output_schema,
-            records=records,
             effort=effort,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        return self.get_research_provider(provider).submit(request)
+        request = self._build_research_request(query, records=records, **plan.options)
+        with plan.explained():
+            job = self.get_research_provider(plan.provider).submit(request)
+        job._pin(plan.meta("pending"))
+        return job
 
     def browse(
         self,
@@ -910,6 +963,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         allowed_domains: list[str] | None = None,
         timeout: float | None = BROWSE_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> BrowseResponse:
         """Hand a task to a hosted browser agent through ``provider`` (or the router's default), and wait.
 
@@ -927,16 +981,22 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
             timeout: Seconds to wait. ``None`` waits as long as the task takes.
                 Running out raises :class:`~web_router.BrowseTimeoutError` and
                 leaves the task going rather than cancelling it.
+            preset: A saved configuration for this call; see :mod:`web_router.presets`.
         """
-        request = self._build_browse_request(
-            task,
+        plan = self.presets.resolve(
+            "browse",
+            preset,
+            provider=provider,
             start_url=start_url,
             output_schema=output_schema,
             max_steps=max_steps,
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        return self.get_browse_provider(provider).browse(request, timeout=timeout)
+        request = self._build_browse_request(task, **plan.options)
+        with plan.explained():
+            response = self.get_browse_provider(plan.provider).browse(request, timeout=timeout)
+        return plan.stamp(response)
 
     def submit_browse(
         self,
@@ -948,22 +1008,31 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         max_steps: int | None = None,
         allowed_domains: list[str] | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> BrowseJob:
         """Start a browse task and hand back the job, without waiting for it.
 
         The same call as :meth:`browse` up to the point the backend accepts the
         task; the job polls with :meth:`~web_router.BrowseJob.status` and blocks
         with :meth:`~web_router.BrowseJob.result`.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
-        request = self._build_browse_request(
-            task,
+        plan = self.presets.resolve(
+            "browse",
+            preset,
+            provider=provider,
             start_url=start_url,
             output_schema=output_schema,
             max_steps=max_steps,
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        return self.get_browse_provider(provider).submit(request)
+        request = self._build_browse_request(task, **plan.options)
+        with plan.explained():
+            job = self.get_browse_provider(plan.provider).submit(request)
+        job._pin(plan.meta("pending"))
+        return job
 
     def open_browser(
         self,
@@ -979,6 +1048,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         viewport: Viewport | None = None,
         headless: bool | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> BrowserHandle:
         """Open a browser session through ``provider`` (or the router's default).
 
@@ -1002,9 +1072,13 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
                 maps a lifetime limit is sent
                 :data:`~web_router.constants.BROWSER_TIMEOUT` rather than its
                 own default, which on some is hours. The only way past that
-                default is to pass a larger ``timeout`` explicitly.
+                default is a larger ``timeout``, passed here or set by a preset.
+            preset: A saved configuration for this call; see :mod:`web_router.presets`.
         """
-        request = self._build_browser_request(
+        plan = self.presets.resolve(
+            "browser",
+            preset,
+            provider=provider,
             proxy_country=proxy_country,
             stealth=stealth,
             solve_captchas=solve_captchas,
@@ -1016,7 +1090,11 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
             headless=headless,
             provider_options=provider_options,
         )
-        return self._track(self.get_browser_provider(provider).open(request))
+        request = self._build_browser_request(**plan.options)
+        with plan.explained():
+            handle = self.get_browser_provider(plan.provider).open(request)
+        handle._pin(plan.meta("passed"))
+        return self._track(handle)
 
     def classify(
         self,
@@ -1103,10 +1181,16 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         country: str | None = None,
         locale: str | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> SearchResponse:
-        """Search the web through ``provider`` (or the router's default)."""
-        request = self._build_request(
-            query,
+        """Search the web through ``provider`` (or the router's default).
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
+        """
+        plan = self.presets.resolve(
+            "search",
+            preset,
+            provider=provider,
             max_results=max_results,
             search_depth=search_depth,
             include_domains=include_domains,
@@ -1115,7 +1199,10 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
             locale=locale,
             provider_options=provider_options,
         )
-        return await self.get_provider(provider).asearch(request)
+        request = self._build_request(query, **plan.options)
+        with plan.explained():
+            response = await self.get_provider(plan.provider).asearch(request)
+        return plan.stamp(response)
 
     async def benchmark(
         self,
@@ -1209,15 +1296,23 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         provider: str | Provider | ExtractProvider | None = None,
         format: ExtractFormat | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> ExtractResponse:
         """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
 
         Backends that take one URL per call are fanned out concurrently. As on
         the sync router, a partly successful call returns its failures and one
         where nothing came back raises.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
-        request = self._build_extract_request(urls, format=format, provider_options=provider_options)
-        return await self.get_extract_provider(provider).aextract(request)
+        plan = self.presets.resolve(
+            "extract", preset, provider=provider, format=format, provider_options=provider_options
+        )
+        request = self._build_extract_request(urls, **plan.options)
+        with plan.explained():
+            response = await self.get_extract_provider(plan.provider).aextract(request)
+        return plan.stamp(response)
 
     async def templates(
         self,
@@ -1246,16 +1341,26 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         provider: str | Provider | TemplateProvider,
         format: ExtractFormat | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> TemplateResponse:
         """Run one of ``provider``'s templates on one page and return its record.
 
         As on the sync router: ``inputs`` are the template's own, and
         ``format`` asks for the page beside the record.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
+        plan = self.presets.resolve("templates", preset, format=format, provider_options=provider_options)
+        options = plan.options
         request = TemplateRequest(
-            template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
+            template=template,
+            inputs=dict(inputs or {}),
+            format=options["format"],
+            provider_options=options["provider_options"] or {},
         )
-        return await self.get_template_provider(provider).arun(request)
+        with plan.explained():
+            response = await self.get_template_provider(provider).arun(request)
+        return plan.stamp(response)
 
     async def research(
         self,
@@ -1269,23 +1374,30 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         exclude_domains: list[str] | None = None,
         timeout: float | None = RESEARCH_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> ResearchResponse:
         """Research a question through ``provider`` (or the router's default), and await it.
 
         As on the sync router, except that waiting gives the event loop back
         rather than holding a thread -- which is what makes running several
         research questions at once reasonable here and not there.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
-        request = self._build_research_request(
-            query,
+        plan = self.presets.resolve(
+            "research",
+            preset,
+            provider=provider,
             output_schema=output_schema,
-            records=records,
             effort=effort,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        return await self.get_research_provider(provider).aresearch(request, timeout=timeout)
+        request = self._build_research_request(query, records=records, **plan.options)
+        with plan.explained():
+            response = await self.get_research_provider(plan.provider).aresearch(request, timeout=timeout)
+        return plan.stamp(response)
 
     async def submit_research(
         self,
@@ -1298,21 +1410,29 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         include_domains: list[str] | None = None,
         exclude_domains: list[str] | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> ResearchJob:
         """Start a research run and hand back the job, without awaiting it.
 
         Await :meth:`~web_router.ResearchJob.aresult` when you want the answer.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
-        request = self._build_research_request(
-            query,
+        plan = self.presets.resolve(
+            "research",
+            preset,
+            provider=provider,
             output_schema=output_schema,
-            records=records,
             effort=effort,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        return await self.get_research_provider(provider).asubmit(request)
+        request = self._build_research_request(query, records=records, **plan.options)
+        with plan.explained():
+            job = await self.get_research_provider(plan.provider).asubmit(request)
+        job._pin(plan.meta("pending"))
+        return job
 
     async def browse(
         self,
@@ -1325,20 +1445,28 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         allowed_domains: list[str] | None = None,
         timeout: float | None = BROWSE_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> BrowseResponse:
         """Hand a task to a hosted browser agent through ``provider`` (or the router's default), and await it.
 
         As on the sync router, except that waiting gives the event loop back.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
-        request = self._build_browse_request(
-            task,
+        plan = self.presets.resolve(
+            "browse",
+            preset,
+            provider=provider,
             start_url=start_url,
             output_schema=output_schema,
             max_steps=max_steps,
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        return await self.get_browse_provider(provider).abrowse(request, timeout=timeout)
+        request = self._build_browse_request(task, **plan.options)
+        with plan.explained():
+            response = await self.get_browse_provider(plan.provider).abrowse(request, timeout=timeout)
+        return plan.stamp(response)
 
     async def submit_browse(
         self,
@@ -1350,20 +1478,29 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         max_steps: int | None = None,
         allowed_domains: list[str] | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> BrowseJob:
         """Start a browse task and hand back the job, without awaiting it.
 
         Await :meth:`~web_router.BrowseJob.aresult` when you want the answer.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
-        request = self._build_browse_request(
-            task,
+        plan = self.presets.resolve(
+            "browse",
+            preset,
+            provider=provider,
             start_url=start_url,
             output_schema=output_schema,
             max_steps=max_steps,
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        return await self.get_browse_provider(provider).asubmit(request)
+        request = self._build_browse_request(task, **plan.options)
+        with plan.explained():
+            job = await self.get_browse_provider(plan.provider).asubmit(request)
+        job._pin(plan.meta("pending"))
+        return job
 
     async def open_browser(
         self,
@@ -1379,6 +1516,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         viewport: Viewport | None = None,
         headless: bool | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> AsyncBrowserHandle:
         """Open a browser session through ``provider`` (or the router's default).
 
@@ -1389,10 +1527,15 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
                 page = await playwright.chromium.connect_over_cdp(browser.cdp_url)
 
         ``stealth`` takes the same levels, and ``timeout`` defaults, as on the
-        sync router; again the only way past that default is to pass a larger
-        one explicitly.
+        sync router; again the only way past that default is a larger one,
+        passed here or set by a preset.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
-        request = self._build_browser_request(
+        plan = self.presets.resolve(
+            "browser",
+            preset,
+            provider=provider,
             proxy_country=proxy_country,
             stealth=stealth,
             solve_captchas=solve_captchas,
@@ -1404,7 +1547,11 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
             headless=headless,
             provider_options=provider_options,
         )
-        return self._track(await self.get_browser_provider(provider).aopen(request))
+        request = self._build_browser_request(**plan.options)
+        with plan.explained():
+            handle = await self.get_browser_provider(plan.provider).aopen(request)
+        handle._pin(plan.meta("passed"))
+        return self._track(handle)
 
     async def aclose(self) -> None:
         """Release every browser session still open, then close every provider this router built.

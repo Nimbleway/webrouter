@@ -1394,6 +1394,96 @@ a live call confirms mapping `output_schema`. A run started with no `agentId`
 may create a new Agent in your Browserbase account each time. `steps` is empty:
 the transcript is a separate endpoint this provider does not read.
 
+## Presets
+
+A preset is saved configuration a call names instead of repeating it: the same
+arguments each method already takes, under their own names, kept in a
+versioned file. It does not change what a method does or returns.
+
+```yaml
+# presets/acme.supplier-research.yaml
+spec_version: 1
+id: acme.supplier-research
+version: 1.0.0
+applies_to: [search, extract]
+components:
+  search:
+    defaults: {max_results: 5}
+    overridable: [max_results]
+  extract:
+    defaults: {format: markdown}
+    overridable: [format]
+```
+
+```python
+router = WebRouter(preset="acme.supplier-research@1.0.0")  # the router's own
+router.presets.load("./presets")  # a file or a directory, JSON or YAML
+
+router.search("warehouse robotics suppliers")  # max_results=5
+router.search("warehouse robotics suppliers", max_results=2)  # the argument wins
+router.extract(url, preset="acme.article@2.0.0")  # a per-call preset sits above the router's
+```
+
+Every method takes `preset=`: `search`, `extract`, `run_template`, `answer`,
+`research` and `submit_research`, `browse` and `submit_browse` and
+`open_browser`. For each setting the call uses, in order: the argument the call
+passed, the per-call preset, the router's preset, then the method's own
+default. A call always needs an exact `id@version`, and a version once loaded
+never changes, so nothing upgrades on its own.
+
+What a section may hold is the method's own arguments less the inputs that
+change every call: no `query`, `urls`, `task`, `records` or template inputs,
+and no research or browse `timeout`, which is how long the caller waits rather
+than part of the request. `provider` is a setting, except on `run_template`,
+where it and `template` stay the caller's. `provider_options` is one setting:
+an argument replaces the preset's whole dict and never merges into it. An
+argument left as `None` is unset, so a call can't clear a preset's setting; use
+a preset that leaves it out.
+
+A section's `overridable` lists the defaults a call or a per-call preset may
+replace, and every default it leaves out is locked, so a section with no
+`overridable` locks all of them. Replacing a locked setting with a different
+value raises `PresetValidationError`, naming the field; passing the same value
+is fine. A lock covers a setting by its name. `provider_options` still reaches
+the backend untranslated, as it always does, so a call can set the vendor's own
+field for a locked setting there unless the section locks `provider_options`
+too.
+
+Nothing is dropped and nothing is guessed. A setting a method doesn't take, a
+value of the wrong type or an unknown backend fails when the definition is
+loaded. A per-call preset for another method raises `PresetCompatibilityError`;
+the router's own preset simply does not apply there. A setting the backend
+doesn't map raises `UnsupportedParameterError`, as the same argument would, and
+names the presets when one of them supplied it. All
+of these are raised before the backend is called, so none bills.
+
+`router.presets.validate("search", {"query": "q", "max_results": 3}, preset=...)`
+runs the preset checks without making the call. It also checks the call's own
+values, and each setting against the backend's class: whether the backend maps it and can return the
+format asked for. It sends nothing and needs no key. A check the backend makes
+only on the call itself, such as a required `start_url`, is not in its report.
+
+A response says what its presets did in `response.meta.preset`: which applied
+(`resolved`, the per-call one first), the settings they supplied (`effective`,
+never a value the caller passed) and the ones the call's arguments replaced
+(`overridden`). A preset's `provider_options` shows there by its keys alone.
+`meta` is `None` when no preset applied. A job pins its presets when it is
+submitted and reports them on `job.meta`, `pending` until the run completes and
+`passed` after; a browser session pins them on `handle.meta` when it opens.
+
+Presets are local in this release, with no registry service and no publishing.
+The router's own preset does not apply to the comparisons (`benchmark`,
+`benchmark_extract` and `evaluate`), which send every backend the same request
+whatever the router holds, and the MCP server doesn't take a preset.
+`execute()` runs a route on the route's own backend, so a router preset that sets
+`provider` conflicts with it. The agent-framework tools fix their extract and
+answer backends when they are built, from the router's default rather than its
+preset, so on a router whose preset sets `provider`, name those backends with
+`extract_provider=` and `answer_provider=` when building the tools. Reading
+YAML needs PyYAML; JSON needs nothing. A YAML file holds only what a JSON one
+could, so an unquoted date stays a string. [`examples/presets.py`](examples/presets.py)
+runs both files in [`examples/presets/`](examples/presets/) with no key.
+
 ## The MCP server
 
 The package ships a **self-hosted stdio MCP server**, so an agent can call these

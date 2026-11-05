@@ -9,10 +9,12 @@ from __future__ import annotations
 import threading
 from typing import Any
 
+from web_router.presets import PresetRegistry
 from web_router.providers.answer import AnswerProvider
 from web_router.registry_answer import create_answer_provider, default_answer_provider
 from web_router.types import Provider, provider_name
 from web_router.types_answer import AnswerRequest, AnswerResponse, Recency
+from web_router.types_presets import Preset
 
 
 class _AnswerLookup:
@@ -22,6 +24,7 @@ class _AnswerLookup:
     _config: dict[str, dict[str, Any]]
     _providers_lock: threading.Lock
     _answer_instances: dict[str, AnswerProvider]
+    presets: PresetRegistry
 
     def _config_for(self, key: str) -> dict[str, Any]:
         raise NotImplementedError
@@ -62,6 +65,7 @@ class SyncAnswer(_AnswerLookup):
         locale: str | None = None,
         recency: Recency | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> AnswerResponse:
         """Ask ``provider`` one question and return its written answer with the sources it rests on.
 
@@ -76,17 +80,25 @@ class SyncAnswer(_AnswerLookup):
         an answer backend. On the usual default, ``auto``, that is the answer
         backends you hold a key for, in ranked order: one that fails or answers
         with nothing is passed over for the next, and each one tried bills.
+
+        ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
-        request = self._answer_request(
-            query,
-            provider_options,
+        plan = self.presets.resolve(
+            "answer",
+            preset,
+            provider=provider,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
             country=country,
             locale=locale,
             recency=recency,
+            provider_options=provider_options,
         )
-        return self.get_answer_provider(provider).answer(request)
+        options = plan.options
+        request = self._answer_request(query, options.pop("provider_options"), **options)
+        with plan.explained():
+            response = self.get_answer_provider(plan.provider).answer(request)
+        return plan.stamp(response)
 
 
 class AsyncAnswer(_AnswerLookup):
@@ -101,15 +113,22 @@ class AsyncAnswer(_AnswerLookup):
         locale: str | None = None,
         recency: Recency | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | Preset | None = None,
     ) -> AnswerResponse:
         """Ask ``provider`` one question and await its written answer, as on the sync router."""
-        request = self._answer_request(
-            query,
-            provider_options,
+        plan = self.presets.resolve(
+            "answer",
+            preset,
+            provider=provider,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
             country=country,
             locale=locale,
             recency=recency,
+            provider_options=provider_options,
         )
-        return await self.get_answer_provider(provider).aanswer(request)
+        options = plan.options
+        request = self._answer_request(query, options.pop("provider_options"), **options)
+        with plan.explained():
+            response = await self.get_answer_provider(plan.provider).aanswer(request)
+        return plan.stamp(response)

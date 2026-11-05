@@ -36,9 +36,9 @@ import time
 import warnings
 from collections.abc import Awaitable, Callable, Iterator, Mapping
 from types import MappingProxyType, TracebackType
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar, cast
 
-from pydantic import SecretStr
+from pydantic import BaseModel, SecretStr
 
 from web_router.constants import (
     BROWSE_TIMEOUT,
@@ -111,6 +111,7 @@ from web_router.types import (
     ResearchProgress,
     ResearchRequest,
     ResearchResponse,
+    ResponseMeta,
     Screenshot,
     SearchRequest,
     SearchResponse,
@@ -135,7 +136,7 @@ _UNASKED = _Unasked.UNASKED
 """A handle's control URL before the backend was asked for it: not the ``None`` of a backend that has none."""
 _StateT = TypeVar("_StateT", bound=str)
 _RequestT = TypeVar("_RequestT", bound=NormalizedRequest)
-_ResponseT = TypeVar("_ResponseT")
+_ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 _ResponseT_co = TypeVar("_ResponseT_co", covariant=True)
 
 
@@ -825,6 +826,32 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         self._provider = provider
         self._request = request
         self._progress = progress
+        self._meta: ResponseMeta | None = None
+
+    @property
+    def meta(self) -> ResponseMeta | None:
+        """The presets this run was started under, pinned when it was submitted; ``None`` when none applied.
+
+        Their checks read ``pending`` until the run has completed and ``passed``
+        after: a run the backend accepted is not yet a run that finished.
+        """
+        if self._meta is None:
+            return None
+        return self._meta.at("passed" if self._progress.state == "completed" else "pending")
+
+    def _pin(self, meta: ResponseMeta | None) -> None:
+        self._meta = meta
+
+    def _stamped(self, progress: _ProgressT) -> _ProgressT:
+        """A copy of ``progress`` with the pinned metadata on its answer, so a caller polling sees it too.
+
+        Stamped on every read rather than once, so changing what one read
+        returned cannot change the next.
+        """
+        if self._meta is None or progress.response is None or not isinstance(progress, BaseModel):
+            return progress
+        response = progress.response.model_copy(update={"meta": self._meta.at("passed")})
+        return cast("_ProgressT", progress.model_copy(update={"response": response}))
 
     @property
     def job_id(self) -> str:
@@ -844,7 +871,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     @property
     def progress(self) -> _ProgressT:
         """The last progress anyone saw, without asking the backend again."""
-        return self._progress
+        return self._stamped(self._progress)
 
     @property
     def resumable(self) -> bool:
@@ -859,13 +886,13 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         """
         if not self._progress.is_terminal:
             self._progress = self._provider.poll(self._request, self.job_id)
-        return self._progress
+        return self._stamped(self._progress)
 
     async def astatus(self) -> _ProgressT:
         """Async counterpart of :meth:`status`."""
         if not self._progress.is_terminal:
             self._progress = await self._provider.apoll(self._request, self.job_id)
-        return self._progress
+        return self._stamped(self._progress)
 
     def result(self, *, timeout: float | _Default | None = _Default.TIMEOUT) -> _ResponseT:
         """Wait for the run to finish and return its answer.
@@ -977,6 +1004,8 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         if progress.state == "failed" or response is None:
             detail = progress.detail or MSG_JOB_NO_DETAIL
             raise ProviderError(self.provider, MSG_JOB_RUN_FAILED.format(detail=detail))
+        if self._meta is not None:
+            return response.model_copy(update={"meta": self._meta.at("passed")})
         return response
 
     def __repr__(self) -> str:
@@ -1512,6 +1541,15 @@ class _Handle:
         self._session = session
         self._released = False
         self._asked_control_url: SecretStr | _Unasked | None = _UNASKED
+        self._meta: ResponseMeta | None = None
+
+    @property
+    def meta(self) -> ResponseMeta | None:
+        """A copy of the presets this session was opened under, pinned when it opened; ``None`` when none applied."""
+        return None if self._meta is None else self._meta.at("passed")
+
+    def _pin(self, meta: ResponseMeta | None) -> None:
+        self._meta = meta
 
     @property
     def session(self) -> BrowserSession:

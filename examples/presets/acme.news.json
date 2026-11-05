@@ -1,0 +1,13 @@
+{
+  "spec_version": 1,
+  "id": "acme.news",
+  "version": "1.0.0",
+  "title": "US news, three results, locked",
+  "applies_to": ["search"],
+  "components": {
+    "search": {
+      "defaults": {"max_results": 3, "country": "US"},
+      "overridable": []
+    }
+  }
+}

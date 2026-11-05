@@ -1,0 +1,16 @@
+# The spec's own example: Search returns up to five results, Extract returns
+# Markdown, and a caller may change either one per call.
+spec_version: 1
+id: acme.supplier-research
+version: 1.0.0
+title: Supplier research
+applies_to: [search, extract]
+components:
+  search:
+    defaults:
+      max_results: 5
+    overridable: [max_results]
+  extract:
+    defaults:
+      format: markdown
+    overridable: [format]
