@@ -51,6 +51,8 @@ from route_eval_sets import TWIN_SETS as TWIN_SETS
 from route_eval_sets import Question, load_set
 
 BASELINE = "baseline"
+NO_GAIN_FLOOR = "no gain (within noise floor)"
+NO_GAIN_INTERVAL = "no gain (static inside the 95% interval)"
 PARTS = ("in_sample", "held_out")
 
 MSG_ROUTER_RAISED = "{spec} raised on {set_name}, first time shown, scored as a router failure: {error}"
@@ -175,7 +177,9 @@ def verdict(gain: float | None, floor: float, static: float | None, ci95: Sequen
         return "gain"
     if gain < -floor and static > high:
         return "loss"
-    return "no gain (within noise floor)"
+    if abs(gain) <= floor:
+        return NO_GAIN_FLOOR
+    return NO_GAIN_INTERVAL
 
 
 def _check_split(name: str, test_fraction: float, questions: int, train: int, test: int) -> None:

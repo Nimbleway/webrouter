@@ -70,7 +70,7 @@ def test_one_question_behind_static_on_30_held_out_is_no_loss(route_eval: Module
 
     assert routers["static"]["held_out"]["correct"] == 19 and routers["static"]["held_out"]["questions"] == 30
     assert routers["always:nimble"]["held_out"]["correct"] == 18
-    assert routers["always:nimble"]["verdict"] == "no gain (within noise floor)", "3.3 points is one question"
+    assert routers["always:nimble"]["verdict"] == route_eval.NO_GAIN_INTERVAL, "3.3 points is one question"
 
 
 def test_a_custom_router_gets_the_prompt_from_a_joined_folder_and_is_fit_on_the_training_split(
