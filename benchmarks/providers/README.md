@@ -439,7 +439,8 @@ noise floor of the best not yet placed, the cheaper backend at known cost
 first, then the faster, then the name. An unknown or $0 cost never moves a backend up, and the keyless tier
 stays last. A backend counted on fewer than 20 questions (`MIN_QUESTIONS` in
 `route_eval_rank.py`, which says why 20) is not ranked: it is listed after the
-ranked ones as *too few questions*. `run.py`'s recommended order calls the same ranking. AIQ and the
+ranked ones as *too few questions*. `run.py`'s recommended order calls the same
+ranking without the minimum, since one scan is often smaller than 20 questions. AIQ and the
 cost and latency curves wait for the first real router. `--json PATH` writes
 the numbers as well.
 
