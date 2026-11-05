@@ -9,6 +9,7 @@ import pytest
 from tests.benchmarks.conftest import route_question as _question
 from tests.benchmarks.conftest import route_row as _row
 from tests.benchmarks.conftest import route_stats as _stats
+from web_router._chains import chains
 
 
 def test_a_gap_wider_than_the_noise_floor_ranks_by_accuracy_whatever_the_cost(route_eval_rank: ModuleType) -> None:
@@ -49,8 +50,9 @@ def test_backend_stats_leave_an_unrecorded_latency_out_of_the_median(route_eval_
 
 def test_the_noise_floor_is_the_twin_runs_widest_gap(route_eval_rank: ModuleType) -> None:
     floor, pairs = route_eval_rank.noise_floor()
-    assert pairs, "the twin runs share at least one backend"
-    assert floor == max(abs(a - b) for a, b in pairs.values())
+    assert pairs["webiq"] == (51 / 254, 54 / 254), "WebIQ's correct answers on SealQA hard, then on its rerun"
+    assert floor == pytest.approx(3 / 254), "the widest gap, WebIQ's three questions"
+    assert floor == pytest.approx(chains()["noise_floor"], abs=1e-6), "the floor chains.json was ranked with"
 
 
 def test_the_best_are_every_backend_within_the_floor_of_the_most_accurate_wherever_cost_put_them(

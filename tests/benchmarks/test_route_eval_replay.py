@@ -77,6 +77,7 @@ def test_the_verdict_needs_a_margin_wider_than_the_noise_floor(route_eval: Modul
     assert route_eval.verdict(0.02, 0.012, 0.5, (0.51, 0.53)) == "gain"
     assert route_eval.verdict(0.01, 0.012, 0.5, (0.505, 0.515)) == "no gain (within noise floor)"
     assert route_eval.verdict(-0.02, 0.012, 0.5, (0.47, 0.49)) == "loss"
+    assert route_eval.verdict(-0.01, 0.012, 0.5, (0.485, 0.495)) == "no gain (within noise floor)", "nor a loss"
     assert route_eval.verdict(None, 0.012, 0.5, None) == "n/a"
 
 

@@ -80,6 +80,35 @@ def test_auto_tries_the_next_member_within_the_deadline_and_names_it_at_the_end(
     assert "first:" in message and "second:" in message, "each member's reason is named"
 
 
+def test_a_member_the_deadline_left_no_time_for_is_never_built_nor_named(clock: _Clock, calls: _Calls) -> None:
+    """The first member fails on its own as the deadline arrives: the chain stops there, before building the next."""
+    built: list[str] = []
+
+    class Spends(FakeProvider):
+        def _search(self, request: SearchRequest) -> SearchResponse:
+            clock.now = DEADLINE
+            raise ProviderError("spends", "upstream 503")
+
+    class Next(FakeProvider):
+        def __init__(self, **kwargs: Any) -> None:
+            built.append("next")
+            super().__init__(**kwargs)
+
+    for name, cls in (("spends", Spends), ("next", Next)):
+        cls.name = name
+        register_provider(name, cls)
+        calls.names.append(name)
+    provider = AutoProvider(chain=(("spends", {}), ("next", {})))
+
+    with call_deadline(DEADLINE), pytest.raises(DeadlineExceededError) as caught:
+        provider.search(SearchRequest(query="q"))
+
+    assert built == [], "no member is built once no time is left"
+    message = str(caught.value)
+    assert "spends: " in message and "upstream 503" in message
+    assert "next" not in message, "a member that never started is not named as tried"
+
+
 def test_the_last_member_gets_everything_that_remains(clock: _Clock, calls: _Calls) -> None:
     _hanging_member(calls, clock, "first", own_timeout=0.5)
     _hanging_member(calls, clock, "last", own_timeout=60.0)
