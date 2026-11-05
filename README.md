@@ -436,7 +436,8 @@ Every backend you hold a key for is a candidate, in a fixed order:
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
 Search's keyed order is generated, not hand-written: `make chains` ranks the
-backends by accuracy on committed benchmark results, then by cost, then by speed.
+backends by accuracy on committed benchmark results; only backends too close in
+accuracy to tell apart are ordered by cost, then speed.
 [`benchmarks/providers/`](benchmarks/providers/README.md#the-default-auto-orders-make-chains)
 explains the method, and how close the top backends are. Every
 key you hold comes before the free tier — so a key you hold only for research,
