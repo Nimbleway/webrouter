@@ -162,3 +162,19 @@ def test_a_cost_unknown_on_every_question_still_shows_how_many(route_eval_report
     assert route_eval_report._usd(None, 127) == "unknown (127)"
     assert route_eval_report._usd(0.005, 6) == "$0.0050 (6 unknown)"
     assert route_eval_report._usd(None) == "unknown"
+
+
+def test_main_writes_the_json_numbers(
+    route_eval: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _tiny_set(tmp_path / "frozen")
+    load_set = route_eval.load_set
+    monkeypatch.setattr(route_eval, "load_set", lambda name, _, joined: load_set(name, tmp_path / "frozen", joined))
+    out = tmp_path / "numbers.json"
+    route_eval.main(["--set", "tiny", "--router", "always:nimble", "--json", str(out)])
+
+    numbers = json.loads(out.read_text(encoding="utf-8"))
+    assert numbers["noise_floor"] == route_eval.noise_floor()[0]
+    assert [s["set"] for s in numbers["sets"]] == ["tiny"]
+    assert list(numbers["sets"][0]["routers"]) == ["static", "oracle", "always:nimble"]
+    assert "## `tiny` (search)" in capsys.readouterr().out

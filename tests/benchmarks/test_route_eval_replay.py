@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import ModuleType
 from typing import Any
 
@@ -118,3 +119,13 @@ def test_a_row_the_judge_did_not_grade_still_served_the_question(route_eval: Mod
     assert outcome.ungraded and not outcome.correct
     assert outcome.cost_usd == pytest.approx(0.008), "an answered call is billed"
     assert route_eval.score([outcome])["ungraded"] == 1
+
+
+def test_a_router_given_as_a_py_file_path_loads(route_eval: ModuleType, tmp_path: Path) -> None:
+    (tmp_path / "my.py").write_text("def pick(prompt, candidates):\n    return ['perplexity']\n")
+    router = route_eval.load_router(f"{tmp_path}/my.py:pick", "search")
+    q = _question(route_eval, _row("tavily", "incorrect"), _row("perplexity", "correct"))
+    outcome = route_eval.replay(router, q, route_eval.static_router("search"))
+    assert outcome.served_by == "perplexity" and outcome.correct and not outcome.router_failed
+    with pytest.raises(SystemExit, match="a router is static, oracle"):
+        route_eval.load_router("x", "search")
