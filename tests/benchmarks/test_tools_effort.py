@@ -32,6 +32,24 @@ def plan_module(tools_effort: ModuleType) -> ModuleType:
     return sys.modules["_tools_effort_plan"]
 
 
+@pytest.fixture(scope="module")
+def budget_module(tools_effort: ModuleType) -> ModuleType:
+    """The costs and the budget, as the runner imported them."""
+    return sys.modules["_tools_effort_budget"]
+
+
+@pytest.fixture(scope="module")
+def runner_module(tools_effort: ModuleType) -> ModuleType:
+    """The judge and the rows, as the runner imported them."""
+    return sys.modules["_tools_effort_runner"]
+
+
+@pytest.fixture(scope="module")
+def run_module(tools_effort: ModuleType) -> ModuleType:
+    """The run folder and the dry run, as the runner imported them."""
+    return sys.modules["_tools_effort_run"]
+
+
 class FakeRouter:
     """Answers every call at once and counts them; ``raw`` carries a stated cost when one is given."""
 
@@ -105,9 +123,9 @@ def _args(out: Path, budget: float, concurrency: int = 1) -> argparse.Namespace:
 # The plan
 
 
-def test_the_dry_run_plans_the_approved_sample_and_paths(tools_effort: ModuleType) -> None:
-    items = tools_effort.placeholder_sample()
-    tasks = tools_effort.plan(items)
+def test_the_dry_run_plans_the_approved_sample_and_paths(run_module: ModuleType, plan_module: ModuleType) -> None:
+    items = run_module.placeholder_sample()
+    tasks = plan_module.plan(items)
     groups = Counter(i.group for i in items)
     columns = Counter((t.path, t.provider, t.mode) for t in tasks)
     research = {(p, m): n for (path, p, m), n in columns.items() if path == "research"}
@@ -137,13 +155,15 @@ def test_the_dry_run_plans_the_approved_sample_and_paths(tools_effort: ModuleTyp
     assert columns[("extract", "nimble", "default")] == 10
     assert len(tasks) == 1100
 
-    text = tools_effort.dry_run(items, 125.0)
+    text = run_module.dry_run(items, 125.0)
     assert "60 questions, 1100 rows" in text
     assert "research 600" in text and "answer 310" in text and "search 180" in text
 
 
-def test_the_runner_works_through_whole_columns_cheapest_research_first(tools_effort: ModuleType) -> None:
-    tasks = tools_effort.order(tools_effort.plan(tools_effort.placeholder_sample()))
+def test_the_runner_works_through_whole_columns_cheapest_research_first(
+    run_module: ModuleType, plan_module: ModuleType
+) -> None:
+    tasks = run_module.order(plan_module.plan(run_module.placeholder_sample()))
     paths = [t.path for t in tasks]
     research = list(dict.fromkeys((t.provider, t.mode) for t in tasks if t.path == "research"))
 
@@ -163,41 +183,45 @@ def test_a_question_given_its_pages_gets_its_own_id(plan_module: ModuleType) -> 
 # What a call costs
 
 
-def test_an_unknown_price_is_never_counted_as_nothing(tools_effort: ModuleType) -> None:
+def test_an_unknown_price_is_never_counted_as_nothing(
+    budget_module: ModuleType, run_module: ModuleType, plan_module: ModuleType
+) -> None:
     assert prices.estimate("parallel", "answer") is None, "the case this guards: no list price"
-    parallel = tools_effort.call_cost("parallel", "answer")
+    parallel = budget_module.call_cost("parallel", "answer")
     assert parallel.worst > 0 and parallel.expected > 0
-    assert tools_effort.list_price("parallel", "answer") is None, "the frozen row says unknown, not $0"
-    assert tools_effort.call_cost("nobody", "research").worst == tools_effort.FALLBACK["research"]
-    for task in tools_effort.plan(tools_effort.placeholder_sample()):
-        for call in tools_effort.backend_calls(task):
-            cost = tools_effort.call_cost(*call)
+    assert budget_module.list_price("parallel", "answer") is None, "the frozen row says unknown, not $0"
+    assert budget_module.call_cost("nobody", "research").worst == budget_module.FALLBACK["research"]
+    for task in plan_module.plan(run_module.placeholder_sample()):
+        for call in budget_module.backend_calls(task):
+            cost = budget_module.call_cost(*call)
             assert cost.worst >= cost.expected > 0, call
 
 
 def test_a_call_with_no_price_is_charged_its_fallback_and_its_row_records_no_cost(
-    tools_effort: ModuleType, plan_module: ModuleType
+    plan_module: ModuleType, budget_module: ModuleType, runner_module: ModuleType
 ) -> None:
     item = _items(plan_module)[1]
     task = plan_module.Task(item, "answer", "parallel", "default")
-    budget = tools_effort.Budget(cap=10.0)
-    ticket = tools_effort.Ticket(budget, task)
-    row = asyncio.run(tools_effort.Runner(FakeRouter(), FakeJudge(cost=None)).row(task, ticket))
+    budget = budget_module.Budget(cap=10.0)
+    ticket = budget_module.Ticket(budget, task)
+    row = asyncio.run(runner_module.Runner(FakeRouter(), FakeJudge(cost=None)).row(task, ticket))
     ticket.close()
 
     assert row["grade"] == "correct"
     assert row["cost_usd"] is None
-    assert row["spend_usd"] == tools_effort.call_cost("parallel", "answer").worst
+    assert row["spend_usd"] == budget_module.call_cost("parallel", "answer").worst
     assert row["judge_spend_usd"] > 0, "a judge call that reports no usage is charged its worst case"
     assert budget.spent == pytest.approx(row["spend_usd"] + row["judge_spend_usd"])
     assert budget.reserved == pytest.approx(0.0)
 
 
-def test_a_stated_cost_is_what_is_charged_and_recorded(tools_effort: ModuleType, plan_module: ModuleType) -> None:
+def test_a_stated_cost_is_what_is_charged_and_recorded(
+    plan_module: ModuleType, budget_module: ModuleType, runner_module: ModuleType
+) -> None:
     task = plan_module.Task(_items(plan_module)[0], "research", "perplexity", "low")
-    budget = tools_effort.Budget(cap=10.0)
-    ticket = tools_effort.Ticket(budget, task)
-    row = asyncio.run(tools_effort.Runner(FakeRouter(stated=0.0123), FakeJudge()).row(task, ticket))
+    budget = budget_module.Budget(cap=10.0)
+    ticket = budget_module.Ticket(budget, task)
+    row = asyncio.run(runner_module.Runner(FakeRouter(stated=0.0123), FakeJudge()).row(task, ticket))
 
     assert (row["cost_usd"], row["spend_usd"], row["judge_spend_usd"]) == (0.0123, 0.0123, 0.001)
 
@@ -206,14 +230,14 @@ def test_a_stated_cost_is_what_is_charged_and_recorded(tools_effort: ModuleType,
 
 
 def test_the_budget_refuses_the_row_that_would_cross_it_and_calls_nothing_for_it(
-    tools_effort: ModuleType, plan_module: ModuleType
+    tools_effort: ModuleType, plan_module: ModuleType, budget_module: ModuleType, runner_module: ModuleType
 ) -> None:
     item = _items(plan_module)[0]
     tasks = [plan_module.Task(item, "research", "parallel", "max")] * 5
-    worst = tools_effort.task_cost(tasks[0]).worst
-    budget = tools_effort.Budget(cap=worst * 2.5)
+    worst = budget_module.task_cost(tasks[0]).worst
+    budget = budget_module.Budget(cap=worst * 2.5)
     router, rows = FakeRouter(), []
-    runner = tools_effort.Runner(router, FakeJudge(cost=None))
+    runner = runner_module.Runner(router, FakeJudge(cost=None))
     finished, stopped = asyncio.run(
         tools_effort.execute(tasks, runner.row, budget, rows.append, concurrency=1, say=lambda _: None)
     )
@@ -226,25 +250,25 @@ def test_the_budget_refuses_the_row_that_would_cross_it_and_calls_nothing_for_it
     assert budget.reserved == pytest.approx(0.0)
 
 
-def test_rows_in_flight_reserve_their_worst_case_together(tools_effort: ModuleType, plan_module: ModuleType) -> None:
+def test_rows_in_flight_reserve_their_worst_case_together(plan_module: ModuleType, budget_module: ModuleType) -> None:
     task = plan_module.Task(_items(plan_module)[0], "research", "nimble", "high")
-    budget = tools_effort.Budget(cap=tools_effort.task_cost(task).worst * 1.5)
-    tools_effort.Ticket(budget, task)
+    budget = budget_module.Budget(cap=budget_module.task_cost(task).worst * 1.5)
+    budget_module.Ticket(budget, task)
 
-    with pytest.raises(tools_effort.BudgetExceeded):
-        tools_effort.Ticket(budget, task)
+    with pytest.raises(budget_module.BudgetExceeded):
+        budget_module.Ticket(budget, task)
     assert budget.spent == 0.0
 
 
-def test_a_call_dearer_than_planned_tops_up_or_is_refused(tools_effort: ModuleType, plan_module: ModuleType) -> None:
+def test_a_call_dearer_than_planned_tops_up_or_is_refused(plan_module: ModuleType, budget_module: ModuleType) -> None:
     task = plan_module.Task(_items(plan_module)[0], "answer", "you", "default")
-    planned = tools_effort.task_cost(task).worst
-    budget = tools_effort.Budget(cap=planned + 0.01)
-    ticket = tools_effort.Ticket(budget, task)
+    planned = budget_module.task_cost(task).worst
+    budget = budget_module.Budget(cap=planned + 0.01)
+    ticket = budget_module.Ticket(budget, task)
 
     ticket.draw(planned + 0.005)
     assert budget.reserved == pytest.approx(planned + 0.005)
-    with pytest.raises(tools_effort.BudgetExceeded):
+    with pytest.raises(budget_module.BudgetExceeded):
         ticket.draw(1.0)
 
 
@@ -252,29 +276,33 @@ def test_a_call_dearer_than_planned_tops_up_or_is_refused(tools_effort: ModuleTy
 
 
 def test_a_rerun_skips_the_rows_already_written_and_counts_what_was_spent(
-    tools_effort: ModuleType, plan_module: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tools_effort: ModuleType,
+    plan_module: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    run_module: ModuleType,
 ) -> None:
     items = _items(plan_module)
     monkeypatch.setattr(tools_effort, "load_sample", lambda local: items)
-    total = len(tools_effort.plan(items))
+    total = len(plan_module.plan(items))
     first_router, second_router = FakeRouter(), FakeRouter()
 
     first = asyncio.run(tools_effort.run(_args(tmp_path, budget=1.0), FakeJudge(), first_router))
-    spent = sum(e["usd"] for e in tools_effort.read_jsonl(tmp_path / tools_effort.SPEND_FILE))
+    spent = sum(e["usd"] for e in run_module.read_jsonl(tmp_path / run_module.SPEND_FILE))
     second = asyncio.run(tools_effort.run(_args(tmp_path, budget=100.0), FakeJudge(), second_router))
     third_router, third_judge = FakeRouter(), FakeJudge()
     third = asyncio.run(tools_effort.run(_args(tmp_path, budget=100.0), third_judge, third_router))
 
-    rows = tools_effort.read_jsonl(tmp_path / tools_effort.ROWS_FILE)
+    rows = run_module.read_jsonl(tmp_path / run_module.ROWS_FILE)
     assert 0 < first < total, "the first run stopped at its budget"
     assert 0 < spent <= 1.0
     assert first + second == total == len(rows)
-    assert len(tools_effort.done_keys(rows)) == total, "no row asked twice"
+    assert len(run_module.done_keys(rows)) == total, "no row asked twice"
     assert third == 0 and not third_router.calls, "a finished run calls nothing"
     assert third_judge.calls == 0, "not even the judge's check"
-    checks = [e for e in tools_effort.read_jsonl(tmp_path / tools_effort.SPEND_FILE) if e["path"] == "judge-check"]
+    checks = [e for e in run_module.read_jsonl(tmp_path / run_module.SPEND_FILE) if e["path"] == "judge-check"]
     assert [e["usd"] for e in checks] == [0.001, 0.001], "each run that asked something paid for its check"
-    run = json.loads((tmp_path / tools_effort.RUN_FILE).read_text(encoding="utf-8"))
+    run = json.loads((tmp_path / run_module.RUN_FILE).read_text(encoding="utf-8"))
     assert len(run["resumed"]) == 2
     assert all("question" not in entry for entry in run["sample"]), "run.json names questions by id only"
 
@@ -298,7 +326,9 @@ def test_a_resumed_run_refuses_another_sample_or_research_timeout(
         asyncio.run(tools_effort.run(_args(tmp_path, budget=100.0), FakeJudge(), FakeRouter()))
 
 
-def test_a_leaked_research_answer_is_not_graded(tools_effort: ModuleType, plan_module: ModuleType) -> None:
+def test_a_leaked_research_answer_is_not_graded(
+    plan_module: ModuleType, budget_module: ModuleType, runner_module: ModuleType
+) -> None:
     class LeakyRouter(FakeRouter):
         async def research(self, query: str, *, provider: str, effort: str, timeout: float) -> ResearchResponse:
             citations = [Citation(url="https://huggingface.co/datasets/vtllms/sealqa")]
@@ -306,19 +336,19 @@ def test_a_leaked_research_answer_is_not_graded(tools_effort: ModuleType, plan_m
 
     task = plan_module.Task(_items(plan_module)[1], "research", "parallel", "low")
     judge = FakeJudge()
-    ticket = tools_effort.Ticket(tools_effort.Budget(cap=10.0), task)
-    row = asyncio.run(tools_effort.Runner(LeakyRouter(), judge).row(task, ticket))
+    ticket = budget_module.Ticket(budget_module.Budget(cap=10.0), task)
+    row = asyncio.run(runner_module.Runner(LeakyRouter(), judge).row(task, ticket))
 
     assert row["leaked"] and row["grade"] is None and judge.calls == 0
 
 
 def test_search_then_read_reads_the_top_three_pages_and_judges_once(
-    tools_effort: ModuleType, plan_module: ModuleType
+    plan_module: ModuleType, budget_module: ModuleType, runner_module: ModuleType
 ) -> None:
     task = plan_module.Task(_items(plan_module)[0], "search+extract", "linkup", "top3")
     router, judge = FakeRouter(), FakeJudge()
     row = asyncio.run(
-        tools_effort.Runner(router, judge).row(task, tools_effort.Ticket(tools_effort.Budget(10.0), task))
+        runner_module.Runner(router, judge).row(task, budget_module.Ticket(budget_module.Budget(10.0), task))
     )
 
     assert router.calls == {"search": 1, "extract": 3}
@@ -365,7 +395,7 @@ def test_a_finished_run_freezes_with_the_reused_answers_and_an_unfinished_one_is
     # A copied answer with no stated cost gets its list price, as the set's own rows do; token-billed stays unknown.
     assert copied == {"linkup": 0.006, "you": 0.005, "exa": 0.005, "perplexity": None, "parallel": None}
 
-    assert len(rows) == len(tools_effort.plan(items)) + 5
+    assert len(rows) == len(plan_module.plan(items)) + 5
     assert {r["method"] for r in rows} == {"search+extract", "extract", "answer", "research"}
     assert all(tuple(r) == frozen.FIELDS and r["set"] == "mixed-tiny" for r in rows)
     assert all(r["grade"] == "correct" for r in rows)
@@ -400,16 +430,16 @@ def test_join_finds_a_mixed_sets_questions_at_their_rows_in_the_public_sets(
 
 
 def test_a_failing_row_stops_new_rows_and_is_raised_once_the_rest_finish(
-    tools_effort: ModuleType, plan_module: ModuleType
+    tools_effort: ModuleType, plan_module: ModuleType, budget_module: ModuleType, runner_module: ModuleType
 ) -> None:
     tasks = [plan_module.Task(_items(plan_module)[0], "research", "parallel", "low")] * 5
     router = FakeRouter()
-    budget = tools_effort.Budget(cap=100.0)
+    budget = budget_module.Budget(cap=100.0)
 
     def broken_sink(row: dict[str, Any]) -> None:
         raise OSError("disk full")
 
-    runner = tools_effort.Runner(router, FakeJudge())
+    runner = runner_module.Runner(router, FakeJudge())
     with pytest.raises(OSError, match="disk full"):
         asyncio.run(tools_effort.execute(tasks, runner.row, budget, broken_sink, concurrency=1, say=lambda _: None))
     assert router.calls["research"] == 1, "no row started after the one that failed"
@@ -422,26 +452,31 @@ def test_a_row_whose_grading_the_budget_refuses_is_kept_and_never_bought_again(
     plan_module: ModuleType,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    budget_module: ModuleType,
+    runner_module: ModuleType,
+    run_module: ModuleType,
 ) -> None:
     items = _items(plan_module)[:1]
     monkeypatch.setattr(tools_effort, "load_sample", lambda local: items)
     task = plan_module.Task(items[0], "research", "parallel", "max")
-    budget = tools_effort.Budget(cap=tools_effort.task_cost(task).worst)
-    monkeypatch.setattr(tools_effort, "judge_worst", lambda system, user: 1.0)  # a prompt dearer than planned
+    budget = budget_module.Budget(cap=budget_module.task_cost(task).worst)
+    monkeypatch.setattr(runner_module, "judge_worst", lambda system, user: 1.0)  # a prompt dearer than planned
     router, rows = FakeRouter(), []
     finished, stopped = asyncio.run(
-        tools_effort.execute([task], tools_effort.Runner(router, FakeJudge()).row, budget, rows.append, say=print)
+        tools_effort.execute([task], runner_module.Runner(router, FakeJudge()).row, budget, rows.append, say=print)
     )
 
     (row,) = rows
     assert finished == 1 and stopped is not None and "budget" in stopped
     assert (row["grade"], row["failed_at"], row["answer"]) == (None, "budget", "gold")
-    assert row["spend_usd"] == tools_effort.list_price("parallel", "research", "max") and row["latency"] is not None
+    assert row["spend_usd"] == budget_module.list_price("parallel", "research", "max") and row["latency"] is not None
     assert frozen.error_class(row) == "budget"
-    assert task.key in tools_effort.done_keys(rows), "a resume skips it"
+    assert task.key in run_module.done_keys(rows), "a resume skips it"
 
 
-def test_a_failed_page_read_counts_in_the_rows_cost_and_time(tools_effort: ModuleType, plan_module: ModuleType) -> None:
+def test_a_failed_page_read_counts_in_the_rows_cost_and_time(
+    plan_module: ModuleType, budget_module: ModuleType, runner_module: ModuleType
+) -> None:
     class FlakyRouter(FakeRouter):
         async def extract(self, url: str, *, provider: str) -> ExtractResponse:
             if url.endswith("/1"):
@@ -452,7 +487,7 @@ def test_a_failed_page_read_counts_in_the_rows_cost_and_time(tools_effort: Modul
     task = plan_module.Task(_items(plan_module)[0], "search+extract", "nimble", "top3")
     router = FlakyRouter()
     row = asyncio.run(
-        tools_effort.Runner(router, FakeJudge()).row(task, tools_effort.Ticket(tools_effort.Budget(10.0), task))
+        runner_module.Runner(router, FakeJudge()).row(task, budget_module.Ticket(budget_module.Budget(10.0), task))
     )
 
     assert router.calls["extract"] == 3 and row["pages_read"] == 2 and row["grade"] == "correct"

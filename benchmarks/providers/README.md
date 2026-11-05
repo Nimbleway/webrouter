@@ -245,7 +245,7 @@ topped up when the call's prompt makes it dearer. A row that would take what
 is spent plus what is reserved past the cap is refused, and the run stops
 there: rows in flight finish, and nothing else is sent. A call is charged what
 its response states, else its list price from `web_router.prices`, else a
-fallback written in the script (`UNPRICED`, `FALLBACK`) -- never $0; a call that
+fallback written in `_tools_effort_budget.py` (`UNPRICED`, `FALLBACK`) -- never $0; a call that
 fails is charged its worst case, as it may have billed. A call that bills more than its
 reserved worst case (a token-billed backend stating a dearer cost) is still
 charged what it billed, so spend can pass the cap by at most what the rows in
