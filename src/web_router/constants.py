@@ -2062,6 +2062,8 @@ AUTO_BROWSE_PREFERRED: tuple[str, ...] = (
 )
 """Tried in this order, and only those the caller holds a credential for.
 
+Unmeasured, hand-ordered: no graded browse data ranks it.
+
 Browser Use first because it answers in prose and reports the steps it took.
 Skyvern next: until its schema field is mapped, most of its answers are only in
 ``raw``. Browserbase last, because its Agents API has no start URL -- a request
