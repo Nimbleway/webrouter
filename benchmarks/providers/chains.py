@@ -66,7 +66,7 @@ def _measured(stats: Mapping[str, Mapping[str, Any]], ranked: Sequence[str]) -> 
             "accuracy": _round(stats[p]["accuracy_all"]),
             "correct": stats[p]["correct"],
             "questions": stats[p]["questions"],
-            "account_failures_left_out": stats[p]["excluded"],
+            "rate_limit_or_quota_left_out": stats[p]["excluded"],
             "cost_usd": _round(stats[p]["cost_usd"]),
             "latency_p50_s": _round(stats[p]["latency_p50"]),
         }
