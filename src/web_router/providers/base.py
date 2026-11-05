@@ -104,14 +104,9 @@ from web_router.types import (
     ExtractResponse,
     JobState,
     NormalizedRequest,
-    PageFormat,
-    PageLoadState,
-    PageSnapshot,
-    PageState,
     ResearchProgress,
     ResearchRequest,
     ResearchResponse,
-    Screenshot,
     SearchRequest,
     SearchResponse,
     StealthLevel,
@@ -120,6 +115,7 @@ from web_router.types import (
     TemplateRequest,
     TemplateResponse,
 )
+from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 if TYPE_CHECKING:
     from playwright.async_api import Page as AsyncPlaywrightPage

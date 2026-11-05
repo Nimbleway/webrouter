@@ -10,7 +10,7 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from web_router.types import Citation, NormalizedRequest, ResearchOutcome
+from web_router.types import DECISION_DESCRIPTION, Citation, DecisionRecord, NormalizedRequest, ResearchOutcome
 
 __all__ = ["ANSWER_ALWAYS_SENT", "ANSWER_PARAMETERS", "AnswerRequest", "AnswerResponse", "Recency"]
 
@@ -69,3 +69,4 @@ class AnswerResponse(BaseModel):
         default=None,
         description="The provider's untouched payloads, one per call the answer took.",
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)

@@ -87,11 +87,9 @@ from web_router.registry import register_browser_provider, unregister_browser_pr
 from web_router.types import (
     BrowserRequest,
     ExtractedDocument,
-    PageSnapshot,
-    PageState,
-    Screenshot,
     StealthLevel,
 )
+from web_router.types_page import PageSnapshot, PageState, Screenshot
 
 SECRET = "SEKRIT-cdp-0123456789"
 """The account key the fake provider's CDP URL carries."""

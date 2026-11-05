@@ -156,10 +156,10 @@ from web_router.types import (
     TEMPLATE_PARAMETERS,
     ExtractFormat,
     ExtractResponse,
-    PageState,
     StealthLevel,
 )
 from web_router.types_answer import ANSWER_PARAMETERS
+from web_router.types_page import PageState
 
 _CONFIGURED: dict[str, Callable[[], list[str]]] = {
     MCP_TOOL_SEARCH: configured_providers,

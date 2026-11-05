@@ -128,6 +128,9 @@ from web_router.types import (
     BrowserState,
     BrowseStep,
     Citation,
+    DecisionAttempt,
+    DecisionHop,
+    DecisionRecord,
     ExtractBenchmarkReport,
     ExtractBenchmarkRun,
     ExtractedDocument,
@@ -135,10 +138,6 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
-    PageFormat,
-    PageLoadState,
-    PageSnapshot,
-    PageState,
     Provider,
     ResearchEffort,
     ResearchOutcome,
@@ -146,7 +145,6 @@ from web_router.types import (
     ResearchRequest,
     ResearchResponse,
     ResearchState,
-    Screenshot,
     SearchDepth,
     SearchRequest,
     SearchResponse,
@@ -160,6 +158,7 @@ from web_router.types import (
     Viewport,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
+from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 __all__ = [
     "ANSWER_PARAMETERS",
@@ -196,6 +195,9 @@ __all__ = [
     "Citation",
     "ConfigurationError",
     "DeadlineExceededError",
+    "DecisionAttempt",
+    "DecisionHop",
+    "DecisionRecord",
     "ElementNotFoundError",
     "ExtractBenchmarkReport",
     "ExtractBenchmarkRun",
