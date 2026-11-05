@@ -85,14 +85,22 @@ Each run gets its own folder under `benchmarks/providers/results/`
 | `rows.jsonl` | One line per question and backend: the synthesized answer, the grade, the latency, the topic and the answer type |
 | `run.json` | The setup the run used |
 
-Nothing is estimated. Accuracy is the judge's grade, latency is timed around
-the search alone, and there is no cost column, because no backend states one.
+Accuracy is the judge's grade, latency is timed around the search alone, and
+there is no cost column, because no search backend states one. Only the
+recommended order reads a cost: the list price from `web_router.prices`, an
+estimate, to break ties.
 
 ## The recommended `auto` order
 
 After the overall table the report suggests an order for `auto`'s search
-chain: the plain backends by overall accuracy, each marked *behind* when its
-95% interval stops short of the best one's and *not shown apart* otherwise.
+chain: the plain backends ranked by [route-eval](#route-eval-replaying-a-router)'s
+rule -- correct answers out of every question; within the noise floor, the
+cheaper backend at list price first, then the faster; the keyless tier last --
+each within the noise floor of the most accurate one marked *best, within the
+noise floor* wherever the tie-break put it, and of the rest each marked
+*behind* when its 95% interval stops short of the most accurate one's and *not
+shown apart* otherwise. It is the same ranking route-eval
+prints, so the repository never suggests two orders.
 Depth and mode setups (`nimble@deep`, `tavily:ultra-fast`) are left out, since
 a chain member is a backend that `auto` sends whatever depth the request asks
 for, not a mode. It ends with a snippet to paste into your own router:
@@ -338,6 +346,82 @@ Whoever holds the scans rebuilds the folder with
 `frozen.py build path/to/results`, which resolves every `question_id` against
 the public dataset before it writes, and writes the same bytes for the same
 scans. Commit the files it writes, `SHA256SUMS` included.
+
+## route-eval: replaying a router
+
+`route_eval.py` replays a router over the frozen results and scores it
+against today's static order. Nothing is called and no key is needed: each
+question goes to the router, the router ranks the backends the set has rows
+for, and the replay looks up the recorded grade, latency and cost of the one
+that served.
+
+```bash
+uv run --all-extras python benchmarks/providers/route_eval.py
+uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254 --router always:nimble
+uv run --all-extras python benchmarks/providers/route_eval.py --router mypkg.routers:pick \
+    --joined benchmarks/providers/results/frozen-joined
+```
+
+By default it scores `sealqa-hard-254` and `simpleqa-300-v2`, SimpleQA being
+the control set where routing should gain nothing. A router is `static`
+(`auto`'s order today), `oracle` (the backend that got each question right,
+cheapest first: the ceiling), `always:<backend>`, or your own callable as
+`module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
+as the yardsticks. Your callable takes `(prompt, candidates)` and returns the
+candidate ids best first, or `{"ranked": [...], "cost_usd": ...}` when it bills
+for itself; given a `fit` method, it is called with the training questions
+first. `prompt` is the question's text only when `--joined` names the folder
+`frozen.py join` wrote; otherwise it is `None` and the report says the prompt
+was unavailable. The interface is a thin adapter, experimental until 1.0, and
+will move to the routing contract when it lands.
+
+**v1 covers provider order for `search` and `answer` only.** Tool choice and
+effort need a dataset that records them, which the frozen sets do not.
+
+How a choice is scored:
+
+- The router's ranking is walked as `auto` walks its chain. The first backend
+  whose row did not fail serves the question. A failed row (`error` not null)
+  is passed over: its time to failure is charged, its cost is not, and the
+  question counts as a **fallback** -- as it does when the router raises,
+  ranks nothing, or names any backend that is not a candidate, which falls
+  back to the static order. Those router
+  failures also have their own column, and the first exception each router
+  raises on a set is printed to stderr. A row whose `error` is `judge` or
+  `leaked` is not a failed attempt: the backend answered, so it serves the
+  question, ungraded -- never correct, no fallback, counted in its own column.
+  A question no backend served is a miss.
+- **Accuracy** is correct out of every question; grades and latency come only
+  from rows that did not fail.
+- **Cost** is the cost the row states (`answer`), else the list price from
+  `web_router.prices` (an estimate). An unknown price is unknown, never $0: the
+  mean is over the questions whose cost is known, and the count unknown is
+  shown.
+- **Latency** adds the failed attempts before the one that served, and the
+  router's own time. A question where any attempt's latency is unrecorded is
+  left out of the mean and counted as unknown, as cost is. The router's own time (**overhead**) and any cost it
+  states are charged on every question, so a slow or paid router does not look
+  free.
+- **Regret** is the oracle's accuracy, or the static order's, minus the
+  router's, in points.
+
+Every router is scored on one seeded split (`--seed 0`, half held out by
+`--test-fraction`), in-sample and held out side by side: on SealQA, routing by
+gold labels once scored 75 in-sample and 46 held out. The **noise floor** is
+the widest accuracy gap one backend shows between `sealqa-hard-254` and its
+twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points). A
+held-out margin over the static order no larger than that is *no gain*; it is
+the only twin run, so it serves every set. It is rerun noise, not a
+significance test on the held-out split: a margin above it can still be
+sampling error.
+
+Each set ends with the **recommended order**, ranked on every question of the
+set, since nothing is fit to it: by correct out of every question; within the
+noise floor of the best not yet placed, the cheaper backend at known cost
+first, then the faster, then the name. An unknown or $0 cost never moves a backend up, and the keyless tier
+stays last. `run.py`'s recommended order calls the same ranking. AIQ and the
+cost and latency curves wait for the first real router. `--json PATH` writes
+the numbers as well.
 
 ## Keeping results
 

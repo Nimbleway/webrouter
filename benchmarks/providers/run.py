@@ -34,9 +34,10 @@ Writes into ``--out``: ``run.json`` (the setup), ``rows.jsonl`` (one line per
 question and backend) and ``report.md`` with ``summary.json``, the same
 numbers for charts. ``--combine`` merges finished scans of the same questions
 and judge -- backends added later -- into one report without searching again.
-Nothing is estimated: accuracy is the judge's grade and
-latency is timed around the search; there is no cost column, because no
-backend here states one.
+Accuracy is the judge's grade and latency is timed around the search; there
+is no cost column, because no backend here states one. The recommended order
+alone reads list prices (``web_router.prices``, estimates), to break ties
+inside route-eval's noise floor.
 """
 
 from __future__ import annotations
@@ -49,16 +50,12 @@ from pathlib import Path
 from typing import Any, cast
 
 from _common import (
-    APART,
     DEFAULT_OUT,
-    DEPTH_MARK,
     MIN_GROUP,
-    MODE_MARK,
     SEARCH_COMBINE_KEYS,
     Sink,
     _p,
     _s,
-    _wilson,
     combine_scans,
     scan_main,
     split_label,
@@ -73,10 +70,12 @@ from _questions import (
     question_args,
     question_tags,
 )
+from _recommended import recommendation
+from _recommended import recommended_order as recommended_order
 from _report_tables import breakdown, breakdown_tables, search_score
 
 from web_router import AsyncWebRouter
-from web_router.constants import BENCHMARK_EXCLUDED, PROVIDER_AUTO
+from web_router.constants import BENCHMARK_EXCLUDED
 from web_router.evals import OpenAIJudge
 from web_router.providers.base import SearchProvider
 from web_router.registry import configured_providers
@@ -145,79 +144,6 @@ def summarize(rows: list[dict[str, Any]], setup: dict[str, Any]) -> dict[str, An
     }
 
 
-def recommended_order(summary: dict[str, Any]) -> list[tuple[str, bool | None]]:
-    """The plain backends by correct answers out of every question, each with whether this run shows it behind the best.
-
-    Ranked on correct over all questions asked, a failed search counting as a
-    miss, not on accuracy over the searches served: a chain member that fails
-    most searches is no member to put first, however well it answered the few
-    it served. A ``provider@depth`` or ``provider:mode`` setup is left out: an
-    ``auto`` member is a backend, sent whatever depth the request asks for, not
-    a mode. So is ``auto`` itself, if a scan named it: as a member it would be a
-    second ``auto`` on the default order, reaching unranked backends first. So
-    is a backend that served nothing; one that served searches and got every
-    answer wrong is ranked, last. A backend is behind only when its 95%
-    interval stops short of the best one's; ``None`` marks the best itself.
-    """
-    overall = summary["overall"]
-    plain = [
-        p
-        for p in summary["setup"]["providers"]
-        if DEPTH_MARK not in p and MODE_MARK not in p and p != PROVIDER_AUTO and overall[p]["served"]
-    ]
-    ranked = sorted(plain, key=lambda p: -_answered(overall[p]))
-    if not ranked:
-        return []
-    floor = _answered_ci(overall[ranked[0]])[0]
-    return [(ranked[0], None)] + [(p, _answered_ci(overall[p])[1] < floor) for p in ranked[1:]]
-
-
-def _answered(score: dict[str, Any]) -> float:
-    """Correct answers out of every question asked, a failed search counting as a miss."""
-    return score["correct"] / score["questions"] if score["questions"] else 0.0
-
-
-def _answered_ci(score: dict[str, Any]) -> tuple[float, float]:
-    return _wilson(score["correct"], score["questions"]) or (0.0, 0.0)
-
-
-def _recommendation(summary: dict[str, Any]) -> list[str]:
-    order = recommended_order(summary)
-    lines = ["## Recommended auto order\n"]
-    if not order:
-        lines.append("No backend in this scan served a search, so there is no order to suggest.\n")
-        return lines
-    overall = summary["overall"]
-    short = QUESTION_SETS[summary["setup"].get("questions", "simpleqa")]["short"]
-    lines.append(
-        f"A suggestion from one judge (`{summary['setup']['judge']}`) on {short}, not the library's default: the "
-        "plain backends in this scan by correct answers out of every question asked, a failed search counting as a "
-        "miss -- so a backend that fails often ranks by what it got right, not by its accuracy on the few it served. "
-        "A `provider@depth` or `provider:mode` setup is left out, "
-        "because a chain member is a backend -- `auto` sends it whatever depth the request asks for -- not a mode. "
-        "A backend is *behind* only when its 95% interval stops short of the best one's; the others are not shown "
-        "apart by this run, and another could order them differently.\n"
-    )
-    lines.append("| Order | Backend | Correct of all questions | 95% CI | Failed | Against the best |")
-    lines.append("|---|---|---|---|---|---|")
-    for rank, (p, behind) in enumerate(order, 1):
-        s = overall[p]
-        ci = _answered_ci(s)
-        lines.append(
-            f"| {rank} | `{p}` | {_p(_answered(s))} ({s['correct']}/{s['questions']}) | {_p(ci[0])}-{_p(ci[1])} "
-            f"| {s['failed']} | {APART[behind]} |"
-        )
-    chain = json.dumps({"auto": {"chain": {"search": [p for p, _ in order]}}})
-    lines.append(
-        "\nIt is opt-in: to try it, give your own router the order. The chain replaces the default one, keyless "
-        "tail included, and each member still needs its key; keyed by `search`, it leaves the other methods' "
-        "chains alone.\n"
-    )
-    lines.append(f"```python\nWebRouter(provider_config={chain})\n```\n")
-    lines.append("The library's default order changes only by a pull request backed by a scan like this one.\n")
-    return lines
-
-
 def markdown(summary: dict[str, Any]) -> str:
     setup, overall = summary["setup"], summary["overall"]
     providers = sorted(setup["providers"], key=lambda p: -(overall[p]["accuracy"] or 0))
@@ -258,7 +184,7 @@ def markdown(summary: dict[str, Any]) -> str:
             "Results withheld from the judge because their page may hold the set's own answers (the dataset, its "
             "paper or a copy): " + ", ".join(f"`{p}` {n}" for p, n in withheld.items()) + ".\n"
         )
-    out.extend(_recommendation(summary))
+    out.extend(recommendation(summary))
     out.extend(
         breakdown_tables(
             summary,

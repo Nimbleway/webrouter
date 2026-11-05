@@ -5,7 +5,8 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -36,20 +37,32 @@ EXTRACT_SETUP = {
 """A ``run.json`` as ``setup_of()`` writes it, minus the backends, which each test names."""
 
 
-@pytest.fixture(scope="module")
-def extract_scan() -> Iterator[ModuleType]:
-    # The scan imports what it shares with its neighbour as a sibling, as it does run from its folder.
-    sys.path.insert(0, str(EXTRACT_SCRIPT.parent))
+@contextmanager
+def load_script(path: Path, name: str, siblings: Iterable[str]) -> Iterator[ModuleType]:
+    """A benchmark script loaded as module ``name``, importing its neighbours as siblings as it does from its folder.
+
+    ``siblings`` are what it imports from its folder under plain names; they
+    and ``name`` are forgotten once the block ends.
+    """
+    sys.path.insert(0, str(path.parent))
     try:
-        spec = importlib.util.spec_from_file_location("extract_scan", EXTRACT_SCRIPT)
+        spec = importlib.util.spec_from_file_location(name, path)
         assert spec is not None and spec.loader is not None
         module = importlib.util.module_from_spec(spec)
+        # Registered first: a dataclass looks its module up by name.
+        sys.modules[name] = module
         spec.loader.exec_module(module)
         yield module
     finally:
-        sys.path.remove(str(EXTRACT_SCRIPT.parent))
-        for name in EXTRACT_SIBLINGS:
-            sys.modules.pop(name, None)
+        sys.path.remove(str(path.parent))
+        for sibling in (*siblings, name):
+            sys.modules.pop(sibling, None)
+
+
+@pytest.fixture(scope="module")
+def extract_scan() -> Iterator[ModuleType]:
+    with load_script(EXTRACT_SCRIPT, "extract_scan", EXTRACT_SIBLINGS) as module:
+        yield module
 
 
 def extract_row(
@@ -88,18 +101,8 @@ ANSWER_SETUP = {
 
 @pytest.fixture(scope="module")
 def answer_scan() -> Iterator[ModuleType]:
-    # Imports the shared helpers as siblings, as it does when run from its folder.
-    sys.path.insert(0, str(ANSWER_SCRIPT.parent))
-    try:
-        spec = importlib.util.spec_from_file_location("answer_scan", ANSWER_SCRIPT)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+    with load_script(ANSWER_SCRIPT, "answer_scan", ANSWER_SIBLINGS) as module:
         yield module
-    finally:
-        sys.path.remove(str(ANSWER_SCRIPT.parent))
-        for name in ANSWER_SIBLINGS:
-            sys.modules.pop(name, None)
 
 
 def answer_scan_row(provider: str, question: str, grade: str | None, **extra: Any) -> dict[str, Any]:
@@ -124,18 +127,8 @@ def answer_scan_row(provider: str, question: str, grade: str | None, **extra: An
 
 @pytest.fixture(scope="module")
 def frozen() -> Iterator[ModuleType]:
-    # Imports the combine keys and its checks as siblings, as it does when run from its folder.
-    sys.path.insert(0, str(FROZEN_SCRIPT.parent))
-    try:
-        spec = importlib.util.spec_from_file_location("frozen_results", FROZEN_SCRIPT)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+    with load_script(FROZEN_SCRIPT, "frozen_results", FROZEN_SIBLINGS) as module:
         yield module
-    finally:
-        sys.path.remove(str(FROZEN_SCRIPT.parent))
-        for name in FROZEN_SIBLINGS:
-            sys.modules.pop(name, None)
 
 
 @pytest.fixture(scope="module")
@@ -172,3 +165,113 @@ def one_frozen_set(frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, runs: li
     """``FROZEN_SETS`` as the one search set ``tiny``, made of the scan folders ``runs``."""
     sets = {"tiny": {"questions": "simpleqa", "method": "search", "runs": runs}}
     monkeypatch.setattr(frozen, "FROZEN_SETS", sets)
+
+
+ROUTE_EVAL_SCRIPT = EXTRACT_SCRIPT.with_name("route_eval.py")
+ROUTE_EVAL_SIBLINGS = (
+    "_common",
+    "_report_tables",
+    "frozen",
+    "_frozen_checks",
+    "_frozen_mixed",
+    "_tools_effort_plan",
+    "route_eval_sets",
+    "route_eval_rank",
+    "route_eval_routers",
+    "route_eval_report",
+)
+"""What route-eval imports from its folder, under plain names, so they are forgotten once it is."""
+
+
+@pytest.fixture(scope="module")
+def route_eval() -> Iterator[ModuleType]:
+    with load_script(ROUTE_EVAL_SCRIPT, "route_eval_under_test", ROUTE_EVAL_SIBLINGS) as module:
+        yield module
+
+
+@pytest.fixture(scope="module")
+def route_eval_rank(route_eval: ModuleType) -> ModuleType:
+    """The ranking, as route-eval imported it."""
+    return sys.modules["route_eval_rank"]
+
+
+@pytest.fixture(scope="module")
+def route_eval_report(route_eval: ModuleType) -> ModuleType:
+    """The report, as route-eval imported it."""
+    return sys.modules["route_eval_report"]
+
+
+def route_row(provider: str, grade: str | None, latency: float = 1.0, cost: float | None = None, **extra: Any) -> dict:
+    """One frozen row of the set ``tiny``: ``qid``, ``method`` and ``error`` default to ``q``, search and none."""
+    return {
+        "set": "tiny",
+        "question_id": extra.get("qid", "q"),
+        "provider": provider,
+        "method": extra.get("method", "search"),
+        "mode": "default",
+        "grade": grade,
+        "latency_s": latency,
+        "cost_usd": cost,
+        "error": extra.get("error"),
+    }
+
+
+def route_question(module: ModuleType, *rows: dict[str, Any], prompt: str | None = None) -> Any:
+    """A question made of ``rows``, built with ``module``'s ``Question``."""
+    return module.Question(rows[0]["question_id"], prompt, {r["provider"]: r for r in rows})
+
+
+def route_stats(accuracy: float, cost: float | None, latency: float = 1.0) -> dict[str, Any]:
+    """What the ranking reads of one backend."""
+    return {"accuracy": accuracy, "cost_usd": cost, "latency_p50": latency}
+
+
+SCAN_SCRIPT = EXTRACT_SCRIPT.with_name("run.py")
+SCAN_SIBLINGS = (
+    "_common",
+    "_questions",
+    "_report_tables",
+    "_recommended",
+    "route_eval_sets",
+    "route_eval_rank",
+    "frozen",
+    "_frozen_checks",
+    "_frozen_mixed",
+    "_tools_effort_plan",
+)
+"""What the search scan imports from its folder, under plain names, so they are forgotten once it is."""
+
+
+@pytest.fixture(scope="module")
+def scan() -> Iterator[ModuleType]:
+    # Loaded under its own name: the agent benchmark's script is also called run.py.
+    with load_script(SCAN_SCRIPT, "provider_scan", SCAN_SIBLINGS) as module:
+        yield module
+
+
+def scan_row(provider: str, question: str, grade: str | None, topic: str = "Science", **extra: Any) -> dict[str, Any]:
+    """One backend's graded search on one question, as ``rows.jsonl`` holds it; ``grade=None`` is a failed search."""
+    failed = grade is None
+    return {
+        "provider": provider,
+        "question": question,
+        "target": "a",
+        "latency": 1.0,
+        "answer": None if failed else "a",
+        "grade": grade,
+        "error": "HTTP 402" if failed else None,
+        "failed_at": "search" if failed else None,
+        "topic": topic,
+        "answer_type": "Date",
+        **extra,
+    }
+
+
+SCAN_SETUP = {
+    "limit": 12,
+    "seed": 0,
+    "max_results": 5,
+    "judge": "openai:gpt-4o",
+    "started": "2026-09-30T00:00:00+00:00",
+}
+"""A search scan's ``run.json``, minus the backends, which each test names."""
