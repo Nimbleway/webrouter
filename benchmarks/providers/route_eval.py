@@ -39,7 +39,7 @@ from typing import Any
 from _common import _pct, _wilson
 from frozen import FROZEN_DIR
 from route_eval_rank import KEYLESS as KEYLESS
-from route_eval_rank import SERVED_ERRORS, backend_stats, cost_of, noise_floor, recommended
+from route_eval_rank import backend_stats, cost_of, is_served, noise_floor, recommended
 from route_eval_rank import rank_backends as rank_backends
 from route_eval_report import markdown
 from route_eval_routers import ALWAYS, ORACLE, STATIC, Router, load_router, static_router
@@ -131,7 +131,7 @@ def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
     for i, provider in enumerate(ranked):
         row = q.rows[provider]
         latency = None if latency is None or row["latency_s"] is None else latency + row["latency_s"]
-        if row["error"] is None or row["error"] in SERVED_ERRORS:
+        if is_served(row):
             price = cost_of(row)
             total = None if price is None else cost + price
             fallback = router_failed or i > 0

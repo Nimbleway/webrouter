@@ -8,7 +8,7 @@ a sibling, by name, as ``_common`` is.
 from __future__ import annotations
 
 import statistics
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -57,9 +57,7 @@ def _within_floor(gap: float, noise_floor: float) -> bool:
     return gap <= noise_floor + 1e-12
 
 
-def rank_backends(
-    stats: Mapping[str, Mapping[str, Any]], noise_floor: float, keyless: Iterable[str] = KEYLESS
-) -> list[str]:
+def rank_backends(stats: Mapping[str, Mapping[str, Any]], noise_floor: float) -> list[str]:
     """Backends best first: by accuracy, and within the noise floor by known cost, then latency, then name.
 
     ``stats`` maps a backend to its ``accuracy`` (correct out of every
@@ -70,7 +68,6 @@ def rank_backends(
     not tell two backends apart, so cost decides. An unknown or $0 cost sorts
     after every known one. The keyless backends go last, whatever they score.
     """
-    keyless = set(keyless)
     remaining = sorted(stats, key=lambda p: (-stats[p]["accuracy"], p))
     order: list[str] = []
     while remaining:
@@ -79,12 +76,10 @@ def rank_backends(
         tier.sort(key=lambda p: (_cost_key(stats[p]["cost_usd"]), _latency_key(stats[p]["latency_p50"]), p))
         order += tier
         remaining = [p for p in remaining if p not in tier]
-    return [p for p in order if p not in keyless] + [p for p in order if p in keyless]
+    return [p for p in order if p not in KEYLESS] + [p for p in order if p in KEYLESS]
 
 
-def ranked_with_best(
-    stats: Mapping[str, Mapping[str, Any]], noise_floor: float, keyless: Iterable[str] = KEYLESS
-) -> tuple[list[str], frozenset[str]]:
+def ranked_with_best(stats: Mapping[str, Mapping[str, Any]], noise_floor: float) -> tuple[list[str], frozenset[str]]:
     """:func:`rank_backends`, and the backends within ``noise_floor`` of the most accurate one.
 
     Those are the best, as far as the floor tells, wherever the cost tie-break
@@ -94,10 +89,10 @@ def ranked_with_best(
         return [], frozenset()
     top = max(s["accuracy"] for s in stats.values())
     best = frozenset(p for p, s in stats.items() if _within_floor(top - s["accuracy"], noise_floor))
-    return rank_backends(stats, noise_floor, keyless), best
+    return rank_backends(stats, noise_floor), best
 
 
-def _served(row: Mapping[str, Any]) -> bool:
+def is_served(row: Mapping[str, Any]) -> bool:
     return row["error"] is None or row["error"] in SERVED_ERRORS
 
 
@@ -121,8 +116,8 @@ def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
             rows_by.setdefault(provider, []).append(row)
     out = {}
     for provider, rows in sorted(rows_by.items()):
-        served = [r for r in rows if _served(r)]
-        graded = [{"grade": _grade(r) if _served(r) else None, "latency": r["latency_s"]} for r in rows]
+        served = [r for r in rows if is_served(r)]
+        graded = [{"grade": _grade(r) if is_served(r) else None, "latency": r["latency_s"]} for r in rows]
         known = [r["latency_s"] for r in served if r["latency_s"] is not None]
         stats = grade_stats(graded, known)
         costs = [cost_of(r) for r in served]
