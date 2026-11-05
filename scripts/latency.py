@@ -5,7 +5,9 @@ against its ``SHA256SUMS`` first. A row counts when the backend answered
 (``error`` is null); on a failed row ``latency_s`` is the time to the failure.
 Every frozen set that covers a (provider, method, mode) is pooled -- one run
 drifts too much to stand alone -- and the row records how many calls that is
-and which runs they came from. Search and answer only; every other row's
+and which runs they came from. Two kinds of set are left out, so no question
+counts twice: a rerun of an earlier set's questions by the same method, and a
+mixed set, whose answer rows are copies of another set's. Search and answer only; every other row's
 latency is left null, unknown.
 
     make latency                                 # rewrite the latency fields
@@ -84,6 +86,26 @@ def run_index(manifest: Mapping[str, Any], split_setup: Any) -> dict[tuple[str, 
     return index
 
 
+def pooled_sets(sets: Mapping[str, Mapping[str, Any]], *, mixed: str) -> list[str]:
+    """The manifest's sets ``make latency`` pools, in order.
+
+    A set asking the same questions (``answers_sha256``) by the same method as
+    one listed before it is a rerun, such as ``sealqa-hard-254-twin`` on two
+    backends: pooling it would count those questions twice for those backends
+    only. A ``mixed`` set calls several methods, and copies its answer rows
+    from another set.
+    """
+    seen: set[tuple[str, str]] = set()
+    pooled = []
+    for name, entry in sets.items():
+        questions = (entry["answers_sha256"], entry["method"])
+        if entry["method"] == mixed or questions in seen:
+            continue
+        seen.add(questions)
+        pooled.append(name)
+    return pooled
+
+
 def measure(
     rows: Iterable[Mapping[str, Any]],
     runs: Mapping[tuple[str, str, str], tuple[str, date]],
@@ -123,12 +145,11 @@ def measure(
 
 
 def frozen_latency() -> tuple[dict[Key, dict[str, Any]], set[tuple[str, str, str]]]:
-    """The latency fields every frozen set supports, after checking the files against ``SHA256SUMS``."""
+    """The latency fields the pooled frozen sets support, after checking the files against ``SHA256SUMS``."""
     frozen, common = _benchmarks()
     frozen.verify(frozen.FROZEN_DIR)
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
-    # A mixed set is not one method's scan, and its answer rows are copies of another set's.
-    manifest = {"sets": {name: e for name, e in manifest["sets"].items() if e["method"] != frozen.MIXED}}
+    manifest = {"sets": {name: manifest["sets"][name] for name in pooled_sets(manifest["sets"], mixed=frozen.MIXED)}}
     rows = [row for name in manifest["sets"] for row in frozen.read_rows(frozen.FROZEN_DIR / (name + frozen.SUFFIX))]
     return measure(
         rows,

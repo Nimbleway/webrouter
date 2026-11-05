@@ -1973,7 +1973,8 @@ prices.estimate_latency("tavily", "extract")  # None: not measured
 It is `None` for every method and mode no benchmark measured -- extract,
 research, browse and the modes the scans did not run -- never a guess. A
 benchmark latency drifts from run to run, which is why each row pools every
-run that covers it. `make latency` rewrites the fields from the frozen
+run that covers it, leaving out reruns of the same questions so none counts
+twice. `make latency` rewrites the fields from the frozen
 results, and a test fails while they disagree.
 
 ### Classifying a query before running it (spike)

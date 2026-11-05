@@ -178,7 +178,8 @@ def test_estimate_latency_reads_the_row() -> None:
     assert 0 < p50 <= p90
     row = prices.price("webiq", "search")
     assert row is not None and row.latency_n is not None and row.latency_n > 0
-    assert row.latency_runs is not None and "sealqa-hard-254-twin" in row.latency_runs
+    # The SealQA rerun repeats the same questions on two backends only, so it is not pooled.
+    assert row.latency_runs == ("sealqa-hard-254", "simpleqa-300-v2")
     # The call that sets no mode reads the default row's latency.
     assert prices.estimate_latency("nimble", "search") == prices.estimate_latency("nimble", "search", "fast")
 
@@ -279,6 +280,17 @@ def test_a_whole_latency_is_accepted() -> None:
         _row(latency_p50_s=1.0, latency_p90_s=2.0, latency_n=5, latency_runs=["r"], latency_measured="2026-10-01")
     )
     assert row.latency_runs == ("r",)
+
+
+def test_a_rerun_of_the_same_questions_and_a_mixed_set_are_not_pooled() -> None:
+    sets = {
+        "sealqa": {"answers_sha256": "s", "method": "search"},
+        "sealqa-twin": {"answers_sha256": "s", "method": "search"},
+        "simpleqa": {"answers_sha256": "q", "method": "search"},
+        "answer-simpleqa": {"answers_sha256": "q", "method": "answer"},
+        "tools-effort": {"answers_sha256": "t", "method": "mixed"},
+    }
+    assert latency.pooled_sets(sets, mixed="mixed") == ["sealqa", "simpleqa", "answer-simpleqa"]
 
 
 def test_measure_reports_an_unmatched_setup_whose_every_call_failed() -> None:

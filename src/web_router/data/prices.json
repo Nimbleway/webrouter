@@ -32,12 +32,11 @@
       "setup": "`nimble`, `nimble@fast`",
       "setting": "`search_depth=standard` (the default)",
       "does": "~2K characters per result",
-      "latency_p50_s": 0.865,
-      "latency_p90_s": 1.246,
-      "latency_n": 808,
+      "latency_p50_s": 0.987,
+      "latency_p90_s": 1.331,
+      "latency_n": 554,
       "latency_runs": [
         "sealqa-hard-254",
-        "sealqa-hard-254-twin",
         "simpleqa-300-v2"
       ],
       "latency_measured": "2026-10-07"
@@ -691,12 +690,11 @@
       "setup": "`webiq`",
       "setting": "`contentFormat=passage` (sent on every search)",
       "does": "The passages of each page that answer the query",
-      "latency_p50_s": 0.185,
-      "latency_p90_s": 0.336,
-      "latency_n": 808,
+      "latency_p50_s": 0.18,
+      "latency_p90_s": 0.339,
+      "latency_n": 554,
       "latency_runs": [
         "sealqa-hard-254",
-        "sealqa-hard-254-twin",
         "simpleqa-300-v2"
       ],
       "latency_measured": "2026-10-07"
