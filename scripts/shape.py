@@ -34,10 +34,6 @@ def source_files(root: Path = ROOT) -> list[Path]:
     return sorted(files)
 
 
-def file_lines(path: Path) -> int:
-    return len(path.read_text(encoding="utf-8").splitlines())
-
-
 def function_lines(tree: ast.AST) -> Iterator[tuple[str, int]]:
     """Each function's qualified name and its length, ``def`` line to the end of its body, docstring included.
 
@@ -66,7 +62,7 @@ def measure(root: Path = ROOT) -> tuple[dict[str, int], dict[str, int]]:
     functions: dict[str, int] = {}
     for path in source_files(root):
         rel = path.relative_to(root).as_posix()
-        files[rel] = file_lines(path)
+        files[rel] = len(path.read_text(encoding="utf-8").splitlines())
         for qualname, lines in function_lines(ast.parse(path.read_text(encoding="utf-8"), filename=rel)):
             key = f"{rel}::{qualname}"
             functions[key] = max(lines, functions.get(key, 0))
