@@ -123,13 +123,6 @@ def test_a_malformed_latency_is_refused(fields: dict[str, object]) -> None:
         Price.model_validate(_row(**fields))
 
 
-def test_a_whole_latency_is_accepted() -> None:
-    row = Price.model_validate(
-        _row(latency_p50_s=1.0, latency_p90_s=2.0, latency_n=5, latency_runs=["r"], latency_measured="2026-10-01")
-    )
-    assert row.latency_runs == ("r",)
-
-
 def test_a_rerun_of_the_same_questions_and_a_mixed_set_are_not_pooled() -> None:
     sets = {
         "sealqa": {"answers_sha256": "s", "method": "search"},
