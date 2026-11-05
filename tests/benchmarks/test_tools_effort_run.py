@@ -190,6 +190,20 @@ def test_a_failing_row_stops_new_rows_and_is_raised_once_the_rest_finish(
     assert budget.reserved == pytest.approx(0.0)
 
 
+def test_a_failed_backend_call_keeps_the_time_to_the_failure(
+    plan_module: ModuleType, budget_module: ModuleType, runner_module: ModuleType
+) -> None:
+    class DownRouter(FakeRouter):
+        async def research(self, query: str, *, provider: str, effort: str, timeout: float) -> ResearchResponse:
+            raise RuntimeError("HTTP 503")
+
+    task = plan_module.Task(_items(plan_module)[0], "research", "parallel", "low")
+    ticket = budget_module.Ticket(budget_module.Budget(10.0), task)
+    row = asyncio.run(runner_module.Runner(DownRouter(), FakeJudge()).row(task, ticket))
+    assert row["error"] and row["grade"] is None
+    assert row["latency"] is not None and row["latency"] >= 0
+
+
 def test_a_failed_page_read_counts_in_the_rows_cost_and_time(
     plan_module: ModuleType, budget_module: ModuleType, runner_module: ModuleType
 ) -> None:

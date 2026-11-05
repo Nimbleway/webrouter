@@ -274,7 +274,9 @@ A research run may take `--research-timeout` seconds (default 1200, twice
 The frozen run's Perplexity research columns (`low` and `medium`) are not
 comparable yet: most of their rows failed during the run (56 and 41 of 60),
 and Brave's answer column, 22 of 60 failed, rests on fewer questions than the
-rest. A later run can fill them.
+rest. A later run can fill them. The run that froze `tools-effort-60` kept no
+latency on its failed rows (`latency_s` is `null` there); the runner now keeps
+the time to the failure.
 
 ## Frozen results
 

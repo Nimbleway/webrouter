@@ -198,6 +198,7 @@ class Runner:
             "leaked": False,
             "cost_usd": None,
         }
+        started = time.perf_counter()
         try:
             pages = await getattr(self, "_" + task.path.replace("+", "_"))(task, ticket, row)
         except BudgetExceeded as exc:
@@ -205,6 +206,8 @@ class Runner:
                 raise  # nothing paid yet: asked again on resume
             return self._refused(row, ticket, exc)
         except Exception as exc:  # whatever a backend raises is this row's failure
+            if row["latency"] is None:  # the time to the failure, as the frozen schema says
+                row["latency"] = time.perf_counter() - started
             row.update(error=_describe(exc), failed_at=row["failed_at"] or task.path)
             pages = None
         if row["error"] is None and not row["leaked"]:
