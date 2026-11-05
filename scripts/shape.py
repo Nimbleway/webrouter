@@ -95,8 +95,12 @@ def main() -> int:
     """Rewrite the baseline, refusing to add an entry or grow one."""
     current = violators()
     if not BASELINE.exists():
-        BASELINE.write_text(render(current), encoding="utf-8")
-        return 0
+        # Recreating it would admit every oversized file and function at once: restore it from git instead.
+        print(
+            f"{BASELINE.relative_to(ROOT)} is missing; restore it with `git checkout -- {BASELINE.relative_to(ROOT)}`.",
+            file=sys.stderr,
+        )
+        return 1
     old = load_baseline()
     grown = [
         f"{key} ({lines} lines)"

@@ -112,3 +112,11 @@ def test_the_rules_cover_the_library_scripts_and_benchmarks_but_not_tests() -> N
     covered = {p.relative_to(shape.ROOT).parts[0] for p in shape.source_files()}
     assert covered == {"src", "scripts", "benchmarks"}
     assert Path(shape.__file__).resolve() in shape.source_files()
+
+
+def test_a_missing_baseline_is_never_recreated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    missing = tmp_path / "shape_baseline.json"
+    monkeypatch.setattr(shape, "BASELINE", missing)
+    monkeypatch.setattr(shape, "ROOT", tmp_path)
+    assert shape.main() == 1, "recreating it would admit every oversized file and function"
+    assert not missing.exists()
