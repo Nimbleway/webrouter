@@ -237,7 +237,7 @@ def evaluate_set(
     names = list(dict.fromkeys((STATIC, ORACLE, *specs)))
     routers = {spec: _score_router(spec, method, name, train, test, candidates) for spec in names}
     _add_regret(routers, floor)
-    stats = backend_stats(test)
+    stats = backend_stats(questions)  # nothing is fit to the order, so it ranks on every question
     return {
         "set": name,
         "method": method,

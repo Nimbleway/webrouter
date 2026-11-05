@@ -178,3 +178,12 @@ def test_main_writes_the_json_numbers(
     assert [s["set"] for s in numbers["sets"]] == ["tiny"]
     assert list(numbers["sets"][0]["routers"]) == ["static", "oracle", "always:nimble"]
     assert "## `tiny` (search)" in capsys.readouterr().out
+
+
+def test_the_recommended_order_ranks_on_every_question_not_the_held_out_half(
+    route_eval: ModuleType, tmp_path: Path
+) -> None:
+    _tiny_set(tmp_path)
+    summary = route_eval.evaluate_set("tiny", [], floor=0.05, folder=tmp_path)
+    assert {b["questions"] for b in summary["backends"].values()} == {20}, "nothing is fit, so no row is held back"
+    assert summary["recommended_order"] == ["nimble", "perplexity"], "15 of 20 right against 10 of 20"

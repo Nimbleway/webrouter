@@ -413,10 +413,10 @@ twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points). A
 held-out margin over the static order no larger than that is *no gain*; it is
 the only twin run, so it serves every set.
 
-Each set ends with the **recommended order** from the held-out questions: by
-correct out of every question; within the noise floor of the best not yet
-placed, the cheaper backend at known cost first, then the faster, then the
-name. An unknown or $0 cost never moves a backend up, and the keyless tier
+Each set ends with the **recommended order**, ranked on every question of the
+set, since nothing is fit to it: by correct out of every question; within the
+noise floor of the best not yet placed, the cheaper backend at known cost
+first, then the faster, then the name. An unknown or $0 cost never moves a backend up, and the keyless tier
 stays last. `run.py`'s recommended order calls the same ranking. AIQ and the
 cost and latency curves wait for the first real router. `--json PATH` writes
 the numbers as well.

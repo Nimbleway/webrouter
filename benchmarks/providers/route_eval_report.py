@@ -70,8 +70,8 @@ def _router_table(s: Mapping[str, Any]) -> list[str]:
 
 def _order_table(s: Mapping[str, Any]) -> list[str]:
     out = [
-        "### Recommended order, from the held-out questions\n\n"
-        "By correct out of every held-out question; within the noise floor of the best not yet placed, the "
+        "### Recommended order, from every question\n\n"
+        "By correct out of every question in the set; within the noise floor of the best not yet placed, the "
         "cheaper backend first (an unknown or $0 cost never moves one up), then the faster, then the name. "
         "Keyless backends go last. A backend that served nothing is left out.\n",
         "| Order | Backend | Correct of all questions | Cost per call | p50 latency | Failed |",
