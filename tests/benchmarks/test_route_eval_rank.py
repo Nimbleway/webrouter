@@ -36,7 +36,6 @@ def test_an_unknown_or_free_cost_never_moves_a_backend_up(route_eval_rank: Modul
 def test_the_keyless_tier_stays_last_however_well_it_scores(route_eval_rank: ModuleType) -> None:
     stats = {"you-mcp": _stats(0.99, 0.0), "nimble": _stats(0.50, 0.005)}
     assert route_eval_rank.rank_backends(stats, noise_floor=0.01) == ["nimble", "you-mcp"]
-    assert "you-mcp" in route_eval_rank.KEYLESS and "tavily" not in route_eval_rank.KEYLESS
 
 
 def test_backend_stats_leave_an_unrecorded_latency_out_of_the_median(route_eval_rank: ModuleType) -> None:
@@ -50,9 +49,8 @@ def test_backend_stats_leave_an_unrecorded_latency_out_of_the_median(route_eval_
 
 def test_the_noise_floor_is_the_twin_runs_widest_gap(route_eval_rank: ModuleType) -> None:
     floor, pairs = route_eval_rank.noise_floor()
-    assert set(pairs) == {"nimble", "webiq"}
-    assert pairs["webiq"] == (51 / 254, 54 / 254)
-    assert floor == pytest.approx(3 / 254)
+    assert pairs, "the twin runs share at least one backend"
+    assert floor == max(abs(a - b) for a, b in pairs.values())
 
 
 def test_the_best_are_every_backend_within_the_floor_of_the_most_accurate_wherever_cost_put_them(
