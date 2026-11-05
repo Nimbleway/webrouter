@@ -173,6 +173,8 @@ ROUTE_EVAL_SIBLINGS = (
     "_report_tables",
     "frozen",
     "_frozen_checks",
+    "_frozen_mixed",
+    "_tools_effort_plan",
     "route_eval_sets",
     "route_eval_rank",
     "route_eval_routers",
@@ -234,6 +236,8 @@ SCAN_SIBLINGS = (
     "route_eval_rank",
     "frozen",
     "_frozen_checks",
+    "_frozen_mixed",
+    "_tools_effort_plan",
 )
 """What the search scan imports from its folder, under plain names, so they are forgotten once it is."""
 

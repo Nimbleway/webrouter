@@ -13,8 +13,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from _frozen_checks import JUDGE_ERROR, LEAKED_ERROR
 from _report_tables import grade_stats
-from frozen import FROZEN_DIR, JUDGE_ERROR, LEAKED_ERROR
+from frozen import FROZEN_DIR
 from route_eval_sets import TWIN_SETS, Question, load_set
 
 from web_router import prices
