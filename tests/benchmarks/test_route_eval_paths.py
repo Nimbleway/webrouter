@@ -18,7 +18,7 @@ def _path_row(qid: str, path: str, grade: str | None, **extra: Any) -> dict[str,
 
 
 def _perplexity_low(qid: str, i: int) -> dict[str, Any]:
-    """Rate-limited on the first 15 questions, timed out on two, right on the last three."""
+    """A `rate_limit` error on the first 15 questions, timed out on two, right on the last three."""
     if i < 15:
         return _path_row(qid, "research:perplexity:low", None, latency=None, error="rate_limit")
     if i < 17:
@@ -90,7 +90,7 @@ def test_the_oracle_takes_the_cheapest_right_path(route_eval: ModuleType, tmp_pa
     assert route_eval.oracle_router(route_eval.MIXED)(questions[-1])[0] == "research:perplexity:low", "cheapest"
 
 
-def test_a_path_failed_on_the_account_is_passed_over_in_the_replay_as_any_failed_row(
+def test_a_path_failed_on_a_rate_limit_is_passed_over_in_the_replay_as_any_failed_row(
     route_eval: ModuleType, tmp_path: Path
 ) -> None:
     _mixed_set(tmp_path)
@@ -147,7 +147,7 @@ def test_the_report_ends_with_research_by_effort(route_eval: ModuleType, tmp_pat
         ("parallel", "low", 16, 20, 0, 0),
         ("parallel", "high", 20, 20, 0, 0),
         ("perplexity", "low", 3, 5, 2, 15),
-    ], "the rate-limited rows are left out of the count and shown apart; the timeouts are misses"
+    ], "rows failed on a rate-limit error are left out of the count and shown apart; the timeouts are misses"
     report = route_eval.markdown([summary], 0.05, {})
     assert "| Order | Path |" in report and "measured on search rows" in report
     assert report.index("Recommended order") < report.index("Research by effort")

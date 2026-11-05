@@ -1,10 +1,8 @@
 """Exa provider tests.
 
 The response mappings here are derived from Exa's documentation, not from a live
-call -- the key available during development was out of credits (HTTP 402), for
-search and for contents alike. The integration tests below are the checks that
-matter; run them once a funded key is available. See CONTRIBUTING.md on
-verifying against the live API.
+call, for search and for contents alike. The integration tests below are the
+checks that matter. See CONTRIBUTING.md on verifying against the live API.
 """
 
 from __future__ import annotations

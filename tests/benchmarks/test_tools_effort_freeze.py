@@ -80,7 +80,7 @@ def test_join_finds_a_mixed_sets_questions_at_their_rows_in_the_public_sets(
     assert index[good["question_id"]].metadata == {"group": "url-given", "source": "frames", "urls": ["https://a.org"]}
 
 
-def test_the_tool_and_effort_set_holds_every_planned_row_and_its_rate_limits_are_classed(
+def test_the_tool_and_effort_set_holds_every_planned_row_and_its_failures_are_classed(
     frozen: ModuleType, plan_module: ModuleType
 ) -> None:
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))

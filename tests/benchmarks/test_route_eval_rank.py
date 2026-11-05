@@ -78,7 +78,7 @@ def test_backend_stats_count_an_ungraded_row_as_served_as_the_replay_does(
     assert stats["latency_p50"] == 2.0 and stats["cost_usd"] == pytest.approx(0.008), "an answered call is billed"
 
 
-def test_a_row_failed_on_the_account_is_left_out_not_counted_a_miss(route_eval_rank: ModuleType) -> None:
+def test_a_row_failed_on_a_rate_limit_or_quota_is_left_out_not_counted_a_miss(route_eval_rank: ModuleType) -> None:
     questions = [
         _question(route_eval_rank, _row("you-mcp", None, error="rate_limit", qid="q0")),
         _question(route_eval_rank, _row("you-mcp", None, error="quota", qid="q1")),

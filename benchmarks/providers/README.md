@@ -62,7 +62,7 @@ reads; change a price there and run `make prices`.
 
 ## Adding backends to a finished scan
 
-A backend whose account was out of credit, or one added later, can run on the
+A backend that failed during a run, or one added later, can run on the
 same questions and be merged in, without paying for the others again:
 
 ```bash
@@ -280,9 +280,8 @@ A research run may take `--research-timeout` seconds (default 1200, twice
 `--concurrency` rows (default 6) run at once. Experimental until 1.0.
 
 The frozen run's Perplexity research columns (`low` and `medium`) are not
-comparable yet: most of their rows failed during the run (56 and 41 of 60),
-and Brave's answer column, 22 of 60 failed, rests on fewer questions than the
-rest. A later run can fill them. The run that froze `tools-effort-60` kept no
+comparable yet: most of their rows failed during the run, and Brave's answer
+column, where some rows failed too, rests on fewer questions than the rest. A later run can fill them. The run that froze `tools-effort-60` kept no
 latency on its failed rows (`latency_s` is `null` there); the runner now keeps
 the time to the failure.
 
@@ -324,7 +323,7 @@ dataset text. Experimental until 1.0: the schema may change, and
 | `sealqa-hard-254-twin` | 254 | 508 | The same questions again on two backends: the run-to-run noise floor |
 | `simpleqa-300-v2` | 300 | 3600 | 300 SimpleQA questions (seed 0), ten backends, with Keenable and DeepSeek added later on the same questions |
 | `answer-simpleqa-300` | 300 | 1500 | The same 300 SimpleQA questions through `answer()`, five backends |
-| `tools-effort-60` | 60 | 1150 | [The tool and effort set](#the-tool-and-effort-set): 60 questions through search then read, extract, `answer()` and `research()` at each effort; the easy questions' answer rows are copied from `answer-simpleqa-300`. Most Perplexity research rows failed during the run (56 of 60 `low`, 41 of 60 `medium`), and 22 of 60 Brave answers; `failed_rows` in the manifest has every count, and route-eval leaves them out |
+| `tools-effort-60` | 60 | 1150 | [The tool and effort set](#the-tool-and-effort-set): 60 questions through search then read, extract, `answer()` and `research()` at each effort; the easy questions' answer rows are copied from `answer-simpleqa-300`. Most Perplexity research rows and some Brave answers failed during the run; `failed_rows` in the manifest has every count |
 
 Each `frozen/<set>.jsonl.gz` is gzipped JSON lines, sorted by `question_id`,
 then provider and mode:
@@ -513,8 +512,7 @@ uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort
 - A failed row counts as on any set: in the replay it is passed over. In the
   recommended order and the effort table, a row that failed during the run
   with `rate_limit` or `quota` is left out of the count and shown apart, as
-  above: `answer:brave` 22, `research:perplexity:low` 56 and
-  `research:perplexity:medium` 41 of 60, so those paths rest on few questions.
+  above, so a path with many such rows rests on few questions.
 - **Research by effort** closes the set's report: each research backend at
   each effort, correct out of the questions counted, mean cost, median latency
   and the rows left out -- the evidence for mapping a budget to an effort.

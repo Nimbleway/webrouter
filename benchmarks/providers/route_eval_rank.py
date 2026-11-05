@@ -29,7 +29,7 @@ UNGRADED = "ungraded"
 KEYLESS = frozenset(name for name, options in AUTO_KEYLESS if not options.get("allow_keyless"))
 """Backends that are only ever keyless (``you-mcp``): a ranking keeps them last, as ``auto`` does."""
 ACCOUNT_ERRORS = frozenset({"rate_limit", "quota"})
-"""Error classes that say the scan's account ran out, not that the backend failed the question: left out of accuracy."""
+"""Error classes of a call that never reached the question (a rate-limit or quota error): left out of accuracy."""
 RANKING_RULE = (
     "Backends best first by accuracy, correct out of every question, a failed row counting as a miss. Backends "
     "whose accuracy is within the noise floor of the most accurate one not yet placed form one tier, ordered "
@@ -67,7 +67,7 @@ def rank_backends(stats: Mapping[str, Mapping[str, Any]], noise_floor: float) ->
     """Backends best first: by accuracy, and within the noise floor by known cost, then latency, then name.
 
     ``stats`` maps a backend to its ``accuracy`` (correct out of every
-    question, a failed row a miss, an account failure left out), ``cost_usd`` (``None`` when
+    question, a failed row a miss, a rate-limit or quota failure left out), ``cost_usd`` (``None`` when
     unknown) and ``latency_p50``. Backends whose accuracy is within
     ``noise_floor`` of the most accurate one not yet placed form one tier,
     ordered cheapest first: an accuracy gap smaller than a rerun's spread does
@@ -111,7 +111,7 @@ def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
     """Each backend's numbers over ``questions``, failed rows skipped for grades and latency.
 
     ``accuracy`` is correct out of every question, a failed row a miss, but one
-    failed on the scan's account (:data:`ACCOUNT_ERRORS`) left out and counted
+    failed on a rate-limit or quota error (:data:`ACCOUNT_ERRORS`) left out and counted
     in ``excluded``; ``cost_usd`` is the mean
     cost of the rows it served, ``None`` if any is unknown. A row the judge did
     not grade, or that leaked the set's own pages, was served, as the replay
