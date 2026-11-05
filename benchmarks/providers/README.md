@@ -496,8 +496,6 @@ are the same as above.
 
 ```bash
 uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60
-uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60 \
-    --router always:research:nimble:low --router always:answer:exa
 ```
 
 - **Static** is what a caller with no router does today: `search` through
@@ -507,8 +505,8 @@ uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort
   research lowest effort first. The cheapest path would be a weaker
   yardstick: no caller gets it by default.
 - **Oracle** is the path that got each question right, cheapest, then fastest.
-- The example routers are `always:research:parallel:low` and
-  `always:answer:perplexity`.
+- The example routers, scored when no `--router` is given, are
+  `always:research:parallel:low` and `always:answer:perplexity`.
 - A failed row counts as on any set: in the replay it is passed over. In the
   recommended order and the effort table, a row that failed during the run
   with `rate_limit` or `quota` is left out of the count and shown apart, as
