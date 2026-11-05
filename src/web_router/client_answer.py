@@ -31,7 +31,7 @@ class _AnswerLookup:
 
         The answer counterpart of :meth:`~web_router.WebRouter.get_provider`, with
         the same ownership rule. With no name it uses the router's default when
-        that serves answers -- ``auto``, the configured backends cheapest first,
+        that serves answers -- ``auto``, the configured backends in ranked order,
         included -- else the one configured answer backend (a key in
         ``provider_config`` counts), and otherwise raises
         :class:`~web_router.ProviderNotFoundError`.
@@ -74,7 +74,7 @@ class SyncAnswer(_AnswerLookup):
 
         With ``provider`` unset the router's default serves the call when it is
         an answer backend. On the usual default, ``auto``, that is the answer
-        backends you hold a key for, cheapest first: one that fails or answers
+        backends you hold a key for, in ranked order: one that fails or answers
         with nothing is passed over for the next, and each one tried bills.
         """
         request = self._answer_request(

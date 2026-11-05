@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from web_router import AsyncWebRouter, WebRouter
+from web_router._chains import chains
 from web_router.constants import (
     AUTO_APPENDED,
     AUTO_CLIENT_OPTION,
@@ -342,13 +343,15 @@ def test_auto_declares_exactly_what_some_member_maps() -> None:
 
 
 def test_every_search_backend_is_a_member(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Each keyed backend joins, in the order of the provider scan, ahead of the keyless tier."""
+    """Each keyed backend joins, in the order make chains generated, ranked ones ahead of the keyless tier."""
     for env_var in _EVERY_SEARCH_KEY:
         monkeypatch.setenv(env_var, "test-key")
 
     chain = [name for name, _ in AutoProvider.default_chain()]
 
-    assert chain[:3] == ["perplexity", "nimble", "linkup"]
+    generated = chains()["search"]
+    assert chain[: len(generated["preferred"])] == generated["preferred"], "the order is make chains', not a literal"
+    assert chain[-len(generated["appended"]) :] == generated["appended"]
     # Tavily and Keenable are held with a key here, so their keyless entries would only repeat the keyed request.
     keyless = [name for name, _ in AUTO_KEYLESS if name not in {*AUTO_PREFERRED, *AUTO_APPENDED}]
     assert chain == [*AUTO_PREFERRED, *keyless, *AUTO_APPENDED]

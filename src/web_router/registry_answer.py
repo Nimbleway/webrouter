@@ -87,7 +87,7 @@ def default_answer_provider(default: str, config: Mapping[str, Mapping[str, Any]
     """The answer backend an unnamed ``answer()`` call uses.
 
     The router's ``default`` when it serves answers -- ``auto`` included, which
-    tries the configured backends cheapest first and raises when there are
+    tries the configured backends in ranked order and raises when there are
     none -- else the one configured answer backend, a key passed in ``config``
     counting as one in the environment does. Otherwise raises
     :class:`NoAnswerProviderError`, naming the configured backends when there

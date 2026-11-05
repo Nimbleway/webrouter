@@ -76,3 +76,15 @@ def test_backend_stats_count_an_ungraded_row_as_served_as_the_replay_does(
     assert stats["served"] == 2 and stats["failed"] == 1, "the backend answered; only grading did not happen"
     assert stats["correct"] == 1 and stats["accuracy_all"] == pytest.approx(1 / 3)
     assert stats["latency_p50"] == 2.0 and stats["cost_usd"] == pytest.approx(0.008), "an answered call is billed"
+
+
+def test_a_row_failed_on_the_account_is_left_out_not_counted_a_miss(route_eval_rank: ModuleType) -> None:
+    questions = [
+        _question(route_eval_rank, _row("you-mcp", None, error="rate_limit", qid="q0")),
+        _question(route_eval_rank, _row("you-mcp", None, error="quota", qid="q1")),
+        _question(route_eval_rank, _row("you-mcp", "correct", qid="q2")),
+        _question(route_eval_rank, _row("you-mcp", None, error="http_5xx", qid="q3")),
+    ]
+    stats = route_eval_rank.backend_stats(questions)["you-mcp"]
+    assert stats["excluded"] == 2 and stats["questions"] == 2
+    assert stats["accuracy_all"] == 0.5, "the 5xx is still a miss; the rate limit and the quota are not graded"

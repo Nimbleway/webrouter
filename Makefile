@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts prices latency check build clean
+.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts prices latency chains check build clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -50,6 +50,9 @@ prices: ## Regenerate PRICING.md's price tables from src/web_router/data/prices.
 
 latency: ## Rewrite prices.json's latency fields from the frozen benchmark results
 	uv run python -m scripts.latency
+
+chains: ## Regenerate src/web_router/data/chains.json, the default auto orders, from the frozen results
+	uv run --all-extras python benchmarks/providers/chains.py
 
 cov: ## Unit tests with a coverage report
 	uv run pytest -m "not integration and not browser" --cov --cov-report=term-missing

@@ -6,21 +6,13 @@ import json
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Any
 
 import pytest
 
 from tests.benchmarks.conftest import route_row as _row
+from tests.benchmarks.conftest import write_frozen_set as _write_set
 
 # A set end to end
-
-
-def _write_set(folder: Path, name: str, rows: list[dict[str, Any]]) -> None:
-    import gzip
-
-    folder.mkdir(parents=True, exist_ok=True)
-    body = "".join(json.dumps({**r, "set": name}) + "\n" for r in rows).encode()
-    (folder / f"{name}.jsonl.gz").write_bytes(gzip.compress(body))
 
 
 def _tiny_set(folder: Path) -> None:

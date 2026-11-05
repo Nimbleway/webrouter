@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import importlib.util
 import json
 import sys
@@ -214,6 +215,13 @@ def route_row(provider: str, grade: str | None, latency: float = 1.0, cost: floa
         "cost_usd": cost,
         "error": extra.get("error"),
     }
+
+
+def write_frozen_set(folder: Path, name: str, rows: list[dict[str, Any]]) -> None:
+    """``rows`` as the frozen set ``name`` in ``folder``, one gzipped JSON line each."""
+    folder.mkdir(parents=True, exist_ok=True)
+    body = "".join(json.dumps({**r, "set": name}) + "\n" for r in rows).encode()
+    (folder / f"{name}.jsonl.gz").write_bytes(gzip.compress(body))
 
 
 def route_question(module: ModuleType, *rows: dict[str, Any], prompt: str | None = None) -> Any:

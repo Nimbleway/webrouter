@@ -27,12 +27,15 @@ UNGRADED = "ungraded"
 """The grade :func:`backend_stats` gives a served row the judge did not grade."""
 KEYLESS = frozenset(name for name, options in AUTO_KEYLESS if not options.get("allow_keyless"))
 """Backends that are only ever keyless (``you-mcp``): a ranking keeps them last, as ``auto`` does."""
+ACCOUNT_ERRORS = frozenset({"rate_limit", "quota"})
+"""Error classes that say the scan's account ran out, not that the backend failed the question: left out of accuracy."""
 RANKING_RULE = (
     "Backends best first by accuracy, correct out of every question, a failed row counting as a miss. Backends "
     "whose accuracy is within the noise floor of the most accurate one not yet placed form one tier, ordered "
     "cheapest first, then by latency, then by name: an accuracy gap smaller than a rerun's spread does not tell "
     "two backends apart, so cost decides. An unknown or $0 cost sorts after every known one. The keyless backends "
-    "go last, whatever they score. A backend that served nothing is left out."
+    "go last, whatever they score. A backend that served nothing is left out, and so is a row that failed during "
+    "the run with a rate-limit or quota error: not counted a miss, nor in that backend's total."
 )
 """The rule :func:`rank_backends` applies, in words, for a report or a reader that prints it."""
 
@@ -62,7 +65,7 @@ def rank_backends(stats: Mapping[str, Mapping[str, Any]], noise_floor: float) ->
     """Backends best first: by accuracy, and within the noise floor by known cost, then latency, then name.
 
     ``stats`` maps a backend to its ``accuracy`` (correct out of every
-    question, a failed row counting as a miss), ``cost_usd`` (``None`` when
+    question, a failed row a miss, an account failure left out), ``cost_usd`` (``None`` when
     unknown) and ``latency_p50``. Backends whose accuracy is within
     ``noise_floor`` of the most accurate one not yet placed form one tier,
     ordered cheapest first: an accuracy gap smaller than a rerun's spread does
@@ -105,8 +108,9 @@ def _grade(row: Mapping[str, Any]) -> str:
 def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
     """Each backend's numbers over ``questions``, failed rows skipped for grades and latency.
 
-    ``accuracy`` is correct out of every question, a failed row counting as a
-    miss, as the recommended order has always ranked; ``cost_usd`` is the mean
+    ``accuracy`` is correct out of every question, a failed row a miss, but one
+    failed on the scan's account (:data:`ACCOUNT_ERRORS`) left out and counted
+    in ``excluded``; ``cost_usd`` is the mean
     cost of the rows it served, ``None`` if any is unknown. A row the judge did
     not grade, or that leaked the set's own pages, was served, as the replay
     counts it: not failed, never correct, its cost and latency counted.
@@ -116,7 +120,8 @@ def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
         for provider, row in q.rows.items():
             rows_by.setdefault(provider, []).append(row)
     out = {}
-    for provider, rows in sorted(rows_by.items()):
+    for provider, all_rows in sorted(rows_by.items()):
+        rows = [r for r in all_rows if r["error"] not in ACCOUNT_ERRORS]
         served = [r for r in rows if is_served(r)]
         graded = [{"grade": _grade(r) if is_served(r) else None, "latency": r["latency_s"]} for r in rows]
         known = [r["latency_s"] for r in served if r["latency_s"] is not None]
@@ -125,6 +130,7 @@ def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
         out[provider] = {
             **stats,
             "failed": stats["questions"] - stats["served"],
+            "excluded": len(all_rows) - len(rows),
             "accuracy_all": stats["correct"] / stats["questions"] if stats["questions"] else 0.0,
             "cost_usd": None if not costs or None in costs else statistics.fmean(c for c in costs if c is not None),
         }
