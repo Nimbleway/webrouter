@@ -187,6 +187,8 @@ src/web_router/
     │                   browse: keyed backends, then keyless (research and browse
     │                   have no keyless tier, so their chains end there; a browser
     │                   chain ends with `local`)
+    ├── auto_browser.py the browser chain's `auto`, apart so auto.py stops growing;
+    │                   auto.py re-exports it
     ├── brave.py        search, via httpx
     ├── parallel.py     search + research, via httpx
     ├── perplexity.py   search + research, via httpx

@@ -47,6 +47,7 @@ from web_router.providers._chain import (
     _quoted,
 )
 from web_router.providers.answer import AnswerProvider
+from web_router.routing.attempts import admitted, in_call_order
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
 
 
@@ -129,9 +130,11 @@ class AutoAnswerProvider(AnswerProvider):
         failures: dict[str, WebRouterError] = {}
         refused: list[UnsupportedParameterError] = []
         held: AnswerResponse | None = None
-        for position, provider_name in self._eligible(request):
+        for position, provider_name in in_call_order("answer", self._eligible(request)):
             if (late := _late_answer(held, self.name, failures)) is not None:
                 return late
+            if not admitted("answer", provider_name, request):
+                continue
             try:
                 response = self._member(position).answer(request)
             except DeadlineExceededError as exc:
@@ -151,9 +154,11 @@ class AutoAnswerProvider(AnswerProvider):
         failures: dict[str, WebRouterError] = {}
         refused: list[UnsupportedParameterError] = []
         held: AnswerResponse | None = None
-        for position, provider_name in self._eligible(request):
+        for position, provider_name in in_call_order("answer", self._eligible(request)):
             if (late := _late_answer(held, self.name, failures)) is not None:
                 return late
+            if not admitted("answer", provider_name, request):
+                continue
             try:
                 response = await self._member(position).aanswer(request)
             except DeadlineExceededError as exc:
