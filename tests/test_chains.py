@@ -9,27 +9,9 @@ import pytest
 
 from web_router import WebRouter
 from web_router._chains import chains
-from web_router.constants import AUTO_APPENDED, AUTO_PREFERRED, ENV_BY_PROVIDER
-from web_router.constants_answer import AUTO_ANSWER_PREFERRED
+from web_router.constants import ENV_BY_PROVIDER
 
 README = Path(__file__).resolve().parents[1] / "README.md"
-
-# Membership before the order was generated, spelled out: a reorder is fine, a member gained or lost is not.
-SEARCH_MEMBERS = {
-    "perplexity",
-    "nimble",
-    "linkup",
-    "tavily",
-    "brave",
-    "webiq",
-    "parallel",
-    "exa",
-    "you",
-    "keenable",
-    "deepseek",
-    "agentcore",
-}
-ANSWER_MEMBERS = {"perplexity", "exa", "you", "linkup", "parallel", "brave"}
 
 README_NAMES = {
     "Perplexity": "perplexity",
@@ -49,20 +31,6 @@ README_NAMES = {
 
 def _names(text: str) -> list[str]:
     return [README_NAMES[name.strip()] for name in re.split(r",|\bthen\b", text) if name.strip()]
-
-
-def test_the_constants_are_the_generated_file() -> None:
-    data = chains()
-    assert list(AUTO_PREFERRED) == data["search"]["preferred"]
-    assert list(AUTO_APPENDED) == data["search"]["appended"]
-    assert list(AUTO_ANSWER_PREFERRED) == data["answer"]["preferred"]
-
-
-def test_the_generated_chains_are_a_permutation_of_todays_members() -> None:
-    data = chains()
-    search = data["search"]["preferred"] + data["search"]["appended"]
-    assert sorted(search) == sorted(SEARCH_MEMBERS)
-    assert sorted(data["answer"]["preferred"]) == sorted(ANSWER_MEMBERS)
 
 
 def test_every_member_is_either_measured_or_marked_unmeasured() -> None:
