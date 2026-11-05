@@ -1,18 +1,22 @@
-"""How the frozen results name a question, and the checks ``frozen.py`` runs on scans and datasets.
+"""How the frozen results name a question and class a row's error, and the checks ``frozen.py`` runs on scans.
 
 ``build`` refuses scans that are not one set: other questions, other gold
 answers, another setup, a row twice or a row missing. ``verify`` refuses a
 manifest whose failed-row counts are not the rows'. ``build`` and ``join``
 refuse a dataset that does not hold every question, or whose gold answers
 changed. Each check raises ``SystemExit`` naming the set and the first fault,
-so nothing is written past it.
+so nothing is written past it. ``frozen.py`` and ``_frozen_mixed.py`` share
+the row primitives here: the grades, the error classes and a scan's reader.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
+import re
 import unicodedata
 from collections.abc import Iterable, Mapping
+from pathlib import Path
 from typing import Any
 
 QUESTION_ID_CHARS = 16
@@ -42,6 +46,34 @@ MSG_FAILED_ROWS = (
     " rebuild the folder rather than editing it"
 )
 
+GRADES = ("correct", "incorrect", "not_attempted")
+LATENCY_DIGITS = 3
+
+RUN_DEFAULTS = {"questions": "simpleqa"}
+"""A ``run.json`` from before ``--questions`` existed asked SimpleQA."""
+
+ERROR_CLASSES: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("timeout", re.compile(r"timed? ?out|timeout|deadline", re.IGNORECASE)),
+    ("rate_limit", re.compile(r"rate.?limit|too many requests|\bHTTP 429\b", re.IGNORECASE)),
+    ("quota", re.compile(r"\bHTTP 402\b|quota|credits?\b|payment required", re.IGNORECASE)),
+    ("invalid_request", re.compile(r"takes a query of at most|does not support|UnsupportedParameter", re.IGNORECASE)),
+    ("http_4xx", re.compile(r"\bHTTP 4\d\d\b")),
+    ("http_5xx", re.compile(r"\bHTTP 5\d\d\b")),
+)
+"""A backend's error message, by the first pattern it matches; anything else is ``other``.
+
+The message itself is never kept: a vendor's text can quote an account, a key
+prefix or a request id.
+"""
+OTHER_ERROR = "other"
+JUDGE_ERROR = "judge"
+JUDGE_STAGES = frozenset({"judge", "synthesis", "grading"})
+"""``failed_at`` values that mean the judge failed, not the backend: the answer scan's and the search scan's."""
+LEAKED_ERROR = "leaked"
+BUDGET_ERROR = "budget"
+"""A row whose backend answered but whose grading the run's budget refused (``tools_effort.py``): kept, ungraded."""
+ERROR_NAMES = (*(name for name, _ in ERROR_CLASSES), OTHER_ERROR, JUDGE_ERROR, LEAKED_ERROR, BUDGET_ERROR)
+
 Scan = tuple[str, dict[str, Any], dict[str, str]]
 """One scan of a set: its folder name, its setup and its gold answers by question id."""
 
@@ -51,8 +83,13 @@ def normalise_question(text: str) -> str:
     return " ".join(unicodedata.normalize("NFKC", text).split())
 
 
-def question_id(text: str) -> str:
-    """A stable id for a question: the first 16 hex characters of the SHA-256 of its normalised text."""
+def question_id(text: str, urls: Iterable[str] = ()) -> str:
+    """A stable id for a question: the first 16 hex characters of the SHA-256 of its normalised text.
+
+    A question asked with the pages to read gets its own id: its text and its
+    URLs, one space apart, are hashed together.
+    """
+    text = " ".join((text, *urls))
     return hashlib.sha256(normalise_question(text).encode("utf-8")).hexdigest()[:QUESTION_ID_CHARS]
 
 
@@ -134,9 +171,9 @@ def check_same_setup(set_name: str, scan: Scan, first: Scan, keys: Iterable[str]
 
 
 def check_no_repeats(set_name: str, rows: Iterable[Mapping[str, Any]]) -> None:
-    """``SystemExit`` when a backend has a row for one question twice."""
-    seen: set[tuple[str, str, str]] = set()
-    for key in ((row["provider"], row["mode"], row["question_id"]) for row in rows):
+    """``SystemExit`` when a backend has a row for one question twice, by the same method."""
+    seen: set[tuple[str, str, str, str]] = set()
+    for key in ((row["provider"], row["mode"], row["question_id"], row.get("method", "")) for row in rows):
         if key in seen:
             raise SystemExit(MSG_REPEATED_ROW.format(set=set_name, provider=key[0], mode=key[1], question_id=key[2]))
         seen.add(key)
@@ -179,3 +216,35 @@ def check_failed_rows(set_name: str, entry: Mapping[str, Any], rows: Iterable[Ma
     counted = failed_rows(rows)
     if entry.get("failed_rows") != counted:
         raise SystemExit(MSG_FAILED_ROWS.format(set=set_name, stated=entry.get("failed_rows"), counted=counted))
+
+
+def error_class(row: Mapping[str, Any]) -> str | None:
+    """What went wrong on a row, as a class rather than the vendor's message; ``None`` when nothing did."""
+    if row.get("leaked"):
+        return LEAKED_ERROR
+    message = row.get("error")
+    if not message:
+        return None
+    if row.get("failed_at") == BUDGET_ERROR:
+        return BUDGET_ERROR
+    if row.get("failed_at") in JUDGE_STAGES:
+        return JUDGE_ERROR
+    return next((name for name, pattern in ERROR_CLASSES if pattern.search(str(message))), OTHER_ERROR)
+
+
+def measures(row: Mapping[str, Any]) -> dict[str, Any]:
+    """A run row's grade, latency, cost and error class, cleaned the same way for every frozen set."""
+    latency, cost = row.get("latency"), row.get("cost_usd")
+    return {
+        "grade": row.get("grade") if row.get("grade") in GRADES else None,
+        "latency_s": None if latency is None else round(float(latency), LATENCY_DIGITS),
+        "cost_usd": None if cost is None else float(cost),
+        "error": error_class(row),
+    }
+
+
+def read_run(folder: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """A scan folder's ``run.json``, with :data:`RUN_DEFAULTS` under it, and its rows."""
+    setup = {**RUN_DEFAULTS, **json.loads((folder / "run.json").read_text(encoding="utf-8"))}
+    rows = [json.loads(line) for line in (folder / "rows.jsonl").read_text(encoding="utf-8").splitlines() if line]
+    return setup, rows

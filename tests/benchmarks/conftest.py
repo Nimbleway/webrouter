@@ -19,7 +19,7 @@ ANSWER_SIBLINGS = ("_common", "_questions", "_report_tables", "answer_report")
 EXTRACT_SIBLINGS = ("_common", "cli", "extract_report", "urls")
 """What the extract scan imports from its folder, under plain names, so they are forgotten once it is."""
 FROZEN_SCRIPT = EXTRACT_SCRIPT.with_name("frozen.py")
-FROZEN_SIBLINGS = ("_common", "_frozen_checks")
+FROZEN_SIBLINGS = ("_common", "_frozen_checks", "_frozen_mixed", "_tools_effort_plan")
 """What ``frozen.py`` imports from its folder, under plain names, so they are forgotten once it is."""
 EXTRACT_SETUP = {
     "urls": "general",

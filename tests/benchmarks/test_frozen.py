@@ -24,7 +24,7 @@ def test_every_committed_file_matches_its_checksum(frozen: ModuleType) -> None:
     assert manifest["sets"]["sealqa-hard-254"]["failed_rows"]["you-mcp"] == {"default": 254}
 
 
-def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleType) -> None:
+def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleType, frozen_checks: ModuleType) -> None:
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
     assert manifest["schema_version"] == frozen.SCHEMA_VERSION
     assert manifest["fields"] == list(frozen.FIELDS)
@@ -34,19 +34,26 @@ def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleT
         assert len(rows) == entry["row_count"], set_name
         assert len({r["question_id"] for r in rows}) == entry["question_count"] == entry["resolved"], set_name
         assert sorted({r["provider"] for r in rows}) == entry["providers"], set_name
-        assert entry["row_count"] == entry["question_count"] * len(entry["providers"]), (
-            "one row per question and backend"
-        )
+        mixed = entry["method"] == frozen.MIXED
+        if not mixed:
+            assert entry["row_count"] == entry["question_count"] * len(entry["providers"]), (
+                "one row per question and backend"
+            )
+        else:
+            assert len(entry["sample"]) == entry["question_count"], set_name
         for row in rows:
             assert tuple(row) == frozen.FIELDS, "no field beyond the schema: no question, answer or message text"
             assert row["set"] == set_name
-            assert row["method"] == entry["method"]
-            assert row["grade"] in (*frozen.GRADES, None)
-            assert row["error"] in (*frozen.ERROR_NAMES, None)
+            if mixed:
+                assert row["method"] in ("search+extract", "extract", "answer", "research")
+            else:
+                assert row["method"] == entry["method"]
+            assert row["grade"] in (*frozen_checks.GRADES, None)
+            assert row["error"] in (*frozen_checks.ERROR_NAMES, None)
             assert len(row["question_id"]) == 16
 
 
-def test_the_four_sets_route_eval_needs_are_frozen_at_their_sizes(frozen: ModuleType) -> None:
+def test_the_sets_route_eval_needs_are_frozen_at_their_sizes(frozen: ModuleType) -> None:
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
     sizes = {name: (e["question_count"], e["row_count"]) for name, e in manifest["sets"].items()}
     assert sizes == {
@@ -54,6 +61,7 @@ def test_the_four_sets_route_eval_needs_are_frozen_at_their_sizes(frozen: Module
         "sealqa-hard-254-twin": (254, 508),
         "simpleqa-300-v2": (300, 3600),
         "answer-simpleqa-300": (300, 1500),
+        "tools-effort-60": (60, 1150),
     }
 
 
@@ -90,8 +98,8 @@ def test_a_changed_file_fails_verification(frozen: ModuleType, tmp_path: Path) -
         ({"error": None, "leaked": True}, "leaked"),
     ],
 )
-def test_an_error_keeps_only_its_class(frozen: ModuleType, row: dict[str, Any], expected: str | None) -> None:
-    assert frozen.error_class(row) == expected
+def test_an_error_keeps_only_its_class(frozen_checks: ModuleType, row: dict[str, Any], expected: str | None) -> None:
+    assert frozen_checks.error_class(row) == expected
 
 
 def test_a_setup_label_splits_into_provider_and_mode(frozen: ModuleType) -> None:

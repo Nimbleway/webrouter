@@ -30,6 +30,7 @@ MIN_GROUP = 10
 APART = {None: "best", False: "not shown apart", True: "behind"}
 """The recommended order's last column: whether this run tells a backend from the best one."""
 MSG_OUT_NOT_EMPTY = "{path} already exists; pass a new --out folder rather than mixing two runs in one."
+MSG_DATASET_ARG = "--dataset takes NAME=PATH, such as simpleqa=simple_qa_test_set.csv; got {value!r}"
 MSG_REPEATED_BACKEND = "{folder} has {providers} again; each backend may appear in only one of the scans combined"
 DEPTH_MARK = "@"
 MODE_MARK = ":"
@@ -216,3 +217,14 @@ def write_scan(
     report = markdown(summary)
     (out / "report.md").write_text(report, encoding="utf-8")
     print(report)
+
+
+def _local(values: list[str]) -> dict[str, Path]:
+    """``--dataset NAME=PATH`` values as name -> local copy of that question set."""
+    local: dict[str, Path] = {}
+    for value in values:
+        name, sep, path = value.partition("=")
+        if not sep:
+            raise SystemExit(MSG_DATASET_ARG.format(value=value))
+        local[name] = Path(path)
+    return local
