@@ -422,11 +422,13 @@ Every router is scored on one seeded split (`--seed 0`, half held out by
 `--test-fraction`), in-sample and held out side by side: on SealQA, routing by
 gold labels once scored 75 in-sample and 46 held out. The **noise floor** is
 the widest accuracy gap one backend shows between `sealqa-hard-254` and its
-twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points). A
-held-out margin over the static order no larger than that is *no gain*; it is
-the only twin run, so it serves every set. It is rerun noise, not a
-significance test on the held-out split: a margin above it can still be
-sampling error.
+twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points); it is
+the only twin run, so it serves every set. It is rerun noise, not sampling
+error, so a held-out verdict needs both: a router is a *gain* only when its
+margin over the static order is wider than the floor and the static order's
+held-out accuracy falls below the router's 95% interval, a *loss* only when
+the margin is under minus the floor and the static order sits above that
+interval, and *no gain* otherwise.
 
 Each set ends with the **recommended order**, ranked on every question of the
 set, since nothing is fit to it: by correct out of every question; within the
@@ -518,8 +520,9 @@ uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort
   and the rows left out -- the evidence for mapping a budget to an effort.
 
 60 questions is small. Each held-out half is 30, where one question is 3.3
-points and the 95% interval runs some 30 points wide: read it before any
-margin. The noise floor was measured on search rows; this set has no twin run.
+points and the 95% interval runs some 30 points wide, which is why a verdict
+needs the static order outside it: here neither example router is a gain or a
+loss. The noise floor was measured on search rows; this set has no twin run.
 A set that mixes methods other than these paths is refused by name.
 
 ## Keeping results

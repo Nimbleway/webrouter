@@ -37,9 +37,11 @@ def _intro(floor: float, pairs: Mapping[str, tuple[float, float]]) -> list[str]:
     return [
         "# route-eval: routers replayed over the frozen results\n",
         f"**Noise floor: {floor * 100:.1f} points**, the largest accuracy gap one backend shows between "
-        f"`{TWIN_SETS[0]}` and `{TWIN_SETS[1]}`, the same questions run twice ({spread}). A margin no larger is "
-        "*no gain*. It is measured on SealQA and used for every set, the only twin run there is. It is rerun noise, "
-        "not a significance test on the held-out split: a margin above it can still be sampling error.\n",
+        f"`{TWIN_SETS[0]}` and `{TWIN_SETS[1]}`, the same questions run twice ({spread}). It is measured on SealQA "
+        "and used for every set, the only twin run there is. It is rerun noise, not a significance test on the "
+        "held-out split, so a verdict needs both: *gain* when the held-out margin over the static order is wider "
+        "than the floor and the static order's accuracy is below the router's 95% interval, *loss* when the margin "
+        "is under minus the floor and the static order is above it, *no gain* otherwise.\n",
         "Accuracy is correct out of every question, a question no backend served counting as a miss. Regret is "
         "in accuracy points (positive: behind). Cost is the backend's stated cost, else its list price from "
         "`web_router.prices` (an estimate); the mean is over the questions whose cost is known, and the count "

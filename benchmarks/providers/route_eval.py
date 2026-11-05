@@ -175,13 +175,19 @@ def score(outcomes: Sequence[Outcome]) -> dict[str, Any]:
     }
 
 
-def verdict(gain: float | None, floor: float) -> str:
-    """A held-out margin over the static order, read against the noise floor."""
-    if gain is None:
+def verdict(gain: float | None, floor: float, static: float | None, ci95: Sequence[float] | None) -> str:
+    """A held-out margin over the static order, read against the noise floor and the router's 95% interval.
+
+    A gain needs both: the margin over the floor and the static order's accuracy below the interval. A loss
+    needs the margin under minus the floor and the static order above it. On 30 held-out questions one question
+    is 3.3 points, wider than the floor, so the floor alone would call a single question a gain or a loss.
+    """
+    if gain is None or static is None or ci95 is None:
         return "n/a"
-    if gain > floor:
+    low, high = ci95
+    if gain > floor and static < low:
         return "gain"
-    if gain < -floor:
+    if gain < -floor and static > high:
         return "loss"
     return "no gain (within noise floor)"
 
@@ -224,9 +230,11 @@ def _add_regret(routers: dict[str, dict[str, Any]], floor: float) -> None:
             acc = result[part]["accuracy"]
             result[part]["regret_oracle"] = None if acc is None else best - acc
             result[part]["regret_static"] = None if acc is None else base - acc
+    static = routers[STATIC]["held_out"]["accuracy"]
     for spec, result in routers.items():
-        regret = result["held_out"]["regret_static"]
-        result["verdict"] = BASELINE if spec == STATIC else verdict(None if regret is None else -regret, floor)
+        held_out = result["held_out"]
+        gain = None if held_out["regret_static"] is None else -held_out["regret_static"]
+        result["verdict"] = BASELINE if spec == STATIC else verdict(gain, floor, static, held_out["accuracy_ci95"])
 
 
 def evaluate_set(
