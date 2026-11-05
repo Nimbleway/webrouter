@@ -392,11 +392,11 @@ How a choice is scored:
   question, ungraded -- never correct, no fallback, counted in its own column.
   A question no backend served is a miss.
 - **Accuracy** is correct out of every question; grades and latency come only
-  from rows that did not fail. In the recommended order, a row that failed on
-  the scan's account (`rate_limit` or `quota`, such as every `you-mcp` row on
-  SealQA) is left out of its backend's questions rather than counted a miss: it
-  says the account ran out, not that the backend answered wrong. The replay
-  still passes over such a row, as `auto` would.
+  from rows that did not fail. In the recommended order, a row that failed
+  during the run with a `rate_limit` or `quota` error is left out of its
+  backend's questions rather than counted a miss: the call never reached the
+  question, so it says nothing about the backend's answer. The replay still
+  passes over such a row, as `auto` would.
 - **Cost** is the cost the row states (`answer`), else the list price from
   `web_router.prices` (an estimate). An unknown price is unknown, never $0: the
   mean is over the questions whose cost is known, and the count unknown is
@@ -443,6 +443,26 @@ every question makes it slightly harder for a router to beat there, on purpose:
   have no SealQA rows.
 - **answer** ranks on `answer-simpleqa-300`, the one answer set.
 
+The rule is route-eval's recommended order: correct out of every question of
+the set, a `rate_limit` or `quota` row left out; within the noise floor of the
+best not yet placed, the cheaper at list price first (an unknown or $0 price
+never moves a member up), then the lower p50 latency, then the name. The
+keyless backends go last.
+
+On `sealqa-hard-254`, judged by `openai:gpt-4o`, frozen from the run of
+2026-10-07, WebIQ (51 of 254), Nimble (49) and Perplexity (48) sit within the
+floor of each other, so the priced and faster go first: Perplexity, Nimble,
+then WebIQ, whose price is unknown. Linkup (47) follows, then Tavily (42), Exa
+and Parallel (41 each), Brave (37) and You.com (29). The order this replaced,
+from a SimpleQA scan, was Perplexity, Nimble, Linkup, Tavily, Brave, WebIQ,
+Parallel, Exa, You.com.
+
+On `answer-simpleqa-300`, judged by `openai:gpt-4o`, frozen from the run of
+2026-11-01, Perplexity (286 of 300), You.com (285), Parallel (285) and Linkup
+(283) sit within the floor, cheapest first with Parallel's unknown price last;
+Exa (281) does not. The order this replaced, cheapest first at list price, was
+Perplexity, Exa, You.com, Linkup, Parallel, Brave.
+
 A member the set has no rows for (Keenable, DeepSeek and AgentCore for search,
 Brave for answer) keeps its place after the ranked ones and is listed as
 `unmeasured`; the keyless search tier stays in `constants.py`, unranked.
@@ -450,7 +470,11 @@ Extract's order is measured on pages returned, not graded, and research's is
 unmeasured, so both stay hand-ordered. `chains.py --check` exits 1 when
 the file is stale, and a unit test runs it, so a change to the frozen results
 or the price list that moves an order fails until `make chains` is run and the
-README's tables follow.
+README's tables follow. For the full report behind both orders:
+
+```bash
+uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254 --set answer-simpleqa-300
+```
 
 ## Keeping results
 
