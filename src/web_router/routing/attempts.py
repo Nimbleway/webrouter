@@ -74,7 +74,9 @@ def in_call_order(tool: ToolName, eligible: list[tuple[int, str]]) -> list[tuple
     route = _ROUTE.get()
     if route is None or tool not in route.order:
         return eligible
-    rank = {name: index for index, name in enumerate(route.order[tool])}
+    rank = {
+        name: index for index, name in enumerate(dict.fromkeys(route.order[tool]))
+    }  # a repeat keeps its first place
     return sorted((member for member in eligible if member[1] in rank), key=lambda member: rank[member[1]])
 
 

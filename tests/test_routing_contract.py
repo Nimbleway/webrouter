@@ -136,3 +136,11 @@ def test_a_budget_scope_runs_the_block_unchanged() -> None:
     with budget_scope(Budget(max_cost_usd=0.0)):
         ran.append("inside")
     assert ran == ["inside"], "the scope runs its block, as it is, until a budget is enforced"
+
+
+def test_a_provider_named_twice_in_the_order_keeps_its_first_place() -> None:
+    from web_router.routing.attempts import CallRoute, call_route, in_call_order
+
+    eligible = [(0, "first"), (1, "second")]
+    with call_route(CallRoute(order={"search": ["second", "first", "second"]})):
+        assert in_call_order("search", eligible) == [(1, "second"), (0, "first")]
