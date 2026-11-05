@@ -22,6 +22,8 @@ from web_router.constants import AUTO_KEYLESS
 
 SERVED_ERRORS = frozenset({JUDGE_ERROR, LEAKED_ERROR})
 """Error classes where the backend answered and only the grading did not happen: served, but ungraded."""
+UNGRADED = "ungraded"
+"""The grade :func:`backend_stats` gives a served row the judge did not grade."""
 KEYLESS = frozenset(name for name, options in AUTO_KEYLESS if not options.get("allow_keyless"))
 """Backends that are only ever keyless (``you-mcp``): a ranking keeps them last, as ``auto`` does."""
 RANKING_RULE = (
@@ -95,12 +97,23 @@ def ranked_with_best(
     return rank_backends(stats, noise_floor, keyless), best
 
 
+def _served(row: Mapping[str, Any]) -> bool:
+    return row["error"] is None or row["error"] in SERVED_ERRORS
+
+
+def _grade(row: Mapping[str, Any]) -> str:
+    # A served row the judge did not grade is neither correct nor incorrect, but it is not a failure either.
+    return UNGRADED if row["error"] is not None else row["grade"]
+
+
 def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
     """Each backend's numbers over ``questions``, failed rows skipped for grades and latency.
 
     ``accuracy`` is correct out of every question, a failed row counting as a
     miss, as the recommended order has always ranked; ``cost_usd`` is the mean
-    cost of the rows it served, ``None`` if any is unknown.
+    cost of the rows it served, ``None`` if any is unknown. A row the judge did
+    not grade, or that leaked the set's own pages, was served, as the replay
+    counts it: not failed, never correct, its cost and latency counted.
     """
     rows_by: dict[str, list[Mapping[str, Any]]] = {}
     for q in questions:
@@ -108,10 +121,11 @@ def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
             rows_by.setdefault(provider, []).append(row)
     out = {}
     for provider, rows in sorted(rows_by.items()):
-        graded = [{"grade": r["grade"] if r["error"] is None else None, "latency": r["latency_s"]} for r in rows]
-        known = [g["latency"] for g in graded if g["grade"] is not None and g["latency"] is not None]
+        served = [r for r in rows if _served(r)]
+        graded = [{"grade": _grade(r) if _served(r) else None, "latency": r["latency_s"]} for r in rows]
+        known = [r["latency_s"] for r in served if r["latency_s"] is not None]
         stats = grade_stats(graded, known)
-        costs = [cost_of(r) for r in rows if r["error"] is None]
+        costs = [cost_of(r) for r in served]
         out[provider] = {
             **stats,
             "failed": stats["questions"] - stats["served"],

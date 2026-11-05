@@ -63,3 +63,18 @@ def test_the_best_are_every_backend_within_the_floor_of_the_most_accurate_wherev
     assert ranked == route_eval_rank.rank_backends(stats, noise_floor=0.02) == ["cheap", "accurate", "far"]
     assert best == {"cheap", "accurate"}
     assert route_eval_rank.ranked_with_best({}, noise_floor=0.02) == ([], frozenset())
+
+
+@pytest.mark.parametrize("error", ["judge", "leaked"])
+def test_backend_stats_count_an_ungraded_row_as_served_as_the_replay_does(
+    route_eval_rank: ModuleType, error: str
+) -> None:
+    questions = [
+        _question(route_eval_rank, _row("tavily", None, latency=3.0, error=error, qid="q1")),
+        _question(route_eval_rank, _row("tavily", "correct", latency=1.0, qid="q2")),
+        _question(route_eval_rank, _row("tavily", None, latency=9.0, error="timeout", qid="q3")),
+    ]
+    stats = route_eval_rank.backend_stats(questions)["tavily"]
+    assert stats["served"] == 2 and stats["failed"] == 1, "the backend answered; only grading did not happen"
+    assert stats["correct"] == 1 and stats["accuracy_all"] == pytest.approx(1 / 3)
+    assert stats["latency_p50"] == 2.0 and stats["cost_usd"] == pytest.approx(0.008), "an answered call is billed"
