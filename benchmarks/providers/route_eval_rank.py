@@ -13,10 +13,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from _frozen_checks import JUDGE_ERROR, LEAKED_ERROR
-from _report_tables import grade_stats
-from _tools_effort_plan import DEFAULT_MODE
-from frozen import FROZEN_DIR
+from _frozen_checks import ACCOUNT_ERRORS, JUDGE_ERROR, LEAKED_ERROR
+from _report_tables import correct_of_all, grade_stats
+from frozen import FROZEN_DIR, price_mode
 from route_eval_sets import TWIN_SETS, Question, load_set
 
 from web_router import prices
@@ -28,8 +27,6 @@ UNGRADED = "ungraded"
 """The grade :func:`backend_stats` gives a served row the judge did not grade."""
 KEYLESS = frozenset(name for name, options in AUTO_KEYLESS if not options.get("allow_keyless"))
 """Backends that are only ever keyless (``you-mcp``): a ranking keeps them last, as ``auto`` does."""
-ACCOUNT_ERRORS = frozenset({"rate_limit", "quota"})
-"""Error classes of a call that never reached the question (a rate-limit or quota error): left out of accuracy."""
 RANKING_RULE = (
     "Backends best first by accuracy, correct out of every question, a failed row counting as a miss. Backends "
     "whose accuracy is within the noise floor of the most accurate one not yet placed form one tier, ordered "
@@ -46,15 +43,16 @@ def cost_of(row: Mapping[str, Any]) -> float | None:
     row's effort); ``None`` when neither is known."""
     if row["cost_usd"] is not None:
         return float(row["cost_usd"])
-    return prices.estimate(row["provider"], row["method"], None if row["mode"] == DEFAULT_MODE else row["mode"])
+    return prices.estimate(row["provider"], row["method"], price_mode(row["method"], row["mode"]))
 
 
-def _cost_key(cost: float | None) -> tuple[bool, float]:
-    # Unknown and $0 sort after every known price: a free tier or a missing price never moves a backend up.
+def cost_key(cost: float | None) -> tuple[bool, float]:
+    """A cost as a tie-break sorts it: unknown and $0 after every known price, so neither moves a backend up."""
     return (cost is None or cost <= 0, cost or 0.0)
 
 
-def _latency_key(latency: float | None) -> float:
+def latency_key(latency: float | None) -> float:
+    """A latency as a tie-break sorts it: unknown after every known one."""
     return float("inf") if latency is None else latency
 
 
@@ -64,22 +62,18 @@ def _within_floor(gap: float, noise_floor: float) -> bool:
 
 
 def rank_backends(stats: Mapping[str, Mapping[str, Any]], noise_floor: float) -> list[str]:
-    """Backends best first: by accuracy, and within the noise floor by known cost, then latency, then name.
+    """Backends best first, by :data:`RANKING_RULE`.
 
     ``stats`` maps a backend to its ``accuracy`` (correct out of every
-    question, a failed row a miss, a rate-limit or quota failure left out), ``cost_usd`` (``None`` when
-    unknown) and ``latency_p50``. Backends whose accuracy is within
-    ``noise_floor`` of the most accurate one not yet placed form one tier,
-    ordered cheapest first: an accuracy gap smaller than a rerun's spread does
-    not tell two backends apart, so cost decides. An unknown or $0 cost sorts
-    after every known one. The keyless backends go last, whatever they score.
+    question, a failed row a miss, a rate-limit or quota failure left out),
+    ``cost_usd`` (``None`` when unknown) and ``latency_p50``.
     """
     remaining = sorted(stats, key=lambda p: (-stats[p]["accuracy"], p))
     order: list[str] = []
     while remaining:
         top = stats[remaining[0]]["accuracy"]
         tier = [p for p in remaining if _within_floor(top - stats[p]["accuracy"], noise_floor)]
-        tier.sort(key=lambda p: (_cost_key(stats[p]["cost_usd"]), _latency_key(stats[p]["latency_p50"]), p))
+        tier.sort(key=lambda p: (cost_key(stats[p]["cost_usd"]), latency_key(stats[p]["latency_p50"]), p))
         order += tier
         remaining = [p for p in remaining if p not in tier]
     return [p for p in order if p not in KEYLESS] + [p for p in order if p in KEYLESS]
@@ -133,7 +127,7 @@ def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
             **stats,
             "failed": stats["questions"] - stats["served"],
             "excluded": len(all_rows) - len(rows),
-            "accuracy_all": stats["correct"] / stats["questions"] if stats["questions"] else 0.0,
+            "accuracy_all": correct_of_all(stats),
             "cost_usd": None if not costs or None in costs else statistics.fmean(c for c in costs if c is not None),
         }
     return out

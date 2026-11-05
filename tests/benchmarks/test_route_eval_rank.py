@@ -9,6 +9,7 @@ import pytest
 from tests.benchmarks.conftest import route_question as _question
 from tests.benchmarks.conftest import route_row as _row
 from tests.benchmarks.conftest import route_stats as _stats
+from web_router import prices
 from web_router._chains import chains
 
 
@@ -90,3 +91,10 @@ def test_a_row_failed_on_a_rate_limit_or_quota_is_left_out_not_counted_a_miss(ro
     stats = route_eval_rank.backend_stats(questions)["you-mcp"]
     assert stats["excluded"] == 2 and stats["questions"] == 2
     assert stats["accuracy_all"] == 0.5, "the 5xx is still a miss; the rate limit and the quota are not graded"
+
+
+def test_a_vendor_mode_or_depth_row_is_priced_as_the_price_list_keys_it(route_eval_rank: ModuleType) -> None:
+    vendor = route_eval_rank.cost_of(_row("tavily", "correct", mode="ultra-fast"))
+    depth = route_eval_rank.cost_of(_row("tavily", "correct", mode="@deep"))
+    assert vendor is not None and vendor == prices.estimate("tavily", "search", ":ultra-fast")
+    assert depth is not None and depth == prices.estimate("tavily", "search", "deep") and depth != vendor

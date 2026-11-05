@@ -5,11 +5,13 @@ from __future__ import annotations
 import importlib
 import sys
 from datetime import date
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from scripts import latency
+from scripts.benchmark_loader import BENCHMARKS, FROZEN_SIBLINGS
 from tests.test_prices import _row
 from web_router import prices
 from web_router.prices import Price
@@ -44,11 +46,18 @@ def test_latency_is_unknown_where_nothing_measured_it() -> None:
 
 
 @pytest.mark.parametrize(
-    ("mode", "expected"),
-    [("default", None), ("@deep", "deep"), ("ultra-fast", ":ultra-fast"), ("ultra-fast@deep", ":ultra-fast@deep")],
+    ("method", "mode", "expected"),
+    [
+        ("search", "default", None),
+        ("search", "@deep", "deep"),
+        ("search", "ultra-fast", ":ultra-fast"),
+        ("search", "ultra-fast@deep", ":ultra-fast@deep"),
+        ("research", "low", "low"),
+        ("research", "default", None),
+    ],
 )
-def test_a_frozen_mode_maps_to_the_price_lists_mode(mode: str, expected: str | None) -> None:
-    assert latency.price_mode(mode, default="default", depth_mark="@") == expected
+def test_a_frozen_mode_maps_to_the_price_lists_mode(method: str, mode: str, expected: str | None) -> None:
+    assert latency._benchmarks()[0].price_mode(method, mode) == expected
 
 
 def _frozen(
@@ -78,15 +87,28 @@ def test_a_pooled_backend_keeps_its_rows_in_every_mode() -> None:
 
 
 def test_loading_frozen_keeps_the_siblings_another_loader_imported(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.syspath_prepend(str(latency.BENCHMARKS))
-    for name in latency.SIBLINGS:
-        monkeypatch.setitem(sys.modules, name, importlib.import_module(name))
+    monkeypatch.syspath_prepend(str(BENCHMARKS))
+    mine = {name: importlib.import_module(name) for name in FROZEN_SIBLINGS}
+    for name, module in mine.items():
+        monkeypatch.setitem(sys.modules, name, module)
     latency._benchmarks()
-    assert all(name in sys.modules for name in latency.SIBLINGS)
+    assert all(sys.modules.get(name) is module for name, module in mine.items())
+
+
+def _benchmark_modules() -> set[str]:
+    return {n for n, m in list(sys.modules.items()) if Path(getattr(m, "__file__", None) or "/").parent == BENCHMARKS}
+
+
+def test_loading_frozen_leaves_none_of_its_siblings_behind(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``FROZEN_SIBLINGS`` names every module ``frozen.py`` imports from its folder: none outlives the load."""
+    for name in _benchmark_modules():
+        monkeypatch.delitem(sys.modules, name)
+    latency._benchmarks()
+    assert _benchmark_modules() == set(), "add them to FROZEN_SIBLINGS in scripts/benchmark_loader.py"
 
 
 def test_measure_pools_sets_skips_failures_and_reports_unmatched() -> None:
-    _pct = latency._benchmarks()[1]._pct
+    frozen, common = latency._benchmarks()
     runs = {
         ("a", "tavily", "default"): ("run-a", date(2026, 10, 1)),
         ("b", "tavily", "@lite"): ("run-b", date(2026, 10, 9)),
@@ -99,7 +121,7 @@ def test_measure_pools_sets_skips_failures_and_reports_unmatched() -> None:
         _frozen("tavily", "@lite", 2.0, set_name="b"),
         _frozen("tavily", "ultra-fast@deep", 0.5),
     ]
-    filled, unmatched = latency.measure(rows, runs, pct=_pct, default="default", depth_mark="@")
+    filled, unmatched = latency.measure(rows, runs, pct=common._pct, price_mode=frozen.price_mode)
     # `tavily` (no mode) and `tavily@lite` are the same row, so they pool; the timeout does not count.
     assert filled == {
         ("tavily", "search", "lite"): {
@@ -163,22 +185,22 @@ def test_a_rerun_of_the_same_questions_and_a_mixed_set_are_not_pooled() -> None:
 
 
 def test_measure_reports_an_unmatched_setup_whose_every_call_failed() -> None:
-    _pct = latency._benchmarks()[1]._pct
+    frozen, common = latency._benchmarks()
     runs = {("a", "tavily", "ultra-fast@deep"): ("run-a", date(2026, 10, 1))}
     rows = [_frozen("tavily", "ultra-fast@deep", 9.0, error="timeout")]
-    filled, unmatched = latency.measure(rows, runs, pct=_pct, default="default", depth_mark="@")
+    filled, unmatched = latency.measure(rows, runs, pct=common._pct, price_mode=frozen.price_mode)
     assert filled == {}
     assert unmatched == {("tavily", "search", "ultra-fast@deep")}
 
 
 def test_measure_leaves_methods_other_than_search_and_answer_alone() -> None:
-    _pct = latency._benchmarks()[1]._pct
+    frozen, common = latency._benchmarks()
     runs = {("r", "nimble", "default"): ("run-r", date(2026, 10, 1))}
     rows = [
         _frozen("nimble", "default", 30.0, set_name="r", method="research"),
         _frozen("nimble", "default", 2.0, set_name="r", method="extract"),
     ]
     assert prices.price("nimble", "research") is not None and prices.price("nimble", "extract") is not None
-    filled, unmatched = latency.measure(rows, runs, pct=_pct, default="default", depth_mark="@")
+    filled, unmatched = latency.measure(rows, runs, pct=common._pct, price_mode=frozen.price_mode)
     assert filled == {}
     assert unmatched == set()

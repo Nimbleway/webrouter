@@ -17,21 +17,20 @@ latency is left null, unknown.
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import sys
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from datetime import date
 from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from scripts.benchmark_loader import FROZEN_SCRIPT, FROZEN_SIBLINGS, load_script
 from web_router.constants_prices import LATENCY_METHODS, MSG_LATENCY_STALE, PRICES_DATA_DIR, PRICES_DATA_FILE
 from web_router.prices import price
 
 ROOT = Path(__file__).resolve().parent.parent
 PRICES_JSON = ROOT / "src" / "web_router" / PRICES_DATA_DIR / PRICES_DATA_FILE
-BENCHMARKS = ROOT / "benchmarks" / "providers"
 
 LATENCY_FIELDS = ("latency_p50_s", "latency_p90_s", "latency_n", "latency_runs", "latency_measured")
 P50, P90 = 0.5, 0.9
@@ -39,40 +38,10 @@ P50, P90 = 0.5, 0.9
 Key = tuple[str, str, "str | None"]
 
 
-SIBLINGS = ("_common", "_frozen_checks", "_frozen_mixed", "_tools_effort_plan")
-"""What ``frozen.py`` imports from its folder by plain name; the ones this loads are forgotten once it is."""
-
-
 def _benchmarks() -> tuple[ModuleType, ModuleType]:
     """``frozen.py`` and ``_common.py``, loaded as siblings, as they are when run from their folder."""
-    already = {name for name in SIBLINGS if name in sys.modules}
-    sys.path.insert(0, str(BENCHMARKS))
-    try:
-        spec = importlib.util.spec_from_file_location("frozen_results", BENCHMARKS / "frozen.py")
-        assert spec is not None and spec.loader is not None
-        frozen = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(frozen)
+    with load_script(FROZEN_SCRIPT, "frozen_for_latency", FROZEN_SIBLINGS) as frozen:
         return frozen, sys.modules["_common"]
-    finally:
-        sys.path.remove(str(BENCHMARKS))
-        for name in set(SIBLINGS) - already:  # a loader that imported one first keeps it
-            sys.modules.pop(name, None)
-
-
-def price_mode(mode: str, *, default: str, depth_mark: str) -> str | None:
-    """A frozen row's ``mode`` as the price list keys it.
-
-    ``default`` (the scan asked for none) is ``None``; ``@deep`` is the
-    ``search_depth`` ``deep``; ``ultra-fast`` is the vendor mode
-    ``:ultra-fast``. A vendor mode at a depth (``ultra-fast@deep``) has no row
-    and is kept whole, so it is reported rather than matched.
-    """
-    if mode == default:
-        return None
-    vendor, _, depth = mode.partition(depth_mark)
-    if not vendor:
-        return depth
-    return ":" + mode
 
 
 def run_index(manifest: Mapping[str, Any], split_setup: Any) -> dict[tuple[str, str, str], tuple[str, date]]:
@@ -122,17 +91,19 @@ def measure(
     runs: Mapping[tuple[str, str, str], tuple[str, date]],
     *,
     pct: Any,
-    default: str,
-    depth_mark: str,
+    price_mode: Callable[[str, str], str | None],
 ) -> tuple[dict[Key, dict[str, Any]], set[tuple[str, str, str]]]:
-    """Each price row's latency fields, pooled over every frozen row it matches, and the frozen setups none matched."""
+    """Each price row's latency fields, pooled over every frozen row it matches, and the frozen setups none matched.
+
+    ``price_mode`` is ``frozen.py``'s: a row's method and mode as the price list keys the mode.
+    """
     samples: dict[Key, list[float]] = {}
     sources: dict[Key, set[tuple[str, date]]] = {}
     unmatched: set[tuple[str, str, str]] = set()
     for row in rows:
         if row["method"] not in LATENCY_METHODS:
             continue
-        mode = price_mode(row["mode"], default=default, depth_mark=depth_mark)
+        mode = price_mode(row["method"], row["mode"])
         priced = price(row["provider"], row["method"], mode)
         # Matched before the error filter, so a setup whose every call failed is still reported.
         if priced is None:
@@ -167,8 +138,7 @@ def frozen_latency() -> tuple[dict[Key, dict[str, Any]], set[tuple[str, str, str
         rows,
         run_index(manifest, frozen.split_setup),
         pct=common._pct,
-        default=frozen.DEFAULT_MODE,
-        depth_mark=common.DEPTH_MARK,
+        price_mode=frozen.price_mode,
     )
 
 

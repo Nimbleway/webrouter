@@ -47,15 +47,20 @@ MSG_FAILED_ROWS = (
 )
 
 GRADES = ("correct", "incorrect", "not_attempted")
+DEFAULT_MODE = "default"
+"""A row's ``mode`` when the scan asked for none: the backend's own default for that method."""
 LATENCY_DIGITS = 3
 
 RUN_DEFAULTS = {"questions": "simpleqa"}
 """A ``run.json`` from before ``--questions`` existed asked SimpleQA."""
 
+RATE_LIMIT_ERROR, QUOTA_ERROR = "rate_limit", "quota"
+ACCOUNT_ERRORS = frozenset({RATE_LIMIT_ERROR, QUOTA_ERROR})
+"""Error classes of a call that never reached the question: route-eval leaves them out of accuracy."""
 ERROR_CLASSES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("timeout", re.compile(r"timed? ?out|timeout|deadline", re.IGNORECASE)),
-    ("rate_limit", re.compile(r"rate.?limit|too many requests|\bHTTP 429\b", re.IGNORECASE)),
-    ("quota", re.compile(r"\bHTTP 402\b|quota|credits?\b|payment required", re.IGNORECASE)),
+    (RATE_LIMIT_ERROR, re.compile(r"rate.?limit|too many requests|\bHTTP 429\b", re.IGNORECASE)),
+    (QUOTA_ERROR, re.compile(r"\bHTTP 402\b|quota|credits?\b|payment required", re.IGNORECASE)),
     ("invalid_request", re.compile(r"takes a query of at most|does not support|UnsupportedParameter", re.IGNORECASE)),
     ("http_4xx", re.compile(r"\bHTTP 4\d\d\b")),
     ("http_5xx", re.compile(r"\bHTTP 5\d\d\b")),

@@ -14,9 +14,10 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, get_args
 
+from _frozen_checks import DEFAULT_MODE
 from _frozen_mixed import MIXED as MIXED
-from _tools_effort_plan import DEFAULT_MODE, RESEARCH, SEARCH_EXTRACT
 from _tools_effort_plan import PATHS as PATH_METHODS
+from _tools_effort_plan import RESEARCH, SEARCH_EXTRACT
 
 from web_router.types import ResearchEffort
 

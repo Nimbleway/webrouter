@@ -16,7 +16,7 @@ from typing import Any
 
 from _tools_effort_plan import EXTRACT
 from route_eval_paths import MIXED, RESEARCH, path_router
-from route_eval_rank import _cost_key, _latency_key, cost_of
+from route_eval_rank import cost_key, cost_of, latency_key
 from route_eval_sets import Question
 
 from web_router.constants import (
@@ -77,7 +77,7 @@ def oracle_router(method: str) -> Router:
 
     def route(q: Question) -> list[str]:
         right = [p for p, r in q.rows.items() if r["error"] is None and r["grade"] == "correct"]
-        right.sort(key=lambda p: (_cost_key(cost_of(q.rows[p])), _latency_key(q.rows[p]["latency_s"]), p))
+        right.sort(key=lambda p: (cost_key(cost_of(q.rows[p])), latency_key(q.rows[p]["latency_s"]), p))
         return right + [p for p in static(q) if p not in right]
 
     return route

@@ -39,6 +39,7 @@ from typing import Any
 
 from _common import COMBINE_KEYS, DEPTH_MARK, _local, split_label
 from _frozen_checks import (
+    DEFAULT_MODE,
     Scan,
     answers_digest,
     check_complete,
@@ -58,6 +59,7 @@ from _frozen_checks import (
 )
 from _frozen_mixed import MIXED, freeze_mixed, sample_index
 from _tools_effort_plan import QUESTIONS as MIXED_QUESTIONS
+from _tools_effort_plan import RESEARCH
 
 HERE = Path(__file__).resolve().parent
 FROZEN_DIR = HERE / "frozen"
@@ -69,8 +71,6 @@ SUFFIX = ".jsonl.gz"
 
 FIELDS = ("set", "question_id", "provider", "method", "mode", "grade", "latency_s", "cost_usd", "error")
 """A frozen row's fields, in order. Nothing else: no question, answer or gold text, no raw message."""
-DEFAULT_MODE = "default"
-"""A row's ``mode`` when the scan asked for none: the backend's own default for that method."""
 
 FROZEN_SETS: dict[str, dict[str, Any]] = {
     "sealqa-hard-254": {"questions": "sealqa-hard", "method": "search", "runs": ["sealqa-hard-254"]},
@@ -101,6 +101,22 @@ def split_setup(setup: str) -> tuple[str, str]:
     provider, vendor_mode, depth = split_label(setup)
     mode = vendor_mode + (DEPTH_MARK + depth if depth else "")
     return provider, mode or DEFAULT_MODE
+
+
+def price_mode(method: str, mode: str) -> str | None:
+    """A frozen row's ``mode`` as ``web_router.prices`` keys it, for its cost and its latency alike.
+
+    ``default`` (the scan asked for none) is ``None``; a research row's mode is
+    its effort, keyed as it is; ``@deep`` is the ``search_depth`` ``deep``;
+    ``ultra-fast`` is the vendor mode ``:ultra-fast``. A vendor mode at a depth
+    (``ultra-fast@deep``) has no row and is kept whole, so it matches nothing.
+    """
+    if mode == DEFAULT_MODE:
+        return None
+    if method == RESEARCH:
+        return mode
+    vendor, _, depth = mode.partition(DEPTH_MARK)
+    return depth if not vendor else ":" + mode
 
 
 def frozen_row(set_name: str, method: str, row: Mapping[str, Any]) -> dict[str, Any]:

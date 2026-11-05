@@ -11,7 +11,8 @@ from typing import Any
 
 from _common import APART, DEPTH_MARK, MODE_MARK, _p, _wilson
 from _questions import QUESTION_SETS
-from route_eval_rank import noise_floor, ranked_with_best
+from _report_tables import correct_of_all
+from route_eval_rank import RANKING_RULE, noise_floor, ranked_with_best
 
 from web_router import prices
 from web_router.constants import PROVIDER_AUTO
@@ -23,13 +24,9 @@ ORDER_LABEL = {**APART, None: "best, within the noise floor"}
 def recommended_order(summary: dict[str, Any], spread: float | None = None) -> list[tuple[str, bool | None]]:
     """The plain backends in route-eval's order, each with whether this run shows it behind the most accurate.
 
-    Ranked by ``route_eval_rank.rank_backends``, the one ranking the repo prints:
-    correct over all questions asked, a failed search counting as a miss, not
-    accuracy over the searches served -- a chain member that fails most
-    searches is no member to put first, however well it answered the few it
-    served. Within route-eval's noise floor the cheaper backend at list price
-    goes first, then the faster; the keyless tier goes last. A
-    ``provider@depth`` or ``provider:mode`` setup is left out: an ``auto``
+    Ranked by ``route_eval_rank.rank_backends``, the one ranking the repo prints
+    (:data:`~route_eval_rank.RANKING_RULE`), at list price from
+    ``web_router.prices``. A ``provider@depth`` or ``provider:mode`` setup is left out: an ``auto``
     member is a backend, sent whatever depth the request asks for, not a mode.
     So is ``auto`` itself, if a scan named it: as a member it would be a second
     ``auto`` on the default order, reaching unranked backends first. So is a
@@ -49,21 +46,16 @@ def recommended_order(summary: dict[str, Any], spread: float | None = None) -> l
         return []
     stats = {
         p: {
-            "accuracy": _answered(overall[p]),
+            "accuracy": correct_of_all(overall[p]),
             "cost_usd": prices.estimate(p, "search"),
             "latency_p50": overall[p]["latency_p50"],
         }
         for p in plain
     }
     ranked, best = ranked_with_best(stats, noise_floor()[0] if spread is None else spread)
-    floor = _answered_ci(overall[max(plain, key=lambda p: _answered(overall[p]))])[0]
+    floor = _answered_ci(overall[max(plain, key=lambda p: correct_of_all(overall[p]))])[0]
     # Labelled by accuracy, not position: the cost tie-break may put a less accurate backend first.
     return [(p, None if p in best else _answered_ci(overall[p])[1] < floor) for p in ranked]
-
-
-def _answered(score: dict[str, Any]) -> float:
-    """Correct answers out of every question asked, a failed search counting as a miss."""
-    return score["correct"] / score["questions"] if score["questions"] else 0.0
 
 
 def _answered_ci(score: dict[str, Any]) -> tuple[float, float]:
@@ -82,13 +74,11 @@ def recommendation(summary: dict[str, Any]) -> list[str]:
     short = QUESTION_SETS[summary["setup"].get("questions", "simpleqa")]["short"]
     lines.append(
         f"A suggestion from one judge (`{summary['setup']['judge']}`) on {short}, not the library's default: the "
-        "plain backends in this scan by correct answers out of every question asked, a failed search counting as a "
-        "miss -- so a backend that fails often ranks by what it got right, not by its accuracy on the few it served. "
-        "A `provider@depth` or `provider:mode` setup is left out, "
+        "plain backends in this scan in route-eval's order. A `provider@depth` or `provider:mode` setup is left out, "
         "because a chain member is a backend -- `auto` sends it whatever depth the request asks for -- not a mode. "
-        f"Backends within the noise floor ({spread:.1%}, the spread between two runs of the same SealQA "
-        "questions; see `route_eval.py`) are ordered cheapest first at list price (`web_router.prices`, an "
-        "estimate; an unknown or $0 price never moves one up), then fastest; the keyless tier goes last. "
+        f"The noise floor is {spread:.1%}, the spread between two runs of the same SealQA questions (see "
+        "`route_eval.py`), and cost is the list price in `web_router.prices`, an estimate. "
+        f"{RANKING_RULE} "
         "Every backend within the noise floor of the most accurate one is *best, within the noise floor*, wherever "
         "the cost tie-break put it. Of the rest, a backend is *behind* only when its 95% interval stops short of "
         "the most accurate one's; the others are "
@@ -100,7 +90,7 @@ def recommendation(summary: dict[str, Any]) -> list[str]:
         s = overall[p]
         ci = _answered_ci(s)
         lines.append(
-            f"| {rank} | `{p}` | {_p(_answered(s))} ({s['correct']}/{s['questions']}) | {_p(ci[0])}-{_p(ci[1])} "
+            f"| {rank} | `{p}` | {_p(correct_of_all(s))} ({s['correct']}/{s['questions']}) | {_p(ci[0])}-{_p(ci[1])} "
             f"| {s['failed']} | {ORDER_LABEL[behind]} |"
         )
     chain = json.dumps({"auto": {"chain": {"search": [p for p, _ in order]}}})
