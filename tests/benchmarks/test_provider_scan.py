@@ -14,7 +14,18 @@ from typing import Any
 import pytest
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "run.py"
-SIBLINGS = ("_common", "_questions", "_report_tables", "route_eval", "frozen", "_frozen_checks")
+SIBLINGS = (
+    "_common",
+    "_questions",
+    "_report_tables",
+    "route_eval",
+    "frozen",
+    "_frozen_checks",
+    "route_eval_sets",
+    "route_eval_rank",
+    "route_eval_routers",
+    "route_eval_report",
+)
 """What the scan imports from its folder, under plain names, so they are forgotten once it is."""
 
 

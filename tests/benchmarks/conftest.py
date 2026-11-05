@@ -172,3 +172,71 @@ def one_frozen_set(frozen: ModuleType, monkeypatch: pytest.MonkeyPatch, runs: li
     """``FROZEN_SETS`` as the one search set ``tiny``, made of the scan folders ``runs``."""
     sets = {"tiny": {"questions": "simpleqa", "method": "search", "runs": runs}}
     monkeypatch.setattr(frozen, "FROZEN_SETS", sets)
+
+
+ROUTE_EVAL_SCRIPT = EXTRACT_SCRIPT.with_name("route_eval.py")
+ROUTE_EVAL_SIBLINGS = (
+    "_common",
+    "_report_tables",
+    "frozen",
+    "_frozen_checks",
+    "route_eval_sets",
+    "route_eval_rank",
+    "route_eval_routers",
+    "route_eval_report",
+)
+"""What route-eval imports from its folder, under plain names, so they are forgotten once it is."""
+
+
+@pytest.fixture(scope="module")
+def route_eval() -> Iterator[ModuleType]:
+    sys.path.insert(0, str(ROUTE_EVAL_SCRIPT.parent))
+    try:
+        spec = importlib.util.spec_from_file_location("route_eval_under_test", ROUTE_EVAL_SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        # Registered first: its dataclasses look their module up by name.
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        yield module
+    finally:
+        sys.path.remove(str(ROUTE_EVAL_SCRIPT.parent))
+        for name in (*ROUTE_EVAL_SIBLINGS, "route_eval_under_test"):
+            sys.modules.pop(name, None)
+
+
+@pytest.fixture(scope="module")
+def route_eval_rank(route_eval: ModuleType) -> ModuleType:
+    """The ranking, as route-eval imported it."""
+    return sys.modules["route_eval_rank"]
+
+
+@pytest.fixture(scope="module")
+def route_eval_report(route_eval: ModuleType) -> ModuleType:
+    """The report, as route-eval imported it."""
+    return sys.modules["route_eval_report"]
+
+
+def route_row(provider: str, grade: str | None, latency: float = 1.0, cost: float | None = None, **extra: Any) -> dict:
+    """One frozen row of the set ``tiny``: ``qid``, ``method`` and ``error`` default to ``q``, search and none."""
+    return {
+        "set": "tiny",
+        "question_id": extra.get("qid", "q"),
+        "provider": provider,
+        "method": extra.get("method", "search"),
+        "mode": "default",
+        "grade": grade,
+        "latency_s": latency,
+        "cost_usd": cost,
+        "error": extra.get("error"),
+    }
+
+
+def route_question(module: ModuleType, *rows: dict[str, Any], prompt: str | None = None) -> Any:
+    """A question made of ``rows``, built with ``module``'s ``Question``."""
+    return module.Question(rows[0]["question_id"], prompt, {r["provider"]: r for r in rows})
+
+
+def route_stats(accuracy: float, cost: float | None, latency: float = 1.0) -> dict[str, Any]:
+    """What the ranking reads of one backend."""
+    return {"accuracy": accuracy, "cost_usd": cost, "latency_p50": latency}
