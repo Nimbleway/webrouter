@@ -52,7 +52,6 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from web_router.constants_prices import (
     MSG_PRICE_DEFAULTS,
     MSG_PRICE_DUPLICATE,
-    MSG_PRICE_LATENCY,
     MSG_PRICE_NEGATIVE,
     MSG_PRICE_SHAPE,
     MSG_PRICE_SOURCE,
@@ -61,6 +60,7 @@ from web_router.constants_prices import (
     PRICES_DATA_FILE,
     UNPRICED_UNITS,
 )
+from web_router.prices_latency import check_latency
 from web_router.types import Provider, provider_name
 
 PriceUnit = Literal["per_request", "per_1k", "per_page", "per_browser_minute", "per_run", "token_billed", "unknown"]
@@ -124,24 +124,10 @@ class Price(BaseModel):
         billed = self.unit == "token_billed" or bool(self.price_usd)
         if billed and (self.source_url is None or self.checked is None):
             raise ValueError(MSG_PRICE_SOURCE.format(key=self.key))
-        self._check_latency()
+        check_latency(
+            self.latency_p50_s, self.latency_p90_s, self.latency_n, self.latency_runs, self.latency_measured, self.key
+        )
         return self
-
-    def _check_latency(self) -> None:
-        fields = (self.latency_p50_s, self.latency_p90_s, self.latency_n, self.latency_runs, self.latency_measured)
-        if all(value is None for value in fields):
-            return
-        p50, p90, n = self.latency_p50_s, self.latency_p90_s, self.latency_n
-        if (
-            p50 is None
-            or p90 is None
-            or n is None
-            or not self.latency_runs
-            or self.latency_measured is None
-            or not 0 <= p50 <= p90
-            or n < 1
-        ):
-            raise ValueError(MSG_PRICE_LATENCY.format(key=self.key))
 
 
 def _validate(rows: tuple[Price, ...]) -> None:

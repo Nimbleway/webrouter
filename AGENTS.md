@@ -109,6 +109,8 @@ src/web_router/
 │                       kept apart for the same reason
 ├── prices.py           estimated list prices per (provider, method, mode), read
 │                       from data/prices.json; PRICING.md's tables are made from it
+├── prices_latency.py   the check a row's measured latency passes, apart from
+│                       prices.py so it stays small; it never imports Price
 ├── data/prices.json    the price list itself (experimental), shipped in the wheel
 ├── constants_prices.py the price list's data path, unit divisors, messages and
 │                       PRICING.md wording, kept apart for the same reason
