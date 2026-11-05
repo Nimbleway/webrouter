@@ -29,14 +29,18 @@ README_NAMES = {
 }
 
 
+CHAIN_PARTS = ("preferred", "appended")
+"""The parts a method's entry may have: the members ``auto`` reaches first, then the ones it appends."""
+
+
 def _names(text: str) -> list[str]:
     return [README_NAMES[name.strip()] for name in re.split(r",|\bthen\b", text) if name.strip()]
 
 
 def test_every_member_is_either_measured_or_marked_unmeasured() -> None:
-    for method, parts in (("search", ("preferred", "appended")), ("answer", ("preferred",))):
+    for method in ("search", "answer"):
         entry = chains()[method]
-        members = [p for part in parts for p in entry[part]]
+        members = [p for part in CHAIN_PARTS if part in entry for p in entry[part]]
         groups = [set(entry["measured"]), set(entry["unmeasured"]), set(entry["no_row_served"])]
         assert sum(len(g) for g in groups) == len(set().union(*groups)), "a member sits in one group only"
         assert set().union(*groups) == set(members)

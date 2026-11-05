@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import gzip
-import json
 from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
-from typing import Any
 
 import pytest
 
-from tests.benchmarks.conftest import ROUTE_EVAL_SIBLINGS, load_script
+from tests.benchmarks.conftest import ROUTE_EVAL_SIBLINGS, load_script, route_row
+from tests.benchmarks.conftest import write_frozen_set as _write_set
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "chains.py"
 
@@ -22,33 +20,15 @@ def chains() -> Iterator[ModuleType]:
         yield module
 
 
-def _row(provider: str, grade: str | None, qid: str, method: str = "search", error: str | None = None) -> dict:
-    return {
-        "question_id": qid,
-        "provider": provider,
-        "method": method,
-        "mode": "default",
-        "grade": grade,
-        "latency_s": 1.0,
-        "cost_usd": None,
-        "error": error,
-    }
-
-
-def _write_set(folder: Path, name: str, rows: list[dict[str, Any]]) -> None:
-    body = "".join(json.dumps({**r, "set": name}) + "\n" for r in rows).encode()
-    (folder / f"{name}.jsonl.gz").write_bytes(gzip.compress(body))
-
-
 def _chain_sets(folder: Path) -> None:
     rows = []
     for i in range(20):
         qid = f"q{i:02d}"
-        rows.append(_row("perplexity", "correct" if i % 2 else "incorrect", qid))
-        rows.append(_row("nimble", "correct", qid))
-        rows.append(_row("you-mcp", None, qid, error="rate_limit"))
+        rows.append(route_row("perplexity", "correct" if i % 2 else "incorrect", qid=qid))
+        rows.append(route_row("nimble", "correct", qid=qid))
+        rows.append(route_row("you-mcp", None, qid=qid, error="rate_limit"))
     _write_set(folder, "searchy", rows)
-    _write_set(folder, "answery", [_row("exa", "correct", f"q{i:02d}", method="answer") for i in range(20)])
+    _write_set(folder, "answery", [route_row("exa", "correct", qid=f"q{i:02d}", method="answer") for i in range(20)])
 
 
 def test_the_chain_order_comes_from_the_data_and_unranked_members_keep_their_place(
@@ -80,12 +60,12 @@ def test_a_backend_outside_the_chain_cannot_shift_its_tiers_and_a_failed_member_
     rows = []
     for i in range(20):
         qid = f"q{i:02d}"
-        rows.append(_row("outsider", "correct", qid))
-        rows.append(_row("b", "correct" if i < 19 else "incorrect", qid))
-        rows.append(_row("a", "correct" if i < 18 else "incorrect", qid))
-        rows.append(_row("you-mcp", None, qid, error="rate_limit"))
+        rows.append(route_row("outsider", "correct", qid=qid))
+        rows.append(route_row("b", "correct" if i < 19 else "incorrect", qid=qid))
+        rows.append(route_row("a", "correct" if i < 18 else "incorrect", qid=qid))
+        rows.append(route_row("you-mcp", None, qid=qid, error="rate_limit"))
     _write_set(tmp_path, "searchy", rows)
-    _write_set(tmp_path, "answery", [_row("exa", "correct", f"q{i:02d}", method="answer") for i in range(20)])
+    _write_set(tmp_path, "answery", [route_row("exa", "correct", qid=f"q{i:02d}", method="answer") for i in range(20)])
     monkeypatch.setattr(chains, "CHAIN_SETS", {"search": "searchy", "answer": "answery"})
     current = {"search": {"preferred": ["b", "a"], "appended": ["you-mcp"]}, "answer": {"preferred": ["exa"]}}
 
