@@ -32,7 +32,7 @@
         "accuracy": 0.188976,
         "correct": 48,
         "questions": 254,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.005,
         "latency_p50_s": 0.343
       },
@@ -40,7 +40,7 @@
         "accuracy": 0.192913,
         "correct": 49,
         "questions": 254,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.005,
         "latency_p50_s": 1.0015
       },
@@ -48,7 +48,7 @@
         "accuracy": 0.200787,
         "correct": 51,
         "questions": 254,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": null,
         "latency_p50_s": 0.198
       },
@@ -56,7 +56,7 @@
         "accuracy": 0.185039,
         "correct": 47,
         "questions": 254,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.005,
         "latency_p50_s": 0.831
       },
@@ -64,7 +64,7 @@
         "accuracy": 0.165354,
         "correct": 42,
         "questions": 254,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.008,
         "latency_p50_s": 2.5955
       },
@@ -72,7 +72,7 @@
         "accuracy": 0.161417,
         "correct": 41,
         "questions": 254,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.017,
         "latency_p50_s": 5.3845
       },
@@ -80,7 +80,7 @@
         "accuracy": 0.161417,
         "correct": 41,
         "questions": 254,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": null,
         "latency_p50_s": 2.399
       },
@@ -88,7 +88,7 @@
         "accuracy": 0.145669,
         "correct": 37,
         "questions": 254,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.005,
         "latency_p50_s": 0.7055
       },
@@ -96,7 +96,7 @@
         "accuracy": 0.114173,
         "correct": 29,
         "questions": 254,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.005,
         "latency_p50_s": 0.5785
       }
@@ -122,7 +122,7 @@
         "accuracy": 0.953333,
         "correct": 286,
         "questions": 300,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.001231,
         "latency_p50_s": 1.8745
       },
@@ -130,7 +130,7 @@
         "accuracy": 0.95,
         "correct": 285,
         "questions": 300,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.005,
         "latency_p50_s": 1.722
       },
@@ -138,7 +138,7 @@
         "accuracy": 0.943333,
         "correct": 283,
         "questions": 300,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.006,
         "latency_p50_s": 0.892
       },
@@ -146,7 +146,7 @@
         "accuracy": 0.95,
         "correct": 285,
         "questions": 300,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": null,
         "latency_p50_s": 6.321
       },
@@ -154,7 +154,7 @@
         "accuracy": 0.936667,
         "correct": 281,
         "questions": 300,
-        "account_failures_left_out": 0,
+        "rate_limit_or_quota_left_out": 0,
         "cost_usd": 0.005,
         "latency_p50_s": 1.317
       }
