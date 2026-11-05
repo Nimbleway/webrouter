@@ -1,18 +1,21 @@
 """route-eval: replay a router over the frozen results and score it against the static order, offline.
 
 Each question of a frozen set goes to a router, which ranks the backends that
-set has rows for. The replay walks that ranking as ``auto`` walks its chain:
-the first backend whose row did not fail serves the question, and its recorded
-grade, latency and cost are what the router scores. Nothing is called; the
-numbers are the committed rows in ``frozen/``.
+set has rows for -- or, on a mixed set such as ``tools-effort-60``, the paths:
+a method, a backend and a mode, as ``research:parallel:low``. The replay walks
+that ranking as ``auto`` walks its chain: the first backend whose row did not
+fail serves the question, and its recorded grade, latency and cost are what
+the router scores. Nothing is called; the numbers are the committed rows in
+``frozen/``.
 
     uv run --all-extras python benchmarks/providers/route_eval.py
     uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254 --router always:nimble
     uv run --all-extras python benchmarks/providers/route_eval.py --router mypkg.routers:pick \
         --joined benchmarks/providers/results/frozen-joined
 
-A router is ``static`` (today's ``auto`` order), ``oracle`` (the best backend
-for each question, known after the fact), ``always:<backend>``, or your own
+A router is ``static`` (today's ``auto`` order; on a mixed set, search then
+read), ``oracle`` (the best backend or path for each question, known after the
+fact), ``always:<backend>`` (``always:<path>`` on a mixed set), or your own
 callable named ``module:attr`` or ``path/to/file.py:attr``. Yours takes
 ``(prompt, candidates)`` and returns the candidate ids best first, or a
 mapping ``{"ranked": [...], "cost_usd": 0.0001}`` when it bills for itself;
@@ -39,21 +42,21 @@ from typing import Any
 
 from _common import _pct, _wilson
 from frozen import FROZEN_DIR
+from route_eval_paths import DEFAULT_PATH_ROUTERS, MIXED, research_by_effort
 from route_eval_rank import KEYLESS as KEYLESS
 from route_eval_rank import backend_stats, cost_of, is_served, noise_floor, recommended
 from route_eval_rank import rank_backends as rank_backends
 from route_eval_report import markdown
-from route_eval_routers import ALWAYS, ORACLE, STATIC, Router, load_router, static_router
-from route_eval_routers import STATIC_ORDER as STATIC_ORDER
+from route_eval_routers import ALWAYS, ORACLE, STATIC, STATIC_ORDER, Router, load_router, static_router
 from route_eval_routers import adapt as adapt
 from route_eval_routers import always_router as always_router
 from route_eval_routers import oracle_router as oracle_router
 from route_eval_sets import TWIN_SETS as TWIN_SETS
 from route_eval_sets import Question, load_set
 
-DEFAULT_SETS = ("sealqa-hard-254", "simpleqa-300-v2")
+DEFAULT_SETS = ("sealqa-hard-254", "simpleqa-300-v2", "tools-effort-60")
 DEFAULT_ROUTERS = ("always:webiq",)
-"""The example router; ``static`` and ``oracle`` are always scored, as the yardsticks."""
+"""The example router; ``static`` and ``oracle`` are always scored, as the yardsticks. A mixed set has its own."""
 DEFAULT_SEED = 0
 DEFAULT_TEST_FRACTION = 0.5
 BASELINE = "baseline"
@@ -226,7 +229,7 @@ def _add_regret(routers: dict[str, dict[str, Any]], floor: float) -> None:
 
 def evaluate_set(
     name: str,
-    specs: Sequence[str],
+    specs: Sequence[str] | None,
     *,
     seed: int = DEFAULT_SEED,
     test_fraction: float = DEFAULT_TEST_FRACTION,
@@ -234,8 +237,14 @@ def evaluate_set(
     folder: Path = FROZEN_DIR,
     joined: Path | None = None,
 ) -> dict[str, Any]:
-    """Every router in ``specs``, with ``static`` and ``oracle``, scored in-sample and held out on one set."""
+    """Every router in ``specs``, with ``static`` and ``oracle``, scored in-sample and held out on one set.
+
+    ``specs`` of ``None`` scores the set's example routers: :data:`DEFAULT_ROUTERS`, or on a mixed set
+    :data:`~route_eval_paths.DEFAULT_PATH_ROUTERS`.
+    """
     method, questions = load_set(name, folder, joined)
+    if specs is None:
+        specs = DEFAULT_PATH_ROUTERS if method == MIXED else DEFAULT_ROUTERS
     train, test = split(questions, seed, test_fraction)
     _check_split(name, test_fraction, len(questions), len(train), len(test))
     candidates = sorted({p for q in questions for p in q.rows})
@@ -255,14 +264,21 @@ def evaluate_set(
         "routers": routers,
         "backends": stats,
         "recommended_order": recommended(stats, floor),
+        "efforts": [{"backend": b, "effort": e, **row} for b, e, row in research_by_effort(stats, STATIC_ORDER)],
     }
+
+
+DEFAULTS_HELP = f"{', '.join(DEFAULT_ROUTERS)}; on a mixed set {', '.join(DEFAULT_PATH_ROUTERS)}"
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
     parser.add_argument("--set", dest="sets", action="append", help=f"frozen set (default: {', '.join(DEFAULT_SETS)})")
     parser.add_argument(
-        "--router", dest="routers", action="append", help=f"router to score (default: {', '.join(DEFAULT_ROUTERS)})"
+        "--router",
+        dest="routers",
+        action="append",
+        help=f"router to score (default: {DEFAULTS_HELP})",
     )
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="the train and held-out split's seed")
     parser.add_argument("--test-fraction", type=float, default=DEFAULT_TEST_FRACTION, help="share held out")
@@ -277,7 +293,7 @@ def main(argv: list[str] | None = None) -> None:
     summaries = [
         evaluate_set(
             name,
-            args.routers or DEFAULT_ROUTERS,
+            args.routers,
             seed=args.seed,
             test_fraction=args.test_fraction,
             floor=floor,

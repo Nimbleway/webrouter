@@ -114,11 +114,6 @@ def test_a_split_that_leaves_either_side_empty_is_refused(
         route_eval.evaluate_set("tiny", [], test_fraction=fraction, floor=0.05, folder=tmp_path)
 
 
-def test_the_committed_mixed_set_is_refused_by_name(route_eval: ModuleType) -> None:
-    with pytest.raises(SystemExit, match="tools-effort-60 mixes methods"):
-        route_eval.load_set("tools-effort-60")
-
-
 def test_the_report_shows_n_a_for_numbers_an_empty_score_cannot_have(route_eval: ModuleType) -> None:
     empty = {**route_eval.score([]), "regret_oracle": None, "regret_static": None}
     summary = {

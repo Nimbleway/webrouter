@@ -176,6 +176,7 @@ ROUTE_EVAL_SIBLINGS = (
     "_frozen_checks",
     "_frozen_mixed",
     "_tools_effort_plan",
+    "route_eval_paths",
     "route_eval_sets",
     "route_eval_rank",
     "route_eval_routers",
@@ -203,13 +204,14 @@ def route_eval_report(route_eval: ModuleType) -> ModuleType:
 
 
 def route_row(provider: str, grade: str | None, latency: float = 1.0, cost: float | None = None, **extra: Any) -> dict:
-    """One frozen row of the set ``tiny``: ``qid``, ``method`` and ``error`` default to ``q``, search and none."""
+    """One frozen row of the set ``tiny``: ``qid``, ``method``, ``mode`` and ``error`` default to ``q``, search,
+    default and none."""
     return {
         "set": "tiny",
         "question_id": extra.get("qid", "q"),
         "provider": provider,
         "method": extra.get("method", "search"),
-        "mode": "default",
+        "mode": extra.get("mode", "default"),
         "grade": grade,
         "latency_s": latency,
         "cost_usd": cost,
@@ -240,6 +242,7 @@ SCAN_SIBLINGS = (
     "_questions",
     "_report_tables",
     "_recommended",
+    "route_eval_paths",
     "route_eval_sets",
     "route_eval_rank",
     "frozen",
