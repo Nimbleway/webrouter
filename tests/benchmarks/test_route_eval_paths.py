@@ -55,6 +55,17 @@ def test_a_mixed_set_keys_each_row_by_its_path(route_eval: ModuleType, tmp_path:
     assert "extract:nimble" in first.rows and "extract:nimble" not in last.rows, "extract only where pages were given"
 
 
+def test_an_extract_path_is_ranked_on_the_questions_where_it_is_a_candidate(
+    route_eval: ModuleType, tmp_path: Path
+) -> None:
+    _mixed_set(tmp_path)
+    summary = route_eval.evaluate_set("mixed-tiny", [], floor=0.05, folder=tmp_path)
+
+    extract = summary["backends"]["extract:nimble"]
+    assert (extract["correct"], extract["questions"]) == (4, 4), "a question given no pages is not a miss for extract"
+    assert summary["recommended_order"][0] == "extract:nimble", "as right as research:parallel:high, and cheaper"
+
+
 def test_a_set_mixing_methods_that_are_not_paths_is_refused(route_eval: ModuleType, tmp_path: Path) -> None:
     write_frozen_set(tmp_path, "odd", [route_row("brave", "correct"), route_row("nimble", "correct", method="crawl")])
     with pytest.raises(SystemExit, match="odd mixes methods \\(crawl, search\\)"):
