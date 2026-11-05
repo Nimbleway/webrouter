@@ -271,6 +271,11 @@ A research run may take `--research-timeout` seconds (default 1200, twice
 `research()`'s default: a Linkup run can take a quarter of an hour), and
 `--concurrency` rows (default 6) run at once. Experimental until 1.0.
 
+The frozen run's Perplexity research columns (`low` and `medium`) are not
+comparable yet: most of their rows failed during the run (56 and 41 of 60),
+and Brave's answer column, 22 of 60 failed, rests on fewer questions than the
+rest. A later run can fill them.
+
 ## Frozen results
 
 The scans route-eval and the latency priors rest on are committed, one row per
