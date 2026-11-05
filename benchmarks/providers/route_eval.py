@@ -68,6 +68,8 @@ MSG_EMPTY_SPLIT = (
     "out; the fraction must be between 0 and 1 and both parts non-empty"
 )
 MSG_BAD_COST = "the router stated a cost of {cost}; a cost is a finite number of dollars, 0 or more"
+MSG_SKIPPED = "{spec} is not a candidate in {set_name}; skipped there"
+MSG_NOWHERE = "{spec!r} is a candidate in none of the sets: {sets}"
 MSG_NOT_A_CANDIDATE = "{spec!r}: {backend} has no rows in {set_name} (it has: {known})"
 
 
@@ -236,11 +238,13 @@ def evaluate_set(
     floor: float,
     folder: Path = FROZEN_DIR,
     joined: Path | None = None,
+    skip_absent: bool = False,
 ) -> dict[str, Any]:
     """Every router in ``specs``, with ``static`` and ``oracle``, scored in-sample and held out on one set.
 
     ``specs`` of ``None`` scores the set's example routers: :data:`DEFAULT_ROUTERS`, or on a mixed set
-    :data:`~route_eval_paths.DEFAULT_PATH_ROUTERS`.
+    :data:`~route_eval_paths.DEFAULT_PATH_ROUTERS`. With ``skip_absent``, an ``always:`` router whose
+    choice is not a candidate here is skipped, with a note, instead of refused: a backend is no path.
     """
     method, questions = load_set(name, folder, joined)
     if specs is None:
@@ -248,13 +252,17 @@ def evaluate_set(
     train, test = split(questions, seed, test_fraction)
     _check_split(name, test_fraction, len(questions), len(train), len(test))
     candidates = sorted({p for q in questions for p in q.rows})
-    names = list(dict.fromkeys((STATIC, ORACLE, *specs)))
+    skipped = [s for s in specs if skip_absent and s.startswith(ALWAYS) and s.removeprefix(ALWAYS) not in candidates]
+    for spec in skipped:
+        print(MSG_SKIPPED.format(spec=spec, set_name=name), file=sys.stderr)
+    names = list(dict.fromkeys((STATIC, ORACLE, *(s for s in specs if s not in skipped))))
     routers = {spec: _score_router(spec, method, name, train, test, candidates) for spec in names}
     _add_regret(routers, floor)
     stats = backend_stats(questions)  # nothing is fit to the order, so it ranks on every question
     return {
         "set": name,
         "method": method,
+        "skipped": skipped,
         "questions": len(questions),
         "train": len(train),
         "held_out": len(test),
@@ -298,9 +306,13 @@ def main(argv: list[str] | None = None) -> None:
             test_fraction=args.test_fraction,
             floor=floor,
             joined=args.joined,
+            skip_absent=not args.sets,  # the default sets mix backends and paths; a named set is held to its own
         )
         for name in args.sets or DEFAULT_SETS
     ]
+    for spec in args.routers or ():
+        if all(spec in s["skipped"] for s in summaries):
+            raise SystemExit(MSG_NOWHERE.format(spec=spec, sets=", ".join(s["set"] for s in summaries)))
     if args.json:
         args.json.write_text(json.dumps({"noise_floor": floor, "sets": summaries}, indent=2), encoding="utf-8")
     print(markdown(summaries, floor, pairs))

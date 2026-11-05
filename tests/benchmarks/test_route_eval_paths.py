@@ -178,3 +178,19 @@ def test_the_committed_tool_and_effort_set_replays_offline(route_eval: ModuleTyp
     oracle = summary["routers"]["oracle"]["held_out"]["accuracy"]
     assert all(r["held_out"]["accuracy"] <= oracle for r in summary["routers"].values())
     assert "tools-effort-60" in route_eval.DEFAULT_SETS
+
+
+def test_a_backend_router_is_skipped_on_a_mixed_default_set_and_refused_on_a_named_one(
+    route_eval: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mixed_set(tmp_path)
+    summary = route_eval.evaluate_set("mixed-tiny", ["always:nimble"], floor=0.05, folder=tmp_path, skip_absent=True)
+    assert summary["skipped"] == ["always:nimble"] and "always:nimble" not in summary["routers"]
+    with pytest.raises(SystemExit, match="nimble has no rows in mixed-tiny"):
+        route_eval.evaluate_set("mixed-tiny", ["always:nimble"], floor=0.05, folder=tmp_path)
+
+    load_set = route_eval.load_set
+    monkeypatch.setattr(route_eval, "load_set", lambda name, _, joined: load_set(name, tmp_path, joined))
+    monkeypatch.setattr(route_eval, "DEFAULT_SETS", ("mixed-tiny",))
+    with pytest.raises(SystemExit, match="a candidate in none of the sets: mixed-tiny"):
+        route_eval.main(["--router", "always:nimble"])
