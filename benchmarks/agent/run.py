@@ -316,10 +316,11 @@ WEB_ROUTER_PRESETS: dict[str, dict[str, tuple[str, ...]]] = {
     # over MCP_SETS["all"]'s five vendors. auto's keyless tier, which a caller holding those five keys would also
     # get after Tavily, is left out on purpose so both sides use the same five vendors. Extract leaves out Exa,
     # which returns text only, so auto at its markdown default would pass over it on every read anyway.
-    # Runs before 2026-10-07 recorded Nimble first here (nimble, tavily, perplexity, exa, parallel): each run's
-    # run.json keeps the chain it actually used.
+    # Runs before 2026-10-07 recorded Nimble first here (nimble, tavily, perplexity, exa, parallel), and runs before
+    # `make chains` set the order (2026-11-04) perplexity, nimble, tavily, parallel, exa: each run's run.json keeps
+    # the chain it actually used.
     "auto-shipped": {
-        "search": ("perplexity", "nimble", "tavily", "parallel", "exa"),
+        "search": ("perplexity", "nimble", "tavily", "exa", "parallel"),
         "extract": ("nimble", "tavily"),
     },
     # Search in the order the confirmation round ranked them; extract unchanged, so search order is the one difference.

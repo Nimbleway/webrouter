@@ -1,0 +1,163 @@
+{
+  "generated_by": "make chains (benchmarks/providers/chains.py); do not edit by hand",
+  "rule": "Backends best first by accuracy, correct out of every question, a failed row counting as a miss. Backends whose accuracy is within the noise floor of the most accurate one not yet placed form one tier, ordered cheapest first, then by latency, then by name: an accuracy gap smaller than a rerun's spread does not tell two backends apart, so cost decides. An unknown or $0 cost sorts after every known one. The keyless backends go last, whatever they score. A backend that served nothing is left out, and so is a row that failed during the run with a rate-limit or quota error: not counted a miss, nor in that backend's total.",
+  "noise_floor": 0.011811,
+  "search": {
+    "set": "sealqa-hard-254",
+    "questions": 254,
+    "preferred": [
+      "perplexity",
+      "nimble",
+      "webiq",
+      "linkup",
+      "tavily",
+      "exa",
+      "parallel",
+      "brave",
+      "you"
+    ],
+    "appended": [
+      "keenable",
+      "deepseek",
+      "agentcore"
+    ],
+    "unmeasured": [
+      "keenable",
+      "deepseek",
+      "agentcore"
+    ],
+    "no_row_served": [],
+    "measured": {
+      "perplexity": {
+        "accuracy": 0.188976,
+        "correct": 48,
+        "questions": 254,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.005,
+        "latency_p50_s": 0.343
+      },
+      "nimble": {
+        "accuracy": 0.192913,
+        "correct": 49,
+        "questions": 254,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.005,
+        "latency_p50_s": 1.0015
+      },
+      "webiq": {
+        "accuracy": 0.200787,
+        "correct": 51,
+        "questions": 254,
+        "account_failures_left_out": 0,
+        "cost_usd": null,
+        "latency_p50_s": 0.198
+      },
+      "linkup": {
+        "accuracy": 0.185039,
+        "correct": 47,
+        "questions": 254,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.005,
+        "latency_p50_s": 0.831
+      },
+      "tavily": {
+        "accuracy": 0.165354,
+        "correct": 42,
+        "questions": 254,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.008,
+        "latency_p50_s": 2.5955
+      },
+      "exa": {
+        "accuracy": 0.161417,
+        "correct": 41,
+        "questions": 254,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.017,
+        "latency_p50_s": 5.3845
+      },
+      "parallel": {
+        "accuracy": 0.161417,
+        "correct": 41,
+        "questions": 254,
+        "account_failures_left_out": 0,
+        "cost_usd": null,
+        "latency_p50_s": 2.399
+      },
+      "brave": {
+        "accuracy": 0.145669,
+        "correct": 37,
+        "questions": 254,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.005,
+        "latency_p50_s": 0.7055
+      },
+      "you": {
+        "accuracy": 0.114173,
+        "correct": 29,
+        "questions": 254,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.005,
+        "latency_p50_s": 0.5785
+      }
+    }
+  },
+  "answer": {
+    "set": "answer-simpleqa-300",
+    "questions": 300,
+    "preferred": [
+      "perplexity",
+      "you",
+      "linkup",
+      "parallel",
+      "exa",
+      "brave"
+    ],
+    "unmeasured": [
+      "brave"
+    ],
+    "no_row_served": [],
+    "measured": {
+      "perplexity": {
+        "accuracy": 0.953333,
+        "correct": 286,
+        "questions": 300,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.001231,
+        "latency_p50_s": 1.8745
+      },
+      "you": {
+        "accuracy": 0.95,
+        "correct": 285,
+        "questions": 300,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.005,
+        "latency_p50_s": 1.722
+      },
+      "linkup": {
+        "accuracy": 0.943333,
+        "correct": 283,
+        "questions": 300,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.006,
+        "latency_p50_s": 0.892
+      },
+      "parallel": {
+        "accuracy": 0.95,
+        "correct": 285,
+        "questions": 300,
+        "account_failures_left_out": 0,
+        "cost_usd": null,
+        "latency_p50_s": 6.321
+      },
+      "exa": {
+        "accuracy": 0.936667,
+        "correct": 281,
+        "questions": 300,
+        "account_failures_left_out": 0,
+        "cost_usd": 0.005,
+        "latency_p50_s": 1.317
+      }
+    }
+  }
+}

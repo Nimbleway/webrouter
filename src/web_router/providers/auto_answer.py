@@ -1,4 +1,4 @@
-"""``auto`` for ``answer()``: the answer backends you hold a key for, cheapest first.
+"""``auto`` for ``answer()``: the answer backends you hold a key for, in the order route-eval ranked them.
 
 Kept apart from :mod:`web_router.providers.auto`, which it follows. As for
 search, each request goes only to the members that map every option it sets --
@@ -51,7 +51,7 @@ from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResp
 
 
 class AutoAnswerProvider(AnswerProvider):
-    """Answers through the first configured backend that answers, cheapest first.
+    """Answers through the first configured backend that answers, in ranked order.
 
     Declares every answer option, since which ones a call can use depends on the
     chain -- a backend added with :func:`register_answer_provider` may map one
@@ -97,7 +97,7 @@ class AutoAnswerProvider(AnswerProvider):
 
     @staticmethod
     def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
-        """The answer backends you have a key for, cheapest first, then any others added since, by name.
+        """The answer backends you have a key for, in ranked order, then any others added since, by name.
 
         Nothing keyless follows them: every answer backend bills the call.
         """
