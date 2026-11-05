@@ -34,8 +34,8 @@ RANKING_RULE = (
     "whose accuracy is within the noise floor of the most accurate one not yet placed form one tier, ordered "
     "cheapest first, then by latency, then by name: an accuracy gap smaller than a rerun's spread does not tell "
     "two backends apart, so cost decides. An unknown or $0 cost sorts after every known one. The keyless backends "
-    "go last, whatever they score. A backend that served nothing is left out, and so is a row failed on the "
-    "scan's account (a rate limit or a spent quota): not counted a miss, nor in that backend's total."
+    "go last, whatever they score. A backend that served nothing is left out, and so is a row that failed during "
+    "the run with a rate-limit or quota error: not counted a miss, nor in that backend's total."
 )
 """The rule :func:`rank_backends` applies, in words, for a report or a reader that prints it."""
 

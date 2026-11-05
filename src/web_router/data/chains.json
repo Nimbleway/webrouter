@@ -1,6 +1,6 @@
 {
   "generated_by": "make chains (benchmarks/providers/chains.py); do not edit by hand",
-  "rule": "accuracy over every question of the set, account and quota failures left out; within the noise floor of the best not yet placed, the cheaper at list price (unknown or $0 never moves a member up), then the lower p50 latency, then the name",
+  "rule": "Backends best first by accuracy, correct out of every question, a failed row counting as a miss. Backends whose accuracy is within the noise floor of the most accurate one not yet placed form one tier, ordered cheapest first, then by latency, then by name: an accuracy gap smaller than a rerun's spread does not tell two backends apart, so cost decides. An unknown or $0 cost sorts after every known one. The keyless backends go last, whatever they score. A backend that served nothing is left out, and so is a row that failed during the run with a rate-limit or quota error: not counted a miss, nor in that backend's total.",
   "noise_floor": 0.011811,
   "search": {
     "set": "sealqa-hard-254",

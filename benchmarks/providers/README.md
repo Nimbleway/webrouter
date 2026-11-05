@@ -443,11 +443,7 @@ every question makes it slightly harder for a router to beat there, on purpose:
   have no SealQA rows.
 - **answer** ranks on `answer-simpleqa-300`, the one answer set.
 
-The rule is route-eval's recommended order: correct out of every question of
-the set, a `rate_limit` or `quota` row left out; within the noise floor of the
-best not yet placed, the cheaper at list price first (an unknown or $0 price
-never moves a member up), then the lower p50 latency, then the name. The
-keyless backends go last.
+The rule is the recommended order's, above; `chains.json` states it as `rule`.
 
 On `sealqa-hard-254`, judged by `openai:gpt-4o`, frozen from the run of
 2026-10-07, WebIQ (51 of 254), Nimble (49) and Perplexity (48) sit within the
