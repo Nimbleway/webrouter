@@ -209,8 +209,9 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         fixtures/browser/; test_auto_browser.py and
                         test_auto_browse.py the two billed `auto` chains;
                         providers/test_http_base.py guards the HTTP plumbing,
-                        and providers/_browser_live.py is the live browser
-                        tests' shared check
+                        providers/_browser_live.py is the live browser
+                        tests' shared check, and test_shape.py the file
+                        length limit, against shape_baseline.json
 examples/               runnable scripts, indexed by examples/README.md
 benchmarks/agent/       one agent over FRAMES on its platform's built-in web
                         search and on web-router — Claude on Managed Agents or
@@ -790,9 +791,36 @@ URL that failed in `ExtractResponse.failures`, and raises only when nothing came
 back at all. Do not move that handling into a provider — it is what makes a
 one-URL-per-call backend behave like a batching one.
 
+**Keep files and functions small.** Functions are limited by ruff, in
+`make check`: at most 50 statements (`PLR0915`) and a cyclomatic complexity of
+at most 10 (`C901`). The few functions over either today carry a
+`# noqa: C901` or `# noqa: PLR0915`; such a `noqa` may be removed once its
+function is split, but never added to new code. Files are limited by the shape
+test, `tests/test_shape.py`: a Python file under `src/web_router/`, `scripts/`,
+`benchmarks/` or `tests/` is at most 400 lines. Files already longer are
+grandfathered in `tests/shape_baseline.json` and may only shrink: after
+shrinking one, run `make shape-baseline`, which refuses to add or grow an
+entry. Never regenerate it to admit new code; split the code instead. The
+large hubs — `client.py`, `providers/auto.py`, `types.py`, `constants.py`,
+`mcp/tools.py` — are in that baseline, so none of them may gain even one line
+on net: new code goes in its own module, and a hub grows only if the same pull
+request moves at least as many lines out of it. To add a keyword argument to
+hub methods, first move something out of the hub — a helper, a group of
+methods into a mixin, as `client_answer.py` holds `answer` for `client.py` —
+to make the room. That counts registry entries too: a new provider's line in
+`constants.py`'s `*_ENV_BY_PROVIDER` tables needs an older provider's
+constants moved out to its own `constants_<provider>.py` in the same pull
+request.
+
+**Reuse before you write.** Before adding a helper, grep for an existing one
+and use it.
+
 **No hardcoded literals in logic.** Endpoints, environment variable names,
-timeouts, header names and message templates belong in `constants.py`; a
-provider's own go in its `constants_<provider>.py`.
+timeouts, header names and message templates belong in a constants module,
+but new ones never go into `constants.py` (beyond a registry entry, paid for as
+above): a provider's go in its `constants_<provider>.py`, and any others in a
+module of their own next to it named for their area, `constants_<area>.py`, as
+`constants_answer.py` and `constants_decisions.py` already are.
 
 **Unset means unset.** Request fields left as `None` must not be sent to the
 provider, so each API keeps its own defaults instead of inheriting ours. Use
@@ -1108,7 +1136,7 @@ plumbing — never the network, and never `OPENAI_API_KEY` or
 - Comments explain *why*, never *what*. Do not narrate the code, leave TODOs
   about work you were asked to do, or add banner headers inside a class.
 - Docstrings on public API; skip them on self-evident private helpers.
-- Prefer a lookup table in `constants.py` over a chain of `if`.
+- Prefer a lookup table in a constants module over a chain of `if`.
 
 ## Pull requests
 
