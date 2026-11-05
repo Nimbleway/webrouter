@@ -29,8 +29,9 @@ def extract_provider_for(
     extract_provider: str | Provider | None,
     *routers: WebRouter | AsyncWebRouter | None,
 ) -> str | None:
-    """The extract tool's backend: the one named, the search one when it extracts, the router preset's, or the default.
+    """The extract tool's backend: the one named, the search one when it extracts, or ``None`` for each router's own.
 
+    ``None`` sends each call to its router's preset backend, else its default.
     A router whose default cannot extract, and whose preset names no extract
     backend, raises here rather than on the agent's first page read, since no
     retry by the model fixes it -- and the tool never picks another backend the
@@ -43,11 +44,13 @@ def extract_provider_for(
     if name in extractors:
         return name
     for router in routers:
-        preset = _preset_provider(router, "extract")
-        if preset is not None:
-            return preset
-    for router in routers:
-        if router is not None and router.default_provider not in extractors:
+        # None leaves each router its own preset's backend, resolved on every call: a sync and an async router
+        # can hold different ones, and one name sent to both would override, or conflict with, the other's.
+        if (
+            router is not None
+            and router.default_provider not in extractors
+            and _preset_provider(router, "extract") is None
+        ):
             raise ConfigurationError(
                 MSG_INTEGRATION_NO_EXTRACT_PROVIDER.format(default=router.default_provider, available=extractors)
             )

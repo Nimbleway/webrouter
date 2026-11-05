@@ -455,9 +455,11 @@ class PresetRegistry:
         except PresetError as exc:
             return PresetCheck(component=component, issues=[*issues, PresetIssue(field="preset", message=str(exc))])
         provider = resolution.provider if PRESET_PROVIDER_FIELD in settable else arguments.get(PRESET_PROVIDER_FIELD)
-        # The class's own checks read the values, so they run only once every value is one the request takes.
+        # A backend's own checks can read a native input (Nimble's read `records`), so the preflight request carries
+        # them beside the settings; and they read values, so they run only once every value is one the request takes.
+        native = {key: arguments[key] for key in PRESET_NATIVE_INPUTS[component] if arguments.get(key) is not None}
         name, backend_issues = self._backend_issues(
-            component, provider, resolution.settings, conditions=not argument_issues
+            component, provider, {**resolution.settings, **native}, conditions=not argument_issues
         )
         return PresetCheck(
             component=component,

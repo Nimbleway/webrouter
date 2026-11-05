@@ -1270,5 +1270,48 @@ def test_the_agent_tools_take_the_router_presets_backends(
     router = WebRouter("brave", preset=Preset.model_validate(definition(components=sections)))
 
     assert answer_provider_for(None, None, router) == "fake"
-    assert extract_provider_for(None, None, router) == "fake"
+    assert extract_provider_for(None, None, router) is None  # each call resolves the router's preset backend
     assert answer_provider_for(None, "linkup", router) == "linkup"
+
+
+@pytest.mark.parametrize(
+    ("arguments", "field"),
+    [
+        ({"records": [{"name": "Acme"}]}, "output_schema"),
+        ({"records": [{"name": "Acme"}], "output_schema": {"type": "object"}, "effort": "low"}, "effort"),
+    ],
+    ids=["records need a schema", "records refuse an effort"],
+)
+def test_validate_reads_the_native_inputs_a_backends_own_checks_need(arguments: dict[str, Any], field: str) -> None:
+    pytest.importorskip("nimble_python")
+
+    check = PresetRegistry(default_provider="nimble").validate("research", {"query": "q", **arguments})
+
+    assert [issue.field for issue in check.issues] == [field]
+
+
+async def test_the_extract_tool_leaves_each_router_its_own_preset(fake_extract_provider: Any) -> None:
+    pytest.importorskip("langchain_core")
+    from web_router.integrations.langchain import web_router_tools
+    from web_router.registry import register_extract_provider, unregister_extract_provider
+
+    class OtherExtract(FakeExtractProvider):
+        name = "other"
+
+    register_extract_provider("other", OtherExtract)
+    try:
+        sync_preset = definition("acme.sync", components={"extract": {"defaults": {"provider": "fake"}}})
+        async_preset = definition("acme.async", components={"extract": {"defaults": {"provider": "other"}}})
+        router = WebRouter("brave", preset=Preset.model_validate(sync_preset))
+        async_router = AsyncWebRouter("brave", preset=Preset.model_validate(async_preset))
+        _, extract_tool = web_router_tools(router, async_router=async_router)
+
+        extract_tool._run(["https://example.com"])
+        await extract_tool._arun(["https://example.com"])
+
+        assert router.get_extract_provider("fake").calls == [["https://example.com"]]  # type: ignore[attr-defined]
+        assert async_router.get_extract_provider("other").calls == [["https://example.com"]]  # type: ignore[attr-defined]
+        await async_router.aclose()
+        router.close()
+    finally:
+        unregister_extract_provider("other")
