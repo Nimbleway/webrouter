@@ -240,3 +240,62 @@ def route_question(module: ModuleType, *rows: dict[str, Any], prompt: str | None
 def route_stats(accuracy: float, cost: float | None, latency: float = 1.0) -> dict[str, Any]:
     """What the ranking reads of one backend."""
     return {"accuracy": accuracy, "cost_usd": cost, "latency_p50": latency}
+
+
+SCAN_SCRIPT = EXTRACT_SCRIPT.with_name("run.py")
+SCAN_SIBLINGS = (
+    "_common",
+    "_questions",
+    "_report_tables",
+    "_recommended",
+    "route_eval_sets",
+    "route_eval_rank",
+    "frozen",
+    "_frozen_checks",
+)
+"""What the search scan imports from its folder, under plain names, so they are forgotten once it is."""
+
+
+@pytest.fixture(scope="module")
+def scan() -> Iterator[ModuleType]:
+    # The scan imports what it shares with its neighbour as a sibling, as it does run from its folder.
+    # Loaded under its own name: the agent benchmark's script is also called run.py.
+    sys.path.insert(0, str(SCAN_SCRIPT.parent))
+    try:
+        spec = importlib.util.spec_from_file_location("provider_scan", SCAN_SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        yield module
+    finally:
+        sys.path.remove(str(SCAN_SCRIPT.parent))
+        for name in SCAN_SIBLINGS:
+            sys.modules.pop(name, None)
+
+
+def scan_row(provider: str, question: str, grade: str | None, topic: str = "Science", **extra: Any) -> dict[str, Any]:
+    """One backend's graded search on one question, as ``rows.jsonl`` holds it; ``grade=None`` is a failed search."""
+    failed = grade is None
+    return {
+        "provider": provider,
+        "question": question,
+        "target": "a",
+        "latency": 1.0,
+        "answer": None if failed else "a",
+        "grade": grade,
+        "error": "HTTP 402" if failed else None,
+        "failed_at": "search" if failed else None,
+        "topic": topic,
+        "answer_type": "Date",
+        **extra,
+    }
+
+
+SCAN_SETUP = {
+    "limit": 12,
+    "seed": 0,
+    "max_results": 5,
+    "judge": "openai:gpt-4o",
+    "started": "2026-09-30T00:00:00+00:00",
+}
+"""A search scan's ``run.json``, minus the backends, which each test names."""

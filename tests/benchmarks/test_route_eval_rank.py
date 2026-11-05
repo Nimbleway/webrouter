@@ -53,3 +53,13 @@ def test_the_noise_floor_is_the_twin_runs_widest_gap(route_eval_rank: ModuleType
     assert set(pairs) == {"nimble", "webiq"}
     assert pairs["webiq"] == (51 / 254, 54 / 254)
     assert floor == pytest.approx(3 / 254)
+
+
+def test_the_best_are_every_backend_within_the_floor_of_the_most_accurate_wherever_cost_put_them(
+    route_eval_rank: ModuleType,
+) -> None:
+    stats = {"accurate": _stats(0.90, 0.050), "cheap": _stats(0.89, 0.001), "far": _stats(0.70, 0.001)}
+    ranked, best = route_eval_rank.ranked_with_best(stats, noise_floor=0.02)
+    assert ranked == route_eval_rank.rank_backends(stats, noise_floor=0.02) == ["cheap", "accurate", "far"]
+    assert best == {"cheap", "accurate"}
+    assert route_eval_rank.ranked_with_best({}, noise_floor=0.02) == ([], frozenset())

@@ -24,6 +24,14 @@ SERVED_ERRORS = frozenset({JUDGE_ERROR, LEAKED_ERROR})
 """Error classes where the backend answered and only the grading did not happen: served, but ungraded."""
 KEYLESS = frozenset(name for name, options in AUTO_KEYLESS if not options.get("allow_keyless"))
 """Backends that are only ever keyless (``you-mcp``): a ranking keeps them last, as ``auto`` does."""
+RANKING_RULE = (
+    "Backends best first by accuracy, correct out of every question, a failed row counting as a miss. Backends "
+    "whose accuracy is within the noise floor of the most accurate one not yet placed form one tier, ordered "
+    "cheapest first, then by latency, then by name: an accuracy gap smaller than a rerun's spread does not tell "
+    "two backends apart, so cost decides. An unknown or $0 cost sorts after every known one. The keyless backends "
+    "go last, whatever they score. A backend that served nothing is left out."
+)
+"""The rule :func:`rank_backends` applies, in words, for a report or a reader that prints it."""
 
 
 def cost_of(row: Mapping[str, Any]) -> float | None:
@@ -40,6 +48,11 @@ def _cost_key(cost: float | None) -> tuple[bool, float]:
 
 def _latency_key(latency: float | None) -> float:
     return float("inf") if latency is None else latency
+
+
+def _within_floor(gap: float, noise_floor: float) -> bool:
+    # The tolerance keeps a gap equal to the floor, computed from different counts, from falling outside it.
+    return gap <= noise_floor + 1e-12
 
 
 def rank_backends(
@@ -60,11 +73,26 @@ def rank_backends(
     order: list[str] = []
     while remaining:
         top = stats[remaining[0]]["accuracy"]
-        tier = [p for p in remaining if top - stats[p]["accuracy"] <= noise_floor + 1e-12]
+        tier = [p for p in remaining if _within_floor(top - stats[p]["accuracy"], noise_floor)]
         tier.sort(key=lambda p: (_cost_key(stats[p]["cost_usd"]), _latency_key(stats[p]["latency_p50"]), p))
         order += tier
         remaining = [p for p in remaining if p not in tier]
     return [p for p in order if p not in keyless] + [p for p in order if p in keyless]
+
+
+def ranked_with_best(
+    stats: Mapping[str, Mapping[str, Any]], noise_floor: float, keyless: Iterable[str] = KEYLESS
+) -> tuple[list[str], frozenset[str]]:
+    """:func:`rank_backends`, and the backends within ``noise_floor`` of the most accurate one.
+
+    Those are the best, as far as the floor tells, wherever the cost tie-break
+    placed them: a report labels them by accuracy, not by position.
+    """
+    if not stats:
+        return [], frozenset()
+    top = max(s["accuracy"] for s in stats.values())
+    best = frozenset(p for p, s in stats.items() if _within_floor(top - s["accuracy"], noise_floor))
+    return rank_backends(stats, noise_floor, keyless), best
 
 
 def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
@@ -95,14 +123,14 @@ def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
 
 def recommended(stats: Mapping[str, Mapping[str, Any]], noise_floor: float) -> list[str]:
     """The one recommended order: :func:`rank_backends` over the backends that served anything."""
-    return rank_backends(
+    return ranked_with_best(
         {
             p: {"accuracy": s["accuracy_all"], "cost_usd": s["cost_usd"], "latency_p50": s["latency_p50"]}
             for p, s in stats.items()
             if s["served"]
         },
         noise_floor,
-    )
+    )[0]
 
 
 @lru_cache(maxsize=4)
