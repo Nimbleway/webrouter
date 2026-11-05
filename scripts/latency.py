@@ -40,11 +40,12 @@ Key = tuple[str, str, "str | None"]
 
 
 SIBLINGS = ("_common", "_frozen_checks", "_frozen_mixed", "_tools_effort_plan")
-"""What ``frozen.py`` imports from its folder by plain name; forgotten once it is loaded, as the tests do."""
+"""What ``frozen.py`` imports from its folder by plain name; the ones this loads are forgotten once it is."""
 
 
 def _benchmarks() -> tuple[ModuleType, ModuleType]:
     """``frozen.py`` and ``_common.py``, loaded as siblings, as they are when run from their folder."""
+    already = {name for name in SIBLINGS if name in sys.modules}
     sys.path.insert(0, str(BENCHMARKS))
     try:
         spec = importlib.util.spec_from_file_location("frozen_results", BENCHMARKS / "frozen.py")
@@ -54,7 +55,7 @@ def _benchmarks() -> tuple[ModuleType, ModuleType]:
         return frozen, sys.modules["_common"]
     finally:
         sys.path.remove(str(BENCHMARKS))
-        for name in SIBLINGS:
+        for name in set(SIBLINGS) - already:  # a loader that imported one first keeps it
             sys.modules.pop(name, None)
 
 
@@ -109,6 +110,13 @@ def pooled_sets(sets: Mapping[str, Mapping[str, Any]], *, mixed: str) -> dict[st
     return pooled
 
 
+def pooled_rows(
+    rows: Mapping[str, Iterable[Mapping[str, Any]]], pooled: Mapping[str, frozenset[str]]
+) -> list[Mapping[str, Any]]:
+    """Each pooled set's rows from its pooled backends, in every mode: the manifest names backends, not modes."""
+    return [row for name, backends in pooled.items() for row in rows[name] if row["provider"] in backends]
+
+
 def measure(
     rows: Iterable[Mapping[str, Any]],
     runs: Mapping[tuple[str, str, str], tuple[str, date]],
@@ -154,13 +162,7 @@ def frozen_latency() -> tuple[dict[Key, dict[str, Any]], set[tuple[str, str, str
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
     pooled = pooled_sets(manifest["sets"], mixed=frozen.MIXED)
     manifest = {"sets": {name: manifest["sets"][name] for name in pooled}}
-    setups = {name: {frozen.split_setup(label) for label in labels} for name, labels in pooled.items()}
-    rows = [
-        row
-        for name in pooled
-        for row in frozen.read_rows(frozen.FROZEN_DIR / (name + frozen.SUFFIX))
-        if (row["provider"], row["mode"]) in setups[name]
-    ]
+    rows = pooled_rows({name: frozen.read_rows(frozen.FROZEN_DIR / (name + frozen.SUFFIX)) for name in pooled}, pooled)
     return measure(
         rows,
         run_index(manifest, frozen.split_setup),

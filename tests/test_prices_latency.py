@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib
+import sys
 from datetime import date
 
 import pytest
@@ -60,6 +62,27 @@ def _frozen(
         "latency_s": latency_s,
         "error": error,
     }
+
+
+def test_a_pooled_backend_keeps_its_rows_in_every_mode() -> None:
+    rows = {
+        "a": [
+            _frozen("tavily", "default", 1.0),
+            _frozen("tavily", "ultra-fast@deep", 2.0),
+            _frozen("exa", "default", 3.0),
+        ],
+        "b": [_frozen("tavily", "default", 4.0, set_name="b")],
+    }
+    kept = latency.pooled_rows(rows, {"a": frozenset({"tavily"})})
+    assert [(r["provider"], r["mode"]) for r in kept] == [("tavily", "default"), ("tavily", "ultra-fast@deep")]
+
+
+def test_loading_frozen_keeps_the_siblings_another_loader_imported(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.syspath_prepend(str(latency.BENCHMARKS))
+    for name in latency.SIBLINGS:
+        monkeypatch.setitem(sys.modules, name, importlib.import_module(name))
+    latency._benchmarks()
+    assert all(name in sys.modules for name in latency.SIBLINGS)
 
 
 def test_measure_pools_sets_skips_failures_and_reports_unmatched() -> None:
