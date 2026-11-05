@@ -237,7 +237,10 @@ def scan() -> Iterator[ModuleType]:
 
 
 def scan_row(provider: str, question: str, grade: str | None, topic: str = "Science", **extra: Any) -> dict[str, Any]:
-    """One backend's graded search on one question, as ``rows.jsonl`` holds it; ``grade=None`` is a failed search."""
+    """One backend's graded search on one question, as ``rows.jsonl`` holds it.
+
+    ``grade=None`` is a failed search, a server error a ranking counts as a miss; ``error=`` gives another.
+    """
     failed = grade is None
     return {
         "provider": provider,
@@ -246,7 +249,7 @@ def scan_row(provider: str, question: str, grade: str | None, topic: str = "Scie
         "latency": 1.0,
         "answer": None if failed else "a",
         "grade": grade,
-        "error": "HTTP 402" if failed else None,
+        "error": "HTTP 500" if failed else None,
         "failed_at": "search" if failed else None,
         "topic": topic,
         "answer_type": "Date",
