@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import statistics
 import sys
@@ -63,6 +64,7 @@ MSG_EMPTY_SPLIT = (
     "{name}: --test-fraction {test_fraction} splits {questions} questions into {train} in-sample and {test} held "
     "out; the fraction must be between 0 and 1 and both parts non-empty"
 )
+MSG_BAD_COST = "the router stated a cost of {cost}; a cost is a finite number of dollars, 0 or more"
 MSG_NOT_A_CANDIDATE = "{spec!r}: {backend} has no rows in {set_name} (it has: {known})"
 
 
@@ -95,7 +97,10 @@ def split(questions: Sequence[Question], seed: int, test_fraction: float) -> tup
 
 def _decision(decision: Any) -> tuple[list[str], float]:
     if isinstance(decision, Mapping):
-        return [str(p) for p in decision.get("ranked") or ()], float(decision.get("cost_usd") or 0.0)
+        cost = float(decision.get("cost_usd") or 0.0)
+        if not math.isfinite(cost) or cost < 0:
+            raise ValueError(MSG_BAD_COST.format(cost=cost))
+        return [str(p) for p in decision.get("ranked") or ()], cost
     if isinstance(decision, str):
         return [decision], 0.0
     return [str(p) for p in decision or ()], 0.0

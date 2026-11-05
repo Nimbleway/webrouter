@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -129,3 +130,29 @@ def test_a_router_given_as_a_py_file_path_loads(route_eval: ModuleType, tmp_path
     assert outcome.served_by == "perplexity" and outcome.correct and not outcome.router_failed
     with pytest.raises(SystemExit, match="a router is static, oracle"):
         route_eval.load_router("x", "search")
+
+
+def test_a_router_file_with_a_dataclass_loads(route_eval: ModuleType, tmp_path: Path) -> None:
+    (tmp_path / "picker.py").write_text(
+        "from __future__ import annotations\n"
+        "from dataclasses import dataclass\n\n\n"
+        "@dataclass\n"
+        "class Picker:\n"
+        "    first: str\n\n"
+        "    def __call__(self, prompt, candidates):\n"
+        "        return [self.first]\n\n\n"
+        "pick = Picker('perplexity')\n"
+    )
+    router = route_eval.load_router(f"{tmp_path}/picker.py:pick", "search")
+    q = _question(route_eval, _row("tavily", "incorrect"), _row("perplexity", "correct"))
+    assert route_eval.replay(router, q, route_eval.static_router("search")).served_by == "perplexity"
+
+
+@pytest.mark.parametrize("cost", [-0.01, float("nan"), float("inf")])
+def test_a_router_stating_an_impossible_cost_is_a_router_failure(route_eval: ModuleType, cost: float) -> None:
+    q = _question(route_eval, _row("tavily", "incorrect"), _row("perplexity", "correct"))
+    outcome = route_eval.replay(
+        lambda _q: {"ranked": ["perplexity"], "cost_usd": cost}, q, route_eval.static_router("search")
+    )
+    assert outcome.router_failed and outcome.router_error and "a cost is a finite number" in outcome.router_error
+    assert outcome.cost_usd is not None and math.isfinite(outcome.cost_usd)

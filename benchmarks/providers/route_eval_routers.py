@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -93,6 +94,7 @@ def load_router(spec: str, method: str) -> Router:
         if module_spec is None or module_spec.loader is None:
             raise SystemExit(MSG_BAD_ROUTER.format(spec=spec))
         module = importlib.util.module_from_spec(module_spec)
+        sys.modules[module_spec.name] = module  # registered while it runs: a dataclass looks its module up by name
         module_spec.loader.exec_module(module)
     else:
         module = importlib.import_module(target)
