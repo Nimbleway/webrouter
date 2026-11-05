@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from tests.conftest import FakeProvider, FakeResearchProvider
+from tests.conftest import FakeExtractProvider, FakeProvider, FakeResearchProvider
 from web_router import (
     AsyncWebRouter,
     Preset,
@@ -27,6 +27,7 @@ from web_router import (
     PresetRegistry,
     PresetValidationError,
     UnsupportedParameterError,
+    Viewport,
     WebRouter,
 )
 from web_router.constants_presets import PRESET_FIELDS
@@ -646,70 +647,170 @@ def test_validate_takes_a_jobs_timeout_as_the_method_does(fake_research_provider
     assert check.ok
 
 
-class _Stop(Exception):
-    """Raised by a stand-in resolver, so a test can see what a method sent it without building a backend."""
+ARGUMENTS: dict[str, dict[str, Any]] = {
+    "search": {
+        "max_results": 3,
+        "search_depth": "deep",
+        "include_domains": ["a.com"],
+        "exclude_domains": ["b.com"],
+        "country": "US",
+        "locale": "en",
+        "provider_options": {"x": 1},
+    },
+    "extract": {"format": "text", "provider_options": {"x": 1}},
+    "templates": {"format": "html", "provider_options": {"x": 1}},
+    "research": {
+        "output_schema": {"type": "object"},
+        "effort": "high",
+        "include_domains": ["a.com"],
+        "exclude_domains": ["b.com"],
+        "provider_options": {"x": 1},
+    },
+    "browse": {
+        "start_url": "https://example.com",
+        "output_schema": {"type": "object"},
+        "max_steps": 5,
+        "allowed_domains": ["a.com"],
+        "provider_options": {"x": 1},
+    },
+    "browser": {
+        "proxy_country": "US",
+        "stealth": "high",
+        "solve_captchas": True,
+        "profile": "p1",
+        "persist_profile": True,
+        "timeout": 60,
+        "idle_timeout": 30,
+        "viewport": {"width": 800, "height": 600},
+        "headless": True,
+        "provider_options": {"x": 1},
+    },
+    "answer": {
+        "include_domains": ["a.com"],
+        "exclude_domains": ["b.com"],
+        "country": "US",
+        "locale": "en",
+        "recency": "week",
+        "provider_options": {"x": 1},
+    },
+}
+"""A valid value for every setting each method's presets can hold, but ``provider``."""
 
+GETTERS = {
+    "search": "get_provider",
+    "extract": "get_extract_provider",
+    "templates": "get_template_provider",
+    "research": "get_research_provider",
+    "browse": "get_browse_provider",
+    "browser": "get_browser_provider",
+    "answer": "get_answer_provider",
+}
 
-SYNC_CALLS: list[tuple[str, Callable[[WebRouter], object]]] = [
-    ("search", lambda router: router.search("q")),
-    ("extract", lambda router: router.extract("https://example.com")),
-    ("templates", lambda router: router.run_template("books_pdp", provider="fake")),
-    ("answer", lambda router: router.answer("q")),
-    ("research", lambda router: router.research("q")),
-    ("research", lambda router: router.submit_research("q")),
-    ("browse", lambda router: router.browse("t")),
-    ("browse", lambda router: router.submit_browse("t")),
-    ("browser", lambda router: router.open_browser()),
+SYNC_CALLS: list[tuple[str, Callable[..., object]]] = [
+    ("search", lambda router, **kw: router.search("q", **kw)),
+    ("extract", lambda router, **kw: router.extract("https://example.com", **kw)),
+    ("templates", lambda router, **kw: router.run_template("books_pdp", {"url": "u"}, provider="fake", **kw)),
+    ("answer", lambda router, **kw: router.answer("q", **kw)),
+    ("research", lambda router, **kw: router.research("q", **kw)),
+    ("research", lambda router, **kw: router.submit_research("q", **kw)),
+    ("browse", lambda router, **kw: router.browse("t", **kw)),
+    ("browse", lambda router, **kw: router.submit_browse("t", **kw)),
+    ("browser", lambda router, **kw: router.open_browser(**kw)),
 ]
 
-ASYNC_CALLS: list[tuple[str, Callable[[AsyncWebRouter], Awaitable[object]]]] = [
-    ("search", lambda router: router.search("q")),
-    ("extract", lambda router: router.extract("https://example.com")),
-    ("templates", lambda router: router.run_template("books_pdp", provider="fake")),
-    ("answer", lambda router: router.answer("q")),
-    ("research", lambda router: router.research("q")),
-    ("research", lambda router: router.submit_research("q")),
-    ("browse", lambda router: router.browse("t")),
-    ("browse", lambda router: router.submit_browse("t")),
-    ("browser", lambda router: router.open_browser()),
+ASYNC_CALLS: list[tuple[str, Callable[..., Awaitable[object]]]] = [
+    ("search", lambda router, **kw: router.search("q", **kw)),
+    ("extract", lambda router, **kw: router.extract("https://example.com", **kw)),
+    ("templates", lambda router, **kw: router.run_template("books_pdp", {"url": "u"}, provider="fake", **kw)),
+    ("answer", lambda router, **kw: router.answer("q", **kw)),
+    ("research", lambda router, **kw: router.research("q", **kw)),
+    ("research", lambda router, **kw: router.submit_research("q", **kw)),
+    ("browse", lambda router, **kw: router.browse("t", **kw)),
+    ("browse", lambda router, **kw: router.submit_browse("t", **kw)),
+    ("browser", lambda router, **kw: router.open_browser(**kw)),
 ]
 
+ALL_FAKES = (
+    "fake_provider",
+    "fake_extract_provider",
+    "fake_template_provider",
+    "fake_answer_provider",
+    "fake_research_provider",
+    "fake_browse_provider",
+    "fake_browser_provider",
+)
 
-def _capturing(seen: dict[str, Any]) -> Callable[..., Any]:
-    def resolve(component: str, preset: Any, **explicit: Any) -> Any:
-        seen.update(component=component, names=set(explicit))
-        raise _Stop
 
-    return resolve
+class RecordingExtract(FakeExtractProvider):
+    """The extract fake, keeping each request as the other fakes do, so a test can read what reached it."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.requests: list[Any] = []
+
+    def _extract(self, request: Any, urls: list[str]) -> Any:
+        self.requests.append(request)
+        return super()._extract(request, urls)
+
+    async def _aextract(self, request: Any, urls: list[str]) -> Any:
+        self.requests.append(request)
+        return await super()._aextract(request, urls)
 
 
+@pytest.fixture
+def every_fake(request: pytest.FixtureRequest) -> None:
+    from web_router.registry import register_extract_provider
+
+    for name in ALL_FAKES:
+        request.getfixturevalue(name)
+    register_extract_provider("fake", RecordingExtract)  # the fixture's teardown unregisters it
+
+
+def _setup(component: str, source: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The preset section and the call's arguments: every setting from one source, the other left to the preset."""
+    if source == "call":
+        # A preset still applies, so the call goes through resolution with every argument set.
+        section = {"defaults": {"provider_options": {"from": "preset"}}, "overridable": ["provider_options"]}
+        return section, dict(ARGUMENTS[component])
+    return {"defaults": dict(ARGUMENTS[component])}, {}
+
+
+def _assert_reached(router: Any, component: str) -> None:
+    request = getattr(router, GETTERS[component])("fake").requests[-1]
+    for name, value in ARGUMENTS[component].items():
+        expected = Viewport(**value) if name == "viewport" else value
+        assert getattr(request, name) == expected, name
+
+
+def test_the_argument_table_covers_every_setting_a_preset_can_hold() -> None:
+    assert {component: set(values) | {"provider"} for component, values in ARGUMENTS.items()} == {
+        component: set(fields) | {"provider"} for component, fields in PRESET_FIELDS.items()
+    }
+
+
+@pytest.mark.parametrize("source", ["call", "preset"])
 @pytest.mark.parametrize(("component", "call"), SYNC_CALLS)
-def test_every_argument_a_method_takes_goes_through_its_presets(
-    component: str, call: Callable[[WebRouter], object], monkeypatch: pytest.MonkeyPatch
+def test_every_setting_reaches_the_request_from_the_call_or_a_preset(
+    component: str, call: Callable[..., object], source: str, every_fake: None
 ) -> None:
-    """A setting left out of the resolver would be dropped from the request, the one failure presets must not add."""
-    router = WebRouter()
-    seen: dict[str, Any] = {}
-    monkeypatch.setattr(router.presets, "resolve", _capturing(seen))
-
-    with pytest.raises(_Stop):
-        call(router)
-
-    assert seen == {"component": component, "names": PRESET_FIELDS[component]}  # type: ignore[index]
+    """Every argument each method takes goes through resolution and arrives; none is dropped on the way."""
+    section, arguments = _setup(component, source)
+    with WebRouter("fake") as router:
+        router.presets.add(definition(components={component: section}))
+        call(router, preset=REF, **arguments)
+        _assert_reached(router, component)
 
 
+@pytest.mark.parametrize("source", ["call", "preset"])
 @pytest.mark.parametrize(("component", "call"), ASYNC_CALLS)
-async def test_every_argument_an_async_method_takes_goes_through_its_presets(
-    component: str, call: Callable[[AsyncWebRouter], Awaitable[object]], monkeypatch: pytest.MonkeyPatch
+async def test_every_setting_reaches_the_request_on_the_async_router(
+    component: str, call: Callable[..., Awaitable[object]], source: str, every_fake: None
 ) -> None:
-    router = AsyncWebRouter()
-    seen: dict[str, Any] = {}
-    monkeypatch.setattr(router.presets, "resolve", _capturing(seen))
-
-    with pytest.raises(_Stop):
-        await call(router)
-
-    assert seen == {"component": component, "names": PRESET_FIELDS[component]}  # type: ignore[index]
+    section, arguments = _setup(component, source)
+    async with AsyncWebRouter("fake") as router:
+        router.presets.add(definition(components={component: section}))
+        await call(router, preset=REF, **arguments)
+        _assert_reached(router, component)
 
 
 ALL_SECTIONS = {
@@ -1059,3 +1160,115 @@ def test_a_read_only_mapping_is_a_definition_like_any_other() -> None:
     added = PresetRegistry().add(MappingProxyType(nested))
 
     assert added.section("search").defaults == {"max_results": 5}
+
+
+@pytest.mark.parametrize(
+    "defaults",
+    [{"max_results": "sk-FAKE-KEY-123"}, {"provider": "sk-FAKE-KEY-123"}],
+    ids=["bad value", "unknown provider"],
+)
+def test_a_definitions_bad_value_is_never_repeated(defaults: dict[str, Any]) -> None:
+    with pytest.raises(PresetValidationError) as caught:
+        PresetRegistry().add(definition(components={"search": {"defaults": defaults}}))
+
+    assert "sk-FAKE-KEY-123".lower() not in str(caught.value).lower()
+
+
+def test_a_lock_error_names_neither_side_of_the_conflict(fake_browse_provider: Any) -> None:
+    held = "https://example.com/start?token=PRESET-ONLY"
+    router = WebRouter("fake")
+    router.presets.add(definition(components={"browse": {"defaults": {"start_url": held}}}))
+
+    with pytest.raises(PresetValidationError) as caught:
+        router.browse("t", start_url="https://example.com/other?token=CALL-ONLY", preset=REF)
+
+    assert "PRESET-ONLY" not in str(caught.value) and "CALL-ONLY" not in str(caught.value)
+    assert "start_url" in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ['{"x": NaN}', '{"x": Infinity}'],
+)
+def test_nan_and_infinity_in_a_json_file_are_refused(text: str, tmp_path: Path) -> None:
+    path = tmp_path / "preset.json"
+    path.write_text(
+        '{"spec_version": 1, "id": "acme.research", "version": "1.0.0", "applies_to": ["search"], '
+        '"components": {"search": {"defaults": {"provider_options": ' + text + "}}}}"
+    )
+
+    with pytest.raises(PresetValidationError) as caught:
+        PresetRegistry().load(path)
+
+    assert [issue.field for issue in caught.value.issues] == ["components.search.defaults.provider_options.x"]
+
+
+def test_nan_is_refused_in_yaml_and_in_a_definition_built_in_code(tmp_path: Path) -> None:
+    path = tmp_path / "preset.yaml"
+    path.write_text(
+        "spec_version: 1\nid: acme.research\nversion: 1.0.0\napplies_to: [browser]\n"
+        "components:\n  browser:\n    defaults: {timeout: .nan}\n"
+    )
+    with pytest.raises(PresetValidationError):
+        PresetRegistry().load(path)
+    with pytest.raises(PresetValidationError):
+        PresetRegistry().add(definition(components={"browser": {"defaults": {"timeout": float("inf")}}}))
+
+
+def test_a_backend_instance_is_the_same_setting_as_its_name(fake_provider: Any) -> None:
+    router = WebRouter("auto")
+    router.presets.add(definition(components={"search": {"defaults": {"provider": "fake"}}}))
+
+    response = router.search("q", provider=FakeProvider(), preset=REF)
+    assert response.meta is not None and response.meta.preset is not None
+    assert response.meta.preset.overridden == []
+
+    with pytest.raises(PresetValidationError):
+        router.search("q", provider=NarrowProvider(), preset=REF)
+
+
+def test_validate_runs_the_backends_own_class_checks(fake_browse_provider: Any, fake_browser_provider: Any) -> None:
+    from tests.conftest import FakeBrowseProvider, FakeBrowserProvider
+    from web_router.registry import (
+        register_browse_provider,
+        register_browser_provider,
+        unregister_browse_provider,
+        unregister_browser_provider,
+    )
+
+    class Needy(FakeBrowseProvider):
+        name = "needy"
+        required_parameters = frozenset({"start_url"})
+
+    class OneLevel(FakeBrowserProvider):
+        name = "onelevel"
+        stealth_levels = frozenset({"low"})
+
+    register_browse_provider("needy", Needy)
+    register_browser_provider("onelevel", OneLevel)
+    try:
+        registry = PresetRegistry(default_provider="auto")
+        needs = registry.validate("browse", {"task": "t", "provider": "needy"})
+        refuses_value = registry.validate("browser", {"provider": "onelevel", "stealth": "high"})
+        refuses_option = registry.validate("browser", {"provider_options": {"x": 1}})
+    finally:
+        unregister_browse_provider("needy")
+        unregister_browser_provider("onelevel")
+
+    assert [issue.field for issue in needs.issues] == ["start_url"]
+    assert [issue.field for issue in refuses_value.issues] == ["stealth"]
+    assert "high" not in refuses_value.issues[0].message
+    assert [issue.field for issue in refuses_option.issues] == ["provider_options"]
+
+
+def test_the_agent_tools_take_the_router_presets_backends(
+    fake_answer_provider: Any, fake_extract_provider: Any
+) -> None:
+    from web_router.integrations._options import answer_provider_for, extract_provider_for
+
+    sections = {"answer": {"defaults": {"provider": "fake"}}, "extract": {"defaults": {"provider": "fake"}}}
+    router = WebRouter("brave", preset=Preset.model_validate(definition(components=sections)))
+
+    assert answer_provider_for(None, None, router) == "fake"
+    assert extract_provider_for(None, None, router) == "fake"
+    assert answer_provider_for(None, "linkup", router) == "linkup"

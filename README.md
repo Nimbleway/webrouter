@@ -1454,14 +1454,15 @@ value of the wrong type or an unknown backend fails when the definition is
 loaded. A per-call preset for another method raises `PresetCompatibilityError`;
 the router's own preset simply does not apply there. A setting the backend
 doesn't map raises `UnsupportedParameterError`, as the same argument would, and
-names the presets when one of them supplied it. All
-of these are raised before the backend is called, so none bills.
+names the presets when one of them supplied it. All of these are raised before
+the backend is called, so none bills.
 
 `router.presets.validate("search", {"query": "q", "max_results": 3}, preset=...)`
 runs the preset checks without making the call. It also checks the call's own
-values, and each setting against the backend's class: whether the backend maps it and can return the
-format asked for. It sends nothing and needs no key. A check the backend makes
-only on the call itself, such as a required `start_url`, is not in its report.
+values, and each setting against the backend's class: whether the backend maps
+it and can return the format asked for, and the checks the class makes before a
+call bills, such as a required `start_url` left unset or a stealth level the
+backend can't serve. It sends nothing and needs no key.
 
 A response says what its presets did in `response.meta.preset`: which applied
 (`resolved`, the per-call one first), the settings they supplied (`effective`,
@@ -1475,14 +1476,15 @@ Presets are local in this release, with no registry service and no publishing.
 The router's own preset does not apply to the comparisons (`benchmark`,
 `benchmark_extract` and `evaluate`), which send every backend the same request
 whatever the router holds, and the MCP server doesn't take a preset.
-`execute()` runs a route on the route's own backend, so a router preset that sets
-`provider` conflicts with it. The agent-framework tools fix their extract and
-answer backends when they are built, from the router's default rather than its
-preset, so on a router whose preset sets `provider`, name those backends with
-`extract_provider=` and `answer_provider=` when building the tools. Reading
-YAML needs PyYAML; JSON needs nothing. A YAML file holds only what a JSON one
-could, so an unquoted date stays a string. [`examples/presets.py`](examples/presets.py)
-runs both files in [`examples/presets/`](examples/presets/) with no key.
+`execute()` runs a route on its own `auto` chain, so a router preset that sets
+any other `provider` conflicts with it. The agent-framework tools fix their
+extract and answer backends when they are built, taking the router preset's
+when you name none.
+
+Reading YAML needs PyYAML; JSON needs nothing. A preset holds only what JSON
+can: an unquoted YAML date stays a string, and NaN or infinity is refused at
+load. [`examples/presets.py`](examples/presets.py) runs both files in
+[`examples/presets/`](examples/presets/) with no key.
 
 ## The MCP server
 

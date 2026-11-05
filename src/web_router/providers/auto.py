@@ -61,7 +61,9 @@ from web_router.constants import (
     AUTO_BROWSE_PREFERRED,
     AUTO_BROWSE_SUPPORTED_PARAMETERS,
     AUTO_BROWSER_KEYLESS,
+    AUTO_BROWSER_OWN_OPTIONS,
     AUTO_BROWSER_PREFERRED,
+    AUTO_BROWSER_PROFILE_OPTIONS,
     AUTO_BROWSER_STEALTH_LEVELS,
     AUTO_CHAIN_BROWSE,
     AUTO_CHAIN_BROWSER,
@@ -770,6 +772,18 @@ class AutoBrowserProvider(BrowserProvider):
                 failures[provider_name] = exc
         raise _exhausted(self.name, failures, MSG_AUTO_BROWSER_EXHAUSTED)
 
+    @classmethod
+    def refused_options(cls, request: BrowserRequest) -> frozenset[str]:
+        """The options this request sets that ``auto`` refuses whatever its members map: a backend's own, a profile.
+
+        On the class, as :meth:`refused_values` is, so a preflight can report
+        them without a credential, through the same check :meth:`_eligible` makes.
+        """
+        refused = {name for name in AUTO_BROWSER_PROFILE_OPTIONS if getattr(request, name) is not None}
+        if request.provider_options:
+            refused.add(AUTO_BROWSER_OWN_OPTIONS)
+        return frozenset(refused)
+
     def _eligible(self, request: BrowserRequest) -> list[tuple[int, str]]:
         """The chain members that can serve every option the caller set, as it was set, in order.
 
@@ -787,13 +801,13 @@ class AutoBrowserProvider(BrowserProvider):
         """
         from web_router.registry import get_browser_provider_class
 
-        if request.provider_options:
+        outright = self.refused_options(request)
+        if AUTO_BROWSER_OWN_OPTIONS in outright:
             raise UnsupportedParameterError(
-                self.name, {"provider_options"}, detail=MSG_AUTO_BROWSER_NO_PROVIDER_OPTIONS
+                self.name, {AUTO_BROWSER_OWN_OPTIONS}, detail=MSG_AUTO_BROWSER_NO_PROVIDER_OPTIONS
             )
-        profile_options = {name for name in ("profile", "persist_profile") if getattr(request, name) is not None}
-        if profile_options:
-            raise UnsupportedParameterError(self.name, profile_options, detail=MSG_AUTO_BROWSER_NO_PROFILE)
+        if outright:
+            raise UnsupportedParameterError(self.name, outright, detail=MSG_AUTO_BROWSER_NO_PROFILE)
 
         wanted = request.specified_parameters()
         eligible: list[tuple[int, str]] = []

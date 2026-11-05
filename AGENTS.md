@@ -445,12 +445,18 @@ preset supplied keeps its type and fields and gains the presets' names
 build the request it built before presets existed, and its response carries
 `meta=None`. `PresetMeta.effective` holds only what a preset supplied, never a
 caller's argument, and shows `provider_options` by its keys alone. A preset
-error or `validate()` issue never repeats a `provider_options` value; of the
-settings a caller passed, it names a value only when the value cannot be a key
--- a registered backend name, or one of a setting's fixed choices such as a
-format -- and the only references it names are well-formed
-`namespace.name@x.y.z` ones. A loaded `id@version` never changes: the registry keeps its own
-deep copy and hands out copies, and pinned metadata is copied on every read.
+error or `validate()` issue names fields rather than values, whether a
+definition's or a caller's: the only values it repeats are ones that cannot be
+a key -- a well-formed `namespace.name@x.y.z` reference, a registered backend
+name or one of a setting's fixed choices such as a format. A definition holds
+only what JSON can, so NaN and infinity are refused at load. `validate()` reads
+the backend's class alone, through the checks the call makes before it bills
+(`supported_parameters` and the formats, then `missing_parameters`,
+`refused_values`, `unmet_requirements` and `refused_options` where the class
+has them). The agent-framework tools take the router preset's extract and
+answer backends when none is named. A loaded `id@version` never changes: the
+registry keeps its own deep copy and hands out copies, and pinned metadata is
+copied on every read.
 Jobs and browser handles pin their resolved presets when they are created
 (`Job._pin`, `_Handle._pin`); a job's reads `pending` until it completes, and
 its answer carries them whether read through `result()`, `status()` or

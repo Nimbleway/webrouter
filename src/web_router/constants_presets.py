@@ -26,13 +26,16 @@ from web_router.types_presets import PRESET_ID_PATTERN, PRESET_VERSION_PATTERN
 
 __all__ = [
     "MSG_PRESET_ALREADY_LOADED",
+    "MSG_PRESET_BACKEND_NEEDS",
+    "MSG_PRESET_BACKEND_NEEDS_PARTNER",
+    "MSG_PRESET_BACKEND_REFUSES_OPTION",
+    "MSG_PRESET_BACKEND_REFUSES_VALUE",
     "MSG_PRESET_BAD_ARGUMENT",
     "MSG_PRESET_BAD_FILE",
     "MSG_PRESET_BAD_PROVIDER_ARGUMENT",
     "MSG_PRESET_BAD_REF",
     "MSG_PRESET_BAD_REF_TYPE",
     "MSG_PRESET_BAD_VALUE",
-    "MSG_PRESET_BAD_VALUE_WITHHELD",
     "MSG_PRESET_CONFLICT",
     "MSG_PRESET_DEFINED_TWICE",
     "MSG_PRESET_DEFINITION",
@@ -42,7 +45,7 @@ __all__ = [
     "MSG_PRESET_INCOMPATIBLE",
     "MSG_PRESET_INVALID",
     "MSG_PRESET_LOCKED",
-    "MSG_PRESET_LOCKED_VALUE",
+    "MSG_PRESET_NOT_FINITE",
     "MSG_PRESET_NOT_FOUND",
     "MSG_PRESET_NOT_JSON",
     "MSG_PRESET_NO_PROVIDER",
@@ -73,14 +76,10 @@ __all__ = [
     "PRESET_PROVIDER_FIELD",
     "PRESET_REF_PATTERN",
     "PRESET_REQUEST_MODELS",
-    "PRESET_SPEC_VERSION",
     "PRESET_WITHHELD_FIELDS",
     "PRESET_YAML_SUFFIXES",
     "YAML_TIMESTAMP_TAG",
 ]
-
-PRESET_SPEC_VERSION = 1
-"""The one manifest version this library reads. A definition naming another fails validation."""
 
 PRESET_REF_PATTERN = re.compile(rf"^(?P<id>{PRESET_ID_PATTERN})@(?P<version>{PRESET_VERSION_PATTERN})$")
 """What ``preset=`` takes as a string: ``namespace.name@major.minor.patch``."""
@@ -195,27 +194,27 @@ MSG_PRESET_YAML_MISSING = (
 )
 MSG_PRESET_SECTION_NOT_DECLARED = "has settings for {component} but does not list it in applies_to"
 MSG_PRESET_UNKNOWN_FIELD = "{field!r} is not a {component} setting a preset can hold; it can hold {allowed}"
-MSG_PRESET_BAD_VALUE = "{value!r} is not a valid {field}: {error}"
+MSG_PRESET_BAD_VALUE = "not a valid {field}: {error}"
+"""Names the field, never the value: a definition can hold a key by mistake, and errors get logged."""
+MSG_PRESET_NOT_FINITE = "NaN and infinity are not numbers JSON can hold; a preset holds only what JSON can"
 MSG_PRESET_NULL_DEFAULT = "a default of null sets nothing; leave the setting out instead"
-MSG_PRESET_BAD_VALUE_WITHHELD = "not a valid {field}: {error}"
-"""For a setting that can hold a key: the value is never repeated."""
 MSG_PRESET_PARSE_POSITION = "{problem} at line {line}, column {column}"
 MSG_PRESET_SOURCE_PRESET = "preset {ref!r}"
 MSG_PRESET_SOURCE_CALL = "the call"
 MSG_PRESET_SUPPLIED = "{names}: set by this call's presets ({refs}), not by its arguments."
 MSG_PRESET_OVERRIDABLE_UNSET = "{field!r} is listed as overridable but the preset sets no default for it"
-MSG_PRESET_UNKNOWN_PROVIDER = "{provider!r} does not serve {component}; it is served by {available}"
-MSG_PRESET_LOCKED_VALUE = "={value!r}"
-"""The preset's own value in :data:`MSG_PRESET_LOCKED`, left out for a setting shown by its keys alone."""
-MSG_PRESET_LOCKED = (
-    "preset {ref!r} sets {field}{value} and does not let it be overridden, but {source} set another value"
-)
-"""Never names the other value: a caller's argument can hold a key (``provider_options``), and errors get logged."""
+MSG_PRESET_UNKNOWN_PROVIDER = "the provider named does not serve {component}; it is served by {available}"
+MSG_PRESET_LOCKED = "preset {ref!r} sets {field} and does not let it be overridden, but {source} set another value"
+"""Names the field, never either value: a preset's or a caller's can hold a key, and errors get logged."""
 MSG_PRESET_UNKNOWN_REQUEST_KEY = "{key!r} is not an argument {component} takes"
 MSG_PRESET_TEMPLATES_PROVIDER = "run_template has no default backend; name one with provider"
 MSG_PRESET_BAD_PROVIDER_ARGUMENT = "provider takes a backend's name or an instance of a {component} backend"
 MSG_PRESET_UNKNOWN_BACKEND = "no {component} backend has the name given; these do: {available}"
 """Never repeats the name: a string that is no backend's name is free text, and can be a key passed by mistake."""
+MSG_PRESET_BACKEND_NEEDS = "{provider!r} needs {field} set alongside what this call sets"
+MSG_PRESET_BACKEND_REFUSES_VALUE = "{provider!r} maps {field} but cannot serve the value asked for"
+MSG_PRESET_BACKEND_NEEDS_PARTNER = "{provider!r} serves {field} only with {partners} set"
+MSG_PRESET_BACKEND_REFUSES_OPTION = "{provider!r} refuses {field} outright"
 MSG_PRESET_NO_PROVIDER = "no backend to check against: {error}"
 MSG_PRESET_UNSUPPORTED_PARAMETER = "{provider!r} does not map {field}, so the call would be refused before it is sent"
 MSG_PRESET_UNSUPPORTED_FORMAT = "{provider!r} cannot return format {format!r}; it returns {supported}"

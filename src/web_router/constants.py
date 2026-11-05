@@ -2620,6 +2620,12 @@ MSG_AUTO_BROWSER_UNSUPPORTED = "does not support {values}"
 MSG_AUTO_BROWSER_NEEDS = "needs {names} beside {values}"
 """A member reason: an option it serves only beside partners the request left unset."""
 
+AUTO_BROWSER_OWN_OPTIONS = "provider_options"
+"""One backend's own options, which browser ``auto`` refuses: ``local`` would read them as Chrome switches."""
+
+AUTO_BROWSER_PROFILE_OPTIONS = ("profile", "persist_profile")
+"""A saved profile belongs to one backend, so browser ``auto`` refuses both options."""
+
 MSG_AUTO_BROWSER_NO_PROFILE = (
     "`auto` does not pass a saved profile on: its id or name belongs to one backend, and another member "
     "would refuse it, or -- Anchor, which keys profiles by name -- start a new, empty one under it. "

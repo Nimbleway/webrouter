@@ -27,6 +27,7 @@ import builtins
 import copy
 import importlib
 import json
+import math
 import threading
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
@@ -42,13 +43,16 @@ from pydantic_core import to_jsonable_python
 from web_router.constants import DEFAULT_PROVIDER
 from web_router.constants_presets import (
     MSG_PRESET_ALREADY_LOADED,
+    MSG_PRESET_BACKEND_NEEDS,
+    MSG_PRESET_BACKEND_NEEDS_PARTNER,
+    MSG_PRESET_BACKEND_REFUSES_OPTION,
+    MSG_PRESET_BACKEND_REFUSES_VALUE,
     MSG_PRESET_BAD_ARGUMENT,
     MSG_PRESET_BAD_FILE,
     MSG_PRESET_BAD_PROVIDER_ARGUMENT,
     MSG_PRESET_BAD_REF,
     MSG_PRESET_BAD_REF_TYPE,
     MSG_PRESET_BAD_VALUE,
-    MSG_PRESET_BAD_VALUE_WITHHELD,
     MSG_PRESET_CONFLICT,
     MSG_PRESET_DEFINED_TWICE,
     MSG_PRESET_DEFINITION,
@@ -57,8 +61,8 @@ from web_router.constants_presets import (
     MSG_PRESET_GIVEN_TWICE,
     MSG_PRESET_INVALID,
     MSG_PRESET_LOCKED,
-    MSG_PRESET_LOCKED_VALUE,
     MSG_PRESET_NO_PROVIDER,
+    MSG_PRESET_NOT_FINITE,
     MSG_PRESET_NOT_JSON,
     MSG_PRESET_NULL_DEFAULT,
     MSG_PRESET_OVERRIDABLE_UNSET,
@@ -370,7 +374,7 @@ class PresetRegistry:
         """
         layers: builtins.list[tuple[PresetSource, Preset]] = []
         if preset is not None:
-            call = self._lookup(preset)
+            call = self._stored(_checked(preset)) if isinstance(preset, Preset) else self._get(preset)
             if component not in call.applies_to:
                 raise PresetCompatibilityError(call.ref, component, call.applies_to)
             layers.append(("request", call))
@@ -381,22 +385,7 @@ class PresetRegistry:
         if not layers:
             return PresetResolution(component, dict(explicit))
 
-        # Lowest precedence first, so each layer is checked against the one beneath it. A lock is carried
-        # up with the value: a layer above that repeats a locked value must not release it.
-        supplied: dict[str, _Supplied] = {}
-        issues: builtins.list[PresetIssue] = []
-        for _, layer in reversed(layers):
-            for name, raw in layer.section(component).defaults.items():
-                value = _coerced(component, name, raw)
-                beneath = supplied.get(name)
-                locker = beneath.locker if beneath is not None else None
-                if beneath is not None and locker is not None and not _same(component, name, value, beneath.value):
-                    issues.append(
-                        _locked(name, beneath.value, locker, source=MSG_PRESET_SOURCE_PRESET.format(ref=layer.ref))
-                    )
-                    continue
-                supplied[name] = _Supplied(value, layer if layer.section(component).locks(name) else locker)
-
+        supplied, issues = _layered(component, layers)
         settings = dict(explicit)
         effective: dict[str, Any] = {}
         overridden: builtins.list[str] = []
@@ -406,16 +395,15 @@ class PresetRegistry:
                 # A copy: a request, or a provider handed it, must never reach back into the registry.
                 settings[name] = copy.deepcopy(entry.value)
                 effective[name] = _shown(name, entry.value)
+                continue
+            # What was compared is what is sent: validating the caller's value can use up a one-shot iterable.
+            settings[name] = normalized = _normalized(component, name, given)
+            if _same(component, name, normalized, entry.value):
+                continue
+            if entry.locker is not None:
+                issues.append(_locked(name, entry.locker, source=MSG_PRESET_SOURCE_CALL))
             else:
-                normalized = _normalized(component, name, given)
-                # What was compared is what is sent: validating the caller's value can use up a one-shot iterable.
-                settings[name] = normalized
-                if _same(component, name, normalized, entry.value):
-                    continue
-                if entry.locker is not None:
-                    issues.append(_locked(name, entry.value, entry.locker, source=MSG_PRESET_SOURCE_CALL))
-                else:
-                    overridden.append(name)
+                overridden.append(name)
         if issues:
             raise PresetValidationError(issues, lead=MSG_PRESET_CONFLICT.format(component=component))
         resolved = [ResolvedPreset(source=source, id=layer.id, version=layer.version) for source, layer in layers]
@@ -435,9 +423,10 @@ class PresetRegistry:
         the presets that applied and the settings they supplied, and lists as
         issues every preset problem, any argument the method does not take,
         each setting the backend does not map and a format it cannot return.
-        Only the backend's class is read: nothing is sent and no key is needed.
-        A check the backend makes only on the call itself, such as a required
-        ``start_url``, is not in the report.
+        It also runs the checks the backend's class makes before a call bills:
+        an option it needs left unset, a value it maps but cannot serve, an
+        option missing its partner and an option it refuses outright. Only the
+        class is read: nothing is sent and no key is needed.
         """
         # Materialized once, so every check below reads the same values the call would.
         arguments: dict[str, Any] = {
@@ -457,7 +446,8 @@ class PresetRegistry:
         if given_twice:
             issues.append(PresetIssue(field=PRESET_ARGUMENT, message=MSG_PRESET_GIVEN_TWICE))
         explicit = {name: arguments.get(name) for name in settable}
-        issues.extend(_argument_issues(component, explicit))
+        argument_issues = _argument_issues(component, explicit)
+        issues.extend(argument_issues)
         try:
             resolution = self.resolve(component, preset, **explicit)
         except PresetValidationError as exc:
@@ -465,7 +455,10 @@ class PresetRegistry:
         except PresetError as exc:
             return PresetCheck(component=component, issues=[*issues, PresetIssue(field="preset", message=str(exc))])
         provider = resolution.provider if PRESET_PROVIDER_FIELD in settable else arguments.get(PRESET_PROVIDER_FIELD)
-        name, backend_issues = self._backend_issues(component, provider, resolution.settings)
+        # The class's own checks read the values, so they run only once every value is one the request takes.
+        name, backend_issues = self._backend_issues(
+            component, provider, resolution.settings, conditions=not argument_issues
+        )
         return PresetCheck(
             component=component,
             provider=name,
@@ -476,9 +469,9 @@ class PresetRegistry:
         )
 
     def _backend_issues(
-        self, component: PresetComponent, provider: Any, settings: Mapping[str, Any]
+        self, component: PresetComponent, provider: Any, settings: Mapping[str, Any], *, conditions: bool = True
     ) -> tuple[str | None, builtins.list[PresetIssue]]:
-        """Whether the backend the call would reach maps every setting it sets, read off its class."""
+        """What the backend the call would reach refuses, read off its class alone."""
         try:
             if isinstance(provider, str) or provider is None:
                 name = self._backend_name(component, provider)
@@ -512,6 +505,8 @@ class PresetRegistry:
             supported = ", ".join(sorted(formats))
             message = MSG_PRESET_UNSUPPORTED_FORMAT.format(provider=name, format=requested, supported=supported)
             issues.append(PresetIssue(field="format", message=message))
+        if conditions:
+            issues.extend(_condition_issues(component, backend, name, settings))
         return name, issues
 
     def _backend_name(self, component: PresetComponent, provider: str | None) -> str:
@@ -528,9 +523,6 @@ class PresetRegistry:
             return self.add(preset).ref
         parse_ref(preset)
         return preset
-
-    def _lookup(self, preset: str | Preset) -> Preset:
-        return self._stored(_checked(preset)) if isinstance(preset, Preset) else self._get(preset)
 
     def _refuse_change(self, preset: Preset) -> None:
         known = self._presets.get(preset.ref)
@@ -556,9 +548,13 @@ def _checked(definition: Preset | Mapping[str, Any], *, where: str | None = None
     Built from a deep copy, so nothing the caller still holds -- the model, the
     mapping or a dict nested in it -- is shared with the copy the registry keeps.
     """
-    data = definition.model_dump() if isinstance(definition, Preset) else definition
+    data = _plain(definition.model_dump() if isinstance(definition, Preset) else definition)
+    lead = MSG_PRESET_DEFINITION_IN.format(where=where) if where else MSG_PRESET_DEFINITION
+    non_finite = [PresetIssue(field=path or "preset", message=MSG_PRESET_NOT_FINITE) for path in _non_finite(data, "")]
+    if non_finite:
+        raise PresetValidationError(non_finite, lead=lead)
     try:
-        preset = Preset.model_validate(_plain(data))
+        preset = Preset.model_validate(data)
     except ValidationError as exc:
         issues = [
             PresetIssue(field=".".join(str(part) for part in error["loc"]) or "preset", message=error["msg"])
@@ -575,6 +571,18 @@ def _checked(definition: Preset | Mapping[str, Any], *, where: str | None = None
     if issues:
         raise PresetValidationError(issues, lead=MSG_PRESET_INVALID.format(ref=preset.ref))
     return preset
+
+
+def _non_finite(value: Any, path: str) -> Iterator[str]:
+    """Where ``value`` holds a number JSON cannot: NaN or an infinity, which Python's JSON and YAML both read."""
+    if isinstance(value, float) and not math.isfinite(value):
+        yield path
+    elif isinstance(value, Mapping):
+        for key, item in value.items():
+            yield from _non_finite(item, f"{path}.{key}" if path else str(key))
+    elif isinstance(value, (builtins.list, tuple)):
+        for index, item in enumerate(value):
+            yield from _non_finite(item, f"{path}.{index}" if path else str(index))
 
 
 def _plain(value: Any) -> Any:
@@ -622,17 +630,14 @@ def _coerced(component: PresetComponent, name: str, value: Any) -> Any:
     if name == PRESET_PROVIDER_FIELD:
         available = _AVAILABLE[component]()
         if not isinstance(value, str) or provider_name(value) not in available:
-            message = MSG_PRESET_UNKNOWN_PROVIDER.format(
-                provider=value, component=component, available=", ".join(available)
-            )
+            message = MSG_PRESET_UNKNOWN_PROVIDER.format(component=component, available=", ".join(available))
             raise PresetValidationError([PresetIssue(field=name, message=message)], lead=MSG_PRESET_DEFINITION)
         return provider_name(value)
     try:
         return _adapter(component, name).validate_python(value)
     except ValidationError as exc:
         error = "; ".join(item["msg"] for item in exc.errors())
-        template = MSG_PRESET_BAD_VALUE_WITHHELD if name in PRESET_WITHHELD_FIELDS else MSG_PRESET_BAD_VALUE
-        message = template.format(value=value, field=name, error=error)
+        message = MSG_PRESET_BAD_VALUE.format(field=name, error=error)
         raise PresetValidationError([PresetIssue(field=name, message=message)], lead=MSG_PRESET_DEFINITION) from None
 
 
@@ -641,6 +646,38 @@ def _adapter(component: PresetComponent, name: str) -> TypeAdapter[Any]:
     # The FieldInfo carries the field's constraints, so `max_results=0` is refused here as the request would refuse it.
     info = PRESET_REQUEST_MODELS[component].model_fields[name]
     return TypeAdapter(Annotated[info.annotation, info])
+
+
+def _layered(
+    component: PresetComponent, layers: builtins.list[tuple[PresetSource, Preset]]
+) -> tuple[dict[str, _Supplied], builtins.list[PresetIssue]]:
+    """Every setting the presets supply for ``component``, the lock holding each, and the conflicts between layers.
+
+    Lowest precedence first, so each layer is laid over the one beneath it.
+    """
+    supplied: dict[str, _Supplied] = {}
+    issues: builtins.list[PresetIssue] = []
+    for _, layer in reversed(layers):
+        for name, raw in layer.section(component).defaults.items():
+            issue = _laid(component, supplied, layer, name, _coerced(component, name, raw))
+            if issue is not None:
+                issues.append(issue)
+    return supplied, issues
+
+
+def _laid(
+    component: PresetComponent, supplied: dict[str, _Supplied], layer: Preset, name: str, value: Any
+) -> PresetIssue | None:
+    """Lay ``layer``'s value for ``name`` over what is beneath it, or return the conflict with a lock there.
+
+    The lock is carried up with the value: a layer above that repeats a locked value must not release it.
+    """
+    beneath = supplied.get(name)
+    locker = beneath.locker if beneath is not None else None
+    if beneath is not None and locker is not None and not _same(component, name, value, beneath.value):
+        return _locked(name, locker, source=MSG_PRESET_SOURCE_PRESET.format(ref=layer.ref))
+    supplied[name] = _Supplied(value, layer if layer.section(component).locks(name) else locker)
+    return None
 
 
 @dataclass(frozen=True)
@@ -653,6 +690,10 @@ class _Supplied:
 
 def _same(component: PresetComponent, name: str, one: Any, other: Any) -> bool:
     """Whether two values of a setting send the same request: equal, or equal but for case where it takes either."""
+    if name == PRESET_PROVIDER_FIELD:
+        # A backend built for this method stands for its name: the router uses the instance, as the name's own.
+        base = _PROVIDER_BASE[component]
+        one, other = (value.name if isinstance(value, base) else value for value in (one, other))
     if name in PRESET_CASE_BLIND[component] and isinstance(one, str) and isinstance(other, str):
         return one.upper() == other.upper()
     return bool(one == other)
@@ -674,6 +715,35 @@ def _normalized(component: PresetComponent, name: str, given: Any) -> Any:
         return _adapter(component, name).validate_python(given)
     except ValidationError:
         return given
+
+
+_CONDITIONS: tuple[tuple[str, str], ...] = (
+    ("missing_parameters", MSG_PRESET_BACKEND_NEEDS),
+    ("refused_values", MSG_PRESET_BACKEND_REFUSES_VALUE),
+    ("unmet_requirements", MSG_PRESET_BACKEND_NEEDS_PARTNER),
+    ("refused_options", MSG_PRESET_BACKEND_REFUSES_OPTION),
+)
+"""The class-level checks a backend may declare and the issue each reports. The call makes them before it bills."""
+
+
+def _condition_issues(
+    component: PresetComponent, backend: type[Any], provider: str, settings: Mapping[str, Any]
+) -> builtins.list[PresetIssue]:
+    """What the backend's class refuses beyond an option it does not map, through its own checks; never a value."""
+    model = PRESET_REQUEST_MODELS[component]
+    fields = {key: value for key, value in settings.items() if key in model.model_fields and value is not None}
+    # Built without validation: the values were checked already, and the native inputs are not in a preflight.
+    request = model.model_construct(**fields)
+    issues: builtins.list[PresetIssue] = []
+    for method, template in _CONDITIONS:
+        check = getattr(backend, method, None)
+        found = check(request) if check is not None else {}
+        for option in sorted(found):
+            partners = ", ".join(sorted(found[option])) if method == "unmet_requirements" else ""
+            issues.append(
+                PresetIssue(field=option, message=template.format(provider=provider, field=option, partners=partners))
+            )
+    return issues
 
 
 def _argument_issues(component: PresetComponent, explicit: Mapping[str, Any]) -> builtins.list[PresetIssue]:
@@ -698,11 +768,8 @@ def _shown(name: str, value: Any) -> Any:
     return to_jsonable_python(value)
 
 
-def _locked(name: str, value: Any, locker: Preset, *, source: str) -> PresetIssue:
-    shown = "" if name in PRESET_WITHHELD_FIELDS else MSG_PRESET_LOCKED_VALUE.format(value=to_jsonable_python(value))
-    return PresetIssue(
-        field=name, message=MSG_PRESET_LOCKED.format(ref=locker.ref, field=name, value=shown, source=source)
-    )
+def _locked(name: str, locker: Preset, *, source: str) -> PresetIssue:
+    return PresetIssue(field=name, message=MSG_PRESET_LOCKED.format(ref=locker.ref, field=name, source=source))
 
 
 def _changed(ref: str, template: str) -> PresetValidationError:
