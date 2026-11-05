@@ -54,7 +54,7 @@ latency: ## Rewrite prices.json's latency fields from the frozen benchmark resul
 chains: ## Regenerate src/web_router/data/chains.json, the default auto orders, from the frozen results
 	uv run --all-extras python benchmarks/providers/chains.py
 
-shape-baseline: ## Rewrite tests/shape_baseline.json after a grandfathered file or function shrank; it refuses new or grown entries
+shape-baseline: ## Rewrite tests/shape_baseline.json after a grandfathered file shrank; it refuses new or grown entries
 	uv run python -m scripts.shape
 
 cov: ## Unit tests with a coverage report

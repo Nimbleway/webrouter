@@ -979,7 +979,7 @@ async def run_session(
     return row
 
 
-async def _drive(client: Any, arm: Arm, session_id: str, row: Row) -> None:
+async def _drive(client: Any, arm: Arm, session_id: str, row: Row) -> None:  # noqa: C901
     stream = await client.beta.sessions.events.stream(session_id)
     async with stream:
         # Stream first, then send: the stream delivers only what happens after it opens.
@@ -1222,7 +1222,7 @@ def _client(platform: str) -> Any:
     return AsyncAnthropic()
 
 
-async def run(args: argparse.Namespace, arm_specs: list[tuple[str, str, str]]) -> list[Row]:
+async def run(args: argparse.Namespace, arm_specs: list[tuple[str, str, str]]) -> list[Row]:  # noqa: C901, PLR0915
     dataset = load_questions(args)
     # After loading: a small CSV or a short split asks fewer than --limit.
     print(f"{len(arm_specs)} arms x {len(dataset)} questions x {args.repeats} repeat(s) -> {args.out}")

@@ -193,8 +193,17 @@ target-version = "py310"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "TID", "RUF"]
+# C901 and PLR0915 bound a function's size; tests/test_shape.py bounds a file's,
+# which ruff cannot. Functions over either limit today carry a `# noqa`.
+select = ["E", "F", "I", "UP", "B", "SIM", "TID", "RUF", "C901", "PLR0915"]
 ignore = ["B008"]
+
+[tool.ruff.lint.mccabe]
+# McCabe's own threshold, and ruff's default.
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-statements = 50
 
 [tool.ruff.lint.isort]
 known-first-party = ["web_router", "scripts"]
