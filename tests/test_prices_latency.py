@@ -125,13 +125,18 @@ def test_a_malformed_latency_is_refused(fields: dict[str, object]) -> None:
 
 def test_a_rerun_of_the_same_questions_and_a_mixed_set_are_not_pooled() -> None:
     sets = {
-        "sealqa": {"answers_sha256": "s", "method": "search"},
-        "sealqa-twin": {"answers_sha256": "s", "method": "search"},
-        "simpleqa": {"answers_sha256": "q", "method": "search"},
-        "answer-simpleqa": {"answers_sha256": "q", "method": "answer"},
-        "tools-effort": {"answers_sha256": "t", "method": "mixed"},
+        "sealqa": {"answers_sha256": "s", "method": "search", "providers": ["nimble", "webiq", "exa"]},
+        "sealqa-twin": {"answers_sha256": "s", "method": "search", "providers": ["nimble", "webiq", "brave"]},
+        "simpleqa": {"answers_sha256": "q", "method": "search", "providers": ["nimble"]},
+        "answer-simpleqa": {"answers_sha256": "q", "method": "answer", "providers": ["exa"]},
+        "tools-effort": {"answers_sha256": "t", "method": "mixed", "providers": ["nimble"]},
     }
-    assert latency.pooled_sets(sets, mixed="mixed") == ["sealqa", "simpleqa", "answer-simpleqa"]
+    assert latency.pooled_sets(sets, mixed="mixed") == {
+        "sealqa": frozenset({"nimble", "webiq", "exa"}),
+        "sealqa-twin": frozenset({"brave"}),  # only the backend the first run did not have
+        "simpleqa": frozenset({"nimble"}),
+        "answer-simpleqa": frozenset({"exa"}),
+    }
 
 
 def test_measure_reports_an_unmatched_setup_whose_every_call_failed() -> None:

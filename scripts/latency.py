@@ -86,23 +86,26 @@ def run_index(manifest: Mapping[str, Any], split_setup: Any) -> dict[tuple[str, 
     return index
 
 
-def pooled_sets(sets: Mapping[str, Mapping[str, Any]], *, mixed: str) -> list[str]:
-    """The manifest's sets ``make latency`` pools, in order.
+def pooled_sets(sets: Mapping[str, Mapping[str, Any]], *, mixed: str) -> dict[str, frozenset[str]]:
+    """The backend setups ``make latency`` pools from each manifest set, in order.
 
-    A set asking the same questions (``answers_sha256``) by the same method as
-    one listed before it is a rerun, such as ``sealqa-hard-254-twin`` on two
-    backends: pooling it would count those questions twice for those backends
-    only. A ``mixed`` set calls several methods, and copies its answer rows
-    from another set.
+    A setup asking the same questions (``answers_sha256``) by the same method
+    as a set listed before it is a rerun, such as ``sealqa-hard-254-twin`` on
+    two backends: pooling it would count those questions twice for that
+    backend. A setup the earlier set did not have is new data and is pooled. A
+    ``mixed`` set calls several methods and copies its answer rows from
+    another set, so it is left out.
     """
-    seen: set[tuple[str, str]] = set()
-    pooled = []
+    seen: set[tuple[str, str, str]] = set()
+    pooled: dict[str, frozenset[str]] = {}
     for name, entry in sets.items():
-        questions = (entry["answers_sha256"], entry["method"])
-        if entry["method"] == mixed or questions in seen:
+        if entry["method"] == mixed:
             continue
-        seen.add(questions)
-        pooled.append(name)
+        questions = (entry["answers_sha256"], entry["method"])
+        new = frozenset(p for p in entry["providers"] if (*questions, p) not in seen)
+        seen.update((*questions, p) for p in new)
+        if new:
+            pooled[name] = new
     return pooled
 
 
@@ -149,8 +152,15 @@ def frozen_latency() -> tuple[dict[Key, dict[str, Any]], set[tuple[str, str, str
     frozen, common = _benchmarks()
     frozen.verify(frozen.FROZEN_DIR)
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
-    manifest = {"sets": {name: manifest["sets"][name] for name in pooled_sets(manifest["sets"], mixed=frozen.MIXED)}}
-    rows = [row for name in manifest["sets"] for row in frozen.read_rows(frozen.FROZEN_DIR / (name + frozen.SUFFIX))]
+    pooled = pooled_sets(manifest["sets"], mixed=frozen.MIXED)
+    manifest = {"sets": {name: manifest["sets"][name] for name in pooled}}
+    setups = {name: {frozen.split_setup(label) for label in labels} for name, labels in pooled.items()}
+    rows = [
+        row
+        for name in pooled
+        for row in frozen.read_rows(frozen.FROZEN_DIR / (name + frozen.SUFFIX))
+        if (row["provider"], row["mode"]) in setups[name]
+    ]
     return measure(
         rows,
         run_index(manifest, frozen.split_setup),
