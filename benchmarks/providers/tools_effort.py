@@ -47,7 +47,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
-from _common import DEFAULT_OUT, ENV_FILE
+from _common import DEFAULT_OUT, ENV_FILE, _local
 from _frozen_checks import answers_digest
 from _tools_effort_plan import (
     ANSWER,
@@ -289,14 +289,7 @@ class MeteredJudge(OpenAIJudge):
 
     async def ask(self, system: str, user: str) -> tuple[str, float | None]:
         """The model's reply, and its cost at list price on the tokens OpenAI reports (``None`` if it reports none)."""
-        with self._client_lock:
-            if self._async_client is None:
-                openai = self._sdk()
-                self._async_client = openai.AsyncOpenAI(
-                    api_key=self.api_key, base_url=self.base_url, timeout=self.timeout
-                )
-            client = self._async_client
-        response = await client.chat.completions.create(**self._request(system, user))
+        response = await self._acreate(system, user)
         usage = getattr(response, "usage", None)
         cost = (
             None
@@ -844,16 +837,6 @@ def dry_run(items: list[Item], budget: float) -> str:
     if totals["worst"] > budget:
         lines.append("Worst case is over the budget: the run reserves each row's worst case and stops before the cap.")
     return "\n".join(lines)
-
-
-def _local(values: list[str]) -> dict[str, Path]:
-    local: dict[str, Path] = {}
-    for value in values:
-        name, sep, path = value.partition("=")
-        if not sep:
-            raise SystemExit(f"--dataset takes NAME=PATH, such as simpleqa=simple_qa_test_set.csv; got {value!r}")
-        local[name] = Path(path)
-    return local
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

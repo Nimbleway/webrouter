@@ -38,7 +38,7 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-from _common import COMBINE_KEYS, DEPTH_MARK, split_label
+from _common import COMBINE_KEYS, DEPTH_MARK, _local, split_label
 from _frozen_checks import (
     Scan,
     answers_digest,
@@ -449,16 +449,6 @@ def build(results: Path, folder: Path, local: Mapping[str, Path], *, check_join:
     sums = "".join(f"{hashlib.sha256(data).hexdigest()}  {name}\n" for name, data in sorted(files.items()))
     (folder / SUMS_FILE).write_text(sums, encoding="utf-8")
     return manifest
-
-
-def _local(values: list[str]) -> dict[str, Path]:
-    local: dict[str, Path] = {}
-    for value in values:
-        name, sep, path = value.partition("=")
-        if not sep:
-            raise SystemExit(f"--dataset takes NAME=PATH, such as simpleqa=simple_qa_test_set.csv; got {value!r}")
-        local[name] = Path(path)
-    return local
 
 
 def main(argv: list[str] | None = None) -> None:
