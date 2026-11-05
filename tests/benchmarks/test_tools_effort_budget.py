@@ -108,7 +108,7 @@ def test_a_call_dearer_than_planned_tops_up_or_is_refused(plan_module: ModuleTyp
 
 def test_a_row_whose_grading_the_budget_refuses_is_kept_and_never_bought_again(
     tools_effort: ModuleType,
-    frozen: ModuleType,
+    frozen_checks: ModuleType,
     plan_module: ModuleType,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -130,5 +130,5 @@ def test_a_row_whose_grading_the_budget_refuses_is_kept_and_never_bought_again(
     assert finished == 1 and stopped is not None and "budget" in stopped
     assert (row["grade"], row["failed_at"], row["answer"]) == (None, "budget", "gold")
     assert row["spend_usd"] == budget_module.list_price("parallel", "research", "max") and row["latency"] is not None
-    assert frozen.error_class(row) == "budget"
+    assert frozen_checks.error_class(row) == "budget"
     assert task.key in run_module.done_keys(rows), "a resume skips it"

@@ -39,8 +39,6 @@ from typing import Any
 
 from _common import COMBINE_KEYS, DEPTH_MARK, _local, split_label
 from _frozen_checks import (
-    GRADES,
-    LATENCY_DIGITS,
     Scan,
     answers_digest,
     check_complete,
@@ -49,8 +47,8 @@ from _frozen_checks import (
     check_same_answers,
     check_same_questions,
     check_same_setup,
-    error_class,
     failed_rows,
+    measures,
     question_id,
     question_index,
     read_golds,
@@ -108,18 +106,13 @@ def split_setup(setup: str) -> tuple[str, str]:
 def frozen_row(set_name: str, method: str, row: Mapping[str, Any]) -> dict[str, Any]:
     """One scan row as a frozen row: ids, grade, latency, stated cost and error class, nothing written in words."""
     provider, mode = split_setup(str(row["provider"]))
-    latency = row.get("latency")
-    cost = row.get("cost_usd")
     return {
         "set": set_name,
         "question_id": question_id(str(row["question"])),
         "provider": provider,
         "method": method,
         "mode": mode,
-        "grade": row.get("grade") if row.get("grade") in GRADES else None,
-        "latency_s": None if latency is None else round(float(latency), LATENCY_DIGITS),
-        "cost_usd": None if cost is None else float(cost),
-        "error": error_class(row),
+        **measures(row),
     }
 
 

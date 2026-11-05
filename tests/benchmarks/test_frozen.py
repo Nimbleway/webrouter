@@ -48,7 +48,7 @@ def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleT
                 assert row["method"] in ("search+extract", "extract", "answer", "research")
             else:
                 assert row["method"] == entry["method"]
-            assert row["grade"] in (*frozen.GRADES, None)
+            assert row["grade"] in (*frozen_checks.GRADES, None)
             assert row["error"] in (*frozen_checks.ERROR_NAMES, None)
             assert len(row["question_id"]) == 16
 
@@ -98,8 +98,8 @@ def test_a_changed_file_fails_verification(frozen: ModuleType, tmp_path: Path) -
         ({"error": None, "leaked": True}, "leaked"),
     ],
 )
-def test_an_error_keeps_only_its_class(frozen: ModuleType, row: dict[str, Any], expected: str | None) -> None:
-    assert frozen.error_class(row) == expected
+def test_an_error_keeps_only_its_class(frozen_checks: ModuleType, row: dict[str, Any], expected: str | None) -> None:
+    assert frozen_checks.error_class(row) == expected
 
 
 def test_a_setup_label_splits_into_provider_and_mode(frozen: ModuleType) -> None:

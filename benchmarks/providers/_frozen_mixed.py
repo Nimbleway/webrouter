@@ -11,11 +11,9 @@ from pathlib import Path
 from typing import Any
 
 from _frozen_checks import (
-    GRADES,
-    LATENCY_DIGITS,
     check_no_repeats,
-    error_class,
     failed_rows,
+    measures,
     question_id,
     read_run,
 )
@@ -39,17 +37,13 @@ MSG_MIXED_INCOMPLETE = (
 
 def mixed_row(set_name: str, row: Mapping[str, Any]) -> dict[str, Any]:
     """One row of a mixed run as a frozen row: it names its question id, method and mode itself."""
-    latency, cost = row.get("latency"), row.get("cost_usd")
     return {
         "set": set_name,
         "question_id": row["question_id"],
         "provider": row["provider"],
         "method": row["path"],
         "mode": row["mode"],
-        "grade": row.get("grade") if row.get("grade") in GRADES else None,
-        "latency_s": None if latency is None else round(float(latency), LATENCY_DIGITS),
-        "cost_usd": None if cost is None else float(cost),
-        "error": error_class(row),
+        **measures(row),
     }
 
 

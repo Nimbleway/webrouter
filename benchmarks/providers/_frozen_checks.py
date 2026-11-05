@@ -232,6 +232,17 @@ def error_class(row: Mapping[str, Any]) -> str | None:
     return next((name for name, pattern in ERROR_CLASSES if pattern.search(str(message))), OTHER_ERROR)
 
 
+def measures(row: Mapping[str, Any]) -> dict[str, Any]:
+    """A run row's grade, latency, cost and error class, cleaned the same way for every frozen set."""
+    latency, cost = row.get("latency"), row.get("cost_usd")
+    return {
+        "grade": row.get("grade") if row.get("grade") in GRADES else None,
+        "latency_s": None if latency is None else round(float(latency), LATENCY_DIGITS),
+        "cost_usd": None if cost is None else float(cost),
+        "error": error_class(row),
+    }
+
+
 def read_run(folder: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """A scan folder's ``run.json``, with :data:`RUN_DEFAULTS` under it, and its rows."""
     setup = {**RUN_DEFAULTS, **json.loads((folder / "run.json").read_text(encoding="utf-8"))}
