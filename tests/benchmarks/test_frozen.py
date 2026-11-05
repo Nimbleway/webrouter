@@ -24,7 +24,7 @@ def test_every_committed_file_matches_its_checksum(frozen: ModuleType) -> None:
     assert manifest["sets"]["sealqa-hard-254"]["failed_rows"]["you-mcp"] == {"default": 254}
 
 
-def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleType) -> None:
+def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleType, frozen_checks: ModuleType) -> None:
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
     assert manifest["schema_version"] == frozen.SCHEMA_VERSION
     assert manifest["fields"] == list(frozen.FIELDS)
@@ -49,7 +49,7 @@ def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleT
             else:
                 assert row["method"] == entry["method"]
             assert row["grade"] in (*frozen.GRADES, None)
-            assert row["error"] in (*frozen.ERROR_NAMES, None)
+            assert row["error"] in (*frozen_checks.ERROR_NAMES, None)
             assert len(row["question_id"]) == 16
 
 
@@ -65,13 +65,15 @@ def test_the_sets_route_eval_needs_are_frozen_at_their_sizes(frozen: ModuleType)
     }
 
 
-def test_the_tool_and_effort_set_holds_every_planned_row_and_its_rate_limits_are_classed(frozen: ModuleType) -> None:
+def test_the_tool_and_effort_set_holds_every_planned_row_and_its_rate_limits_are_classed(
+    frozen: ModuleType, frozen_mixed: ModuleType
+) -> None:
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
     entry = manifest["sets"]["tools-effort-60"]
     rows = frozen.read_rows(frozen.FROZEN_DIR / ("tools-effort-60" + frozen.SUFFIX))
     keys = {(r["question_id"], r["method"], r["provider"], r["mode"]) for r in rows}
 
-    assert keys == frozen.expected_keys(entry["sample"])
+    assert keys == frozen_mixed.expected_keys(entry["sample"])
     methods = {m: sum(r["method"] == m for r in rows) for m in ("search+extract", "extract", "answer", "research")}
     assert methods == {"search+extract": 180, "extract": 10, "answer": 360, "research": 600}
     limited = {(r["provider"], r["mode"]) for r in rows if r["error"] == "rate_limit"}

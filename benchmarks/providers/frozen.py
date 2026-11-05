@@ -32,7 +32,6 @@ import gzip
 import hashlib
 import io
 import json
-import re
 import sys
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -40,6 +39,8 @@ from typing import Any
 
 from _common import COMBINE_KEYS, DEPTH_MARK, _local, split_label
 from _frozen_checks import (
+    GRADES,
+    LATENCY_DIGITS,
     Scan,
     answers_digest,
     check_complete,
@@ -48,15 +49,17 @@ from _frozen_checks import (
     check_same_answers,
     check_same_questions,
     check_same_setup,
+    error_class,
     failed_rows,
     question_id,
     question_index,
     read_golds,
+    read_run,
     require_resolved,
     require_same_answers,
 )
+from _frozen_mixed import MIXED, freeze_mixed, sample_index
 from _tools_effort_plan import QUESTIONS as MIXED_QUESTIONS
-from _tools_effort_plan import REUSED_ANSWER_SET, expected_keys
 
 HERE = Path(__file__).resolve().parent
 FROZEN_DIR = HERE / "frozen"
@@ -68,17 +71,9 @@ SUFFIX = ".jsonl.gz"
 
 FIELDS = ("set", "question_id", "provider", "method", "mode", "grade", "latency_s", "cost_usd", "error")
 """A frozen row's fields, in order. Nothing else: no question, answer or gold text, no raw message."""
-GRADES = ("correct", "incorrect", "not_attempted")
 DEFAULT_MODE = "default"
 """A row's ``mode`` when the scan asked for none: the backend's own default for that method."""
-LATENCY_DIGITS = 3
 
-MIXED = "mixed"
-"""A set whose rows call several methods (``tools_effort.py``'s): each row names its own, and its run.json its sample.
-
-Such a set is added to ``FROZEN_SETS`` as ``{"questions": "tools-effort", "method": "mixed", "runs": [folder]}``,
-after the set it reuses answer rows from.
-"""
 FROZEN_SETS: dict[str, dict[str, Any]] = {
     "sealqa-hard-254": {"questions": "sealqa-hard", "method": "search", "runs": ["sealqa-hard-254"]},
     "sealqa-hard-254-twin": {"questions": "sealqa-hard", "method": "search", "runs": ["sealqa-hard-254-twin"]},
@@ -98,55 +93,9 @@ A set made of several scans is one scan with backends added later, as
 requires for their method (``COMBINE_KEYS``), the same questions and the same
 gold answers; a key a scan predates reads as missing.
 """
-MSG_MIXED_UNPLANNED = (
-    "{set}: {count} rows are not in the run's plan, e.g. {example}; only the planned (question, method, backend,"
-    " mode) rows are frozen"
-)
-MSG_MIXED_INCOMPLETE = (
-    "{set}: {count} planned rows are missing, e.g. {example}; was the run cut short? Run it again to finish it"
-)
-RUN_DEFAULTS = {"questions": "simpleqa"}
-"""A ``run.json`` from before ``--questions`` existed asked SimpleQA."""
-
-ERROR_CLASSES: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("timeout", re.compile(r"timed? ?out|timeout|deadline", re.IGNORECASE)),
-    ("rate_limit", re.compile(r"rate.?limit|too many requests|\bHTTP 429\b", re.IGNORECASE)),
-    ("quota", re.compile(r"\bHTTP 402\b|quota|credits?\b|payment required", re.IGNORECASE)),
-    ("invalid_request", re.compile(r"takes a query of at most|does not support|UnsupportedParameter", re.IGNORECASE)),
-    ("http_4xx", re.compile(r"\bHTTP 4\d\d\b")),
-    ("http_5xx", re.compile(r"\bHTTP 5\d\d\b")),
-)
-"""A backend's error message, by the first pattern it matches; anything else is ``other``.
-
-The message itself is never kept: a vendor's text can quote an account, a key
-prefix or a request id.
-"""
-OTHER_ERROR = "other"
-JUDGE_ERROR = "judge"
-JUDGE_STAGES = frozenset({"judge", "synthesis", "grading"})
-"""``failed_at`` values that mean the judge failed, not the backend: the answer scan's and the search scan's."""
-LEAKED_ERROR = "leaked"
-BUDGET_ERROR = "budget"
-"""A row whose backend answered but whose grading the run's budget refused (``tools_effort.py``): kept, ungraded."""
-ERROR_NAMES = (*(name for name, _ in ERROR_CLASSES), OTHER_ERROR, JUDGE_ERROR, LEAKED_ERROR, BUDGET_ERROR)
-
 MSG_SUMS_MISMATCH = "{name}: SHA-256 {actual} does not match SHA256SUMS ({expected}); the file changed or is damaged"
 MSG_SUMS_MISSING = "{name} is in {folder} but not in SHA256SUMS"
 MSG_FILE_MISSING = "{name} is in SHA256SUMS but not in {folder}"
-
-
-def error_class(row: Mapping[str, Any]) -> str | None:
-    """What went wrong on a row, as a class rather than the vendor's message; ``None`` when nothing did."""
-    if row.get("leaked"):
-        return LEAKED_ERROR
-    message = row.get("error")
-    if not message:
-        return None
-    if row.get("failed_at") == BUDGET_ERROR:
-        return BUDGET_ERROR
-    if row.get("failed_at") in JUDGE_STAGES:
-        return JUDGE_ERROR
-    return next((name for name, pattern in ERROR_CLASSES if pattern.search(str(message))), OTHER_ERROR)
 
 
 def split_setup(setup: str) -> tuple[str, str]:
@@ -174,12 +123,6 @@ def frozen_row(set_name: str, method: str, row: Mapping[str, Any]) -> dict[str, 
     }
 
 
-def _read_run(folder: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    setup = {**RUN_DEFAULTS, **json.loads((folder / "run.json").read_text(encoding="utf-8"))}
-    rows = [json.loads(line) for line in (folder / "rows.jsonl").read_text(encoding="utf-8").splitlines() if line]
-    return setup, rows
-
-
 def manifest_entry(spec: Mapping[str, Any], first: Scan, rows: list[dict[str, Any]], runs: list[Any]) -> dict[str, Any]:
     """A set's entry in ``manifest.json``: its setup, sizes, backends, their failed rows and the scans it is made of."""
     setup = first[1]
@@ -200,79 +143,6 @@ def manifest_entry(spec: Mapping[str, Any], first: Scan, rows: list[dict[str, An
     }
 
 
-def mixed_row(set_name: str, row: Mapping[str, Any]) -> dict[str, Any]:
-    """One row of a mixed run as a frozen row: it names its question id, method and mode itself."""
-    latency, cost = row.get("latency"), row.get("cost_usd")
-    return {
-        "set": set_name,
-        "question_id": row["question_id"],
-        "provider": row["provider"],
-        "method": row["path"],
-        "mode": row["mode"],
-        "grade": row.get("grade") if row.get("grade") in GRADES else None,
-        "latency_s": None if latency is None else round(float(latency), LATENCY_DIGITS),
-        "cost_usd": None if cost is None else float(cost),
-        "error": error_class(row),
-    }
-
-
-def reused_row(set_name: str, row: Mapping[str, Any]) -> dict[str, Any]:
-    """An answer row copied into a mixed set, its cost filled as the set's own: stated, else the list price."""
-    # Imported here so verify and the tests of the other sets need no price list.
-    from web_router import prices
-
-    cost = row["cost_usd"]
-    if cost is None and row["error"] is None:
-        cost = prices.estimate(row["provider"], row["method"])
-    return {**row, "set": set_name, "cost_usd": cost}
-
-
-def freeze_mixed(
-    set_name: str, results: Path, built: Mapping[str, list[dict[str, Any]]]
-) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """A mixed set's frozen rows and manifest entry: its run's rows, and the answer rows it reuses from ``built``.
-
-    Refuses a row twice, a row its sample does not plan, and a run that has not fetched every row it plans.
-    """
-    spec = FROZEN_SETS[set_name]
-    (run,) = spec["runs"]
-    setup, source = _read_run(results / run)
-    expected = expected_keys(setup["sample"])
-    rows = [mixed_row(set_name, r) for r in source]
-    rows += [
-        reused_row(set_name, r)
-        for r in built[REUSED_ANSWER_SET]
-        if (r["question_id"], r["method"], r["provider"], r["mode"]) in expected
-    ]
-    check_no_repeats(set_name, rows)
-    found = {(r["question_id"], r["method"], r["provider"], r["mode"]) for r in rows}
-    unplanned = sorted(found - expected)
-    if unplanned:
-        raise SystemExit(MSG_MIXED_UNPLANNED.format(set=set_name, count=len(unplanned), example=unplanned[0]))
-    missing = sorted(expected - found)
-    if missing:
-        raise SystemExit(MSG_MIXED_INCOMPLETE.format(set=set_name, count=len(missing), example=missing[0]))
-    rows.sort(key=lambda r: (r["question_id"], r["method"], r["provider"], r["mode"]))
-    entry = {
-        "questions": MIXED_QUESTIONS,
-        "dataset": setup.get("dataset"),
-        "method": MIXED,
-        "limit": len(setup["sample"]),
-        "seed": None,
-        "max_results": setup.get("max_results"),
-        "judge": setup.get("judge"),
-        "question_count": len(setup["sample"]),
-        "answers_sha256": setup["answers_sha256"],
-        "row_count": len(rows),
-        "providers": sorted({r["provider"] for r in rows}),
-        "failed_rows": failed_rows(rows),
-        "runs": [{"run": run, "started": setup.get("started"), "rows": len(source), "reused": REUSED_ANSWER_SET}],
-        "cost_usd": "stated by the response where it states one, else the list price in web_router.prices",
-        "sample": setup["sample"],
-    }
-    return rows, entry
-
-
 def freeze_set(
     set_name: str, results: Path, built: Mapping[str, list[dict[str, Any]]] | None = None
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -284,12 +154,12 @@ def freeze_set(
     """
     spec = FROZEN_SETS[set_name]
     if spec["method"] == MIXED:
-        return freeze_mixed(set_name, results, built or {})
+        return freeze_mixed(set_name, spec, results, built or {})
     rows: list[dict[str, Any]] = []
     runs: list[dict[str, Any]] = []
     first: Scan | None = None
     for run in spec["runs"]:
-        setup, source = _read_run(results / run)
+        setup, source = read_run(results / run)
         scan = (run, setup, read_golds(set_name, run, source))
         first = first or scan
         check_same_questions(set_name, scan, first)
@@ -373,23 +243,6 @@ def load_index(questions: str, local: Mapping[str, Path]) -> dict[str, Any]:
 
     dataset = Dataset.for_set(questions, path=local.get(questions))
     return question_index(dataset.questions, questions)
-
-
-def sample_index(sample: list[Mapping[str, Any]], local: Mapping[str, Path]) -> dict[str, Any]:
-    """A mixed set's questions by id, each found at its row in the public set it came from, with its pages."""
-    from web_router.evals import Dataset, Question
-
-    full = {name: Dataset.for_set(name, path=local.get(name)) for name in sorted({e["source"] for e in sample})}
-    index: dict[str, Any] = {}
-    for entry in sample:
-        found = full[entry["source"]].questions
-        question = found[entry["index"]] if entry["index"] < len(found) else None
-        urls = entry.get("urls") or []
-        if question is None or question_id(question.question, urls) != entry["question_id"]:
-            continue  # left out, so require_resolved names it
-        labels = {"group": entry["group"], "source": entry["source"], "urls": urls}
-        index[entry["question_id"]] = Question(question=question.question, answer=question.answer, metadata=labels)
-    return index
 
 
 def set_index(entry: Mapping[str, Any], local: Mapping[str, Path]) -> dict[str, Any]:
