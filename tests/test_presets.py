@@ -1315,3 +1315,29 @@ async def test_the_extract_tool_leaves_each_router_its_own_preset(fake_extract_p
         router.close()
     finally:
         unregister_extract_provider("other")
+
+
+class Ambiguous(list):  # type: ignore[type-arg]
+    """A list whose truth value raises, as a multi-element NumPy array's does."""
+
+    def __bool__(self) -> bool:
+        raise ValueError("the truth value is ambiguous")
+
+
+@pytest.mark.parametrize(
+    ("records", "fields"),
+    [(Ambiguous([{"name": "Acme"}, {"name": "Beta"}]), ["output_schema"]), ("not a list", ["records"])],
+    ids=["records that cannot be tested for truth", "records of the wrong type"],
+)
+def test_validate_reports_malformed_native_inputs_instead_of_crashing(records: Any, fields: list[str]) -> None:
+    pytest.importorskip("nimble_python")
+
+    check = PresetRegistry(default_provider="nimble").validate("research", {"query": "q", "records": records})
+
+    assert [issue.field for issue in check.issues] == fields
+
+
+def test_validate_takes_native_inputs_shaped_as_the_method_takes_them(fake_extract_provider: Any) -> None:
+    check = PresetRegistry(default_provider="fake").validate("extract", {"urls": "https://example.com"})
+
+    assert check.ok

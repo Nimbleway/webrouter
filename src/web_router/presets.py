@@ -456,10 +456,13 @@ class PresetRegistry:
             return PresetCheck(component=component, issues=[*issues, PresetIssue(field="preset", message=str(exc))])
         provider = resolution.provider if PRESET_PROVIDER_FIELD in settable else arguments.get(PRESET_PROVIDER_FIELD)
         # A backend's own checks can read a native input (Nimble's read `records`), so the preflight request carries
-        # them beside the settings; and they read values, so they run only once every value is one the request takes.
-        native = {key: arguments[key] for key in PRESET_NATIVE_INPUTS[component] if arguments.get(key) is not None}
+        # them beside the settings, validated; and they read values, so they run only once every value is valid.
+        native, native_issues = _native_inputs(component, arguments)
         name, backend_issues = self._backend_issues(
-            component, provider, {**resolution.settings, **native}, conditions=not argument_issues
+            component,
+            provider,
+            {**resolution.settings, **native},
+            conditions=not (argument_issues or native_issues),
         )
         return PresetCheck(
             component=component,
@@ -467,7 +470,7 @@ class PresetRegistry:
             resolved=resolution.resolved,
             effective=resolution.effective,
             overridden=resolution.overridden,
-            issues=[*issues, *backend_issues],
+            issues=[*issues, *native_issues, *backend_issues],
         )
 
     def _backend_issues(
@@ -746,6 +749,33 @@ def _condition_issues(
                 PresetIssue(field=option, message=template.format(provider=provider, field=option, partners=partners))
             )
     return issues
+
+
+def _native_inputs(
+    component: PresetComponent, arguments: Mapping[str, Any]
+) -> tuple[dict[str, Any], builtins.list[PresetIssue]]:
+    """The native inputs the call was given, as its request would hold them, and each one it would refuse.
+
+    Shaped first as the method shapes them -- one URL is a list of one, template
+    inputs are a dict -- so a value the call takes is not reported. A bad one is
+    named by field, never repeated, and left out of what the backend's checks read.
+    """
+    native: dict[str, Any] = {}
+    issues: builtins.list[PresetIssue] = []
+    for name in sorted(PRESET_NATIVE_INPUTS[component]):
+        value = arguments.get(name)
+        if value is None:
+            continue
+        if name == "urls" and isinstance(value, str):
+            value = [value]
+        elif name == "inputs" and isinstance(value, Mapping):
+            value = dict(value)
+        try:
+            native[name] = _adapter(component, name).validate_python(value)
+        except ValidationError as exc:
+            error = "; ".join(item["msg"] for item in exc.errors())
+            issues.append(PresetIssue(field=name, message=MSG_PRESET_BAD_ARGUMENT.format(field=name, error=error)))
+    return native, issues
 
 
 def _argument_issues(component: PresetComponent, explicit: Mapping[str, Any]) -> builtins.list[PresetIssue]:
