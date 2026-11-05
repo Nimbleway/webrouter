@@ -1,0 +1,38 @@
+{
+  "files": {
+    "benchmarks/agent/page.py": 732,
+    "benchmarks/agent/report.py": 1474,
+    "benchmarks/agent/run.py": 1637,
+    "src/web_router/client.py": 1445,
+    "src/web_router/constants.py": 4615,
+    "src/web_router/mcp/shaping.py": 507,
+    "src/web_router/mcp/tools.py": 888,
+    "src/web_router/providers/_http.py": 604,
+    "src/web_router/providers/_page.py": 801,
+    "src/web_router/providers/auto.py": 1059,
+    "src/web_router/providers/base.py": 1893,
+    "src/web_router/providers/local.py": 600,
+    "src/web_router/providers/nimble.py": 531,
+    "src/web_router/registry.py": 453,
+    "src/web_router/types.py": 1131
+  },
+  "functions": {
+    "benchmarks/agent/report.py::_markdown": 316,
+    "benchmarks/agent/report.py::combine": 69,
+    "benchmarks/agent/run.py::_drive": 52,
+    "benchmarks/agent/run.py::parse_args": 78,
+    "benchmarks/agent/run.py::run": 100,
+    "benchmarks/providers/run.py::markdown": 61,
+    "src/web_router/client.py::WebRouter.__init__": 52,
+    "src/web_router/client.py::WebRouter.benchmark": 52,
+    "src/web_router/client.py::WebRouter.evaluate": 55,
+    "src/web_router/client.py::WebRouter.open_browser": 52,
+    "src/web_router/client.py::_BaseRouter.__init__": 63,
+    "src/web_router/integrations/_tools.py::WebRouterTools.__init__": 69,
+    "src/web_router/mcp/shaping.py::_fit": 54,
+    "src/web_router/mcp/tools.py::WebRouterTools.__init__": 64,
+    "src/web_router/providers/_utils.py::build_browser_payload": 55,
+    "src/web_router/providers/auto.py::AutoBrowserProvider._eligible": 64,
+    "src/web_router/providers/auto.py::AutoResearchProvider._eligible": 51
+  }
+}
