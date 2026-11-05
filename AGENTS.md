@@ -227,7 +227,8 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         route_eval.py: a router replayed over them and
                         scored against the static order, its ranking in
                         route_eval_rank.py, tool and effort paths in
-                        route_eval_paths.py; chains.py (`make chains`): the
+                        route_eval_paths.py, its command line in
+                        route_eval_cli.py; chains.py (`make chains`): the
                         default auto orders ranked from them into
                         data/chains.json — scripts; each
                         run's report stays under results/

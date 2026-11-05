@@ -181,6 +181,7 @@ ROUTE_EVAL_SIBLINGS = (
     "route_eval_rank",
     "route_eval_routers",
     "route_eval_report",
+    "route_eval_cli",
 )
 """What route-eval imports from its folder, under plain names, so they are forgotten once it is."""
 

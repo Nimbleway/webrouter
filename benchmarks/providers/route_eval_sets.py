@@ -13,12 +13,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from _tools_effort_plan import DEFAULT_MODE
 from frozen import FROZEN_DIR, SUFFIX, read_rows
 from route_eval_paths import MIXED, is_mixed, path_id
 
 TWIN_SETS = ("sealqa-hard-254", "sealqa-hard-254-twin")
 """The same questions run twice: their spread is the noise floor."""
-DEFAULT_MODE = "default"
 
 MSG_UNKNOWN_SET = "{name}: no frozen set by that name (there are: {known})"
 MSG_MIXED_SET = (
