@@ -15,7 +15,9 @@
       "does": "Titles, URLs, snippets",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "nimble",
@@ -30,9 +32,14 @@
       "setup": "`nimble`, `nimble@fast`",
       "setting": "`search_depth=standard` (the default)",
       "does": "~2K characters per result",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 0.987,
+      "latency_p90_s": 1.331,
+      "latency_n": 554,
+      "latency_runs": [
+        "sealqa-hard-254",
+        "simpleqa-300-v2"
+      ],
+      "latency_measured": "2026-10-07"
     },
     {
       "provider": "nimble",
@@ -48,7 +55,9 @@
       "does": "The whole page, scraped live",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "tavily",
@@ -63,9 +72,14 @@
       "setup": "`tavily`, `tavily@lite`",
       "setting": "`search_depth=basic` (the default)",
       "does": "Several snippets per URL",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 2.457,
+      "latency_p90_s": 3.991,
+      "latency_n": 554,
+      "latency_runs": [
+        "sealqa-hard-254",
+        "simpleqa-300-v2"
+      ],
+      "latency_measured": "2026-10-07"
     },
     {
       "provider": "tavily",
@@ -81,7 +95,9 @@
       "does": "Most relevant snippets, slower",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "tavily",
@@ -97,7 +113,9 @@
       "does": "Adds the page body",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "tavily",
@@ -113,7 +131,9 @@
       "does": "Lower latency",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "tavily",
@@ -129,7 +149,9 @@
       "does": "Lowest latency, one summary per URL",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "exa",
@@ -143,9 +165,14 @@
       "setup": "`exa`",
       "setting": "`type=auto` (the default)",
       "does": "Balances quality and speed",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 3.358,
+      "latency_p90_s": 6.302,
+      "latency_n": 554,
+      "latency_runs": [
+        "sealqa-hard-254",
+        "simpleqa-300-v2"
+      ],
+      "latency_measured": "2026-10-07"
     },
     {
       "provider": "exa",
@@ -161,7 +188,9 @@
       "does": "Query-relevant highlights instead of page text",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "exa",
@@ -177,7 +206,9 @@
       "does": "Fastest",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "exa",
@@ -193,7 +224,9 @@
       "does": "Low latency",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "exa",
@@ -209,7 +242,9 @@
       "does": "Light research with synthesis, ~4s",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "exa",
@@ -225,7 +260,9 @@
       "does": "Multi-step research",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "exa",
@@ -241,7 +278,9 @@
       "does": "Stronger reasoning",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "perplexity",
@@ -255,9 +294,14 @@
       "setup": "`perplexity`",
       "setting": "`search_type=web` (the default)",
       "does": "General web search",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 0.316,
+      "latency_p90_s": 1.719,
+      "latency_n": 554,
+      "latency_runs": [
+        "sealqa-hard-254",
+        "simpleqa-300-v2"
+      ],
+      "latency_measured": "2026-10-07"
     },
     {
       "provider": "perplexity",
@@ -273,7 +317,9 @@
       "does": "Lower latency, lower cost",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "perplexity",
@@ -289,7 +335,9 @@
       "does": "Content per page",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "perplexity",
@@ -305,7 +353,9 @@
       "does": "Content per page",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "brave",
@@ -319,9 +369,14 @@
       "setup": "`brave`",
       "setting": "Search plan",
       "does": "Full web results",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 0.674,
+      "latency_p90_s": 0.939,
+      "latency_n": 554,
+      "latency_runs": [
+        "sealqa-hard-254",
+        "simpleqa-300-v2"
+      ],
+      "latency_measured": "2026-10-07"
     },
     {
       "provider": "brave",
@@ -337,7 +392,9 @@
       "does": "Up to 5 extra excerpts per result",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel",
@@ -351,9 +408,14 @@
       "setup": "`parallel`",
       "setting": "Default on `/v1beta/search`",
       "does": "What web-router calls today",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 1.808,
+      "latency_p90_s": 3.062,
+      "latency_n": 554,
+      "latency_runs": [
+        "sealqa-hard-254",
+        "simpleqa-300-v2"
+      ],
+      "latency_measured": "2026-10-07"
     },
     {
       "provider": "parallel",
@@ -369,7 +431,9 @@
       "does": "Legacy tier selector",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel",
@@ -385,7 +449,9 @@
       "does": "~200 ms, English and Japanese only",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel",
@@ -401,7 +467,9 @@
       "does": "Sub-second",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel",
@@ -417,7 +485,9 @@
       "does": "Longer snippets, ~1 s",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel",
@@ -433,7 +503,9 @@
       "does": "Advanced retrieval, ~3 s",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "you",
@@ -448,9 +520,14 @@
       "setup": "`you`, `you@lite`",
       "setting": "No extraction (the default)",
       "does": "Snippets",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 0.558,
+      "latency_p90_s": 0.806,
+      "latency_n": 554,
+      "latency_runs": [
+        "sealqa-hard-254",
+        "simpleqa-300-v2"
+      ],
+      "latency_measured": "2026-10-07"
     },
     {
       "provider": "you",
@@ -466,7 +543,9 @@
       "does": "Query-relevant passages",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "you",
@@ -482,7 +561,9 @@
       "does": "The whole page",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "you",
@@ -498,7 +579,9 @@
       "does": "The whole page, cached copies only",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "you-mcp",
@@ -512,9 +595,13 @@
       "setup": "`you-mcp`",
       "setting": "Free MCP (`you-mcp`)",
       "does": "Search through the keyless endpoint",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 0.895,
+      "latency_p90_s": 1.418,
+      "latency_n": 100,
+      "latency_runs": [
+        "simpleqa-300-v2"
+      ],
+      "latency_measured": "2026-10-06"
     },
     {
       "provider": "linkup",
@@ -530,7 +617,9 @@
       "does": "Snippets, about 0.5 s",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "linkup",
@@ -544,9 +633,14 @@
       "setup": "`linkup`",
       "setting": "`depth=fast` (sent on every search)",
       "does": "Snippets, about 1 s; Linkup's recommended default",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 0.802,
+      "latency_p90_s": 1.026,
+      "latency_n": 554,
+      "latency_runs": [
+        "sealqa-hard-254",
+        "simpleqa-300-v2"
+      ],
+      "latency_measured": "2026-10-07"
     },
     {
       "provider": "linkup",
@@ -562,7 +656,9 @@
       "does": "Snippets, one agentic pass for multi-topic queries",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "linkup",
@@ -578,7 +674,9 @@
       "does": "Snippets, several search iterations, 6 to 16 s",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "webiq",
@@ -592,9 +690,14 @@
       "setup": "`webiq`",
       "setting": "`contentFormat=passage` (sent on every search)",
       "does": "The passages of each page that answer the query",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 0.18,
+      "latency_p90_s": 0.339,
+      "latency_n": 554,
+      "latency_runs": [
+        "sealqa-hard-254",
+        "simpleqa-300-v2"
+      ],
+      "latency_measured": "2026-10-07"
     },
     {
       "provider": "keenable",
@@ -608,9 +711,13 @@
       "setup": "`keenable`",
       "setting": "`mode=pro` (Keenable's default; web-router sends none)",
       "does": "Titles, URLs, a snippet per result",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 0.317,
+      "latency_p90_s": 0.636,
+      "latency_n": 299,
+      "latency_runs": [
+        "simpleqa-300-keenable"
+      ],
+      "latency_measured": "2026-10-13"
     },
     {
       "provider": "keenable",
@@ -626,7 +733,9 @@
       "does": "The same, faster; billed as its own SKU",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "deepseek",
@@ -640,9 +749,13 @@
       "setup": "`deepseek`",
       "setting": "default (`need_content` false)",
       "does": "Titles, URLs, a snippet and a summary per result",
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 0.535,
+      "latency_p90_s": 0.577,
+      "latency_n": 252,
+      "latency_runs": [
+        "simpleqa-300-deepseek"
+      ],
+      "latency_measured": "2026-10-19"
     },
     {
       "provider": "deepseek",
@@ -658,7 +771,9 @@
       "does": "The same, plus the page body",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "agentcore",
@@ -674,7 +789,9 @@
       "does": "Titles, URLs, a passage and a published date per result, up to 25",
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "exa-mcp",
@@ -690,7 +807,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel-mcp",
@@ -706,7 +825,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "nimble",
@@ -722,7 +843,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "tavily",
@@ -738,7 +861,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "exa",
@@ -754,7 +879,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "firecrawl",
@@ -770,7 +897,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "brightdata",
@@ -786,7 +915,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "oxylabs",
@@ -802,7 +933,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "jina",
@@ -818,7 +951,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel",
@@ -834,7 +969,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "webiq",
@@ -850,7 +987,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "keenable",
@@ -866,7 +1005,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "deepseek",
@@ -882,7 +1023,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "linkup",
@@ -898,7 +1041,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "nimble",
@@ -914,7 +1059,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "linkup",
@@ -928,9 +1075,13 @@
       "setup": null,
       "setting": "`/v1/search`, `outputType=sourcedAnswer`, `depth=fast`",
       "does": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 0.892,
+      "latency_p90_s": 1.109,
+      "latency_n": 300,
+      "latency_runs": [
+        "answer-simpleqa-300"
+      ],
+      "latency_measured": "2026-11-01"
     },
     {
       "provider": "exa",
@@ -944,9 +1095,13 @@
       "setup": null,
       "setting": "`/answer`, the query alone",
       "does": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 1.317,
+      "latency_p90_s": 1.618,
+      "latency_n": 300,
+      "latency_runs": [
+        "answer-simpleqa-300"
+      ],
+      "latency_measured": "2026-11-01"
     },
     {
       "provider": "parallel",
@@ -960,9 +1115,13 @@
       "setup": null,
       "setting": "Chat API (beta), `model=lite`",
       "does": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 6.321,
+      "latency_p90_s": 7.747,
+      "latency_n": 299,
+      "latency_runs": [
+        "answer-simpleqa-300"
+      ],
+      "latency_measured": "2026-11-01"
     },
     {
       "provider": "you",
@@ -976,9 +1135,13 @@
       "setup": null,
       "setting": "`/v1/answer` on `api.you.com`",
       "does": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 1.722,
+      "latency_p90_s": 2.042,
+      "latency_n": 299,
+      "latency_runs": [
+        "answer-simpleqa-300"
+      ],
+      "latency_measured": "2026-11-01"
     },
     {
       "provider": "perplexity",
@@ -992,9 +1155,13 @@
       "setup": null,
       "setting": "`/v1/responses`, `effort=fast`",
       "does": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null
+      "latency_p50_s": 1.874,
+      "latency_p90_s": 2.128,
+      "latency_n": 300,
+      "latency_runs": [
+        "answer-simpleqa-300"
+      ],
+      "latency_measured": "2026-11-01"
     },
     {
       "provider": "brave",
@@ -1010,7 +1177,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "nimble",
@@ -1026,7 +1195,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "nimble",
@@ -1042,7 +1213,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "nimble",
@@ -1058,7 +1231,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "nimble",
@@ -1074,7 +1249,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "nimble",
@@ -1090,7 +1267,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel",
@@ -1106,7 +1285,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel",
@@ -1123,7 +1304,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel",
@@ -1139,7 +1322,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "parallel",
@@ -1155,7 +1340,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "perplexity",
@@ -1171,7 +1358,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "perplexity",
@@ -1188,7 +1377,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "perplexity",
@@ -1204,7 +1395,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "perplexity",
@@ -1220,7 +1413,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "linkup",
@@ -1236,7 +1431,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "linkup",
@@ -1252,7 +1449,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "linkup",
@@ -1269,7 +1468,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "linkup",
@@ -1285,7 +1486,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "you",
@@ -1301,7 +1504,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "steel",
@@ -1317,7 +1522,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "browserbase",
@@ -1333,7 +1540,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "hyperbrowser",
@@ -1349,7 +1558,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "anchor",
@@ -1365,7 +1576,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "kernel",
@@ -1381,7 +1594,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "local",
@@ -1397,7 +1612,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "browser-use",
@@ -1413,7 +1630,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "skyvern",
@@ -1429,7 +1648,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     },
     {
       "provider": "browserbase",
@@ -1445,7 +1666,9 @@
       "does": null,
       "latency_p50_s": null,
       "latency_p90_s": null,
-      "latency_n": null
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     }
   ]
 }

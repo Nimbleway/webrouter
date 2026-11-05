@@ -303,6 +303,14 @@ dataset's labels back, and writes one `<set>.jsonl` per set to
 `frozen.py verify` runs the checksum step and the failed-row counts alone, and
 the unit tests run it too.
 
+The latency in `src/web_router/data/prices.json` comes from these files:
+`make latency` pools every set that covers a (provider, method, mode), counts
+only the rows with no error, and writes each row's p50, p90, sample size, runs
+and date. It leaves out a set that repeats an earlier set's questions by the
+same method (`sealqa-hard-254-twin`) and a mixed set (`tools-effort-60`, whose
+answer rows are copies), so no question counts twice. A frozen setup with no
+price row is reported and left out, never given one.
+
 The committed rows carry no question or answer text, only a `question_id`:
 the questions stay with the public datasets they come from, and `join` is how
 they come back. SimpleQA is from `openai/simple-evals` (MIT) and SealQA from

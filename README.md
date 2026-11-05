@@ -1970,6 +1970,24 @@ vendor mode sent through `provider_options` written with a leading `:`
 [`PRICING.md`](benchmarks/providers/PRICING.md) shows the same list as tables,
 with the notes behind each figure.
 
+A search or answer row also carries measured latency, from the committed
+benchmark results in `benchmarks/providers/frozen/`: the median and
+90th-percentile seconds of the calls that succeeded, how many there were
+(`latency_n`), the runs pooled (`latency_runs`) and the newest one's date
+(`latency_measured`).
+
+```python
+prices.estimate_latency("exa", "answer")  # (1.317, 1.618): p50 and p90 seconds
+prices.estimate_latency("tavily", "extract")  # None: not measured
+```
+
+It is `None` for every method and mode no benchmark measured -- extract,
+research, browse and the modes the scans did not run -- never a guess. A
+benchmark latency drifts from run to run, which is why each row pools every
+run that covers it, leaving out reruns of the same questions so none counts
+twice. `make latency` rewrites the fields from the frozen
+results, and a test fails while they disagree.
+
 ### Classifying a query before running it (spike)
 
 `classify()` is an opt-in spike, off unless you pass `decider=`. It asks a
