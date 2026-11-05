@@ -24,6 +24,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 - Contributors: `make check` now limits size. Ruff holds a function to 50 statements (`PLR0915`) and a complexity of 10 (`C901`); the few over either today carry a `noqa`. `tests/test_shape.py` holds a file to 400 lines, test files included; files already longer are listed in `tests/shape_baseline.json` and may only shrink, and `make shape-baseline` records a shrink and refuses a new or grown entry. `CHANGELOG.md` merges with git's union driver, so parallel pull requests that each add a line no longer conflict.
 - `chains.json`'s per-backend `account_failures_left_out` is renamed `rate_limit_or_quota_left_out`, for the error classes it counts. The file is experimental; every value is 0 and the orders are unchanged.
 
+### Removed
+
+- The decider spike: `WebRouter(decider=, decider_config=)`, `WebRouter.classify()`, `WebRouter.execute()`, `Route` and the `web_router.decisions` package (`DecisionProvider`, `register_decider()` and the `keywords`, `jev` and `llm` deciders). It was a proof of concept for routing, and a router contract will replace it. To keep using it, pin `web-router==0.9.0`, the last version that has it.
+
 ## [0.9.0] - 2026-11-04
 
 ### Added
