@@ -41,11 +41,18 @@ def test_every_member_is_either_measured_or_marked_unmeasured() -> None:
     for method in ("search", "answer"):
         entry = chains()[method]
         members = [p for part in CHAIN_PARTS if part in entry for p in entry[part]]
-        groups = [set(entry["measured"]), set(entry["unmeasured"]), set(entry["no_row_served"])]
+        groups = [set(entry[k]) for k in ("measured", "unmeasured", "too_few_questions", "no_row_served")]
         assert sum(len(g) for g in groups) == len(set().union(*groups)), "a member sits in one group only"
         assert set().union(*groups) == set(members)
         measured = list(entry["measured"])
         assert entry["preferred"][: len(measured)] == measured, "the ranked members come first, in their rank"
+
+
+def test_each_method_names_the_floor_it_was_ranked_with() -> None:
+    search, answer = chains()["search"]["noise_floor"], chains()["answer"]["noise_floor"]
+    assert search["measured_on"] == "search" and not search["fallback"], "search has its own rerun"
+    assert answer["measured_on"] == "search" and answer["fallback"], "answer has none frozen: search's floor"
+    assert answer["value"] == search["value"]
 
 
 def test_the_readme_search_table_matches_the_file() -> None:
