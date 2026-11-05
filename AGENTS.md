@@ -791,11 +791,12 @@ URL that failed in `ExtractResponse.failures`, and raises only when nothing came
 back at all. Do not move that handling into a provider — it is what makes a
 one-URL-per-call backend behave like a batching one.
 
-**Keep files and functions small.** A file is at most 400 lines and a function
-or method at most 50, `def` to the end of the body, docstring included, across
-`src/web_router/`, `scripts/` and `benchmarks/`; `tests/test_shape.py` enforces
-it in `make check`. Files and functions already larger are grandfathered in
-`tests/shape_baseline.json` and may only shrink: after shrinking one, run
+**Keep files and functions small.** A file is at most 400 lines across
+`src/web_router/`, `scripts/`, `benchmarks/` and `tests/`, and a function or
+method at most 50, `def` to the end of the body, docstring included, across all
+but `tests/`; `tests/test_shape.py` enforces both in `make check`. Files and
+functions already larger are grandfathered in `tests/shape_baseline.json` and
+may only shrink: after shrinking one, run
 `make shape-baseline`, which refuses to add or grow an entry. Never regenerate
 it to admit new code; split the code instead. The large hubs — `client.py`,
 `providers/auto.py`, `types.py`, `constants.py`, `mcp/tools.py` — are in that

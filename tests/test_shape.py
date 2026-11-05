@@ -108,9 +108,12 @@ def test_a_function_counts_from_def_to_the_end_of_its_body() -> None:
     assert dict(shape.function_lines(ast.parse(source))) == {"top": 3, "Box.method": 4, "Box.method.inner": 2}
 
 
-def test_the_rules_cover_the_library_scripts_and_benchmarks_but_not_tests() -> None:
-    covered = {p.relative_to(shape.ROOT).parts[0] for p in shape.source_files()}
-    assert covered == {"src", "scripts", "benchmarks"}
+def test_files_are_measured_everywhere_and_functions_everywhere_but_tests(
+    measured: tuple[dict[str, int], dict[str, int]],
+) -> None:
+    files, functions = measured
+    assert {key.split("/", 1)[0] for key in files} == {"src", "scripts", "benchmarks", "tests"}
+    assert {key.split("/", 1)[0] for key in functions} == {"src", "scripts", "benchmarks"}
     assert Path(shape.__file__).resolve() in shape.source_files()
 
 

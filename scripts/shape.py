@@ -1,9 +1,9 @@
 """Measure the shape rules: a file is at most 400 lines and a function at most 50.
 
-Covers the Python source under ``src/web_router/``, ``scripts/`` and
-``benchmarks/``. ``tests/test_shape.py`` holds every file and function to the
-limits, except those recorded in ``tests/shape_baseline.json``, which may keep
-their size or shrink but never grow.
+Files are measured under ``src/web_router/``, ``scripts/``, ``benchmarks/`` and
+``tests/``; functions under all but ``tests/``. ``tests/test_shape.py`` holds
+every file and function to the limits, except those recorded in
+``tests/shape_baseline.json``, which may keep their size or shrink but never grow.
 
     make shape-baseline    # rewrite the baseline after a grandfathered file or function shrank
 
@@ -20,7 +20,9 @@ from collections.abc import Iterator
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE_DIRS = ("src/web_router", "scripts", "benchmarks")
+SOURCE_DIRS = ("src/web_router", "scripts", "benchmarks", "tests")
+# Test functions are long by nature (setup, call, asserts in one place); only their files are held to a limit.
+FILES_ONLY_DIRS = ("tests",)
 BASELINE = ROOT / "tests" / "shape_baseline.json"
 MAX_FILE_LINES = 400
 MAX_FUNCTION_LINES = 50
@@ -65,6 +67,8 @@ def measure(root: Path = ROOT) -> tuple[dict[str, int], dict[str, int]]:
         text = path.read_text(encoding="utf-8")
         # Newlines only, as editors count: splitlines() also breaks on form feeds and other separators.
         files[rel] = text.count("\n") + (bool(text) and not text.endswith("\n"))
+        if rel.split("/", 1)[0] in FILES_ONLY_DIRS:
+            continue
         for qualname, lines in function_lines(ast.parse(text, filename=rel)):
             key = f"{rel}::{qualname}"
             functions[key] = max(lines, functions.get(key, 0))
