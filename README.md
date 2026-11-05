@@ -439,7 +439,10 @@ backends on the committed SealQA hard results by judged accuracy over all 254
 questions, and within the noise floor of a rerun puts the cheaper at list price
 first, then the faster (see [`benchmarks/providers/`](benchmarks/providers/README.md)).
 Ranking on every question, not the held-out half route-eval scores routers on, makes
-this baseline slightly harder for a router to beat there, on purpose. Every
+this baseline slightly harder for a router to beat there, on purpose. Perplexity
+leads by the narrowest margin: its 48 of 254 sits exactly on the noise floor (3
+questions, 1.2 points) below WebIQ's 51, so one answer fewer for it, or one more
+for WebIQ, on a re-freeze would put Nimble first for every keyed caller. Every
 key you hold comes before the free tier — so a key you hold only for research,
 Perplexity's say, serves your plain searches too. Keenable, DeepSeek and AgentCore have
 no rows in those results, so they come after the keyless tier until a scan places them: with a gateway set up, a plain
