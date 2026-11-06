@@ -24,6 +24,23 @@ def _tiny_set(folder: Path) -> None:
     _write_set(folder, "tiny", rows)
 
 
+def test_a_set_in_its_own_folder_is_ranked_with_the_reruns_frozen_beside_it(
+    route_eval: ModuleType, route_eval_rank: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _tiny_set(tmp_path)
+    first = [_row("exa", "correct" if i < 10 else "incorrect", qid=f"q{i}") for i in range(20)]
+    again = [_row("exa", "correct" if i < 14 else "incorrect", qid=f"q{i}") for i in range(20)]
+    _write_set(tmp_path, "tiny-rerun", first)
+    _write_set(tmp_path, "tiny-rerun-twin", again)
+    monkeypatch.setattr(
+        route_eval_rank, "RERUNS", {**route_eval_rank.RERUNS, "search": ("tiny-rerun", "tiny-rerun-twin")}
+    )
+
+    floor = route_eval.evaluate_set("tiny", ["always:nimble"], folder=tmp_path)["noise_floor"]
+    assert floor["rerun"] == ["tiny-rerun", "tiny-rerun-twin"]
+    assert floor["value"] == pytest.approx(0.2), "the spread of the reruns in the set's own folder"
+
+
 def test_a_set_reports_static_oracle_and_a_router_in_sample_and_held_out(
     route_eval: ModuleType, tmp_path: Path
 ) -> None:
