@@ -49,7 +49,7 @@ At 20 questions one answer moves accuracy 5 points, four times search's
 1.2-point floor, and a 95% interval spans some 35 points: fewer, and one
 question can carry a backend across several tiers. It is a third of
 ``tools-effort-60``, the smallest set route-eval ranks, so a path that lost
-most of its rows to rate limits (``research:perplexity:low``, 4 counted) or
+most of its rows to failures left out (``research:perplexity:low``, 4 counted) or
 is asked on a few questions only (``extract:nimble``, 10) is held back, while
 one that lost a third (``answer:brave``, 38) is still ranked. The shipped
 orders rank on 254 and 300 questions, far above it.
