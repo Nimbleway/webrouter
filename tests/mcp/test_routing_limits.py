@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import re
 import time
 from collections.abc import Iterator
 from types import SimpleNamespace
@@ -17,7 +18,7 @@ import pytest
 from tests.conftest import FakeBrowserProvider, FakeResearchProvider
 from tests.mcp.conftest import CONFIG, Table, ok_on, outcome, routed
 from tests.test_auto_seam import MEMBERS
-from web_router import RouteDecision, RouteRequest
+from web_router import RouteDecision, RouteRequest, prices
 from web_router.constants_budget import SKIP_PRICE_UNKNOWN
 from web_router.constants_mcp import (
     ENV_MCP_MAX_COST_USD,
@@ -27,7 +28,7 @@ from web_router.constants_mcp import (
     MCP_TOOL_BUDGET_STATUS,
     MCP_TOOL_WEB_RUN,
 )
-from web_router.exceptions import BudgetExceededError, ConfigurationError
+from web_router.exceptions import BudgetExceededError, ConfigurationError, DeadlineExceededError
 from web_router.mcp.budget import ConnectionBudget, browser_charged, charged, wait_left
 from web_router.mcp.routing import McpRouting
 from web_router.mcp.tools import WebRouterTools
@@ -43,7 +44,7 @@ from web_router.routing import Budget
 from web_router.routing.attempts import Attempt
 from web_router.routing.pool import current_pool
 from web_router.routing.pricing import attempt_cost
-from web_router.types import BrowserRequest
+from web_router.types import BrowserRequest, ResearchProgress, ResearchRequest
 
 # -- startup and budget_start refuse what is not a limit ---------------------------
 
@@ -66,20 +67,20 @@ async def test_budget_start_refuses_a_limit_that_is_not_finite(name: str, bad: f
 # -- what a browser costs ------------------------------------------------------------
 
 
-def _browser(price: float, **options: Any) -> float | None:
+def _browser(**options: Any) -> float | None:
     return attempt_cost(Attempt(tool="open_browser", provider="cheap", request=BrowserRequest(**options)))  # type: ignore[arg-type]
 
 
 def test_a_browser_is_charged_whole_minutes(priced: Table) -> None:
     priced.update(cheap=0.01)
-    assert _browser(0.01, timeout=61) == pytest.approx(0.02), "61 seconds bill two minutes"
-    assert _browser(0.01, timeout=120, headless=True, idle_timeout=30) == pytest.approx(0.02)
+    assert _browser(timeout=61) == pytest.approx(0.02), "61 seconds bill two minutes"
+    assert _browser(timeout=120, headless=True, idle_timeout=30) == pytest.approx(0.02)
 
 
 @pytest.mark.parametrize("extra", [{"proxy_country": "us"}, {"stealth": "low"}, {"solve_captchas": True}])
 def test_a_browser_option_that_can_bill_apart_makes_the_price_unknown(priced: Table, extra: dict[str, Any]) -> None:
     priced.update(cheap=0.01, local=0.0)
-    assert _browser(0.01, timeout=60, **extra) is None
+    assert _browser(timeout=60, **extra) is None
     free = Attempt(tool="open_browser", provider="local", request=BrowserRequest(timeout=60, **extra))  # type: ignore[arg-type]
     assert attempt_cost(free) == 0.0, "a free backend bills no extra"
 
@@ -186,3 +187,61 @@ async def test_a_task_opened_after_the_ceiling_ran_out_reports_no_time_not_negat
     time.sleep(0.05)
     status = (await ok_on(tools, MCP_TOOL_BUDGET_START, max_cost_usd=1.0, time_limit_s=60))["budget"]
     assert (status["time_limit_s"], status["time_left_s"]) == (0.0, 0.0)
+
+
+class _LostInPoll(FakeResearchProvider):
+    """A run that is accepted, then whose poll runs out of the call's deadline."""
+
+    polls_before_done = 10**6
+
+    def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
+        raise DeadlineExceededError(self.name, 0.1)
+
+    async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
+        return self._fetch(request, job_id)
+
+
+@pytest.fixture
+def lost_in_poll() -> Iterator[None]:
+    for name in MEMBERS:
+        register_research_provider(name, type(f"Lost_{name}", (_LostInPoll,), {"name": name}))
+    yield
+    for name in MEMBERS:
+        unregister_research_provider(name)
+
+
+@pytest.mark.usefixtures("lost_in_poll")
+async def test_web_run_keeps_the_handle_of_a_run_whose_poll_ran_out_of_time() -> None:
+    routing = McpRouting.from_environ({ENV_MCP_ROUTER: f"{__name__}:route_to_research"})
+    tools = WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=0.2)
+    pending = await asyncio.wait_for(ok_on(tools, MCP_TOOL_WEB_RUN, prompt="what changed in solar policy?"), 5)
+    assert pending["tool"] == "research" and pending["job_id"].startswith("first")
+    assert tools.store.get(pending["handle"]).job is not None, "the paid run's handle is kept"
+
+
+@pytest.mark.usefixtures("slow_research")
+async def test_a_pending_note_says_how_long_the_tool_actually_waited() -> None:
+    routing = McpRouting(ceiling=Budget(time_limit_s=0.3))
+    tools = WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=25.0)
+    pending = await asyncio.wait_for(ok_on(tools, "research", query="q", provider="first"), 5)
+    waited = float(re.search(r"in the ([0-9.e-]+)s this tool waits", pending["note"]).group(1))  # type: ignore[union-attr]
+    assert waited <= 0.3, "cut to the time the budget had left, not the tool's 25 s"
+
+
+def test_a_browser_with_a_charge_per_session_on_top_is_a_floor_and_unknown_under_a_cap() -> None:
+    row = prices.price("anchor", "open_browser")
+    assert row is not None and row.estimate_is_floor, "its note names a charge per browser created"
+    attempt = Attempt(tool="open_browser", provider="anchor", request=BrowserRequest(timeout=60))  # type: ignore[arg-type]
+    assert attempt_cost(attempt) is None
+
+
+@pytest.mark.parametrize("bad", [math.inf, -1, 0])
+async def test_web_run_refuses_a_cap_that_is_not_a_finite_positive_number(members: list[str], bad: float) -> None:
+    failed, message = await outcome(routed(), MCP_TOOL_WEB_RUN, prompt="q", max_cost_usd=bad)
+    assert failed and "max_cost_usd" in message and members == []
+
+
+@pytest.mark.parametrize("value", ["inf", "Infinity", "-inf", "nan"])
+def test_a_ceiling_that_is_not_finite_stops_the_server(value: str) -> None:
+    with pytest.raises(ConfigurationError):
+        McpRouting.from_environ({ENV_MCP_MAX_COST_USD: value})

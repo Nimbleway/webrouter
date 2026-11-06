@@ -58,8 +58,8 @@ from web_router.constants_mcp import (
     MCP_URL_POLICY,
 )
 from web_router.constants_routing import RULES_ROUTER_NAME
-from web_router.exceptions import BrowseTimeoutError, ConfigurationError, ResearchTimeoutError
-from web_router.mcp.budget import budget_start, budget_status, wait_left
+from web_router.exceptions import BrowseTimeoutError, ConfigurationError, DeadlineExceededError, ResearchTimeoutError
+from web_router.mcp.budget import budget_start, budget_status, positive_limit, wait_left
 from web_router.mcp.shaping import (
     max_response_chars,
     redact,
@@ -99,6 +99,9 @@ _SHAPERS: dict[type, tuple[str, Callable[..., dict[str, Any]]]] = {
     BrowseResponse: (MCP_TOOL_BROWSE, shape_browse),
 }
 """Each response ``run`` can return: the method it is from, and how that method's own tool shapes it."""
+
+_CAPS = ("max_cost_usd", "time_limit_s")
+"""``web_run``'s own caps on one call, each held to the same rule as ``budget_start``'s limits."""
 
 _JOBS: dict[str, tuple[type[ResearchJob] | type[BrowseJob], type[NormalizedRequest], type[BaseModel], str]] = {
     MCP_TOOL_RESEARCH: (ResearchJob, ResearchRequest, ResearchProgress, MCP_MSG_RESEARCH_PENDING),
@@ -196,25 +199,46 @@ def _plan_payload(plan: Plan) -> dict[str, Any]:
 async def web_run(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """Plan ``prompt`` with the attached router and run it, or with ``dry_run`` only plan it."""
     kwargs = tools.arguments(MCP_TOOL_WEB_RUN, arguments)
-    caps = {name: kwargs[name] for name in ("max_cost_usd", "time_limit_s") if name in kwargs}
-    budget = Budget(**caps) if caps else None
+    caps = {name: positive_limit(kwargs, name, MCP_TOOL_WEB_RUN) for name in _CAPS if name in kwargs}
+    budget = Budget(max_cost_usd=caps.get("max_cost_usd"), time_limit_s=caps.get("time_limit_s")) if caps else None
     prompt = str(kwargs["prompt"])
     plan = await tools.router.plan(prompt, budget=budget)
     if kwargs.get("dry_run"):
         return {"dry_run": True, **_plan_payload(plan)}
     wait = {MCP_TOOL_RESEARCH: tools.research_wait, MCP_TOOL_BROWSE: tools.browse_wait}.get(plan.tool)
+    waited = None if wait is None else wait_left(wait)
+    started = _started(tools, plan.tool)
     try:
         # A job is waited for as its own tool waits, then handed back as a handle: a paid run is never lost.
-        with call_deadline(None if wait is None else wait_left(wait)):
+        with call_deadline(waited):
             response = await tools.router.run(plan, budget=budget)
     except (ResearchTimeoutError, BrowseTimeoutError) as exc:
-        return _pending(tools, plan, exc.job_id, wait or 0.0)
+        return _pending(tools, plan, exc.job_id, waited or 0.0)
+    except DeadlineExceededError:
+        # The deadline ran out in a poll, after the run was accepted: the error names no job, the chain does.
+        job_id = started()
+        if job_id is None:
+            raise
+        return _pending(tools, plan, job_id, waited or 0.0)
     tool, shape = _SHAPERS[type(response)]
     # A browse payload can carry the session the agent ran in, so fetch_raw hands back its redacted copy.
     raw = redact(response.raw)[0] if tool == MCP_TOOL_BROWSE else response.raw
     handle = tools.store.add(MCP_TOOL_WEB_RUN, raw=raw).handle
     decision = response.decision.model_dump(exclude_none=True) if response.decision else None
     return {"tool": tool, **shape(response, handle, budget=max_response_chars()), "decision": decision}
+
+
+def _started(tools: WebRouterTools, tool: str) -> Callable[[], str | None]:
+    """For a job method, what tells the run ``web_run`` started on its ``auto``: the handle it took, if any.
+
+    ``auto`` keeps each run it starts by handle; the one added since this was
+    called is this call's. Nothing for a method that is no job.
+    """
+    if tool not in _JOBS:
+        return lambda: None
+    jobs: dict[str, Any] = getattr(tools.router, AUTO_GETTERS[tool])(PROVIDER_AUTO)._jobs
+    before = set(jobs)
+    return lambda: next((handle for handle in reversed(jobs) if handle not in before), None)
 
 
 def _pending(tools: WebRouterTools, plan: Plan, job_id: str, wait: float) -> dict[str, Any]:
