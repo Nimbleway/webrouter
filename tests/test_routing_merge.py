@@ -351,3 +351,17 @@ def test_rule_1_a_tool_set_aside_for_want_of_a_candidate_is_noted() -> None:
     excluded = _merge(RouteDecision(tools=["answer"], exclude={"answer:perplexity": "down"}))
     assert excluded.tool == "search" and "answer" in excluded.notes.ignored
     assert "research" not in _merge(RouteDecision(tools=["research", "answer"])).notes.ignored, "chosen: no note"
+
+
+def test_rule_5_a_depth_checks_the_time_cap_and_strict_as_well_as_the_cost(monkeypatch: pytest.MonkeyPatch) -> None:
+    from web_router import prices
+
+    decision = RouteDecision(params={"search": {"search_depth": "lite"}}, exclude=NO_UNDECLARED)
+    monkeypatch.setattr(prices, "estimate_latency", lambda *_: (9.0, 30.0))
+    slow = _merge(decision, pinned="search", budget=Budget(time_limit_s=10.0))
+    assert slow.params == {} and "p90 of 30s, over the 10s" in slow.notes.ignored["params.search.search_depth"]
+    monkeypatch.setattr(prices, "estimate_latency", lambda *_: None)
+    strict = _merge(decision, pinned="search", budget=Budget(time_limit_s=10.0, strict=True))
+    assert strict.params == {} and "strict" in strict.notes.ignored["params.search.search_depth"]
+    lenient = _merge(decision, pinned="search", budget=Budget(time_limit_s=10.0))
+    assert lenient.params == {"search_depth": "lite"}

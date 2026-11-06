@@ -249,3 +249,21 @@ def test_a_skip_names_the_estimate_and_what_is_left_unrounded(chain: Chain, pric
     response = call(chain, CAP)
     assert response.decision.hops == [DecisionHop(id=_ids(chain, "first")[0], error=_over("$0.025", "$0.01"))]
     assert chain.called == ["second"]
+
+
+@pytest.mark.parametrize(("provider", "depth"), [("nimble", "deep"), ("you", "deep"), ("exa", None)])
+def test_a_search_asking_more_results_than_its_price_assumes_is_unpriced(provider: str, depth: str | None) -> None:
+    row = prices.price(provider, "search", depth)
+    assert row is not None and row.results_assumed == 10
+    asked = {"query": "q", "search_depth": depth} if depth else {"query": "q"}
+    within = Attempt(tool="search", provider=provider, request=SearchRequest(**asked, max_results=10))
+    beyond = Attempt(tool="search", provider=provider, request=SearchRequest(**asked, max_results=11))
+    unset = Attempt(tool="search", provider=provider, request=SearchRequest(**asked))
+    assert attempt_cost(within) == attempt_cost(unset) == row.estimate_usd
+    assert attempt_cost(beyond) is None, "each result past the tenth is charged: the row no longer prices it"
+
+
+def test_a_row_that_charges_no_result_keeps_its_price_for_any_count() -> None:
+    many = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q", max_results=50))
+    assert prices.price("nimble", "search", None).results_assumed is None
+    assert attempt_cost(many) == prices.estimate("nimble", "search")

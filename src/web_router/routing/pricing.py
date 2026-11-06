@@ -113,12 +113,22 @@ def attempt_mode(attempt: Attempt) -> str | None:
 
 def attempt_cost(attempt: Attempt) -> float | None:
     """The estimated list price of ``attempt`` in US dollars, or ``None`` when it cannot be known before the call."""
-    if attempt.request.provider_options:
+    if attempt.request.provider_options or _more_results_than_priced(attempt):
         return None
     cost = mode_cost(attempt.provider, attempt.tool, attempt_mode(attempt))
     if cost is not None and isinstance(attempt.request, ExtractRequest):
         return cost * len(attempt.request.urls)
     return cost
+
+
+def _more_results_than_priced(attempt: Attempt) -> bool:
+    """A search asking for more results than its row's price assumes, where each result is charged: unpriced."""
+    request = attempt.request
+    if not isinstance(request, SearchRequest) or request.max_results is None:
+        return False
+    row = prices.price(attempt.provider, attempt.tool, attempt_mode(attempt))
+    assumed = None if row is None else row.results_assumed
+    return assumed is not None and request.max_results > assumed
 
 
 def attempt_p90(attempt: Attempt) -> float | None:

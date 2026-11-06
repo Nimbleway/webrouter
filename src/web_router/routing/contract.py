@@ -5,6 +5,7 @@ Experimental: every name here may change before 1.0.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
@@ -20,6 +21,16 @@ ToolName = Literal["search", "extract", "answer", "research", "browse"]
 def candidate_id(tool: str, provider: str) -> str:
     """The id every decision field names a candidate by: ``tool:provider``, as ``search:exa``."""
     return f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"
+
+
+def _finite_cap(value: object) -> bool:
+    """A real number, finite as a float, and not negative."""
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return False
+    try:
+        return math.isfinite(float(value)) and value >= 0
+    except OverflowError:  # an int too large for a float, such as 10**400
+        return False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -48,14 +59,12 @@ class Budget:
     def __post_init__(self) -> None:
         """
         Raises:
-            ValueError: for a cap that is negative or not a number -- text, a bool, NaN: it would cap nothing,
-                or everything, silently.
+            ValueError: for a cap that is not a finite number of 0 or more -- negative, text, a bool, NaN,
+                infinity, or too large for a float: it would cap nothing or everything, or fail later.
         """
         for name in ("max_cost_usd", "time_limit_s"):
             value = getattr(self, name)
-            if value is None:
-                continue
-            if isinstance(value, bool) or not isinstance(value, int | float) or not value >= 0:  # NaN fails >= 0
+            if value is not None and not _finite_cap(value):
                 raise ValueError(MSG_BUDGET_VALUE.format(name=name, value=value))
 
 
