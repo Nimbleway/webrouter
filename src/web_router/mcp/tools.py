@@ -420,12 +420,12 @@ class WebRouterTools:
     async def _research(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         job = await self.router.submit_research(**self.arguments(MCP_TOOL_RESEARCH, arguments))
         try:
-            response = await job.aresult(timeout=wait_left(self.research_wait))
+            response = await job.aresult(timeout=(waited := wait_left(self.research_wait)))
         except ResearchTimeoutError:
             # Not a failure: the run is still going, and a stdio session cannot
             # be held open for the ten minutes it may take.
             handle = self.store.add(MCP_TOOL_RESEARCH, job=job).handle
-            return shape_pending(job, handle, wait=self.research_wait, note=MCP_MSG_RESEARCH_PENDING)
+            return shape_pending(job, handle, wait=waited, note=MCP_MSG_RESEARCH_PENDING)
         record = self.store.add(MCP_TOOL_RESEARCH, raw=response.raw, job=job)
         return shape_research(response, record.handle, budget=max_response_chars())
 
@@ -442,11 +442,11 @@ class WebRouterTools:
     async def _browse(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         job = await self.router.submit_browse(**self.arguments(MCP_TOOL_BROWSE, arguments))
         try:
-            response = await job.aresult(timeout=wait_left(self.browse_wait))
+            response = await job.aresult(timeout=(waited := wait_left(self.browse_wait)))
         except BrowseTimeoutError:
             # As for research: the task is still going, and is polled rather than waited on.
             handle = self.store.add(MCP_TOOL_BROWSE, job=job).handle
-            return shape_pending(job, handle, wait=self.browse_wait, note=MCP_MSG_BROWSE_PENDING)
+            return shape_pending(job, handle, wait=waited, note=MCP_MSG_BROWSE_PENDING)
         record = self.store.add(MCP_TOOL_BROWSE, raw=response.raw, job=job)
         return shape_browse(response, record.handle, budget=max_response_chars())
 

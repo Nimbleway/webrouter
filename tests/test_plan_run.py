@@ -195,7 +195,7 @@ def test_run_with_a_budget_records_the_spend(called: list[str], monkeypatch: pyt
 
     from web_router import prices
 
-    row = SimpleNamespace(estimate_usd=0.001, estimate_is_floor=False, mode=None)
+    row = SimpleNamespace(estimate_usd=0.001, estimate_is_floor=False, mode=None, results_assumed=None)
     monkeypatch.setattr(prices, "price", lambda *_: row)
     monkeypatch.setattr(prices, "estimate_latency", lambda *_: None)
     response = _wr(router=_chooser("search")).run(PROMPT, budget=Budget(max_cost_usd=0.01))

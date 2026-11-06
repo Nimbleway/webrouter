@@ -2,7 +2,7 @@
 
 ``goto``, ``snapshot``, ``click``, ``type``, ``press``, ``screenshot`` and
 ``read`` on :class:`~web_router.BrowserHandle` answer with these. Kept apart so
-``types.py`` stops growing; like it, this module imports nothing of ours.
+``types.py`` stops growing; this module imports nothing of ours.
 """
 
 from __future__ import annotations

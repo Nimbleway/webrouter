@@ -136,17 +136,18 @@ def wait_left(wait: float) -> float:
     return wait if left is None else min(wait, left)
 
 
-def _limit(arguments: Mapping[str, Any], name: str) -> float:
+def positive_limit(arguments: Mapping[str, Any], name: str, tool: str = MCP_TOOL_BUDGET_START) -> float:
+    """``arguments[name]`` as a limit: a finite number above zero, or ``ValueError`` naming ``tool``."""
     value = arguments[name]
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not (math.isfinite(value) and value > 0):
-        raise ValueError(MCP_MSG_BUDGET_LIMIT.format(tool=MCP_TOOL_BUDGET_START, name=name, value=value))
+        raise ValueError(MCP_MSG_BUDGET_LIMIT.format(tool=tool, name=name, value=value))
     return float(value)
 
 
 async def budget_start(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """Open a new task budget with the limits ``arguments`` state, and report it."""
     kwargs = tools.arguments(MCP_TOOL_BUDGET_START, arguments)
-    tools.budget.start(_limit(kwargs, "max_cost_usd"), _limit(kwargs, "time_limit_s"))
+    tools.budget.start(positive_limit(kwargs, "max_cost_usd"), positive_limit(kwargs, "time_limit_s"))
     return await budget_status(tools, {})
 
 

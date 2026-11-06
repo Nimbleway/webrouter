@@ -20,10 +20,12 @@ from typing import Any, get_args, overload
 
 from web_router import registry
 from web_router._urls import host_of
-from web_router.constants_budget import OVER_COST
+from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
 from web_router.constants_merge import (
     MSG_PARAM_CALLER,
     MSG_PARAM_DEPTH_COST,
+    MSG_PARAM_DEPTH_STRICT,
+    MSG_PARAM_DEPTH_TIME,
     MSG_PARAM_DEPTH_UNKNOWN_PRICE,
     MSG_PARAM_INVALID,
     MSG_PARAM_NO_URL_POLICY,
@@ -38,7 +40,7 @@ from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledErr
 from web_router.routing.contract import Budget, RouteDecision
 from web_router.routing.params import EFFORTS, effort_misfit
 from web_router.routing.pricing import misfit as misfit_code
-from web_router.routing.pricing import mode_cost
+from web_router.routing.pricing import mode_cost, mode_p90
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -101,14 +103,23 @@ def _url_refusal(key: str, value: Any, url_check: UrlCheck | None) -> str | None
 
 
 def _depth_misfit(provider: str, depth: str, budget: Budget) -> str | None:
-    """Why ``depth`` does not fit the cost cap on ``provider``: by the one fit rule, the cost half only."""
-    cap = budget.max_cost_usd
+    """Why ``depth`` does not fit ``budget`` on ``provider``, by the one fit rule: the cost cap and the time cap."""
+    cap, limit = budget.max_cost_usd, budget.time_limit_s
     cost = None if cap is None else mode_cost(provider, "search", depth)
-    code = misfit_code(cost, None, cap, None, strict=False)
+    p90 = None if limit is None else mode_p90(provider, "search", depth)
+    code = misfit_code(cost, p90, cap, limit, budget.strict)
     if code is None:
         return None
-    wording = MSG_PARAM_DEPTH_COST if code == OVER_COST else MSG_PARAM_DEPTH_UNKNOWN_PRICE
-    return wording.format(provider=provider, depth=depth, cost=cost, cap=cap)
+    shown_cap = limit if code == OVER_TIME else cap  # the time wording names the time limit as its cap
+    return _DEPTH_MISFITS[code].format(provider=provider, depth=depth, cost=cost, cap=shown_cap, p90=p90)
+
+
+_DEPTH_MISFITS = {
+    UNKNOWN_PRICE: MSG_PARAM_DEPTH_UNKNOWN_PRICE,
+    OVER_COST: MSG_PARAM_DEPTH_COST,
+    UNKNOWN_P90: MSG_PARAM_DEPTH_STRICT,
+    OVER_TIME: MSG_PARAM_DEPTH_TIME,
+}
 
 
 def misfit(key: str, value: str, providers: Sequence[str], budget: Budget | None) -> str | None:

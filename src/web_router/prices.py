@@ -85,6 +85,8 @@ class Price(BaseModel):
     """What the figure leaves out or adds: content add-ons, tokens, a plan range."""
     estimate_is_floor: bool = False
     """The note names charges billed on top of ``price_usd`` -- agent steps, tokens -- so a call costs at least this."""
+    results_assumed: int | None = None
+    """The result count the price assumes where each result fetched is charged; ``None`` where none is."""
     source_url: str | None
     checked: date | None
     setup: str | None = None
