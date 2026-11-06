@@ -1,7 +1,7 @@
 """The answer method's request and response.
 
 Kept apart so ``types.py`` stops growing. ``web_router`` exports them too; ``types.py``
-imports nothing of ours, so this module imports it, never the other way round.
+never imports this module, so this module imports it, never the other way round.
 """
 
 from __future__ import annotations

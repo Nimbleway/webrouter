@@ -22,5 +22,13 @@ def test_types_imports_nothing_of_ours() -> None:
             if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("web_router")
         ]
 
-    assert ours(types_module) == ["web_router.types_decision"]
+    assert set(ours(types_module)) == {"web_router.types_decision"}
     assert ours(decision_module) == []
+
+
+def test_the_record_types_import_from_types_as_from_the_package() -> None:
+    import web_router
+    from web_router import types
+
+    for name in ("DecisionRecord", "DecisionHop", "DecisionAttempt"):
+        assert getattr(types, name) is getattr(web_router, name)

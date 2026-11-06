@@ -1,11 +1,9 @@
 """Provider-agnostic request and response models.
 
-Every provider maps its own payload onto these types, so swapping Nimble for
-Tavily or You.com does not change the shape of what callers get back. Anything a
-provider returns that has no home here is preserved verbatim under
-``SearchResult.extra`` / ``SearchResponse.raw`` for a search, and under
-``ExtractedDocument.extra`` / ``ExtractResponse.raw`` for an extract, and under
-``TemplateResponse.extra`` / ``TemplateResponse.raw`` for an Extract Template run.
+Every provider maps its own payload onto these types, so swapping Nimble for Tavily or You.com does not change the
+shape of what callers get back. Anything a provider returns that has no home here is preserved verbatim under
+``SearchResult.extra`` / ``SearchResponse.raw`` for a search, ``ExtractedDocument.extra`` / ``ExtractResponse.raw``
+for an extract, and ``TemplateResponse.extra`` / ``TemplateResponse.raw`` for an Extract Template run.
 
 A browser session is the exception to "a call returns an answer": it returns a
 :class:`BrowserSession` describing a browser the caller then drives itself.
@@ -23,6 +21,8 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Generic, Literal, Ty
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_serializer, model_validator
 
 from web_router.types_decision import DECISION_DESCRIPTION, DecisionRecord
+from web_router.types_decision import DecisionAttempt as DecisionAttempt
+from web_router.types_decision import DecisionHop as DecisionHop
 
 SearchDepth = Literal["lite", "fast", "deep"]
 """How much page content to retrieve per result.
