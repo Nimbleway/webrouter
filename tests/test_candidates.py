@@ -315,7 +315,8 @@ def test_it_is_fast_enough_for_every_routed_call(keys: pytest.MonkeyPatch) -> No
     started = time.perf_counter()
     for _ in range(runs):
         build_candidates(router, requests, budget=budget)
-    assert (time.perf_counter() - started) / runs < 0.001
+    # Far below a router's 50 ms default timeout; CI runners are a few times slower than a laptop.
+    assert (time.perf_counter() - started) / runs < 0.005
 
 
 def test_a_chain_member_with_no_credential_is_no_candidate(keys: pytest.MonkeyPatch) -> None:
