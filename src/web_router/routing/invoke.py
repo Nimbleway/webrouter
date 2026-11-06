@@ -37,6 +37,7 @@ import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from concurrent.futures import Future
 from concurrent.futures import wait as wait_futures
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -142,6 +143,11 @@ def _on_private_loop(awaitable: Awaitable[Any]) -> Future[Any]:
     return asyncio.run_coroutine_threadsafe(_awaited(awaitable), _PRIVATE_LOOP.get())
 
 
+def _on_caller_loop(awaitable: Awaitable[Any]) -> asyncio.Future[Any]:
+    """Schedule ``awaitable`` on the running loop, the async caller's own."""
+    return asyncio.ensure_future(awaitable)
+
+
 async def _awaited(awaitable: Awaitable[Any]) -> Any:
     return await awaitable
 
@@ -184,9 +190,18 @@ def _valid(result: object) -> bool:
 
 
 def _close(value: object) -> None:
-    """Close ``value`` when it is a coroutine nobody will await, so it is not left to warn."""
+    """Drop an awaitable nobody will await: close a coroutine; cancel a task, reading its error, on its own loop."""
     if inspect.iscoroutine(value):
         value.close()
+    elif isinstance(value, asyncio.Future):
+        with suppress(RuntimeError):  # its loop is closed: nothing left to run it
+            value.get_loop().call_soon_threadsafe(_abandon, value)
+
+
+def _abandon(task: asyncio.Future[Any]) -> None:
+    """Cancel a task the call gave up on, and read its error once it ends, so it is not logged as never retrieved."""
+    task.cancel()
+    task.add_done_callback(_retrieved)
 
 
 def _close_late(future: Future[Any]) -> None:
@@ -195,7 +210,6 @@ def _close_late(future: Future[Any]) -> None:
 
 
 def _retrieved(task: asyncio.Future[Any]) -> None:
-    """Read the error of a task the call gave up on, so it is not logged as never retrieved."""
     if not task.cancelled():
         task.exception()
 
@@ -226,12 +240,10 @@ async def _asettled(task: asyncio.Future[Any], seconds: float) -> tuple[str | No
     try:
         done, _ = await asyncio.wait({task}, timeout=seconds) if seconds > 0 else (set(), set())
     except asyncio.CancelledError:
-        task.cancel()
-        task.add_done_callback(_retrieved)
+        _abandon(task)
         raise
     if not done:
-        task.cancel()
-        task.add_done_callback(_retrieved)
+        _abandon(task)
         return ROUTER_TIMEOUT, None
     return _classified(task)
 
@@ -276,8 +288,9 @@ class AttachedRouter:
         pending = self._pending(code, value, req, started)
         if isinstance(pending, RouterOutcome):
             return pending
-        if pending is not None:
-            code, value = _settled(_on_private_loop(value), pending)
+        if pending:
+            scheduled = _on_private_loop(value)
+            code, value = _settled(scheduled, self._left(req, started))  # measured after scheduling
         return self._outcome(code, value, started)
 
     async def acall(self, req: RouteRequest) -> RouterOutcome:
@@ -295,26 +308,31 @@ class AttachedRouter:
                 task = asyncio.wrap_future(on_thread)
         except Exception as exc:  # the router failed before it could be waited on
             return self._failed(ROUTER_ERROR, started, exc)
-        code, value = await _asettled(task, self._left(req, started))
+        try:
+            code, value = await _asettled(task, self._left(req, started))
+        except asyncio.CancelledError:
+            if on_thread is not None:
+                _close_late(on_thread)
+            raise
         if code == ROUTER_TIMEOUT and on_thread is not None:
             _close_late(on_thread)
         pending = self._pending(code, value, req, started)
         if isinstance(pending, RouterOutcome):
             return pending
-        if pending is not None:
-            code, value = await _asettled(asyncio.ensure_future(value), pending)
+        if pending:
+            scheduled_task = _on_caller_loop(value)
+            code, value = await _asettled(scheduled_task, self._left(req, started))  # measured after scheduling
         return self._outcome(code, value, started)
 
-    def _pending(self, code: str | None, value: Any, req: RouteRequest, started: float) -> RouterOutcome | float | None:
-        """For a sync-looking router that answered with a coroutine, the seconds left to await it.
+    def _pending(self, code: str | None, value: Any, req: RouteRequest, started: float) -> RouterOutcome | bool:
+        """Whether a sync-looking router answered with a coroutine to await, with time left to await it.
 
-        ``None`` when the answer is not awaitable; the timeout's outcome, the coroutine
-        closed unrun, when no time is left.
+        The timeout's outcome, the coroutine closed unrun, when no time is left.
         """
         if code is not None or not inspect.isawaitable(value):
-            return None
-        if (left := self._left(req, started)) > 0:
-            return left
+            return False
+        if self._left(req, started) > 0:
+            return True
         _close(value)
         return self._failed(ROUTER_TIMEOUT, started)
 
