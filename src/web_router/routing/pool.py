@@ -76,7 +76,12 @@ class BudgetPool:
             pool = pool.parent
 
     def limit(self, budget: Budget | None) -> Budget:
-        """One call's budget: the tighter of its own ``budget`` and this pool's, with the time left now."""
+        """One call's budget: the tighter of its own ``budget`` and this pool's, with the time left now.
+
+        The time left is a snapshot for what the call shows a router and records;
+        the call's deadline is held to :meth:`expires_at` itself, so a call that
+        starts late gets no more time than the clock has left.
+        """
         own = budget or Budget()
         caps = [own.max_cost_usd, *(pool.budget.max_cost_usd for pool in self._chain())]
         return Budget(
@@ -85,15 +90,17 @@ class BudgetPool:
             strict=own.strict or any(pool.budget.strict for pool in self._chain()),
         )
 
+    def expires_at(self) -> float | None:
+        """The earliest clock up the chain runs out at this :func:`time.monotonic` instant; ``None`` with no limit."""
+        ends = [
+            pool.started + pool.budget.time_limit_s for pool in self._chain() if pool.budget.time_limit_s is not None
+        ]
+        return min(ends) if ends else None
+
     def time_left(self) -> float | None:
         """Seconds left on the earliest clock up the chain, never below zero; ``None`` when none has a limit."""
-        now = time.monotonic()
-        left = [
-            pool.started + pool.budget.time_limit_s - now
-            for pool in self._chain()
-            if pool.budget.time_limit_s is not None
-        ]
-        return None if not left else max(0.0, min(left))
+        ends = self.expires_at()
+        return None if ends is None else max(0.0, ends - time.monotonic())
 
     def reserve(self, cost: float) -> float | None:
         """Reserve ``cost`` in this pool and every one up the chain, or in none of them.

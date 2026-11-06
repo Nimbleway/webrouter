@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Awaitable, Callable, Coroutine
-from contextvars import Token
+from contextvars import ContextVar, Token
 from types import TracebackType
-from typing import Any, Concatenate, ParamSpec, TypeVar
+from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.routing.contract import Budget
@@ -22,33 +22,43 @@ _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
 
+_ENTRIES: ContextVar[tuple[tuple[_Scope, Token[BudgetPool | None]], ...]] = ContextVar(
+    "web_router_budget_scope_entries", default=()
+)
+"""The scopes entered in this context, each with the token that undoes its binding; per thread and per task."""
+
+
 class _Scope:
-    """What both scopes share: the pool, made where the scope is, and the tokens of the blocks it is entered in."""
+    """What both scopes share: the pool, made where the scope is, and entering and leaving it."""
 
     def __init__(self, router: Any, budget: Budget) -> None:
         self.router = router
         self.pool = BudgetPool(budget, parent=current_pool())
-        self._tokens: list[Token[BudgetPool | None]] = []
 
     def status(self) -> BudgetStatus:
         """What is spent, reserved and left, and the clock: see :class:`~web_router.routing.pool.BudgetStatus`."""
         return self.pool.status()
 
     def _enter(self) -> None:
-        self._tokens.append(bind(self.pool))
+        _ENTRIES.set((*_ENTRIES.get(), (self, bind(self.pool))))
 
     def _exit(self) -> None:
-        unbind(self._tokens.pop())
+        """Undo this context's latest entry of this scope: another thread or task's entries are its own."""
+        entries = _ENTRIES.get()
+        index = max(at for at, (scope, _) in enumerate(entries) if scope is self)
+        unbind(entries[index][1])
+        _ENTRIES.set(entries[:index] + entries[index + 1 :])
 
 
 def _spending(method: Callable[Concatenate[WebRouter, _P], _R]) -> Callable[Concatenate[BudgetScope, _P], _R]:
-    """``method`` on the scope's router, with the scope's pool in force for the call."""
+    """``method``'s namesake on the scope's router, a subclass's override included, with the pool in force."""
+    name = method.__name__
 
     @functools.wraps(method)
     def call(scope: BudgetScope, /, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         token = bind(scope.pool)
         try:
-            return method(scope.router, *args, **kwargs)
+            return cast("Callable[_P, _R]", getattr(scope.router, name))(*args, **kwargs)
         finally:
             unbind(token)
 
@@ -59,12 +69,13 @@ def _aspending(
     method: Callable[Concatenate[AsyncWebRouter, _P], Awaitable[_R]],
 ) -> Callable[Concatenate[AsyncBudgetScope, _P], Coroutine[Any, Any, _R]]:
     """As :func:`_spending`, awaited."""
+    name = method.__name__
 
     @functools.wraps(method)
     async def call(scope: AsyncBudgetScope, /, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         token = bind(scope.pool)
         try:
-            return await method(scope.router, *args, **kwargs)
+            return await cast("Callable[_P, Awaitable[_R]]", getattr(scope.router, name))(*args, **kwargs)
         finally:
             unbind(token)
 

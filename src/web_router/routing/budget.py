@@ -39,7 +39,7 @@ from web_router.constants import PROVIDER_AUTO
 from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import WebRouterError
-from web_router.providers._deadline import call_deadline
+from web_router.providers._deadline import call_deadline, current_deadline, job_deadline
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
@@ -94,9 +94,11 @@ def _held(
     ledger: Ledger, tool: ToolName, backend: _BackendT, request: NormalizedRequest
 ) -> Iterator[BudgetedCall[_BackendT]]:
     """The block under ``ledger``: its deadline, its check before each attempt, and its refusal."""
-    with call_deadline(ledger.budget.time_limit_s), call_route(_hooked(ledger.admit)):
+    expires = None if ledger.pool is None else ledger.pool.expires_at()
+    with call_deadline(ledger.budget.time_limit_s), job_deadline(expires), call_route(_hooked(ledger.admit)):
         name = getattr(backend, "name", PROVIDER_AUTO)
-        if ledger.budget.time_limit_s is not None and ledger.budget.time_limit_s <= 0:
+        deadline = current_deadline()
+        if ledger.budget.time_limit_s is not None and deadline is not None and deadline.left() <= 0:
             # A shared budget's clock ran out: say so before `auto` stops at the deadline untried.
             ledger.skipped[f"{tool}{CANDIDATE_ID_SEPARATOR}{name}"] = SKIP_NO_TIME
             raise ledger.refusal()
