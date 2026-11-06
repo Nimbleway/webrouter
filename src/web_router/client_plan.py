@@ -5,7 +5,8 @@ a prompt calls, with which options and backends: it finds the ``http(s)``
 URLs in the prompt and holds them to ``url_policy``, builds every method's
 candidates, asks the attached router, and merges its answer by the merge rule.
 :meth:`run` calls the planned method on ``auto`` in the planned order, and
-returns that method's own response with the plan's decision record on it.
+returns that method's own response with the plan's decision record on it,
+and what the call tried: its attempts, its hops and the position that ran.
 With no router the plan is the static order: ``search``, unless ``tool``
 pins another method.
 
@@ -28,7 +29,7 @@ from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS, ONE_PAGE_URL
 from web_router.providers._deadline import call_deadline
 from web_router.routing.attempts import CallRoute, call_route
-from web_router.routing.budget import budget_scope
+from web_router.routing.budget import budget_scope, recorded
 from web_router.routing.candidates import CandidateSet, build_candidates, default_requests
 from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
 from web_router.routing.decide import decided
@@ -152,7 +153,7 @@ class SyncPlan(_Planner, SyncRouted):
                 stack.enter_context(call_deadline(None if budget is None else budget.time_limit_s))
                 plan = self.plan(plan, budget=budget, tool=tool)
             chain, request, providers = self._run_parts(plan)
-            scope = stack.enter_context(budget_scope(budget, plan.tool, chain, request))
+            scope = stack.enter_context(recorded(stack.enter_context(budget_scope(budget, plan.tool, chain, request))))
             _ordered(stack, plan.tool, providers)
             response = getattr(chain, plan.tool)(request)
             return scope.settle(_settled(response, plan))  # type: ignore[no-any-return]
@@ -173,7 +174,7 @@ class AsyncPlan(_Planner, AsyncRouted):
                 stack.enter_context(call_deadline(None if budget is None else budget.time_limit_s))
                 plan = await self.plan(plan, budget=budget, tool=tool)
             chain, request, providers = self._run_parts(plan)
-            scope = stack.enter_context(budget_scope(budget, plan.tool, chain, request))
+            scope = stack.enter_context(recorded(stack.enter_context(budget_scope(budget, plan.tool, chain, request))))
             _ordered(stack, plan.tool, providers)
             response = await getattr(chain, f"a{plan.tool}")(request)
             return scope.settle(_settled(response, plan))  # type: ignore[no-any-return]

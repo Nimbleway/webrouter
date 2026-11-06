@@ -10,7 +10,8 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from web_router.types import DECISION_DESCRIPTION, Citation, DecisionRecord, NormalizedRequest, ResearchOutcome
+from web_router.types import Citation, NormalizedRequest, ResearchOutcome
+from web_router.types_decision import DECISION_DESCRIPTION, DecisionRecord
 
 __all__ = ["ANSWER_ALWAYS_SENT", "ANSWER_PARAMETERS", "AnswerRequest", "AnswerResponse", "Recency"]
 

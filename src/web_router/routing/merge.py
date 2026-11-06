@@ -110,6 +110,7 @@ class Merged:
             "ranked": list(notes.ranked) or None,
             "merged": list(notes.merged),
             "excluded": dict(notes.excluded) or None,
+            "ignored": dict(notes.ignored) or None,
             "reason": notes.fallback or (ROUTER_EMPTY if notes.empty else notes.reason),
             "router_timeout": True if notes.fallback == ROUTER_TIMEOUT else None,
             "params": shown(self.params) or None,

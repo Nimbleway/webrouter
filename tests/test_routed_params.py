@@ -9,6 +9,7 @@ import pytest
 
 from tests.test_auto_seam import MEMBERS, TOOLS, _Tool
 from web_router import Budget, RouteDecision, RouteRequest, WebRouter
+from web_router.constants_params import MSG_EFFORT_NO_BUDGET
 from web_router.routing import decide
 from web_router.routing.params import EffortChoice
 
@@ -57,6 +58,13 @@ def test_an_option_the_router_may_not_set_is_dropped(sent: list[Any]) -> None:
     response = _router({"output_schema": {"type": "object"}}).research("q")
     assert sent[0][1].output_schema is None
     assert response.decision.params is None
+    assert list(response.decision.ignored or {}) == ["params.research.output_schema"], "and the record says so"
+
+
+def test_the_mappings_reason_is_kept_when_it_keeps_the_default(sent: list[Any]) -> None:
+    response = _router({}).research("q")
+    assert response.decision.params is None
+    assert response.decision.params_reason == MSG_EFFORT_NO_BUDGET.format(provider="third")
 
 
 def test_with_no_effort_from_the_router_the_budget_maps_one(sent: list[Any], monkeypatch: pytest.MonkeyPatch) -> None:
@@ -72,9 +80,10 @@ def test_with_no_effort_from_the_router_the_budget_maps_one(sent: list[Any], mon
     assert asked == [("third", budget)], "mapped for the backend tried first"
     assert [request.effort for _, request in sent] == ["medium"]
     assert (response.decision.params, response.decision.params_source) == ({"effort": "medium"}, "budget")
+    assert response.decision.params_reason == "mapped", "the mapping's own reason, kept"
 
 
 @pytest.mark.parametrize("tool", [tool for tool in TOOLS if tool.name != "research"], ids=lambda tool: tool.name)
 def test_the_budget_maps_no_option_on_any_other_method(tool: _Tool, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(decide, "map_effort", lambda *_: pytest.fail("only research has an effort"))
-    assert decide._budget_effort(tool.name, ("x",), {}, (), Budget(max_cost_usd=1.0)) is False  # type: ignore[arg-type]
+    assert decide._budget_effort(tool.name, ("x",), {}, (), Budget(max_cost_usd=1.0)) is None  # type: ignore[arg-type]

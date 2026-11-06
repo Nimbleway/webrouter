@@ -131,7 +131,7 @@ from web_router.providers.base import (
     ResearchProvider,
     SearchProvider,
 )
-from web_router.routing.attempts import admitted, in_call_order
+from web_router.routing.attempts import admitted, failed, in_call_order
 from web_router.types import (
     EXTRACT_PARAMETERS,
     BrowseProgress,
@@ -231,7 +231,7 @@ class AutoProvider(SearchProvider):
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name)
             except _RECOVERABLE as exc:
-                failures[provider_name] = exc
+                failed(failures, "search", provider_name, exc)
                 continue
             if not (self.fallback_on_empty and _empty_search(response)):
                 return response
@@ -252,7 +252,7 @@ class AutoProvider(SearchProvider):
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name)
             except _RECOVERABLE as exc:
-                failures[provider_name] = exc
+                failed(failures, "search", provider_name, exc)
                 continue
             if not (self.fallback_on_empty and _empty_search(response)):
                 return response
@@ -388,7 +388,7 @@ class AutoExtractProvider(ExtractProvider):
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name)
             except _RECOVERABLE as exc:
-                failures[provider_name] = exc
+                failed(failures, "extract", provider_name, exc)
                 continue
             if not (self.fallback_on_empty and _empty_extract(response)):
                 return response
@@ -409,7 +409,7 @@ class AutoExtractProvider(ExtractProvider):
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name)
             except _RECOVERABLE as exc:
-                failures[provider_name] = exc
+                failed(failures, "extract", provider_name, exc)
                 continue
             if not (self.fallback_on_empty and _empty_extract(response)):
                 return response
@@ -529,7 +529,7 @@ class AutoResearchProvider(ResearchProvider):
                 # from the moment it was accepted.
                 if not _nothing_started(exc):
                     raise
-                failures[provider_name] = exc
+                failed(failures, "research", provider_name, exc)
                 continue
             # Registered from the start progress, with no poll first: a poll
             # that failed here would leave a billed run with no handle to it.
@@ -547,7 +547,7 @@ class AutoResearchProvider(ResearchProvider):
             except _RECOVERABLE as exc:
                 if not _nothing_started(exc):
                     raise
-                failures[provider_name] = exc
+                failed(failures, "research", provider_name, exc)
                 continue
             return self._took(provider_name, job)
         raise _no_backend(self.name, failures)
@@ -730,7 +730,7 @@ class AutoBrowseProvider(BrowseProvider):
                 # nothing started may try the next member.
                 if not _nothing_started(exc):
                     raise
-                failures[provider_name] = exc
+                failed(failures, "browse", provider_name, exc)
                 continue
             # Registered from the start progress, with no poll first: a poll
             # that failed here would leave a billed task with no handle to it.
@@ -747,7 +747,7 @@ class AutoBrowseProvider(BrowseProvider):
             except _RECOVERABLE as exc:
                 if not _nothing_started(exc):
                     raise
-                failures[provider_name] = exc
+                failed(failures, "browse", provider_name, exc)
                 continue
             return self._took(provider_name, job)
         raise self._no_backend(failures)

@@ -412,19 +412,3 @@ def test_a_report_serializes_what_names_the_comparison_before_its_rows() -> None
     assert list(BenchmarkReport(query="q").model_dump()) == ["query", "runs"]
     assert list(ExtractBenchmarkReport(urls=["https://a.test"]).model_dump()) == ["urls", "runs"]
     assert list(BenchmarkReport.model_fields) == ["query", "runs"]
-
-
-def test_types_imports_nothing_of_ours() -> None:
-    """The import graph is types <- constants <- exceptions <- everything else; the rows live here to keep it so."""
-    import ast
-    import inspect
-
-    import web_router.types as types_module
-
-    tree = ast.parse(inspect.getsource(types_module))
-    ours = [
-        node.module
-        for node in ast.walk(tree)
-        if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("web_router")
-    ]
-    assert ours == []

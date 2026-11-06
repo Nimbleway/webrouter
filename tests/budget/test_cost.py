@@ -54,7 +54,10 @@ def test_a_failed_attempt_is_charged_its_estimate(chain: Chain, priced: Table) -
     priced.update(first=(0.006, None), second=(0.006, None), third=(0.0, None))
     response = call(chain, CAP)
     assert chain.called == ["first", "third"], "second no longer fits once first's estimate is spent"
-    assert response.decision.hops == [DecisionHop(id=_ids(chain, "second")[0], error=_over("$0.006", "$0.004"))]
+    assert response.decision.hops == [
+        DecisionHop(id=_ids(chain, "first")[0], error="ConfigurationError"),  # its class, never its message
+        DecisionHop(id=_ids(chain, "second")[0], error=_over("$0.006", "$0.004")),
+    ]
     assert [attempt.id for attempt in response.decision.attempts] == _ids(chain, "first", "third")
     assert response.decision.estimated_cost_usd == 0.006
 

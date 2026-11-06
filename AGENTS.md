@@ -78,9 +78,10 @@ src/web_router/
 │                       TemplateRequest/Response + Template/TemplatePage,
 │                       ResearchRequest/Response/Progress + Citation,
 │                       BrowserRequest/Session/State + Viewport,
-│                       BrowseRequest/Response/Progress + BrowseStep,
-│                       DecisionRecord, on every response a call can route
+│                       BrowseRequest/Response/Progress + BrowseStep
 │                       — the normalized contract, one request model per method
+├── types_decision.py   DecisionRecord + DecisionHop/DecisionAttempt, on every response a
+│                       call can route and on Plan; types re-exports it, it imports nothing
 ├── types_answer.py     AnswerRequest/Response + Recency: answer()'s contract, apart so
 │                       types.py stops growing; it imports types, never the reverse
 ├── types_page.py       PageState/PageSnapshot/Screenshot + PageLoadState/PageFormat:
@@ -135,7 +136,9 @@ src/web_router/
 │   │                   a hook before each attempt, held in a context variable
 │   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,
 │   │                   the check before each attempt, BudgetExceededError, the record
-│   ├── ledger.py       one budgeted call's ledger: what each attempt is charged, the spend
+│   ├── ledger.py       one budgeted or routed call's ledger: what each attempt is charged,
+│   │                   the spend, the hops, the position that ran
+│   ├── record.py       the record's own fields: decision_id, the prompt's hash, a failure's code
 │   ├── pricing.py      the one cost and p90 rule: price list, floor and provider_options
 │   │                   unknown, research's p90 from the effort table
 │   ├── params.py       map_effort(): the research effort a budget picks, from

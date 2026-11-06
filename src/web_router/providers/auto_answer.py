@@ -47,7 +47,7 @@ from web_router.providers._chain import (
     _quoted,
 )
 from web_router.providers.answer import AnswerProvider
-from web_router.routing.attempts import admitted, in_call_order
+from web_router.routing.attempts import admitted, failed, in_call_order
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
 
 
@@ -143,7 +143,7 @@ class AutoAnswerProvider(AnswerProvider):
                 refused.append(exc)
                 continue
             except _RECOVERABLE as exc:
-                failures[provider_name] = exc
+                failed(failures, "answer", provider_name, exc)
                 continue
             if not (self.fallback_on_empty and _empty_answer(response)):
                 return response
@@ -167,7 +167,7 @@ class AutoAnswerProvider(AnswerProvider):
                 refused.append(exc)
                 continue
             except _RECOVERABLE as exc:
-                failures[provider_name] = exc
+                failed(failures, "answer", provider_name, exc)
                 continue
             if not (self.fallback_on_empty and _empty_answer(response)):
                 return response

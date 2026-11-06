@@ -4,7 +4,7 @@ Experimental. The one path a routed call and :meth:`~web_router.WebRouter.plan`
 share: :func:`static_order` reads the candidate builder's order,
 :func:`~web_router.routing.merge.merge` merges the router's decision into it,
 and :func:`decided` adds the budget's research effort and writes the decision
-record. Pure: nothing here sends or waits.
+record, stamped with a fresh ``decision_id``. Nothing here sends or waits.
 """
 
 from __future__ import annotations
@@ -19,8 +19,9 @@ from web_router.routing.contract import Budget, RouteDecision, RouteRequest, Too
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
 from web_router.routing.merge_params import shown
-from web_router.routing.params import map_effort
-from web_router.types import DecisionRecord
+from web_router.routing.params import EffortChoice, map_effort
+from web_router.routing.record import stamp
+from web_router.types_decision import DecisionRecord
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -47,14 +48,14 @@ def _budget_effort(
     params: dict[str, Any],
     caller_set: Collection[str],
     budget: Budget | None,
-) -> bool:
-    """Set research's ``effort`` the budget maps for the first backend, unless the router or the caller set one."""
+) -> EffortChoice | None:
+    """The budget's research effort for the first backend, set in ``params``; ``None`` when one is set already."""
     if tool != "research" or not providers or "effort" in params or "effort" in caller_set:
-        return False
-    effort = map_effort(providers[0], budget).effort
-    if effort is not None:
-        params["effort"] = effort
-    return effort is not None
+        return None
+    choice = map_effort(providers[0], budget)
+    if choice.effort is not None:
+        params["effort"] = choice.effort
+    return choice
 
 
 def decided(
@@ -78,8 +79,11 @@ def decided(
     merged = merge(req, decision, static_order(found), failure=failure, caller_set=caller_set, url_check=url_check)
     params = dict(merged.params)
     fields = merged.record()
-    if _budget_effort(merged.tool, merged.providers, params, caller_set, req.budget):
-        fields.update(params=shown(params), params_source=PARAMS_SOURCE_BUDGET)
+    choice = _budget_effort(merged.tool, merged.providers, params, caller_set, req.budget)
+    if choice is not None:
+        fields["params_reason"] = choice.reason
+        if choice.effort is not None:
+            fields.update(params=shown(params), params_source=PARAMS_SOURCE_BUDGET)
     if outcome is None:
         fields["reason"] = None  # no router: the static order is no router's empty answer
     out = DecisionRecord(
@@ -88,6 +92,7 @@ def decided(
         dropped={**(refused or {}), **found.dropped} or None,
         unmeasured=list(found.unmeasured) or None,
         router_ms=None if outcome is None else outcome.elapsed_ms,
+        **stamp(req.prompt),
         **fields,
     )
     return Decided(tool=merged.tool, providers=merged.providers, params=params, record=out)

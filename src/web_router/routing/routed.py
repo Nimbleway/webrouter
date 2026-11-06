@@ -29,22 +29,23 @@ from web_router.constants_candidates import AUTO_GETTERS
 from web_router.constants_invoke import MSG_ROUTE_TOOLS
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, call_route, current_route
-from web_router.routing.budget import budget_scope
+from web_router.routing.budget import budget_scope, recorded
 from web_router.routing.candidates import CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
 from web_router.routing.decide import decided
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge import UrlCheck
+from web_router.routing.record import prompt_of
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import (
     BrowseRequest,
-    DecisionRecord,
     ExtractRequest,
     NormalizedRequest,
     ResearchRequest,
     SearchRequest,
 )
 from web_router.types_answer import AnswerRequest
+from web_router.types_decision import DecisionRecord
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 _RequestT = TypeVar("_RequestT", bound=NormalizedRequest)
@@ -70,15 +71,6 @@ def _route_tools(route_tools: Collection[ToolName] | None) -> frozenset[ToolName
         known = ", ".join(get_args(ToolName))
         raise ConfigurationError(MSG_ROUTE_TOOLS.format(known=known, got=route_tools))
     return frozenset(route_tools)
-
-
-def _prompt(tool: ToolName, request: Any) -> tuple[str, tuple[str, ...]]:
-    """What the router reads for ``request``: the query or task, or for extract the URLs one per line; and its URLs."""
-    if tool == "extract":
-        return "\n".join(request.urls), tuple(request.urls)
-    if tool == "browse":
-        return request.task, (request.start_url,) if request.start_url else ()
-    return request.query, ()
 
 
 class _Only:
@@ -123,7 +115,7 @@ class RouterSetup:
         found = build_candidates(_Only(tool, chain), {tool: request}, budget=budget)
         if not found.candidates:
             return None
-        prompt, urls = _prompt(tool, request)
+        prompt, urls = prompt_of(tool, request)
         req = RouteRequest(
             prompt=prompt,
             candidates=found.candidates,
@@ -171,9 +163,9 @@ class SyncRouted(RouterSetup):
                 return scope.settle(call(request))
             assert self._router is not None  # a request is built only with a router attached
             route, request, record = self._merged(routed, self._router.call(routed[0]), request)
-            with call_route(in_force_with(route)):
+            with recorded(scope) as logged, call_route(in_force_with(route)):
                 response = call(request)
-            return scope.settle(response.model_copy(update={"decision": record}))
+            return logged.settle(response.model_copy(update={"decision": record}))
 
 
 class AsyncRouted(RouterSetup):
@@ -191,6 +183,6 @@ class AsyncRouted(RouterSetup):
                 return scope.settle(await call(request))
             assert self._router is not None  # a request is built only with a router attached
             route, request, record = self._merged(routed, await self._router.acall(routed[0]), request)
-            with call_route(in_force_with(route)):
+            with recorded(scope) as logged, call_route(in_force_with(route)):
                 response = await call(request)
-            return scope.settle(response.model_copy(update={"decision": record}))
+            return logged.settle(response.model_copy(update={"decision": record}))

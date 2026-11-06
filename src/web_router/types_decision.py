@@ -1,0 +1,89 @@
+"""The decision record: how a routed or budgeted call chose its backend. Experimental: it may change before 1.0.
+
+Apart from :mod:`web_router.types` so that file stops growing; it re-exports
+these, and imports nothing of ours. Every routable response and
+:class:`~web_router.Plan` carries one in ``decision``.
+
+**Privacy.** The record holds no key values and no prompt text: the prompt is
+there only as ``prompt_sha256``, which is not anonymisation, since a short
+prompt can be guessed from its hash. A URL shows only its scheme and host, never
+its path, query string or credentials. Candidate ids (``tool:provider``) do show
+which backends are configured. ``reason``, ``excluded`` and ``ignored`` hold a
+router's own words, URLs cut the same way: a router that writes the prompt there
+puts it in the record.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class DecisionHop(BaseModel):
+    """A candidate a routed call moved past, and why."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="The candidate, as ``tool:provider``.")
+    error: str | None = Field(
+        default=None,
+        description=(
+            "Why the call moved on: the budget's skip reason, or the failure's HTTP status or error class; "
+            "None when the candidate answered empty."
+        ),
+    )
+
+
+class DecisionAttempt(BaseModel):
+    """A candidate a routed call tried: what it was estimated to cost, and how long it took."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="The candidate, as ``tool:provider``.")
+    est_cost_usd: float | None = Field(default=None, description="Its estimated cost; None when unknown.")
+    seconds: float | None = Field(default=None, description="Wall-clock seconds the attempt took.")
+
+
+REASON_DESCRIPTION = (
+    "The router's own reason. When the static order ran instead of the router's decision, why: "
+    "router_timeout, router_error, router_invalid, or router_empty for a decision that decided nothing."
+)
+
+
+class DecisionRecord(BaseModel):
+    """How a routed or budgeted call chose its backend. Experimental: it may change before 1.0.
+
+    Every field is optional, and ``None`` means not recorded. Candidates are named
+    ``tool:provider``, which shows the backends configured; no key values, and no
+    prompt text, only its hash (which is not anonymisation: a short one can be guessed).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    decision_id: str | None = Field(default=None, description="A unique id for this decision.")
+    router: str | None = Field(default=None, description="The router that ranked the candidates.")
+    offered: list[str] | None = Field(default=None, description="Every candidate the router saw, in that order.")
+    ranked: list[str] | None = Field(default=None, description="The router's own ranking.")
+    merged: list[str] | None = Field(default=None, description="The order tried, after the merge rule.")
+    ran: int | None = Field(default=None, description="The position in `merged` that answered, from 0.")
+    hops: list[DecisionHop] | None = Field(default=None, description="The candidates the call moved past.")
+    attempts: list[DecisionAttempt] | None = Field(default=None, description="Every candidate tried, in order.")
+    reason: str | None = Field(default=None, description=REASON_DESCRIPTION)
+    router_timeout: bool | None = Field(default=None, description="Whether the router ran out of time.")
+    router_ms: float | None = Field(default=None, description="Milliseconds the router took.")
+    dropped: dict[str, str] | None = Field(default=None, description="Candidates left out before routing -> why.")
+    excluded: dict[str, str] | None = Field(default=None, description="Candidates the router excluded -> why.")
+    ignored: dict[str, str] | None = Field(
+        default=None, description="What of the router's decision the merge rule set aside -> why."
+    )
+    params: dict[str, Any] | None = Field(default=None, description="The options the call ran with, prompt left out.")
+    params_source: Literal["budget", "router", "caller"] | None = Field(default=None, description="Who set `params`.")
+    params_reason: str | None = Field(default=None, description="Why the budget's mapping chose `params`, in words.")
+    estimated_cost_usd: float | None = Field(default=None, description="The call's estimated spend in US dollars.")
+    cost_is_estimate: bool | None = Field(default=None, description="Whether that spend is a list-price estimate.")
+    unmeasured: list[str] | None = Field(default=None, description="Candidates with no known price or latency.")
+    prompt_sha256: str | None = Field(default=None, description="The prompt's SHA-256; a short one can be guessed.")
+
+
+DECISION_DESCRIPTION = "How a routed or budgeted call chose its backend; None on any other call."

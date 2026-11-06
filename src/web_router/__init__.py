@@ -131,9 +131,6 @@ from web_router.types import (
     BrowserState,
     BrowseStep,
     Citation,
-    DecisionAttempt,
-    DecisionHop,
-    DecisionRecord,
     ExtractBenchmarkReport,
     ExtractBenchmarkRun,
     ExtractedDocument,
@@ -161,6 +158,7 @@ from web_router.types import (
     Viewport,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
+from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 __all__ = [
