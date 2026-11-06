@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from web_router._urls import shown
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_CANDIDATE_ID, PROMPT_PARAMS
+from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_BUDGET_VALUE, MSG_CANDIDATE_ID, PROMPT_PARAMS
 from web_router.types import DecisionRecord
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
@@ -44,6 +44,16 @@ class Budget:
 
     strict: bool = False
     """Under a time cap, drop the candidates with no measured p90 latency instead of trying them."""
+
+    def __post_init__(self) -> None:
+        """
+        Raises:
+            ValueError: for a cap that is negative or not a number: it would cap nothing, or everything, silently.
+        """
+        for name in ("max_cost_usd", "time_limit_s"):
+            value = getattr(self, name)
+            if value is not None and (isinstance(value, bool) or not value >= 0):  # NaN fails ``>= 0``
+                raise ValueError(MSG_BUDGET_VALUE.format(name=name, value=value))
 
 
 @dataclass(frozen=True, kw_only=True)
