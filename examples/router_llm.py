@@ -130,8 +130,9 @@ def main() -> None:
     with WebRouter(router=router) as client:
         for prompt in PROMPTS:
             plan = client.plan(prompt)
-            backends = ", ".join(plan.providers.get(plan.tool, ())) or "none"
-            print(f"{prompt!r}\n  -> {plan.tool} on {backends}\n  ({printable(plan.decision.reason)})")
+            # Every word here can come from the server: the method, the backends and above all the reason.
+            backends = printable(", ".join(plan.providers.get(plan.tool, ()))) or "none"
+            print(f"{prompt!r}\n  -> {printable(plan.tool)} on {backends}\n  ({printable(plan.decision.reason)})")
 
 
 if __name__ == "__main__":
