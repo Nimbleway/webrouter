@@ -10,3 +10,9 @@ CANDIDATE_ID_SEPARATOR = ":"
 """Between a candidate's tool and its provider: ``search:exa``."""
 
 MSG_CANDIDATE_ID = "Candidate id {id!r} does not match its tool and provider; it would be {expected!r}."
+
+RULES_ROUTER_NAME = "rules"
+"""The built-in rules router's name, as a decision record and the MCP capabilities resource show it."""
+
+RULES_REASON_URL = "the prompt names a URL"
+RULES_REASON_NO_URL = "the prompt names no URL"

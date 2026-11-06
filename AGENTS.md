@@ -159,8 +159,9 @@ src/web_router/
 │   │                   the budget's scope around it
 │   ├── decide.py       decided(): candidates and a router's outcome merged into the
 │   │                   method, order, options and record a call runs with, pure
-│   └── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
-│                       check before dispatch (no DNS, no redirects)
+│   ├── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
+│   │                   check before dispatch (no DNS, no redirects)
+│   └── rules.py        rules(): the built-in keyless router, URL to extract, else search
 ├── _urls.py            urls_in(): the URLs written in a query's prose
 ├── _hosts.py           a URL host's kind -- loopback, cloud metadata, private -- in
 │                       every spelling a browser reads; shared by the MCP navigation
@@ -169,6 +170,8 @@ src/web_router/
 │                       metadata, loopback and legacy-IPv4 host lists
 ├── constants_params.py the effort mapping's data path, rule and reasons
 ├── constants_merge.py  the options a router may set, and the merge's reasons and notes
+├── constants_mcp.py    the MCP server's instructions, and its routing tools' names, schemas,
+│                       descriptions, environment variables and messages
 ├── constants_prices.py the price list's data path, unit divisors, messages and
 │                       PRICING.md wording, kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
@@ -178,6 +181,10 @@ src/web_router/
 ├── exceptions.py       WebRouterError and subclasses
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
+│   ├── routing.py      the operator's router and ceiling, read once at startup, and web_run
+│   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
+│   │                   the charge for run_template and browser_open
+│   └── chains.py       the members a delegating provider would try, per tool
 ├── integrations/       agent-framework adapters, one module each
 │   ├── _render.py      what a model reads back, one layout for every framework
 │   ├── _options.py     which backend each tool calls, fixed when it is built

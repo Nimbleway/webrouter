@@ -35,7 +35,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
-from typing import Generic, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
 from pydantic import BaseModel
 
@@ -54,6 +54,15 @@ from web_router.types_decision import DecisionRecord
 
 _BackendT = TypeVar("_BackendT")
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
+_JobT = TypeVar("_JobT", covariant=True)
+
+
+class _Submits(Protocol[_JobT]):
+    def submit(self, request: Any) -> _JobT: ...
+
+
+class _ASubmits(Protocol[_JobT]):
+    async def asubmit(self, request: Any) -> _JobT: ...
 
 
 @dataclass(frozen=True)
@@ -164,3 +173,20 @@ def _hooked(ledger: Ledger) -> CallRoute:
         ledger.failed(tool, provider, exc)
 
     return replace(route, before_attempt=admit, on_failure=note)
+
+
+def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedRequest) -> _JobT:
+    """``backend``'s job for ``request``, its start held to the shared budget in force, if any (:mod:`.pool`).
+
+    A job's start is what bills, so inside ``wr.budget(...)`` each attempt to
+    start one is reserved like any other; with no shared budget it starts as
+    it would without one.
+    """
+    with budget_scope(None, tool, backend, request):
+        return backend.submit(request)
+
+
+async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: NormalizedRequest) -> _JobT:
+    """As :func:`submitted`, awaited."""
+    with budget_scope(None, tool, backend, request):
+        return await backend.asubmit(request)

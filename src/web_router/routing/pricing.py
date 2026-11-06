@@ -9,7 +9,9 @@ way when offered and another when run.
   unknown -- ``None`` -- when the list has no price (no row, ``unknown``, or
   billed by tokens), when the row is only a floor with charges billed on top
   (``estimate_is_floor``), and when the request carries ``provider_options``,
-  which can change the mode the vendor bills. An extract is charged per URL.
+  which can change the mode the vendor bills. An extract is charged per URL,
+  and a browser session per minute of its lifetime (``timeout``): unknown
+  without one, unless the backend is free.
 - **p90** is the price list's measured latency; for research with none there,
   the effort table's measured p90 for the effort, the backend's default when
   none is set. Unknown otherwise, and with ``provider_options``, which can
@@ -19,9 +21,9 @@ way when offered and another when run.
 from __future__ import annotations
 
 from web_router import prices
-from web_router.constants_budget import COST_TOLERANCE_USD
+from web_router.constants_budget import COST_TOLERANCE_USD, SECONDS_PER_MINUTE
 from web_router.routing.attempts import Attempt
-from web_router.types import ExtractRequest, ResearchRequest, SearchRequest
+from web_router.types import BrowserRequest, ExtractRequest, ResearchRequest, SearchRequest
 
 RESEARCH = "research"
 
@@ -77,6 +79,9 @@ def attempt_cost(attempt: Attempt) -> float | None:
     cost = mode_cost(attempt.provider, attempt.tool, attempt_mode(attempt))
     if cost is not None and isinstance(attempt.request, ExtractRequest):
         return cost * len(attempt.request.urls)
+    if cost and isinstance(attempt.request, BrowserRequest):
+        lifetime = attempt.request.timeout
+        return None if lifetime is None else cost * lifetime / SECONDS_PER_MINUTE
     return cost
 
 
