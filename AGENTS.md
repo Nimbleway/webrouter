@@ -249,6 +249,8 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         tests/mcp/ the server, tests/max_extract/ the race
                         (its conftest holds the fake members), tests/budget/
                         the per-call budget (its conftest the priced chain).
+                        routing_helpers.py holds the router tests' fake members,
+                        wr(), Ranker and the tool, called and priced fixtures.
                         test_contract.py, test_extract_contract.py, test_template_contract.py,
                         test_research_contract.py, test_answer_contract.py,
                         test_browse_contract.py and

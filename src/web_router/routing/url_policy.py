@@ -1,4 +1,4 @@
-"""``url_policy``: which URLs a routed call or a plan may send to a backend.
+"""``url_policy``: which URLs a routed call or a plan may fetch, or hand a backend as a URL.
 
 Experimental. A pre-dispatch hostname check: it reads the URL as written --
 a literal address in any spelling a browser accepts is judged as the address
@@ -17,7 +17,11 @@ hosts, and a backend registered to fetch locally may be meant for an intranet.
 
 It holds the URLs :meth:`~web_router.WebRouter.plan` finds in a prompt, before
 any candidate is built, and the URLs a router sets in ``params``, through the
-merge rule. The MCP browser tools keep their own, stricter guard.
+merge rule. A refused URL is never fetched and never passed as ``urls`` or
+``start_url``, but it is not cut from the prompt: the prompt's text, the URL
+in it, is still what a search, answer or research backend gets as its query
+and a browse agent as its task. The MCP browser tools keep their own, stricter
+guard.
 """
 
 from __future__ import annotations
