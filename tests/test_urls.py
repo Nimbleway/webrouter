@@ -35,3 +35,11 @@ def test_a_url_named_twice_is_found_twice_and_plan_takes_it_once() -> None:
 )
 def test_a_url_shows_only_its_scheme_and_host_an_ipv6_host_in_its_brackets(url: str, shown: str) -> None:
     assert host_of(url) == shown
+
+
+def test_a_shown_ipv6_host_keeps_its_brackets_and_drops_its_scope_id() -> None:
+    from web_router._urls import host_of
+
+    assert host_of("http://[fe80::1%25eth0]/x?token=1") == "http://[fe80::1]"
+    assert host_of("http://[fe80::1%eth0]/") == "http://[fe80::1]"
+    assert host_of("https://[2001:db8::1]:8443/p") == "https://[2001:db8::1]"
