@@ -82,7 +82,7 @@ class _Planner(RouterSetup):
     ) -> tuple[RouteRequest, CandidateSet, list[str], dict[str, str]]:
         """The router's request for ``prompt``, its candidates, the URLs kept, and those the URL policy refused."""
         assert self._url_check is not None  # set by every router's constructor
-        budget = limited(budget)
+        budget = limited(budget, self)
         kept, refused = screened(list(dict.fromkeys(urls_in(prompt))), self._url_check)  # each URL once
         requests = default_requests(prompt, kept)
         if not kept and self._router is not None:
@@ -125,7 +125,9 @@ class _Planner(RouterSetup):
         """The ``auto`` the plan runs on, its request, and the budget's scope, entered with the plan's order."""
         chain = getattr(self, AUTO_GETTERS[plan.tool])(PROVIDER_AUTO)
         request = _REQUEST[plan.tool](**{k: v for k, v in plan.params.items() if v is not None})
-        scope = stack.enter_context(recorded(stack.enter_context(budget_scope(budget, plan.tool, chain, request))))
+        scope = stack.enter_context(
+            recorded(stack.enter_context(budget_scope(budget, plan.tool, chain, request, self)))
+        )
         _ordered(stack, plan.tool, list(plan.providers.get(plan.tool, ())))
         return chain, request, scope
 

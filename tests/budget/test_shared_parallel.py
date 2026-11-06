@@ -249,3 +249,32 @@ def test_settlements_from_many_threads_at_once_lose_no_update() -> None:
         thread.join(WAIT_S)
     status = pool.status()
     assert (status.spent_usd, status.reserved_usd) == (round(CALLS * COST, 9), 0.0)
+
+
+class _ReportingCost(float):
+    """A cost that signals when the outer pool compares it, then takes a while there."""
+
+    def __init__(self, value: float) -> None:
+        self.compares = 0
+        self.at_outer = threading.Event()
+
+    def __gt__(self, other: object) -> bool:
+        self.compares += 1
+        if self.compares == 2:  # the inner pool's check is first, the outer's second
+            self.at_outer.set()
+            time.sleep(0.1)
+        return float(self) > other  # type: ignore[operator]
+
+
+def test_a_nested_reservation_the_outer_pool_refuses_never_blocks_another_call_in_the_inner_one() -> None:
+    outer = BudgetPool(Budget(max_cost_usd=0.10))
+    inner = BudgetPool(Budget(max_cost_usd=0.5), parent=outer)
+    big = _ReportingCost(0.5)
+    refused: list[float | None] = []
+    worker = threading.Thread(target=lambda: refused.append(inner.reserve(big)))
+    worker.start()
+    assert big.at_outer.wait(WAIT_S)
+    assert inner.reserve(0.05) is None, "the refused reservation was never visible in the inner pool"
+    worker.join(WAIT_S)
+    assert refused == [pytest.approx(0.10)]
+    assert (inner.status().reserved_usd, outer.status().reserved_usd) == (0.05, 0.05)

@@ -22,7 +22,7 @@ _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
 
-_ENTRIES: ContextVar[tuple[tuple[_Scope, Token[BudgetPool | None]], ...]] = ContextVar(
+_ENTRIES: ContextVar[tuple[tuple[_Scope, Token[tuple[BudgetPool, ...]]], ...]] = ContextVar(
     "web_router_budget_scope_entries", default=()
 )
 """The scopes entered in this context, each with the token that undoes its binding; per thread and per task."""
@@ -33,7 +33,7 @@ class _Scope:
 
     def __init__(self, router: Any, budget: Budget) -> None:
         self.router = router
-        self.pool = BudgetPool(budget, parent=current_pool())
+        self.pool = BudgetPool(budget, parent=current_pool(router), owner=router)
 
     def status(self) -> BudgetStatus:
         """What is spent, reserved and left, and the clock: see :class:`~web_router.routing.pool.BudgetStatus`."""

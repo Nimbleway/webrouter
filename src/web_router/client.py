@@ -555,7 +555,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        return submitted("research", self.get_research_provider(provider), request)
+        return submitted("research", self.get_research_provider(provider), request, self)
 
     def browse(
         self,
@@ -623,7 +623,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        return submitted("browse", self.get_browse_provider(provider), request)
+        return submitted("browse", self.get_browse_provider(provider), request, self)
 
     def open_browser(
         self,
@@ -865,7 +865,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        return await asubmitted("research", self.get_research_provider(provider), request)
+        return await asubmitted("research", self.get_research_provider(provider), request, self)
 
     async def browse(
         self,
@@ -918,7 +918,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        return await asubmitted("browse", self.get_browse_provider(provider), request)
+        return await asubmitted("browse", self.get_browse_provider(provider), request, self)
 
     async def open_browser(
         self,
