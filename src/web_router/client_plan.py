@@ -36,6 +36,7 @@ from web_router.routing.candidates import CandidateSet, build_candidates, defaul
 from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
 from web_router.routing.decide import decided
 from web_router.routing.invoke import RouterOutcome
+from web_router.routing.record import stamp
 from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted, in_force_with
 from web_router.routing.url_policy import screened
 from web_router.types import (
@@ -80,7 +81,7 @@ class _Planner(RouterSetup):
     ) -> tuple[RouteRequest, CandidateSet, list[str], dict[str, str]]:
         """The router's request for ``prompt``, its candidates, the URLs kept, and those the URL policy refused."""
         assert self._url_check is not None  # set by every router's constructor
-        kept, refused = screened(urls_in(prompt), self._url_check)
+        kept, refused = screened(list(dict.fromkeys(urls_in(prompt))), self._url_check)  # each URL once
         requests = default_requests(prompt, kept)
         if not kept and self._router is not None:
             # A router may supply the URLs itself; offered at one page, extract is chosen only if it does.
@@ -132,7 +133,9 @@ def _ordered(stack: ExitStack, tool: ToolName, providers: Sequence[str]) -> None
 
 
 def _settled(response: Any, plan: Plan) -> Any:
-    return response.model_copy(update={"decision": plan.decision})
+    """``response`` with the plan's record; a plan made by hand, whose record has no id, is stamped here."""
+    record = plan.decision if plan.decision.decision_id else plan.decision.model_copy(update=stamp(plan.prompt))
+    return response.model_copy(update={"decision": record})
 
 
 class SyncPlan(_Planner, SyncRouted):

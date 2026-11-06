@@ -60,10 +60,11 @@ class Ledger:
     spent: float = 0.0
     tried: list[_Tried] = field(default_factory=list)
     skipped: dict[str, str] = field(default_factory=dict)
-    passed: dict[str, str | None] = field(default_factory=dict)
-    """Every candidate moved past, in the order it happened, with why: ``None`` for one that answered empty."""
-    _open: str | None = None
-    """The last candidate tried, until the call fails it or moves past it: an empty answer, unless it answered."""
+    passed: list[tuple[int | None, str, str | None]] = field(default_factory=list)
+    """Every candidate moved past, in the order it happened: the attempt (its index in ``tried``, ``None`` for a
+    skip), its id, and why, ``None`` for an empty answer. By attempt, so a backend a chain names twice keeps both."""
+    _open: int | None = None
+    """The last attempt, until the call fails it or moves past it: an empty answer, unless it answered."""
     unmeasured: list[str] = field(default_factory=list)
     stamp: dict[str, Any] = field(default_factory=dict)
     """The ``decision_id`` and ``prompt_sha256`` of a record this ledger starts, with no router's to write into."""
@@ -77,9 +78,10 @@ class Ledger:
         reason = self._over_cost(cost) or self._over_time(p90)
         self._moved_on()
         if reason is not None:
-            self.skipped[name] = self.passed[name] = reason
+            self.skipped[name] = reason
+            self.passed.append((None, name, reason))
             return False
-        self._open = name
+        self._open = len(self.tried)
         self.spent += cost or 0.0
         self.tried.append(_Tried(name, cost, time.monotonic()))
         return True
@@ -111,25 +113,29 @@ class Ledger:
     def failed(self, tool: str, provider: str, exc: BaseException) -> None:
         """Note that ``provider`` failed and the call moved on, by :func:`~.record.error_code`."""
         name = f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"
-        self.passed[name] = error_code(exc)
-        self._open = None if self._open == name else self._open
+        attempt = self._open if self._open is not None and self.tried[self._open].id == name else None
+        self.passed.append((attempt, name, error_code(exc)))
+        self._open = None if attempt is not None else self._open
 
     def _moved_on(self) -> None:
-        """The call went on past the open candidate without its failing: it answered empty."""
+        """The call went on past the open attempt without its failing: it answered empty."""
         if self._open is not None:
-            self.passed.setdefault(self._open, None)
+            self.passed.append((self._open, self.tried[self._open].id, None))
             self._open = None
 
-    def _answered(self, provider: str | None) -> str | None:
-        """The candidate that answered: the last tried by ``provider``'s name, else the last tried."""
-        ids = [tried.id for tried in self.tried]
-        named = [i for i in ids if i.partition(CANDIDATE_ID_SEPARATOR)[2] == provider]
-        return (named or ids)[-1] if ids else None
+    def _answered(self, provider: str | None) -> int | None:
+        """The attempt that answered: the open one when ``provider`` names it, else the last by that name or tried."""
+        if self._open is not None and self.tried[self._open].id.partition(CANDIDATE_ID_SEPARATOR)[2] == provider:
+            return self._open
+        named = [i for i, tried in enumerate(self.tried) if tried.id.partition(CANDIDATE_ID_SEPARATOR)[2] == provider]
+        return named[-1] if named else (len(self.tried) - 1 if self.tried else None)
 
-    def _hops(self, answered: str | None) -> list[DecisionHop] | None:
-        """Every candidate moved past, in order; an empty answer the call came back to and returned is not one."""
-        passed = {name: why for name, why in self.passed.items() if not (name == answered and why is None)}
-        return [DecisionHop(id=name, error=why) for name, why in passed.items()] or None
+    def _hops(self, answered: int | None) -> list[DecisionHop] | None:
+        """Every candidate moved past, in order: the open attempt too, when another's held answer was returned."""
+        if self._open is not None and self._open != answered:
+            self._moved_on()
+        passed = [(name, why) for attempt, name, why in self.passed if not (attempt == answered and why is None)]
+        return [DecisionHop(id=name, error=why) for name, why in passed] or None
 
     def refusal(self) -> BudgetExceededError:
         """The error for a call that started nothing: every candidate skipped, each with its reason."""
@@ -144,7 +150,8 @@ class Ledger:
         ended = time.monotonic()
         ends = [tried.started for tried in self.tried[1:]] + [ended]
         known = [tried.est_cost_usd for tried in self.tried if tried.est_cost_usd is not None]
-        ran = self._answered(answered)
+        answering = self._answered(answered)
+        ran = None if answering is None else self.tried[answering].id
         update = {
             "estimated_cost_usd": sum(known) if known else None,
             "cost_is_estimate": True,
@@ -152,7 +159,7 @@ class Ledger:
                 DecisionAttempt(id=tried.id, est_cost_usd=tried.est_cost_usd, seconds=end - tried.started)
                 for tried, end in zip(self.tried, ends, strict=True)
             ],
-            "hops": self._hops(ran),
+            "hops": self._hops(answering),
             "ran": into.merged.index(ran) if into.merged and ran in into.merged else into.ran,
             "unmeasured": list(dict.fromkeys([*(into.unmeasured or ()), *self.unmeasured])) or None,
         }
