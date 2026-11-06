@@ -134,7 +134,9 @@ src/web_router/
 │   │                   a hook before each attempt, held in a context variable
 │   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,
 │   │                   the check before each attempt, BudgetExceededError, the record
-│   ├── ledger.py       one budgeted call's ledger: the cost and p90 rules, the spend
+│   ├── ledger.py       one budgeted call's ledger: what each attempt is charged, the spend
+│   ├── pricing.py      the one cost and p90 rule: price list, floor and provider_options
+│   │                   unknown, research's p90 from the effort table
 │   ├── params.py       map_effort(): the research effort a budget picks, from
 │   │                   data/efforts.json (`make efforts`) and the price list
 │   ├── merge.py        merge(): a router's decision and the static order made into

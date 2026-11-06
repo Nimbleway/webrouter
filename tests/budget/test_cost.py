@@ -17,6 +17,7 @@ from web_router.constants_budget import SKIP_OVER_COST, SKIP_PRICE_UNKNOWN, SKIP
 from web_router.exceptions import ConfigurationError, ProviderError, WebRouterError
 from web_router.routing.attempts import Attempt, CallRoute, call_route
 from web_router.routing.ledger import attempt_cost, attempt_p90
+from web_router.routing.params import measured_efforts
 from web_router.types import BrowseRequest, ExtractRequest, ResearchRequest, SearchRequest
 from web_router.types_answer import AnswerRequest
 
@@ -175,7 +176,10 @@ def test_an_extract_is_priced_per_url() -> None:
 def test_the_p90_comes_from_the_measured_latency() -> None:
     measured = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q"))
     assert attempt_p90(measured) == pytest.approx(1.331)
-    assert attempt_p90(Attempt(tool="research", provider="parallel", request=ResearchRequest(query="q"))) is None
+    # Research has no latency in the price list: its p90 is the effort table's, at the default effort when unset.
+    default = Attempt(tool="research", provider="parallel", request=ResearchRequest(query="q"))
+    assert attempt_p90(default) == measured_efforts("parallel")["medium"]["latency_p90_s"]
+    assert attempt_p90(Attempt(tool="research", provider="you", request=ResearchRequest(query="q"))) is None
 
 
 # -- What makes a price unknown -------------------------------------------------

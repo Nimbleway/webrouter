@@ -111,6 +111,16 @@ def test_an_unknown_price_never_fits_a_cost_cap(monkeypatch: pytest.MonkeyPatch)
     assert map_effort("nimble", Budget(time_limit_s=1000.0)).effort == "max"
 
 
+def test_an_effort_priced_only_as_a_floor_never_fits_a_cost_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    from types import SimpleNamespace
+
+    from web_router import prices
+
+    floor = SimpleNamespace(estimate_usd=0.001, estimate_is_floor=True, mode="low")
+    monkeypatch.setattr(prices, "price", lambda *_: floor)
+    assert "no known price" in (effort_misfit("parallel", "low", Budget(max_cost_usd=1000.0)) or "")
+
+
 def test_an_unknown_p90_fits_a_time_cap_unless_the_budget_is_strict(monkeypatch: pytest.MonkeyPatch) -> None:
     _table_with(monkeypatch, "nimble", "max", accuracy=1.0, latency_p90_s=None)
     assert map_effort("nimble", Budget(time_limit_s=60.0)).effort == "max"

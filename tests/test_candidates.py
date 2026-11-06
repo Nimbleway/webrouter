@@ -24,6 +24,7 @@ from web_router.prices import estimate, estimate_latency
 from web_router.registry import get_extract_provider_class, get_provider_class, get_research_provider_class
 from web_router.routing.candidates import CandidateSet, build_candidates, default_requests
 from web_router.types import ExtractRequest, ResearchRequest, SearchRequest
+from web_router.types_answer import AnswerRequest
 
 _TABLES = (ANSWER_ENV_BY_PROVIDER, BROWSE_ENV_BY_PROVIDER, EXTRACT_ENV_BY_PROVIDER, RESEARCH_ENV_BY_PROVIDER)
 _ALL_ENV = {var for table in _TABLES for names in table.values() for var in names} | {
@@ -218,14 +219,25 @@ def test_provider_options_make_the_price_unknown_under_a_cost_cap(keys: pytest.M
     assert "no known price" in found.dropped["search:brave"]
 
 
-def test_provider_options_keep_the_estimate_with_no_cost_cap_and_mark_it_unmeasured(keys: pytest.MonkeyPatch) -> None:
+def test_provider_options_make_the_price_unknown_with_no_cost_cap_too_and_mark_it_unmeasured(
+    keys: pytest.MonkeyPatch,
+) -> None:
     _set_keys(keys, "brave")
     plain = build_candidates(WebRouter(), {"search": SearchRequest(query="q")})
     assert "search:brave" not in plain.unmeasured
     request = {"search": SearchRequest(query="q", provider_options={"extra_snippets": True})}
     found = build_candidates(WebRouter(), request, budget=Budget(time_limit_s=10.0))
-    assert _one(found, "search:brave").est_cost_usd == estimate("brave", "search")
+    assert _one(found, "search:brave").est_cost_usd is None, "priced as the ledger charges it: unknown"
     assert "search:brave" in found.unmeasured
+
+
+def test_a_floor_row_is_an_unknown_price_as_the_ledger_reads_it(keys: pytest.MonkeyPatch) -> None:
+    _set_keys(keys, "brave")
+    assert estimate("brave", "answer") is not None  # the row has a figure, but only a floor
+    found = build_candidates(WebRouter(), {"answer": AnswerRequest(query="q")})
+    assert _one(found, "answer:brave").est_cost_usd is None
+    capped = build_candidates(WebRouter(), {"answer": AnswerRequest(query="q")}, budget=Budget(max_cost_usd=10.0))
+    assert "no known price" in capped.dropped["answer:brave"]
 
 
 def test_research_with_a_pinned_effort_is_priced_at_that_effort(keys: pytest.MonkeyPatch) -> None:

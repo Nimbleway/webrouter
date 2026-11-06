@@ -187,10 +187,22 @@ def test_rule_5_an_option_is_kept_only_when_every_backend_in_the_order_takes_it(
 def test_rule_5_an_unknown_price_never_fits_a_cost_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     from web_router import prices
 
-    monkeypatch.setattr(prices, "estimate", lambda *_: None)
+    monkeypatch.setattr(prices, "price", lambda *_: None)
     budget = Budget(max_cost_usd=100.0)
     decision = RouteDecision(params={"search": {"search_depth": "lite"}}, exclude=NO_UNDECLARED)
     merged = _merge(decision, pinned="search", budget=budget)
+    assert merged.params == {} and "no known price" in merged.notes.ignored["params.search.search_depth"]
+
+
+def test_rule_5_a_depth_priced_only_as_a_floor_never_fits_a_cost_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    from types import SimpleNamespace
+
+    from web_router import prices
+
+    floor = SimpleNamespace(estimate_usd=0.001, estimate_is_floor=True, mode="lite")
+    monkeypatch.setattr(prices, "price", lambda *_: floor)
+    decision = RouteDecision(params={"search": {"search_depth": "lite"}}, exclude=NO_UNDECLARED)
+    merged = _merge(decision, pinned="search", budget=Budget(max_cost_usd=100.0))
     assert merged.params == {} and "no known price" in merged.notes.ignored["params.search.search_depth"]
 
 

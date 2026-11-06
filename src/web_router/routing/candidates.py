@@ -4,15 +4,17 @@ Experimental. :func:`build_candidates` reads each method's ``auto`` -- the
 chain it would try, a configured ``chain`` included -- and keeps the members
 its ``_eligible`` keeps: only those that map every option the request sets, so
 a candidate is never one the call would be silently degraded on. Each carries
-its estimated cost from :mod:`web_router.prices` and its measured p90 latency
-from the same rows; neither is ever guessed, so an unknown stays ``None``.
+its estimated cost and its measured p90 latency by :mod:`.pricing`'s rule, the
+one the budget's ledger charges by; neither is ever guessed, so an unknown
+stays ``None``.
 
 A budget, the part of it still left, then prefilters them. Under a cost cap a
 candidate whose price is unknown, or whose estimate is over what is left, is
 dropped. Research is priced at the ``effort`` the caller set, else at the
 backend's default; choosing a cheaper effort is the budget mapping's job, not
 this one's. A request carrying ``provider_options`` may be billed at another
-mode than its row, so under a cost cap its price counts as unknown. Under a time cap a known p90 over the time left
+mode than its row, and a floor row bills more on top, so their price is
+unknown, and under a cost cap dropped. Under a time cap a known p90 over the time left
 drops a candidate, and an unknown p90 drops it only on a strict budget. Every
 drop is recorded with its reason, for the decision record.
 
@@ -39,8 +41,9 @@ from web_router.constants_candidates import (
     RANKED_METHODS,
 )
 from web_router.exceptions import ProviderNotInstalledError, WebRouterError
-from web_router.prices import estimate, estimate_latency
+from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, Candidate, ToolName
+from web_router.routing.pricing import attempt_cost, attempt_p90
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -111,7 +114,7 @@ def build_candidates(
     seen: set[str] = set()
     for tool, request in requests.items():
         for name, keyless in _eligible(router, tool, request):
-            cost, p90 = _estimates(tool, name, request, budget)
+            cost, p90 = _estimates(tool, name, request)
             candidate = Candidate(tool=tool, provider=name, est_cost_usd=cost, est_latency_s=p90)
             if candidate.id in seen:
                 continue  # a member listed twice is one candidate, at its first place
@@ -167,26 +170,10 @@ def _serves(tool: ToolName, name: str, request: NormalizedRequest) -> bool:
     return True
 
 
-def _estimates(
-    tool: ToolName, name: str, request: NormalizedRequest, budget: Budget | None
-) -> tuple[float | None, float | None]:
-    """The candidate's estimated cost in US dollars and its p90 seconds, at the mode it would run."""
-    mode = _pinned_mode(request)
-    units = len(request.urls) if isinstance(request, ExtractRequest) else 1  # extract bills per page
-    cost = _times(estimate(name, tool, mode), units)
-    if request.provider_options and budget is not None and budget.max_cost_usd is not None:
-        cost = None  # a vendor option can change the billed mode, so the list price is no estimate
-    latency = estimate_latency(name, tool, mode)
-    return cost, None if latency is None else latency[1]
-
-
-def _pinned_mode(request: NormalizedRequest) -> str | None:
-    """The price list's mode the caller set: search's ``search_depth`` or research's ``effort``."""
-    if isinstance(request, SearchRequest):
-        return request.search_depth
-    if isinstance(request, ResearchRequest):
-        return request.effort
-    return None
+def _estimates(tool: ToolName, name: str, request: NormalizedRequest) -> tuple[float | None, float | None]:
+    """The candidate's estimated cost in US dollars and its p90 seconds, by the one pricing rule."""
+    attempt = Attempt(tool=tool, provider=name, request=request)
+    return attempt_cost(attempt), attempt_p90(attempt)
 
 
 def _over_budget(cost: float | None, p90: float | None, budget: Budget | None) -> str | None:
@@ -208,10 +195,6 @@ def _over_budget(cost: float | None, p90: float | None, budget: Budget | None) -
 
 def _fits(cost: float | None, cap: float) -> bool:
     return cost is not None and cost <= cap
-
-
-def _times(cost: float | None, units: int) -> float | None:
-    return None if cost is None else cost * units
 
 
 @cache

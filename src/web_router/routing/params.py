@@ -2,9 +2,8 @@
 
 Experimental. A pure selection with no model and no side effects: it reads the
 research effort table (``data/efforts.json``, written by ``make efforts`` from
-the frozen ``tools-effort-60`` results), the price list
-(:func:`web_router.prices.estimate`) and its latency priors
-(:func:`web_router.prices.estimate_latency`, else the table's own p90), and
+the frozen ``tools-effort-60`` results), and prices and times each effort by
+:mod:`.pricing`'s rule -- the price list, then the table's own p90 -- and
 answers which effort to run with and why. Nothing calls it yet; enforcing the
 budget is not its job.
 
@@ -28,7 +27,6 @@ from functools import lru_cache
 from importlib import resources
 from typing import Any, Literal, cast, get_args
 
-from web_router import prices
 from web_router.constants_params import (
     DEFAULT_EFFORT_NAME,
     EFFORTS_DATA_DIR,
@@ -48,6 +46,7 @@ from web_router.constants_params import (
     PARAMS_SOURCE_CALLER,
 )
 from web_router.routing.contract import Budget, ToolName, candidate_id
+from web_router.routing.pricing import mode_cost, mode_p90, research_mode
 from web_router.types import Provider, ResearchEffort, provider_name
 
 RESEARCH: ToolName = "research"
@@ -103,23 +102,6 @@ def measured_efforts(provider: str | Provider) -> Mapping[str, Mapping[str, Any]
     return measured
 
 
-def _effort_of(provider: str, effort: str | None) -> str | None:
-    """``effort``, or for ``None`` the effort the price list marks as the backend's default, when it marks one."""
-    if effort is not None:
-        return effort
-    row = prices.price(provider, RESEARCH, None)
-    return None if row is None else row.mode
-
-
-def _p90(provider: str, effort: str | None) -> float | None:
-    """The p90 seconds: the price list's latency prior, else the effort table's measured figure, else ``None``."""
-    prior = prices.estimate_latency(provider, RESEARCH, effort)
-    if prior is not None:
-        return prior[1]
-    p90 = measured_efforts(provider).get(_effort_of(provider, effort) or "", {}).get("latency_p90_s")
-    return None if p90 is None else float(p90)
-
-
 def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) -> str | None:
     """Why research on ``provider`` at ``effort`` does not fit ``budget``, or ``None`` when it fits.
 
@@ -130,13 +112,13 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
     name = provider_name(provider)
     shown = effort or DEFAULT_EFFORT_NAME
     if budget.max_cost_usd is not None:
-        cost = prices.estimate(name, RESEARCH, effort)
+        cost = mode_cost(name, RESEARCH, effort)
         if cost is None:
             return MSG_MISFIT_UNKNOWN_PRICE.format(provider=name, effort=shown)
         if cost > budget.max_cost_usd:
             return MSG_MISFIT_COST.format(provider=name, effort=shown, cost=cost, cap=budget.max_cost_usd)
     if budget.time_limit_s is not None:
-        p90 = _p90(name, effort)
+        p90 = mode_p90(name, RESEARCH, effort)
         if p90 is None and budget.strict:
             return MSG_MISFIT_STRICT.format(provider=name, effort=shown)
         if p90 is not None and p90 > budget.time_limit_s:
@@ -145,7 +127,7 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
 
 
 def _is_measured(provider: str, effort: str | None) -> bool:
-    return _effort_of(provider, effort) in measured_efforts(provider)
+    return research_mode(provider, effort) in measured_efforts(provider)
 
 
 def _default(provider: str, budget: Budget, reason: str) -> EffortChoice:
@@ -158,7 +140,7 @@ def _default(provider: str, budget: Budget, reason: str) -> EffortChoice:
 
 def _cheapest_key(provider: str, effort: str) -> tuple[bool, float, float, int]:
     """Cost first, an unknown one last; then p90, an unknown one last; then the lower effort."""
-    cost, p90 = prices.estimate(provider, RESEARCH, effort), _p90(provider, effort)
+    cost, p90 = mode_cost(provider, RESEARCH, effort), mode_p90(provider, RESEARCH, effort)
     return (cost is None, cost or 0.0, float("inf") if p90 is None else p90, EFFORTS.index(effort))
 
 

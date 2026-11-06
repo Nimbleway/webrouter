@@ -18,7 +18,7 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from typing import Any, get_args
 from urllib.parse import urlsplit
 
-from web_router import prices, registry
+from web_router import registry
 from web_router.constants_merge import (
     MSG_PARAM_CALLER,
     MSG_PARAM_DEPTH_COST,
@@ -33,6 +33,7 @@ from web_router.constants_merge import (
 )
 from web_router.routing.contract import Budget, RouteDecision
 from web_router.routing.params import EFFORTS, effort_misfit
+from web_router.routing.pricing import mode_cost
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -103,7 +104,7 @@ def _url_refusal(key: str, value: Any, url_check: UrlCheck | None) -> str | None
 def _depth_misfit(provider: str, depth: str, budget: Budget) -> str | None:
     if budget.max_cost_usd is None:
         return None
-    cost = prices.estimate(provider, "search", depth)
+    cost = mode_cost(provider, "search", depth)
     if cost is None:
         return MSG_PARAM_DEPTH_UNKNOWN_PRICE.format(provider=provider, depth=depth)
     if cost > budget.max_cost_usd:

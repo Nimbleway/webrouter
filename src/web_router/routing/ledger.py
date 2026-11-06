@@ -4,8 +4,8 @@ Experimental. :func:`~web_router.routing.budget.budget_scope` keeps one per
 call and asks :meth:`Ledger.admit` before every attempt, ``auto``'s members
 and a named backend alike.
 
-Money is always an estimate: each attempt is charged its list price from
-:mod:`web_router.prices` when it starts, whether it then answers or fails,
+Money is always an estimate: each attempt is charged its list price by
+:mod:`.pricing`'s rule when it starts, whether it then answers or fails,
 since a failed call may still bill. Under a cost cap a candidate whose price
 is unknown -- no row, ``unknown``, or billed by tokens -- never runs; with no
 cost cap it runs and the record names it unmeasured. Time is the call's
@@ -19,7 +19,6 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 
-from web_router import prices
 from web_router.constants_budget import (
     COST_TOLERANCE_USD,
     SKIP_LATENCY_UNKNOWN,
@@ -33,49 +32,8 @@ from web_router.exceptions import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
-from web_router.types import (
-    DecisionAttempt,
-    DecisionHop,
-    DecisionRecord,
-    ExtractRequest,
-    ResearchRequest,
-    SearchRequest,
-)
-
-
-def attempt_mode(attempt: Attempt) -> str | None:
-    """The price list's mode for ``attempt``: a search's depth, a research run's effort, else ``None``."""
-    request = attempt.request
-    if isinstance(request, SearchRequest):
-        return request.search_depth
-    if isinstance(request, ResearchRequest):
-        return request.effort
-    return None
-
-
-def attempt_cost(attempt: Attempt) -> float | None:
-    """The estimated list price of ``attempt`` in US dollars, or ``None`` when it cannot be known before the call.
-
-    Unknown when the price list has no price -- no row, ``unknown``, billed by
-    tokens -- when the row is only a floor, with charges billed on top
-    (``estimate_is_floor``), and when the request carries ``provider_options``,
-    which can change the mode the vendor bills (a deeper tier, a pro mode). An
-    extract is charged per URL, each a page or a request.
-    """
-    if attempt.request.provider_options:
-        return None
-    row = prices.price(attempt.provider, attempt.tool, attempt_mode(attempt))
-    if row is None or row.estimate_is_floor or row.estimate_usd is None:
-        return None
-    if isinstance(attempt.request, ExtractRequest):
-        return row.estimate_usd * len(attempt.request.urls)
-    return row.estimate_usd
-
-
-def attempt_p90(attempt: Attempt) -> float | None:
-    """The measured p90 seconds of ``attempt``, or ``None`` when unmeasured."""
-    measured = prices.estimate_latency(attempt.provider, attempt.tool, attempt_mode(attempt))
-    return None if measured is None else measured[1]
+from web_router.routing.pricing import attempt_cost, attempt_p90
+from web_router.types import DecisionAttempt, DecisionHop, DecisionRecord
 
 
 def _usd(value: float) -> str:

@@ -32,7 +32,7 @@ def priced(monkeypatch: pytest.MonkeyPatch) -> Table:
 
     def price(provider: str, method: str, mode: str | None = None) -> SimpleNamespace | None:
         cost = table.get(provider, (None, None))[0]
-        return None if cost is None else SimpleNamespace(estimate_usd=cost, estimate_is_floor=False)
+        return None if cost is None else SimpleNamespace(estimate_usd=cost, estimate_is_floor=False, mode=mode)
 
     def estimate_latency(provider: str, method: str, mode: str | None = None) -> tuple[float, float] | None:
         p90 = table.get(provider, (None, None))[1]
