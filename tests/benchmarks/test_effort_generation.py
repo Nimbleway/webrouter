@@ -52,9 +52,17 @@ def test_each_effort_is_measured_or_named_apart(
     assert (out["questions"], out["min_questions"], out["rule"]) == (20, efforts.MIN_QUESTIONS, EFFORT_RULE)
 
 
-def test_the_floor_is_the_one_route_eval_reports_for_the_set(efforts: ModuleType) -> None:
-    floor = efforts.floor_for("mixed")
-    assert efforts.effort_file()["noise_floor"] == floor.as_json(6)
+def test_the_floor_is_the_one_route_eval_reports_for_the_set(efforts: ModuleType, route_eval: ModuleType) -> None:
+    floor = efforts.effort_file()["noise_floor"]
+    reported = route_eval.evaluate_set("tools-effort-60", None)["noise_floor"]
+    assert floor == {**reported, "value": round(reported["value"], 6)}, "the floor route-eval's report uses"
+    # Checked by hand: no research rerun is frozen, so the set takes search's SealQA twin spread, 3 of 254.
+    assert floor == {
+        "value": 0.011811,
+        "measured_on": "search",
+        "rerun": ["sealqa-hard-254", "sealqa-hard-254-twin"],
+        "fallback": True,
+    }
 
 
 def test_the_committed_efforts_file_is_current(efforts: ModuleType) -> None:
