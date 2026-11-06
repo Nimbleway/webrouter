@@ -9,9 +9,11 @@ from typing import Any
 
 import pytest
 
-from tests.budget.conftest import Table
-from web_router import AsyncWebRouter, Budget, WebRouter
-from web_router.providers._deadline import current_deadline
+from tests.budget.conftest import Chain, Table
+from web_router import AsyncWebRouter, Budget, BudgetExceededError, WebRouter
+from web_router.constants_budget import SKIP_NO_TIME
+from web_router.exceptions import ConfigurationError, WebRouterError
+from web_router.providers._deadline import call_deadline, current_deadline
 from web_router.routing import ledger
 from web_router.routing.pool import BudgetPool, current_pool
 from web_router.types import SearchResponse
@@ -136,3 +138,26 @@ def test_a_call_that_starts_late_gets_only_the_time_the_clock_has_left(
     with WebRouter().budget(Budget(time_limit_s=limit)) as scope:
         scope.search("q", provider="fake")
     assert 0 < left[0] <= limit - late
+
+
+def test_a_named_backend_under_an_enclosing_deadline_that_has_passed_reserves_nothing(
+    priced: Table, fake_provider: Any
+) -> None:
+    priced.update(fake=(0.01, None))
+    with WebRouter().budget(Budget(max_cost_usd=1.0)) as scope, call_deadline(0.01):
+        time.sleep(0.02)
+        with pytest.raises(BudgetExceededError) as raised:
+            scope.search("q", provider="fake")
+    assert raised.value.skipped == {"search:fake": SKIP_NO_TIME}
+    assert (scope.status().spent_usd, scope.status().reserved_usd) == (0.0, 0.0)
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+def test_a_member_after_an_enclosing_deadline_has_passed_is_not_reserved(chain: Chain, priced: Table) -> None:
+    chain.raises["first"] = ConfigurationError("first holds no key")
+    chain.sleeps["first"] = 0.15  # outlasts the enclosing deadline, then fails
+    priced.update(first=(0.01, None), second=(0.02, None))
+    with WebRouter().budget(Budget(max_cost_usd=1.0)) as scope, call_deadline(0.1), pytest.raises(WebRouterError):
+        scope.search("q", provider=chain.auto())
+    assert chain.called == ["first"]
+    assert scope.status().spent_usd == 0.01, "second was skipped for no time left, not reserved"

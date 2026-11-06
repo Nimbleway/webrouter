@@ -98,8 +98,9 @@ def _held(
     with call_deadline(ledger.budget.time_limit_s), job_deadline(expires), call_route(_hooked(ledger.admit)):
         name = getattr(backend, "name", PROVIDER_AUTO)
         deadline = current_deadline()
-        if ledger.budget.time_limit_s is not None and deadline is not None and deadline.left() <= 0:
-            # A shared budget's clock ran out: say so before `auto` stops at the deadline untried.
+        if deadline is not None and deadline.left() <= 0:
+            # The call's deadline -- its own, the shared clock's, or an enclosing call's -- has passed:
+            # say so before `auto` stops at it untried, and before anything is reserved.
             ledger.skipped[f"{tool}{CANDIDATE_ID_SEPARATOR}{name}"] = SKIP_NO_TIME
             raise ledger.refusal()
         if name != PROVIDER_AUTO and not admitted(tool, name, request):
