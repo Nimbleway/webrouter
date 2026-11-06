@@ -45,6 +45,7 @@ from typing import Any, Generic, TypeVar
 from web_router._benchmark import Stragglers
 from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
+from web_router.client_budget import AsyncBudget, SyncBudget
 from web_router.client_requests import JsonSchema as JsonSchema
 from web_router.client_requests import (
     build_browse_request,
@@ -368,7 +369,7 @@ def _async_client_holders(config: dict[str, dict[str, Any]]) -> set[str]:
     }
 
 
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudget):
     """Synchronous router.
 
     Example:
@@ -377,8 +378,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
         >>> response.urls
         >>> router.extract(response.urls[:3], format="markdown")
 
-    ``search``, ``extract``, ``answer``, ``research`` and ``browse`` take ``budget=``, a
-    :class:`~web_router.Budget` (experimental): see :mod:`web_router.routing.budget` for how it holds the call.
+    ``budget=`` caps one call and :meth:`budget` several (experimental): see :mod:`web_router.routing.budget`.
     """
 
     def __init__(
@@ -797,7 +797,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
         self.close()
 
 
-class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark):
+class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncBudget):
     """Asynchronous router.
 
     Example:

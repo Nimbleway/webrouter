@@ -94,6 +94,8 @@ src/web_router/
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
+├── client_budget.py   budget(), mixed into both routers; client_scope.py the
+│                       BudgetScope / AsyncBudgetScope it returns
 ├── client_requests.py  the routers' request builders: a method's arguments in, its
 │                       normalized request out; JsonSchema
 ├── evals/              accuracy: a question set, judged — installed by [evals]
@@ -131,6 +133,7 @@ src/web_router/
 │   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,
 │   │                   the check before each attempt, BudgetExceededError, the record
 │   ├── ledger.py       one budgeted call's ledger: the cost and p90 rules, the spend
+│   ├── pool.py         a shared budget: reservations under one lock, its clock, status()
 │   └── candidates.py, invoke.py, merge.py, params.py   empty until their parts land
 ├── constants_prices.py the price list's data path, unit divisors, messages and
 │                       PRICING.md wording, kept apart for the same reason
@@ -217,7 +220,7 @@ src/web_router/
 tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         tests/mcp/ the server, tests/max_extract/ the race
                         (its conftest holds the fake members), tests/budget/
-                        the per-call budget (its conftest the priced chain).
+                        the per-call and shared budgets (its conftest the priced chain).
                         test_contract.py, test_extract_contract.py, test_template_contract.py,
                         test_research_contract.py, test_answer_contract.py,
                         test_browse_contract.py and

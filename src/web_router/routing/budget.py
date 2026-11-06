@@ -17,6 +17,10 @@ exactly as it would without one. With a budget:
   :class:`~web_router.BudgetExceededError`, naming each skip;
 - the response's ``decision`` carries the estimated spend and every attempt,
   labelled an estimate.
+
+Inside a shared budget (:mod:`.pool`), a call runs here even with no
+``budget=`` of its own: its budget is the tighter of the two, each attempt it
+admits is reserved in the pool, and what it reserved is settled when it ends.
 """
 
 from __future__ import annotations
@@ -29,11 +33,14 @@ from typing import Generic, TypeVar
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
+from web_router.constants_budget import SKIP_NO_TIME
+from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import WebRouterError
 from web_router.providers._deadline import call_deadline
 from web_router.routing.attempts import Attempt, CallRoute, call_route, current_route
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
+from web_router.routing.pool import current_pool
 from web_router.types import DecisionRecord, NormalizedRequest
 
 _BackendT = TypeVar("_BackendT")
@@ -64,12 +71,32 @@ def budget_scope(
     Raises:
         BudgetExceededError: when the budget skips every candidate, before any starts.
     """
+    pool = current_pool()
+    if pool is not None:
+        budget = pool.limit(budget)
     if budget is None:
         yield BudgetedCall(backend)
         return
-    ledger = Ledger(budget)
-    with call_deadline(budget.time_limit_s), call_route(_hooked(ledger.admit)):
+    ledger = Ledger(budget, pool)
+    try:
+        with _held(ledger, tool, backend, request) as call:
+            yield call
+    finally:
+        if pool is not None:
+            pool.settle(ledger.spent)
+
+
+@contextmanager
+def _held(
+    ledger: Ledger, tool: ToolName, backend: _BackendT, request: NormalizedRequest
+) -> Iterator[BudgetedCall[_BackendT]]:
+    """The block under ``ledger``: its deadline, its check before each attempt, and its refusal."""
+    with call_deadline(ledger.budget.time_limit_s), call_route(_hooked(ledger.admit)):
         name = getattr(backend, "name", PROVIDER_AUTO)
+        if ledger.budget.time_limit_s is not None and ledger.budget.time_limit_s <= 0:
+            # A shared budget's clock ran out: say so before `auto` stops at the deadline untried.
+            ledger.skipped[f"{tool}{CANDIDATE_ID_SEPARATOR}{name}"] = SKIP_NO_TIME
+            raise ledger.refusal()
         if name != PROVIDER_AUTO and not ledger.admit(Attempt(tool=tool, provider=name, request=request)):
             raise ledger.refusal()
         try:

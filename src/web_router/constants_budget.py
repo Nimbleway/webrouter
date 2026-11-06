@@ -8,6 +8,7 @@ from __future__ import annotations
 
 SKIP_PRICE_UNKNOWN = "price unknown under a cost cap"
 SKIP_OVER_COST = "est. {cost} > {left} left"
+SKIP_OVER_SHARED = "est. {cost} > {left} left in the shared budget"
 SKIP_NO_TIME = "no time left"
 SKIP_OVER_TIME = "p90 {p90:.1f}s > {left:.1f}s left"
 SKIP_LATENCY_UNKNOWN = "no measured p90 under a strict time cap"
@@ -18,3 +19,6 @@ MSG_BUDGET_EXCEEDED = "Nothing fits the budget: {skipped}."
 
 COST_TOLERANCE_USD = 1e-9
 """An estimate this close to what is left still fits: sums of list prices are not exact in binary."""
+
+STATUS_DIGITS = 9
+"""Decimal places a shared budget's status rounds dollars to, so sums of estimates read as they were set."""
