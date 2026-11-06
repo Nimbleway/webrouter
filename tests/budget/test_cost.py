@@ -233,3 +233,19 @@ def test_the_candidate_builder_and_the_ledger_draw_the_cap_at_one_line(
     priced.update(first=(cost, None), second=(0.0, None))
     call(chain, CAP)
     assert (chain.called[0] == "first") is fits
+
+
+def test_when_the_budget_skips_every_member_the_error_chains_no_missing_backend_cause(
+    chain: Chain, priced: Table
+) -> None:
+    with pytest.raises(BudgetExceededError) as raised:
+        call(chain, CAP)
+    assert raised.value.__cause__ is None
+    assert raised.value.__suppress_context__, "the chain's 'nothing configured' error is not why it stopped"
+
+
+def test_a_skip_names_the_estimate_and_what_is_left_unrounded(chain: Chain, priced: Table) -> None:
+    priced.update(first=(0.025, None), second=(0.0011, None))
+    response = call(chain, CAP)
+    assert response.decision.hops == [DecisionHop(id=_ids(chain, "first")[0], error=_over("$0.025", "$0.01"))]
+    assert chain.called == ["second"]
