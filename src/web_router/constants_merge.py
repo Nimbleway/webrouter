@@ -50,8 +50,11 @@ MSG_PARAM_UNDECLARED = "{tool}:{provider} does not take {key}"
 MSG_PARAM_UNCHECKED = "{tool}:{provider} could not be checked for {key}: {error}"
 URL_HIDDEN = "<url>"
 """How a URL with no scheme or host shows in a record: the URL itself never does."""
-URL_IN_TEXT = r"[A-Za-z][A-Za-z0-9+.-]*://[^\s<>\"`]+"
-"""A URL inside free text, such as a router's reason, up to whitespace, a quote, an angle bracket or a backtick;
-:func:`~web_router.routing.merge_params.hide_urls` also ends it at a closing bracket it did not open."""
+URL_IN_TEXT = r"[A-Za-z][A-Za-z0-9+.-]*://[^\s\"`]+"
+"""A URL inside free text, such as a router's reason: from its scheme up to whitespace, a double quote or a
+backtick. All of it is replaced by its scheme and host, so nothing after the host survives, brackets and
+punctuation included: a URL's end cannot be told safely, and what follows it may be its query."""
+HOST_CHARS = r"[A-Za-z0-9.-]+"
+"""What a shown host keeps: a host parsed out of free text stops at the first character a hostname cannot hold."""
 MSG_PARAM_DEPTH_UNKNOWN_PRICE = "search:{provider} at depth {depth} has no known price, so it never fits a cost cap"
 MSG_PARAM_DEPTH_COST = "search:{provider} at depth {depth} is estimated at ${cost:g}, over the ${cap:g} cost cap"

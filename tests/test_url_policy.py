@@ -131,7 +131,7 @@ def test_one_trailing_dot_is_dropped_before_the_host_is_judged(url: str, why: st
 
 @pytest.mark.usefixtures("members")
 def test_public_only_refuses_a_bracketed_loopback_the_finder_now_reads_whole() -> None:
-    with pytest.raises(MissingParameterError, match=r"url:http://::1"):
+    with pytest.raises(MissingParameterError, match="the host is loopback"):
         _wr(url_policy="public_only").plan("open http://[::1]/admin", tool="extract")
 
 

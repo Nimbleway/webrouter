@@ -20,8 +20,8 @@ from typing import Any, get_args, overload
 from urllib.parse import urlsplit
 
 from web_router import registry
-from web_router._urls import url_end
 from web_router.constants_merge import (
+    HOST_CHARS,
     MSG_PARAM_CALLER,
     MSG_PARAM_DEPTH_COST,
     MSG_PARAM_DEPTH_UNKNOWN_PRICE,
@@ -70,13 +70,13 @@ def host_of(url: str) -> str:
         host = parts.hostname
     except ValueError:
         return URL_HIDDEN
-    return f"{parts.scheme}://{host}" if parts.scheme and host else URL_HIDDEN
+    kept = re.match(HOST_CHARS, host or "")
+    return f"{parts.scheme}://{kept.group(0)}" if parts.scheme and kept else URL_HIDDEN
 
 
 def _hide(match: re.Match[str]) -> str:
-    text = match.group(0)
-    end = url_end(text)
-    return host_of(text[:end]) + text[end:]
+    """The whole matched URL, and whatever ran on after it, as its scheme and host only."""
+    return host_of(match.group(0))
 
 
 @overload
