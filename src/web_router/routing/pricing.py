@@ -10,8 +10,10 @@ way when offered and another when run.
   billed by tokens), when the row is only a floor with charges billed on top
   (``estimate_is_floor``), and when the request carries ``provider_options``,
   which can change the mode the vendor bills. An extract is charged per URL,
-  and a browser session per minute of its lifetime (``timeout``): unknown
-  without one, unless the backend is free.
+  and a browser session per minute of its lifetime (``timeout``), rounded up
+  to whole minutes as vendors bill: unknown without one, and unknown with any
+  option that can turn on an extra billed apart -- a proxy, stealth, CAPTCHA
+  solving, a profile -- unless the backend is free.
 - **p90** is the price list's measured latency; for research with none there,
   the effort table's measured p90 for the effort, the backend's default when
   none is set. Unknown otherwise, and with ``provider_options``, which can
@@ -21,6 +23,7 @@ way when offered and another when run.
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Mapping
 from functools import lru_cache
 from importlib import resources
@@ -28,6 +31,7 @@ from typing import Any
 
 from web_router import prices
 from web_router.constants_budget import (
+    BROWSER_UNBILLED_OPTIONS,
     COST_TOLERANCE_USD,
     OVER_COST,
     OVER_TIME,
@@ -129,7 +133,9 @@ def attempt_cost(attempt: Attempt) -> float | None:
         return cost * len(attempt.request.urls)
     if cost and isinstance(attempt.request, BrowserRequest):
         lifetime = attempt.request.timeout
-        return None if lifetime is None else cost * lifetime / SECONDS_PER_MINUTE
+        if lifetime is None or attempt.request.specified_parameters() - BROWSER_UNBILLED_OPTIONS:
+            return None
+        return cost * math.ceil(lifetime / SECONDS_PER_MINUTE)
     return cost
 
 

@@ -113,7 +113,7 @@ from web_router.exceptions import (
     ResearchTimeoutError,
 )
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
-from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged
+from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
 from web_router.mcp.chains import CHAIN_OF
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.routing import ROUTING_TOOLS, McpRouting
@@ -420,7 +420,7 @@ class WebRouterTools:
     async def _research(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         job = await self.router.submit_research(**self.arguments(MCP_TOOL_RESEARCH, arguments))
         try:
-            response = await job.aresult(timeout=self.research_wait)
+            response = await job.aresult(timeout=wait_left(self.research_wait))
         except ResearchTimeoutError:
             # Not a failure: the run is still going, and a stdio session cannot
             # be held open for the ten minutes it may take.
@@ -442,7 +442,7 @@ class WebRouterTools:
     async def _browse(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         job = await self.router.submit_browse(**self.arguments(MCP_TOOL_BROWSE, arguments))
         try:
-            response = await job.aresult(timeout=self.browse_wait)
+            response = await job.aresult(timeout=wait_left(self.browse_wait))
         except BrowseTimeoutError:
             # As for research: the task is still going, and is polled rather than waited on.
             handle = self.store.add(MCP_TOOL_BROWSE, job=job).handle

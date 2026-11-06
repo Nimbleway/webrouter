@@ -28,14 +28,22 @@ def _wr(cls: type = WebRouter, router: Any = None) -> Any:
     return cls(provider_config={"auto": {"chain": list(MEMBERS)}}, router=router)
 
 
-def test_the_scope_has_plan_and_run_on_both_routers() -> None:
-    assert all(callable(getattr(scope, name)) for scope in (BudgetScope, AsyncBudgetScope) for name in ("plan", "run"))
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+async def test_plan_through_the_async_scope_shows_the_router_the_scope_budget(chain: Chain, priced: Table) -> None:
+    priced.update(first=(0.04, None))
+    router = _seeing()
+    async with _wr(AsyncWebRouter, router=router).budget(SHARED) as shared:
+        assert isinstance(shared, AsyncBudgetScope)
+        plan = await shared.plan("q", tool="search")
+    assert plan.tool == "search" and router.seen[-1].budget.max_cost_usd == SHARED.max_cost_usd
+    assert chain.called == [], "a plan runs nothing"
 
 
 @pytest.mark.parametrize("tool", ["search"], indirect=True)
 def test_run_through_the_scope_spends_from_it(chain: Chain, priced: Table) -> None:
     priced.update(first=(0.04, None))
     with _wr().budget(SHARED) as shared:
+        assert isinstance(shared, BudgetScope)
         shared.run("q", tool="search")
         shared.run("q", tool="search")
     assert chain.called == ["first", "first"]

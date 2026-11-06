@@ -47,7 +47,7 @@ from web_router.providers._deadline import Deadline, call_deadline, current_dead
 from web_router.routing.attempts import CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
-from web_router.routing.pool import current_pool, limited
+from web_router.routing.pool import current_pool
 from web_router.routing.record import prompt_of, stamp
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -88,14 +88,22 @@ class BudgetedCall(Generic[_BackendT]):
 
 @contextmanager
 def budget_scope(
-    budget: Budget | None, tool: ToolName, backend: _BackendT, request: NormalizedRequest
+    budget: Budget | None,
+    tool: ToolName,
+    backend: _BackendT,
+    request: NormalizedRequest,
+    router: object = None,
 ) -> Iterator[BudgetedCall[_BackendT]]:
     """Hold ``budget`` over ``backend``'s call of ``tool`` with ``request``, made inside the block.
+
+    ``router`` is the router making the call: only a shared budget it opened applies.
 
     Raises:
         BudgetExceededError: when the budget skips every candidate, before any starts.
     """
-    pool, budget = current_pool(), limited(budget)
+    pool = None if router is None else current_pool(router)
+    if pool is not None:
+        budget = pool.limit(budget)
     if budget is None:
         yield BudgetedCall(backend)
         return
@@ -175,18 +183,18 @@ def _hooked(ledger: Ledger) -> CallRoute:
     return replace(route, before_attempt=admit, on_failure=note)
 
 
-def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedRequest) -> _JobT:
-    """``backend``'s job for ``request``, its start held to the shared budget in force, if any (:mod:`.pool`).
+def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedRequest, router: object) -> _JobT:
+    """``backend``'s job for ``request``, its start held to ``router``'s shared budget in force, if any (:mod:`.pool`).
 
     A job's start is what bills, so inside ``wr.budget(...)`` each attempt to
     start one is reserved like any other; with no shared budget it starts as
     it would without one.
     """
-    with budget_scope(None, tool, backend, request):
+    with budget_scope(None, tool, backend, request, router):
         return backend.submit(request)
 
 
-async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: NormalizedRequest) -> _JobT:
+async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: NormalizedRequest, router: object) -> _JobT:
     """As :func:`submitted`, awaited."""
-    with budget_scope(None, tool, backend, request):
+    with budget_scope(None, tool, backend, request, router):
         return await backend.asubmit(request)

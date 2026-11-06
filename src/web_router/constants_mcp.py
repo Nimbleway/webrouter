@@ -57,15 +57,18 @@ MCP_ROUTER_OFF = "off"
 MCP_URL_POLICY: Literal["public_only"] = "public_only"
 """The ``url_policy`` ``web_run``'s plans hold to: a prompt cannot steer a locally fetching backend at private hosts."""
 
-MCP_PROMPTS_IN_PROCESS = "in_process"
-"""Where ``web_run``'s prompts go with the built-in rules router or none: nowhere outside this process."""
+MCP_ROUTER_IN_PROCESS = "in_process"
+"""Where ``web_run``'s router runs with the built-in rules router or none: in this process, sending nothing out."""
 
-MCP_PROMPTS_OPERATOR = "operator_router"
-MCP_PROMPTS_OPERATOR_NOTE = (
-    "Prompts go to the operator's router, which runs in this process but may send them elsewhere, "
-    "such as to a model's server."
+MCP_ROUTER_OPERATOR = "operator"
+MCP_ROUTER_OPERATOR_NOTE = (
+    "The operator's router runs in this process, but it is the operator's code: it may send the prompt "
+    "elsewhere, such as to a model's server."
 )
-"""Where they go with an operator's router: to code web-router cannot see into."""
+"""Where an operator's router runs, and what that means for the prompt."""
+
+MCP_PROMPT_NOTE = "web_run sends the prompt to the backend that serves it, as its query or task, as search does."
+"""What the capabilities resource says of the prompt whatever the router: a backend always receives it."""
 
 MCP_TOOL_WEB_RUN = "web_run"
 MCP_TOOL_BUDGET_START = "budget_start"

@@ -26,19 +26,21 @@ runs, and the refusal names the unknown price.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from typing import TYPE_CHECKING, Any, cast
 
 from web_router.client import AsyncWebRouter
-from web_router.constants import MCP_ARG_PROVIDER, MCP_TOOL_BROWSER_OPEN
+from web_router.constants import MCP_ARG_PROVIDER
 from web_router.constants_mcp import (
     MCP_MSG_BUDGET_LIMIT,
     MCP_PRICE_OPEN_BROWSER,
     MCP_PRICE_RUN_TEMPLATE,
     MCP_TOOL_BUDGET_START,
 )
-from web_router.mcp.chains import CHAIN_OF
+from web_router.providers._deadline import job_deadline
+from web_router.providers.auto_browser import AutoBrowserProvider
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
@@ -51,16 +53,20 @@ if TYPE_CHECKING:
 
 
 class ConnectionBudget:
-    """The ceiling one connection runs under, if any, and the task in force inside it."""
+    """The connection's own budget, capped by the ceiling if one is set, and the task in force inside it.
+
+    The connection's budget holds everything every task spent, so what one
+    ``budget_start`` closes still counts against the ceiling and is reported.
+    """
 
     def __init__(self, ceiling: Budget) -> None:
+        self.connection = BudgetPool(ceiling)
         capped = ceiling.max_cost_usd is not None or ceiling.time_limit_s is not None
-        self.ceiling: BudgetPool | None = BudgetPool(ceiling) if capped else None
-        self.task: BudgetPool | None = self.ceiling
+        self.task: BudgetPool | None = self.connection if capped else None
 
     def start(self, max_cost_usd: float, time_limit_s: float) -> None:
-        """Open a new task with these limits, inside the ceiling; the previous one closes."""
-        self.task = BudgetPool(Budget(max_cost_usd=max_cost_usd, time_limit_s=time_limit_s), parent=self.ceiling)
+        """Open a new task with these limits, inside the connection's budget; the previous one closes."""
+        self.task = BudgetPool(Budget(max_cost_usd=max_cost_usd, time_limit_s=time_limit_s), parent=self.connection)
 
     @contextmanager
     def bound(self) -> Iterator[None]:
@@ -75,24 +81,24 @@ class ConnectionBudget:
             unbind(token)
 
     def status(self) -> dict[str, Any] | None:
-        """Where the task stands, what is left counted against the ceiling too; ``None`` with no budget."""
+        """Where the task stands, what is left counted against the ceiling too, and what the connection spent.
+
+        ``None`` with no budget at all: no ceiling and no ``budget_start``.
+        """
         if self.task is None:
             return None
-        now = self.task.status()
-        pools = [pool for pool in (self.task, self.ceiling) if pool is not None]
-        left = [
-            status.remaining_usd for status in (pool.status() for pool in pools) if status.remaining_usd is not None
-        ]
-        limits = self.task.limit(None)
+        now, total = self.task.status(), self.connection.status()
+        left = [usd for usd in (now.remaining_usd, total.remaining_usd) if usd is not None]
         ends = self.task.expires_at()  # the earliest clock up the chain: the task's, or the ceiling's if sooner
         return {
-            "max_cost_usd": limits.max_cost_usd,
-            "time_limit_s": None if ends is None else round(ends - self.task.started, 3),
+            "max_cost_usd": self.task.limit(None).max_cost_usd,
+            "time_limit_s": None if ends is None else round(max(0.0, ends - self.task.started), 3),
             "spent_usd": now.spent_usd,
             "reserved_usd": now.reserved_usd,
             "remaining_usd": min(left) if left else None,
             "elapsed_s": round(now.elapsed_s, 3),
             "time_left_s": None if now.time_left_s is None else round(now.time_left_s, 3),
+            "connection": {"spent_usd": total.spent_usd, "reserved_usd": total.reserved_usd},
         }
 
 
@@ -117,14 +123,22 @@ def charged(method: str, providers: Sequence[str], request: NormalizedRequest) -
     if not ledger.admit(attempts[dearest]):
         raise ledger.refusal()
     try:
-        yield
+        with job_deadline(pool.expires_at()):  # the call itself runs on the shared clock
+            yield
     finally:
         pool.settle(ledger.spent)
 
 
+def wait_left(wait: float) -> float:
+    """``wait``, cut to the time the budget in force has left, so a job tool never waits past the deadline."""
+    pool = current_pool()
+    left = None if pool is None else pool.time_left()
+    return wait if left is None else min(wait, left)
+
+
 def _limit(arguments: Mapping[str, Any], name: str) -> float:
     value = arguments[name]
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not value > 0:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not (math.isfinite(value) and value > 0):
         raise ValueError(MCP_MSG_BUDGET_LIMIT.format(tool=MCP_TOOL_BUDGET_START, name=name, value=value))
     return float(value)
 
@@ -151,9 +165,12 @@ def template_charged(router: AsyncWebRouter, kwargs: Mapping[str, Any]) -> Abstr
 
 
 def browser_charged(router: AsyncWebRouter, kwargs: Mapping[str, Any]) -> AbstractContextManager[None]:
-    """:func:`charged` for a ``browser_open`` with ``kwargs``: its lifetime on the dearest backend it may open on."""
+    """:func:`charged` for a ``browser_open`` with ``kwargs``: its lifetime on the dearest backend that may open it."""
     if current_pool() is None:
         return nullcontext()
-    name = router.get_browser_provider(kwargs.get(MCP_ARG_PROVIDER)).name
-    members = CHAIN_OF[MCP_TOOL_BROWSER_OPEN](router, name) or (name,)
-    return charged(MCP_PRICE_OPEN_BROWSER, members, BrowserRequest(timeout=kwargs.get("timeout")))
+    backend = router.get_browser_provider(kwargs.get(MCP_ARG_PROVIDER))
+    request = BrowserRequest(**{name: value for name, value in kwargs.items() if name != MCP_ARG_PROVIDER})
+    # Only the members that can serve this request may open it, so only theirs are priced.
+    eligible = backend._eligible(request) if isinstance(backend, AutoBrowserProvider) else ()
+    members = [name for _, name in eligible] or [backend.name]
+    return charged(MCP_PRICE_OPEN_BROWSER, members, request)

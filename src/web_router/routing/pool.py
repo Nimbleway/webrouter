@@ -17,12 +17,16 @@ made through its scope, and is the only state those calls share:
   (:meth:`BudgetPool.settle`): moved from reserved to spent, at the estimate,
   since no call reports what it was billed. A failed attempt stays charged.
 
-A pool made while another is in force spends from both: each reservation
-must fit every pool up the chain, and the clock is the earliest of theirs.
+A pool belongs to the router that made it: only that router's calls spend
+from it, and another router's calls inside the block run as they would
+outside it. A pool made while another of the same router's is in force
+spends from both: each reservation must fit every pool up the chain, checked
+and taken under all their locks at once, and the clock is the earliest of
+theirs.
 
-The pool in force is held in a context variable, as the per-call deadline is,
-so a call made on the router inside ``with wr.budget(...)`` spends from it
-too. An asyncio task inherits it; a thread does not, so a thread calls
+The pools in force are held in a context variable, as the per-call deadline
+is, so a call made on the router inside ``with wr.budget(...)`` spends from
+it too. An asyncio task inherits them; a thread does not, so a thread calls
 through the scope (``b.search``), which binds the pool for the call.
 """
 
@@ -31,6 +35,7 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Iterator
+from contextlib import ExitStack
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
 
@@ -50,7 +55,7 @@ class BudgetStatus:
     """The estimates reserved by calls still running."""
 
     remaining_usd: float | None
-    """The cap less what is spent and reserved; ``None`` with no cost cap."""
+    """The least, up the chain, of each cap less what is spent and reserved; ``None`` with no cost cap."""
 
     elapsed_s: float
     """Seconds since the budget was made."""
@@ -62,9 +67,11 @@ class BudgetStatus:
 class BudgetPool:
     """One :class:`~web_router.Budget` that every call made through its scope reserves from and settles to."""
 
-    def __init__(self, budget: Budget, parent: BudgetPool | None = None) -> None:
+    def __init__(self, budget: Budget, parent: BudgetPool | None = None, owner: object = None) -> None:
         self.budget = budget
         self.parent = parent
+        self.owner = owner
+        """The router whose calls spend from this pool."""
         self.started = time.monotonic()
         self._lock = threading.Lock()
         self._spent = 0.0
@@ -106,17 +113,22 @@ class BudgetPool:
     def reserve(self, cost: float) -> float | None:
         """Reserve ``cost`` in this pool and every one up the chain, or in none of them.
 
-        Returns ``None`` once reserved; otherwise the dollars left in the pool
-        that refused, which ``cost`` does not fit.
+        Every pool's lock is held at once, outermost first, so no other call
+        sees a reservation that is about to be undone.
+
+        Returns ``None`` once reserved; otherwise the dollars left in the
+        innermost pool that refused, which ``cost`` does not fit.
         """
-        taken: list[BudgetPool] = []
-        for pool in self._chain():
-            left = pool._take(cost)
-            if left is not None:
-                for held in taken:
-                    held._move(cost, spent=False)
-                return left
-            taken.append(pool)
+        chain = list(self._chain())
+        with ExitStack() as held:
+            for pool in reversed(chain):
+                held.enter_context(pool._lock)
+            for pool in chain:
+                left = pool._left()
+                if left is not None and over_cost(cost, left):
+                    return left
+            for pool in chain:
+                pool._reserved += cost
         return None
 
     def settle(self, cost: float) -> None:
@@ -124,15 +136,9 @@ class BudgetPool:
         for pool in self._chain():
             pool._move(cost, spent=True)
 
-    def _take(self, cost: float) -> float | None:
-        with self._lock:
-            cap = self.budget.max_cost_usd
-            if cap is not None:
-                left = cap - self._spent - self._reserved
-                if over_cost(cost, left):
-                    return left
-            self._reserved += cost
-            return None
+    def _left(self) -> float | None:
+        cap = self.budget.max_cost_usd
+        return None if cap is None else cap - self._spent - self._reserved
 
     def _move(self, cost: float, *, spent: bool) -> None:
         with self._lock:
@@ -141,14 +147,18 @@ class BudgetPool:
                 self._spent += cost
 
     def status(self) -> BudgetStatus:
-        """Spent, reserved and remaining dollars, and the clock, as of now."""
+        """Spent and reserved dollars here, what is left up the chain, and the clock, as of now."""
         with self._lock:
             spent, reserved = round(self._spent, STATUS_DIGITS), round(self._reserved, STATUS_DIGITS)
-        cap = self.budget.max_cost_usd
+        lefts: list[float | None] = []
+        for pool in self._chain():
+            with pool._lock:
+                lefts.append(pool._left())
+        remaining = _least(lefts)
         return BudgetStatus(
             spent_usd=spent,
             reserved_usd=reserved,
-            remaining_usd=None if cap is None else round(cap - spent - reserved, STATUS_DIGITS),
+            remaining_usd=None if remaining is None else round(remaining, STATUS_DIGITS),
             elapsed_s=time.monotonic() - self.started,
             time_left_s=self.time_left(),
         )
@@ -159,25 +169,33 @@ def _least(values: list[float | None]) -> float | None:
     return min(known) if known else None
 
 
-_POOL: ContextVar[BudgetPool | None] = ContextVar("web_router_budget_pool", default=None)
+_POOLS: ContextVar[tuple[BudgetPool, ...]] = ContextVar("web_router_budget_pools", default=())
+"""The pools in force in this context, innermost last."""
 
 
-def bind(pool: BudgetPool) -> Token[BudgetPool | None]:
-    """Make ``pool`` the one calls in this context spend from, until :func:`unbind` with the token."""
-    return _POOL.set(pool)
+def bind(pool: BudgetPool) -> Token[tuple[BudgetPool, ...]]:
+    """Put ``pool`` in force for its router's calls in this context, until :func:`unbind` with the token."""
+    return _POOLS.set((*_POOLS.get(), pool))
 
 
-def unbind(token: Token[BudgetPool | None]) -> None:
-    """Put back the pool that was in force before :func:`bind` returned ``token``."""
-    _POOL.reset(token)
+def unbind(token: Token[tuple[BudgetPool, ...]]) -> None:
+    """Put back the pools that were in force before :func:`bind` returned ``token``."""
+    _POOLS.reset(token)
 
 
-def current_pool() -> BudgetPool | None:
-    """The pool calls in this context spend from, or ``None`` outside every budget scope."""
-    return _POOL.get()
+def current_pool(owner: object = None) -> BudgetPool | None:
+    """The innermost pool ``owner``'s calls spend from in this context -- any router's with no owner -- or ``None``.
+
+    A pool with no owner of its own (the MCP server's, which outlives the routers
+    ``load_env`` replaces) applies to every router's calls.
+    """
+    for pool in reversed(_POOLS.get()):
+        if owner is None or pool.owner is None or pool.owner is owner:
+            return pool
+    return None
 
 
-def limited(budget: Budget | None) -> Budget | None:
-    """``budget`` held to the pool in force (:meth:`BudgetPool.limit`); as given outside every budget scope."""
-    pool = current_pool()
+def limited(budget: Budget | None, owner: object = None) -> Budget | None:
+    """``budget`` held to ``owner``'s pool in force (:meth:`BudgetPool.limit`); as given outside every budget scope."""
+    pool = current_pool(owner)
     return budget if pool is None else pool.limit(budget)
