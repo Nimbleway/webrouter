@@ -38,6 +38,7 @@ from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNO
 from web_router.constants_candidates import (
     AUTO_GETTERS,
     KEYLESS_OPTION,
+    MSG_DROPPED_BUILD_FAILED,
     MSG_DROPPED_NOT_A_BACKEND,
     MSG_DROPPED_NOT_CONFIGURED,
     MSG_DROPPED_NOT_INSTALLED,
@@ -189,7 +190,8 @@ def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
     Built as ``auto`` builds them, and cached there for the call that tries one:
     a member that is not configured -- no credential and no keyless tier, a
     setting missing -- or whose extra is not installed, refuses to be built and
-    is no candidate. Extract's
+    is no candidate; so is one that is no backend of this method, and one that
+    raises anything else, dropped with the class of what it raised. Extract's
     ``_eligible`` reads only the format, so its other options are checked
     against the built member.
     """
@@ -204,6 +206,8 @@ def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
             unbuilt.setdefault(name, MSG_DROPPED_NOT_INSTALLED)
         except ProviderNotFoundError:  # a plain-list chain names backends of other methods too
             unbuilt.setdefault(name, MSG_DROPPED_NOT_A_BACKEND)
+        except Exception as exc:  # a broken backend: dropped, named with what it raised, never silently
+            unbuilt.setdefault(name, MSG_DROPPED_BUILD_FAILED.format(error=type(exc).__name__))
         else:
             built.append(position)
     return built, unbuilt

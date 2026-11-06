@@ -145,7 +145,7 @@ def test_a_provider_named_twice_in_the_order_keeps_its_first_place() -> None:
 
 
 @pytest.mark.parametrize("field", ["max_cost_usd", "time_limit_s"])
-@pytest.mark.parametrize("value", [-0.01, float("nan"), True])
+@pytest.mark.parametrize("value", [-0.01, float("nan"), True, "1", b"1", [1]])
 def test_a_budget_refuses_a_cap_that_is_negative_or_not_a_number(field: str, value: object) -> None:
     with pytest.raises(ValueError, match=field):
         Budget(**{field: value})  # type: ignore[arg-type]
