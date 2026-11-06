@@ -1,9 +1,10 @@
-"""Calling a router at the edges: the caller's context, the call's own deadline, and a task the call gave up on."""
+"""A router at the edges: which callables it may be, the caller's context, the call's own deadline, abandoned tasks."""
 
 from __future__ import annotations
 
 import asyncio
 import contextvars
+import functools
 import gc
 import inspect
 import threading
@@ -12,11 +13,44 @@ from typing import Any
 
 import pytest
 
-from tests.test_router_invoke import DECISION, SLEEP_S, _async, _decorated, _req, _sleeper
+from tests.test_router_invoke import DECISION, SLEEP_S, _async, _Both, _decorated, _req, _sleeper, _sync
 from web_router import RouteDecision, RouteRequest
+from web_router.exceptions import ConfigurationError
 from web_router.providers._deadline import call_deadline
 from web_router.routing import invoke
 from web_router.routing.invoke import AttachedRouter
+
+
+class _OnlyCallable:
+    def __call__(self, req: RouteRequest) -> RouteDecision:
+        return DECISION
+
+
+class _OnlyAsyncCallable:
+    async def __call__(self, req: RouteRequest) -> RouteDecision:
+        return DECISION
+
+
+@pytest.mark.parametrize("router", [_OnlyCallable(), _OnlyAsyncCallable()], ids=["sync", "async"])
+def test_an_object_that_is_only_callable_is_refused(router: Any) -> None:
+    with pytest.raises(ConfigurationError, match="route"):
+        AttachedRouter(router)
+
+
+@pytest.mark.parametrize(
+    ("router", "side"),
+    [
+        (functools.partial(_sync), "sync"),
+        (functools.partial(_async), "async"),
+        (_Both().route, "sync"),
+        (print, "sync"),
+    ],
+    ids=["partial", "async-partial", "method", "builtin"],
+)
+def test_a_partial_a_method_or_a_builtin_is_a_function(router: Any, side: str) -> None:
+    attached = AttachedRouter(router)
+    assert (attached._sync is router, attached._async is router) == (side == "sync", side == "async")
+
 
 _SEEN_BY_ROUTER: contextvars.ContextVar[str] = contextvars.ContextVar("seen_by_router", default="unset")
 
