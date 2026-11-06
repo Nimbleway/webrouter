@@ -53,7 +53,7 @@ FallbackReason = Literal["router_timeout", "router_error", "router_invalid"]
 
 TOOLS: tuple[str, ...] = get_args(ToolName)
 
-__all__ = ["FallbackReason", "MergeNotes", "Merged", "UrlCheck", "merge"]
+__all__ = ["FallbackReason", "MergeNotes", "Merged", "UrlCheck", "merge", "well_formed"]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -134,7 +134,7 @@ def _keyed_by_name(value: object) -> bool:
     return isinstance(value, Mapping) and all(isinstance(k, str) for k in value)
 
 
-def _well_formed(decision: object) -> bool:
+def well_formed(decision: object) -> bool:
     """Whether ``decision`` is a :class:`RouteDecision` whose fields have the shapes the contract gives them.
 
     A mapping keyed by anything but one of the five method names is malformed, not an unknown id: the
@@ -230,7 +230,7 @@ def merge(
     changes. ``url_check`` is the URL policy: it returns why a URL is refused,
     ``None`` when it is allowed. With none, a router sets no URL.
     """
-    if failure is None and not _well_formed(decision):
+    if failure is None and not well_formed(decision):
         failure = ROUTER_INVALID
     if failure is not None:
         return _static(request, static_order, failure, None)

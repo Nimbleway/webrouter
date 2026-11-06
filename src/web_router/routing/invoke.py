@@ -34,7 +34,7 @@ import inspect
 import math
 import threading
 import time
-from collections.abc import Awaitable, Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable
 from concurrent.futures import Future
 from concurrent.futures import wait as wait_futures
 from dataclasses import dataclass
@@ -54,6 +54,7 @@ from web_router.constants_invoke import (
 from web_router.exceptions import ConfigurationError, RouterError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.contract import Budget, RouteDecision, RouteRequest
+from web_router.routing.merge import well_formed
 
 
 class SyncRouter(Protocol):
@@ -169,18 +170,6 @@ def _declared_timeout(router: object) -> float:
     if isinstance(declared, bool) or not isinstance(declared, (int, float)) or not 0 < declared < math.inf:
         raise ConfigurationError(MSG_ROUTER_TIMEOUT_S.format(value=declared))
     return float(declared)
-
-
-def _valid(result: object) -> bool:
-    """Whether ``result`` is a :class:`RouteDecision` whose ``providers``, when set, map tools to lists of names."""
-    if not isinstance(result, RouteDecision):
-        return False
-    if result.providers is None:
-        return True
-    return isinstance(result.providers, Mapping) and all(
-        isinstance(ranked, Sequence) and not isinstance(ranked, str) and all(isinstance(p, str) for p in ranked)
-        for ranked in result.providers.values()
-    )
 
 
 def _close(value: object) -> None:
@@ -318,7 +307,7 @@ class AttachedRouter:
         return await self._async(req)
 
     def _read(self, result: object, started: float) -> RouterOutcome:
-        if not isinstance(result, RouteDecision) or not _valid(result):
+        if not isinstance(result, RouteDecision) or not well_formed(result):
             _close(result)
             return self._failed(ROUTER_INVALID, started)
         return RouterOutcome(decision=result, failure=None, elapsed_ms=_ms_since(started))

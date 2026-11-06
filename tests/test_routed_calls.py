@@ -125,7 +125,7 @@ def test_the_decision_record_says_what_the_router_did(tool: _Tool, called: list[
     assert decision.ranked == [f"{tool.name}:third"]
     assert decision.merged == [ids[2], ids[0], ids[1]]
     assert decision.reason == "ranked"
-    assert decision.router_timeout is False
+    assert decision.router_timeout is None  # set only when it ran out of time
     assert decision.router_ms is not None and decision.router_ms >= 0
 
 

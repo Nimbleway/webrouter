@@ -6,6 +6,10 @@ Kept apart from :mod:`web_router.constants`, so that file stops growing.
 
 from __future__ import annotations
 
+from web_router.constants_merge import ROUTER_ERROR, ROUTER_INVALID, ROUTER_TIMEOUT
+
+__all__ = ["ROUTER_ERROR", "ROUTER_INVALID", "ROUTER_TIMEOUT"]  # the merge rule's codes, one spelling of each
+
 ROUTER_TIMEOUT_S = 0.05
 """Seconds a router has to answer when it declares no ``timeout_s``: 50 ms.
 
@@ -19,10 +23,6 @@ ROUTER_TIMEOUT_ATTR = "timeout_s"
 ROUTER_THREAD_NAME = "web-router-router"
 """The name of the worker thread a sync router runs on, and of the loop thread an async one runs on from sync code."""
 
-ROUTER_TIMEOUT = "router_timeout"
-ROUTER_ERROR = "router_error"
-ROUTER_INVALID = "router_invalid"
-"""Why a call fell back to the static order: the code recorded as the decision record's ``reason``."""
 
 MSG_ROUTER_FORM = (
     "router= takes a function, a coroutine function, or an object with route(req) or aroute(req); got {kind}."

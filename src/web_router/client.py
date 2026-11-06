@@ -414,7 +414,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
             provider_options=provider_options,
         )
         chain = self.get_provider(provider)
-        return self._routed(chain, request, budget, lambda: chain.search(request))
+        return self._routed(chain, request, budget, chain.search)
 
     def extract(
         self,
@@ -434,7 +434,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
-        return self._routed(chain, request, budget, lambda: chain.extract(request))
+        return self._routed(chain, request, budget, chain.extract)
 
     def templates(
         self,
@@ -532,7 +532,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
             provider_options=provider_options,
         )
         chain = self.get_research_provider(provider)
-        return self._routed(chain, request, budget, lambda: chain.research(request, timeout=timeout))
+        return self._routed(chain, request, budget, lambda r: chain.research(r, timeout=timeout))
 
     def submit_research(
         self,
@@ -604,7 +604,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
             provider_options=provider_options,
         )
         chain = self.get_browse_provider(provider)
-        return self._routed(chain, request, budget, lambda: chain.browse(request, timeout=timeout))
+        return self._routed(chain, request, budget, lambda r: chain.browse(r, timeout=timeout))
 
     def submit_browse(
         self,
@@ -757,7 +757,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             provider_options=provider_options,
         )
         chain = self.get_provider(provider)
-        return await self._arouted(chain, request, budget, lambda: chain.asearch(request))
+        return await self._arouted(chain, request, budget, chain.asearch)
 
     async def extract(
         self,
@@ -776,7 +776,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
-        return await self._arouted(chain, request, budget, lambda: chain.aextract(request))
+        return await self._arouted(chain, request, budget, chain.aextract)
 
     async def templates(
         self,
@@ -846,7 +846,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             provider_options=provider_options,
         )
         chain = self.get_research_provider(provider)
-        return await self._arouted(chain, request, budget, lambda: chain.aresearch(request, timeout=timeout))
+        return await self._arouted(chain, request, budget, lambda r: chain.aresearch(r, timeout=timeout))
 
     async def submit_research(
         self,
@@ -901,7 +901,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             provider_options=provider_options,
         )
         chain = self.get_browse_provider(provider)
-        return await self._arouted(chain, request, budget, lambda: chain.abrowse(request, timeout=timeout))
+        return await self._arouted(chain, request, budget, lambda r: chain.abrowse(r, timeout=timeout))
 
     async def submit_browse(
         self,

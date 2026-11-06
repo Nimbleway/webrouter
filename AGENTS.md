@@ -148,10 +148,10 @@ src/web_router/
 │   ├── invoke.py       router=: the two forms a router takes, called sync or async on
 │   │                   its own thread or loop within its timeout, and the failure policy
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
-│   │                   to ask the router (route_tools, auto only), what it is shown,
-│   │                   and the decision record
-│   └── interim.py      stand-ins for the candidate builder and the merge rule, until
-│                       candidates.py and merge.py replace them
+│   │                   to ask the router (route_tools, auto only), its candidates, and
+│   │                   the budget's scope around it
+│   └── decide.py       decided(): candidates and a router's outcome merged into the
+│                       method, order, options and record a call runs with, pure
 ├── _urls.py            urls_in(): the URLs written in a query's prose
 ├── constants_urls.py   the punctuation stripped from the end of a URL found in prose
 ├── constants_params.py the effort mapping's data path, rule and reasons

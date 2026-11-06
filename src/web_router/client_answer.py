@@ -90,7 +90,7 @@ class SyncAnswer(_AnswerLookup, SyncRouted):
             recency=recency,
         )
         chain = self.get_answer_provider(provider)
-        return self._routed(chain, request, budget, lambda: chain.answer(request))
+        return self._routed(chain, request, budget, chain.answer)
 
 
 class AsyncAnswer(_AnswerLookup, AsyncRouted):
@@ -118,4 +118,4 @@ class AsyncAnswer(_AnswerLookup, AsyncRouted):
             recency=recency,
         )
         chain = self.get_answer_provider(provider)
-        return await self._arouted(chain, request, budget, lambda: chain.aanswer(request))
+        return await self._arouted(chain, request, budget, chain.aanswer)

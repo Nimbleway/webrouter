@@ -25,10 +25,11 @@ def _ids(chain: Chain, *names: str) -> list[str]:
 
 
 def _check(chain: Chain, response: Any) -> None:
-    assert chain.called == ["second"], "the router put third first, the budget skipped it, second came next"
+    assert chain.called == ["second"], "the router put third first, but the budget left it out"
     decision = response.decision
     assert decision.router is not None and decision.reason == "ranked"
-    assert decision.merged[:2] == _ids(chain, "third", "second")
+    assert "third" not in str(decision.offered) and _ids(chain, "third")[0] in decision.dropped
+    assert decision.merged == _ids(chain, "second", "first")
     assert [attempt.id for attempt in decision.attempts] == _ids(chain, "second")
     assert decision.estimated_cost_usd == 0.005
 

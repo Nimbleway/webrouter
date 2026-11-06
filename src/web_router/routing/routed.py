@@ -9,9 +9,11 @@ call goes to ``auto``: a provider the caller names, or a default that is not
 attached a call runs exactly as it did before routers existed.
 
 The router orders the backends of the method the caller called; it never
-changes the method. What it answered is applied by
-:func:`~web_router.routing.interim.ranked_first` until the merge rule lands,
-and recorded on the response's ``decision``.
+changes the method. It is shown the candidates
+:func:`~web_router.routing.candidates.build_candidates` finds on the chain the
+call runs on, and what it answered is merged by
+:func:`~web_router.routing.decide.decided` -- the merge rule, then the
+budget's research effort -- and recorded on the response's ``decision``.
 """
 
 from __future__ import annotations
@@ -22,14 +24,17 @@ from typing import Any, TypeVar, get_args
 
 from pydantic import BaseModel
 
-from web_router.constants_invoke import MSG_ROUTE_TOOLS, ROUTER_TIMEOUT
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
+from web_router.constants import PROVIDER_AUTO
+from web_router.constants_candidates import AUTO_GETTERS
+from web_router.constants_invoke import MSG_ROUTE_TOOLS
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, call_route, current_route
 from web_router.routing.budget import budget_scope
+from web_router.routing.candidates import CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
-from web_router.routing.interim import chain_candidates, ranked_first
+from web_router.routing.decide import decided
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
+from web_router.routing.merge import UrlCheck
 from web_router.types import (
     BrowseRequest,
     DecisionRecord,
@@ -41,6 +46,7 @@ from web_router.types import (
 from web_router.types_answer import AnswerRequest
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
+_RequestT = TypeVar("_RequestT", bound=NormalizedRequest)
 
 _TOOL_OF: dict[type[NormalizedRequest], ToolName] = {
     SearchRequest: "search",
@@ -74,8 +80,11 @@ def _prompt(tool: ToolName, request: Any) -> tuple[str, tuple[str, ...]]:
     return request.query, ()
 
 
-def _ids(tool: ToolName, providers: Collection[str]) -> list[str]:
-    return [f"{tool}{CANDIDATE_ID_SEPARATOR}{name}" for name in providers]
+class _Only:
+    """A router whose ``auto`` for ``tool`` is ``chain``: the candidates of the chain the call runs on."""
+
+    def __init__(self, tool: ToolName, chain: Any) -> None:
+        setattr(self, AUTO_GETTERS[tool], lambda _name: chain)
 
 
 class RouterSetup:
@@ -83,6 +92,7 @@ class RouterSetup:
 
     _router: AttachedRouter | None = None
     _route_tools: frozenset[ToolName] = _ALL_TOOLS
+    _url_check: UrlCheck | None = None
 
     def _attach_router(
         self, router: RouterLike | None, route_tools: Collection[ToolName] | None, fail_on_router_error: bool
@@ -94,40 +104,40 @@ class RouterSetup:
         self._route_tools = _route_tools(route_tools)
         self._router = None if router is None else AttachedRouter(router, fail_on_error=fail_on_router_error)
 
-    def _route_request(self, chain: Any, request: NormalizedRequest, budget: Budget | None) -> RouteRequest | None:
-        """What the router is shown for this call, or ``None`` when the call is not routed."""
+    def _route_request(
+        self, chain: Any, request: NormalizedRequest, budget: Budget | None
+    ) -> tuple[RouteRequest, CandidateSet] | None:
+        """What the router is shown for this call, and the candidates; ``None`` when the call is not routed."""
         tool = _TOOL_OF.get(type(request))
         if self._router is None or tool is None or tool not in self._route_tools:
             return None
-        candidates = chain_candidates(tool, chain, request)
-        if not candidates:
+        if getattr(chain, "name", None) != PROVIDER_AUTO:
+            return None  # a named backend: nothing to order
+        found = build_candidates(_Only(tool, chain), {tool: request}, budget=budget)
+        if not found.candidates:
             return None
         prompt, urls = _prompt(tool, request)
-        return RouteRequest(
+        req = RouteRequest(
             prompt=prompt,
-            candidates=candidates,
+            candidates=found.candidates,
             deadline_s=self._router.deadline(budget),
             urls=urls,
             budget=budget,
             pinned_tool=tool,
         )
+        return req, found
 
-    def _merged(self, req: RouteRequest, outcome: RouterOutcome) -> tuple[CallRoute, DecisionRecord]:
-        """The order the call runs in, and the record of how it was chosen."""
-        assert self._router is not None and req.pinned_tool is not None  # set on every routed call
-        tool, decision = req.pinned_tool, outcome.decision
-        merged = ranked_first(tool, req.candidates, decision)
-        ranked = (decision.providers or {}).get(tool) if decision is not None else None
-        record = DecisionRecord(
-            router=self._router.name,
-            offered=[candidate.id for candidate in req.candidates],
-            ranked=_ids(tool, ranked) if ranked is not None else None,
-            merged=_ids(tool, merged),
-            reason=outcome.failure or (decision.reason if decision is not None else None),
-            router_timeout=outcome.failure == ROUTER_TIMEOUT,
-            router_ms=outcome.elapsed_ms,
-        )
-        return CallRoute(order={tool: merged}), record
+    def _merged(
+        self, routed: tuple[RouteRequest, CandidateSet], outcome: RouterOutcome, request: _RequestT
+    ) -> tuple[CallRoute, _RequestT, DecisionRecord]:
+        """The order the call runs in, its request with the options a router or the budget set, and the record."""
+        assert self._router is not None  # set on every routed call
+        req, found = routed
+        caller_set = request.specified_parameters() | request.always_sent
+        out = decided(req, found, outcome, router=self._router.name, caller_set=caller_set, url_check=self._url_check)
+        if out.params:
+            request = request.model_copy(update=dict(out.params))
+        return CallRoute(order={out.tool: out.providers}), request, out.record
 
 
 def _in_force_with(route: CallRoute) -> CallRoute:
@@ -140,22 +150,22 @@ class SyncRouted(RouterSetup):
     def _routed(
         self,
         chain: Any,
-        request: NormalizedRequest,
+        request: _RequestT,
         budget: Budget | None,
-        call: Callable[[], _ResponseT],
+        call: Callable[[_RequestT], _ResponseT],
     ) -> _ResponseT:
         """Run ``call``, which calls ``chain``, in ``budget``'s scope.
 
         A routed call runs in the order the router chose, and its response records how.
         """
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
-            req = self._route_request(chain, request, budget)
-            if req is None:
-                return scope.settle(call())
+            routed = self._route_request(chain, request, budget)
+            if routed is None:
+                return scope.settle(call(request))
             assert self._router is not None  # a request is built only with a router attached
-            route, record = self._merged(req, self._router.call(req))
+            route, request, record = self._merged(routed, self._router.call(routed[0]), request)
             with call_route(_in_force_with(route)):
-                response = call()
+                response = call(request)
             return scope.settle(response.model_copy(update={"decision": record}))
 
 
@@ -163,17 +173,17 @@ class AsyncRouted(RouterSetup):
     async def _arouted(
         self,
         chain: Any,
-        request: NormalizedRequest,
+        request: _RequestT,
         budget: Budget | None,
-        call: Callable[[], Awaitable[_ResponseT]],
+        call: Callable[[_RequestT], Awaitable[_ResponseT]],
     ) -> _ResponseT:
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
-            req = self._route_request(chain, request, budget)
-            if req is None:
-                return scope.settle(await call())
+            routed = self._route_request(chain, request, budget)
+            if routed is None:
+                return scope.settle(await call(request))
             assert self._router is not None  # a request is built only with a router attached
-            route, record = self._merged(req, await self._router.acall(req))
+            route, request, record = self._merged(routed, await self._router.acall(routed[0]), request)
             with call_route(_in_force_with(route)):
-                response = await call()
+                response = await call(request)
             return scope.settle(response.model_copy(update={"decision": record}))
