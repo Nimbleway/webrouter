@@ -12,7 +12,9 @@ from typing import Any
 
 import pytest
 
-from tests.test_auto_seam import MEMBERS, TOOLS, _member
+from tests.routing_helpers import MEMBERS, TOOLS
+from tests.routing_helpers import member as _member
+from tests.routing_helpers import wr as _wr
 from web_router import AsyncWebRouter, Budget, Plan, RouteDecision, RouteRequest, WebRouter
 from web_router.exceptions import MissingParameterError
 from web_router.types import BrowseResponse, ExtractResponse, ResearchResponse, SearchResponse
@@ -72,10 +74,6 @@ def _chooser(tool: str | None, **decision: Any) -> Any:
 
     route.seen = []  # type: ignore[attr-defined]
     return route
-
-
-def _wr(cls: type = WebRouter, router: Any = None, **kwargs: Any) -> Any:
-    return cls(provider_config={"auto": {"chain": list(MEMBERS)}}, router=router, **kwargs)
 
 
 # -- plan ----------------------------------------------------------------------
@@ -212,3 +210,33 @@ async def test_async_plan_and_run_route_as_the_sync_ones_do(called: list[str]) -
     response = await wr.run(plan)
     assert isinstance(response, AnswerResponse) and called[0] == "answer:third"
     assert isinstance(await wr.run(PROMPT), AnswerResponse)
+
+
+def test_a_plans_repr_shows_neither_its_prompt_nor_a_whole_url() -> None:
+    secret = "https://user:pw@example.com/p?token=SECRET"
+    plan = Plan(prompt=f"fetch {secret} now", tool="extract", params={"urls": [secret]}, providers={"extract": ["x"]})
+    shown = repr(plan)
+    assert "SECRET" not in shown and "pw@" not in shown and "fetch" not in shown
+    assert "https://example.com" in shown and "'extract'" in shown
+    searched = Plan(prompt=f"fetch {secret}", tool="search", params={"query": f"fetch {secret}"})
+    assert "SECRET" not in repr(searched)
+
+
+def test_a_plan_whose_router_picks_a_method_the_budget_emptied_notes_why() -> None:
+    from web_router.constants_merge import MSG_TOOL_NO_CANDIDATE
+
+    router = WebRouter(router=lambda req: RouteDecision(tools=["extract"]), url_policy="public_only")
+    plan = router.plan("read https://example.com/", budget=Budget(max_cost_usd=0.0001))
+    assert plan.tool == "search"
+    assert plan.decision.ignored == {"extract": MSG_TOOL_NO_CANDIDATE.format(tool="extract")}
+
+
+@pytest.mark.usefixtures("called")
+def test_a_plan_notes_a_router_url_the_policy_refused_when_it_searches_instead() -> None:
+    from web_router.constants_merge import NOTE_EXTRACT_URLS
+
+    route = lambda req: RouteDecision(tools=["extract"], params={"extract": {"urls": ["http://10.0.0.1/x"]}})  # noqa: E731
+    plan = _wr(router=route, url_policy="public_only").plan("summarize it")
+    assert plan.tool == "search"
+    note = (plan.decision.ignored or {})[NOTE_EXTRACT_URLS]
+    assert "10.0.0.1" in note and "/x" not in note

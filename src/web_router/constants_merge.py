@@ -35,10 +35,16 @@ ROUTER_EMPTY: Final = "router_empty"
 
 NOTE_EXCLUDE = "exclude"
 NOTE_EXTRACT = "extract"
+NOTE_EXTRACT_URLS = "params.extract.urls"
+"""The note for the router's extract URLs when they were refused and the call searches instead."""
 """The keys of the notes that are about the decision as a whole rather than one id or option."""
 
 MSG_UNKNOWN_ID = "{id} is not a candidate for this call"
 MSG_UNKNOWN_TOOL = "{tool} is not a method a router can choose"
+MSG_TOOL_NO_CANDIDATE = (
+    "{tool} was set aside: no candidate is left for it, since none was offered for this call (the budget or the "
+    "configuration left it none) or the router excluded them all"
+)
 MSG_EXCLUSIONS_EMPTY = "excluding {ids} would leave {tool} no backend to try, so the exclusions were ignored"
 MSG_EXTRACT_NO_URL = "extract was chosen with no URL to read, so the call searches instead"
 MSG_PARAM_NOT_ALLOWED = "a router may not set {tool}'s {key}"
@@ -53,7 +59,8 @@ URL_HIDDEN = "<url>"
 URL_IN_TEXT = r"[A-Za-z][A-Za-z0-9+.-]*://[^\s\"`]+"
 """A URL inside free text, such as a router's reason: from its scheme up to whitespace, a double quote or a
 backtick. All of it is replaced by its scheme and host, so nothing after the host survives, brackets and
-punctuation included: a URL's end cannot be told safely, and what follows it may be its query."""
+punctuation included: a URL's end cannot be told safely, and what follows it may be its query. The URL
+finder, ``web_router._urls``, has its own pattern on purpose: it finds URLs to fetch, this one URLs to hide."""
 HOST_CHARS = r"[A-Za-z0-9.-]+"
 """What a shown host keeps: a host parsed out of free text stops at the first character a hostname cannot hold."""
 MSG_PARAM_DEPTH_UNKNOWN_PRICE = "search:{provider} at depth {depth} has no known price, so it never fits a cost cap"

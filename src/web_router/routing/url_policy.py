@@ -1,4 +1,4 @@
-"""``url_policy``: which URLs a routed call or a plan may send to a backend.
+"""``url_policy``: which URLs a routed call or a plan may fetch, or hand a backend as a URL.
 
 Experimental. A pre-dispatch hostname check: it reads the URL as written --
 a literal address in any spelling a browser accepts is judged as the address
@@ -17,16 +17,22 @@ hosts, and a backend registered to fetch locally may be meant for an intranet.
 
 It holds the URLs :meth:`~web_router.WebRouter.plan` finds in a prompt, before
 any candidate is built, and the URLs a router sets in ``params``, through the
-merge rule. The MCP browser tools keep their own, stricter guard.
+merge rule. A refused URL is never fetched and never passed as ``urls`` or
+``start_url``, but it is not cut from the prompt: the prompt's text, the URL
+in it, is still what a search, answer or research backend gets as its query
+and a browse agent as its task. The MCP browser tools keep their own, stricter
+guard.
 """
 
 from __future__ import annotations
 
+import ipaddress
 from collections.abc import Sequence
 from typing import Literal, get_args
 from urllib.parse import urlsplit
 
-from web_router._hosts import is_loopback, is_metadata, is_private
+from web_router._hosts import is_loopback, is_metadata, is_private, legacy_ipv4
+from web_router._urls import host_of
 from web_router.constants_urls import (
     AUTHORITY_REFUSED,
     LOCALHOST_SUFFIX,
@@ -42,7 +48,6 @@ from web_router.constants_urls import (
 )
 from web_router.exceptions import ConfigurationError
 from web_router.routing.merge import UrlCheck
-from web_router.routing.merge_params import host_of
 
 UrlPolicy = Literal["public_only"]
 """The URL policies a router takes; ``None`` is none."""
@@ -112,7 +117,18 @@ def public_only(url: str) -> str | None:
         return MSG_URL_LOOPBACK
     if is_private(host):
         return MSG_URL_PRIVATE
+    if legacy_ipv4(host) is not None and not _canonical_address(host):
+        # 010.0.0.1: a browser reads octal, macOS's getaddrinfo decimal; no public URL needs the spelling.
+        return MSG_URL_AMBIGUOUS
     return None
+
+
+def _canonical_address(host: str) -> bool:
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return True
 
 
 def url_check(policy: UrlPolicy | None) -> UrlCheck:

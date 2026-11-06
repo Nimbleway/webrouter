@@ -13,12 +13,13 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from typing import Any, cast
 
+from web_router._urls import shown
 from web_router.constants_params import MSG_EFFORT_NONE_FITS_EVERY, PARAMS_SOURCE_BUDGET
 from web_router.routing.candidates import CandidateSet
 from web_router.routing.contract import Budget, RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
-from web_router.routing.merge_params import misfit, shown
+from web_router.routing.merge_params import misfit
 from web_router.routing.params import EffortChoice, map_effort
 from web_router.routing.record import stamp
 from web_router.types_decision import DecisionRecord
@@ -42,7 +43,7 @@ def static_order(found: CandidateSet) -> dict[ToolName, list[str]]:
     return order
 
 
-def _budget_effort(
+def budget_effort(
     tool: ToolName,
     providers: tuple[str, ...],
     params: dict[str, Any],
@@ -92,7 +93,7 @@ def decided(
     merged = merge(req, decision, static_order(found), failure=failure, caller_set=caller_set, url_check=url_check)
     params = dict(merged.params)
     fields = merged.record()
-    choice = _budget_effort(merged.tool, merged.providers, params, caller_set, req.budget)
+    choice = budget_effort(merged.tool, merged.providers, params, caller_set, req.budget)
     if choice is not None:
         fields["params_reason"] = choice.reason
         if choice.effort is not None:

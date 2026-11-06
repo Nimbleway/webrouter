@@ -34,9 +34,11 @@ from typing import Any
 
 from web_router._chains import chains
 from web_router.constants import PROVIDER_AUTO
+from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
 from web_router.constants_candidates import (
     AUTO_GETTERS,
     KEYLESS_OPTION,
+    MSG_DROPPED_NOT_A_BACKEND,
     MSG_DROPPED_NOT_CONFIGURED,
     MSG_DROPPED_NOT_INSTALLED,
     MSG_DROPPED_OVER_COST,
@@ -50,6 +52,7 @@ from web_router.exceptions import (
     ConfigurationError,
     MissingParameterError,
     NoAnswerProviderError,
+    ProviderNotFoundError,
     ProviderNotInstalledError,
     UnsupportedFormatError,
     UnsupportedParameterError,
@@ -57,7 +60,7 @@ from web_router.exceptions import (
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, Candidate, ToolName
 from web_router.routing.params import map_effort
-from web_router.routing.pricing import attempt_cost, attempt_p90, over_cost
+from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -199,6 +202,8 @@ def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
             unbuilt.setdefault(name, MSG_DROPPED_NOT_CONFIGURED)
         except ProviderNotInstalledError:
             unbuilt.setdefault(name, MSG_DROPPED_NOT_INSTALLED)
+        except ProviderNotFoundError:  # a plain-list chain names backends of other methods too
+            unbuilt.setdefault(name, MSG_DROPPED_NOT_A_BACKEND)
         else:
             built.append(position)
     return built, unbuilt
@@ -217,21 +222,21 @@ def _estimates(
     return attempt_cost(attempt), attempt_p90(attempt)
 
 
+_DROPPED = {
+    UNKNOWN_PRICE: MSG_DROPPED_UNKNOWN_COST,
+    OVER_COST: MSG_DROPPED_OVER_COST,
+    UNKNOWN_P90: MSG_DROPPED_UNKNOWN_LATENCY,
+    OVER_TIME: MSG_DROPPED_OVER_TIME,
+}
+
+
 def _over_budget(cost: float | None, p90: float | None, budget: Budget | None) -> str | None:
     """Why ``budget`` leaves the candidate out, or ``None`` when it fits."""
     if budget is None:
         return None
-    cap = budget.max_cost_usd
-    if cap is not None and cost is None:
-        return MSG_DROPPED_UNKNOWN_COST.format(cap=cap)
-    if cap is not None and cost is not None and over_cost(cost, cap):
-        return MSG_DROPPED_OVER_COST.format(cost=cost, cap=cap)
-    limit = budget.time_limit_s
-    if limit is not None and p90 is None and budget.strict:
-        return MSG_DROPPED_UNKNOWN_LATENCY
-    if limit is not None and p90 is not None and p90 > limit:
-        return MSG_DROPPED_OVER_TIME.format(p90=p90, limit=limit)
-    return None
+    cap, limit = budget.max_cost_usd, budget.time_limit_s
+    code = misfit(cost, p90, cap, limit, budget.strict)
+    return None if code is None else _DROPPED[code].format(cost=cost, cap=cap, p90=p90, limit=limit)
 
 
 @cache

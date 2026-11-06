@@ -28,6 +28,7 @@ MSG_DROPPED_UNKNOWN_LATENCY = "no measured p90 latency, and the budget is strict
 MSG_DROPPED_OVER_TIME = "p90 latency {p90:g}s, over the {limit:g}s left"
 MSG_DROPPED_NOT_CONFIGURED = "not configured: auto could not build it"
 MSG_DROPPED_NOT_INSTALLED = "its optional dependency is not installed"
+MSG_DROPPED_NOT_A_BACKEND = "not a backend for this method"
 
 ONE_PAGE_URL = "https://example.com/"
 """What a plan prices extract on when the prompt names no URL and a router may supply its own: one page."""

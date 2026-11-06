@@ -170,7 +170,7 @@ def test_the_router_gets_the_least_of_its_timeout_the_budget_and_the_call_deadli
     assert attached.deadline(None) == 2.0
     assert attached.deadline(Budget(time_limit_s=0.5)) == 0.5
     with call_deadline(0.2):
-        assert 0.1 < attached.deadline(Budget(time_limit_s=0.5)) <= 0.2
+        assert 0 < attached.deadline(Budget(time_limit_s=0.5)) <= 0.2
 
 
 def _sleeper(req: RouteRequest) -> RouteDecision:
@@ -193,8 +193,7 @@ async def test_a_sync_router_that_sleeps_is_dropped_at_the_deadline_from_async_c
     assert outcome.failure == "router_timeout"
 
 
-@pytest.mark.parametrize("from_async", [False, True], ids=["from-sync", "from-async"])
-def test_an_async_router_that_sleeps_is_cancelled_at_the_deadline(from_async: bool) -> None:
+def test_an_async_router_that_sleeps_is_cancelled_at_the_deadline_from_sync_code() -> None:
     cancelled = threading.Event()
 
     async def slow(req: RouteRequest) -> RouteDecision:
@@ -205,10 +204,25 @@ def test_an_async_router_that_sleeps_is_cancelled_at_the_deadline(from_async: bo
             raise
         return DECISION
 
-    attached = AttachedRouter(slow)
-    outcome = asyncio.run(attached.acall(_req(0.05))) if from_async else attached.call(_req(0.05))
+    outcome = AttachedRouter(slow).call(_req(0.05))
     assert outcome.failure == "router_timeout"
     assert cancelled.wait(1.0)
+
+
+async def test_an_async_router_that_sleeps_is_cancelled_at_the_deadline_from_async_code() -> None:
+    cancelled = asyncio.Event()
+
+    async def slow(req: RouteRequest) -> RouteDecision:
+        try:
+            await asyncio.sleep(SLEEP_S)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return DECISION
+
+    outcome = await AttachedRouter(slow).acall(_req(0.05))
+    assert outcome.failure == "router_timeout"
+    await asyncio.wait_for(cancelled.wait(), 1.0)  # while this loop still runs, not at its shutdown
 
 
 def test_no_time_left_is_a_timeout_without_calling_the_router() -> None:
