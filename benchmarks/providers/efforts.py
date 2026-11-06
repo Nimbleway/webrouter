@@ -28,7 +28,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from _common import _pct
+from _common import _pct, _round
 from _tools_effort_plan import RESEARCH
 from frozen import FROZEN_DIR
 from route_eval_paths import path_id, research_by_effort
@@ -44,10 +44,6 @@ EFFORTS_COMMAND = "make efforts"
 P90 = 0.9
 MSG_EFFORTS_STALE = "{path} is stale: run `{command}` and commit the result"
 MSG_EFFORTS_WRITTEN = "wrote {path}"
-
-
-def _round(value: float | None) -> float | None:
-    return None if value is None else round(value, 6)
 
 
 def _p90(questions: Sequence[Question], path: str) -> float | None:

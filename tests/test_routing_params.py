@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from web_router import Budget, DecisionRecord
+from web_router.constants_params import PARAMS_SOURCE_BUDGET, PARAMS_SOURCE_CALLER
 from web_router.routing import params
 from web_router.routing.params import EffortChoice, effort_misfit, map_effort
 
@@ -50,7 +51,7 @@ def test_no_cap_changes_nothing(provider: str, budget: Budget | None) -> None:
 )
 def test_nimble_research_at_a_few_cost_caps(cap: float, effort: str) -> None:
     choice = map_effort("nimble", Budget(max_cost_usd=cap))
-    assert (choice.effort, choice.source, choice.misfit) == (effort, "budget", None)
+    assert (choice.effort, choice.source, choice.misfit) == (effort, PARAMS_SOURCE_BUDGET, None)
     assert choice.reason.startswith(f"effort {effort} (")
 
 
@@ -92,12 +93,12 @@ def test_when_no_measured_effort_fits_the_default_stays_and_says_whether_it_fits
 
 def test_the_callers_effort_always_stands_and_a_misfit_is_reported_not_downgraded() -> None:
     choice = map_effort("nimble", Budget(max_cost_usd=0.2), effort="high")
-    assert (choice.effort, choice.source) == ("high", "caller")
+    assert (choice.effort, choice.source) == ("high", PARAMS_SOURCE_CALLER)
     assert choice.misfit == "research:nimble at effort high is estimated at $0.5, over the $0.2 cost cap"
     fits = map_effort("nimble", Budget(max_cost_usd=1.0), effort="high")
     assert (fits.effort, fits.misfit) == ("high", None)
     assert map_effort("nimble", None, effort="medium") == EffortChoice(
-        effort="medium", source="caller", reason=fits.reason.replace("high", "medium")
+        effort="medium", source=PARAMS_SOURCE_CALLER, reason=fits.reason.replace("high", "medium")
     )
 
 
@@ -129,7 +130,7 @@ def test_an_unmeasured_backend_keeps_its_default_and_is_marked(provider: str) ->
 def test_a_choice_fills_the_decision_record() -> None:
     choice = map_effort("nimble", Budget(max_cost_usd=0.2))
     record = DecisionRecord(**choice.record("nimble"))
-    assert (record.params, record.params_source, record.unmeasured) == ({"effort": "low"}, "budget", None)
+    assert (record.params, record.params_source, record.unmeasured) == ({"effort": "low"}, PARAMS_SOURCE_BUDGET, None)
 
 
 def test_the_fit_check_reads_the_price_list() -> None:

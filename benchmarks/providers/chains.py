@@ -27,6 +27,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from _common import _round
 from frozen import FROZEN_DIR
 from route_eval_rank import MIN_QUESTIONS, RANKING_RULE, Floor, backend_stats, floor_for, recommended, too_few
 from route_eval_sets import load_set
@@ -47,10 +48,6 @@ CHAIN_PARTS = {"search": ("preferred", "appended"), "answer": ("preferred",)}
 CHAINS_COMMAND = "make chains"
 MSG_CHAINS_STALE = "{path} is stale: run `{command}` and commit the result"
 MSG_CHAINS_WRITTEN = "wrote {path}"
-
-
-def _round(value: float | None) -> float | None:
-    return None if value is None else round(value, 6)
 
 
 def _place(parts: Mapping[str, Sequence[str]], ranked: Sequence[str]) -> dict[str, list[str]]:

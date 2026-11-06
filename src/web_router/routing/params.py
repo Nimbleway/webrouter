@@ -44,6 +44,8 @@ from web_router.constants_params import (
     MSG_MISFIT_STRICT,
     MSG_MISFIT_TIME,
     MSG_MISFIT_UNKNOWN_PRICE,
+    PARAMS_SOURCE_BUDGET,
+    PARAMS_SOURCE_CALLER,
 )
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.routing.contract import Budget, ToolName
@@ -175,7 +177,7 @@ def _chosen(provider: str, fitting: Mapping[str, float]) -> EffortChoice:
         best_accuracy=fitting[best],
         provider=provider,
     )
-    return EffortChoice(effort=cast(ResearchEffort, chosen), source="budget", reason=reason)
+    return EffortChoice(effort=cast(ResearchEffort, chosen), source=PARAMS_SOURCE_BUDGET, reason=reason)
 
 
 def map_effort(provider: str | Provider, budget: Budget | None, effort: ResearchEffort | None = None) -> EffortChoice:
@@ -190,7 +192,7 @@ def map_effort(provider: str | Provider, budget: Budget | None, effort: Research
     if effort is not None:
         return EffortChoice(
             effort=effort,
-            source="caller",
+            source=PARAMS_SOURCE_CALLER,
             reason=MSG_EFFORT_CALLER.format(effort=effort),
             misfit=None if budget is None else effort_misfit(name, effort, budget),
             unmeasured=not _is_measured(name, effort),
