@@ -84,7 +84,8 @@ class LLMRouter:
         if client is None:
             from openai import AsyncOpenAI
 
-            client = AsyncOpenAI()  # OPENAI_API_KEY, and OPENAI_BASE_URL for any compatible server
+            # OPENAI_API_KEY, and OPENAI_BASE_URL for any compatible server. No retries: one model call per plan.
+            client = AsyncOpenAI(max_retries=0)
         self.client = client
         self.model = model or os.environ[MODEL_ENV]
 

@@ -75,10 +75,13 @@ class TestClassifier:
     def test_declares_its_time_limit(self) -> None:
         assert classifier.ClassifierRouter.timeout_s == 0.05
 
+    @pytest.mark.parametrize("missing", ["joblib", "sklearn"])
     def test_without_scikit_learn_it_says_how_to_get_it(
-        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+        self, missing: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        monkeypatch.setitem(sys.modules, "joblib", None)  # import joblib now raises ImportError
+        if missing == "sklearn":  # joblib alone installed, scikit-learn not
+            monkeypatch.setitem(sys.modules, "joblib", object())
+        monkeypatch.setitem(sys.modules, missing, None)  # importing it now raises ImportError
         classifier.main()
         assert "uv run --with scikit-learn" in capsys.readouterr().out
 

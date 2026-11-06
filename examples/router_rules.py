@@ -6,8 +6,7 @@ A router is any function that takes a `RouteRequest` and returns a
 backend is configured. Anything else gets no opinion -- `tools=None` -- and
 the call runs as it would with no router: a search, in `auto`'s order.
 
-The library ships a router like this built in, and the MCP server uses it by
-default (URL to extract, else search). This one is here to copy and change.
+It is here to copy and change: add a rule, or rank backends as well as methods.
 
 Runs offline with no key: `plan()` works out the method and backends without
 calling any of them.

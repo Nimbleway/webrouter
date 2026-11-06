@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from types import SimpleNamespace
 from typing import Any
 
@@ -70,6 +71,13 @@ class TestLLM:
 
     def test_declares_its_time_limit(self) -> None:
         assert llm.LLMRouter.timeout_s == 3.0
+
+    def test_the_default_client_never_retries(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        built: dict[str, Any] = {}
+        fake_openai = SimpleNamespace(AsyncOpenAI=lambda **kwargs: built.update(kwargs) or object())
+        monkeypatch.setitem(sys.modules, "openai", fake_openai)
+        llm.LLMRouter(model="m")
+        assert built == {"max_retries": 0}
 
     def test_the_model_comes_from_the_environment(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("LLM_ROUTER_MODEL", "from-env")

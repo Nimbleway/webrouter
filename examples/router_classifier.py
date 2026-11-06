@@ -69,14 +69,15 @@ def train(path: Path) -> None:
 
 
 def main() -> None:
-    try:
-        import joblib
-    except ImportError:
-        print("This example needs scikit-learn: uv run --with scikit-learn python examples/router_classifier.py")
-        return
     with tempfile.TemporaryDirectory() as folder:
         path = Path(folder) / "router.joblib"
-        train(path)
+        try:
+            import joblib
+
+            train(path)
+        except ImportError:
+            print("This example needs scikit-learn: uv run --with scikit-learn python examples/router_classifier.py")
+            return
         router = ClassifierRouter(joblib.load(path))
     with WebRouter(router=router) as client:
         for prompt in PROMPTS:
