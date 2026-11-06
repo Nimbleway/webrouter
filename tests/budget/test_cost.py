@@ -200,6 +200,13 @@ def test_with_no_cost_cap_provider_options_run_and_their_cost_stays_unknown(chai
     assert (response.decision.estimated_cost_usd, response.decision.unmeasured) == (None, _ids(chain, "first"))
 
 
+def test_provider_options_make_the_p90_unknown_as_well_as_the_price() -> None:
+    plain = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q"))
+    optioned = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q", provider_options={"x": 1}))
+    assert attempt_p90(plain) is not None
+    assert attempt_p90(optioned) is None
+
+
 def test_a_row_whose_estimate_is_only_a_floor_has_an_unknown_price() -> None:
     steps = Attempt(tool="browse", provider="browser-use", request=BrowseRequest(task="t"))
     tokens = Attempt(tool="answer", provider="brave", request=AnswerRequest(query="q"))

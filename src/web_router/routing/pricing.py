@@ -12,7 +12,8 @@ way when offered and another when run.
   which can change the mode the vendor bills. An extract is charged per URL.
 - **p90** is the price list's measured latency; for research with none there,
   the effort table's measured p90 for the effort, the backend's default when
-  none is set. Unknown otherwise.
+  none is set. Unknown otherwise, and with ``provider_options``, which can
+  change the mode that runs.
 """
 
 from __future__ import annotations
@@ -74,5 +75,7 @@ def attempt_cost(attempt: Attempt) -> float | None:
 
 
 def attempt_p90(attempt: Attempt) -> float | None:
-    """The measured p90 seconds of ``attempt``, or ``None`` when unmeasured."""
+    """The measured p90 seconds of ``attempt``, or ``None`` when unmeasured or ``provider_options`` may change it."""
+    if attempt.request.provider_options:
+        return None
     return mode_p90(attempt.provider, attempt.tool, attempt_mode(attempt))
