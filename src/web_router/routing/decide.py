@@ -41,7 +41,7 @@ def static_order(found: CandidateSet) -> dict[ToolName, list[str]]:
     return order
 
 
-def _budget_effort(
+def budget_effort(
     tool: ToolName,
     providers: tuple[str, ...],
     params: dict[str, Any],
@@ -85,7 +85,7 @@ def decided(
     merged = merge(req, decision, static_order(found), failure=failure, caller_set=caller_set, url_check=url_check)
     params = dict(merged.params)
     fields = merged.record()
-    if _budget_effort(merged.tool, merged.providers, params, caller_set, req.budget):
+    if budget_effort(merged.tool, merged.providers, params, caller_set, req.budget):
         fields.update(params=shown(params), params_source=PARAMS_SOURCE_BUDGET)
     if outcome is None:
         fields["reason"] = None  # no router: the static order is no router's empty answer

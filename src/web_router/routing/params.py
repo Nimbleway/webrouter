@@ -181,10 +181,12 @@ def map_effort(provider: str | Provider, budget: Budget | None, effort: Research
     if budget is None or (budget.max_cost_usd is None and budget.time_limit_s is None):
         return EffortChoice(effort=None, source=None, reason=MSG_EFFORT_NO_BUDGET.format(provider=name))
     measured = {e: float(s["accuracy"]) for e, s in measured_efforts(name).items() if e in EFFORTS}
-    if len(measured) < MIN_MEASURED_EFFORTS:
-        unmeasured = MSG_EFFORT_UNMEASURED.format(provider=name, min=MIN_MEASURED_EFFORTS, set=effort_table()["set"])
-        return _default(name, budget, unmeasured)
     fitting = {e: accuracy for e, accuracy in measured.items() if effort_misfit(name, e, budget) is None}
+    if len(measured) < MIN_MEASURED_EFFORTS:
+        # Too few to rank: the default stands while it fits; when it does not, a measured effort that fits runs.
+        unmeasured = MSG_EFFORT_UNMEASURED.format(provider=name, min=MIN_MEASURED_EFFORTS, set=effort_table()["set"])
+        default = _default(name, budget, unmeasured)
+        return default if default.misfit is None or not fitting else _chosen(name, fitting)
     if not fitting:
         return _default(name, budget, MSG_EFFORT_NONE_FITS.format(provider=name))
     return _chosen(name, fitting)

@@ -27,12 +27,13 @@ from pydantic import BaseModel
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS
 from web_router.constants_invoke import MSG_ROUTE_TOOLS
+from web_router.constants_params import PARAMS_SOURCE_BUDGET
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, call_route, current_route
 from web_router.routing.budget import budget_scope
 from web_router.routing.candidates import CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
-from web_router.routing.decide import decided
+from web_router.routing.decide import budget_effort, decided
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge import UrlCheck
 from web_router.routing.url_policy import UrlPolicy, url_check
@@ -147,6 +148,28 @@ class RouterSetup:
         return CallRoute(order={out.tool: out.providers}), request, out.record
 
 
+def _unrouted(chain: Any, request: _RequestT, budget: Budget | None) -> tuple[_RequestT, DecisionRecord | None]:
+    """A call no router orders: with a budget, research still runs at the effort the budget maps.
+
+    The effort is the one :func:`~web_router.routing.decide.budget_effort` picks over the backends the budget
+    leaves in the chain's order -- one that fits on every one of them -- unless the caller set one.
+    """
+    capped = budget is not None and (budget.max_cost_usd is not None or budget.time_limit_s is not None)
+    if not capped or not isinstance(request, ResearchRequest) or getattr(chain, "name", None) != PROVIDER_AUTO:
+        return request, None
+    found = build_candidates(_Only("research", chain), {"research": request}, budget=budget)
+    params: dict[str, Any] = {}
+    caller_set = request.specified_parameters()
+    if not budget_effort("research", tuple(c.provider for c in found.candidates), params, caller_set, budget):
+        return request, None
+    record = DecisionRecord(params=dict(params), params_source=PARAMS_SOURCE_BUDGET)
+    return request.model_copy(update=params), record
+
+
+def _decided(response: _ResponseT, record: DecisionRecord | None) -> _ResponseT:
+    return response if record is None else response.model_copy(update={"decision": record})
+
+
 def in_force_with(route: CallRoute) -> CallRoute:
     """``route``'s order, kept with the hook already in force -- the budget's -- so both hold."""
     in_force = current_route()
@@ -168,7 +191,8 @@ class SyncRouted(RouterSetup):
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
             routed = self._route_request(chain, request, budget)
             if routed is None:
-                return scope.settle(call(request))
+                request, mapped = _unrouted(chain, request, budget)
+                return scope.settle(_decided(call(request), mapped))
             assert self._router is not None  # a request is built only with a router attached
             route, request, record = self._merged(routed, self._router.call(routed[0]), request)
             with call_route(in_force_with(route)):
@@ -188,7 +212,8 @@ class AsyncRouted(RouterSetup):
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
             routed = self._route_request(chain, request, budget)
             if routed is None:
-                return scope.settle(await call(request))
+                request, mapped = _unrouted(chain, request, budget)
+                return scope.settle(_decided(await call(request), mapped))
             assert self._router is not None  # a request is built only with a router attached
             route, request, record = self._merged(routed, await self._router.acall(routed[0]), request)
             with call_route(in_force_with(route)):

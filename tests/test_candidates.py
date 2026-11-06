@@ -195,16 +195,15 @@ def test_a_cost_cap_drops_unknown_prices(keys: pytest.MonkeyPatch) -> None:
     assert "search:brave" in _ids(found)
 
 
-def test_research_without_effort_is_priced_at_its_default_effort(keys: pytest.MonkeyPatch) -> None:
+def test_research_without_effort_is_priced_at_its_default_effort_while_it_fits(keys: pytest.MonkeyPatch) -> None:
     _set_keys(keys, "linkup")
     request = {"research": ResearchRequest(query="q")}
     assert estimate("linkup", "research") == 1.5  # its default, high
     roomy = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=2.0))
     assert _one(roomy, "research:linkup").est_cost_usd == 1.5
-    # Linkup has too few measured efforts for the mapping to pick one, so its default stays, and is dropped.
+    # Under $1 the default does not fit, but measured low ($0.25) does: Linkup stays a candidate, at low.
     tight = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=1.0))
-    assert _ids(tight) == []
-    assert tight.dropped["research:linkup"].startswith("estimated $1.5")
+    assert _one(tight, "research:linkup").est_cost_usd == estimate("linkup", "research", "low") == 0.25
 
 
 def test_research_without_effort_is_priced_at_the_effort_the_budget_maps(keys: pytest.MonkeyPatch) -> None:

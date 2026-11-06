@@ -147,3 +147,9 @@ def test_the_fit_check_reads_the_price_list() -> None:
     for effort, price in NIMBLE_PRICES.items():
         assert effort_misfit("nimble", effort, Budget(max_cost_usd=price)) is None, "a price equal to the cap fits"
         assert effort_misfit("nimble", effort, Budget(max_cost_usd=price * 0.99)) is not None
+
+
+def test_with_too_few_measured_efforts_a_measured_one_that_fits_replaces_a_default_that_does_not() -> None:
+    assert map_effort("linkup", Budget(max_cost_usd=2.0)).effort is None, "the default fits: it stands"
+    assert map_effort("linkup", Budget(max_cost_usd=1.0)).effort == "low"
+    assert map_effort("linkup", Budget(max_cost_usd=0.1)).effort is None, "nothing measured fits: the default"
