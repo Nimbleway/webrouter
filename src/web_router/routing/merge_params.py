@@ -168,10 +168,16 @@ def _undeclared(tool: str, key: str, providers: Sequence[str]) -> str | None:
     return None
 
 
+def router_url_refusal(decision: RouteDecision, url_check: UrlCheck | None, caller_set: Collection[str]) -> str | None:
+    """Why the router's extract URLs fail a check; ``None`` when they pass, or when it gave none."""
+    urls = (decision.params or {}).get("extract", {}).get("urls")
+    return None if urls is None else _refusal("extract", "urls", urls, caller_set, url_check)
+
+
 def router_urls(decision: RouteDecision, url_check: UrlCheck | None, caller_set: Collection[str]) -> bool:
     """Whether the router gave extract URLs that pass every check: rule 7 reads it before the method is final."""
-    urls = (decision.params or {}).get("extract", {}).get("urls")
-    return urls is not None and _refusal("extract", "urls", urls, caller_set, url_check) is None
+    gave = (decision.params or {}).get("extract", {}).get("urls") is not None
+    return gave and router_url_refusal(decision, url_check, caller_set) is None
 
 
 def checked_params(

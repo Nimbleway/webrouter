@@ -38,17 +38,26 @@ from web_router.constants_merge import (
     LAST_RESORT_TOOL,
     MSG_EXCLUSIONS_EMPTY,
     MSG_EXTRACT_NO_URL,
+    MSG_TOOL_NO_CANDIDATE,
     MSG_UNKNOWN_ID,
     MSG_UNKNOWN_TOOL,
     NOTE_EXCLUDE,
     NOTE_EXTRACT,
+    NOTE_EXTRACT_URLS,
     ROUTER_EMPTY,
     ROUTER_INVALID,
     ROUTER_TIMEOUT,
 )
 from web_router.constants_params import PARAMS_SOURCE_ROUTER
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
-from web_router.routing.merge_params import UrlCheck, checked_params, hide_urls, router_urls, shown
+from web_router.routing.merge_params import (
+    UrlCheck,
+    checked_params,
+    hide_urls,
+    router_url_refusal,
+    router_urls,
+    shown,
+)
 
 FallbackReason = Literal["router_timeout", "router_error", "router_invalid"]
 """Why the static order was used instead of a decision."""
@@ -205,6 +214,8 @@ def _tool(request: RouteRequest, decision: RouteDecision, excluded: Collection[s
             ignored[tool] = MSG_UNKNOWN_TOOL.format(tool=tool)
         elif tool in left:
             return tool
+        else:
+            ignored[tool] = MSG_TOOL_NO_CANDIDATE.format(tool=tool)
     return LAST_RESORT_TOOL
 
 
@@ -251,6 +262,9 @@ def merge(
     no_url = request.pinned_tool is None and not request.urls and not router_urls(decision, url_check, caller_set)
     if tool == EXTRACT_TOOL and no_url:
         ignored[NOTE_EXTRACT] = MSG_EXTRACT_NO_URL
+        refused = router_url_refusal(decision, url_check, caller_set)
+        if refused is not None:
+            ignored[NOTE_EXTRACT_URLS] = refused
         tool = LAST_RESORT_TOOL
     ranked = _ranked(tool, decision, known, ignored)
     providers = _order(tool, request, ranked, excluded, static_order)

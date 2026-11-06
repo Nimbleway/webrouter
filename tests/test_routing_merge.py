@@ -329,3 +329,13 @@ def test_a_backend_that_cannot_be_looked_up_is_not_said_to_refuse_the_option() -
 def test_a_confidence_outside_0_to_1_is_router_invalid(confidence: float) -> None:
     assert _merge(RouteDecision(confidence=confidence), pinned="search").notes.fallback == "router_invalid"
     assert _merge(RouteDecision(confidence=1), pinned="search").notes.fallback is None
+
+
+def test_rule_1_a_tool_set_aside_for_want_of_a_candidate_is_noted() -> None:
+    searches = tuple(Candidate(tool="search", provider=p) for p in ("exa", "brave"))  # the budget dropped extract's
+    request = RouteRequest(prompt="read https://example.com/", candidates=searches, deadline_s=1.0, urls=("x",))
+    merged = merge(request, RouteDecision(tools=["extract", "search"]), STATIC)
+    assert merged.tool == "search" and "no candidate is left" in merged.notes.ignored["extract"]
+    excluded = _merge(RouteDecision(tools=["answer"], exclude={"answer:perplexity": "down"}))
+    assert excluded.tool == "search" and "answer" in excluded.notes.ignored
+    assert "research" not in _merge(RouteDecision(tools=["research", "answer"])).notes.ignored, "chosen: no note"

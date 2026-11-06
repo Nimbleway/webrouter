@@ -35,10 +35,16 @@ ROUTER_EMPTY: Final = "router_empty"
 
 NOTE_EXCLUDE = "exclude"
 NOTE_EXTRACT = "extract"
+NOTE_EXTRACT_URLS = "params.extract.urls"
+"""The note for the router's extract URLs when they were refused and the call searches instead."""
 """The keys of the notes that are about the decision as a whole rather than one id or option."""
 
 MSG_UNKNOWN_ID = "{id} is not a candidate for this call"
 MSG_UNKNOWN_TOOL = "{tool} is not a method a router can choose"
+MSG_TOOL_NO_CANDIDATE = (
+    "{tool} was set aside: no candidate is left for it, since none was offered for this call (the budget or the "
+    "configuration left it none) or the router excluded them all"
+)
 MSG_EXCLUSIONS_EMPTY = "excluding {ids} would leave {tool} no backend to try, so the exclusions were ignored"
 MSG_EXTRACT_NO_URL = "extract was chosen with no URL to read, so the call searches instead"
 MSG_PARAM_NOT_ALLOWED = "a router may not set {tool}'s {key}"
