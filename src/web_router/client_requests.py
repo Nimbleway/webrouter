@@ -2,15 +2,18 @@
 
 Pure functions, kept apart so ``client.py`` stops growing. Both routers build
 every request here, so the sync and async twins of a method can never send
-different requests for the same arguments.
+different requests for the same arguments. :func:`async_client_holders`, the
+sync router's check of its ``provider_config``, lives here for the same reason.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from pydantic import BaseModel
 
+from web_router.constants import AUTO_CLIENT_OPTION, DELEGATING_PROVIDERS
 from web_router.types import (
     BrowseRequest,
     BrowserRequest,
@@ -22,6 +25,7 @@ from web_router.types import (
     SearchRequest,
     StealthLevel,
     Viewport,
+    provider_name,
 )
 
 JsonSchema = dict[str, Any] | type[BaseModel]
@@ -144,3 +148,25 @@ def as_json_schema(schema: JsonSchema | None) -> dict[str, Any] | None:
     if schema is None or isinstance(schema, dict):
         return schema
     return schema.model_json_schema()
+
+
+def async_client_holders(config: dict[str, dict[str, Any]]) -> set[str]:
+    """Every backend ``config`` hands an ``async_client``: by name, in ``auto``'s ``members_config``, or in its chain.
+
+    A chain is a list of entries or a mapping from method to one, and an entry
+    a bare name or ``(name, kwargs)`` -- only the latter can carry a client.
+    """
+    entries: list[tuple[str, Any]] = list(config.items())
+    for delegating in DELEGATING_PROVIDERS:
+        own = config.get(delegating, {})
+        entries.extend((own.get("members_config") or {}).items())
+        chain = own.get("chain") or ()
+        for listed in chain.values() if isinstance(chain, Mapping) else (chain,):
+            entries.extend(
+                (item[0], item[1]) for item in listed or () if isinstance(item, (tuple, list)) and len(item) == 2
+            )
+    return {
+        provider_name(name)
+        for name, options in entries
+        if isinstance(options, Mapping) and options.get(AUTO_CLIENT_OPTION)
+    }

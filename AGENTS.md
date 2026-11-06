@@ -95,7 +95,8 @@ src/web_router/
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
 ├── client_requests.py  the routers' request builders: a method's arguments in, its
-│                       normalized request out; JsonSchema
+│                       normalized request out; JsonSchema; the sync router's
+│                       async_client check
 ├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
@@ -124,6 +125,7 @@ src/web_router/
 ├── constants_routing.py routing's candidate-id separator and messages
 ├── constants_candidates.py the candidate builder's getters and drop reasons,
 │                       kept apart so constants_routing.py stays small
+├── constants_invoke.py a router's default timeout, failure codes and messages
 ├── routing/            the router contract (experimental): what a router is shown
 │   │                   and what it may answer, one module per part
 │   ├── contract.py     ToolName, Budget, Candidate, RouteRequest, RouteDecision, Plan
@@ -138,7 +140,15 @@ src/web_router/
 │   │                   the caller's own, the budget, the URL policy
 │   ├── candidates.py   build_candidates(): every (tool, provider) a call's `auto`
 │   │                   chains can serve, priced, timed and prefiltered by the budget
-│   └── invoke.py       empty until its part lands
+│   ├── invoke.py       router=: the two forms a router takes, called sync or async on
+│   │                   its own thread or loop within its timeout, and the failure policy
+│   ├── routed.py       the routers' mixin every routable call runs through: whether
+│   │                   to ask the router (route_tools, auto only), what it is shown,
+│   │                   and the decision record
+│   └── interim.py      stand-ins for the candidate builder and the merge rule, until
+│                       candidates.py and merge.py replace them
+├── _urls.py            urls_in(): the URLs written in a query's prose
+├── constants_urls.py   the punctuation stripped from the end of a URL found in prose
 ├── constants_params.py the effort mapping's data path, rule and reasons
 ├── constants_merge.py  the options a router may set, and the merge's reasons and notes
 ├── constants_prices.py the price list's data path, unit divisors, messages and
@@ -855,7 +865,7 @@ timeouts, header names and message templates belong in a constants module,
 but new ones never go into `constants.py` (beyond a registry entry, paid for as
 above): a provider's go in its `constants_<provider>.py`, and any others in a
 module of their own next to it named for their area, `constants_<area>.py`, as
-`constants_answer.py` and `constants_decisions.py` already are.
+`constants_answer.py` and `constants_urls.py` already are.
 
 **Unset means unset.** Request fields left as `None` must not be sent to the
 provider, so each API keeps its own defaults instead of inheriting ours. Use
@@ -1214,8 +1224,7 @@ Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses 
 read only by its judge behind `evaluate()` (the `evals` extra) —
 `OpenAIJudge` and `AnthropicJudge` — so each appears in `.env.example` and in
 no `*_ENV_BY_PROVIDER` table, and no search, extract, research or browser call
-ever touches either. The opt-in `LLMDecider` behind `classify()` (`decider="llm"`, the `decider=`
-spike) reads `OPENAI_API_KEY` too, only when a caller asks for it and passes no `api_key`. `benchmarks/agent/` reads both too, for its agents —
+ever touches either. `benchmarks/agent/` reads both too, for its agents —
 `ANTHROPIC_API_KEY` for Claude's, `OPENAI_API_KEY` for OpenAI's; the Claude and
 OpenAI tools never read either key, because they are
 definitions the caller's own client sends. `.env` is gitignored — keep it that way. `TEMPLATE_ENV_BY_PROVIDER` is the

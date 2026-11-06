@@ -37,7 +37,7 @@ caller gets. :meth:`WebRouter.benchmark_extract` is the same consumer of
 from __future__ import annotations
 
 import threading
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from contextlib import AsyncExitStack, ExitStack, suppress
 from types import TracebackType
 from typing import Any, Generic, TypeVar
@@ -47,6 +47,7 @@ from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
 from web_router.client_requests import JsonSchema as JsonSchema
 from web_router.client_requests import (
+    async_client_holders,
     build_browse_request,
     build_browser_request,
     build_extract_request,
@@ -54,7 +55,6 @@ from web_router.client_requests import (
     build_search_request,
 )
 from web_router.constants import (
-    AUTO_CLIENT_OPTION,
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
     DELEGATING_PROVIDERS,
@@ -64,10 +64,6 @@ from web_router.constants import (
     PROVIDER_MAX,
     RESEARCH_TIMEOUT,
 )
-from web_router.constants_decisions import MSG_ROUTE_DECIDER_CONFIG_UNUSED
-from web_router.decisions import execution
-from web_router.decisions.registry import create_decider
-from web_router.decisions.route import Route
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
@@ -98,8 +94,8 @@ from web_router.registry import (
     create_template_provider,
 )
 from web_router.registry_answer import available_answer_providers
-from web_router.routing import Budget
-from web_router.routing.budget import budget_scope
+from web_router.routing import Budget, RouterLike, ToolName
+from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
 from web_router.types import (
     BrowseResponse,
     ExtractFormat,
@@ -121,7 +117,7 @@ from web_router.types import (
 _HandleT = TypeVar("_HandleT", BrowserHandle, AsyncBrowserHandle)
 
 
-class _BaseRouter(Generic[_HandleT]):
+class _BaseRouter(RouterSetup, Generic[_HandleT]):
     """Provider resolution and caching shared by the sync and async routers.
 
     Generic only in the browser handle each one hands out, which is the one
@@ -133,6 +129,9 @@ class _BaseRouter(Generic[_HandleT]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
+        router: RouterLike | None = None,
+        route_tools: Collection[ToolName] | None = None,
+        fail_on_router_error: bool = False,
     ) -> None:
         """
         Args:
@@ -142,7 +141,11 @@ class _BaseRouter(Generic[_HandleT]):
                 name -- ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is
                 the only place credentials are passed explicitly; everything
                 else comes from the environment.
+            router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
+                ask it (all five by default) and whether its failure raises (experimental) -- see
+                :mod:`web_router.routing.invoke`.
         """
+        self._attach_router(router, route_tools, fail_on_router_error)
         name = provider_name(provider)
         # Either registry is enough to name a default: a router defaulted to a
         # search-only backend still extracts through `provider=`, and the
@@ -346,29 +349,7 @@ class _BaseRouter(Generic[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
-def _async_client_holders(config: dict[str, dict[str, Any]]) -> set[str]:
-    """Every backend ``config`` hands an ``async_client``: by name, in ``auto``'s ``members_config``, or in its chain.
-
-    A chain is a list of entries or a mapping from method to one, and an entry
-    a bare name or ``(name, kwargs)`` -- only the latter can carry a client.
-    """
-    entries: list[tuple[str, Any]] = list(config.items())
-    for delegating in DELEGATING_PROVIDERS:
-        own = config.get(delegating, {})
-        entries.extend((own.get("members_config") or {}).items())
-        chain = own.get("chain") or ()
-        for listed in chain.values() if isinstance(chain, Mapping) else (chain,):
-            entries.extend(
-                (item[0], item[1]) for item in listed or () if isinstance(item, (tuple, list)) and len(item) == 2
-            )
-    return {
-        provider_name(name)
-        for name, options in entries
-        if isinstance(options, Mapping) and options.get(AUTO_CLIENT_OPTION)
-    }
-
-
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRouted):
     """Synchronous router.
 
     Example:
@@ -386,53 +367,26 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        decider: str | Any | None = None,
-        decider_config: dict[str, Any] | None = None,
+        router: RouterLike | None = None,
+        route_tools: Collection[ToolName] | None = None,
+        fail_on_router_error: bool = False,
     ) -> None:
         """
-        Args:
-            decider: Turns on :meth:`classify`. ``"keywords"`` uses simple keyword
-                rules, keyless; ``"jev"`` asks TypeSafe's Jev with
-                ``TYPESAFE_API_KEY``; ``"llm"`` a chat model over any
-                OpenAI-compatible API, with ``OPENAI_API_KEY``. A name
-                given to :func:`~web_router.decisions.register_decider` works
-                the same way, and any instance with ``decide`` and ``close`` --
-                a configured :class:`~web_router.decisions.JevDecider`, say -- is
-                used as given. The query text is sent to it.
-            decider_config: Constructor kwargs for a decider given by name, as
-                ``provider_config`` is for backends: for example
-                ``decider="llm", decider_config={"model": ..., "base_url": ..., "api_key": ...}``.
-                With a decider instance, or no decider, it raises ConfigurationError rather than being ignored.
-
         Raises:
             ConfigurationError: for a backend handed an ``async_client``, which
                 this router, calling synchronously, could never use: through
-                ``auto`` the call would quietly go to another backend instead;
-                for a decider name nothing is registered under; or for a named
-                decider with no key, such as ``decider="jev"`` with no TypeSafe key;
-                or for ``decider_config`` with a decider that is not a name;
-                or for a decider whose ``passthrough`` is not an exception class or a tuple of them.
+                ``auto`` the call would quietly go to another backend instead.
         """
-        super().__init__(provider, provider_config=provider_config)
-        async_only = sorted(_async_client_holders(self._config))
+        super().__init__(
+            provider,
+            provider_config=provider_config,
+            router=router,
+            route_tools=route_tools,
+            fail_on_router_error=fail_on_router_error,
+        )
+        async_only = sorted(async_client_holders(self._config))
         if async_only:
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
-        if decider_config and not isinstance(decider, str):
-            raise ConfigurationError(MSG_ROUTE_DECIDER_CONFIG_UNUSED)
-        # Built after every check that can refuse the router, so a refused build leaves no open client behind.
-        if isinstance(decider, str):
-            # Imported on first use: Jev needs httpx, the llm decider the openai SDK.
-            decider = create_decider(decider, **(decider_config or {}))
-            self._owns_decider = True
-        else:
-            self._owns_decider = False  # a decider handed in may be shared: its owner closes it
-        try:
-            self._decider_passthrough = execution.passthrough_types(decider)
-        except ConfigurationError:
-            if self._owns_decider and decider is not None:
-                decider.close()
-            raise
-        self.decider = decider
 
     def search(
         self,
@@ -459,8 +413,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
             locale=locale,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return self.get_provider(provider).search(request)
+        chain = self.get_provider(provider)
+        return self._routed(chain, request, budget, lambda: chain.search(request))
 
     def extract(
         self,
@@ -479,8 +433,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
         nothing came back raises instead.
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
-        with budget_scope(budget):
-            return self.get_extract_provider(provider).extract(request)
+        chain = self.get_extract_provider(provider)
+        return self._routed(chain, request, budget, lambda: chain.extract(request))
 
     def templates(
         self,
@@ -577,8 +531,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return self.get_research_provider(provider).research(request, timeout=timeout)
+        chain = self.get_research_provider(provider)
+        return self._routed(chain, request, budget, lambda: chain.research(request, timeout=timeout))
 
     def submit_research(
         self,
@@ -649,8 +603,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return self.get_browse_provider(provider).browse(request, timeout=timeout)
+        chain = self.get_browse_provider(provider)
+        return self._routed(chain, request, budget, lambda: chain.browse(request, timeout=timeout))
 
     def submit_browse(
         self,
@@ -732,32 +686,6 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
         )
         return self._track(self.get_browser_provider(provider).open(request))
 
-    def classify(
-        self,
-        query: str,
-        *,
-        urls: str | list[str] | None = None,
-        output_schema: JsonSchema | None = None,
-    ) -> Route:
-        """Decide what to run for ``query`` before spending on it: the method, and the auto chain to run it on.
-
-        One call to the decider labels the query; a lookup table turns the
-        labels into a route. Passing ``urls`` routes to extract and
-        ``output_schema`` to research without asking. A decider that fails, times
-        out or raises anything else gives today's default -- search on the default chain -- with
-        :attr:`Route.fallback` saying why. Nothing is searched: run it with
-        :meth:`execute`, or read it and call a method yourself.
-
-        This is a baseline for measuring decision-model routing, not a router contract.
-        """
-        return execution.classify(self, query, urls=urls, output_schema=output_schema)
-
-    def execute(
-        self, route: Route, **overrides: Any
-    ) -> SearchResponse | ExtractResponse | ResearchResponse | BrowseResponse:
-        """Run a :class:`Route` with this router's methods, on the route's chain. ``overrides`` go to the method."""
-        return execution.execute(self, route, **overrides)
-
     def close(self) -> None:
         """Release every browser session still open, then close every provider this router built.
 
@@ -778,8 +706,6 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
                 stack.callback(instance.close)
             for handle in self._open_handles():
                 stack.callback(self._release_tracked, handle)
-            if self._owns_decider and self.decider is not None:
-                stack.callback(self.decider.close)
 
     def _release_tracked(self, handle: BrowserHandle) -> None:
         handle.release()
@@ -797,7 +723,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
         self.close()
 
 
-class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark):
+class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncRouted):
     """Asynchronous router.
 
     Example:
@@ -830,8 +756,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             locale=locale,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return await self.get_provider(provider).asearch(request)
+        chain = self.get_provider(provider)
+        return await self._arouted(chain, request, budget, lambda: chain.asearch(request))
 
     async def extract(
         self,
@@ -849,8 +775,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
         where nothing came back raises.
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
-        with budget_scope(budget):
-            return await self.get_extract_provider(provider).aextract(request)
+        chain = self.get_extract_provider(provider)
+        return await self._arouted(chain, request, budget, lambda: chain.aextract(request))
 
     async def templates(
         self,
@@ -919,8 +845,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return await self.get_research_provider(provider).aresearch(request, timeout=timeout)
+        chain = self.get_research_provider(provider)
+        return await self._arouted(chain, request, budget, lambda: chain.aresearch(request, timeout=timeout))
 
     async def submit_research(
         self,
@@ -974,8 +900,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return await self.get_browse_provider(provider).abrowse(request, timeout=timeout)
+        chain = self.get_browse_provider(provider)
+        return await self._arouted(chain, request, budget, lambda: chain.abrowse(request, timeout=timeout))
 
     async def submit_browse(
         self,
