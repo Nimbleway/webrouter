@@ -16,6 +16,7 @@ handle failures uniformly regardless of which backend served the request:
     ├── BenchmarkTimeoutError       one benchmark row outlasted the comparison's timeout
     ├── DeadlineExceededError       a call outlasted its per-call deadline
     ├── RouterError                 an attached router failed, under fail_on_router_error=True
+    ├── BudgetExceededError         nothing a call could run fits its budget
     ├── ProviderError               the backend itself failed
     └── BrowserActionError          a page action on an open browser session failed
         ├── StaleElementError           a snapshot ref no longer names an element
@@ -54,6 +55,7 @@ from web_router.constants import (
     MSG_UNSUPPORTED_VALUES,
 )
 from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
+from web_router.constants_budget import MSG_BUDGET_EXCEEDED, SKIPPED
 from web_router.constants_invoke import MSG_ROUTER_FAILED
 
 
@@ -300,6 +302,22 @@ class RouterError(WebRouterError):
         self.router = router
         self.code = code
         super().__init__(MSG_ROUTER_FAILED.format(router=router, code=code))
+
+
+class BudgetExceededError(WebRouterError):
+    """Nothing the call could run fits its :class:`~web_router.Budget`. Experimental.
+
+    Raised before anything starts, naming each candidate the budget skipped
+    and why, as :attr:`skipped` holds them. Not a :class:`ProviderError`, as
+    :class:`DeadlineExceededError` is not: ``auto`` never takes it as a reason
+    to try the next member. A time cap reached mid-call raises the method's
+    own timeout error instead.
+    """
+
+    def __init__(self, skipped: Mapping[str, str]) -> None:
+        self.skipped = dict(skipped)
+        detail = "; ".join(SKIPPED.format(id=name, reason=reason) for name, reason in self.skipped.items())
+        super().__init__(MSG_BUDGET_EXCEEDED.format(skipped=detail))
 
 
 class ProviderError(WebRouterError):

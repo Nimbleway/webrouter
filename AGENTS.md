@@ -126,12 +126,15 @@ src/web_router/
 ├── constants_candidates.py the candidate builder's getters and drop reasons,
 │                       kept apart so constants_routing.py stays small
 ├── constants_invoke.py a router's default timeout, failure codes and messages
+├── constants_budget.py a budget's skip reasons and BudgetExceededError's message
 ├── routing/            the router contract (experimental): what a router is shown
 │   │                   and what it may answer, one module per part
 │   ├── contract.py     ToolName, Budget, Candidate, RouteRequest, RouteDecision, Plan
 │   ├── attempts.py     the seam in auto's fallback loops: a per-call order and
 │   │                   a hook before each attempt, held in a context variable
-│   ├── budget.py       budget_scope(), which every budget= call runs in
+│   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,
+│   │                   the check before each attempt, BudgetExceededError, the record
+│   ├── ledger.py       one budgeted call's ledger: the cost and p90 rules, the spend
 │   ├── params.py       map_effort(): the research effort a budget picks, from
 │   │                   data/efforts.json (`make efforts`) and the price list
 │   ├── merge.py        merge(): a router's decision and the static order made into
@@ -235,8 +238,9 @@ src/web_router/
     └── skyvern.py      browse, via httpx — tasks on Skyvern Cloud
 tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         tests/mcp/ the server, tests/max_extract/ the race
-                        (its conftest holds the fake members). test_contract.py,
-                        test_extract_contract.py, test_template_contract.py,
+                        (its conftest holds the fake members), tests/budget/
+                        the per-call budget (its conftest the priced chain).
+                        test_contract.py, test_extract_contract.py, test_template_contract.py,
                         test_research_contract.py, test_answer_contract.py,
                         test_browse_contract.py and
                         test_browser_contract.py guard the seven shared

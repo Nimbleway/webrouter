@@ -17,12 +17,15 @@ and recorded on the response's ``decision``.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Collection
-from typing import Any, Protocol, TypeVar, get_args
+from dataclasses import replace
+from typing import Any, TypeVar, get_args
+
+from pydantic import BaseModel
 
 from web_router.constants_invoke import MSG_ROUTE_TOOLS, ROUTER_TIMEOUT
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import ConfigurationError
-from web_router.routing.attempts import CallRoute, call_route
+from web_router.routing.attempts import CallRoute, call_route, current_route
 from web_router.routing.budget import budget_scope
 from web_router.routing.contract import Budget, RouteRequest, ToolName
 from web_router.routing.interim import chain_candidates, ranked_first
@@ -37,12 +40,7 @@ from web_router.types import (
 )
 from web_router.types_answer import AnswerRequest
 
-
-class _Decided(Protocol):
-    decision: DecisionRecord | None
-
-
-_ResponseT = TypeVar("_ResponseT", bound=_Decided)
+_ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 
 _TOOL_OF: dict[type[NormalizedRequest], ToolName] = {
     SearchRequest: "search",
@@ -132,6 +130,12 @@ class RouterSetup:
         return CallRoute(order={tool: merged}), record
 
 
+def _in_force_with(route: CallRoute) -> CallRoute:
+    """``route``'s order, kept with the hook already in force -- the budget's -- so both hold."""
+    in_force = current_route()
+    return route if in_force is None else replace(in_force, order={**in_force.order, **route.order})
+
+
 class SyncRouted(RouterSetup):
     def _routed(
         self,
@@ -144,16 +148,15 @@ class SyncRouted(RouterSetup):
 
         A routed call runs in the order the router chose, and its response records how.
         """
-        with budget_scope(budget):
+        with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
             req = self._route_request(chain, request, budget)
             if req is None:
-                return call()
+                return scope.settle(call())
             assert self._router is not None  # a request is built only with a router attached
             route, record = self._merged(req, self._router.call(req))
-            with call_route(route):
+            with call_route(_in_force_with(route)):
                 response = call()
-            response.decision = record
-            return response
+            return scope.settle(response.model_copy(update={"decision": record}))
 
 
 class AsyncRouted(RouterSetup):
@@ -165,13 +168,12 @@ class AsyncRouted(RouterSetup):
         call: Callable[[], Awaitable[_ResponseT]],
     ) -> _ResponseT:
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
-        with budget_scope(budget):
+        with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
             req = self._route_request(chain, request, budget)
             if req is None:
-                return await call()
+                return scope.settle(await call())
             assert self._router is not None  # a request is built only with a router attached
             route, record = self._merged(req, await self._router.acall(req))
-            with call_route(route):
+            with call_route(_in_force_with(route)):
                 response = await call()
-            response.decision = record
-            return response
+            return scope.settle(response.model_copy(update={"decision": record}))

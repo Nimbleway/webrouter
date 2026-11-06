@@ -35,7 +35,11 @@ class Budget:
     """
 
     time_limit_s: float | None = None
-    """The most seconds the call may wait: a cap on waiting, not a latency estimate."""
+    """The most seconds the call may wait: a cap on waiting, not a latency estimate.
+
+    It bounds when web-router stops waiting and starting attempts: a provider call that blocks past it
+    returns late. The built-in backends clamp each HTTP request to the time left, so theirs do not.
+    """
 
     strict: bool = False
     """Under a time cap, drop the candidates with no measured p90 latency instead of trying them."""
