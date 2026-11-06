@@ -14,6 +14,7 @@ import pytest
 
 from tests.test_auto_seam import MEMBERS, TOOLS, _member
 from web_router import AsyncWebRouter, Budget, Plan, RouteDecision, RouteRequest, WebRouter
+from web_router.exceptions import MissingParameterError
 from web_router.types import BrowseResponse, ExtractResponse, ResearchResponse, SearchResponse
 from web_router.types_answer import AnswerResponse
 
@@ -111,9 +112,22 @@ def test_the_router_picks_each_tool_and_the_plan_carries_its_params(tool: str) -
 
 
 @pytest.mark.usefixtures("called")
-def test_with_no_url_and_no_router_extract_has_no_candidates() -> None:
-    plan = _wr().plan("summarize the latest report", tool="extract")
-    assert plan.decision.offered == [] and list(plan.providers["extract"]) == []
+@pytest.mark.parametrize("router", [None, "extract"], ids=["no-router", "router-without-urls"])
+def test_a_pinned_extract_with_no_url_is_refused_at_plan_time(router: str | None) -> None:
+    wr = _wr(router=None if router is None else _chooser(router))
+    with pytest.raises(MissingParameterError, match="no http\\(s\\) URL"):
+        wr.plan("summarize the latest report", tool="extract")
+    with pytest.raises(MissingParameterError):
+        wr.run("summarize the latest report", tool="extract")
+
+
+@pytest.mark.usefixtures("called")
+def test_a_pinned_extract_whose_router_supplies_a_url_is_planned() -> None:
+    def route(req: RouteRequest) -> RouteDecision:
+        return RouteDecision(params={"extract": {"urls": ["https://example.com/r"]}})
+
+    plan = _wr(router=route).plan("summarize the latest report", tool="extract")
+    assert (plan.tool, plan.params["urls"]) == ("extract", ["https://example.com/r"])
 
 
 @pytest.mark.usefixtures("called")

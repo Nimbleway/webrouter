@@ -37,7 +37,7 @@ from web_router.constants_merge import (
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.routing.contract import Budget, RouteDecision
 from web_router.routing.params import EFFORTS, effort_misfit
-from web_router.routing.pricing import mode_cost
+from web_router.routing.pricing import mode_cost, over_cost
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -116,7 +116,7 @@ def _depth_misfit(provider: str, depth: str, budget: Budget) -> str | None:
     cost = mode_cost(provider, "search", depth)
     if cost is None:
         return MSG_PARAM_DEPTH_UNKNOWN_PRICE.format(provider=provider, depth=depth)
-    if cost > budget.max_cost_usd:
+    if over_cost(cost, budget.max_cost_usd):
         return MSG_PARAM_DEPTH_COST.format(provider=provider, depth=depth, cost=cost, cap=budget.max_cost_usd)
     return None
 

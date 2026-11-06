@@ -9,7 +9,9 @@ hosts, and a backend registered to fetch locally may be meant for an intranet.
 
 - ``None`` (the default) admits any ``http`` or ``https`` URL.
 - ``"public_only"`` also refuses loopback, link-local and cloud metadata
-  hosts, and private, shared (CGNAT) and reserved addresses -- for a server
+  hosts, and private, shared (CGNAT) and reserved addresses, and any URL a
+  browser could read a different host from (a backslash, ``@`` or ``%`` in
+  the authority; whitespace or a control character anywhere) -- for a server
   where a prompt could steer a locally fetching backend at its own network.
   For a cloud backend it mainly protects third parties.
 
@@ -26,7 +28,9 @@ from urllib.parse import urlsplit
 
 from web_router._hosts import is_loopback, is_metadata, is_private
 from web_router.constants_urls import (
+    AUTHORITY_REFUSED,
     LOCALHOST_SUFFIX,
+    MSG_URL_AMBIGUOUS,
     MSG_URL_LOOPBACK,
     MSG_URL_METADATA,
     MSG_URL_POLICY,
@@ -61,11 +65,44 @@ def any_web_url(url: str) -> str | None:
     return _scheme_refusal(url)[0]
 
 
+def _ambiguous(url: str) -> bool:
+    """Whether a browser's WHATWG parse could read ``url``'s host differently from :func:`urllib.parse.urlsplit`.
+
+    Refused rather than reconciled: whitespace or a control character anywhere
+    (a browser strips some of them), and in the authority a backslash (a
+    browser reads it as ``/``, ending the host early), an ``@`` (userinfo, the
+    classic host confusion) or a ``%`` (a browser decodes a percent-encoded host).
+    """
+    if any(ch.isspace() or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in url):
+        return True
+    _, sep, rest = url.partition(":")
+    authority = rest[2:] if sep and rest.startswith("//") else rest
+    for end in "/?#":
+        authority = authority.split(end, 1)[0]
+    return any(ch in authority for ch in AUTHORITY_REFUSED)
+
+
+def _as_browser_host(host: str) -> str | None:
+    """``host`` as a browser connects to it: a non-ASCII name mapped by IDNA (full-width digits, ideographic dots
+    included), so it is judged as the ASCII it becomes; ``None`` when it does not map."""
+    if host.isascii():
+        return host
+    try:
+        return host.encode("idna").decode("ascii").lower()
+    except UnicodeError:
+        return None
+
+
 def public_only(url: str) -> str | None:
     """Why ``url`` is refused under ``"public_only"``, or ``None`` when its host may be public."""
-    why, host = _scheme_refusal(url)
+    if _ambiguous(url):
+        return MSG_URL_AMBIGUOUS
+    why, written = _scheme_refusal(url)
     if why is not None:
         return why
+    host = _as_browser_host(written)
+    if host is None:
+        return MSG_URL_AMBIGUOUS
     if is_metadata(host):
         return MSG_URL_METADATA
     if is_loopback(host) or host.endswith(LOCALHOST_SUFFIX):

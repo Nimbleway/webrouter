@@ -20,7 +20,6 @@ import time
 from dataclasses import dataclass, field
 
 from web_router.constants_budget import (
-    COST_TOLERANCE_USD,
     SKIP_LATENCY_UNKNOWN,
     SKIP_NO_TIME,
     SKIP_OVER_COST,
@@ -32,7 +31,7 @@ from web_router.exceptions import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
-from web_router.routing.pricing import attempt_cost, attempt_p90
+from web_router.routing.pricing import attempt_cost, attempt_p90, over_cost
 from web_router.types import DecisionAttempt, DecisionHop, DecisionRecord
 
 
@@ -78,7 +77,7 @@ class Ledger:
         if cost is None:
             return SKIP_PRICE_UNKNOWN
         left = cap - self.spent
-        if cost > left + COST_TOLERANCE_USD:
+        if over_cost(cost, left):
             return SKIP_OVER_COST.format(cost=_usd(cost), left=_usd(max(left, 0.0)))
         return None
 

@@ -221,3 +221,15 @@ def test_a_route_that_refuses_a_named_backend_stops_the_budgeted_call(chain: Cha
         call(chain, CAP, provider="second")
     assert chain.called == []
     assert raised.value.skipped == {_ids(chain, "second")[0]: SKIP_ROUTE_REFUSED}
+
+
+@pytest.mark.parametrize(("cost", "fits"), [(0.01 + 5e-10, True), (0.01 + 1e-6, False)], ids=["in-tolerance", "over"])
+def test_the_candidate_builder_and_the_ledger_draw_the_cap_at_one_line(
+    chain: Chain, priced: Table, cost: float, fits: bool
+) -> None:
+    from web_router.routing.candidates import _over_budget
+
+    assert (_over_budget(cost, None, CAP) is None) is fits
+    priced.update(first=(cost, None), second=(0.0, None))
+    call(chain, CAP)
+    assert (chain.called[0] == "first") is fits
