@@ -17,12 +17,11 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Collection, Mapping, Sequence
 from typing import Any, get_args, overload
-from urllib.parse import urlsplit
 
 from web_router import registry
+from web_router._urls import host_of
 from web_router.constants_budget import OVER_COST
 from web_router.constants_merge import (
-    HOST_CHARS,
     MSG_PARAM_CALLER,
     MSG_PARAM_DEPTH_COST,
     MSG_PARAM_DEPTH_UNKNOWN_PRICE,
@@ -33,7 +32,6 @@ from web_router.constants_merge import (
     MSG_PARAM_UNDECLARED,
     MSG_PARAM_URL_REFUSED,
     ROUTER_PARAMS,
-    URL_HIDDEN,
     URL_IN_TEXT,
 )
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
@@ -65,17 +63,6 @@ DECLARED: dict[str, tuple[type[NormalizedRequest], Callable[[str], type[Any]]]] 
 """Per method, its request (whose ``always_sent`` every backend takes) and its registry's class lookup."""
 
 
-def host_of(url: str) -> str:
-    """What a note or a record shows of ``url``: its scheme and host, never its path, query or credentials."""
-    try:
-        parts = urlsplit(url)
-        host = parts.hostname
-    except ValueError:
-        return URL_HIDDEN
-    kept = re.match(HOST_CHARS, host or "")
-    return f"{parts.scheme}://{kept.group(0)}" if parts.scheme and kept else URL_HIDDEN
-
-
 def _hide(match: re.Match[str]) -> str:
     """The whole matched URL, and whatever ran on after it, as its scheme and host only."""
     return host_of(match.group(0))
@@ -88,16 +75,6 @@ def hide_urls(text: None) -> None: ...
 def hide_urls(text: str | None) -> str | None:
     """``text`` with every URL in it cut to its scheme and host: for anything a router wrote, ids included."""
     return None if text is None else re.sub(URL_IN_TEXT, _hide, text)
-
-
-def shown(params: Mapping[str, Any]) -> dict[str, Any]:
-    """``params`` as a record or a ``repr`` shows them: each URL cut to its scheme and host."""
-    out = dict(params)
-    if "urls" in out:
-        out["urls"] = [host_of(u) for u in out["urls"]]
-    if "start_url" in out:
-        out["start_url"] = host_of(out["start_url"])
-    return out
 
 
 def _valid(key: str, value: Any) -> bool:

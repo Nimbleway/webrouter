@@ -207,3 +207,13 @@ async def test_async_plan_and_run_route_as_the_sync_ones_do(called: list[str]) -
     response = await wr.run(plan)
     assert isinstance(response, AnswerResponse) and called[0] == "answer:third"
     assert isinstance(await wr.run(PROMPT), AnswerResponse)
+
+
+def test_a_plans_repr_shows_neither_its_prompt_nor_a_whole_url() -> None:
+    secret = "https://user:pw@example.com/p?token=SECRET"
+    plan = Plan(prompt=f"fetch {secret} now", tool="extract", params={"urls": [secret]}, providers={"extract": ["x"]})
+    shown = repr(plan)
+    assert "SECRET" not in shown and "pw@" not in shown and "fetch" not in shown
+    assert "https://example.com" in shown and "'extract'" in shown
+    searched = Plan(prompt=f"fetch {secret}", tool="search", params={"query": f"fetch {secret}"})
+    assert "SECRET" not in repr(searched)

@@ -13,12 +13,13 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from typing import Any, cast
 
+from web_router._urls import shown
 from web_router.constants_params import PARAMS_SOURCE_BUDGET
 from web_router.routing.candidates import CandidateSet
 from web_router.routing.contract import Budget, RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
-from web_router.routing.merge_params import misfit, shown
+from web_router.routing.merge_params import misfit
 from web_router.routing.params import map_effort
 from web_router.types import DecisionRecord
 

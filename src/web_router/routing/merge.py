@@ -33,6 +33,7 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal, cast, get_args
 
+from web_router._urls import shown
 from web_router.constants_merge import (
     EXTRACT_TOOL,
     LAST_RESORT_TOOL,
@@ -48,7 +49,7 @@ from web_router.constants_merge import (
 )
 from web_router.constants_params import PARAMS_SOURCE_ROUTER
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
-from web_router.routing.merge_params import UrlCheck, checked_params, hide_urls, router_urls, shown
+from web_router.routing.merge_params import UrlCheck, checked_params, hide_urls, router_urls
 
 FallbackReason = Literal["router_timeout", "router_error", "router_invalid"]
 """Why the static order was used instead of a decision."""

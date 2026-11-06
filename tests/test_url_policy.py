@@ -237,3 +237,32 @@ def test_a_metadata_address_in_any_spelling_is_named_as_one(url: str) -> None:
     from web_router.constants_urls import MSG_URL_METADATA
 
     assert public_only(url) == MSG_URL_METADATA
+
+
+@pytest.mark.parametrize("url", ["http://010.0.0.1/", "http://0127.0.0.1/", "http://010.8.8.8/"])
+def test_public_only_refuses_a_numeric_spelling_resolvers_read_differently(url: str) -> None:
+    # A browser reads 010 as octal (8), macOS's getaddrinfo as decimal (10): no public URL needs the spelling.
+    from web_router.constants_urls import MSG_URL_AMBIGUOUS
+
+    assert public_only(url) == MSG_URL_AMBIGUOUS
+
+
+@pytest.mark.parametrize(
+    ("url", "why"),
+    [
+        ("http://[64:ff9b::a9fe:a9fe]/", MSG_URL_METADATA),  # NAT64 169.254.169.254
+        ("http://[64:ff9b::127.0.0.1]/", MSG_URL_LOOPBACK),
+        ("http://[::127.0.0.1]/", MSG_URL_LOOPBACK),  # IPv4-compatible
+        ("http://[::7f00:1]/", MSG_URL_LOOPBACK),
+    ],
+)
+def test_an_ipv4_address_carried_in_ipv6_is_judged_as_that_ipv4(url: str, why: str) -> None:
+    assert public_only(url) == why
+
+
+def test_the_ipv6_forms_of_a_public_ipv4_and_ipv6_loopback_are_read_right() -> None:
+    from web_router._hosts import host_address, is_loopback
+
+    assert public_only("http://[64:ff9b::808:808]/") is None
+    assert str(host_address("64:ff9b::808:808")) == "8.8.8.8"
+    assert is_loopback("::1") and str(host_address("::1")) == "::1", "::1 is IPv6's own loopback, not 0.0.0.1"

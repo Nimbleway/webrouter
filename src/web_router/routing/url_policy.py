@@ -26,11 +26,13 @@ guard.
 
 from __future__ import annotations
 
+import ipaddress
 from collections.abc import Sequence
 from typing import Literal, get_args
 from urllib.parse import urlsplit
 
-from web_router._hosts import is_loopback, is_metadata, is_private
+from web_router._hosts import is_loopback, is_metadata, is_private, legacy_ipv4
+from web_router._urls import host_of
 from web_router.constants_urls import (
     AUTHORITY_REFUSED,
     LOCALHOST_SUFFIX,
@@ -46,7 +48,6 @@ from web_router.constants_urls import (
 )
 from web_router.exceptions import ConfigurationError
 from web_router.routing.merge import UrlCheck
-from web_router.routing.merge_params import host_of
 
 UrlPolicy = Literal["public_only"]
 """The URL policies a router takes; ``None`` is none."""
@@ -116,7 +117,18 @@ def public_only(url: str) -> str | None:
         return MSG_URL_LOOPBACK
     if is_private(host):
         return MSG_URL_PRIVATE
+    if legacy_ipv4(host) is not None and not _canonical_address(host):
+        # 010.0.0.1: a browser reads octal, macOS's getaddrinfo decimal; no public URL needs the spelling.
+        return MSG_URL_AMBIGUOUS
     return None
+
+
+def _canonical_address(host: str) -> bool:
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return True
 
 
 def url_check(policy: UrlPolicy | None) -> UrlCheck:

@@ -9,7 +9,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_CANDIDATE_ID
+from web_router._urls import shown
+from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_CANDIDATE_ID, PROMPT_PARAMS
 from web_router.types import DecisionRecord
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
@@ -143,3 +144,8 @@ class Plan:
 
     decision: DecisionRecord = field(default_factory=DecisionRecord)
     """How the plan was made: the same record a routed call's response carries."""
+
+    def __repr__(self) -> str:
+        """The plan without its prompt -- nor the query or task that repeat it -- and each URL as scheme and host."""
+        params = {k: v for k, v in shown(self.params).items() if k not in PROMPT_PARAMS}
+        return f"Plan(tool={self.tool!r}, params={params!r}, providers={dict(self.providers)!r})"
