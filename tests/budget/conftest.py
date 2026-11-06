@@ -10,6 +10,7 @@ from __future__ import annotations
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -29,14 +30,15 @@ def priced(monkeypatch: pytest.MonkeyPatch) -> Table:
     """The price list the budget reads, by member name, whatever the method and mode."""
     table: Table = {}
 
-    def estimate(provider: str, method: str, mode: str | None = None) -> float | None:
-        return table.get(provider, (None, None))[0]
+    def price(provider: str, method: str, mode: str | None = None) -> SimpleNamespace | None:
+        cost = table.get(provider, (None, None))[0]
+        return None if cost is None else SimpleNamespace(estimate_usd=cost, estimate_is_floor=False)
 
     def estimate_latency(provider: str, method: str, mode: str | None = None) -> tuple[float, float] | None:
         p90 = table.get(provider, (None, None))[1]
         return None if p90 is None else (p90, p90)
 
-    monkeypatch.setattr(prices, "estimate", estimate)
+    monkeypatch.setattr(prices, "price", price)
     monkeypatch.setattr(prices, "estimate_latency", estimate_latency)
     return table
 

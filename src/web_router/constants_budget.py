@@ -12,6 +12,7 @@ SKIP_OVER_SHARED = "est. {cost} > {left} left in the shared budget"
 SKIP_NO_TIME = "no time left"
 SKIP_OVER_TIME = "p90 {p90:.1f}s > {left:.1f}s left"
 SKIP_LATENCY_UNKNOWN = "no measured p90 under a strict time cap"
+SKIP_ROUTE_REFUSED = "refused by the call's route"
 """Why the budget passed over a candidate: in the decision record's hops and in the error."""
 
 SKIPPED = "{id} skipped: {reason}"

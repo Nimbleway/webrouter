@@ -6,10 +6,13 @@ routers, with prices and p90s the test sets.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from tests.budget.conftest import Chain, Table, call
 from web_router import BrowseTimeoutError, Budget, BudgetExceededError, DecisionHop, ResearchTimeoutError
+from web_router.constants_budget import SKIP_LATENCY_UNKNOWN, SKIP_OVER_TIME
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._deadline import current_deadline
 from web_router.routing import ledger
@@ -22,7 +25,7 @@ def test_a_known_p90_that_does_not_fit_the_time_left_is_skipped(chain: Chain, pr
     priced.update(first=(None, 9.0), second=(None, 1.0))
     response = call(chain, Budget(time_limit_s=5.0))
     assert chain.called == ["second"]
-    assert response.decision.hops == [DecisionHop(id=f"{chain.tool.name}:first", error="p90 9.0s > 5.0s left")]
+    assert response.decision.hops == [DecisionHop(id=f"{chain.tool.name}:first", error=_over(9.0, 5.0))]
 
 
 def test_an_unknown_p90_runs_under_a_time_cap_in_its_place(chain: Chain, priced: Table) -> None:
@@ -35,9 +38,7 @@ def test_strict_drops_an_unknown_p90(chain: Chain, priced: Table) -> None:
     priced.update(second=(None, 1.0))
     response = call(chain, Budget(time_limit_s=5.0, strict=True))
     assert chain.called == ["second"]
-    assert response.decision.hops == [
-        DecisionHop(id=f"{chain.tool.name}:first", error="no measured p90 under a strict time cap")
-    ]
+    assert response.decision.hops == [DecisionHop(id=f"{chain.tool.name}:first", error=SKIP_LATENCY_UNKNOWN)]
 
 
 def test_strict_without_a_time_cap_drops_nothing(chain: Chain, priced: Table) -> None:
@@ -46,7 +47,7 @@ def test_strict_without_a_time_cap_drops_nothing(chain: Chain, priced: Table) ->
 
 def test_when_nothing_fits_the_time_left_the_call_raises_budget_exceeded(chain: Chain, priced: Table) -> None:
     priced.update(first=(None, 9.0), second=(None, 8.0), third=(None, 7.0))
-    with pytest.raises(BudgetExceededError, match=r"p90 9\.0s > 5\.0s left"):
+    with pytest.raises(BudgetExceededError, match=re.escape(_over(9.0, 5.0))):
         call(chain, Budget(time_limit_s=5.0))
     assert chain.called == []
 
@@ -106,4 +107,4 @@ def test_a_job_whose_known_p90_does_not_fit_never_starts(chain: Chain, priced: T
 
 
 def _over(p90: float, limit: float) -> str:
-    return f"p90 {p90:.1f}s > {limit:.1f}s left"
+    return SKIP_OVER_TIME.format(p90=p90, left=limit)

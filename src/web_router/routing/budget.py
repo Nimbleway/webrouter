@@ -33,11 +33,11 @@ from typing import Generic, TypeVar
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_budget import SKIP_NO_TIME
+from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import WebRouterError
 from web_router.providers._deadline import call_deadline
-from web_router.routing.attempts import Attempt, CallRoute, call_route, current_route
+from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
 from web_router.routing.pool import current_pool
@@ -97,7 +97,10 @@ def _held(
             # A shared budget's clock ran out: say so before `auto` stops at the deadline untried.
             ledger.skipped[f"{tool}{CANDIDATE_ID_SEPARATOR}{name}"] = SKIP_NO_TIME
             raise ledger.refusal()
-        if name != PROVIDER_AUTO and not ledger.admit(Attempt(tool=tool, provider=name, request=request)):
+        if name != PROVIDER_AUTO and not admitted(tool, name, request):
+            # Through the same hook auto's members pass, so a route in force can refuse it too;
+            # the ledger's admit, last in that hook, reserves it in a shared budget.
+            ledger.skipped.setdefault(f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", SKIP_ROUTE_REFUSED)
             raise ledger.refusal()
         try:
             yield BudgetedCall(backend, ledger)

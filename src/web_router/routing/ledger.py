@@ -58,14 +58,22 @@ def attempt_mode(attempt: Attempt) -> str | None:
 
 
 def attempt_cost(attempt: Attempt) -> float | None:
-    """The estimated list price of ``attempt`` in US dollars, or ``None`` when unknown or billed by tokens.
+    """The estimated list price of ``attempt`` in US dollars, or ``None`` when it cannot be known before the call.
 
-    An extract is charged per URL, each a page or a request.
+    Unknown when the price list has no price -- no row, ``unknown``, billed by
+    tokens -- when the row is only a floor, with charges billed on top
+    (``estimate_is_floor``), and when the request carries ``provider_options``,
+    which can change the mode the vendor bills (a deeper tier, a pro mode). An
+    extract is charged per URL, each a page or a request.
     """
-    one = prices.estimate(attempt.provider, attempt.tool, attempt_mode(attempt))
-    if one is not None and isinstance(attempt.request, ExtractRequest):
-        return one * len(attempt.request.urls)
-    return one
+    if attempt.request.provider_options:
+        return None
+    row = prices.price(attempt.provider, attempt.tool, attempt_mode(attempt))
+    if row is None or row.estimate_is_floor or row.estimate_usd is None:
+        return None
+    if isinstance(attempt.request, ExtractRequest):
+        return row.estimate_usd * len(attempt.request.urls)
+    return row.estimate_usd
 
 
 def attempt_p90(attempt: Attempt) -> float | None:
