@@ -110,7 +110,8 @@ def _depth_misfit(provider: str, depth: str, budget: Budget) -> str | None:
     code = misfit_code(cost, p90, cap, limit, budget.strict)
     if code is None:
         return None
-    return _DEPTH_MISFITS[code].format(provider=provider, depth=depth, cost=cost, cap=cap, p90=p90, limit=limit)
+    shown_cap = limit if code == OVER_TIME else cap  # the time wording names the time limit as its cap
+    return _DEPTH_MISFITS[code].format(provider=provider, depth=depth, cost=cost, cap=shown_cap, p90=p90)
 
 
 _DEPTH_MISFITS = {

@@ -365,3 +365,23 @@ def test_rule_5_a_depth_checks_the_time_cap_and_strict_as_well_as_the_cost(monke
     assert strict.params == {} and "strict" in strict.notes.ignored["params.search.search_depth"]
     lenient = _merge(decision, pinned="search", budget=Budget(time_limit_s=10.0))
     assert lenient.params == {"search_depth": "lite"}
+
+
+@pytest.mark.parametrize(
+    ("latency", "budget", "kept"),
+    [
+        ((1.0, 30.0), Budget(time_limit_s=10.0), False),
+        ((1.0, 5.0), Budget(time_limit_s=10.0), True),
+        (None, Budget(time_limit_s=10.0), True),
+        (None, Budget(time_limit_s=10.0, strict=True), False),
+    ],
+)
+def test_rule_5_a_search_depth_must_fit_the_time_cap_too(
+    monkeypatch: pytest.MonkeyPatch, latency: tuple[float, float] | None, budget: Budget, kept: bool
+) -> None:
+    from web_router import prices
+
+    monkeypatch.setattr(prices, "estimate_latency", lambda *_: latency)
+    decision = RouteDecision(params={"search": {"search_depth": "deep"}}, exclude=NO_UNDECLARED)
+    merged = _merge(decision, pinned="search", budget=budget)
+    assert ("search_depth" in merged.params) is kept
