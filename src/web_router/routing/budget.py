@@ -8,7 +8,10 @@ exactly as it would without one. With a budget:
   attempt gets the time left; research and browse wait at most
   ``min(timeout, time left)``, and a time cap reached while a job runs raises
   the method's own timeout error, which carries the job's handle. The cap
-  limits how long the caller waits, not what the job spends;
+  limits how long the caller waits, not what the job spends. It bounds when
+  web-router stops waiting and starting attempts: a provider call that blocks
+  past it returns late. The built-in backends clamp each HTTP request to the
+  time left (no lower than half a second for a job's), so theirs do not;
 - before each attempt -- each member of an ``auto`` chain, in the order the
   call tries them, or the one backend named -- a :class:`~.ledger.Ledger`
   checks the estimate and the p90 against what is left, and skips a candidate
