@@ -20,13 +20,14 @@ a routed call would run it. The rules:
    noted, and the caller's options and the budget's mapping apply instead.
 6. **No decision.** A router that timed out, raised, or answered with
    anything but a well-formed :class:`~web_router.routing.RouteDecision` gets
-   the static order, with the reason.
+   the static order, with the reason. So does a decision that decides
+   nothing, recorded as ``router_empty`` and not as a failure.
 7. **Extract with no URL** searches instead, and says so.
 """
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal, cast, get_args
 
@@ -38,12 +39,12 @@ from web_router.constants_merge import (
     MSG_UNKNOWN_TOOL,
     NOTE_EXCLUDE,
     NOTE_EXTRACT,
+    ROUTER_EMPTY,
     ROUTER_INVALID,
     ROUTER_TIMEOUT,
 )
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
-from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
-from web_router.routing.merge_params import UrlCheck, checked_params, router_urls
+from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
+from web_router.routing.merge_params import UrlCheck, checked_params, router_urls, shown
 
 FallbackReason = Literal["router_timeout", "router_error", "router_invalid"]
 """Why the static order was used instead of a decision."""
@@ -72,6 +73,9 @@ class MergeNotes:
     fallback: FallbackReason | None = None
     """Why the static order was used instead of the decision; ``None`` when the decision was merged."""
 
+    empty: bool = False
+    """The router answered with a well-formed decision that decides nothing: the static order, and no failure."""
+
     reason: str | None = None
     """The router's own reason."""
 
@@ -85,9 +89,17 @@ class Merged:
     """Backend names, in the order to try them."""
 
     params: Mapping[str, Any]
-    """The router's options that passed every check. Empty, the caller's options and the budget's mapping apply."""
+    """The router's options that passed every check. Empty, the caller's options and the budget's mapping apply.
+
+    URLs are kept whole here, to be called with; the record and the ``repr`` show only their scheme and host."""
 
     notes: MergeNotes
+
+    def __repr__(self) -> str:
+        shown_params = shown(self.params)
+        return (
+            f"Merged(tool={self.tool!r}, providers={self.providers!r}, params={shown_params!r}, notes={self.notes!r})"
+        )
 
     def record(self) -> dict[str, Any]:
         """The :class:`~web_router.DecisionRecord` fields the merge fills."""
@@ -96,15 +108,11 @@ class Merged:
             "ranked": list(notes.ranked) or None,
             "merged": list(notes.merged),
             "excluded": dict(notes.excluded) or None,
-            "reason": notes.fallback or notes.reason,
+            "reason": notes.fallback or (ROUTER_EMPTY if notes.empty else notes.reason),
             "router_timeout": True if notes.fallback == ROUTER_TIMEOUT else None,
-            "params": dict(self.params) or None,
+            "params": shown(self.params) or None,
             "params_source": "router" if self.params else None,
         }
-
-
-def _id(tool: str, provider: str) -> str:
-    return f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"
 
 
 def _names(value: object) -> bool:
@@ -112,18 +120,41 @@ def _names(value: object) -> bool:
     return isinstance(value, list | tuple) and all(isinstance(v, str) for v in value)
 
 
+def _by_tool(value: object, check: Callable[[object], bool]) -> bool:
+    """``None``, or a mapping keyed by method names whose every value passes ``check``."""
+    if value is None:
+        return True
+    return isinstance(value, Mapping) and all(k in TOOLS and check(v) for k, v in value.items())
+
+
+def _options(value: object) -> bool:
+    return isinstance(value, Mapping) and all(isinstance(k, str) for k in value)
+
+
 def _well_formed(decision: object) -> bool:
-    """Whether ``decision`` is a :class:`RouteDecision` whose fields have the shapes the contract gives them."""
+    """Whether ``decision`` is a :class:`RouteDecision` whose fields have the shapes the contract gives them.
+
+    A mapping keyed by anything but one of the five method names is malformed, not an unknown id: the
+    contract types those keys, so a router that breaks them is broken, and its decision is set aside whole.
+    """
     if not isinstance(decision, RouteDecision):
         return False
-    providers, params, exclude = decision.providers, decision.params, decision.exclude
+    exclude, confidence = decision.exclude, decision.confidence
     return (
         (decision.tools is None or _names(decision.tools))
-        and (providers is None or (isinstance(providers, Mapping) and all(map(_names, providers.values()))))
+        and _by_tool(decision.providers, _names)
+        and _by_tool(decision.params, _options)
         and isinstance(exclude, Mapping)
         and all(isinstance(k, str) and isinstance(v, str) for k, v in exclude.items())
-        and (params is None or (isinstance(params, Mapping) and all(isinstance(p, Mapping) for p in params.values())))
+        and (decision.reason is None or isinstance(decision.reason, str))
+        and (confidence is None or (isinstance(confidence, int | float) and not isinstance(confidence, bool)))
     )
+
+
+def _empty(decision: RouteDecision) -> bool:
+    """A decision that decides nothing: no method, no backend, no exclusion and no option."""
+    providers, params = decision.providers or {}, decision.params or {}
+    return not (decision.tools or any(providers.values()) or decision.exclude or any(params.values()))
 
 
 def _order(
@@ -135,10 +166,12 @@ def _order(
     return tuple(dict.fromkeys(p for p in (*ranked, *static.get(tool, ()), *names) if p in pool))
 
 
-def _static(request: RouteRequest, static: Mapping[Any, Any], why: FallbackReason) -> Merged:
+def _static(request: RouteRequest, static: Mapping[Any, Any], why: FallbackReason | None, reason: str | None) -> Merged:
+    """The static order: for a failed router (``why``), or for an empty decision (``why`` of ``None``)."""
     tool = request.pinned_tool or LAST_RESORT_TOOL
     providers = _order(tool, request, (), (), static)
-    notes = MergeNotes(merged=tuple(_id(tool, p) for p in providers), fallback=why)
+    merged = tuple(candidate_id(tool, p) for p in providers)
+    notes = MergeNotes(merged=merged, fallback=why, empty=why is None, reason=reason)
     return Merged(tool=tool, providers=providers, params={}, notes=notes)
 
 
@@ -170,13 +203,10 @@ def _ranked(tool: str, decision: RouteDecision, known: Collection[str], ignored:
     asked: Mapping[Any, Sequence[str]] = decision.providers or {}
     ranked = []
     for provider in dict.fromkeys(asked.get(tool, ())):
-        if _id(tool, provider) in known:
+        if candidate_id(tool, provider) in known:
             ranked.append(provider)
         else:
-            ignored[_id(tool, provider)] = MSG_UNKNOWN_ID.format(id=_id(tool, provider))
-    for other in asked:
-        if other not in TOOLS:
-            ignored[other] = MSG_UNKNOWN_TOOL.format(tool=other)
+            ignored[candidate_id(tool, provider)] = MSG_UNKNOWN_ID.format(id=candidate_id(tool, provider))
     return tuple(ranked)
 
 
@@ -200,27 +230,29 @@ def merge(
     if failure is None and not _well_formed(decision):
         failure = ROUTER_INVALID
     if failure is not None:
-        return _static(request, static_order, failure)
+        return _static(request, static_order, failure, None)
     decision = cast(RouteDecision, decision)
+    if _empty(decision):
+        return _static(request, static_order, None, decision.reason)
     known = {c.id for c in request.candidates}
     ignored: dict[str, str] = {}
     excluded = _exclusions(decision, known, ignored)
     tool = _tool(request, decision, excluded, ignored)
-    no_url = request.pinned_tool is None and not request.urls and not router_urls(decision, url_check)
+    no_url = request.pinned_tool is None and not request.urls and not router_urls(decision, url_check, caller_set)
     if tool == "extract" and no_url:
         ignored[NOTE_EXTRACT] = MSG_EXTRACT_NO_URL
         tool = LAST_RESORT_TOOL
     ranked = _ranked(tool, decision, known, ignored)
     providers = _order(tool, request, ranked, excluded, static_order)
-    mine = [cid for cid in excluded if cid.startswith(_id(tool, ""))]
+    mine = [cid for cid in excluded if cid.startswith(candidate_id(tool, ""))]
     if not providers and mine:
         ignored[NOTE_EXCLUDE] = MSG_EXCLUSIONS_EMPTY.format(ids=", ".join(mine), tool=tool)
         excluded = {cid: why for cid, why in excluded.items() if cid not in mine}
         providers = _order(tool, request, ranked, (), static_order)
     params = checked_params(tool, decision, providers, request.budget, caller_set, url_check, ignored)
     notes = MergeNotes(
-        ranked=tuple(_id(tool, p) for p in ranked),
-        merged=tuple(_id(tool, p) for p in providers),
+        ranked=tuple(candidate_id(tool, p) for p in ranked),
+        merged=tuple(candidate_id(tool, p) for p in providers),
         excluded=excluded,
         ignored=ignored,
         reason=decision.reason,

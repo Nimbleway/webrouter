@@ -121,10 +121,8 @@ def test_rule_3_a_ranked_backend_that_is_also_excluded_stays_out() -> None:
     ("decision", "ignored"),
     [
         (RouteDecision(providers={"search": ["made-up", "exa"]}), {"search:made-up"}),
-        (RouteDecision(providers={"telepathy": ["exa"]}), {"telepathy"}),
         (RouteDecision(tools=["telepathy"]), {"telepathy"}),
         (RouteDecision(exclude={"search:made-up": "why"}), {"search:made-up"}),
-        (RouteDecision(params={"telepathy": {"x": 1}}), {"params.telepathy"}),
     ],
 )
 def test_rule_4_an_unknown_id_is_set_aside_and_noted_not_an_error(decision: RouteDecision, ignored: set[str]) -> None:
@@ -136,7 +134,7 @@ def test_rule_4_an_unknown_id_is_set_aside_and_noted_not_an_error(decision: Rout
 @pytest.mark.parametrize(
     ("tool", "params", "budget", "kept"),
     [
-        ("search", {"max_results": 3, "search_depth": "deep"}, None, {"max_results": 3, "search_depth": "deep"}),
+        ("search", {"max_results": 3, "search_depth": "deep"}, None, {"max_results": 3}),
         ("search", {"max_results": 0}, None, {}),
         ("search", {"max_results": True}, None, {}),
         ("search", {"search_depth": "bottomless"}, None, {}),
@@ -173,9 +171,26 @@ def test_rule_5_an_effort_must_fit_on_every_backend_in_the_order() -> None:
     assert merged.params == {"effort": "medium"}, "parallel's and nimble's medium are within $0.2"
 
 
-def test_rule_5_an_unknown_price_never_fits_a_cost_cap() -> None:
+NO_UNDECLARED = {"search:exa": "no depth", "search:brave": "no depth"}
+"""Leaves tavily and nimble, which both take ``search_depth``."""
+
+
+def test_rule_5_an_option_is_kept_only_when_every_backend_in_the_order_takes_it() -> None:
+    depth = {"search": {"search_depth": "deep"}}
+    merged = _merge(RouteDecision(params=depth), pinned="search")
+    assert merged.params == {}
+    assert merged.notes.ignored["params.search.search_depth"] == "search:brave does not take search_depth"
+    kept = _merge(RouteDecision(params=depth, exclude=NO_UNDECLARED), pinned="search")
+    assert kept.providers == ("tavily", "nimble") and kept.params == {"search_depth": "deep"}
+
+
+def test_rule_5_an_unknown_price_never_fits_a_cost_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    from web_router import prices
+
+    monkeypatch.setattr(prices, "estimate", lambda *_: None)
     budget = Budget(max_cost_usd=100.0)
-    merged = _merge(RouteDecision(params={"search": {"search_depth": "lite"}}), pinned="search", budget=budget)
+    decision = RouteDecision(params={"search": {"search_depth": "lite"}}, exclude=NO_UNDECLARED)
+    merged = _merge(decision, pinned="search", budget=budget)
     assert merged.params == {} and "no known price" in merged.notes.ignored["params.search.search_depth"]
 
 
@@ -211,6 +226,12 @@ def test_rule_5_a_url_passes_only_through_the_url_policy(
         (RouteDecision(providers={"search": "exa"}), None, "router_invalid"),  # type: ignore[dict-item]
         (RouteDecision(exclude={"search:exa": 1}), None, "router_invalid"),  # type: ignore[dict-item]
         (RouteDecision(params={"search": 3}), None, "router_invalid"),  # type: ignore[dict-item]
+        (RouteDecision(providers={"telepathy": ["exa"]}), None, "router_invalid"),  # type: ignore[dict-item]
+        (RouteDecision(providers={1: ["exa"]}), None, "router_invalid"),  # type: ignore[dict-item]
+        (RouteDecision(params={"telepathy": {"x": 1}}), None, "router_invalid"),  # type: ignore[dict-item]
+        (RouteDecision(params={"search": {1: 3}}), None, "router_invalid"),  # type: ignore[dict-item]
+        (RouteDecision(reason=["why"]), None, "router_invalid"),  # type: ignore[arg-type]
+        (RouteDecision(confidence="high"), None, "router_invalid"),  # type: ignore[arg-type]
         (RouteDecision(providers={"search": ["exa"]}), "router_timeout", "router_timeout"),
         (RouteDecision(providers={"search": ["exa"]}), "router_error", "router_error"),
     ],
@@ -277,3 +298,46 @@ def test_the_record_fills_the_decision_records_fields() -> None:
 def test_rule_5_a_key_another_method_takes_is_dropped(tool: str, key: str, value: Any) -> None:
     merged = _merge(RouteDecision(params={tool: {key: value}}), pinned=tool, url_check=lambda u: None)
     assert merged.params == {} and "may not set" in merged.notes.ignored[f"params.{tool}.{key}"]
+
+
+@pytest.mark.parametrize(
+    "decision",
+    [RouteDecision(), RouteDecision(reason="no opinion"), RouteDecision(tools=[], providers={"search": []})],
+)
+def test_an_empty_decision_gets_the_static_order_recorded_as_router_empty_not_a_failure(
+    decision: RouteDecision,
+) -> None:
+    merged = _merge(decision, pinned="search")
+    assert merged.providers == STATIC["search"] and merged.notes.fallback is None and merged.notes.empty
+    assert DecisionRecord(**merged.record()).reason == "router_empty"
+    assert not _merge(RouteDecision(providers={"search": ["exa"]}), pinned="search").notes.empty
+
+
+TOKEN_URL = "https://user:pw@a.example/page?session=s3cr3t-token#frag"
+
+
+def test_a_url_is_kept_to_call_with_but_never_shown_whole() -> None:
+    merged = _merge(RouteDecision(params={"browse": {"start_url": TOKEN_URL}}), pinned="browse", url_check=_none)
+    assert merged.params == {"start_url": TOKEN_URL}, "the call gets the URL whole"
+    assert merged.record()["params"] == {"start_url": "https://a.example"}
+    extract = _merge(RouteDecision(params={"extract": {"urls": [TOKEN_URL]}}), pinned="extract", url_check=_none)
+    assert extract.record()["params"] == {"urls": ["https://a.example"]}
+    refused = _merge(RouteDecision(params={"extract": {"urls": [TOKEN_URL]}}), pinned="extract", url_check=_refuse)
+    invalid = _merge(RouteDecision(params={"browse": {"start_url": [TOKEN_URL]}}), pinned="browse", url_check=_none)
+    for shown in (repr(merged), repr(extract), repr(refused), repr(invalid), str(DecisionRecord(**merged.record()))):
+        assert "s3cr3t" not in shown and "pw@" not in shown and "/page" not in shown
+    assert "a.example" in refused.notes.ignored["params.extract.urls"]
+
+
+def test_rule_7_a_url_the_caller_set_does_not_let_the_router_choose_extract() -> None:
+    params = {"extract": {"urls": ["https://a.example"]}}
+    merged = _merge(RouteDecision(tools=["extract"], params=params), url_check=_none, caller_set={"urls"})
+    assert merged.tool == "search" and "extract" in merged.notes.ignored
+
+
+def _none(url: str) -> None:
+    return None
+
+
+def _refuse(url: str) -> str:
+    return "not allowed"

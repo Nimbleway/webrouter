@@ -47,8 +47,7 @@ from web_router.constants_params import (
     PARAMS_SOURCE_BUDGET,
     PARAMS_SOURCE_CALLER,
 )
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
-from web_router.routing.contract import Budget, ToolName
+from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.types import Provider, ResearchEffort, provider_name
 
 RESEARCH: ToolName = "research"
@@ -80,7 +79,7 @@ class EffortChoice:
         return {
             "params": None if self.effort is None else {"effort": self.effort},
             "params_source": self.source,
-            "unmeasured": [f"{RESEARCH}{CANDIDATE_ID_SEPARATOR}{provider_name(provider)}"] if self.unmeasured else None,
+            "unmeasured": [candidate_id(RESEARCH, provider_name(provider))] if self.unmeasured else None,
         }
 
 
