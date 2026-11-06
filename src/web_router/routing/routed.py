@@ -35,6 +35,7 @@ from web_router.routing.contract import Budget, RouteRequest, ToolName
 from web_router.routing.decide import decided
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge import UrlCheck
+from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import (
     BrowseRequest,
     DecisionRecord,
@@ -95,12 +96,18 @@ class RouterSetup:
     _url_check: UrlCheck | None = None
 
     def _attach_router(
-        self, router: RouterLike | None, route_tools: Collection[ToolName] | None, fail_on_router_error: bool
+        self,
+        router: RouterLike | None,
+        route_tools: Collection[ToolName] | None,
+        fail_on_router_error: bool,
+        url_policy: UrlPolicy | None = None,
     ) -> None:
         """
         Raises:
-            ConfigurationError: for a ``router`` in neither form, or a ``route_tools`` naming something else.
+            ConfigurationError: for a ``router`` in neither form, a ``route_tools`` naming something else, or an
+                unknown ``url_policy``.
         """
+        self._url_check = url_check(url_policy)
         self._route_tools = _route_tools(route_tools)
         self._router = None if router is None else AttachedRouter(router, fail_on_error=fail_on_router_error)
 
@@ -140,7 +147,7 @@ class RouterSetup:
         return CallRoute(order={out.tool: out.providers}), request, out.record
 
 
-def _in_force_with(route: CallRoute) -> CallRoute:
+def in_force_with(route: CallRoute) -> CallRoute:
     """``route``'s order, kept with the hook already in force -- the budget's -- so both hold."""
     in_force = current_route()
     return route if in_force is None else replace(in_force, order={**in_force.order, **route.order})
@@ -164,7 +171,7 @@ class SyncRouted(RouterSetup):
                 return scope.settle(call(request))
             assert self._router is not None  # a request is built only with a router attached
             route, request, record = self._merged(routed, self._router.call(routed[0]), request)
-            with call_route(_in_force_with(route)):
+            with call_route(in_force_with(route)):
                 response = call(request)
             return scope.settle(response.model_copy(update={"decision": record}))
 
@@ -184,6 +191,6 @@ class AsyncRouted(RouterSetup):
                 return scope.settle(await call(request))
             assert self._router is not None  # a request is built only with a router attached
             route, request, record = self._merged(routed, await self._router.acall(routed[0]), request)
-            with call_route(_in_force_with(route)):
+            with call_route(in_force_with(route)):
                 response = await call(request)
             return scope.settle(response.model_copy(update={"decision": record}))

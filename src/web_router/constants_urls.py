@@ -27,3 +27,22 @@ LEGACY_IPV4_PATTERN = r"(?:0x[0-9a-f]+|[0-9]+)(?:\.(?:0x[0-9a-f]+|[0-9]+)){0,3}"
 Only a host of this shape is handed to ``inet_aton``, which would otherwise be
 asked to read names it has no business reading.
 """
+
+URL_POLICY_PUBLIC_ONLY = "public_only"
+"""The ``url_policy`` that refuses private, loopback, link-local and cloud metadata hosts before a call."""
+
+URL_SCHEMES: frozenset[str] = frozenset({"http", "https"})
+"""The schemes a routed call's URLs may use, with any ``url_policy`` or none."""
+
+LOCALHOST_SUFFIX = ".localhost"
+"""Every name under ``localhost`` is loopback (RFC 6761)."""
+
+URL_REFUSED_KEY = "url:{host}"
+"""How the decision record's ``dropped`` names a URL the policy refused: by scheme and host, never in full."""
+
+MSG_URL_POLICY = "url_policy takes {known} or None; got {got!r}."
+MSG_URL_SCHEME = "the scheme {scheme!r} is not http or https"
+MSG_URL_UNPARSEABLE = "the URL cannot be parsed"
+MSG_URL_LOOPBACK = "the host is loopback"
+MSG_URL_METADATA = "the host is a cloud metadata endpoint"
+MSG_URL_PRIVATE = "the host is a private, shared or reserved address"

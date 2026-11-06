@@ -26,3 +26,6 @@ MSG_DROPPED_UNKNOWN_COST = "no known price, under a cost cap of ${cap:g}"
 MSG_DROPPED_OVER_COST = "estimated ${cost:g}, over the ${cap:g} left"
 MSG_DROPPED_UNKNOWN_LATENCY = "no measured p90 latency, and the budget is strict"
 MSG_DROPPED_OVER_TIME = "p90 latency {p90:g}s, over the {limit:g}s left"
+
+ONE_PAGE_URL = "https://example.com/"
+"""What a plan prices extract on when the prompt names no URL and a router may supply its own: one page."""

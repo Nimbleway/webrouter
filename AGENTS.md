@@ -92,6 +92,7 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
+├── client_plan.py      plan() and run(), prompt-level routing, mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
 ├── client_requests.py  the routers' request builders: a method's arguments in, its
@@ -150,8 +151,10 @@ src/web_router/
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
-│   └── decide.py       decided(): candidates and a router's outcome merged into the
-│                       method, order, options and record a call runs with, pure
+│   ├── decide.py       decided(): candidates and a router's outcome merged into the
+│   │                   method, order, options and record a call runs with, pure
+│   └── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
+│                       check before dispatch (no DNS, no redirects)
 ├── _urls.py            urls_in(): the URLs written in a query's prose
 ├── _hosts.py           a URL host's kind -- loopback, cloud metadata, private -- in
 │                       every spelling a browser reads; shared by the MCP navigation

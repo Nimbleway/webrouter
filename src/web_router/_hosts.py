@@ -57,3 +57,13 @@ def is_metadata(host: str) -> bool:
     address = host_address(host)
     # All of link-local, not only the one address: the metadata service answers on 169.254/16 on several clouds.
     return host in METADATA_HOSTS or (address is not None and address.is_link_local)
+
+
+def is_private(host: str) -> bool:
+    """A literal address no public host has: private (RFC 1918, ULA), shared (CGNAT), reserved, or multicast.
+
+    Read as :func:`ipaddress.ip_address` reads ``is_global``, so loopback and
+    link-local are in it too. A name is never private here: nothing resolves it.
+    """
+    address = host_address(host)
+    return address is not None and (not address.is_global or address.is_multicast)

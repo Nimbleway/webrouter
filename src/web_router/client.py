@@ -45,6 +45,7 @@ from typing import Any, Generic, TypeVar
 from web_router._benchmark import Stragglers
 from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
+from web_router.client_plan import AsyncPlan, SyncPlan
 from web_router.client_requests import JsonSchema as JsonSchema
 from web_router.client_requests import (
     async_client_holders,
@@ -80,12 +81,6 @@ from web_router.providers.base import (
     _BaseProvider,
 )
 from web_router.registry import (
-    available_browse_providers,
-    available_browser_providers,
-    available_extract_providers,
-    available_providers,
-    available_research_providers,
-    available_template_providers,
     create_browse_provider,
     create_browser_provider,
     create_extract_provider,
@@ -93,9 +88,10 @@ from web_router.registry import (
     create_research_provider,
     create_template_provider,
 )
-from web_router.registry_answer import available_answer_providers
+from web_router.registry_answer import every_provider_name
 from web_router.routing import Budget, RouterLike, ToolName
-from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
+from web_router.routing.routed import RouterSetup
+from web_router.routing.url_policy import UrlPolicy
 from web_router.types import (
     BrowseResponse,
     ExtractFormat,
@@ -132,6 +128,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         router: RouterLike | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
+        url_policy: UrlPolicy | None = None,
     ) -> None:
         """
         Args:
@@ -143,22 +140,15 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
                 else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
                 ask it (all five by default) and whether its failure raises (experimental) -- see
-                :mod:`web_router.routing.invoke`.
+                :mod:`web_router.routing.invoke`. ``url_policy="public_only"`` refuses private hosts in a
+                plan's or a router's URLs (experimental) -- see :mod:`web_router.routing.url_policy`.
         """
-        self._attach_router(router, route_tools, fail_on_router_error)
+        self._attach_router(router, route_tools, fail_on_router_error, url_policy)
         name = provider_name(provider)
         # Either registry is enough to name a default: a router defaulted to a
         # search-only backend still extracts through `provider=`, and the
         # method that cannot serve the default says so when it is called.
-        known = (
-            available_providers()
-            + available_extract_providers()
-            + available_template_providers()
-            + available_research_providers()
-            + available_answer_providers()
-            + available_browser_providers()
-            + available_browse_providers()
-        )
+        known = every_provider_name()
         if name not in known:
             raise ProviderNotFoundError(name, known)
 
@@ -349,7 +339,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRouted):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan):
     """Synchronous router.
 
     Example:
@@ -370,6 +360,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
         router: RouterLike | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
+        url_policy: UrlPolicy | None = None,
     ) -> None:
         """
         Raises:
@@ -383,6 +374,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
             router=router,
             route_tools=route_tools,
             fail_on_router_error=fail_on_router_error,
+            url_policy=url_policy,
         )
         async_only = sorted(async_client_holders(self._config))
         if async_only:
@@ -723,7 +715,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
         self.close()
 
 
-class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncRouted):
+class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncPlan):
     """Asynchronous router.
 
     Example:

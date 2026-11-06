@@ -74,7 +74,7 @@ async def test_with_no_budget_an_async_call_runs_with_no_route_no_budget_deadlin
 @pytest.mark.parametrize("router", [WebRouter, AsyncWebRouter])
 def test_only_the_routable_methods_take_a_budget(router: type) -> None:
     takes = {name for name in dir(router) if "budget" in _parameters(router, name)}
-    assert takes == {"search", "extract", "answer", "research", "browse"}
+    assert takes == {"search", "extract", "answer", "research", "browse", "plan", "run"}
 
 
 def _parameters(router: type, name: str) -> set[str]:

@@ -1,0 +1,171 @@
+"""The URL finder's edge cases, and ``url_policy``: the hosts it refuses, in every spelling, on and off."""
+
+from __future__ import annotations
+
+from collections.abc import Iterator
+from typing import Any
+
+import pytest
+
+from tests.test_auto_seam import MEMBERS, TOOLS, _member
+from web_router import RouteDecision, RouteRequest, WebRouter
+from web_router._urls import urls_in
+from web_router.exceptions import ConfigurationError
+from web_router.routing.url_policy import any_web_url, public_only, screened, url_check
+
+# -- the URL finder: http(s) URLs only -----------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "found"),
+    [
+        ("see https://a.test/x.", ["https://a.test/x"]),
+        ("(https://a.test/x) and <https://b.test>", ["https://a.test/x", "https://b.test"]),
+        (
+            '"https://a.test/x?y=1&z=2", then http://b.test:8080/p!',
+            ["https://a.test/x?y=1&z=2", "http://b.test:8080/p"],
+        ),
+        ("nfl.com scores", []),
+        ("install node.js and run file.py", []),
+        ("ftp://a.test/f and mailto:x@a.test", []),
+        ("no url here", []),
+    ],
+    ids=["sentence-end", "brackets", "query-and-port", "bare-domain", "dotted-names", "other-schemes", "none"],
+)
+def test_the_finder_reads_only_http_urls(text: str, found: list[str]) -> None:
+    assert urls_in(text) == found
+
+
+# -- public_only ---------------------------------------------------------------
+
+REFUSED = [
+    "http://169.254.169.254/latest/meta-data",
+    "http://metadata.google.internal/computeMetadata",
+    "http://[fd00:ec2::254]/",
+    "http://100.100.100.200/",
+    "http://localhost:8080/",
+    "http://app.localhost/",
+    "http://127.0.0.1/",
+    "http://0.0.0.0/",
+    "http://[::1]/",
+    "http://10.1.2.3/",
+    "http://172.16.0.1/",
+    "http://192.168.1.1/",
+    "http://100.64.0.1/",  # CGNAT
+    "http://[fc00::1]/",  # ULA
+    "http://2130706433/",  # decimal 127.0.0.1
+    "http://0x7f000001/",  # hex
+    "http://127.1/",  # short
+    "http://0251.0376.0251.0376/",  # octal 169.254.169.254
+    "http://[::ffff:169.254.169.254]/",  # IPv4-mapped IPv6
+    "http://[::ffff:10.0.0.1]/",
+    "http://LOCALHOST./",
+]
+
+
+@pytest.mark.parametrize("url", REFUSED)
+def test_public_only_refuses_private_loopback_link_local_and_metadata_hosts(url: str) -> None:
+    assert public_only(url) is not None
+    assert any_web_url(url) is None, "with no policy, an http(s) URL is never refused"
+
+
+@pytest.mark.parametrize(
+    "url", ["https://example.com/a", "http://8.8.8.8/", "https://[2606:4700::1111]/", "http://[::ffff:8.8.8.8]/"]
+)
+def test_public_only_admits_public_hosts(url: str) -> None:
+    assert public_only(url) is None
+
+
+@pytest.mark.parametrize("url", ["file:///etc/passwd", "javascript:alert(1)", "https://", "http://[::1"])
+def test_every_policy_refuses_what_is_no_http_url(url: str) -> None:
+    assert public_only(url) is not None and any_web_url(url) is not None
+
+
+def test_a_refused_url_is_recorded_by_its_host_only() -> None:
+    kept, refused = screened(["https://a.test/x", "http://10.0.0.1/secret?token=1"], public_only)
+    assert kept == ["https://a.test/x"]
+    assert list(refused) == ["url:http://10.0.0.1"]
+
+
+def test_an_unknown_policy_is_a_configuration_error() -> None:
+    with pytest.raises(ConfigurationError, match="url_policy"):
+        url_check("private_ok")  # type: ignore[arg-type]
+    with pytest.raises(ConfigurationError, match="url_policy"):
+        WebRouter(url_policy="everything")  # type: ignore[arg-type]
+
+
+# -- in a plan -----------------------------------------------------------------
+
+
+@pytest.fixture
+def members() -> Iterator[None]:
+    for tool in TOOLS:
+        for name in MEMBERS:
+            tool.register(name, _member(tool, name, [], fails=False))
+    yield
+    for tool in TOOLS:
+        for name in MEMBERS:
+            tool.unregister(name)
+
+
+def _wr(router: Any = None, **kwargs: Any) -> WebRouter:
+    return WebRouter(provider_config={"auto": {"chain": list(MEMBERS)}}, router=router, **kwargs)
+
+
+PRIVATE_PROMPT = "read http://169.254.169.254/latest and https://example.com/a"
+
+
+@pytest.mark.usefixtures("members")
+def test_with_the_policy_off_a_private_url_is_planned_as_any_other() -> None:
+    plan = _wr().plan(PRIVATE_PROMPT, tool="extract")
+    assert plan.params["urls"] == ["http://169.254.169.254/latest", "https://example.com/a"]
+    assert plan.decision.dropped is None
+
+
+@pytest.mark.usefixtures("members")
+def test_public_only_refuses_a_private_url_before_any_candidate_and_records_why() -> None:
+    seen: list[RouteRequest] = []
+
+    def router(req: RouteRequest) -> RouteDecision:
+        seen.append(req)
+        return RouteDecision(tools=["extract"])
+
+    plan = _wr(router, url_policy="public_only").plan(PRIVATE_PROMPT)
+    assert seen[0].urls == ("https://example.com/a",), "the router never sees the refused URL"
+    assert plan.params["urls"] == ["https://example.com/a"]
+    assert plan.decision.dropped == {"url:http://169.254.169.254": "the host is a cloud metadata endpoint"}
+
+
+@pytest.mark.usefixtures("members")
+def test_when_every_url_is_refused_extract_has_no_candidates_and_browse_no_start() -> None:
+    wr = _wr(url_policy="public_only")
+    assert "extract" not in {c.tool for c in wr.plan("read http://10.0.0.1/x", tool="extract").decision.offered or ()}
+    assert wr.plan("open http://10.0.0.1/x", tool="browse").params["start_url"] is None
+
+
+def _url_router(url: str) -> Any:
+    return lambda req: RouteDecision(tools=["extract"], params={"extract": {"urls": [url]}})
+
+
+@pytest.mark.usefixtures("members")
+@pytest.mark.parametrize(("policy", "kept"), [(None, True), ("public_only", False)])
+def test_urls_a_router_supplies_go_through_the_policy(policy: str | None, kept: bool) -> None:
+    plan = _wr(_url_router("http://192.168.0.10/admin"), url_policy=policy).plan("summarize the admin page")
+    assert (plan.tool == "extract") is kept
+    if kept:
+        assert plan.params["urls"] == ["http://192.168.0.10/admin"]
+
+
+@pytest.mark.usefixtures("members")
+def test_a_public_url_a_router_supplies_is_planned_under_public_only() -> None:
+    plan = _wr(_url_router("https://example.com/a"), url_policy="public_only").plan("summarize it")
+    assert (plan.tool, plan.params["urls"]) == ("extract", ["https://example.com/a"])
+
+
+@pytest.mark.parametrize(
+    "url", ["http://[::ffff:169.254.169.254]/", "http://0251.0376.0251.0376/", "http://2852039166/"]
+)
+def test_a_metadata_address_in_any_spelling_is_named_as_one(url: str) -> None:
+    from web_router.constants_urls import MSG_URL_METADATA
+
+    assert public_only(url) == MSG_URL_METADATA
