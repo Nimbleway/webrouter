@@ -203,3 +203,16 @@ def test_the_replay_merges_with_the_librarys_own_function(route_eval: ModuleType
     from web_router.routing.merge import merge
 
     assert sys.modules["route_eval_merge"].merge is merge
+
+
+def test_a_decision_ranking_no_candidate_fails_as_the_same_list_does(route_eval: ModuleType) -> None:
+    from web_router import RouteDecision
+
+    q = _question(route_eval, _row("tavily", "incorrect"), _row("perplexity", "correct"))
+    static = route_eval.static_router("search")
+    as_list = route_eval.replay(lambda _: ["bogus"], q, static)
+    as_decision = route_eval.replay(lambda _: RouteDecision(providers={"search": ["bogus"]}), q, static)
+    assert as_list.router_failed and as_decision.router_failed
+    assert as_decision.served_by == as_list.served_by == "perplexity"
+    other = route_eval.replay(lambda _: RouteDecision(providers={"answer": ["bogus"]}), q, static)
+    assert not other.router_failed, "a ranking for another method names nothing for this one"

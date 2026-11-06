@@ -40,20 +40,26 @@ def urls_in(text: str) -> list[str]:
 
 
 def host_of(url: str) -> str:
-    """What a note or a record shows of ``url``: its scheme and host, never its path, query or credentials."""
+    """What a note or a record shows of ``url``: its scheme and host, never its path, query or credentials.
+
+    A scheme-relative URL (``//host/path``) shows as ``//host``.
+    """
     try:
         parts = urlsplit(url)
         host = parts.hostname
     except ValueError:
         return URL_HIDDEN
-    if parts.scheme and host and ":" in host:  # an IPv6 literal, shown in its brackets
+    if not host or not (parts.scheme or url.startswith("//")):
+        return URL_HIDDEN
+    prefix = f"{parts.scheme}{':' if parts.scheme else ''}//"
+    if ":" in host:  # an IPv6 literal, shown in its brackets
         try:
             # A scope id (``%eth0``) names the machine's own interface, never shown.
-            return f"{parts.scheme}://[{ipaddress.IPv6Address(host.partition('%')[0])}]"
+            return f"{prefix}[{ipaddress.IPv6Address(host.partition('%')[0])}]"
         except ValueError:
             return URL_HIDDEN
-    kept = re.match(HOST_CHARS, host or "")
-    return f"{parts.scheme}://{kept.group(0)}" if parts.scheme and kept else URL_HIDDEN
+    kept = re.match(HOST_CHARS, host)
+    return f"{prefix}{kept.group(0)}" if kept else URL_HIDDEN
 
 
 def shown(params: Mapping[str, Any]) -> dict[str, Any]:

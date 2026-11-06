@@ -494,15 +494,17 @@ does not publish is `unknown` and one billed by tokens is `token_billed`, never
 estimated. The library still never puts a price in a response outside
 `DecisionRecord`, where an estimate says so in `cost_is_estimate`.
 
-**`constants.py` imports `types.py`, so `types.py` imports nothing of ours.**
+**`constants.py` imports `types.py`, so `types.py` imports nothing of ours**
+but `types_decision`, a leaf that imports nothing of ours either.
 The import graph is `types` ← `constants` ← `exceptions` ← everything else. A
 model that needs an exception type or a message template cannot live in
 `types.py` — put it in a subpackage's own `types.py` (as `evals/types.py`
 does) or annotate the field as `Exception` and say why in its docstring (as
 `BenchmarkRun.error` does). Do not "fix" this by importing lazily inside a
 validator. A `constants_<provider>.py` sits at the same level as `constants`:
-it may import `types` (and `types_answer`, which imports only `types`, and
-`types_page`, which imports nothing of ours) and nothing else of ours.
+it may import `types` (and `types_answer`, which imports only `types` and
+`types_decision`, and `types_page` and `types_decision`, which import nothing
+of ours) and nothing else of ours.
 
 **Never override the public method in a provider.** `search`/`asearch`,
 `extract`/`aextract`, `run`/`templates`/`template`, `answer`/`aanswer`,
