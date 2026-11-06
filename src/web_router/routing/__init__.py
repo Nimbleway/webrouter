@@ -25,5 +25,6 @@ budget sets, and :mod:`.attempts` the seam in ``auto``'s fallback loops.
 """
 
 from web_router.routing.contract import Budget, Candidate, Plan, RouteDecision, RouteRequest, ToolName
+from web_router.routing.invoke import RouterLike
 
-__all__ = ["Budget", "Candidate", "Plan", "RouteDecision", "RouteRequest", "ToolName"]
+__all__ = ["Budget", "Candidate", "Plan", "RouteDecision", "RouteRequest", "RouterLike", "ToolName"]

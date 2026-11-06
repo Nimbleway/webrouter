@@ -35,8 +35,7 @@ def scoped(monkeypatch: pytest.MonkeyPatch) -> list[Budget | None]:
         with real(budget):
             yield
 
-    monkeypatch.setattr("web_router.client.budget_scope", spy)
-    monkeypatch.setattr("web_router.client_answer.budget_scope", spy)
+    monkeypatch.setattr("web_router.routing.routed.budget_scope", spy)  # every routable call opens it there
     return seen
 
 
