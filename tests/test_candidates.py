@@ -373,3 +373,16 @@ def test_a_member_missing_a_setting_beside_its_key_is_dropped_as_not_configured(
     assert _ids(found) == ["extract:jina"]
     assert found.dropped == {"extract:brightdata": MSG_DROPPED_NOT_CONFIGURED}
     assert "credential" not in MSG_DROPPED_NOT_CONFIGURED
+
+
+def test_a_plain_list_chain_naming_other_methods_backends_leaves_those_methods_without_candidates(
+    keys: pytest.MonkeyPatch,
+) -> None:
+    _set_keys(keys, "exa", "tavily")
+    router = WebRouter(provider_config={"auto": {"chain": ["exa", "tavily"]}})
+    found = build_candidates(router, default_requests("who won the cup"))
+    assert {c.tool for c in found.candidates} >= {"search"}
+    assert "research" not in {c.tool for c in found.candidates}
+    assert found.dropped["research:tavily"] == "not a backend for this method"
+    plan = router.plan("who won the cup")
+    assert plan.tool == "search" and set(plan.providers["search"]) == {"exa", "tavily"}

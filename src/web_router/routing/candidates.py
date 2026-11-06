@@ -38,6 +38,7 @@ from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNO
 from web_router.constants_candidates import (
     AUTO_GETTERS,
     KEYLESS_OPTION,
+    MSG_DROPPED_NOT_A_BACKEND,
     MSG_DROPPED_NOT_CONFIGURED,
     MSG_DROPPED_NOT_INSTALLED,
     MSG_DROPPED_OVER_COST,
@@ -51,6 +52,7 @@ from web_router.exceptions import (
     ConfigurationError,
     MissingParameterError,
     NoAnswerProviderError,
+    ProviderNotFoundError,
     ProviderNotInstalledError,
     UnsupportedFormatError,
     UnsupportedParameterError,
@@ -200,6 +202,8 @@ def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
             unbuilt.setdefault(name, MSG_DROPPED_NOT_CONFIGURED)
         except ProviderNotInstalledError:
             unbuilt.setdefault(name, MSG_DROPPED_NOT_INSTALLED)
+        except ProviderNotFoundError:  # a plain-list chain names backends of other methods too
+            unbuilt.setdefault(name, MSG_DROPPED_NOT_A_BACKEND)
         else:
             built.append(position)
     return built, unbuilt
