@@ -2026,6 +2026,12 @@ guessed from it -- never a whole URL, only its scheme and host, and no key
 values. Candidate ids do show which backends you have configured, and
 `reason`, `excluded` and `ignored` hold the router's own words.
 
+To score a router offline before you attach it, route-eval
+(`benchmarks/providers/route_eval.py`) replays it over the committed benchmark
+results against the static order. The default search and answer orders come
+from it; research, extract and browse are hand-ordered and unmeasured. See
+[`benchmarks/providers/`](benchmarks/providers/README.md#route-eval-replaying-a-router).
+
 Four example routers, tested offline: [rules](examples/router_rules.py), a
 [scikit-learn classifier](examples/router_classifier.py), an
 [OpenAI-compatible model](examples/router_llm.py) and
