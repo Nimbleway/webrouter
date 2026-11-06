@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
+import functools
 import inspect
 import math
 import threading
@@ -153,19 +154,16 @@ async def _awaited(awaitable: Awaitable[Any]) -> Any:
 
 
 def _sides(router: object) -> tuple[_Side | None, _Side | None]:
-    """The router's sync and async sides; either may be missing, and a non-callable such as a string has neither."""
+    """The router's sync and async sides: a function, method or partial, or an object's ``route`` and ``aroute``."""
     route = getattr(router, "route", None)
     aroute = getattr(router, "aroute", None)
     if callable(route) or callable(aroute):
         sync_fn = route if callable(route) and not inspect.iscoroutinefunction(route) else None
         async_fn = aroute if callable(aroute) else (route if callable(route) and sync_fn is None else None)
         return sync_fn, async_fn
-    if not callable(router):
-        return None, None
-    dunder_call = type(router).__call__  # a callable instance's own method
-    if inspect.iscoroutinefunction(router) or inspect.iscoroutinefunction(dunder_call):
-        return None, router
-    return router, None
+    if not (inspect.isroutine(router) or isinstance(router, functools.partial)):
+        return None, None  # a string, or an object that is only callable: neither form
+    return (None, router) if inspect.iscoroutinefunction(router) else (router, None)
 
 
 def _declared_timeout(router: object) -> float:
