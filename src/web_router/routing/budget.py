@@ -67,14 +67,20 @@ class BudgetedCall(Generic[_BackendT]):
 
 @contextmanager
 def budget_scope(
-    budget: Budget | None, tool: ToolName, backend: _BackendT, request: NormalizedRequest
+    budget: Budget | None,
+    tool: ToolName,
+    backend: _BackendT,
+    request: NormalizedRequest,
+    router: object = None,
 ) -> Iterator[BudgetedCall[_BackendT]]:
     """Hold ``budget`` over ``backend``'s call of ``tool`` with ``request``, made inside the block.
+
+    ``router`` is the router making the call: only a shared budget it opened applies.
 
     Raises:
         BudgetExceededError: when the budget skips every candidate, before any starts.
     """
-    pool = current_pool()
+    pool = None if router is None else current_pool(router)
     if pool is not None:
         budget = pool.limit(budget)
     if budget is None:

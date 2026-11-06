@@ -14,7 +14,6 @@ import pytest
 
 from tests.budget.conftest import ARGS, Chain, Table
 from web_router import (
-    AsyncBudgetScope,
     AsyncWebRouter,
     Budget,
     BudgetExceededError,
@@ -36,10 +35,31 @@ def _scoped(chain: Chain, scope: BudgetScope, **options: object) -> object:
     return getattr(scope, chain.tool.name)(ARGS[chain.tool.name], provider=chain.auto(), **options)
 
 
-def test_the_scope_has_every_budgeted_method_on_both_routers() -> None:
-    methods = ("search", "extract", "answer", "research", "browse")
-    assert all(callable(getattr(scope, name)) for scope in (BudgetScope, AsyncBudgetScope) for name in methods)
-    assert WebRouter.budget.__doc__ is not None
+async def test_calls_through_an_async_scope_spend_from_it_on_every_tool(chain: Chain, priced: Table) -> None:
+    priced.update(first=(0.06, None))
+    async with AsyncWebRouter().budget(SHARED) as shared:
+        scoped = getattr(shared, chain.tool.name)
+        await scoped(ARGS[chain.tool.name], provider=chain.auto())
+        with pytest.raises(BudgetExceededError):
+            await scoped(ARGS[chain.tool.name], provider=chain.auto())
+    assert chain.called == ["first"]
+    assert shared.status().spent_usd == 0.06
+
+
+def test_another_routers_calls_inside_the_block_neither_spend_from_it_nor_are_refused_by_it(
+    priced: Table, fake_provider: object
+) -> None:
+    priced.update(fake=(0.01, None))
+    mine, other = WebRouter(), WebRouter()
+    with mine.budget(Budget(max_cost_usd=0.001)) as shared:
+        response = other.search("q", provider="fake")
+        with other.budget(Budget(max_cost_usd=1.0)) as theirs:
+            other.search("q", provider="fake")
+        with pytest.raises(BudgetExceededError):
+            mine.search("q", provider="fake")
+    assert response.decision is None, "the other router's call ran as it would outside any budget"
+    assert theirs.pool.parent is None, "a scope on another router does not nest in this one"
+    assert (shared.status().spent_usd, theirs.status().spent_usd) == (0.0, 0.01)
 
 
 def test_calls_through_the_scope_spend_from_it_on_every_tool(chain: Chain, priced: Table) -> None:
@@ -209,6 +229,15 @@ def test_a_scope_inside_another_spends_from_both(chain: Chain, priced: Table) ->
             _scoped(chain, inner)
     assert (outer.status().spent_usd, inner.status().spent_usd) == (0.06, 0.06)
     assert (outer.status().reserved_usd, inner.status().reserved_usd) == (0.0, 0.0), "the refusal released the inner"
+
+
+def test_a_nested_scopes_status_counts_what_its_parent_has_left() -> None:
+    router = WebRouter()
+    with router.budget(SHARED) as outer, router.budget(Budget(max_cost_usd=1.0)) as inner:
+        assert inner.pool.reserve(0.06) is None
+        assert (inner.status().remaining_usd, outer.status().remaining_usd) == (0.04, 0.04)
+    with router.budget(Budget()) as uncapped, router.budget(Budget(max_cost_usd=1.0)) as capped:
+        assert (uncapped.status().remaining_usd, capped.status().remaining_usd) == (None, 1.0)
 
 
 @pytest.mark.parametrize("tool", ["answer"], indirect=True)

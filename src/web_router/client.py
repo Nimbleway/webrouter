@@ -459,7 +459,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
             locale=locale,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "search", self.get_provider(provider), request) as call:
+        with budget_scope(budget, "search", self.get_provider(provider), request, self) as call:
             return call.settle(call.backend.search(request))
 
     def extract(
@@ -479,7 +479,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
         nothing came back raises instead.
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
-        with budget_scope(budget, "extract", self.get_extract_provider(provider), request) as call:
+        with budget_scope(budget, "extract", self.get_extract_provider(provider), request, self) as call:
             return call.settle(call.backend.extract(request))
 
     def templates(
@@ -577,7 +577,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "research", self.get_research_provider(provider), request) as call:
+        with budget_scope(budget, "research", self.get_research_provider(provider), request, self) as call:
             return call.settle(call.backend.research(request, timeout=timeout))
 
     def submit_research(
@@ -649,7 +649,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "browse", self.get_browse_provider(provider), request) as call:
+        with budget_scope(budget, "browse", self.get_browse_provider(provider), request, self) as call:
             return call.settle(call.backend.browse(request, timeout=timeout))
 
     def submit_browse(
@@ -830,7 +830,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             locale=locale,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "search", self.get_provider(provider), request) as call:
+        with budget_scope(budget, "search", self.get_provider(provider), request, self) as call:
             return call.settle(await call.backend.asearch(request))
 
     async def extract(
@@ -849,7 +849,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
         where nothing came back raises.
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
-        with budget_scope(budget, "extract", self.get_extract_provider(provider), request) as call:
+        with budget_scope(budget, "extract", self.get_extract_provider(provider), request, self) as call:
             return call.settle(await call.backend.aextract(request))
 
     async def templates(
@@ -919,7 +919,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "research", self.get_research_provider(provider), request) as call:
+        with budget_scope(budget, "research", self.get_research_provider(provider), request, self) as call:
             return call.settle(await call.backend.aresearch(request, timeout=timeout))
 
     async def submit_research(
@@ -974,7 +974,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "browse", self.get_browse_provider(provider), request) as call:
+        with budget_scope(budget, "browse", self.get_browse_provider(provider), request, self) as call:
             return call.settle(await call.backend.abrowse(request, timeout=timeout))
 
     async def submit_browse(
