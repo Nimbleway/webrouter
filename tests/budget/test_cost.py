@@ -7,16 +7,24 @@ test sets (see :mod:`tests.budget.conftest`).
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from tests.budget.conftest import Chain, Table, acall, call
-from web_router import Budget, BudgetExceededError, DecisionHop, WebRouter
+from web_router import Budget, BudgetExceededError, DecisionHop, WebRouter, prices
+from web_router.constants_budget import SKIP_OVER_COST, SKIP_PRICE_UNKNOWN, SKIP_ROUTE_REFUSED, SKIPPED
 from web_router.exceptions import ConfigurationError, ProviderError, WebRouterError
 from web_router.routing.attempts import Attempt, CallRoute, call_route
 from web_router.routing.ledger import attempt_cost, attempt_p90
-from web_router.types import ExtractRequest, ResearchRequest, SearchRequest
+from web_router.types import BrowseRequest, ExtractRequest, ResearchRequest, SearchRequest
+from web_router.types_answer import AnswerRequest
 
 CAP = Budget(max_cost_usd=0.01)
+
+
+def _over(cost: str, left: str) -> str:
+    return SKIP_OVER_COST.format(cost=cost, left=left)
 
 
 def _ids(chain: Chain, *names: str) -> list[str]:
@@ -28,7 +36,7 @@ def test_a_candidate_over_what_is_left_is_skipped_and_the_next_runs(chain: Chain
     response = call(chain, CAP)
     assert (response.provider, chain.called) == ("second", ["second"])
     decision = response.decision
-    assert decision.hops == [DecisionHop(id=_ids(chain, "first")[0], error="est. $0.05 > $0.01 left")]
+    assert decision.hops == [DecisionHop(id=_ids(chain, "first")[0], error=_over("$0.05", "$0.01"))]
     assert [attempt.id for attempt in decision.attempts] == _ids(chain, "second")
     assert (decision.estimated_cost_usd, decision.cost_is_estimate) == (0.005, True)
 
@@ -45,7 +53,7 @@ def test_a_failed_attempt_is_charged_its_estimate(chain: Chain, priced: Table) -
     priced.update(first=(0.006, None), second=(0.006, None), third=(0.0, None))
     response = call(chain, CAP)
     assert chain.called == ["first", "third"], "second no longer fits once first's estimate is spent"
-    assert response.decision.hops == [DecisionHop(id=_ids(chain, "second")[0], error="est. $0.006 > $0.004 left")]
+    assert response.decision.hops == [DecisionHop(id=_ids(chain, "second")[0], error=_over("$0.006", "$0.004"))]
     assert [attempt.id for attempt in response.decision.attempts] == _ids(chain, "first", "third")
     assert response.decision.estimated_cost_usd == 0.006
 
@@ -54,7 +62,7 @@ def test_under_a_cost_cap_an_unknown_price_is_skipped_and_the_order_kept(chain: 
     priced.update(second=(0.001, None), third=(0.001, None))  # first's price is unknown
     response = call(chain, CAP)
     assert chain.called == ["second"]
-    assert response.decision.hops == [DecisionHop(id=_ids(chain, "first")[0], error="price unknown under a cost cap")]
+    assert response.decision.hops == [DecisionHop(id=_ids(chain, "first")[0], error=SKIP_PRICE_UNKNOWN)]
     assert response.decision.unmeasured == _ids(chain, "first", "second")  # second has no p90
 
 
@@ -65,7 +73,7 @@ def test_an_unknown_price_research_call_under_a_ten_cent_cap_is_skipped_and_the_
     priced.update(second=(0.05, None))
     response = call(chain, Budget(max_cost_usd=0.10))
     assert chain.called == ["second"]
-    assert response.decision.hops == [DecisionHop(id="research:first", error="price unknown under a cost cap")]
+    assert response.decision.hops == [DecisionHop(id="research:first", error=SKIP_PRICE_UNKNOWN)]
 
 
 def test_with_no_cost_cap_an_unknown_price_runs_and_its_cost_stays_unknown(chain: Chain, priced: Table) -> None:
@@ -85,11 +93,11 @@ def test_when_the_budget_skips_every_member_the_call_raises_budget_exceeded(chai
     assert raised.value.skipped == dict(
         zip(
             _ids(chain, "first", "second", "third"),
-            ["est. $1.00 > $0.01 left", "est. $0.02 > $0.01 left", "price unknown under a cost cap"],
+            [_over("$1.00", "$0.01"), _over("$0.02", "$0.01"), SKIP_PRICE_UNKNOWN],
             strict=True,
         )
     )
-    assert f"{chain.tool.name}:first skipped: est. $1.00 > $0.01 left" in str(raised.value)
+    assert SKIPPED.format(id=f"{chain.tool.name}:first", reason=_over("$1.00", "$0.01")) in str(raised.value)
 
 
 async def test_when_the_budget_skips_every_member_an_async_call_raises_budget_exceeded(
@@ -103,7 +111,7 @@ async def test_when_the_budget_skips_every_member_an_async_call_raises_budget_ex
 
 def test_a_named_backend_that_does_not_fit_is_never_called(chain: Chain, priced: Table) -> None:
     priced.update(second=(0.05, None))
-    with pytest.raises(BudgetExceededError, match=r"skipped: est\. \$0\.05 > \$0\.01 left"):
+    with pytest.raises(BudgetExceededError, match=re.escape(_over("$0.05", "$0.01"))):
         call(chain, CAP, provider="second")
     assert chain.called == []
 
@@ -168,3 +176,37 @@ def test_the_p90_comes_from_the_measured_latency() -> None:
     measured = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q"))
     assert attempt_p90(measured) == pytest.approx(1.331)
     assert attempt_p90(Attempt(tool="research", provider="parallel", request=ResearchRequest(query="q"))) is None
+
+
+# -- What makes a price unknown -------------------------------------------------
+
+
+def test_under_a_cost_cap_provider_options_make_the_price_unknown(chain: Chain, priced: Table) -> None:
+    priced.update(first=(0.001, None), second=(0.001, None), third=(0.001, None))
+    with pytest.raises(BudgetExceededError) as raised:
+        call(chain, CAP, provider_options={"depth": "deep"})
+    assert chain.called == []
+    assert set(raised.value.skipped.values()) == {SKIP_PRICE_UNKNOWN}, "options can change the mode billed"
+
+
+def test_with_no_cost_cap_provider_options_run_and_their_cost_stays_unknown(chain: Chain, priced: Table) -> None:
+    priced.update(first=(0.001, None))
+    response = call(chain, Budget(time_limit_s=60), provider_options={"depth": "deep"})
+    assert chain.called == ["first"]
+    assert (response.decision.estimated_cost_usd, response.decision.unmeasured) == (None, _ids(chain, "first"))
+
+
+def test_a_row_whose_estimate_is_only_a_floor_has_an_unknown_price() -> None:
+    steps = Attempt(tool="browse", provider="browser-use", request=BrowseRequest(task="t"))
+    tokens = Attempt(tool="answer", provider="brave", request=AnswerRequest(query="q"))
+    assert [attempt_cost(steps), attempt_cost(tokens)] == [None, None], "per-step and token charges come on top"
+    assert prices.estimate("browser-use", "browse") == pytest.approx(0.01), "the list still states the floor"
+
+
+def test_a_route_that_refuses_a_named_backend_stops_the_budgeted_call(chain: Chain, priced: Table) -> None:
+    priced.update(second=(0.001, None))
+    refuse_second = CallRoute(before_attempt=lambda attempt: attempt.provider != "second")
+    with call_route(refuse_second), pytest.raises(BudgetExceededError) as raised:
+        call(chain, CAP, provider="second")
+    assert chain.called == []
+    assert raised.value.skipped == {_ids(chain, "second")[0]: SKIP_ROUTE_REFUSED}
