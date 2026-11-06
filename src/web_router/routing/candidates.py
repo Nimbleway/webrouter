@@ -3,7 +3,8 @@
 Experimental. :func:`build_candidates` reads each method's ``auto`` -- the
 chain it would try, a configured ``chain`` included -- and keeps the members
 its ``_eligible`` keeps: only those that map every option the request sets, so
-a candidate is never one the call would be silently degraded on. Each carries
+a candidate is never one the call would be silently degraded on -- and that
+``auto`` can build, so a member with no credential is never offered. Each carries
 its estimated cost from :mod:`web_router.prices` and its measured p90 latency
 from the same rows; neither is ever guessed, so an unknown stays ``None``.
 
@@ -12,12 +13,13 @@ candidate whose price is unknown, or whose estimate is over what is left, is
 dropped. Research is priced at the ``effort`` the caller set, else at the
 backend's default; choosing a cheaper effort is the budget mapping's job, not
 this one's. A request carrying ``provider_options`` may be billed at another
-mode than its row, so under a cost cap its price counts as unknown. Under a time cap a known p90 over the time left
+mode than its row, so under a cost cap its price counts as unknown, and under
+a time cap its p90. Under a time cap a known p90 over the time left
 drops a candidate, and an unknown p90 drops it only on a strict budget. Every
 drop is recorded with its reason, for the decision record.
 
 It is on the hot path of every routed call: it reads classes and the cached
-price list, builds nothing a call would not, and sends nothing.
+price list, builds a member only as ``auto`` does, once per router, and sends nothing.
 """
 
 from __future__ import annotations
@@ -38,7 +40,14 @@ from web_router.constants_candidates import (
     MSG_DROPPED_UNKNOWN_LATENCY,
     RANKED_METHODS,
 )
-from web_router.exceptions import ProviderNotInstalledError, WebRouterError
+from web_router.exceptions import (
+    ConfigurationError,
+    MissingParameterError,
+    NoAnswerProviderError,
+    ProviderNotInstalledError,
+    UnsupportedFormatError,
+    UnsupportedParameterError,
+)
 from web_router.prices import estimate, estimate_latency
 from web_router.routing.contract import Budget, Candidate, ToolName
 from web_router.types import (
@@ -51,6 +60,9 @@ from web_router.types import (
     provider_name,
 )
 from web_router.types_answer import AnswerRequest
+
+_NO_MEMBER_LEFT = (UnsupportedParameterError, UnsupportedFormatError, MissingParameterError, NoAnswerProviderError)
+"""What an ``auto``'s ``_eligible`` raises when no member can serve the request: no candidates, not a failure."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -129,9 +141,8 @@ def _eligible(router: Any, tool: ToolName, request: NormalizedRequest) -> list[t
     """The members of ``tool``'s ``auto`` that can serve ``request``, in chain order, each with whether it is keyless.
 
     ``auto`` passes over a member that does not map an option the request sets,
-    and raises when none is left; here that is a method with no candidates. A
-    member whose extra is not installed is one ``auto`` keeps, to fail on; it
-    cannot serve, so it is no candidate.
+    and raises when none is left; here that is a method with no candidates. Any
+    other error is the caller's setup, and raises as it would from ``auto``.
     """
     auto = getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO)
     try:
@@ -139,32 +150,29 @@ def _eligible(router: Any, tool: ToolName, request: NormalizedRequest) -> list[t
             members = auto._eligible(auto.format_of(request))
         else:
             members = auto._eligible(request)
-    except WebRouterError:
+    except _NO_MEMBER_LEFT:
         return []
     chain = auto._chain  # the keyless tier is hand-ordered, whatever route-eval ranked the keyed member
     return [
         (name, bool(chain[position][1].get(KEYLESS_OPTION)))
         for position, name in members
-        if _serves(tool, name, request)
+        if _serves(auto, position, request)
     ]
 
 
-def _serves(tool: ToolName, name: str, request: NormalizedRequest) -> bool:
-    """Whether ``name`` is installed and maps the options ``auto``'s own check leaves unread.
+def _serves(auto: Any, position: int, request: NormalizedRequest) -> bool:
+    """Whether ``auto`` can build the member at ``position`` and it maps every option ``request`` sets.
 
-    Search's and extract's ``_eligible`` keep a member whose class cannot be
-    read, and extract's reads only the format.
+    Built as ``auto`` builds it, and cached there for the call that tries it: a
+    member with no credential, and no keyless tier to fall back on, or whose
+    extra is not installed, refuses to be built and is no candidate. Extract's
+    ``_eligible`` reads only the format, so its other options are checked here.
     """
-    from web_router.registry import get_extract_provider_class, get_provider_class
-
     try:
-        if tool == "search":
-            get_provider_class(name)
-        elif tool == "extract":
-            return request.specified_parameters() <= get_extract_provider_class(name).supported_parameters
-    except ProviderNotInstalledError:
+        supported: frozenset[str] = auto._member(position).supported_parameters
+    except (ConfigurationError, ProviderNotInstalledError):
         return False
-    return True
+    return request.specified_parameters() <= supported
 
 
 def _estimates(
@@ -173,11 +181,15 @@ def _estimates(
     """The candidate's estimated cost in US dollars and its p90 seconds, at the mode it would run."""
     mode = _pinned_mode(request)
     units = len(request.urls) if isinstance(request, ExtractRequest) else 1  # extract bills per page
-    cost = _times(estimate(name, tool, mode), units)
-    if request.provider_options and budget is not None and budget.max_cost_usd is not None:
-        cost = None  # a vendor option can change the billed mode, so the list price is no estimate
+    price = estimate(name, tool, mode)
+    cost = None if price is None else price * units
     latency = estimate_latency(name, tool, mode)
-    return cost, None if latency is None else latency[1]
+    p90 = None if latency is None else latency[1]
+    if request.provider_options and budget is not None:
+        # A vendor option can change the billed mode, so the row's figures are no estimate under a cap.
+        cost = None if budget.max_cost_usd is not None else cost
+        p90 = None if budget.time_limit_s is not None else p90
+    return cost, p90
 
 
 def _pinned_mode(request: NormalizedRequest) -> str | None:
@@ -196,7 +208,7 @@ def _over_budget(cost: float | None, p90: float | None, budget: Budget | None) -
     cap = budget.max_cost_usd
     if cap is not None and cost is None:
         return MSG_DROPPED_UNKNOWN_COST.format(cap=cap)
-    if cap is not None and not _fits(cost, cap):
+    if cap is not None and cost is not None and cost > cap:
         return MSG_DROPPED_OVER_COST.format(cost=cost, cap=cap)
     limit = budget.time_limit_s
     if limit is not None and p90 is None and budget.strict:
@@ -204,14 +216,6 @@ def _over_budget(cost: float | None, p90: float | None, budget: Budget | None) -
     if limit is not None and p90 is not None and p90 > limit:
         return MSG_DROPPED_OVER_TIME.format(p90=p90, limit=limit)
     return None
-
-
-def _fits(cost: float | None, cap: float) -> bool:
-    return cost is not None and cost <= cap
-
-
-def _times(cost: float | None, units: int) -> float | None:
-    return None if cost is None else cost * units
 
 
 @cache

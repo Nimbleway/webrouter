@@ -21,6 +21,7 @@ from web_router.constants import (
 )
 from web_router.exceptions import ProviderNotInstalledError
 from web_router.prices import estimate, estimate_latency
+from web_router.providers.auto import AutoResearchProvider
 from web_router.registry import get_extract_provider_class, get_provider_class, get_research_provider_class
 from web_router.routing.candidates import CandidateSet, build_candidates, default_requests
 from web_router.types import ExtractRequest, ResearchRequest, SearchRequest
@@ -223,8 +224,10 @@ def test_provider_options_keep_the_estimate_with_no_cost_cap_and_mark_it_unmeasu
     plain = build_candidates(WebRouter(), {"search": SearchRequest(query="q")})
     assert "search:brave" not in plain.unmeasured
     request = {"search": SearchRequest(query="q", provider_options={"extra_snippets": True})}
-    found = build_candidates(WebRouter(), request, budget=Budget(time_limit_s=10.0))
-    assert _one(found, "search:brave").est_cost_usd == estimate("brave", "search")
+    found = build_candidates(WebRouter(), request)
+    brave = _one(found, "search:brave")
+    assert brave.est_cost_usd == estimate("brave", "search")
+    assert brave.est_latency_s is not None  # no cap: the row's figures stay, marked unmeasured
     assert "search:brave" in found.unmeasured
 
 
@@ -283,3 +286,32 @@ def test_it_is_fast_enough_for_every_routed_call(keys: pytest.MonkeyPatch) -> No
     for _ in range(runs):
         build_candidates(router, requests, budget=budget)
     assert (time.perf_counter() - started) / runs < 0.001
+
+
+def test_a_chain_member_with_no_credential_is_no_candidate(keys: pytest.MonkeyPatch) -> None:
+    bare = WebRouter(provider_config={"auto": {"chain": {"search": ["tavily", "you-mcp"]}}})
+    assert _ids(build_candidates(bare, {"search": SearchRequest(query="q")})) == ["search:you-mcp"]
+    keyless = WebRouter(provider_config={"auto": {"chain": {"search": [("tavily", {"allow_keyless": True})]}}})
+    assert _ids(build_candidates(keyless, {"search": SearchRequest(query="q")})) == ["search:tavily"]
+    keyed = WebRouter(provider_config={"auto": {"chain": {"search": ["tavily"]}}, "tavily": {"api_key": "test-key"}})
+    assert _ids(build_candidates(keyed, {"search": SearchRequest(query="q")})) == ["search:tavily"]
+
+
+def test_an_error_other_than_no_member_left_raises(keys: pytest.MonkeyPatch) -> None:
+    _set_keys(keys, "linkup")
+
+    def broken(self: AutoResearchProvider, request: ResearchRequest) -> list[tuple[int, str]]:
+        raise ProviderNotInstalledError("linkup", "research")
+
+    keys.setattr(AutoResearchProvider, "_eligible", broken)
+    with pytest.raises(ProviderNotInstalledError):
+        build_candidates(WebRouter(), {"research": ResearchRequest(query="q")})
+
+
+def test_provider_options_make_the_p90_unknown_under_a_time_cap(keys: pytest.MonkeyPatch) -> None:
+    _set_keys(keys, "brave")
+    request = {"search": SearchRequest(query="q", provider_options={"extra_snippets": True})}
+    found = build_candidates(WebRouter(), request, budget=Budget(time_limit_s=10.0))
+    assert _one(found, "search:brave").est_latency_s is None
+    strict = build_candidates(WebRouter(), request, budget=Budget(time_limit_s=10.0, strict=True))
+    assert "strict" in strict.dropped["search:brave"]
