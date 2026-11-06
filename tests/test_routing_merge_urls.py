@@ -55,17 +55,22 @@ def test_a_url_in_the_routers_own_words_shows_as_its_scheme_and_host() -> None:
     ("text", "expected"),
     [
         ("see https://a.example/page'session=secret now", "see https://a.example now"),
-        ("(see https://a.example/x?t=secret)", "(see https://a.example)"),
-        ("[https://a.example/a(b)c?t=secret]", "[https://a.example]"),
+        ("see https://a.example'session=secret now", "see https://a.example now"),
+        ("https://a.example/x(foo]session=secret", "https://a.example"),
+        ("https://a.example/x)session=secret", "https://a.example"),
+        ("https://a.example}session=secret", "https://a.example"),
+        ("(see https://a.example/x?t=secret)", "(see https://a.example"),
+        ("[https://a.example/a(b)c?t=secret]", "[https://a.example"),
+        ("https://a.example/x>session=secret", "https://a.example"),
         (
             '"https://a.example/x?t=secret" and `https://b.example/y?t=secret`',
             '"https://a.example" and `https://b.example`',
         ),
-        ("<https://a.example/x?t=secret>", "<https://a.example>"),
+        ("<https://a.example/x?t=secret>", "<https://a.example"),
         ("https://a.example/x?t=secret, then more", "https://a.example then more"),
     ],
 )
-def test_a_url_in_free_text_ends_only_where_a_url_can(text: str, expected: str) -> None:
+def test_nothing_after_a_urls_host_survives_in_free_text(text: str, expected: str) -> None:
     from web_router.routing.merge_params import hide_urls
 
     assert hide_urls(text) == expected and "secret" not in hide_urls(text)

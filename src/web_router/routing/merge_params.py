@@ -21,6 +21,7 @@ from urllib.parse import urlsplit
 
 from web_router import prices, registry
 from web_router.constants_merge import (
+    HOST_CHARS,
     MSG_PARAM_CALLER,
     MSG_PARAM_DEPTH_COST,
     MSG_PARAM_DEPTH_UNKNOWN_PRICE,
@@ -31,7 +32,6 @@ from web_router.constants_merge import (
     MSG_PARAM_UNDECLARED,
     MSG_PARAM_URL_REFUSED,
     ROUTER_PARAMS,
-    URL_BRACKETS,
     URL_HIDDEN,
     URL_IN_TEXT,
 )
@@ -69,24 +69,13 @@ def host_of(url: str) -> str:
         host = parts.hostname
     except ValueError:
         return URL_HIDDEN
-    return f"{parts.scheme}://{host}" if parts.scheme and host else URL_HIDDEN
-
-
-def _url_end(match: str) -> int:
-    """Where the URL in ``match`` ends: before the first closing bracket it did not open."""
-    opened: list[str] = []
-    for i, char in enumerate(match):
-        if char in URL_BRACKETS.values():
-            opened.append(char)
-        elif char in URL_BRACKETS and (not opened or opened.pop() != URL_BRACKETS[char]):
-            return i
-    return len(match)
+    kept = re.match(HOST_CHARS, host or "")
+    return f"{parts.scheme}://{kept.group(0)}" if parts.scheme and kept else URL_HIDDEN
 
 
 def _hide(match: re.Match[str]) -> str:
-    text = match.group(0)
-    end = _url_end(text)
-    return host_of(text[:end]) + text[end:]
+    """The whole matched URL, and whatever ran on after it, as its scheme and host only."""
+    return host_of(match.group(0))
 
 
 @overload
