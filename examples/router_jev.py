@@ -61,13 +61,21 @@ def probabilities(answer: Any, choices: dict[str, str]) -> dict[str, float]:
     """Jev's probability for every choice.
 
     Raises:
-        ValueError: for a reply that leaves a choice out or names one not asked, so the call runs on the
-            static order and the decision record says router_error.
+        ValueError: for a reply that leaves a choice out, names one not asked, or gives a probability or
+            confidence that is not a number from 0 to 1, so the call runs on the static order and the
+            decision record says router_error.
     """
     numbers = {str(k): float(v) for k, v in (answer.get("probabilities") or {}).items()}
     if set(numbers) != set(choices) or answer.get("choice") not in choices:
         raise ValueError(f"an incomplete Jev reply: {sorted(numbers)} for {sorted(choices)}")
+    if not all(0.0 <= p <= 1.0 for p in (*numbers.values(), float(answer.get("confidence", "nan")))):
+        raise ValueError("a Jev reply with a probability or confidence outside 0 to 1")  # NaN fails too
     return numbers
+
+
+def printable(text: str | None) -> str:
+    """A server's words with control characters taken out, safe to print to a terminal."""
+    return "".join(ch for ch in text or "" if ch.isprintable())
 
 
 def decision(req: RouteRequest, ranked: list[str], reason: str, confidence: float | None) -> RouteDecision:
@@ -118,8 +126,9 @@ def main() -> None:
     with WebRouter(router=JevRouter()) as client:
         for prompt in PROMPTS:
             plan = client.plan(prompt)
-            backends = ", ".join(plan.providers.get(plan.tool, ())) or "none"
-            print(f"{prompt!r}\n  -> {plan.tool} on {backends}\n  ({plan.decision.reason})")
+            # Every word here can come from the server: the method, the backends and above all the reason.
+            backends = printable(", ".join(plan.providers.get(plan.tool, ()))) or "none"
+            print(f"{prompt!r}\n  -> {printable(plan.tool)} on {backends}\n  ({printable(plan.decision.reason)})")
 
 
 if __name__ == "__main__":
