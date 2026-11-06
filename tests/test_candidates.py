@@ -19,6 +19,7 @@ from web_router.constants import (
     EXTRACT_ENV_BY_PROVIDER,
     RESEARCH_ENV_BY_PROVIDER,
 )
+from web_router.constants_candidates import MSG_DROPPED_NOT_CONFIGURED, MSG_DROPPED_NOT_INSTALLED
 from web_router.exceptions import ProviderNotInstalledError
 from web_router.prices import estimate, estimate_latency
 from web_router.providers.auto import AutoResearchProvider
@@ -147,6 +148,7 @@ def test_a_member_whose_extra_is_missing_is_no_candidate(keys: pytest.MonkeyPatc
     found = build_candidates(WebRouter(), {"search": SearchRequest(query="q")})
     assert "search:tavily" in _ids(found)
     assert "search:you-mcp" not in _ids(found)
+    assert found.dropped["search:you-mcp"] == MSG_DROPPED_NOT_INSTALLED
 
 
 def test_an_answer_candidate_carries_its_price_and_p90(keys: pytest.MonkeyPatch) -> None:
@@ -321,7 +323,9 @@ def test_it_is_fast_enough_for_every_routed_call(keys: pytest.MonkeyPatch) -> No
 
 def test_a_chain_member_with_no_credential_is_no_candidate(keys: pytest.MonkeyPatch) -> None:
     bare = WebRouter(provider_config={"auto": {"chain": {"search": ["tavily", "you-mcp"]}}})
-    assert _ids(build_candidates(bare, {"search": SearchRequest(query="q")})) == ["search:you-mcp"]
+    found = build_candidates(bare, {"search": SearchRequest(query="q")})
+    assert _ids(found) == ["search:you-mcp"]
+    assert found.dropped == {"search:tavily": MSG_DROPPED_NOT_CONFIGURED}
     keyless = WebRouter(provider_config={"auto": {"chain": {"search": [("tavily", {"allow_keyless": True})]}}})
     assert _ids(build_candidates(keyless, {"search": SearchRequest(query="q")})) == ["search:tavily"]
     keyed = WebRouter(provider_config={"auto": {"chain": {"search": ["tavily"]}}, "tavily": {"api_key": "test-key"}})
@@ -346,3 +350,17 @@ def test_provider_options_make_the_p90_unknown_under_a_time_cap(keys: pytest.Mon
     assert _one(found, "search:brave").est_latency_s is None
     strict = build_candidates(WebRouter(), request, budget=Budget(time_limit_s=10.0, strict=True))
     assert "strict" in strict.dropped["search:brave"]
+
+
+def test_a_research_member_whose_extra_is_missing_leaves_out_only_that_member(keys: pytest.MonkeyPatch) -> None:
+    _set_keys(keys, "nimble", "linkup")
+
+    def missing(name: str) -> type:
+        if name == "nimble":
+            raise ProviderNotInstalledError(name, "research")
+        return get_research_provider_class(name)
+
+    keys.setattr("web_router.registry.get_research_provider_class", missing)
+    found = build_candidates(WebRouter(), {"research": ResearchRequest(query="q")})
+    assert _ids(found) == ["research:linkup"]
+    assert found.dropped == {"research:nimble": MSG_DROPPED_NOT_INSTALLED}
