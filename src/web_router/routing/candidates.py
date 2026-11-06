@@ -54,7 +54,7 @@ from web_router.exceptions import (
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, Candidate, ToolName
 from web_router.routing.params import map_effort
-from web_router.routing.pricing import attempt_cost, attempt_p90
+from web_router.routing.pricing import attempt_cost, attempt_p90, over_cost
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -200,7 +200,7 @@ def _over_budget(cost: float | None, p90: float | None, budget: Budget | None) -
     cap = budget.max_cost_usd
     if cap is not None and cost is None:
         return MSG_DROPPED_UNKNOWN_COST.format(cap=cap)
-    if cap is not None and cost is not None and cost > cap:
+    if cap is not None and cost is not None and over_cost(cost, cap):
         return MSG_DROPPED_OVER_COST.format(cost=cost, cap=cap)
     limit = budget.time_limit_s
     if limit is not None and p90 is None and budget.strict:

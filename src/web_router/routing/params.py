@@ -46,7 +46,7 @@ from web_router.constants_params import (
     PARAMS_SOURCE_CALLER,
 )
 from web_router.routing.contract import Budget, ToolName, candidate_id
-from web_router.routing.pricing import mode_cost, mode_p90, research_mode
+from web_router.routing.pricing import mode_cost, mode_p90, over_cost, research_mode
 from web_router.types import Provider, ResearchEffort, provider_name
 
 RESEARCH: ToolName = "research"
@@ -115,7 +115,7 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
         cost = mode_cost(name, RESEARCH, effort)
         if cost is None:
             return MSG_MISFIT_UNKNOWN_PRICE.format(provider=name, effort=shown)
-        if cost > budget.max_cost_usd:
+        if over_cost(cost, budget.max_cost_usd):
             return MSG_MISFIT_COST.format(provider=name, effort=shown, cost=cost, cap=budget.max_cost_usd)
     if budget.time_limit_s is not None:
         p90 = mode_p90(name, RESEARCH, effort)

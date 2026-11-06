@@ -152,13 +152,22 @@ def test_no_record_holds_the_prompt_the_task_or_a_url(every_tool: None) -> None:
 
 
 def test_a_url_a_router_supplies_shows_only_its_scheme_and_host(every_tool: None) -> None:
-    def route(req: RouteRequest) -> RouteDecision:
-        return RouteDecision(tools=["extract"], providers={"extract": ["third"]}, params={"extract": {"urls": [URL]}})
+    supplied = URL.replace("alice:hunter2@", "")  # url_policy refuses credentials in a URL
+    refused: list[str] = []
 
-    plan = _wr(router=route, url_policy="public_only").plan(QUERY)
-    assert plan.params["urls"] == [URL], "called with the whole URL"
+    def route(req: RouteRequest) -> RouteDecision:
+        urls = refused or [supplied]
+        return RouteDecision(tools=["extract"], providers={"extract": ["third"]}, params={"extract": {"urls": urls}})
+
+    wr = _wr(router=route, url_policy="public_only")
+    plan = wr.plan(QUERY)
+    assert plan.params["urls"] == [supplied], "called with the whole URL"
     assert plan.decision.params == {"urls": ["https://intranet.example.org"]}
     assert _leaks(plan.decision) == []
+    refused.append(URL)
+    record = wr.plan(QUERY).decision
+    assert record.params is None and record.ignored, "the URL with credentials is refused, and noted"
+    assert _leaks(record) == []
 
 
 def _failing(tool: _Tool, error: Exception) -> type:

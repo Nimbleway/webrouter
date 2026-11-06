@@ -27,6 +27,8 @@ from typing import Any
 from web_router._urls import urls_in
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS, ONE_PAGE_URL
+from web_router.constants_urls import MSG_PLAN_EXTRACT_NO_URL, MSG_PLAN_EXTRACT_REFUSED
+from web_router.exceptions import MissingParameterError
 from web_router.providers._deadline import call_deadline
 from web_router.routing.attempts import CallRoute, call_route
 from web_router.routing.budget import budget_scope, recorded
@@ -104,6 +106,11 @@ class _Planner(RouterSetup):
         name = None if self._router is None else self._router.name
         out = decided(req, found, outcome, router=name, url_check=self._url_check, refused=refused)
         params = {**_base_params(out.tool, req.prompt, kept), **out.params}
+        if out.tool == "extract" and not params["urls"]:
+            # Only a pinned extract gets here: unpinned, the merge rule searches instead. A pin is never moved.
+            refusals = "; ".join(f"{host}: {why}" for host, why in refused.items())
+            detail = MSG_PLAN_EXTRACT_REFUSED.format(refused=refusals) if refused else MSG_PLAN_EXTRACT_NO_URL
+            raise MissingParameterError(PROVIDER_AUTO, ["urls"], detail=detail)
         return Plan(
             prompt=req.prompt, tool=out.tool, params=params, providers={out.tool: out.providers}, decision=out.record
         )
@@ -136,6 +143,10 @@ class SyncPlan(_Planner, SyncRouted):
             prompt: What the caller asks, in words; any ``http(s)`` URL in it is read as one to fetch.
             budget: Caps the plan's candidates and maps research's effort, as on any routed call.
             tool: Pins the method; the router then orders its backends only.
+
+        Raises:
+            MissingParameterError: for ``tool="extract"`` when the prompt names no URL to fetch, or ``url_policy``
+                refused every one it names, and no router supplied one: a plan ``run`` could not execute.
         """
         parts = self._plan_request(prompt, budget, tool)
         req = parts[0]

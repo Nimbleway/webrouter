@@ -46,3 +46,11 @@ MSG_URL_UNPARSEABLE = "the URL cannot be parsed"
 MSG_URL_LOOPBACK = "the host is loopback"
 MSG_URL_METADATA = "the host is a cloud metadata endpoint"
 MSG_URL_PRIVATE = "the host is a private, shared or reserved address"
+MSG_URL_AMBIGUOUS = "a browser could read the host differently from how it is checked"
+
+AUTHORITY_REFUSED = "\\@%"
+"""Characters ``public_only`` refuses in a URL's authority: a browser ends the host at a backslash, ``@`` brings
+userinfo, and a browser decodes a ``%``-encoded host, so each can make it connect somewhere other than checked."""
+
+MSG_PLAN_EXTRACT_NO_URL = "plan(tool='extract') found no http(s) URL in the prompt: write the URL into it."
+MSG_PLAN_EXTRACT_REFUSED = "plan(tool='extract') found only URLs url_policy refuses ({refused})."

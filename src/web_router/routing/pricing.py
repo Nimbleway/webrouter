@@ -19,6 +19,7 @@ way when offered and another when run.
 from __future__ import annotations
 
 from web_router import prices
+from web_router.constants_budget import COST_TOLERANCE_USD
 from web_router.routing.attempts import Attempt
 from web_router.types import ExtractRequest, ResearchRequest, SearchRequest
 
@@ -39,6 +40,11 @@ def mode_cost(provider: str, tool: str, mode: str | None) -> float | None:
     if row is None or row.estimate_is_floor or row.estimate_usd is None:
         return None
     return row.estimate_usd
+
+
+def over_cost(cost: float, left: float) -> bool:
+    """Whether an estimate of ``cost`` dollars does not fit ``left``: the one comparison, with a float's tolerance."""
+    return cost > left + COST_TOLERANCE_USD
 
 
 def mode_p90(provider: str, tool: str, mode: str | None) -> float | None:

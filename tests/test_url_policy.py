@@ -10,7 +10,8 @@ import pytest
 from tests.test_auto_seam import MEMBERS, TOOLS, _member
 from web_router import RouteDecision, RouteRequest, WebRouter
 from web_router._urls import urls_in
-from web_router.exceptions import ConfigurationError
+from web_router.constants_urls import MSG_URL_LOOPBACK, MSG_URL_METADATA
+from web_router.exceptions import ConfigurationError, MissingParameterError
 from web_router.routing.url_policy import any_web_url, public_only, screened, url_check
 
 # -- the URL finder: http(s) URLs only -----------------------------------------
@@ -76,6 +77,48 @@ def test_public_only_admits_public_hosts(url: str) -> None:
     assert public_only(url) is None
 
 
+AMBIGUOUS = [
+    "http://127.0.0.1\\@public.example/",  # a browser ends the host at the backslash: loopback
+    "http://public.example\\@127.0.0.1/",
+    "http://127.0.0.1\\.public.example/",  # no @: the backslash alone moves the host
+    "https://169.254.169.254\\x.example.com/",
+    "http://user@public.example/",  # userinfo
+    "http://public.example@127.0.0.1/",
+    "http://%31%32%37.0.0.1/",  # a browser decodes a percent-encoded host
+    "http://[fe80::1%25eth0]/",
+    "http://public.ex\tample/",  # a browser strips tab and newline
+    "http://public.ex\nample/",
+    "http://public.example /",
+    " http://127.0.0.1/",
+    "http://public.example\x00/",
+    "http://public.example\x7f/",
+]
+
+
+@pytest.mark.parametrize("url", AMBIGUOUS)
+def test_public_only_refuses_a_url_a_browser_could_read_another_host_from(url: str) -> None:
+    from web_router.constants_urls import MSG_URL_AMBIGUOUS
+
+    assert public_only(url) == MSG_URL_AMBIGUOUS
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://\uff11\uff12\uff17.\uff10.\uff10.\uff11/",  # full-width digits
+        "http://127\u30020\u30020\u30021/",  # ideographic full stops
+        "http://\uff4c\uff4f\uff43\uff41\uff4c\uff48\uff4f\uff53\uff54/",  # full-width localhost
+        "http://169\u3002254\u3002169\u3002254/",
+    ],
+)
+def test_public_only_judges_a_non_ascii_host_as_the_ascii_a_browser_maps_it_to(url: str) -> None:
+    assert public_only(url) in {MSG_URL_LOOPBACK, MSG_URL_METADATA}
+
+
+def test_a_backslash_or_userinfo_in_the_path_or_query_is_no_host_confusion() -> None:
+    assert public_only("https://example.com/a\\b?next=x@y.test") is None
+
+
 @pytest.mark.parametrize("url", ["file:///etc/passwd", "javascript:alert(1)", "https://", "http://[::1"])
 def test_every_policy_refuses_what_is_no_http_url(url: str) -> None:
     assert public_only(url) is not None and any_web_url(url) is not None
@@ -137,10 +180,17 @@ def test_public_only_refuses_a_private_url_before_any_candidate_and_records_why(
 
 
 @pytest.mark.usefixtures("members")
-def test_when_every_url_is_refused_extract_has_no_candidates_and_browse_no_start() -> None:
+def test_when_every_url_is_refused_a_pinned_extract_is_refused_and_browse_has_no_start() -> None:
     wr = _wr(url_policy="public_only")
-    assert "extract" not in {c.tool for c in wr.plan("read http://10.0.0.1/x", tool="extract").decision.offered or ()}
+    with pytest.raises(MissingParameterError, match=r"url_policy refuses .*url:http://10\.0\.0\.1"):
+        wr.plan("read http://10.0.0.1/x", tool="extract")
     assert wr.plan("open http://10.0.0.1/x", tool="browse").params["start_url"] is None
+
+
+@pytest.mark.usefixtures("members")
+def test_when_every_url_is_refused_an_unpinned_plan_never_picks_extract() -> None:
+    plan = _wr(lambda req: RouteDecision(tools=["extract"]), url_policy="public_only").plan("read http://10.0.0.1/x")
+    assert plan.tool == "search" and "url:http://10.0.0.1" in (plan.decision.dropped or {})
 
 
 def _url_router(url: str) -> Any:
