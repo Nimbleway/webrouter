@@ -229,7 +229,7 @@ class AutoProvider(SearchProvider):
             try:
                 response = self._member(position).search(request)
             except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name)
+                return _held_or_late(held, self.name, failures, exc, provider_name, "search")
             except _RECOVERABLE as exc:
                 failed(failures, "search", provider_name, exc)
                 continue
@@ -250,7 +250,7 @@ class AutoProvider(SearchProvider):
             try:
                 response = await self._member(position).asearch(request)
             except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name)
+                return _held_or_late(held, self.name, failures, exc, provider_name, "search")
             except _RECOVERABLE as exc:
                 failed(failures, "search", provider_name, exc)
                 continue
@@ -386,7 +386,7 @@ class AutoExtractProvider(ExtractProvider):
             try:
                 response = self._member(position).extract(delegated)
             except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name)
+                return _held_or_late(held, self.name, failures, exc, provider_name, "extract")
             except _RECOVERABLE as exc:
                 failed(failures, "extract", provider_name, exc)
                 continue
@@ -407,7 +407,7 @@ class AutoExtractProvider(ExtractProvider):
             try:
                 response = await self._member(position).aextract(delegated)
             except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name)
+                return _held_or_late(held, self.name, failures, exc, provider_name, "extract")
             except _RECOVERABLE as exc:
                 failed(failures, "extract", provider_name, exc)
                 continue

@@ -104,6 +104,11 @@ def admitted(tool: ToolName, provider: str, request: NormalizedRequest) -> bool:
 def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseException) -> None:
     """Note in ``failures`` that ``provider`` failed with ``exc``, and tell the call's failure hook, if any."""
     failures[provider] = exc
+    noted(tool, provider, exc)
+
+
+def noted(tool: ToolName, provider: str, exc: BaseException) -> None:
+    """Tell the call's failure hook, if any, that ``exc`` moved ``auto`` past ``provider``: a deadline, a refusal."""
     route = _ROUTE.get()
     if route is not None and route.on_failure is not None:
         route.on_failure(tool, provider, exc)
