@@ -6,7 +6,9 @@ Read from the instances the session's router serves each method with, so a
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Callable
+from typing import Any
 
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_TOOL_ANSWER, MCP_TOOL_BROWSER_OPEN, MCP_TOOL_EXTRACT, MCP_TOOL_SEARCH
@@ -14,44 +16,23 @@ from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, 
 from web_router.providers.auto_answer import AutoAnswerProvider
 
 
-def _search_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
-    """The members the router's own search ``name`` would try, read as :func:`_browser_chain` reads its own."""
-    provider = router.get_provider(name)
-    return provider.members if isinstance(provider, AutoProvider) else ()
+def _members(getter: str, auto: type[Any], router: AsyncWebRouter, name: str) -> tuple[str, ...]:
+    """The members the router's own ``name`` would try, read from the instance ``getter`` serves the method with.
 
-
-def _answer_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
-    """The members the router's own answer ``name`` would try, read as :func:`_search_chain` reads its own."""
-    provider = router.get_answer_provider(name)
-    return provider.members if isinstance(provider, AutoAnswerProvider) else ()
-
-
-def _extract_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
-    """The members the router's own extract ``name`` would try, read as :func:`_browser_chain` reads its own.
-
-    ``max`` subclasses ``auto``, so this reads the members it would race the
-    same way.
+    So a ``chain`` in ``provider_config`` is honoured exactly as a request
+    honours it. Building it costs no credential: members are created only when
+    tried. A backend that is no ``auto`` has none; extract's ``max`` subclasses
+    ``auto``, so its members are the ones it would race.
     """
-    provider = router.get_extract_provider(name)
-    return provider.members if isinstance(provider, AutoExtractProvider) else ()
-
-
-def _browser_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
-    """The members the router's own browser ``name`` would try.
-
-    Read from the instance the router serves ``open_browser`` with, so a
-    ``chain`` in ``provider_config`` is honoured exactly as a request honours
-    it. Building it costs no credential: members are created only when tried.
-    """
-    provider = router.get_browser_provider(name)
-    return provider.members if isinstance(provider, AutoBrowserProvider) else ()
+    provider = getattr(router, getter)(name)
+    return tuple(provider.members) if isinstance(provider, auto) else ()
 
 
 CHAIN_OF: dict[str, Callable[[AsyncWebRouter, str], tuple[str, ...]]] = {
-    MCP_TOOL_SEARCH: _search_chain,
-    MCP_TOOL_EXTRACT: _extract_chain,
-    MCP_TOOL_ANSWER: _answer_chain,
-    MCP_TOOL_BROWSER_OPEN: _browser_chain,
+    MCP_TOOL_SEARCH: functools.partial(_members, "get_provider", AutoProvider),
+    MCP_TOOL_EXTRACT: functools.partial(_members, "get_extract_provider", AutoExtractProvider),
+    MCP_TOOL_ANSWER: functools.partial(_members, "get_answer_provider", AutoAnswerProvider),
+    MCP_TOOL_BROWSER_OPEN: functools.partial(_members, "get_browser_provider", AutoBrowserProvider),
 }
 """The tools whose delegating providers declare what some member serves, and how each one's members are read.
 
