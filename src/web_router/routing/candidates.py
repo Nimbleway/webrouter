@@ -184,8 +184,9 @@ def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
     """The positions of the members ``auto`` can build, and why each other member cannot be built.
 
     Built as ``auto`` builds them, and cached there for the call that tries one:
-    a member with no credential and no keyless tier to fall back on, or whose
-    extra is not installed, refuses to be built and is no candidate. Extract's
+    a member that is not configured -- no credential and no keyless tier, a
+    setting missing -- or whose extra is not installed, refuses to be built and
+    is no candidate. Extract's
     ``_eligible`` reads only the format, so its other options are checked
     against the built member.
     """

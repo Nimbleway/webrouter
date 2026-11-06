@@ -13,12 +13,12 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from typing import Any, cast
 
-from web_router.constants_params import PARAMS_SOURCE_BUDGET
+from web_router.constants_params import MSG_EFFORT_NONE_FITS_EVERY, PARAMS_SOURCE_BUDGET
 from web_router.routing.candidates import CandidateSet
 from web_router.routing.contract import Budget, RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
-from web_router.routing.merge_params import shown
+from web_router.routing.merge_params import misfit, shown
 from web_router.routing.params import EffortChoice, map_effort
 from web_router.routing.record import stamp
 from web_router.types_decision import DecisionRecord
@@ -49,13 +49,26 @@ def _budget_effort(
     caller_set: Collection[str],
     budget: Budget | None,
 ) -> EffortChoice | None:
-    """The budget's research effort for the first backend, set in ``params``; ``None`` when one is set already."""
+    """Set the research ``effort`` the budget maps, unless the router or the caller set one; the choice, and why.
+
+    The request is shared by every backend in the order, so the effort must fit the budget on all of them,
+    by the rule the merge holds a router's effort to: the first backend's pick that does, then the next's;
+    when none fits every backend, none is set, each runs at its own default, and the choice says so.
+    ``None`` when the mapping does not apply.
+    """
     if tool != "research" or not providers or "effort" in params or "effort" in caller_set:
         return None
-    choice = map_effort(providers[0], budget)
-    if choice.effort is not None:
-        params["effort"] = choice.effort
-    return choice
+    choices = [map_effort(provider, budget) for provider in providers]
+    for choice in choices:
+        effort = choice.effort
+        if effort is not None and budget is not None and misfit("effort", effort, providers, budget) is None:
+            params["effort"] = effort
+            return choice
+    if any(choice.effort is not None for choice in choices):
+        efforts = ", ".join(dict.fromkeys(c.effort for c in choices if c.effort is not None))
+        reason = MSG_EFFORT_NONE_FITS_EVERY.format(efforts=efforts, providers=", ".join(providers))
+        return EffortChoice(effort=None, source=None, reason=reason)
+    return choices[0]
 
 
 def decided(

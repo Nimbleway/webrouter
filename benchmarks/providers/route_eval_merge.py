@@ -11,8 +11,9 @@ Imported as a sibling, by name, as ``_common`` is.
 
 On a mixed set, a question given its pages offers ``extract``, but its frozen
 rows do not keep the page URLs, so the request names the placeholder
-:data:`FROZEN_PAGES` in their place. A merged research backend runs at the
-router's effort, else at its own default effort, as a real call would; with no
+:data:`FROZEN_PAGES` in their place. On every set, a merged research backend
+runs at the router's effort, else as a call that sends none: its default-mode
+row, or the price list's default effort when the set has no such row; with no
 frozen row at that effort it cannot be scored, and counts as an unscorable miss
 in its place in the order. A decision never leaves its method, not even when it
 failed or decided nothing: the replay walks that method's static order, as a
@@ -95,28 +96,42 @@ def _by_tool(static: Sequence[str], method: str) -> dict[str, list[str]]:
     return {tool: list(providers) for tool, providers in order.items()}
 
 
-def _mode_wanted(merged: Merged, provider: str) -> tuple[str, ...] | None:
-    """The research mode a call runs: the router's effort, else the backend's default, as a real call would.
+def _parsed(cid: str, method: str) -> tuple[str, str, tuple[str, ...]]:
+    """A replay id as ``(tool, provider, mode)``: a one-method set's ids are backends, at their default mode."""
+    if method != MIXED:
+        return method, cid, ()
+    kind, name, *mode = cid.split(SEP)
+    return TOOL_OF_PATH[kind], name, tuple(mode)
 
-    ``()`` is the call that sends no effort; ``None`` means any mode, for a method other than research.
+
+def _modes(merged: Merged, provider: str) -> tuple[tuple[str, ...], ...] | None:
+    """The modes a real research call runs, best match first; ``None`` for another method, where any will do.
+
+    ``()`` is a default-mode row, the call that sends no effort. With no effort set, that row first, then the
+    effort the price list marks as the backend's default; with one set, that effort, then the default-mode
+    row when the effort is the backend's default anyway.
     """
     if merged.tool != RESEARCH:
         return None
+    row = prices.price(provider, RESEARCH, None)
+    default = None if row is None else row.mode
     effort = merged.params.get("effort")
     if effort is None:
-        row = prices.price(provider, RESEARCH, None)
-        effort = None if row is None else row.mode
-    return () if effort is None else (effort,)
+        return ((), (default,)) if default else ((),)
+    return ((effort,), ()) if effort == default else ((effort,),)
 
 
-def _path_of(merged: Merged, provider: str, static: Sequence[str]) -> str | None:
-    """``provider``'s path at the mode a real call would run; ``None`` when the frozen set has no row for it."""
-    wanted = _mode_wanted(merged, provider)
-    for path in static:
-        kind, name, *mode = path.split(SEP)
-        if TOOL_OF_PATH[kind] == merged.tool and name == provider and wanted in (None, tuple(mode)):
-            return path
-    return None
+def _path_of(merged: Merged, provider: str, ids: Sequence[str], method: str) -> str | None:
+    """``provider``'s id at the mode a real call would run; ``None`` when the frozen set has no row for it."""
+    found: dict[tuple[str, ...], str] = {}
+    for cid in ids:
+        tool, name, mode = _parsed(cid, method)
+        if tool == merged.tool and name == provider:
+            found.setdefault(mode, cid)
+    modes = _modes(merged, provider)
+    if modes is None:
+        return next(iter(found.values()), None)
+    return next((found[mode] for mode in modes if mode in found), None)
 
 
 def walk(
@@ -137,6 +152,4 @@ def walk(
     decision = RouteDecision(providers={method: answer}) if ranking else answer  # type: ignore[dict-item]
     merged = merge(request_for(q), decision, _by_tool(static, method), failure=failure)  # type: ignore[arg-type]
     failed = merged.notes.fallback is not None or (ranking and not merged.notes.ranked)
-    if method != MIXED:
-        return list(merged.providers), failed
-    return [_path_of(merged, provider, static) for provider in merged.providers], failed
+    return [_path_of(merged, provider, static, method) for provider in merged.providers], failed

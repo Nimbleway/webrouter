@@ -10,3 +10,14 @@ def test_a_url_ending_a_sentence_loses_its_punctuation() -> None:
         "https://example.com/page",
         "https://example.org/a?b=1",
     ]
+
+
+def test_a_closing_bracket_the_url_opened_is_kept_and_one_it_did_not_is_dropped() -> None:
+    wiki = "https://en.wikipedia.org/wiki/Python_(programming_language)"
+    assert urls_in(f"see {wiki}.") == [wiki]
+    assert urls_in(f"(see {wiki})") == [wiki]
+    assert urls_in("open http://[::1]/admin, or (http://[::1]:8080/)") == ["http://[::1]/admin", "http://[::1]:8080/"]
+
+
+def test_a_url_named_twice_is_found_twice_and_plan_takes_it_once() -> None:
+    assert urls_in("https://a.test/x and https://a.test/x") == ["https://a.test/x", "https://a.test/x"]
