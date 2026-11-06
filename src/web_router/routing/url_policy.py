@@ -49,10 +49,10 @@ UrlPolicy = Literal["public_only"]
 
 
 def _scheme_refusal(url: str) -> tuple[str | None, str]:
-    """Why ``url`` is no http(s) URL, or ``None``; and its host, lowercased, without a trailing dot."""
+    """Why ``url`` is no http(s) URL, or ``None``; and its host as written."""
     try:
         parts = urlsplit(url)
-        scheme, host = parts.scheme.lower(), (parts.hostname or "").rstrip(".").lower()
+        scheme, host = parts.scheme.lower(), parts.hostname or ""
     except ValueError:
         return MSG_URL_UNPARSEABLE, ""
     if scheme not in URL_SCHEMES or not host:
@@ -83,14 +83,17 @@ def _ambiguous(url: str) -> bool:
 
 
 def _as_browser_host(host: str) -> str | None:
-    """``host`` as a browser connects to it: a non-ASCII name mapped by IDNA (full-width digits, ideographic dots
-    included), so it is judged as the ASCII it becomes; ``None`` when it does not map."""
-    if host.isascii():
-        return host
-    try:
-        return host.encode("idna").decode("ascii").lower()
-    except UnicodeError:
-        return None
+    """``host`` as a browser connects to it, or ``None`` when it does not map.
+
+    A non-ASCII name is mapped by IDNA (full-width digits, ideographic dots), then -- for every host -- one
+    trailing dot is dropped and the name lowercased, so ``127.0.0.1。`` is judged as ``127.0.0.1``.
+    """
+    if not host.isascii():
+        try:
+            host = host.encode("idna").decode("ascii")
+        except UnicodeError:
+            return None
+    return host.removesuffix(".").lower()
 
 
 def public_only(url: str) -> str | None:

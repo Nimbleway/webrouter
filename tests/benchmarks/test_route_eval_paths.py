@@ -287,3 +287,49 @@ def test_a_research_backend_with_no_effort_set_runs_at_its_default(route_eval: M
     decision = RouteDecision(tools=["research"], providers={"research": ["parallel"]})
     outcome = route_eval.replay(lambda _: decision, q, route_eval.static_router(route_eval.MIXED))
     assert outcome.served_by == "research:parallel:medium" and outcome.correct, "parallel's default is medium"
+
+
+def _default_mode_set(folder: Path) -> None:
+    """One question; parallel's research has a default-mode row (right), a low one and a medium one (wrong)."""
+    rows = [
+        _path_row("q", "search+extract:nimble:top3", "incorrect"),
+        _path_row("q", "research:parallel", "correct", cost=0.1),
+        _path_row("q", "research:parallel:low", "incorrect"),
+        _path_row("q", "research:parallel:medium", "incorrect"),
+    ]
+    write_frozen_set(folder, "mixed-default-row", rows)
+
+
+@pytest.mark.parametrize(
+    ("effort", "served"),
+    [(None, "research:parallel"), ("medium", "research:parallel:medium"), ("low", "research:parallel:low")],
+)
+def test_no_effort_runs_the_default_mode_row_before_the_priced_default(
+    route_eval: ModuleType, tmp_path: Path, effort: str | None, served: str
+) -> None:
+    from web_router import RouteDecision
+
+    _default_mode_set(tmp_path)
+    _, (q,) = route_eval.load_set("mixed-default-row", tmp_path)
+    params = None if effort is None else {"research": {"effort": effort}}
+    decision = RouteDecision(tools=["research"], providers={"research": ["parallel"]}, params=params)
+    outcome = route_eval.replay(lambda _: decision, q, route_eval.static_router(route_eval.MIXED))
+    assert outcome.served_by == served and outcome.unscorable == 0
+
+
+@pytest.mark.parametrize(("effort", "served"), [(None, "parallel"), ("medium", "parallel"), ("high", None)])
+def test_a_one_method_research_set_matches_the_effort_too(
+    route_eval: ModuleType, tmp_path: Path, effort: str | None, served: str | None
+) -> None:
+    from web_router import RouteDecision
+
+    rows = [_path_row("q", "research:parallel", "correct", cost=0.1), _path_row("q", "research:nimble", "incorrect")]
+    write_frozen_set(tmp_path, "research-only", rows)
+    _, (q,) = route_eval.load_set("research-only", tmp_path)
+    params = None if effort is None else {"research": {"effort": effort}}
+    decision = RouteDecision(providers={"research": ["parallel"]}, params=params)
+    outcome = route_eval.replay(lambda _: decision, q, route_eval.static_router("research"))
+    if served is None:
+        assert outcome.unscorable == 2 and outcome.served_by is None, "a default-mode row is no high run, on either"
+    else:
+        assert outcome.served_by == served and outcome.unscorable == 0, "the default-mode row is medium's call"

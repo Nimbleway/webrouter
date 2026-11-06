@@ -512,8 +512,9 @@ effort). A question's candidates are the paths it has rows for, so `extract`
 is one only on the ten questions given their pages. A router is shown one
 candidate per method and backend, with no method pinned, and decides the
 method, the backends and research's `effort`; the merge rule picks one method,
-and each backend runs its path at that effort, or with none at its own default
-effort from the price list, as a real call would. A backend with no row at that
+and each backend runs its path at that effort, or with none set, its
+default-mode row, else the price list's default effort, as a real call would;
+a one-method research set is matched the same way, its rows being default-mode. A backend with no row at that
 effort cannot be scored: it keeps its place in the order as a miss with no
 cost, so a later backend serving still counts as a fallback, and it is counted
 in the summary's `unscorable`. A decision never moves to another method, so the
