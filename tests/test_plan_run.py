@@ -12,8 +12,10 @@ from typing import Any
 
 import pytest
 
-from tests.test_auto_seam import MEMBERS, TOOLS, _member
-from web_router import AsyncWebRouter, Budget, Plan, RouteDecision, RouteRequest, WebRouter
+from tests.routing_helpers import MEMBERS, TOOLS
+from tests.routing_helpers import member as _member
+from tests.routing_helpers import wr as _wr
+from web_router import AsyncWebRouter, Budget, Plan, RouteDecision, RouteRequest
 from web_router.exceptions import MissingParameterError
 from web_router.types import BrowseResponse, ExtractResponse, ResearchResponse, SearchResponse
 from web_router.types_answer import AnswerResponse
@@ -72,10 +74,6 @@ def _chooser(tool: str | None, **decision: Any) -> Any:
 
     route.seen = []  # type: ignore[attr-defined]
     return route
-
-
-def _wr(cls: type = WebRouter, router: Any = None, **kwargs: Any) -> Any:
-    return cls(provider_config={"auto": {"chain": list(MEMBERS)}}, router=router, **kwargs)
 
 
 # -- plan ----------------------------------------------------------------------

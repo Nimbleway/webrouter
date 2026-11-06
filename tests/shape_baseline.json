@@ -15,7 +15,7 @@
   "src/web_router/registry.py": 453,
   "src/web_router/types.py": 1130,
   "tests/benchmarks/test_agent_benchmark.py": 2053,
-  "tests/conftest.py": 562,
+  "tests/conftest.py": 557,
   "tests/mcp/test_browser_tools.py": 1231,
   "tests/mcp/test_navigation.py": 571,
   "tests/mcp/test_tools.py": 928,

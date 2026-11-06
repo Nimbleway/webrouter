@@ -7,7 +7,8 @@ from typing import Any
 
 import pytest
 
-from tests.test_auto_seam import MEMBERS, TOOLS, _Tool
+from tests.routing_helpers import MEMBERS, TOOLS
+from tests.routing_helpers import Tool as _Tool
 from web_router import Budget, RouteDecision, RouteRequest, WebRouter
 from web_router.routing import decide
 from web_router.routing.params import EffortChoice

@@ -7,81 +7,18 @@ ones it does not name, and passes over a member its hook refuses.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from collections.abc import Callable
 from typing import Any
 
 import pytest
 
-from tests.conftest import (
-    FakeAnswerProvider,
-    FakeBrowseProvider,
-    FakeExtractProvider,
-    FakeProvider,
-    FakeResearchProvider,
-)
-from web_router import registry, registry_answer
-from web_router.exceptions import ConfigurationError, WebRouterError
-from web_router.providers.auto import AutoBrowseProvider, AutoExtractProvider, AutoProvider, AutoResearchProvider
-from web_router.providers.auto_answer import AutoAnswerProvider
+from tests.routing_helpers import MEMBERS, TOOLS
+from tests.routing_helpers import Tool as _Tool
+from tests.routing_helpers import member as _member
+from web_router.exceptions import WebRouterError
 from web_router.routing.attempts import Attempt, CallRoute, call_route
-from web_router.types import BrowseRequest, ExtractRequest, ResearchRequest, SearchRequest
-from web_router.types_answer import AnswerRequest
 
-MEMBERS = ("first", "second", "third")
-
-
-@dataclass(frozen=True)
-class _Tool:
-    name: str
-    fake: type
-    entry: str
-    auto: type
-    register: Callable[[str, type], None]
-    unregister: Callable[[str], None]
-    request: Any
-    sync: str
-    async_: str
-
-
-TOOLS = [
-    _Tool("search", FakeProvider, "_respond", AutoProvider, registry.register_provider,
-          registry.unregister_provider, SearchRequest(query="q"), "search", "asearch"),
-    _Tool("extract", FakeExtractProvider, "_respond", AutoExtractProvider, registry.register_extract_provider,
-          registry.unregister_extract_provider, ExtractRequest(urls=["https://a.test"]), "extract", "aextract"),
-    _Tool("answer", FakeAnswerProvider, "_answer", AutoAnswerProvider, registry_answer.register_answer_provider,
-          registry_answer.unregister_answer_provider, AnswerRequest(query="q"), "answer", "aanswer"),
-    _Tool("research", FakeResearchProvider, "_start", AutoResearchProvider, registry.register_research_provider,
-          registry.unregister_research_provider, ResearchRequest(query="q"), "research", "aresearch"),
-    _Tool("browse", FakeBrowseProvider, "_start", AutoBrowseProvider, registry.register_browse_provider,
-          registry.unregister_browse_provider, BrowseRequest(task="t"), "browse", "abrowse"),
-]  # fmt: skip
-
-
-@pytest.fixture(params=TOOLS, ids=[tool.name for tool in TOOLS])
-def tool(request: pytest.FixtureRequest) -> Iterator[_Tool]:
-    yield request.param
-
-
-@pytest.fixture
-def called(tool: _Tool) -> Iterator[list[str]]:
-    """Register three members for ``tool`` that fail before sending anything, but ``third``; yield who was called."""
-    log: list[str] = []
-    for name in MEMBERS:
-        tool.register(name, _member(tool, name, log, fails=name != "third"))
-    yield log
-    for name in MEMBERS:
-        tool.unregister(name)
-
-
-def _member(tool: _Tool, member: str, log: list[str], *, fails: bool) -> type:
-    def entry(self: Any, *args: Any) -> Any:
-        log.append(member)
-        if fails:
-            raise ConfigurationError(f"{member} holds no key")
-        return getattr(tool.fake, tool.entry)(self, *args)
-
-    return type(f"Member_{member}", (tool.fake,), {"name": member, tool.entry: entry})
+__all__ = ["MEMBERS", "TOOLS", "_Tool", "_member"]  # where they lived: tests on other branches import them here
 
 
 def _hooked(seen: list[Attempt], refuse: str | None = None) -> Callable[[Attempt], bool]:
