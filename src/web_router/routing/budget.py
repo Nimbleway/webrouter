@@ -38,8 +38,8 @@ from pydantic import BaseModel
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
-from web_router.exceptions import WebRouterError
-from web_router.providers._deadline import call_deadline, current_deadline, job_deadline
+from web_router.exceptions import DeadlineExceededError, WebRouterError
+from web_router.providers._deadline import Deadline, call_deadline, current_deadline, job_deadline
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
@@ -95,14 +95,10 @@ def _held(
 ) -> Iterator[BudgetedCall[_BackendT]]:
     """The block under ``ledger``: its deadline, its check before each attempt, and its refusal."""
     expires = None if ledger.pool is None else ledger.pool.expires_at()
+    outside = current_deadline()
     with call_deadline(ledger.budget.time_limit_s), job_deadline(expires), call_route(_hooked(ledger.admit)):
         name = getattr(backend, "name", PROVIDER_AUTO)
-        deadline = current_deadline()
-        if deadline is not None and deadline.left() <= 0:
-            # The call's deadline -- its own, the shared clock's, or an enclosing call's -- has passed:
-            # say so before `auto` stops at it untried, and before anything is reserved.
-            ledger.skipped[f"{tool}{CANDIDATE_ID_SEPARATOR}{name}"] = SKIP_NO_TIME
-            raise ledger.refusal()
+        _refuse_late(ledger, f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", name, outside)
         if name != PROVIDER_AUTO and not admitted(tool, name, request):
             # Through the same hook auto's members pass, so a route in force can refuse it too;
             # the ledger's admit, last in that hook, reserves it in a shared budget.
@@ -116,6 +112,23 @@ def _held(
             if ledger.skipped and not ledger.tried:
                 raise ledger.refusal() from exc
             raise
+
+
+def _refuse_late(ledger: Ledger, call_id: str, name: str, outside: Deadline | None) -> None:
+    """Refuse the call before anything is admitted or reserved when its deadline has already passed.
+
+    The budget's own deadline -- its time cap or the shared clock -- raises
+    :class:`~web_router.BudgetExceededError`. A deadline the budget did not set,
+    an enclosing call's, raises :class:`~web_router.DeadlineExceededError`, as
+    the call would with no budget.
+    """
+    deadline = current_deadline()
+    if deadline is None or deadline.left() > 0:
+        return
+    if deadline is outside:
+        raise DeadlineExceededError(name, deadline.seconds)
+    ledger.skipped[call_id] = SKIP_NO_TIME
+    raise ledger.refusal()
 
 
 def _hooked(admit: Callable[[Attempt], bool]) -> CallRoute:

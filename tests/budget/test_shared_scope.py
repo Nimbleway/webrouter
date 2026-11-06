@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 
 from tests.budget.conftest import Chain, Table
-from web_router import AsyncWebRouter, Budget, BudgetExceededError, WebRouter
+from web_router import AsyncWebRouter, Budget, BudgetExceededError, DeadlineExceededError, WebRouter
 from web_router.constants_budget import SKIP_NO_TIME
 from web_router.exceptions import ConfigurationError, WebRouterError
 from web_router.providers._deadline import call_deadline, current_deadline
@@ -140,11 +140,24 @@ def test_a_call_that_starts_late_gets_only_the_time_the_clock_has_left(
     assert 0 < left[0] <= limit - late
 
 
-def test_a_named_backend_under_an_enclosing_deadline_that_has_passed_reserves_nothing(
+def test_an_enclosing_deadline_that_has_passed_raises_its_own_error_and_reserves_nothing(
     priced: Table, fake_provider: Any
 ) -> None:
     priced.update(fake=(0.01, None))
     with WebRouter().budget(Budget(max_cost_usd=1.0)) as scope, call_deadline(0.01):
+        time.sleep(0.02)
+        with pytest.raises(DeadlineExceededError) as raised:
+            scope.search("q", provider="fake")
+    assert not isinstance(raised.value, BudgetExceededError)
+    assert (raised.value.provider, raised.value.seconds) == ("fake", 0.01)
+    assert (scope.status().spent_usd, scope.status().reserved_usd) == (0.0, 0.0)
+
+
+def test_the_shared_clock_running_out_under_a_later_enclosing_deadline_is_the_budgets_error(
+    priced: Table, fake_provider: Any
+) -> None:
+    priced.update(fake=(0.01, None))
+    with call_deadline(60), WebRouter().budget(Budget(max_cost_usd=1.0, time_limit_s=0.01)) as scope:
         time.sleep(0.02)
         with pytest.raises(BudgetExceededError) as raised:
             scope.search("q", provider="fake")
