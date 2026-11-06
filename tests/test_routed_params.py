@@ -7,7 +7,8 @@ from typing import Any
 
 import pytest
 
-from tests.test_auto_seam import MEMBERS, TOOLS, _Tool
+from tests.routing_helpers import MEMBERS, TOOLS
+from tests.routing_helpers import Tool as _Tool
 from web_router import Budget, RouteDecision, RouteRequest, WebRouter
 from web_router.constants_params import MSG_EFFORT_NO_BUDGET, MSG_EFFORT_NONE_FITS_EVERY
 from web_router.routing import decide
@@ -86,7 +87,7 @@ def test_with_no_effort_from_the_router_the_budget_maps_one(sent: list[Any], mon
 @pytest.mark.parametrize("tool", [tool for tool in TOOLS if tool.name != "research"], ids=lambda tool: tool.name)
 def test_the_budget_maps_no_option_on_any_other_method(tool: _Tool, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(decide, "map_effort", lambda *_: pytest.fail("only research has an effort"))
-    assert decide._budget_effort(tool.name, ("x",), {}, (), Budget(max_cost_usd=1.0)) is None  # type: ignore[arg-type]
+    assert decide.budget_effort(tool.name, ("x",), {}, (), Budget(max_cost_usd=1.0)) is None  # type: ignore[arg-type]
 
 
 def _two_backends(monkeypatch: pytest.MonkeyPatch, picks: dict[str, str], fits: dict[str, set[str]]) -> None:
@@ -122,3 +123,51 @@ def test_with_no_effort_that_fits_every_backend_none_is_set(sent: list[Any], mon
     assert response.decision.params_reason == MSG_EFFORT_NONE_FITS_EVERY.format(
         efforts="low, high", providers="third, first"
     ), "and the record says why"
+
+
+@pytest.fixture
+def nimble_sent() -> Iterator[list[Any]]:
+    """A fake research backend registered as ``nimble``, so the real price list and effort table apply to it."""
+    log: list[Any] = []
+
+    def entry(self: Any, request: Any) -> Any:
+        log.append(request)
+        return RESEARCH.fake._start(self, request)
+
+    RESEARCH.register("nimble", type("SentNimble", (RESEARCH.fake,), {"name": "nimble", RESEARCH.entry: entry}))
+    yield log
+    RESEARCH.unregister("nimble")
+
+
+def test_with_no_router_a_budget_still_maps_research_effort(nimble_sent: list[Any]) -> None:
+    wr = WebRouter(provider_config={"auto": {"chain": ["nimble"]}})
+    response = wr.research("q", budget=Budget(max_cost_usd=0.10))
+    assert [request.effort for request in nimble_sent] == ["low"], "nimble's default has no price: unmapped, refused"
+    assert (response.decision.params, response.decision.params_source) == ({"effort": "low"}, "budget")
+    assert response.decision.params_reason and response.decision.decision_id, "with its reason, and stamped"
+
+
+def test_with_no_router_and_no_effort_that_fits_every_backend_the_record_says_why(
+    sent: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _two_backends(monkeypatch, {"third": "low", "first": "high"}, {"third": {"low"}, "first": {"high"}})
+    wr = WebRouter(provider_config={"auto": {"chain": ["third", "first"]}})
+    response = wr.research("q", budget=Budget(time_limit_s=600.0))
+    assert [request.effort for _, request in sent] == [None]
+    assert response.decision.params is None
+    assert response.decision.params_reason == MSG_EFFORT_NONE_FITS_EVERY.format(
+        efforts="low, high", providers="third, first"
+    )
+
+
+async def test_with_no_router_an_async_budgeted_call_maps_it_too(nimble_sent: list[Any]) -> None:
+    from web_router import AsyncWebRouter
+
+    wr = AsyncWebRouter(provider_config={"auto": {"chain": ["nimble"]}})
+    await wr.research("q", budget=Budget(max_cost_usd=0.10))
+    assert [request.effort for request in nimble_sent] == ["low"]
+
+
+def test_with_no_router_and_no_budget_research_runs_unchanged(nimble_sent: list[Any]) -> None:
+    response = WebRouter(provider_config={"auto": {"chain": ["nimble"]}}).research("q")
+    assert [request.effort for request in nimble_sent] == [None] and response.decision is None

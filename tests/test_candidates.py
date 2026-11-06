@@ -195,16 +195,15 @@ def test_a_cost_cap_drops_unknown_prices(keys: pytest.MonkeyPatch) -> None:
     assert "search:brave" in _ids(found)
 
 
-def test_research_without_effort_is_priced_at_its_default_effort(keys: pytest.MonkeyPatch) -> None:
+def test_research_without_effort_is_priced_at_its_default_effort_while_it_fits(keys: pytest.MonkeyPatch) -> None:
     _set_keys(keys, "linkup")
     request = {"research": ResearchRequest(query="q")}
     assert estimate("linkup", "research") == 1.5  # its default, high
     roomy = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=2.0))
     assert _one(roomy, "research:linkup").est_cost_usd == 1.5
-    # Linkup has too few measured efforts for the mapping to pick one, so its default stays, and is dropped.
+    # Under $1 the default does not fit, but measured low ($0.25) does: Linkup stays a candidate, at low.
     tight = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=1.0))
-    assert _ids(tight) == []
-    assert tight.dropped["research:linkup"].startswith("estimated $1.5")
+    assert _one(tight, "research:linkup").est_cost_usd == estimate("linkup", "research", "low") == 0.25
 
 
 def test_research_without_effort_is_priced_at_the_effort_the_budget_maps(keys: pytest.MonkeyPatch) -> None:
@@ -374,3 +373,16 @@ def test_a_member_missing_a_setting_beside_its_key_is_dropped_as_not_configured(
     assert _ids(found) == ["extract:jina"]
     assert found.dropped == {"extract:brightdata": MSG_DROPPED_NOT_CONFIGURED}
     assert "credential" not in MSG_DROPPED_NOT_CONFIGURED
+
+
+def test_a_plain_list_chain_naming_other_methods_backends_leaves_those_methods_without_candidates(
+    keys: pytest.MonkeyPatch,
+) -> None:
+    _set_keys(keys, "exa", "tavily")
+    router = WebRouter(provider_config={"auto": {"chain": ["exa", "tavily"]}})
+    found = build_candidates(router, default_requests("who won the cup"))
+    assert {c.tool for c in found.candidates} >= {"search"}
+    assert "research" not in {c.tool for c in found.candidates}
+    assert found.dropped["research:tavily"] == "not a backend for this method"
+    plan = router.plan("who won the cup")
+    assert plan.tool == "search" and set(plan.providers["search"]) == {"exa", "tavily"}

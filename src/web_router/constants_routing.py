@@ -10,3 +10,8 @@ CANDIDATE_ID_SEPARATOR = ":"
 """Between a candidate's tool and its provider: ``search:exa``."""
 
 MSG_CANDIDATE_ID = "Candidate id {id!r} does not match its tool and provider; it would be {expected!r}."
+
+PROMPT_PARAMS = frozenset({"query", "task"})
+"""The options that carry a plan's prompt, left out of its ``repr`` with the prompt itself."""
+
+MSG_BUDGET_VALUE = "Budget({name}=...) takes a number of 0 or more, or None for no cap; got {value!r}."

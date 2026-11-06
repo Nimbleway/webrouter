@@ -31,24 +31,33 @@ from __future__ import annotations
 
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal, cast, get_args
+from typing import Any, Literal, TypeGuard, cast, get_args
 
+from web_router._urls import shown
 from web_router.constants_merge import (
     EXTRACT_TOOL,
     LAST_RESORT_TOOL,
     MSG_EXCLUSIONS_EMPTY,
     MSG_EXTRACT_NO_URL,
+    MSG_TOOL_NO_CANDIDATE,
     MSG_UNKNOWN_ID,
     MSG_UNKNOWN_TOOL,
     NOTE_EXCLUDE,
     NOTE_EXTRACT,
+    NOTE_EXTRACT_URLS,
     ROUTER_EMPTY,
     ROUTER_INVALID,
     ROUTER_TIMEOUT,
 )
 from web_router.constants_params import PARAMS_SOURCE_ROUTER
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
-from web_router.routing.merge_params import UrlCheck, checked_params, hide_urls, router_urls, shown
+from web_router.routing.merge_params import (
+    UrlCheck,
+    checked_params,
+    hide_urls,
+    router_url_refusal,
+    router_urls,
+)
 
 FallbackReason = Literal["router_timeout", "router_error", "router_invalid"]
 """Why the static order was used instead of a decision."""
@@ -100,10 +109,8 @@ class Merged:
     notes: MergeNotes
 
     def __repr__(self) -> str:
-        shown_params = shown(self.params)
-        return (
-            f"Merged(tool={self.tool!r}, providers={self.providers!r}, params={shown_params!r}, notes={self.notes!r})"
-        )
+        params = self.record()["params"] or {}
+        return f"Merged(tool={self.tool!r}, providers={self.providers!r}, params={params!r}, notes={self.notes!r})"
 
     def record(self) -> dict[str, Any]:
         """The :class:`~web_router.DecisionRecord` fields the merge fills."""
@@ -137,7 +144,7 @@ def _keyed_by_name(value: object) -> bool:
     return isinstance(value, Mapping) and all(isinstance(k, str) for k in value)
 
 
-def well_formed(decision: object) -> bool:
+def well_formed(decision: object) -> TypeGuard[RouteDecision]:
     """Whether ``decision`` is a :class:`RouteDecision` whose fields have the shapes the contract gives them.
 
     A mapping keyed by anything but one of the five method names is malformed, not an unknown id: the
@@ -206,6 +213,8 @@ def _tool(request: RouteRequest, decision: RouteDecision, excluded: Collection[s
             ignored[tool] = MSG_UNKNOWN_TOOL.format(tool=tool)
         elif tool in left:
             return tool
+        else:
+            ignored[tool] = MSG_TOOL_NO_CANDIDATE.format(tool=tool)
     return LAST_RESORT_TOOL
 
 
@@ -252,6 +261,9 @@ def merge(
     no_url = request.pinned_tool is None and not request.urls and not router_urls(decision, url_check, caller_set)
     if tool == EXTRACT_TOOL and no_url:
         ignored[NOTE_EXTRACT] = MSG_EXTRACT_NO_URL
+        refused = router_url_refusal(decision, url_check, caller_set)
+        if refused is not None:
+            ignored[NOTE_EXTRACT_URLS] = refused
         tool = LAST_RESORT_TOOL
     ranked = _ranked(tool, decision, known, ignored)
     providers = _order(tool, request, ranked, excluded, static_order)
