@@ -36,10 +36,12 @@ def _scoped(chain: Chain, scope: BudgetScope, **options: object) -> object:
     return getattr(scope, chain.tool.name)(ARGS[chain.tool.name], provider=chain.auto(), **options)
 
 
-def test_the_scope_has_every_budgeted_method_on_both_routers() -> None:
-    methods = ("search", "extract", "answer", "research", "browse")
-    assert all(callable(getattr(scope, name)) for scope in (BudgetScope, AsyncBudgetScope) for name in methods)
-    assert WebRouter.budget.__doc__ is not None
+async def test_calls_through_the_async_scope_spend_from_it_on_every_tool(chain: Chain, priced: Table) -> None:
+    priced.update(first=(0.04, None))
+    async with AsyncWebRouter().budget(SHARED) as shared:
+        assert isinstance(shared, AsyncBudgetScope)
+        await getattr(shared, chain.tool.name)(ARGS[chain.tool.name], provider=chain.auto())
+    assert chain.called == ["first"] and shared.status().spent_usd == 0.04
 
 
 def test_calls_through_the_scope_spend_from_it_on_every_tool(chain: Chain, priced: Table) -> None:

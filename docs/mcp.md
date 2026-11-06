@@ -245,7 +245,10 @@ options and the backend order -- and the server runs it. The result is the
 method's own tool output (`search`'s, `extract`'s, ...) with `tool`, the
 method that ran, a `handle` for `fetch_raw`, and the `decision` record.
 `dry_run=true` returns the plan alone and calls nothing. `max_cost_usd` and
-`time_limit_s` cap that one call, within the budget below. The other tools
+`time_limit_s` cap that one call, within the budget below. When the router
+picks `research` or `browse`, `web_run` waits as those tools do, 25 seconds,
+and then hands back a handle for `research_status` or `browse_status` with the
+run still going, never losing a run that bills. The other tools
 are unchanged: `search`, `extract` and the rest never ask the router.
 
 The router is set by the operator, once, when the server starts:
@@ -258,8 +261,11 @@ The router is set by the operator, once, when the server starts:
   order, which is `search`.
 
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
-loopback, private or cloud-metadata host is never sent to a backend. Prompts
-stay in the server's process.
+loopback, private or cloud-metadata host is never sent to a backend. The
+prompt itself goes to the backend that serves it, as its query or task, as it
+would through `search`. The built-in router runs in the server's process and
+sends nothing out; an operator's router runs there too, but it is your code,
+and may send the prompt on, to a model's server for instance.
 
 **The budget.** Every billed tool -- `search`, `extract`, `answer`, `research`,
 `browse`, `run_template`, `browser_open` and `web_run` -- spends from one budget
@@ -267,9 +273,15 @@ per connection, a shared budget as `wr.budget(...)` is in the library. Each
 attempt reserves its estimated list price before it starts, and a call that
 does not fit is refused with `BudgetExceededError` before anything bills. A
 template run is charged its list price; a cloud browser per minute of its
-lifetime (`timeout`), on the dearest backend `auto` might open it on. Under a
-cost cap a backend whose price is unknown never runs, and the refusal names
-the unknown price.
+lifetime (`timeout`), rounded up to whole minutes, on the dearest backend that
+can serve the options asked for. A browser option that can turn on an extra
+billed apart -- a proxy country, stealth, CAPTCHA solving, a profile -- makes a
+paid backend's price unknown. Under a cost cap a backend whose price is
+unknown never runs, and the refusal names the unknown price. So `extract` with
+`provider="max"`, which races every member at once and has no price before the
+race, is refused under a cost cap; name a backend or use `auto`. The calls the
+server charges itself run on the budget's clock, and `research` and `browse`
+wait no longer than it has left.
 
 - **The operator's ceiling**: `WEB_ROUTER_MCP_MAX_COST_USD` and
   `WEB_ROUTER_MCP_TIME_LIMIT_S`. With no `budget_start`, the whole connection
@@ -280,20 +292,24 @@ the unknown price.
   reservation must fit the task and the ceiling, so the limits are cut to what
   the ceiling has left. A call still running when a new task starts stays
   charged to the connection.
-- **`budget_status()`** returns the task's `max_cost_usd`, `time_limit_s`,
-  `spent_usd`, `reserved_usd`, `remaining_usd` (counted against the ceiling
-  too), `elapsed_s` and `time_left_s`, and the ceiling.
+- **`budget_status()`** returns the task's `max_cost_usd` and `time_limit_s`
+  as they are in force (cut to the ceiling), its `spent_usd`, `reserved_usd`,
+  `remaining_usd` (counted against the ceiling too), `elapsed_s` and
+  `time_left_s`; `connection`, what every task on the connection has spent
+  and reserved; and the ceiling.
 
 With no ceiling and no `budget_start`, nothing is held, and every tool runs as
 it would with no budget.
 
 The three variables are read from the server's own process environment, once,
 at startup. No `.env` file and no `load_env` call can set or change them, and a
-value the server cannot read stops it from starting rather than leaving the
-connection without the ceiling you meant. The capabilities resource reports
+value the server cannot read -- an empty one included -- stops it from
+starting rather than leaving the connection without the ceiling you meant. The capabilities resource reports
 all of it under `routing`: the router (`rules`, your `<module>:<attribute>`, or
-`off`), where prompts go (`in_process`), the `url_policy`, the ceiling, and the
-budget in force (`null` with none).
+`off`), where it runs (`router_runs`: `in_process` for the built-in router or
+none, `operator` with a `router_note` for yours), a `prompt_note` saying the
+prompt goes to the backend, the `url_policy`, the ceiling, and the budget in
+force (`null` with none).
 
 ### A browse result never carries its session
 
