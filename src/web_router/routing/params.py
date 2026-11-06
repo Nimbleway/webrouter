@@ -27,6 +27,7 @@ from functools import lru_cache
 from importlib import resources
 from typing import Any, Literal, cast, get_args
 
+from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
 from web_router.constants_params import (
     DEFAULT_EFFORT_NAME,
     EFFORTS_DATA_DIR,
@@ -46,7 +47,7 @@ from web_router.constants_params import (
     PARAMS_SOURCE_CALLER,
 )
 from web_router.routing.contract import Budget, ToolName, candidate_id
-from web_router.routing.pricing import mode_cost, mode_p90, over_cost, research_mode
+from web_router.routing.pricing import misfit, mode_cost, mode_p90, research_mode
 from web_router.types import Provider, ResearchEffort, provider_name
 
 RESEARCH: ToolName = "research"
@@ -110,20 +111,22 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
     within it, and an unknown p90 fits unless the budget is ``strict``.
     """
     name = provider_name(provider)
-    shown = effort or DEFAULT_EFFORT_NAME
-    if budget.max_cost_usd is not None:
-        cost = mode_cost(name, RESEARCH, effort)
-        if cost is None:
-            return MSG_MISFIT_UNKNOWN_PRICE.format(provider=name, effort=shown)
-        if over_cost(cost, budget.max_cost_usd):
-            return MSG_MISFIT_COST.format(provider=name, effort=shown, cost=cost, cap=budget.max_cost_usd)
-    if budget.time_limit_s is not None:
-        p90 = mode_p90(name, RESEARCH, effort)
-        if p90 is None and budget.strict:
-            return MSG_MISFIT_STRICT.format(provider=name, effort=shown)
-        if p90 is not None and p90 > budget.time_limit_s:
-            return MSG_MISFIT_TIME.format(provider=name, effort=shown, p90=p90, cap=budget.time_limit_s)
-    return None
+    cap, limit = budget.max_cost_usd, budget.time_limit_s
+    cost = None if cap is None else mode_cost(name, RESEARCH, effort)
+    p90 = None if limit is None else mode_p90(name, RESEARCH, effort)
+    code = misfit(cost, p90, cap, limit, budget.strict)
+    if code is None:
+        return None
+    shown_cap = limit if code == OVER_TIME else cap  # the time wording names the time limit as its cap
+    return _MISFITS[code].format(provider=name, effort=effort or DEFAULT_EFFORT_NAME, cost=cost, cap=shown_cap, p90=p90)
+
+
+_MISFITS = {
+    UNKNOWN_PRICE: MSG_MISFIT_UNKNOWN_PRICE,
+    OVER_COST: MSG_MISFIT_COST,
+    UNKNOWN_P90: MSG_MISFIT_STRICT,
+    OVER_TIME: MSG_MISFIT_TIME,
+}
 
 
 def _is_measured(provider: str, effort: str | None) -> bool:

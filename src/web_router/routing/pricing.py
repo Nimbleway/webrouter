@@ -19,7 +19,7 @@ way when offered and another when run.
 from __future__ import annotations
 
 from web_router import prices
-from web_router.constants_budget import COST_TOLERANCE_USD
+from web_router.constants_budget import COST_TOLERANCE_USD, OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
 from web_router.routing.attempts import Attempt
 from web_router.types import ExtractRequest, ResearchRequest, SearchRequest
 
@@ -45,6 +45,27 @@ def mode_cost(provider: str, tool: str, mode: str | None) -> float | None:
 def over_cost(cost: float, left: float) -> bool:
     """Whether an estimate of ``cost`` dollars does not fit ``left``: the one comparison, with a float's tolerance."""
     return cost > left + COST_TOLERANCE_USD
+
+
+def misfit(
+    cost: float | None, p90: float | None, cost_left: float | None, time_left: float | None, strict: bool
+) -> str | None:
+    """Why an estimate of ``cost`` dollars and ``p90`` seconds does not fit what is left, as a code; ``None`` fits.
+
+    The one fit rule: ``cost_left`` of ``None`` caps no cost, and under a cap an unknown price never fits;
+    ``time_left`` of ``None`` caps no time, and under a cap an unknown p90 fits unless ``strict``.
+    """
+    if cost_left is not None:
+        if cost is None:
+            return UNKNOWN_PRICE
+        if over_cost(cost, cost_left):
+            return OVER_COST
+    if time_left is not None:
+        if p90 is None:
+            return UNKNOWN_P90 if strict else None
+        if p90 > time_left:
+            return OVER_TIME
+    return None
 
 
 def mode_p90(provider: str, tool: str, mode: str | None) -> float | None:

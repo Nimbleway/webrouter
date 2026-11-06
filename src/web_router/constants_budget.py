@@ -17,5 +17,12 @@ SKIP_ROUTE_REFUSED = "refused by the call's route"
 SKIPPED = "{id} skipped: {reason}"
 MSG_BUDGET_EXCEEDED = "Nothing fits the budget: {skipped}."
 
+UNKNOWN_PRICE = "unknown_price"
+OVER_COST = "over_cost"
+UNKNOWN_P90 = "unknown_p90"
+OVER_TIME = "over_time"
+"""Why an estimate does not fit what is left, as :func:`web_router.routing.pricing.misfit` answers: each
+caller words the code its own way."""
+
 COST_TOLERANCE_USD = 1e-9
 """An estimate this close to what is left still fits: sums of list prices are not exact in binary."""

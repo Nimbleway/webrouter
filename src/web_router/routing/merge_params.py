@@ -20,6 +20,7 @@ from typing import Any, get_args, overload
 from urllib.parse import urlsplit
 
 from web_router import registry
+from web_router.constants_budget import OVER_COST
 from web_router.constants_merge import (
     HOST_CHARS,
     MSG_PARAM_CALLER,
@@ -38,7 +39,8 @@ from web_router.constants_merge import (
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.routing.contract import Budget, RouteDecision
 from web_router.routing.params import EFFORTS, effort_misfit
-from web_router.routing.pricing import mode_cost, over_cost
+from web_router.routing.pricing import misfit as misfit_code
+from web_router.routing.pricing import mode_cost
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -122,14 +124,14 @@ def _url_refusal(key: str, value: Any, url_check: UrlCheck | None) -> str | None
 
 
 def _depth_misfit(provider: str, depth: str, budget: Budget) -> str | None:
-    if budget.max_cost_usd is None:
+    """Why ``depth`` does not fit the cost cap on ``provider``: by the one fit rule, the cost half only."""
+    cap = budget.max_cost_usd
+    cost = None if cap is None else mode_cost(provider, "search", depth)
+    code = misfit_code(cost, None, cap, None, strict=False)
+    if code is None:
         return None
-    cost = mode_cost(provider, "search", depth)
-    if cost is None:
-        return MSG_PARAM_DEPTH_UNKNOWN_PRICE.format(provider=provider, depth=depth)
-    if over_cost(cost, budget.max_cost_usd):
-        return MSG_PARAM_DEPTH_COST.format(provider=provider, depth=depth, cost=cost, cap=budget.max_cost_usd)
-    return None
+    wording = MSG_PARAM_DEPTH_COST if code == OVER_COST else MSG_PARAM_DEPTH_UNKNOWN_PRICE
+    return wording.format(provider=provider, depth=depth, cost=cost, cap=cap)
 
 
 def misfit(key: str, value: str, providers: Sequence[str], budget: Budget | None) -> str | None:
