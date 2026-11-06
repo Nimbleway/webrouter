@@ -79,7 +79,9 @@ def attempt_p90(attempt: Attempt) -> float | None:
 
 
 def _usd(value: float) -> str:
-    return f"${value:.2f}" if value >= 0.01 else f"${value:.4g}"
+    """Dollars as the price list states them, never rounded to cents: ``$0.025``, ``$0.0011``, ``$1.00``."""
+    whole, _, cents = f"{value:.6f}".rstrip("0").partition(".")
+    return f"${whole}.{cents.ljust(2, '0')}"
 
 
 @dataclass

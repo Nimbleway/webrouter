@@ -210,3 +210,19 @@ def test_a_route_that_refuses_a_named_backend_stops_the_budgeted_call(chain: Cha
         call(chain, CAP, provider="second")
     assert chain.called == []
     assert raised.value.skipped == {_ids(chain, "second")[0]: SKIP_ROUTE_REFUSED}
+
+
+def test_when_the_budget_skips_every_member_the_error_chains_no_missing_backend_cause(
+    chain: Chain, priced: Table
+) -> None:
+    with pytest.raises(BudgetExceededError) as raised:
+        call(chain, CAP)
+    assert raised.value.__cause__ is None
+    assert raised.value.__suppress_context__, "the chain's 'nothing configured' error is not why it stopped"
+
+
+def test_a_skip_names_the_estimate_and_what_is_left_unrounded(chain: Chain, priced: Table) -> None:
+    priced.update(first=(0.025, None), second=(0.0011, None))
+    response = call(chain, CAP)
+    assert response.decision.hops == [DecisionHop(id=_ids(chain, "first")[0], error=_over("$0.025", "$0.01"))]
+    assert chain.called == ["second"]
