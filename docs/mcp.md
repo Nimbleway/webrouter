@@ -3,8 +3,9 @@
 A self-hosted stdio MCP server that gives an agent — Claude Code, Claude
 Desktop, Cursor, anything that speaks MCP — the methods this package
 routes: `search`, `extract`, `answer`, `research` and a vendor's templates (`templates`,
-`template`, `run_template`) — plus `browse` for a hosted browser agent, and the
-`browser_*` tools for driving a browser yourself.
+`template`, `run_template`) — plus `browse` for a hosted browser agent, the
+`browser_*` tools for driving a browser yourself, and `web_run`, which picks the
+method for a request in words.
 
 It runs as a subprocess of your own client, on your own machine, and reads your
 own credentials out of your own environment. There is no hosted service in the
@@ -250,7 +251,7 @@ are unchanged: `search`, `extract` and the rest never ask the router.
 
 The router is set by the operator, once, when the server starts:
 
-- unset, the built-in rules router (`web_router.routing.rules`): a prompt
+- unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
   with an `http(s)` URL is read with `extract`, anything else searched;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
   installed -- any form `router=` takes on the library;
@@ -258,8 +259,9 @@ The router is set by the operator, once, when the server starts:
   order, which is `search`.
 
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
-loopback, private or cloud-metadata host is never sent to a backend. Prompts
-stay in the server's process.
+loopback, private or cloud-metadata host is never sent to a backend. The
+router runs inside the server's process: the prompt leaves it only as the
+planned call's query, task or URLs, unless a router you name sends it on.
 
 **The budget.** Every billed tool -- `search`, `extract`, `answer`, `research`,
 `browse`, `run_template`, `browser_open` and `web_run` -- spends from one budget

@@ -4,8 +4,9 @@ Experimental. A pure selection with no model and no side effects: it reads the
 research effort table (``data/efforts.json``, written by ``make efforts`` from
 the frozen ``tools-effort-60`` results), and prices and times each effort by
 :mod:`.pricing`'s rule -- the price list, then the table's own p90 -- and
-answers which effort to run with and why. Nothing calls it yet; enforcing the
-budget is not its job.
+answers which effort to run with and why. The candidate builder and
+:func:`~web_router.routing.decide.decided` call it on a routed call or a plan;
+enforcing the budget is not its job.
 
 Only research's ``effort`` is mapped. Search keeps its own ``search_depth``
 and ``max_results``, and timeouts come from the time cap, not from here.

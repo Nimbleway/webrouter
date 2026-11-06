@@ -1400,7 +1400,8 @@ The package ships a **self-hosted stdio MCP server**, so an agent can call these
 methods as tools -- `search`, `extract`, `templates` / `template` /
 `run_template`, `answer` and `research` -- plus `browse` / `browse_status` for a hosted browser
 agent's task, shaped like `research` / `research_status`: the tool waits 25
-seconds, then hands back a handle to poll. It runs in your own process and reads your own keys from
+seconds, then hands back a handle to poll; and `web_run`, `budget_start` and `budget_status`
+for [smart routing](#smart-routing-experimental). It runs in your own process and reads your own keys from
 your own environment — each key goes only to the backend it belongs to, which is
 the whole reason it is self-hosted rather than a service someone runs for you.
 
@@ -1877,6 +1878,125 @@ carries the results' text, from ~1,000 tokens for a snippet-only backend to
 ~3,500 for one that returns long excerpts at ten results. And it **fails fast**: a
 missing key or SDK for a built-in judge raises before the first search is
 paid for. `evaluate()` is `search` only, for the same reason `benchmark()` is.
+
+## Smart routing (experimental)
+
+Everything in this section is experimental: any name in it may change before
+1.0. With no router and no budget, nothing here changes a call.
+
+A router is your code. web-router shows it a prompt and the candidates that
+could serve it, each priced and timed; the router picks the method and orders
+the backends; web-router checks its answer, holds the call to its budget and
+runs it.
+
+```python
+from web_router import Budget, RouteDecision, RouteRequest, WebRouter
+
+
+def route(req: RouteRequest) -> RouteDecision:
+    if req.urls:  # the http(s) URLs in the prompt
+        return RouteDecision(tools=["extract"], reason="names a URL")
+    if "compare" in req.prompt:
+        return RouteDecision(tools=["research", "search"], params={"research": {"effort": "low"}})
+    return RouteDecision()  # no opinion: the static order runs
+
+
+wr = WebRouter(router=route, url_policy="public_only")
+plan = wr.plan("read https://example.com/pricing")  # runs nothing
+response = wr.run(plan, budget=Budget(max_cost_usd=0.05))
+```
+
+A router is a function or coroutine function, or an object with `route(req)`
+or `aroute(req)`. `RouteRequest` holds the `prompt`, its `urls`, the `budget`
+and the `candidates`, each a `Candidate` named `tool:provider` (`search:exa`)
+with `est_cost_usd` and `est_latency_s` (p90), `None` when unknown. Every
+`RouteDecision` field is optional: `tools` and `providers`, best first,
+`exclude`, `params`, `confidence` and `reason`. A router gets 50 ms unless it
+sets a `timeout_s` attribute. One that raises, runs out of time or answers
+something else leaves the static order -- `auto`'s, as in
+[Working with no credentials](#working-with-no-credentials) --
+and `fail_on_router_error=True` raises `RouterError` instead.
+
+Its answer is merged: its ranking first, then the static order. Only
+`exclude` removes a backend, never the last one, and a router may set only
+search's `max_results` and `search_depth`, research's `effort`, and the URLs
+for extract and browse -- never an option you set yourself. A fallback never
+moves to another method. Attached with `router=`, a router also orders the
+backends of a plain `search`, `extract`, `answer`, `research` or `browse` sent
+to `auto`, without changing the method; `route_tools=` names fewer methods.
+
+### `plan()` and `run()`
+
+`plan(prompt, budget=, tool=)` runs nothing. It returns a `Plan`: the method
+(`tool`), its options (`params`), the backends in order (`providers`) and the
+decision record. With no router it is a search, unless `tool` pins a method.
+`run(plan)` calls that method on `auto` in that order and returns its own
+response: a `SearchResponse`, `ExtractResponse`, `AnswerResponse`,
+`ResearchResponse` or `BrowseResponse`. `run(prompt)` does both.
+
+### Budgets
+
+`budget=Budget(max_cost_usd=, time_limit_s=, strict=)` caps one call to
+`search`, `extract`, `answer`, `research`, `browse`, `plan` or `run`. Before
+each attempt web-router checks its estimate against what is left and skips it
+if it does not fit; when nothing fits, it raises `BudgetExceededError`, naming
+each skip. Costs are estimates from the list prices in
+[`web_router.prices`](#estimated-prices-experimental), not your bill, and a
+failed attempt still counts.
+
+- **Unknown price.** Under a cost cap, a backend whose price is unknown never
+  runs: it is skipped, and the record says why. With no cost cap it runs.
+- **Unknown p90.** Under a time cap, a backend with no measured p90 runs
+  within the time left; `strict=True` skips it instead. One whose p90 does not
+  fit the time left is skipped.
+- **Research and browse.** The time cap limits the wait, not the job: they
+  wait at most `min(timeout, time left)`, then raise their own timeout error
+  with the job's handle.
+- **Research effort.** On `plan()`, `run()` and a routed call, the budget picks
+  research's `effort` when neither you nor the router set one.
+
+To spend several calls from one budget:
+
+```python
+with wr.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
+    b.search("...")
+    b.research("...")  # calls on wr inside the block spend from it too
+    b.status()  # spent, reserved, remaining, elapsed, time left
+```
+
+Each attempt reserves its estimate before it starts, so parallel threads and
+tasks never overspend together. A thread started inside the block calls
+through `b`. On `AsyncWebRouter`, every method here is awaited and the scope is
+`async with awr.budget(...)`.
+
+### `url_policy`
+
+`url_policy="public_only"` refuses loopback, link-local, cloud-metadata,
+private, shared and reserved hosts, and URLs a browser could read another host
+from, among the URLs a plan finds in a prompt and those a router supplies; the
+record lists each refusal under `dropped` or `ignored`, by scheme and host. It
+is a hostname check before
+dispatch: it resolves no DNS and follows no redirect. It is off by default, and
+leaves the URLs you pass to `extract` yourself alone.
+
+### The decision record
+
+`response.decision` and `plan.decision` hold a `DecisionRecord` on every
+routed or budgeted call, and `None` on any other: the candidates offered, the
+router's ranking and the merged order, which one answered (`ran`), each
+attempt with its estimated cost, each candidate moved past and why, and the
+router's time and reason. It never holds the prompt or a browse task -- only
+the prompt's SHA-256, which is not anonymisation: a short prompt can be
+guessed from it -- never a whole URL, only its scheme and host, and no key
+values. Candidate ids do show which backends you have configured, and
+`reason`, `excluded` and `ignored` hold the router's own words.
+
+Four example routers, tested offline: [rules](examples/router_rules.py), a
+[scikit-learn classifier](examples/router_classifier.py), an
+[OpenAI-compatible model](examples/router_llm.py) and
+[Jev](examples/router_jev.py). The MCP server brings the same to an agent with
+`web_run`, `budget_start` and `budget_status`, under a ceiling the operator
+sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
 
 ## Routing and extending
 
