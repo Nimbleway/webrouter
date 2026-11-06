@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Collection, Mapping, Sequence
-from typing import Any, get_args
+from typing import Any, get_args, overload
 from urllib.parse import urlsplit
 
 from web_router import prices, registry
@@ -31,6 +31,7 @@ from web_router.constants_merge import (
     MSG_PARAM_UNDECLARED,
     MSG_PARAM_URL_REFUSED,
     ROUTER_PARAMS,
+    URL_BRACKETS,
     URL_HIDDEN,
     URL_IN_TEXT,
 )
@@ -71,9 +72,30 @@ def host_of(url: str) -> str:
     return f"{parts.scheme}://{host}" if parts.scheme and host else URL_HIDDEN
 
 
+def _url_end(match: str) -> int:
+    """Where the URL in ``match`` ends: before the first closing bracket it did not open."""
+    opened: list[str] = []
+    for i, char in enumerate(match):
+        if char in URL_BRACKETS.values():
+            opened.append(char)
+        elif char in URL_BRACKETS and (not opened or opened.pop() != URL_BRACKETS[char]):
+            return i
+    return len(match)
+
+
+def _hide(match: re.Match[str]) -> str:
+    text = match.group(0)
+    end = _url_end(text)
+    return host_of(text[:end]) + text[end:]
+
+
+@overload
+def hide_urls(text: str) -> str: ...
+@overload
+def hide_urls(text: None) -> None: ...
 def hide_urls(text: str | None) -> str | None:
-    """``text`` with every URL in it cut to its scheme and host: for a router's free-form reasons."""
-    return None if text is None else re.sub(URL_IN_TEXT, lambda m: host_of(m.group(0)), text)
+    """``text`` with every URL in it cut to its scheme and host: for anything a router wrote, ids included."""
+    return None if text is None else re.sub(URL_IN_TEXT, _hide, text)
 
 
 def shown(params: Mapping[str, Any]) -> dict[str, Any]:
@@ -184,5 +206,5 @@ def checked_params(
         if why is None:
             kept[key] = list(value) if key == "urls" else value
         else:
-            ignored[f"params.{tool}.{key}"] = why
+            ignored[hide_urls(f"params.{tool}.{key}")] = hide_urls(why)
     return kept
