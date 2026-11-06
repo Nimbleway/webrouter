@@ -153,7 +153,11 @@ src/web_router/
 │   └── decide.py       decided(): candidates and a router's outcome merged into the
 │                       method, order, options and record a call runs with, pure
 ├── _urls.py            urls_in(): the URLs written in a query's prose
-├── constants_urls.py   the punctuation stripped from the end of a URL found in prose
+├── _hosts.py           a URL host's kind -- loopback, cloud metadata, private -- in
+│                       every spelling a browser reads; shared by the MCP navigation
+│                       guard and url_policy
+├── constants_urls.py   the punctuation stripped from a URL found in prose, and the
+│                       metadata, loopback and legacy-IPv4 host lists
 ├── constants_params.py the effort mapping's data path, rule and reasons
 ├── constants_merge.py  the options a router may set, and the merge's reasons and notes
 ├── constants_prices.py the price list's data path, unit divisors, messages and
