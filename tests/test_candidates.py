@@ -190,19 +190,42 @@ def test_a_cost_cap_drops_unknown_prices(keys: pytest.MonkeyPatch) -> None:
     assert "search:brave" in _ids(found)
 
 
-def test_research_without_effort_stays_when_a_cheaper_effort_fits(keys: pytest.MonkeyPatch) -> None:
+def test_research_without_effort_is_priced_at_its_default_effort(keys: pytest.MonkeyPatch) -> None:
     _set_keys(keys, "linkup")
     request = {"research": ResearchRequest(query="q")}
     assert estimate("linkup", "research") == 1.5  # its default, high
-    found = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=1.0))
-    assert _one(found, "research:linkup").est_cost_usd == estimate("linkup", "research", "low") == 0.25
-    # With room for its default, it is priced at its default.
     roomy = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=2.0))
     assert _one(roomy, "research:linkup").est_cost_usd == 1.5
-    # Dropped only when no effort fits.
-    tight = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=0.1))
+    # A cheaper effort would fit $1, but choosing one is the budget mapping's job: here it is dropped.
+    assert estimate("linkup", "research", "low") == 0.25
+    tight = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=1.0))
     assert _ids(tight) == []
-    assert "research:linkup" in tight.dropped
+    assert tight.dropped["research:linkup"].startswith("estimated $1.5")
+
+
+def test_research_with_an_unknown_default_price_is_dropped_under_a_cost_cap(keys: pytest.MonkeyPatch) -> None:
+    _set_keys(keys, "nimble")
+    assert estimate("nimble", "research") is None  # priced only per effort
+    found = build_candidates(WebRouter(), {"research": ResearchRequest(query="q")}, budget=Budget(max_cost_usd=10.0))
+    assert "no known price" in found.dropped["research:nimble"]
+
+
+def test_provider_options_make_the_price_unknown_under_a_cost_cap(keys: pytest.MonkeyPatch) -> None:
+    _set_keys(keys, "brave")
+    request = {"search": SearchRequest(query="q", provider_options={"extra_snippets": True})}
+    found = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=10.0))
+    assert "search:brave" not in _ids(found)
+    assert "no known price" in found.dropped["search:brave"]
+
+
+def test_provider_options_keep_the_estimate_with_no_cost_cap_and_mark_it_unmeasured(keys: pytest.MonkeyPatch) -> None:
+    _set_keys(keys, "brave")
+    plain = build_candidates(WebRouter(), {"search": SearchRequest(query="q")})
+    assert "search:brave" not in plain.unmeasured
+    request = {"search": SearchRequest(query="q", provider_options={"extra_snippets": True})}
+    found = build_candidates(WebRouter(), request, budget=Budget(time_limit_s=10.0))
+    assert _one(found, "search:brave").est_cost_usd == estimate("brave", "search")
+    assert "search:brave" in found.unmeasured
 
 
 def test_research_with_a_pinned_effort_is_priced_at_that_effort(keys: pytest.MonkeyPatch) -> None:
