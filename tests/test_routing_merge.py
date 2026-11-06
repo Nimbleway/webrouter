@@ -353,3 +353,29 @@ def _none(url: str) -> None:
 
 def _refuse(url: str) -> str:
     return "not allowed"
+
+
+def test_a_url_in_the_routers_own_words_shows_as_its_scheme_and_host() -> None:
+    decision = RouteDecision(
+        providers={"search": ["exa"]},
+        exclude={"search:brave": f"failed on {TOKEN_URL} twice"},
+        reason=f"see {TOKEN_URL}",
+    )
+    merged = _merge(decision, pinned="search")
+    empty = _merge(RouteDecision(reason=f"nothing for {TOKEN_URL}"), pinned="search")
+    assert merged.notes.reason == "see https://a.example"
+    assert merged.notes.excluded == {"search:brave": "failed on https://a.example twice"}
+    for shown in (repr(merged), repr(empty), str(DecisionRecord(**merged.record())), str(empty.record())):
+        assert "s3cr3t" not in shown and "pw@" not in shown
+
+
+def test_a_backend_that_cannot_be_looked_up_is_not_said_to_refuse_the_option() -> None:
+    request = RouteRequest(
+        prompt="q",
+        candidates=(Candidate(tool="search", provider="tavily"), Candidate(tool="search", provider="no-such")),
+        deadline_s=1.0,
+        pinned_tool="search",
+    )
+    merged = merge(request, RouteDecision(params={"search": {"search_depth": "deep"}}), {})
+    why = merged.notes.ignored["params.search.search_depth"]
+    assert merged.params == {} and why.startswith("search:no-such could not be checked for search_depth")

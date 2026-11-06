@@ -19,6 +19,9 @@ ROUTER_PARAMS: dict[str, frozenset[str]] = {
 ``timeout``, ``output_schema``, ``allowed_domains``, ``max_steps`` -- is dropped: ``provider_options`` goes
 into the vendor's request as it is, where a budget cannot see what it spends."""
 
+EXTRACT_TOOL: Final = "extract"
+"""The method rule 7 moves to ``search`` when it has no URL to read."""
+
 LAST_RESORT_TOOL: Final = "search"
 """The method a call runs when nothing pins one and the router names none that has a candidate."""
 
@@ -44,7 +47,10 @@ MSG_PARAM_INVALID = "the router's {key} is not a valid {key} for {tool}"
 MSG_PARAM_NO_URL_POLICY = "no URL policy is in force, so a router may not set {key}"
 MSG_PARAM_URL_REFUSED = "a URL on {host} is refused by the URL policy: {why}"
 MSG_PARAM_UNDECLARED = "{tool}:{provider} does not take {key}"
+MSG_PARAM_UNCHECKED = "{tool}:{provider} could not be checked for {key}: {error}"
 URL_HIDDEN = "<url>"
+URL_IN_TEXT = r"[A-Za-z][A-Za-z0-9+.-]*://[^\s<>\"']+"
+"""A URL inside free text, such as a router's reason: it is shown as its scheme and host only."""
 """How a URL with no scheme or host shows in a record: the URL itself never does."""
 MSG_PARAM_DEPTH_UNKNOWN_PRICE = "search:{provider} at depth {depth} has no known price, so it never fits a cost cap"
 MSG_PARAM_DEPTH_COST = "search:{provider} at depth {depth} is estimated at ${cost:g}, over the ${cap:g} cost cap"

@@ -32,6 +32,8 @@ PARAMS_SOURCE_BUDGET: Final = "budget"
 """``params_source`` when the budget's mapping chose the params."""
 PARAMS_SOURCE_CALLER: Final = "caller"
 """``params_source`` when the caller set them; the budget never changes them."""
+PARAMS_SOURCE_ROUTER: Final = "router"
+"""``params_source`` when a router set them and they passed the merge rule's checks."""
 
 DEFAULT_EFFORT_NAME = "default"
 """How a reason names the effort a call gets when it sets none."""

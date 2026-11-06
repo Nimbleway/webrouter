@@ -87,6 +87,8 @@ class Outcome:
     """The exception the router raised, as ``Type: message``; ``None`` when it raised nothing."""
     ungraded: bool = False
     """The backend served, but the judge failed or the answer leaked the set's own pages: never correct."""
+    unscorable: int = 0
+    """Backends the merged order named that have no frozen row to score, such as research at an effort never run."""
 
 
 def split(questions: Sequence[Question], seed: int, test_fraction: float) -> tuple[list[Question], list[Question]]:
@@ -138,7 +140,7 @@ def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
         answer, cost, failure = None, 0.0, ROUTER_ERROR
         error = f"{type(exc).__name__}: {exc}"
     overhead = time.perf_counter() - started
-    ranked, router_failed = walk(answer, q, fallback_order, failure)
+    ranked, router_failed, unscorable = walk(answer, q, fallback_order, failure)
     latency: float | None = overhead
     total: float | None = cost
     for i, provider in enumerate(ranked):
@@ -150,8 +152,10 @@ def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
             fallback = router_failed or i > 0
             ungraded = row["error"] is not None
             correct = not ungraded and row["grade"] == "correct"
-            return Outcome(correct, provider, latency, total, fallback, router_failed, overhead, error, ungraded)
-    return Outcome(False, None, latency, total, True, router_failed, overhead, error)
+            return Outcome(
+                correct, provider, latency, total, fallback, router_failed, overhead, error, ungraded, unscorable
+            )
+    return Outcome(False, None, latency, total, True, router_failed, overhead, error, unscorable=unscorable)
 
 
 def score(outcomes: Sequence[Outcome]) -> dict[str, Any]:
@@ -174,6 +178,7 @@ def score(outcomes: Sequence[Outcome]) -> dict[str, Any]:
         "router_failed": sum(o.router_failed for o in outcomes),
         "unserved": sum(o.served_by is None for o in outcomes),
         "ungraded": sum(o.ungraded for o in outcomes),
+        "unscorable": sum(o.unscorable for o in outcomes),
         "mean_overhead_s": statistics.fmean(o.overhead_s for o in outcomes) if outcomes else None,
     }
 

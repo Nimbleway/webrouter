@@ -220,7 +220,8 @@ def test_a_decision_on_a_mixed_set_picks_one_tool_and_its_effort(route_eval: Mod
     _mixed_set(tmp_path)
     _, questions = route_eval.load_set("mixed-tiny", tmp_path)
     request = sys.modules["route_eval_merge"].request_for(questions[0])
-    assert request.pinned_tool is None and request.urls, "a question given its pages offers extract a URL"
+    assert request.pinned_tool is None and request.urls == ("frozen:pages",), "the rows keep no URL: a placeholder"
+    assert not sys.modules["route_eval_merge"].request_for(questions[-1]).urls, "no pages, no URL"
     assert {"research:parallel", "search:nimble", "extract:nimble"} <= {c.id for c in request.candidates}
     high = {"research": {"effort": "high"}}
     decision = RouteDecision(tools=["research"], providers={"research": ["parallel"]}, params=high)
@@ -239,3 +240,31 @@ def test_a_ranking_on_a_mixed_set_is_followed_by_the_static_path_order(route_eva
     static = route_eval.static_router(route_eval.MIXED)
     outcome = route_eval.replay(lambda _: ["research:perplexity:low"], questions[0], static)
     assert outcome.served_by == "search+extract:perplexity:top3" and outcome.fallback and not outcome.router_failed
+
+
+def test_an_empty_decision_on_a_mixed_set_walks_the_whole_static_path_order(
+    route_eval: ModuleType, tmp_path: Path
+) -> None:
+    from web_router import RouteDecision
+
+    _mixed_set(tmp_path)
+    _, questions = route_eval.load_set("mixed-tiny", tmp_path)
+    q = questions[-1]
+    static = route_eval.static_router(route_eval.MIXED)
+    walked, failed, _ = sys.modules["route_eval_merge"].walk(RouteDecision(), q, static, None)
+    assert walked == static(q) and not failed, "every path, as the static yardstick walks them"
+
+
+def test_a_research_backend_with_no_row_at_the_effort_is_counted_unscorable(
+    route_eval: ModuleType, tmp_path: Path
+) -> None:
+    from web_router import RouteDecision
+
+    _mixed_set(tmp_path)
+    _, questions = route_eval.load_set("mixed-tiny", tmp_path)
+    decision = RouteDecision(
+        tools=["research"], providers={"research": ["perplexity", "parallel"]}, params={"research": {"effort": "high"}}
+    )
+    outcome = route_eval.replay(lambda _: decision, questions[-1], route_eval.static_router(route_eval.MIXED))
+    assert outcome.served_by == "research:parallel:high", "perplexity has no high row; the walk goes on"
+    assert outcome.unscorable == 1 and route_eval.score([outcome])["unscorable"] == 1
