@@ -121,11 +121,13 @@ class _Planner(RouterSetup):
     def _asks(self, req: RouteRequest) -> bool:
         return self._router is not None and bool(req.candidates)
 
-    def _run_parts(self, plan: Plan) -> tuple[Any, NormalizedRequest, Sequence[str]]:
-        """The ``auto`` the plan runs on, its request, and its order."""
+    def _run_scope(self, stack: ExitStack, plan: Plan, budget: Budget | None) -> tuple[Any, NormalizedRequest, Any]:
+        """The ``auto`` the plan runs on, its request, and the budget's scope, entered with the plan's order."""
         chain = getattr(self, AUTO_GETTERS[plan.tool])(PROVIDER_AUTO)
         request = _REQUEST[plan.tool](**{k: v for k, v in plan.params.items() if v is not None})
-        return chain, request, list(plan.providers.get(plan.tool, ()))
+        scope = stack.enter_context(recorded(stack.enter_context(budget_scope(budget, plan.tool, chain, request))))
+        _ordered(stack, plan.tool, list(plan.providers.get(plan.tool, ())))
+        return chain, request, scope
 
 
 def _ordered(stack: ExitStack, tool: ToolName, providers: Sequence[str]) -> None:
@@ -168,11 +170,8 @@ class SyncPlan(_Planner, SyncRouted):
             if isinstance(plan, str):
                 stack.enter_context(call_deadline(None if budget is None else budget.time_limit_s))
                 plan = self.plan(plan, budget=budget, tool=tool)
-            chain, request, providers = self._run_parts(plan)
-            scope = stack.enter_context(recorded(stack.enter_context(budget_scope(budget, plan.tool, chain, request))))
-            _ordered(stack, plan.tool, providers)
-            response = getattr(chain, plan.tool)(request)
-            return scope.settle(_settled(response, plan))  # type: ignore[no-any-return]
+            chain, request, scope = self._run_scope(stack, plan, budget)
+            return scope.settle(_settled(getattr(chain, plan.tool)(request), plan))  # type: ignore[no-any-return]
 
 
 class AsyncPlan(_Planner, AsyncRouted):
@@ -189,11 +188,8 @@ class AsyncPlan(_Planner, AsyncRouted):
             if isinstance(plan, str):
                 stack.enter_context(call_deadline(None if budget is None else budget.time_limit_s))
                 plan = await self.plan(plan, budget=budget, tool=tool)
-            chain, request, providers = self._run_parts(plan)
-            scope = stack.enter_context(recorded(stack.enter_context(budget_scope(budget, plan.tool, chain, request))))
-            _ordered(stack, plan.tool, providers)
-            response = await getattr(chain, f"a{plan.tool}")(request)
-            return scope.settle(_settled(response, plan))  # type: ignore[no-any-return]
+            chain, request, scope = self._run_scope(stack, plan, budget)
+            return scope.settle(_settled(await getattr(chain, f"a{plan.tool}")(request), plan))  # type: ignore[no-any-return]
 
 
 __all__ = ["AsyncPlan", "RunResponse", "SyncPlan"]

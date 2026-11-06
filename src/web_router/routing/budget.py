@@ -125,11 +125,11 @@ def _held(
             raise ledger.refusal()
         try:
             yield BudgetedCall(backend, ledger)
-        except WebRouterError as exc:
+        except WebRouterError:
             # An `auto` chain whose every member the budget skipped ends as one with no
-            # backend configured would; the budget is what stopped it, so say so.
+            # backend configured would. Nothing ran, so that error is no cause: the budget is.
             if ledger.skipped and not ledger.tried:
-                raise ledger.refusal() from exc
+                raise ledger.refusal() from None
             raise
 
 

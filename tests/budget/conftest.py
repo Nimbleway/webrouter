@@ -1,8 +1,9 @@
 """What the budget tests share: a price list of their own, and an ``auto`` chain of three fake members per tool.
 
 The members are named ``first``, ``second`` and ``third`` and answer unless
-told to raise; :func:`priced` sets what each is estimated to cost and take,
-so a test reads its prices beside its assertions rather than in prices.json.
+told to raise; the ``priced`` fixture (:mod:`tests.routing_helpers`) sets what
+each is estimated to cost and take, so a test reads its prices beside its
+assertions rather than in prices.json. ``tool`` is every method in turn.
 """
 
 from __future__ import annotations
@@ -10,37 +11,18 @@ from __future__ import annotations
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
-from tests.test_auto_seam import MEMBERS, TOOLS, _Tool
-from web_router import AsyncWebRouter, Budget, WebRouter, prices
+from tests.routing_helpers import MEMBERS, Table
+from tests.routing_helpers import Tool as _Tool
+from web_router import AsyncWebRouter, Budget, WebRouter
 
 ARGS = {"search": "q", "extract": "https://a.test", "answer": "q", "research": "q", "browse": "t"}
 """What each tool is called with: its query, URL or task."""
 
-Table = dict[str, tuple[float | None, float | None]]
-"""A member's name -> its (estimated cost, p90 seconds); ``None`` is unknown. A member not listed is unknown in both."""
-
-
-@pytest.fixture
-def priced(monkeypatch: pytest.MonkeyPatch) -> Table:
-    """The price list the budget reads, by member name, whatever the method and mode."""
-    table: Table = {}
-
-    def price(provider: str, method: str, mode: str | None = None) -> SimpleNamespace | None:
-        cost = table.get(provider, (None, None))[0]
-        return None if cost is None else SimpleNamespace(estimate_usd=cost, estimate_is_floor=False, mode=mode)
-
-    def estimate_latency(provider: str, method: str, mode: str | None = None) -> tuple[float, float] | None:
-        p90 = table.get(provider, (None, None))[1]
-        return None if p90 is None else (p90, p90)
-
-    monkeypatch.setattr(prices, "price", price)
-    monkeypatch.setattr(prices, "estimate_latency", estimate_latency)
-    return table
+__all__ = ["ARGS", "Chain", "Table", "acall", "call"]
 
 
 @dataclass
@@ -73,12 +55,6 @@ class Chain:
 
         attrs = {"name": name, tool.entry: entry, "polls_before_done": property(polls_before_done)}
         return type(f"Budgeted_{name}", (tool.fake,), attrs)
-
-
-@pytest.fixture(params=TOOLS, ids=[tool.name for tool in TOOLS])
-def tool(request: pytest.FixtureRequest) -> _Tool:
-    """Every tool in turn; a test narrows it by name with ``parametrize("tool", ["research"], indirect=True)``."""
-    return next(tool for tool in TOOLS if request.param in (tool, tool.name))
 
 
 @pytest.fixture

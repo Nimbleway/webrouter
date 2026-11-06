@@ -13,7 +13,7 @@ import pytest
 
 from web_router import Budget, DecisionRecord
 from web_router.constants_params import PARAMS_SOURCE_BUDGET, PARAMS_SOURCE_CALLER
-from web_router.routing import params
+from web_router.routing import params, pricing
 from web_router.routing.params import EffortChoice, effort_misfit, map_effort
 
 NIMBLE_PRICES = {"low": 0.025, "medium": 0.1, "high": 0.5}
@@ -21,9 +21,9 @@ NIMBLE_PRICES = {"low": 0.025, "medium": 0.1, "high": 0.5}
 
 def _table_with(monkeypatch: pytest.MonkeyPatch, provider: str, effort: str, **row: Any) -> None:
     """The shipped table with ``provider``'s ``effort`` measured as ``row``."""
-    table = copy.deepcopy(params.effort_table())
+    table = copy.deepcopy(pricing.effort_table())
     table["research"].setdefault(provider, {"measured": {}})["measured"][effort] = row
-    monkeypatch.setattr(params, "effort_table", lambda: table)
+    monkeypatch.setattr(pricing, "effort_table", lambda: table)
 
 
 def test_the_table_measures_what_the_cases_below_assume() -> None:
@@ -147,3 +147,9 @@ def test_the_fit_check_reads_the_price_list() -> None:
     for effort, price in NIMBLE_PRICES.items():
         assert effort_misfit("nimble", effort, Budget(max_cost_usd=price)) is None, "a price equal to the cap fits"
         assert effort_misfit("nimble", effort, Budget(max_cost_usd=price * 0.99)) is not None
+
+
+def test_with_too_few_measured_efforts_a_measured_one_that_fits_replaces_a_default_that_does_not() -> None:
+    assert map_effort("linkup", Budget(max_cost_usd=2.0)).effort is None, "the default fits: it stands"
+    assert map_effort("linkup", Budget(max_cost_usd=1.0)).effort == "low"
+    assert map_effort("linkup", Budget(max_cost_usd=0.1)).effort is None, "nothing measured fits: the default"

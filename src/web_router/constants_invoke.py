@@ -6,10 +6,6 @@ Kept apart from :mod:`web_router.constants`, so that file stops growing.
 
 from __future__ import annotations
 
-from web_router.constants_merge import ROUTER_ERROR, ROUTER_INVALID, ROUTER_TIMEOUT
-
-__all__ = ["ROUTER_ERROR", "ROUTER_INVALID", "ROUTER_TIMEOUT"]  # the merge rule's codes, one spelling of each
-
 ROUTER_TIMEOUT_S = 0.05
 """Seconds a router has to answer when it declares no ``timeout_s``: 50 ms.
 

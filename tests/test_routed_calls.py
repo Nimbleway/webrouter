@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import inspect
 import time
-from collections.abc import Iterator
 from typing import Any
 
 import pytest
 
-from tests.test_auto_seam import MEMBERS, TOOLS, _member, _Tool
+from tests.routing_helpers import MEMBERS, Ranker
+from tests.routing_helpers import Tool as _Tool
 from web_router import AsyncWebRouter, RouteDecision, RouteRequest, RouterError, WebRouter
 from web_router.exceptions import ConfigurationError
 
@@ -35,38 +35,9 @@ PROMPTS = {
 }
 
 
-@pytest.fixture(params=TOOLS, ids=[tool.name for tool in TOOLS])
-def tool(request: pytest.FixtureRequest) -> Iterator[_Tool]:
-    yield request.param
-
-
-@pytest.fixture
-def called(tool: _Tool) -> Iterator[list[str]]:
-    log: list[str] = []
-    for name in MEMBERS:
-        tool.register(name, _member(tool, name, log, fails=name != "third"))
-    yield log
-    for name in MEMBERS:
-        tool.unregister(name)
-
-
 def _order(called: list[str]) -> list[str]:
     """The members called, each once: extract calls a member once per URL."""
     return list(dict.fromkeys(called))
-
-
-class _Ranker:
-    """A router that ranks ``ranking`` first for whichever tool it is asked about, and keeps what it was shown."""
-
-    def __init__(self, *ranking: str, reason: str | None = "ranked") -> None:
-        self.ranking = list(ranking)
-        self.reason = reason
-        self.seen: list[RouteRequest] = []
-
-    def route(self, req: RouteRequest) -> RouteDecision:
-        self.seen.append(req)
-        assert req.pinned_tool is not None
-        return RouteDecision(providers={req.pinned_tool: self.ranking}, reason=self.reason)
 
 
 def _router(cls: type, router: Any, **kwargs: Any) -> Any:
@@ -85,7 +56,7 @@ async def _acall(router: AsyncWebRouter, tool: _Tool, **kwargs: Any) -> Any:
 
 
 def test_the_router_orders_the_call(tool: _Tool, called: list[str]) -> None:
-    ranker = _Ranker("third")
+    ranker = Ranker("third")
     response = _call(_router(WebRouter, ranker), tool)
     assert response.provider == "third"
     assert _order(called) == ["third"]
@@ -93,20 +64,20 @@ def test_the_router_orders_the_call(tool: _Tool, called: list[str]) -> None:
 
 
 async def test_the_router_orders_the_async_call(tool: _Tool, called: list[str]) -> None:
-    ranker = _Ranker("third")
+    ranker = Ranker("third")
     response = await _acall(_router(AsyncWebRouter, ranker), tool)
     assert response.provider == "third"
     assert _order(called) == ["third"]
 
 
 def test_the_rest_follow_in_static_order_and_unknown_names_are_dropped(tool: _Tool, called: list[str]) -> None:
-    response = _call(_router(WebRouter, _Ranker("second", "nobody")), tool)
+    response = _call(_router(WebRouter, Ranker("second", "nobody")), tool)
     assert _order(called) == ["second", "first", "third"]
     assert response.decision.merged == [f"{tool.name}:{name}" for name in ("second", "first", "third")]
 
 
 def test_the_router_sees_the_prompt_the_candidates_and_no_key(tool: _Tool, called: list[str]) -> None:
-    ranker = _Ranker("third")
+    ranker = Ranker("third")
     _call(_router(WebRouter, ranker), tool)
     (req,) = ranker.seen
     assert (req.prompt, req.urls) == PROMPTS[tool.name]
@@ -117,10 +88,10 @@ def test_the_router_sees_the_prompt_the_candidates_and_no_key(tool: _Tool, calle
 
 
 def test_the_decision_record_says_what_the_router_did(tool: _Tool, called: list[str]) -> None:
-    ranker = _Ranker("third")
+    ranker = Ranker("third")
     decision = _call(_router(WebRouter, ranker), tool).decision
     ids = [f"{tool.name}:{name}" for name in MEMBERS]
-    assert decision.router == "_Ranker"
+    assert decision.router == "Ranker"
     assert decision.offered == ids
     assert decision.ranked == [f"{tool.name}:third"]
     assert decision.merged == [ids[2], ids[0], ids[1]]
@@ -165,7 +136,7 @@ async def test_fail_on_router_error_raises_from_async_code_too(tool: _Tool, call
 
 def test_a_tool_left_out_of_route_tools_never_asks_the_router(tool: _Tool, called: list[str]) -> None:
     others = [name for name in ARGS if name != tool.name]
-    ranker = _Ranker("third")
+    ranker = Ranker("third")
     response = _call(_router(WebRouter, ranker, route_tools=others), tool)
     assert ranker.seen == []
     assert _order(called) == list(MEMBERS)
@@ -173,13 +144,13 @@ def test_a_tool_left_out_of_route_tools_never_asks_the_router(tool: _Tool, calle
 
 
 def test_route_tools_names_the_tools_that_ask(tool: _Tool, called: list[str]) -> None:
-    ranker = _Ranker("third")
+    ranker = Ranker("third")
     _call(_router(WebRouter, ranker, route_tools={tool.name}), tool)
     assert len(ranker.seen) == 1
 
 
 def test_a_pinned_provider_never_asks_the_router(tool: _Tool, called: list[str]) -> None:
-    ranker = _Ranker("second")
+    ranker = Ranker("second")
     response = _call(_router(WebRouter, ranker), tool, provider="third")
     assert ranker.seen == []
     assert response.decision is None
