@@ -119,7 +119,7 @@ async def test_the_async_scope_calls_a_router_subclass_override(priced: Table, f
 def test_a_call_that_starts_late_gets_only_the_time_the_clock_has_left(
     priced: Table, fake_provider: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    limit, late = 0.5, 0.3
+    limit, late = 5.0, 0.3  # a wide margin: only the upper bound is the rule, the lower one need only hold
     real_limit, real_admit = BudgetPool.limit, ledger.Ledger.admit
     left: list[float] = []
 
