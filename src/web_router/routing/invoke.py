@@ -45,13 +45,11 @@ from web_router.constants_invoke import (
     MSG_ROUTER_CLASS,
     MSG_ROUTER_FORM,
     MSG_ROUTER_TIMEOUT_S,
-    ROUTER_ERROR,
-    ROUTER_INVALID,
     ROUTER_THREAD_NAME,
-    ROUTER_TIMEOUT,
     ROUTER_TIMEOUT_ATTR,
     ROUTER_TIMEOUT_S,
 )
+from web_router.constants_merge import ROUTER_ERROR, ROUTER_INVALID, ROUTER_TIMEOUT
 from web_router.exceptions import ConfigurationError, RouterError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.contract import Budget, RouteDecision, RouteRequest
@@ -341,7 +339,7 @@ class AttachedRouter:
         return await self._async(req)
 
     def _read(self, result: object, started: float) -> RouterOutcome:
-        if not isinstance(result, RouteDecision) or not well_formed(result):
+        if not well_formed(result):
             _close(result)
             return self._failed(ROUTER_INVALID, started)
         return RouterOutcome(decision=result, failure=None, elapsed_ms=(time.perf_counter() - started) * 1000)

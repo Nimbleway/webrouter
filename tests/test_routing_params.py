@@ -13,7 +13,7 @@ import pytest
 
 from web_router import Budget, DecisionRecord
 from web_router.constants_params import PARAMS_SOURCE_BUDGET, PARAMS_SOURCE_CALLER
-from web_router.routing import params
+from web_router.routing import params, pricing
 from web_router.routing.params import EffortChoice, effort_misfit, map_effort
 
 NIMBLE_PRICES = {"low": 0.025, "medium": 0.1, "high": 0.5}
@@ -21,9 +21,9 @@ NIMBLE_PRICES = {"low": 0.025, "medium": 0.1, "high": 0.5}
 
 def _table_with(monkeypatch: pytest.MonkeyPatch, provider: str, effort: str, **row: Any) -> None:
     """The shipped table with ``provider``'s ``effort`` measured as ``row``."""
-    table = copy.deepcopy(params.effort_table())
+    table = copy.deepcopy(pricing.effort_table())
     table["research"].setdefault(provider, {"measured": {}})["measured"][effort] = row
-    monkeypatch.setattr(params, "effort_table", lambda: table)
+    monkeypatch.setattr(pricing, "effort_table", lambda: table)
 
 
 def test_the_table_measures_what_the_cases_below_assume() -> None:

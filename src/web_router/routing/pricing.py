@@ -18,12 +18,34 @@ way when offered and another when run.
 
 from __future__ import annotations
 
+import json
+from collections.abc import Mapping
+from functools import lru_cache
+from importlib import resources
+from typing import Any
+
 from web_router import prices
 from web_router.constants_budget import COST_TOLERANCE_USD, OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
+from web_router.constants_params import EFFORTS_DATA_DIR, EFFORTS_DATA_FILE
 from web_router.routing.attempts import Attempt
-from web_router.types import ExtractRequest, ResearchRequest, SearchRequest
+from web_router.types import ExtractRequest, Provider, ResearchRequest, SearchRequest, provider_name
 
 RESEARCH = "research"
+
+
+@lru_cache(maxsize=1)
+def effort_table() -> dict[str, Any]:
+    """The whole generated research effort table."""
+    text = (resources.files("web_router") / EFFORTS_DATA_DIR / EFFORTS_DATA_FILE).read_text(encoding="utf-8")
+    data: dict[str, Any] = json.loads(text)
+    return data
+
+
+def measured_efforts(provider: str | Provider) -> Mapping[str, Mapping[str, Any]]:
+    """``provider``'s measured research efforts, by name, each with its ``accuracy`` and latency; empty if none."""
+    entry = effort_table()["research"].get(provider_name(provider), {})
+    measured: Mapping[str, Mapping[str, Any]] = entry.get("measured", {})
+    return measured
 
 
 def research_mode(provider: str, effort: str | None) -> str | None:
@@ -75,8 +97,6 @@ def mode_p90(provider: str, tool: str, mode: str | None) -> float | None:
         return prior[1]
     if tool != RESEARCH:
         return None
-    from web_router.routing.params import measured_efforts  # params prices by this module
-
     p90 = measured_efforts(provider).get(research_mode(provider, mode) or "", {}).get("latency_p90_s")
     return None if p90 is None else float(p90)
 

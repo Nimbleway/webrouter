@@ -19,6 +19,7 @@ budget's research effort -- and recorded on the response's ``decision``.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Collection
+from contextlib import AbstractContextManager, nullcontext
 from dataclasses import replace
 from typing import Any, TypeVar, get_args
 
@@ -135,6 +136,24 @@ class RouterSetup:
         )
         return req, found
 
+    def _attached(self) -> AttachedRouter:
+        assert self._router is not None  # a call is routed only with a router attached
+        return self._router
+
+    def _prepared(
+        self,
+        chain: Any,
+        request: _RequestT,
+        budget: Budget | None,
+        routed: tuple[RouteRequest, CandidateSet] | None,
+        outcome: RouterOutcome | None,
+    ) -> tuple[CallRoute | None, _RequestT, DecisionRecord | None]:
+        """The order in force, the request and the record: the router's merged, or with none the budget's effort."""
+        if routed is None or outcome is None:
+            request, mapped = _unrouted(chain, request, budget)
+            return None, request, mapped
+        return self._merged(routed, outcome, request)
+
     def _merged(
         self, routed: tuple[RouteRequest, CandidateSet], outcome: RouterOutcome, request: _RequestT
     ) -> tuple[CallRoute, _RequestT, DecisionRecord]:
@@ -170,6 +189,11 @@ def _decided(response: _ResponseT, record: DecisionRecord | None) -> _ResponseT:
     return response if record is None else response.model_copy(update={"decision": record})
 
 
+def _in_route(route: CallRoute | None) -> AbstractContextManager[None]:
+    """``route`` in force beside the budget's hook; nothing for a call no router ordered."""
+    return nullcontext() if route is None else call_route(in_force_with(route))
+
+
 def in_force_with(route: CallRoute) -> CallRoute:
     """``route``'s order, kept with the hook already in force -- the budget's -- so both hold."""
     in_force = current_route()
@@ -190,14 +214,10 @@ class SyncRouted(RouterSetup):
         """
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
             routed = self._route_request(chain, request, budget)
-            if routed is None:
-                request, mapped = _unrouted(chain, request, budget)
-                return scope.settle(_decided(call(request), mapped))
-            assert self._router is not None  # a request is built only with a router attached
-            route, request, record = self._merged(routed, self._router.call(routed[0]), request)
-            with call_route(in_force_with(route)):
-                response = call(request)
-            return scope.settle(response.model_copy(update={"decision": record}))
+            outcome = None if routed is None else self._attached().call(routed[0])
+            route, request, record = self._prepared(chain, request, budget, routed, outcome)
+            with _in_route(route):
+                return scope.settle(_decided(call(request), record))
 
 
 class AsyncRouted(RouterSetup):
@@ -211,11 +231,7 @@ class AsyncRouted(RouterSetup):
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
             routed = self._route_request(chain, request, budget)
-            if routed is None:
-                request, mapped = _unrouted(chain, request, budget)
-                return scope.settle(_decided(await call(request), mapped))
-            assert self._router is not None  # a request is built only with a router attached
-            route, request, record = self._merged(routed, await self._router.acall(routed[0]), request)
-            with call_route(in_force_with(route)):
-                response = await call(request)
-            return scope.settle(response.model_copy(update={"decision": record}))
+            outcome = None if routed is None else await self._attached().acall(routed[0])
+            route, request, record = self._prepared(chain, request, budget, routed, outcome)
+            with _in_route(route):
+                return scope.settle(_decided(await call(request), record))

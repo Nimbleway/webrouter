@@ -33,9 +33,6 @@ Only a host of this shape is handed to ``inet_aton``, which would otherwise be
 asked to read names it has no business reading.
 """
 
-URL_POLICY_PUBLIC_ONLY = "public_only"
-"""The ``url_policy`` that refuses private, loopback, link-local and cloud metadata hosts before a call."""
-
 URL_SCHEMES: frozenset[str] = frozenset({"http", "https"})
 """The schemes a routed call's URLs may use, with any ``url_policy`` or none."""
 

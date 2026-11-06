@@ -53,7 +53,8 @@ URL_HIDDEN = "<url>"
 URL_IN_TEXT = r"[A-Za-z][A-Za-z0-9+.-]*://[^\s\"`]+"
 """A URL inside free text, such as a router's reason: from its scheme up to whitespace, a double quote or a
 backtick. All of it is replaced by its scheme and host, so nothing after the host survives, brackets and
-punctuation included: a URL's end cannot be told safely, and what follows it may be its query."""
+punctuation included: a URL's end cannot be told safely, and what follows it may be its query. The URL
+finder, ``web_router._urls``, has its own pattern on purpose: it finds URLs to fetch, this one URLs to hide."""
 HOST_CHARS = r"[A-Za-z0-9.-]+"
 """What a shown host keeps: a host parsed out of free text stops at the first character a hostname cannot hold."""
 MSG_PARAM_DEPTH_UNKNOWN_PRICE = "search:{provider} at depth {depth} has no known price, so it never fits a cost cap"

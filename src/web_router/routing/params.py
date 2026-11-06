@@ -20,18 +20,13 @@ an effort that came from elsewhere, such as a router's ``params``.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from functools import lru_cache
-from importlib import resources
 from typing import Any, Literal, cast, get_args
 
 from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
 from web_router.constants_params import (
     DEFAULT_EFFORT_NAME,
-    EFFORTS_DATA_DIR,
-    EFFORTS_DATA_FILE,
     FLOOR_TOLERANCE,
     MIN_MEASURED_EFFORTS,
     MSG_EFFORT_CALLER,
@@ -46,8 +41,9 @@ from web_router.constants_params import (
     PARAMS_SOURCE_BUDGET,
     PARAMS_SOURCE_CALLER,
 )
+from web_router.routing import pricing
 from web_router.routing.contract import Budget, ToolName, candidate_id
-from web_router.routing.pricing import misfit, mode_cost, mode_p90, research_mode
+from web_router.routing.pricing import measured_efforts, misfit, mode_cost, mode_p90, research_mode
 from web_router.types import Provider, ResearchEffort, provider_name
 
 RESEARCH: ToolName = "research"
@@ -83,24 +79,9 @@ class EffortChoice:
         }
 
 
-@lru_cache(maxsize=1)
-def effort_table() -> dict[str, Any]:
-    """The whole generated research effort table."""
-    text = (resources.files("web_router") / EFFORTS_DATA_DIR / EFFORTS_DATA_FILE).read_text(encoding="utf-8")
-    data: dict[str, Any] = json.loads(text)
-    return data
-
-
 def noise_floor() -> float:
     """The accuracy gap, as a fraction, two efforts must exceed to be told apart: route-eval's floor for the set."""
-    return float(effort_table()["noise_floor"]["value"])
-
-
-def measured_efforts(provider: str | Provider) -> Mapping[str, Mapping[str, Any]]:
-    """``provider``'s measured research efforts, by name, each with its ``accuracy`` and latency; empty if none."""
-    entry = effort_table()["research"].get(provider_name(provider), {})
-    measured: Mapping[str, Mapping[str, Any]] = entry.get("measured", {})
-    return measured
+    return float(pricing.effort_table()["noise_floor"]["value"])
 
 
 def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) -> str | None:
@@ -187,7 +168,9 @@ def map_effort(provider: str | Provider, budget: Budget | None, effort: Research
     fitting = {e: accuracy for e, accuracy in measured.items() if effort_misfit(name, e, budget) is None}
     if len(measured) < MIN_MEASURED_EFFORTS:
         # Too few to rank: the default stands while it fits; when it does not, a measured effort that fits runs.
-        unmeasured = MSG_EFFORT_UNMEASURED.format(provider=name, min=MIN_MEASURED_EFFORTS, set=effort_table()["set"])
+        unmeasured = MSG_EFFORT_UNMEASURED.format(
+            provider=name, min=MIN_MEASURED_EFFORTS, set=pricing.effort_table()["set"]
+        )
         default = _default(name, budget, unmeasured)
         return default if default.misfit is None or not fitting else _chosen(name, fitting)
     if not fitting:

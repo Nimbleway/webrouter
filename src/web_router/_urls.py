@@ -17,7 +17,7 @@ from web_router.constants_urls import URL_BRACKETS, URL_TRAILING_PUNCTUATION
 _URL = re.compile(r"https?://[^\s<>\"'`]+")
 
 
-def url_end(text: str) -> int:
+def _url_end(text: str) -> int:
     """Where the URL at the start of ``text`` ends: before the first closing bracket it did not open."""
     opened: list[str] = []
     for i, char in enumerate(text):
@@ -30,7 +30,7 @@ def url_end(text: str) -> int:
 
 def _trimmed(match: str) -> str:
     """``match`` cut at a closing bracket it did not open, then without the punctuation that ends a sentence."""
-    return match[: url_end(match)].rstrip(URL_TRAILING_PUNCTUATION)
+    return match[: _url_end(match)].rstrip(URL_TRAILING_PUNCTUATION)
 
 
 def urls_in(text: str) -> list[str]:
