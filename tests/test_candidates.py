@@ -334,3 +334,13 @@ def test_a_research_member_whose_extra_is_missing_leaves_out_only_that_member(ke
     found = build_candidates(WebRouter(), {"research": ResearchRequest(query="q")})
     assert _ids(found) == ["research:linkup"]
     assert found.dropped == {"research:nimble": MSG_DROPPED_NOT_INSTALLED}
+
+
+def test_a_member_missing_a_setting_beside_its_key_is_dropped_as_not_configured(keys: pytest.MonkeyPatch) -> None:
+    token, _zone = EXTRACT_ENV_BY_PROVIDER["brightdata"]
+    keys.setenv(token, "test-key")  # a key, but no zone: not a missing credential
+    router = WebRouter(provider_config={"auto": {"chain": {"extract": ["brightdata", "jina"]}}})
+    found = build_candidates(router, {"extract": ExtractRequest(urls=["https://a.test"])})
+    assert _ids(found) == ["extract:jina"]
+    assert found.dropped == {"extract:brightdata": MSG_DROPPED_NOT_CONFIGURED}
+    assert "credential" not in MSG_DROPPED_NOT_CONFIGURED
