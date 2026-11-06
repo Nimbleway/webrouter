@@ -128,7 +128,10 @@ src/web_router/
 │   ├── attempts.py     the seam in auto's fallback loops: a per-call order and
 │   │                   a hook before each attempt, held in a context variable
 │   ├── budget.py       budget_scope(), which every budget= call runs in
-│   └── candidates.py, invoke.py, merge.py, params.py   empty until their parts land
+│   ├── params.py       map_effort(): the research effort a budget picks, from
+│   │                   data/efforts.json (`make efforts`) and the price list
+│   └── candidates.py, invoke.py, merge.py   empty until their parts land
+├── constants_params.py the effort mapping's data path, rule and reasons
 ├── constants_prices.py the price list's data path, unit divisors, messages and
 │                       PRICING.md wording, kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
@@ -248,7 +251,9 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         route_eval_paths.py, its command line in
                         route_eval_cli.py; chains.py (`make chains`): the
                         default auto orders ranked from them into
-                        data/chains.json — scripts; each
+                        data/chains.json; efforts.py (`make efforts`): each
+                        research effort's accuracy and p90 into
+                        data/efforts.json — scripts; each
                         run's report stays under results/
 ```
 
