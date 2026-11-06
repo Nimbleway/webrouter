@@ -11,8 +11,9 @@ stays ``None``.
 A budget, the part of it still left, then prefilters them. Under a cost cap a
 candidate whose price is unknown, or whose estimate is over what is left, is
 dropped. Research is priced at the ``effort`` the caller set, else at the
-backend's default; choosing a cheaper effort is the budget mapping's job, not
-this one's. A request carrying ``provider_options`` may be billed at another
+one :func:`~web_router.routing.params.map_effort` picks for that backend under
+the budget -- the backend's default when there is no cap -- so it is offered at
+the effort it would run with. A request carrying ``provider_options`` may be billed at another
 mode than its row, and a floor row bills more on top, so their price is
 unknown, and under a cost cap dropped. Under a time cap a known p90 over the time left
 drops a candidate, and an unknown p90 drops it only on a strict budget. Every
@@ -43,6 +44,7 @@ from web_router.constants_candidates import (
 from web_router.exceptions import ProviderNotInstalledError, WebRouterError
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, Candidate, ToolName
+from web_router.routing.params import map_effort
 from web_router.routing.pricing import attempt_cost, attempt_p90
 from web_router.types import (
     BrowseRequest,
@@ -114,7 +116,7 @@ def build_candidates(
     seen: set[str] = set()
     for tool, request in requests.items():
         for name, keyless in _eligible(router, tool, request):
-            cost, p90 = _estimates(tool, name, request)
+            cost, p90 = _estimates(tool, name, request, budget)
             candidate = Candidate(tool=tool, provider=name, est_cost_usd=cost, est_latency_s=p90)
             if candidate.id in seen:
                 continue  # a member listed twice is one candidate, at its first place
@@ -170,8 +172,15 @@ def _serves(tool: ToolName, name: str, request: NormalizedRequest) -> bool:
     return True
 
 
-def _estimates(tool: ToolName, name: str, request: NormalizedRequest) -> tuple[float | None, float | None]:
-    """The candidate's estimated cost in US dollars and its p90 seconds, by the one pricing rule."""
+def _estimates(
+    tool: ToolName, name: str, request: NormalizedRequest, budget: Budget | None
+) -> tuple[float | None, float | None]:
+    """The candidate's estimated cost in US dollars and its p90 seconds, by the one pricing rule.
+
+    Research runs at the effort the caller set, else the one the budget picks for this backend.
+    """
+    if isinstance(request, ResearchRequest) and request.effort is None:
+        request = request.model_copy(update={"effort": map_effort(name, budget).effort})
     attempt = Attempt(tool=tool, provider=name, request=request)
     return attempt_cost(attempt), attempt_p90(attempt)
 

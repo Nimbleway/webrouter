@@ -23,6 +23,7 @@ from web_router.exceptions import ProviderNotInstalledError
 from web_router.prices import estimate, estimate_latency
 from web_router.registry import get_extract_provider_class, get_provider_class, get_research_provider_class
 from web_router.routing.candidates import CandidateSet, build_candidates, default_requests
+from web_router.routing.params import map_effort
 from web_router.types import ExtractRequest, ResearchRequest, SearchRequest
 from web_router.types_answer import AnswerRequest
 
@@ -197,18 +198,35 @@ def test_research_without_effort_is_priced_at_its_default_effort(keys: pytest.Mo
     assert estimate("linkup", "research") == 1.5  # its default, high
     roomy = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=2.0))
     assert _one(roomy, "research:linkup").est_cost_usd == 1.5
-    # A cheaper effort would fit $1, but choosing one is the budget mapping's job: here it is dropped.
-    assert estimate("linkup", "research", "low") == 0.25
+    # Linkup has too few measured efforts for the mapping to pick one, so its default stays, and is dropped.
     tight = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=1.0))
     assert _ids(tight) == []
     assert tight.dropped["research:linkup"].startswith("estimated $1.5")
 
 
-def test_research_with_an_unknown_default_price_is_dropped_under_a_cost_cap(keys: pytest.MonkeyPatch) -> None:
+def test_research_without_effort_is_priced_at_the_effort_the_budget_maps(keys: pytest.MonkeyPatch) -> None:
+    _set_keys(keys, "parallel")
+    request = {"research": ResearchRequest(query="q")}
+    assert estimate("parallel", "research") == 0.025  # its default, medium: over a one-cent cap
+    cap = Budget(max_cost_usd=0.01)
+    assert map_effort("parallel", cap).effort == "low"
+    found = build_candidates(WebRouter(), request, budget=cap)
+    assert _one(found, "research:parallel").est_cost_usd == estimate("parallel", "research", "low")
+    unbudgeted = build_candidates(WebRouter(), request)
+    assert _one(unbudgeted, "research:parallel").est_cost_usd == 0.025, "no cap: the default, as the call runs"
+
+
+def test_research_with_an_unknown_default_price_is_kept_at_a_priced_effort_the_budget_maps(
+    keys: pytest.MonkeyPatch,
+) -> None:
     _set_keys(keys, "nimble")
     assert estimate("nimble", "research") is None  # priced only per effort
-    found = build_candidates(WebRouter(), {"research": ResearchRequest(query="q")}, budget=Budget(max_cost_usd=10.0))
-    assert "no known price" in found.dropped["research:nimble"]
+    request = {"research": ResearchRequest(query="q")}
+    assert _one(build_candidates(WebRouter(), request), "research:nimble").est_cost_usd is None
+    cap = Budget(max_cost_usd=10.0)
+    mapped = map_effort("nimble", cap).effort
+    found = build_candidates(WebRouter(), request, budget=cap)
+    assert mapped is not None and _one(found, "research:nimble").est_cost_usd == estimate("nimble", "research", mapped)
 
 
 def test_provider_options_make_the_price_unknown_under_a_cost_cap(keys: pytest.MonkeyPatch) -> None:
