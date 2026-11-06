@@ -17,7 +17,8 @@ permissions:
 jobs:
   changelog:
     name: CHANGELOG updated
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+    # Only pull requests into main; an integration branch's PRs reach main through one PR that runs this.
+    if: ${{ github.base_ref == 'main' && !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
     runs-on: ubuntu-latest
     steps:
       - name: New CHANGELOG lines must sit under ## [Unreleased]
