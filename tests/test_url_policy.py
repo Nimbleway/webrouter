@@ -115,6 +115,26 @@ def test_public_only_judges_a_non_ascii_host_as_the_ascii_a_browser_maps_it_to(u
     assert public_only(url) in {MSG_URL_LOOPBACK, MSG_URL_METADATA}
 
 
+@pytest.mark.parametrize(
+    ("url", "why"),
+    [
+        ("http://127.0.0.1\u3002/", MSG_URL_LOOPBACK),  # an ideographic full stop that IDNA makes a trailing dot
+        ("http://localhost\u3002/", MSG_URL_LOOPBACK),
+        ("http://127.0.0.1./", MSG_URL_LOOPBACK),
+        ("http://metadata.google.internal./", MSG_URL_METADATA),
+        ("http://169.254.169.254./", MSG_URL_METADATA),
+    ],
+)
+def test_one_trailing_dot_is_dropped_before_the_host_is_judged(url: str, why: str) -> None:
+    assert public_only(url) == why
+
+
+@pytest.mark.usefixtures("members")
+def test_public_only_refuses_a_bracketed_loopback_the_finder_now_reads_whole() -> None:
+    with pytest.raises(MissingParameterError, match=r"url:http://::1"):
+        _wr(url_policy="public_only").plan("open http://[::1]/admin", tool="extract")
+
+
 def test_a_backslash_or_userinfo_in_the_path_or_query_is_no_host_confusion() -> None:
     assert public_only("https://example.com/a\\b?next=x@y.test") is None
 

@@ -3,6 +3,9 @@
 URL_TRAILING_PUNCTUATION = ".,;:!?"
 """Stripped from a URL found in prose: the end of a sentence, not part of the address."""
 
+URL_BRACKETS = {")": "(", "]": "[", "}": "{"}
+"""Each closing bracket and its opener: a URL in prose keeps a closing bracket only when it opened it."""
+
 METADATA_HOSTS: frozenset[str] = frozenset(
     {
         "169.254.169.254",

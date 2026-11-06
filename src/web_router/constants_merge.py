@@ -53,7 +53,5 @@ URL_HIDDEN = "<url>"
 URL_IN_TEXT = r"[A-Za-z][A-Za-z0-9+.-]*://[^\s<>\"`]+"
 """A URL inside free text, such as a router's reason, up to whitespace, a quote, an angle bracket or a backtick;
 :func:`~web_router.routing.merge_params.hide_urls` also ends it at a closing bracket it did not open."""
-URL_BRACKETS = {")": "(", "]": "[", "}": "{"}
-"""Each closing bracket and its opener: an unopened closer ends a URL in free text, as in ``(see https://a.b)``."""
 MSG_PARAM_DEPTH_UNKNOWN_PRICE = "search:{provider} at depth {depth} has no known price, so it never fits a cost cap"
 MSG_PARAM_DEPTH_COST = "search:{provider} at depth {depth} is estimated at ${cost:g}, over the ${cap:g} cost cap"

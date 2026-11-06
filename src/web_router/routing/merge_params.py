@@ -20,6 +20,7 @@ from typing import Any, get_args, overload
 from urllib.parse import urlsplit
 
 from web_router import registry
+from web_router._urls import url_end
 from web_router.constants_merge import (
     MSG_PARAM_CALLER,
     MSG_PARAM_DEPTH_COST,
@@ -31,7 +32,6 @@ from web_router.constants_merge import (
     MSG_PARAM_UNDECLARED,
     MSG_PARAM_URL_REFUSED,
     ROUTER_PARAMS,
-    URL_BRACKETS,
     URL_HIDDEN,
     URL_IN_TEXT,
 )
@@ -73,20 +73,9 @@ def host_of(url: str) -> str:
     return f"{parts.scheme}://{host}" if parts.scheme and host else URL_HIDDEN
 
 
-def _url_end(match: str) -> int:
-    """Where the URL in ``match`` ends: before the first closing bracket it did not open."""
-    opened: list[str] = []
-    for i, char in enumerate(match):
-        if char in URL_BRACKETS.values():
-            opened.append(char)
-        elif char in URL_BRACKETS and (not opened or opened.pop() != URL_BRACKETS[char]):
-            return i
-    return len(match)
-
-
 def _hide(match: re.Match[str]) -> str:
     text = match.group(0)
-    end = _url_end(text)
+    end = url_end(text)
     return host_of(text[:end]) + text[end:]
 
 
@@ -143,7 +132,7 @@ def _depth_misfit(provider: str, depth: str, budget: Budget) -> str | None:
     return None
 
 
-def _misfit(key: str, value: str, providers: Sequence[str], budget: Budget | None) -> str | None:
+def misfit(key: str, value: str, providers: Sequence[str], budget: Budget | None) -> str | None:
     """Why ``value`` for ``key`` would not fit ``budget`` on one of ``providers``; ``None`` when it fits on all."""
     if budget is None or key not in ("effort", "search_depth"):
         return None
@@ -202,7 +191,7 @@ def checked_params(
         why = (
             _refusal(tool, key, value, caller_set, url_check)
             or _undeclared(tool, key, providers)
-            or _misfit(key, value, providers, budget)
+            or misfit(key, value, providers, budget)
         )
         if why is None:
             kept[key] = list(value) if key == "urls" else value

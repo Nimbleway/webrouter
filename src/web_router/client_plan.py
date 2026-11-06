@@ -79,7 +79,7 @@ class _Planner(RouterSetup):
     ) -> tuple[RouteRequest, CandidateSet, list[str], dict[str, str]]:
         """The router's request for ``prompt``, its candidates, the URLs kept, and those the URL policy refused."""
         assert self._url_check is not None  # set by every router's constructor
-        kept, refused = screened(urls_in(prompt), self._url_check)
+        kept, refused = screened(list(dict.fromkeys(urls_in(prompt))), self._url_check)  # each URL once
         requests = default_requests(prompt, kept)
         if not kept and self._router is not None:
             # A router may supply the URLs itself; offered at one page, extract is chosen only if it does.

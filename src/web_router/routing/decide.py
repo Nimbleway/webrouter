@@ -18,7 +18,7 @@ from web_router.routing.candidates import CandidateSet
 from web_router.routing.contract import Budget, RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
-from web_router.routing.merge_params import shown
+from web_router.routing.merge_params import misfit, shown
 from web_router.routing.params import map_effort
 from web_router.types import DecisionRecord
 
@@ -48,13 +48,20 @@ def _budget_effort(
     caller_set: Collection[str],
     budget: Budget | None,
 ) -> bool:
-    """Set research's ``effort`` the budget maps for the first backend, unless the router or the caller set one."""
+    """Set the research ``effort`` the budget maps, unless the router or the caller set one.
+
+    The request is shared by every backend in the order, so the effort must fit the budget on all of them,
+    by the rule the merge holds a router's effort to: the first backend's pick that does, then the next's;
+    when none fits every backend, none is set and each runs at its own default.
+    """
     if tool != "research" or not providers or "effort" in params or "effort" in caller_set:
         return False
-    effort = map_effort(providers[0], budget).effort
-    if effort is not None:
-        params["effort"] = effort
-    return effort is not None
+    picks = dict.fromkeys(map_effort(provider, budget).effort for provider in providers)
+    for effort in picks:
+        if effort is not None and budget is not None and misfit("effort", effort, providers, budget) is None:
+            params["effort"] = effort
+            return True
+    return False
 
 
 def decided(

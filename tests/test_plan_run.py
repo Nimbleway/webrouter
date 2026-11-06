@@ -139,6 +139,12 @@ def test_with_no_url_a_router_that_picks_extract_without_urls_gets_search() -> N
 
 
 @pytest.mark.usefixtures("called")
+def test_a_url_named_twice_is_planned_once() -> None:
+    plan = _wr().plan(f"compare {URL} with {URL}.", tool="extract")
+    assert plan.params["urls"] == [URL]
+
+
+@pytest.mark.usefixtures("called")
 def test_a_router_failure_plans_the_static_order() -> None:
     plan = _wr(router=lambda req: 1 / 0).plan(PROMPT)
     assert (plan.tool, plan.decision.reason) == ("search", "router_error")
