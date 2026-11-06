@@ -36,6 +36,7 @@ from web_router.routing.candidates import CandidateSet, build_candidates, defaul
 from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
 from web_router.routing.decide import decided
 from web_router.routing.invoke import RouterOutcome
+from web_router.routing.record import stamp
 from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted, in_force_with
 from web_router.routing.url_policy import screened
 from web_router.types import (
@@ -132,7 +133,9 @@ def _ordered(stack: ExitStack, tool: ToolName, providers: Sequence[str]) -> None
 
 
 def _settled(response: Any, plan: Plan) -> Any:
-    return response.model_copy(update={"decision": plan.decision})
+    """``response`` with the plan's record; a plan made by hand, whose record has no id, is stamped here."""
+    record = plan.decision if plan.decision.decision_id else plan.decision.model_copy(update=stamp(plan.prompt))
+    return response.model_copy(update={"decision": record})
 
 
 class SyncPlan(_Planner, SyncRouted):

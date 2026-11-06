@@ -7,6 +7,8 @@ each, in order, by its error's class or status.
 
 from __future__ import annotations
 
+import hashlib
+import re
 from collections.abc import Callable, Iterator
 from typing import Any
 
@@ -15,9 +17,11 @@ import pytest
 from tests.conftest import FakeAnswerProvider, FakeProvider
 from web_router import (
     AsyncWebRouter,
+    Budget,
     ConfigurationError,
     DeadlineExceededError,
     DecisionHop,
+    Plan,
     RouteDecision,
     RouteRequest,
     UnsupportedParameterError,
@@ -101,3 +105,48 @@ async def test_a_member_that_refuses_a_parameter_is_a_hop_with_its_error(
         response = _wr().answer("q")
     assert response.provider == "second"
     assert response.decision.hops == [DecisionHop(id="answer:first", error="UnsupportedParameterError")]
+
+
+def test_a_backend_a_chain_names_twice_keeps_both_hops(search_members: Callable[..., None]) -> None:
+    search_members(first=_raising(ConfigurationError("first holds no key")), second=_empty)
+    wr = WebRouter(provider_config={"auto": {"chain": ["first", "second", "first", "third"]}})
+    record = wr.search("q", budget=Budget()).decision
+    assert record.hops == [
+        DecisionHop(id="search:first", error="ConfigurationError"),
+        DecisionHop(id="search:second"),
+        DecisionHop(id="search:first", error="ConfigurationError"),
+    ]
+    assert [attempt.id for attempt in record.attempts] == [
+        "search:first",
+        "search:second",
+        "search:first",
+        "search:third",
+    ]
+
+
+def test_a_last_empty_answer_is_a_hop_when_an_earlier_one_is_returned(search_members: Callable[..., None]) -> None:
+    search_members(first=_empty, second=_empty, third=_empty)
+    response = _wr().search("q")
+    assert response.provider == "first", "auto returns the first empty answer it held"
+    assert response.decision.ran == 0
+    assert response.decision.hops == [DecisionHop(id="search:second"), DecisionHop(id="search:third")]
+
+
+def test_a_last_empty_answer_that_is_returned_is_the_answer_not_a_hop(search_members: Callable[..., None]) -> None:
+    failing = _raising(ConfigurationError("no key"))
+    search_members(first=failing, second=failing, third=_empty)
+    response = _wr().search("q")
+    assert response.provider == "third"
+    assert response.decision.ran == 2
+    assert [hop.id for hop in response.decision.hops] == ["search:first", "search:second"]
+
+
+@pytest.mark.parametrize("budget", [None, Budget()], ids=["no budget", "budget"])
+def test_a_plan_made_by_hand_runs_with_a_decision_id(
+    search_members: Callable[..., None], budget: Budget | None
+) -> None:
+    search_members()
+    plan = Plan(prompt="q", tool="search", params={"query": "q"}, providers={"search": ["third"]})
+    record = WebRouter(provider_config={"auto": {"chain": list(NAMES)}}).run(plan, budget=budget).decision
+    assert re.fullmatch(r"[0-9a-f]{32}", record.decision_id or "")
+    assert record.prompt_sha256 == hashlib.sha256(b"q").hexdigest()
