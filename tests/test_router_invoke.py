@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import functools
+import inspect
 import threading
 import time
 from typing import Any
@@ -255,3 +257,103 @@ def test_fail_on_router_error_raises_instead(router: Any, code: str) -> None:
     assert raised.value.code == code
     if code == "router_error":
         assert isinstance(raised.value.__cause__, ValueError)
+
+
+async def test_a_caller_cancelled_while_waiting_cancels_the_router_and_is_cancelled() -> None:
+    started, cancelled = asyncio.Event(), asyncio.Event()
+
+    async def slow(req: RouteRequest) -> RouteDecision:
+        started.set()
+        try:
+            await asyncio.sleep(SLEEP_S)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return DECISION
+
+    waiting = asyncio.ensure_future(AttachedRouter(slow).acall(_req(SLEEP_S)))
+    await started.wait()
+    waiting.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await waiting
+    await asyncio.wait_for(cancelled.wait(), 1.0)
+
+
+async def _cancels_itself(req: RouteRequest) -> RouteDecision:
+    raise asyncio.CancelledError
+
+
+def _sync_cancels_itself(req: RouteRequest) -> RouteDecision:
+    raise asyncio.CancelledError
+
+
+@pytest.mark.parametrize("router", [_cancels_itself, _sync_cancels_itself], ids=["async", "sync"])
+@pytest.mark.parametrize("from_async", [False, True], ids=["from-sync", "from-async"])
+def test_a_router_that_cancels_itself_is_a_router_error(router: Any, from_async: bool) -> None:
+    attached = AttachedRouter(router)
+    outcome = asyncio.run(attached.acall(_req())) if from_async else attached.call(_req())
+    assert (outcome.decision, outcome.failure) == (None, "router_error")
+    with pytest.raises(RouterError, match="router_error"):
+        AttachedRouter(router, fail_on_error=True).call(_req())
+
+
+def _decorated(fn: Any) -> Any:
+    """A plain decorator: the wrapper looks sync, and hands back ``fn``'s coroutine."""
+
+    @functools.wraps(fn)
+    def wrapper(req: RouteRequest) -> Any:
+        return fn(req)
+
+    return wrapper
+
+
+@pytest.mark.parametrize("from_async", [False, True], ids=["from-sync", "from-async"])
+def test_a_decorated_async_router_is_awaited(from_async: bool) -> None:
+    attached = AttachedRouter(_decorated(_async))
+    outcome = asyncio.run(attached.acall(_req())) if from_async else attached.call(_req())
+    assert outcome.decision is DECISION
+
+
+@pytest.mark.parametrize("from_async", [False, True], ids=["from-sync", "from-async"])
+def test_a_decorated_async_router_is_held_to_the_deadline_and_closed(from_async: bool) -> None:
+    coroutines: list[Any] = []
+
+    async def slow(req: RouteRequest) -> RouteDecision:
+        await asyncio.sleep(SLEEP_S)
+        return DECISION
+
+    def router(req: RouteRequest) -> Any:
+        coroutines.append(slow(req))
+        return coroutines[-1]
+
+    attached = AttachedRouter(router)
+    started = time.perf_counter()
+    outcome = asyncio.run(attached.acall(_req())) if from_async else attached.call(_req())
+    assert time.perf_counter() - started < SLEEP_S / 2
+    assert outcome.failure == "router_timeout"
+    _closes(coroutines[0])
+
+
+@pytest.mark.parametrize("from_async", [False, True], ids=["from-sync", "from-async"])
+def test_a_coroutine_handed_back_after_the_deadline_is_closed(from_async: bool) -> None:
+    coroutines: list[Any] = []
+
+    def late(req: RouteRequest) -> Any:
+        time.sleep(0.2)
+        coroutines.append(_async(req))
+        return coroutines[-1]
+
+    attached = AttachedRouter(late)
+    outcome = asyncio.run(attached.acall(_req())) if from_async else attached.call(_req())
+    assert outcome.failure == "router_timeout"
+    deadline = time.monotonic() + 1.0
+    while not coroutines and time.monotonic() < deadline:
+        time.sleep(0.01)
+    _closes(coroutines[0])
+
+
+def _closes(coroutine: Any) -> None:
+    deadline = time.monotonic() + 1.0
+    while inspect.getcoroutinestate(coroutine) != inspect.CORO_CLOSED and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert inspect.getcoroutinestate(coroutine) == inspect.CORO_CLOSED
