@@ -1984,7 +1984,8 @@ with wr.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
 ```
 
 Every `search`, `extract`, `answer`, `research`, `browse`, `plan` and `run`
-inside the block spends from it; `run_template` and `open_browser` do not.
+inside the block spends from it; `run_template` and `open_browser` do not,
+nor do the calls of another router.
 Each attempt reserves its estimate before it starts, so parallel threads and
 tasks never overspend together. A thread started inside the block calls
 through `b`. On `AsyncWebRouter`, every method here is awaited and the scope is

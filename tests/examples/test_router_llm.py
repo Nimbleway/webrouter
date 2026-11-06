@@ -1,4 +1,4 @@
-"""The remote example routers, router_llm.py and router_jev.py, on fake clients: no key, no network."""
+"""examples/router_llm.py on a fake client: no key, no network."""
 
 from __future__ import annotations
 
@@ -7,14 +7,12 @@ import sys
 from types import SimpleNamespace
 from typing import Any
 
-import httpx
 import pytest
 
-from tests.examples.helpers import load_example, request
-from web_router import WebRouter
+from tests.examples.helpers import CANDIDATES, EXTRACT, load_example, request
+from web_router import RouteDecision, WebRouter
 
 llm = load_example("router_llm")
-jev = load_example("router_jev")
 
 
 class _Completions:
@@ -100,60 +98,29 @@ class TestLLM:
         llm.main()
         assert "Set OPENAI_API_KEY and LLM_ROUTER_MODEL" in capsys.readouterr().out
 
+    async def test_offers_extract_only_when_the_prompt_names_a_url(self) -> None:
+        router, completions = _llm(lambda _: {"ranked": ["extract:jina"], "reason": "r"})
+        no_url = await router.aroute(request(candidates=(*CANDIDATES, EXTRACT)))
+        assert "extract:jina" not in _enum(completions.requests[0])
+        assert no_url.tools == []  # the one id it named is not on offer: no opinion
+        with_url = await router.aroute(request(candidates=(*CANDIDATES, EXTRACT), urls=("https://example.com/a",)))
+        assert "extract:jina" in _enum(completions.requests[1])
+        assert with_url.tools == ["extract"]
 
-def _jev(probabilities: dict[str, float], seen: list[httpx.Request]) -> Any:
-    def handler(req: httpx.Request) -> httpx.Response:
-        seen.append(req)
-        answer = {"choice": max(probabilities, key=probabilities.__getitem__), "confidence": 0.6}
-        return httpx.Response(200, json={"answers": {"route": {**answer, "probabilities": probabilities}}})
+    async def test_with_nothing_to_rank_it_asks_nobody(self) -> None:
+        router, completions = _llm(lambda _: {"ranked": [], "reason": "r"})
+        assert await router.aroute(request(candidates=(EXTRACT,))) == RouteDecision()
+        assert completions.requests == []
 
-    client = httpx.AsyncClient(base_url=jev.BASE_URL, transport=httpx.MockTransport(handler))
-    return jev.JevRouter(client=client)
-
-
-class TestJev:
-    async def test_posts_one_choice_question_over_the_candidates(self) -> None:
-        seen: list[httpx.Request] = []
-        await _jev({"search:tavily": 1.0}, seen).aroute(request("who won"))
-        assert seen[0].url.path == "/v1/systemone"
-        body = json.loads(seen[0].content)
-        assert body["state"] == {"query": "who won"}
-        assert body["model"] == jev.MODEL
-        question = body["questions"]["route"]
-        assert question["type"] == "choice"
-        assert list(question["criteria"]) == [c.id for c in request().candidates]
-        assert question["criteria"]["search:tavily"] == "search on tavily, $0.008, p90 1.2s"
-
-    async def test_ranks_by_the_returned_probabilities(self) -> None:
-        probabilities = {"research:parallel": 0.1, "search:exa": 0.5, "answer:perplexity": 0.3, "search:tavily": 0.1}
-        decision = await _jev(probabilities, []).aroute(request())
-        assert decision.tools == ["search", "answer", "research"]
-        assert decision.providers["search"] == ["exa", "tavily"]
-        assert decision.confidence == 0.6
-        assert decision.reason == "jev: search:exa"
-
-    async def test_an_http_error_raises_so_the_static_order_runs(self) -> None:
-        client = httpx.AsyncClient(base_url=jev.BASE_URL, transport=httpx.MockTransport(lambda _: httpx.Response(500)))
-        with pytest.raises(httpx.HTTPStatusError):
-            await jev.JevRouter(client=client).aroute(request())
-
-    def test_the_key_goes_in_the_bearer_header(self) -> None:
-        router = jev.JevRouter(api_key="test-token")
-        assert router.client.headers["Authorization"] == "Bearer test-token"
-        assert str(router.client.base_url) == jev.BASE_URL
-
-    def test_declares_its_time_limit(self) -> None:
-        assert jev.JevRouter.timeout_s == 1.0
-
-    def test_plans_through_the_router(self) -> None:
-        with WebRouter(router=_jev({"extract:jina": 0.9}, [])) as client:
-            plan = client.plan("read https://example.com/a")
-        assert plan.tool == "extract"
-        assert plan.providers["extract"][0] == "jina"
-
-    def test_without_a_key_it_says_what_to_set(
+    def test_prints_the_model_reason_without_control_characters(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
-        jev.main()
-        assert "Set TYPESAFE_API_KEY" in capsys.readouterr().out
+        completions = _Completions(lambda kwargs: {"ranked": _searches(kwargs), "reason": "ok\x1b[2J\x07 done"})
+        client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+        monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(AsyncOpenAI=lambda **_: client))
+        monkeypatch.setenv("OPENAI_API_KEY", "test-token")
+        monkeypatch.setenv("LLM_ROUTER_MODEL", "m")
+        llm.main()
+        out = capsys.readouterr().out
+        assert "(ok[2J done)" in out
+        assert "\x1b" not in out and "\x07" not in out

@@ -47,7 +47,8 @@ class ClassifierRouter:
         self.model = model  # anything with predict_proba() and classes_, a pipeline that vectorizes text
 
     def route(self, req: RouteRequest) -> RouteDecision:
-        offered = {candidate.tool for candidate in req.candidates}
+        # Extract is offered with no URL in case a router supplies one; this one does not, so it never picks it.
+        offered = {c.tool for c in req.candidates if c.tool != "extract" or req.urls}
         scores = dict(zip(map(str, self.model.classes_), self.model.predict_proba([req.prompt])[0], strict=True))
         tools = sorted((tool for tool in scores if tool in offered), key=scores.__getitem__, reverse=True)
         if not tools:

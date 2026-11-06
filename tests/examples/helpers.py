@@ -29,6 +29,9 @@ CANDIDATES = (
     Candidate(tool="research", provider="parallel", est_cost_usd=0.1, est_latency_s=60.0),
 )
 
+EXTRACT = Candidate(tool="extract", provider="jina")
+"""An extract candidate, which a router may rank only when the request names a URL."""
+
 
 def request(
     prompt: str = "who won the 2022 world cup",
