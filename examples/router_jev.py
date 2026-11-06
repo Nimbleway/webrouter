@@ -11,7 +11,8 @@ decision's `tools` and `providers`. It is async, and declares
 
 The key is `TYPESAFE_API_KEY`; with none set this prints what to set and
 exits. The model is pinned, so a new Jev release does not change the routing
-until you change the pin. Each plan bills one Jev call.
+until you change the pin. Each plan bills one Jev call, on an HTTP client opened
+for it and closed after, so no connection outlives the call.
 
 Run it with::
 
@@ -21,6 +22,7 @@ Run it with::
 
 from __future__ import annotations
 
+import contextlib
 import os
 from typing import Any
 
@@ -43,13 +45,29 @@ PROMPTS = ("who won the 2022 world cup final", "compare the EU and US rules on A
 
 
 def criteria(req: RouteRequest) -> dict[str, str]:
-    """Each candidate id, described the way Jev reads a choice."""
+    """Each candidate id, described the way Jev reads a choice; extract only when the prompt names a URL.
+
+    Extract is offered with no URL in case a router supplies one; this one does not.
+    """
     out = {}
-    for c in req.candidates:
+    for c in (c for c in req.candidates if c.tool != "extract" or req.urls):
         cost = "unknown cost" if c.est_cost_usd is None else f"${c.est_cost_usd:g}"
         p90 = "unknown latency" if c.est_latency_s is None else f"p90 {c.est_latency_s:g}s"
         out[c.id] = f"{c.tool} on {c.provider}, {cost}, {p90}"
     return out
+
+
+def probabilities(answer: Any, choices: dict[str, str]) -> dict[str, float]:
+    """Jev's probability for every choice.
+
+    Raises:
+        ValueError: for a reply that leaves a choice out or names one not asked, so the call runs on the
+            static order and the decision record says router_error.
+    """
+    numbers = {str(k): float(v) for k, v in (answer.get("probabilities") or {}).items()}
+    if set(numbers) != set(choices) or answer.get("choice") not in choices:
+        raise ValueError(f"an incomplete Jev reply: {sorted(numbers)} for {sorted(choices)}")
+    return numbers
 
 
 def decision(req: RouteRequest, ranked: list[str], reason: str, confidence: float | None) -> RouteDecision:
@@ -68,20 +86,28 @@ class JevRouter:
     timeout_s = 1.0
 
     def __init__(self, client: httpx.AsyncClient | None = None, api_key: str | None = None) -> None:
-        if client is None:
-            key = api_key or os.environ[KEY_ENV]
-            client = httpx.AsyncClient(base_url=BASE_URL, headers={"Authorization": f"Bearer {key}"})
+        """``client``: one you open and close yourself; without it, each call opens its own and closes it."""
         self.client = client
+        self.headers = {} if client else {"Authorization": f"Bearer {api_key or os.environ[KEY_ENV]}"}
+
+    def session(self) -> Any:
+        """The client for one call: yours, left open, or a new one, closed when the call ends."""
+        if self.client is not None:
+            return contextlib.nullcontext(self.client)
+        return httpx.AsyncClient(base_url=BASE_URL, headers=self.headers)
 
     async def aroute(self, req: RouteRequest) -> RouteDecision:
         choices = criteria(req)
+        if not choices:
+            return RouteDecision()
         question = {"type": "choice", "instructions": INSTRUCTIONS, "criteria": choices}
         body: dict[str, Any] = {"state": {"query": req.prompt}, "model": MODEL, "questions": {"route": question}}
-        response = await self.client.post(PATH, json=body)
-        response.raise_for_status()
-        answer = response.json()["answers"]["route"]
-        probabilities = {k: float(v) for k, v in (answer.get("probabilities") or {}).items()}
-        ranked = sorted(choices, key=lambda cid: probabilities.get(cid, 0.0), reverse=True)
+        async with self.session() as client:
+            response = await client.post(PATH, json=body)
+            response.raise_for_status()
+            answer = response.json()["answers"]["route"]
+        numbers = probabilities(answer, choices)
+        ranked = sorted(choices, key=numbers.__getitem__, reverse=True)
         return decision(req, ranked, f"jev: {answer['choice']}", float(answer["confidence"]))
 
 

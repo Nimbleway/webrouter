@@ -28,7 +28,7 @@ import json
 import os
 from typing import Any
 
-from web_router import RouteDecision, RouteRequest, WebRouter
+from web_router import Candidate, RouteDecision, RouteRequest, WebRouter
 
 MODEL_ENV = "LLM_ROUTER_MODEL"
 
@@ -42,12 +42,25 @@ Give the reason in a few words."""
 PROMPTS = ("who won the 2022 world cup final", "compare the EU and US rules on AI training data")
 
 
+def usable(req: RouteRequest) -> list[Candidate]:
+    """The candidates this router may rank: extract only when the prompt names a URL.
+
+    Extract is offered with no URL in case a router supplies one; this one does not.
+    """
+    return [c for c in req.candidates if c.tool != "extract" or req.urls]
+
+
+def printable(text: str | None) -> str:
+    """A model's words with control characters taken out, safe to print to a terminal."""
+    return "".join(ch for ch in text or "" if ch.isprintable())
+
+
 def menu(req: RouteRequest) -> str:
     """The request as the model reads it: the prompt, the budget, a pinned method, and each candidate."""
     lines = [f"Request: {req.prompt}", f"Budget: {req.budget or 'none'}"]
     if req.pinned_tool:
         lines.append(f"The method is fixed to {req.pinned_tool}: rank its backends only.")
-    for c in req.candidates:
+    for c in usable(req):
         cost = "unknown" if c.est_cost_usd is None else f"${c.est_cost_usd:g}"
         p90 = "unknown" if c.est_latency_s is None else f"{c.est_latency_s:g}s"
         lines.append(f"- {c.id}: cost {cost}, p90 {p90}")
@@ -56,7 +69,7 @@ def menu(req: RouteRequest) -> str:
 
 def schema(req: RouteRequest) -> dict[str, Any]:
     """Strict structured output: a ranking of real candidate ids, and a reason."""
-    ranked = {"type": "array", "items": {"type": "string", "enum": [c.id for c in req.candidates]}}
+    ranked = {"type": "array", "items": {"type": "string", "enum": [c.id for c in usable(req)]}}
     return {
         "type": "object",
         "additionalProperties": False,
@@ -67,7 +80,7 @@ def schema(req: RouteRequest) -> dict[str, Any]:
 
 def decision(req: RouteRequest, ranked: list[str], reason: str) -> RouteDecision:
     """`tools` in the order the ranking first names them, and each tool's backends in ranked order."""
-    by_id = {c.id: c for c in req.candidates}
+    by_id = {c.id: c for c in usable(req)}
     providers: dict[str, list[str]] = {}
     for cid in ranked:
         if cid in by_id:
@@ -90,6 +103,8 @@ class LLMRouter:
         self.model = model or os.environ[MODEL_ENV]
 
     async def aroute(self, req: RouteRequest) -> RouteDecision:
+        if not usable(req):
+            return RouteDecision()
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "system", "content": INSTRUCTIONS}, {"role": "user", "content": menu(req)}],
@@ -116,7 +131,7 @@ def main() -> None:
         for prompt in PROMPTS:
             plan = client.plan(prompt)
             backends = ", ".join(plan.providers.get(plan.tool, ())) or "none"
-            print(f"{prompt!r}\n  -> {plan.tool} on {backends}\n  ({plan.decision.reason})")
+            print(f"{prompt!r}\n  -> {plan.tool} on {backends}\n  ({printable(plan.decision.reason)})")
 
 
 if __name__ == "__main__":

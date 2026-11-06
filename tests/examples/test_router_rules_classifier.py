@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.examples.helpers import load_example, request
+from tests.examples.helpers import CANDIDATES, EXTRACT, load_example, request
 from web_router import RouteDecision, WebRouter
 
 rules = load_example("router_rules")
@@ -55,6 +55,13 @@ class _Model:
         return [self.probabilities]
 
 
+class _ExtractModel(_Model):
+    classes_ = ("extract", "search")
+
+    def __init__(self) -> None:
+        super().__init__((0.9, 0.1))
+
+
 class TestClassifier:
     def test_ranks_the_offered_tools_by_probability(self) -> None:
         model = _Model((0.2, 0.5, 0.3))
@@ -67,6 +74,13 @@ class TestClassifier:
         only_search = tuple(c for c in request().candidates if c.tool == "search")
         decision = classifier.ClassifierRouter(_Model((0.7, 0.2, 0.1))).route(request(candidates=only_search))
         assert decision.tools == ["search"]
+
+    def test_ranks_extract_only_when_the_prompt_names_a_url(self) -> None:
+        model = _ExtractModel()
+        offered = (*CANDIDATES, EXTRACT)
+        assert "extract" not in classifier.ClassifierRouter(model).route(request(candidates=offered)).tools
+        with_url = request(candidates=offered, urls=("https://example.com/a",))
+        assert classifier.ClassifierRouter(model).route(with_url).tools[0] == "extract"
 
     def test_no_offered_tool_is_no_opinion(self) -> None:
         router = classifier.ClassifierRouter(_Model((1.0, 0.0, 0.0)))
