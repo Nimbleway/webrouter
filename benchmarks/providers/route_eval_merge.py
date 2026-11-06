@@ -139,7 +139,8 @@ def walk(
 ) -> tuple[list[str | None], bool]:
     """The ids the replay tries for ``answer``, in order, and whether the router failed.
 
-    A ranking (a list) fails when it names no candidate; a decision fails when the merge set it aside. On a
+    A ranking fails when it names no candidate, given as a list or as a decision's ``providers`` for the merged
+    method; a decision also fails when the merge set it aside. On a
     mixed set a decision -- failed or empty too -- walks only the merged method's backends, as a routed call
     would; one with no frozen row to score is ``None`` in its place, a miss the replay counts as unscorable.
     """
@@ -151,5 +152,7 @@ def walk(
     ranking = isinstance(answer, list)
     decision = RouteDecision(providers={method: answer}) if ranking else answer  # type: ignore[dict-item]
     merged = merge(request_for(q), decision, _by_tool(static, method), failure=failure)  # type: ignore[arg-type]
-    failed = merged.notes.fallback is not None or (ranking and not merged.notes.ranked)
+    asked = decision.providers if isinstance(decision, RouteDecision) and not ranking else None
+    named = ranking or bool((asked or {}).get(merged.tool))
+    failed = merged.notes.fallback is not None or (named and not merged.notes.ranked)
     return [_path_of(merged, provider, static, method) for provider in merged.providers], failed

@@ -35,9 +35,9 @@ ROUTER_EMPTY: Final = "router_empty"
 
 NOTE_EXCLUDE = "exclude"
 NOTE_EXTRACT = "extract"
+"""The keys of the notes that are about the decision as a whole rather than one id or option."""
 NOTE_EXTRACT_URLS = "params.extract.urls"
 """The note for the router's extract URLs when they were refused and the call searches instead."""
-"""The keys of the notes that are about the decision as a whole rather than one id or option."""
 
 MSG_UNKNOWN_ID = "{id} is not a candidate for this call"
 MSG_UNKNOWN_TOOL = "{tool} is not a method a router can choose"
@@ -56,12 +56,15 @@ MSG_PARAM_UNDECLARED = "{tool}:{provider} does not take {key}"
 MSG_PARAM_UNCHECKED = "{tool}:{provider} could not be checked for {key}: {error}"
 URL_HIDDEN = "<url>"
 """How a URL with no scheme or host shows in a record: the URL itself never does."""
-URL_IN_TEXT = r"[A-Za-z][A-Za-z0-9+.-]*://[^\s\"`]+"
-"""A URL inside free text, such as a router's reason: from its scheme up to whitespace, a double quote or a
-backtick. All of it is replaced by its scheme and host, so nothing after the host survives, brackets and
-punctuation included: a URL's end cannot be told safely, and what follows it may be its query. The URL
-finder, ``web_router._urls``, has its own pattern on purpose: it finds URLs to fetch, this one URLs to hide."""
+URL_IN_TEXT = r"(?:[A-Za-z][A-Za-z0-9+.-]*:)?//[^\s\"`]+"
+"""A URL inside free text, such as a router's reason: from its scheme, or from any ``//`` as a scheme-relative
+URL, wherever it stands, up to whitespace, a double quote or a backtick. All of it is replaced by its
+scheme and host, so nothing after the host survives, brackets and punctuation included: a URL's end cannot be
+told safely, and what follows it may be its query. The URL finder, ``web_router._urls``, has its own
+pattern on purpose: it finds URLs to fetch, this one URLs to hide."""
 HOST_CHARS = r"[A-Za-z0-9.-]+"
 """What a shown host keeps: a host parsed out of free text stops at the first character a hostname cannot hold."""
 MSG_PARAM_DEPTH_UNKNOWN_PRICE = "search:{provider} at depth {depth} has no known price, so it never fits a cost cap"
 MSG_PARAM_DEPTH_COST = "search:{provider} at depth {depth} is estimated at ${cost:g}, over the ${cap:g} cost cap"
+MSG_PARAM_DEPTH_TIME = "search:{provider} at depth {depth} has a p90 of {p90:g}s, over the {cap:g}s time limit"
+MSG_PARAM_DEPTH_STRICT = "search:{provider} at depth {depth} has no measured p90, and the budget is strict"
