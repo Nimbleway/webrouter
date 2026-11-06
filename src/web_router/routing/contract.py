@@ -48,11 +48,14 @@ class Budget:
     def __post_init__(self) -> None:
         """
         Raises:
-            ValueError: for a cap that is negative or not a number: it would cap nothing, or everything, silently.
+            ValueError: for a cap that is negative or not a number -- text, a bool, NaN: it would cap nothing,
+                or everything, silently.
         """
         for name in ("max_cost_usd", "time_limit_s"):
             value = getattr(self, name)
-            if value is not None and (isinstance(value, bool) or not value >= 0):  # NaN fails ``>= 0``
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, int | float) or not value >= 0:  # NaN fails >= 0
                 raise ValueError(MSG_BUDGET_VALUE.format(name=name, value=value))
 
 

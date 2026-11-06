@@ -48,7 +48,8 @@ def host_of(url: str) -> str:
         return URL_HIDDEN
     if parts.scheme and host and ":" in host:  # an IPv6 literal, shown in its brackets
         try:
-            return f"{parts.scheme}://[{ipaddress.IPv6Address(host)}]"
+            # A scope id (``%eth0``) names the machine's own interface, never shown.
+            return f"{parts.scheme}://[{ipaddress.IPv6Address(host.partition('%')[0])}]"
         except ValueError:
             return URL_HIDDEN
     kept = re.match(HOST_CHARS, host or "")
