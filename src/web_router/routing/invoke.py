@@ -200,17 +200,25 @@ def _retrieved(task: asyncio.Future[Any]) -> None:
         task.exception()
 
 
+def _classified(done: Future[Any] | asyncio.Future[Any]) -> tuple[str | None, Any]:
+    """A finished router call: ``(None, result)``, or ``router_error`` and the error behind it.
+
+    A router that cancelled itself is a failure of the router's, not the caller's.
+    """
+    if done.cancelled():
+        return ROUTER_ERROR, None
+    if (error := done.exception()) is not None:
+        return ROUTER_ERROR, error
+    return None, done.result()
+
+
 def _settled(future: Future[Any], seconds: float) -> tuple[str | None, Any]:
     """Wait up to ``seconds`` for ``future``: ``(None, result)``, or a failure code and the error behind it."""
     if seconds <= 0 or not wait_futures([future], timeout=seconds).done:
         future.cancel()  # cancels an async router; a sync one runs on, unheard
         _close_late(future)
         return ROUTER_TIMEOUT, None
-    if future.cancelled():  # the router cancelled itself: a failure of the router's, not the caller's
-        return ROUTER_ERROR, None
-    if (error := future.exception()) is not None:
-        return ROUTER_ERROR, error
-    return None, future.result()
+    return _classified(future)
 
 
 async def _asettled(task: asyncio.Future[Any], seconds: float) -> tuple[str | None, Any]:
@@ -225,15 +233,7 @@ async def _asettled(task: asyncio.Future[Any], seconds: float) -> tuple[str | No
         task.cancel()
         task.add_done_callback(_retrieved)
         return ROUTER_TIMEOUT, None
-    if task.cancelled():
-        return ROUTER_ERROR, None
-    if (error := task.exception()) is not None:
-        return ROUTER_ERROR, error
-    return None, task.result()
-
-
-def _ms_since(started: float) -> float:
-    return (time.perf_counter() - started) * 1000
+    return _classified(task)
 
 
 class AttachedRouter:
@@ -273,12 +273,12 @@ class AttachedRouter:
         except Exception as exc:  # the router failed before it could be waited on
             return self._failed(ROUTER_ERROR, started, exc)
         code, value = _settled(future, self._left(req, started))
-        if code is None and inspect.isawaitable(value):  # a sync-looking router that answered with a coroutine
-            if (left := self._left(req, started)) <= 0:
-                _close(value)
-                return self._failed(ROUTER_TIMEOUT, started)
-            code, value = _settled(_on_private_loop(value), left)
-        return self._failed(code, started, value) if code is not None else self._read(value, started)
+        pending = self._pending(code, value, req, started)
+        if isinstance(pending, RouterOutcome):
+            return pending
+        if pending is not None:
+            code, value = _settled(_on_private_loop(value), pending)
+        return self._outcome(code, value, started)
 
     async def acall(self, req: RouteRequest) -> RouterOutcome:
         """Ask the router from async code, waiting at most ``req.deadline_s``."""
@@ -298,11 +298,27 @@ class AttachedRouter:
         code, value = await _asettled(task, self._left(req, started))
         if code == ROUTER_TIMEOUT and on_thread is not None:
             _close_late(on_thread)
-        if code is None and inspect.isawaitable(value):  # a sync-looking router that answered with a coroutine
-            if (left := self._left(req, started)) <= 0:
-                _close(value)
-                return self._failed(ROUTER_TIMEOUT, started)
-            code, value = await _asettled(asyncio.ensure_future(value), left)
+        pending = self._pending(code, value, req, started)
+        if isinstance(pending, RouterOutcome):
+            return pending
+        if pending is not None:
+            code, value = await _asettled(asyncio.ensure_future(value), pending)
+        return self._outcome(code, value, started)
+
+    def _pending(self, code: str | None, value: Any, req: RouteRequest, started: float) -> RouterOutcome | float | None:
+        """For a sync-looking router that answered with a coroutine, the seconds left to await it.
+
+        ``None`` when the answer is not awaitable; the timeout's outcome, the coroutine
+        closed unrun, when no time is left.
+        """
+        if code is not None or not inspect.isawaitable(value):
+            return None
+        if (left := self._left(req, started)) > 0:
+            return left
+        _close(value)
+        return self._failed(ROUTER_TIMEOUT, started)
+
+    def _outcome(self, code: str | None, value: Any, started: float) -> RouterOutcome:
         return self._failed(code, started, value) if code is not None else self._read(value, started)
 
     @staticmethod
@@ -321,9 +337,9 @@ class AttachedRouter:
         if not isinstance(result, RouteDecision) or not _valid(result):
             _close(result)
             return self._failed(ROUTER_INVALID, started)
-        return RouterOutcome(decision=result, failure=None, elapsed_ms=_ms_since(started))
+        return RouterOutcome(decision=result, failure=None, elapsed_ms=(time.perf_counter() - started) * 1000)
 
     def _failed(self, code: str, started: float, error: Any = None) -> RouterOutcome:
         if self.fail_on_error:
             raise RouterError(self.name, code) from error
-        return RouterOutcome(decision=None, failure=code, elapsed_ms=_ms_since(started))
+        return RouterOutcome(decision=None, failure=code, elapsed_ms=(time.perf_counter() - started) * 1000)
