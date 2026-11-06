@@ -259,8 +259,9 @@ The router is set by the operator, once, when the server starts:
   order, which is `search`.
 
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
-loopback, private or cloud-metadata host is never sent to a backend. The
-router runs inside the server's process: the prompt leaves it only as the
+loopback, private or cloud-metadata host is never fetched or passed to a
+backend as a URL. It stays in the prompt text, though, and the prompt is sent
+as the search query or the browse task. The router runs inside the server's process: the prompt leaves it only as the
 planned call's query, task or URLs, unless a router you name sends it on.
 
 **The budget.** Every billed tool -- `search`, `extract`, `answer`, `research`,
@@ -282,9 +283,20 @@ the unknown price.
   reservation must fit the task and the ceiling, so the limits are cut to what
   the ceiling has left. A call still running when a new task starts stays
   charged to the connection.
-- **`budget_status()`** returns the task's `max_cost_usd`, `time_limit_s`,
-  `spent_usd`, `reserved_usd`, `remaining_usd` (counted against the ceiling
-  too), `elapsed_s` and `time_left_s`, and the ceiling.
+- **`budget_status()`** returns the task in force and the ceiling:
+
+  ```json
+  {
+    "budget": {"max_cost_usd": 1.0, "time_limit_s": 300, "spent_usd": 0.016,
+               "reserved_usd": 0.0, "remaining_usd": 0.984,
+               "elapsed_s": 12.5, "time_left_s": 287.5},
+    "ceiling": {"max_cost_usd": 5.0, "time_limit_s": null}
+  }
+  ```
+
+  `budget` is `null` with no ceiling and no `budget_start`; `remaining_usd`
+  counts against the ceiling too. `ceiling` is always there, each limit
+  `null` when the operator set none.
 
 With no ceiling and no `budget_start`, nothing is held, and every tool runs as
 it would with no budget.

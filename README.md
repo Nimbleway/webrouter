@@ -1917,13 +1917,22 @@ something else leaves the static order -- `auto`'s, as in
 [Working with no credentials](#working-with-no-credentials) --
 and `fail_on_router_error=True` raises `RouterError` instead.
 
-Its answer is merged: its ranking first, then the static order. Only
+Its answer is merged. The method is the first in `tools` that has a backend
+left, else search: without a research key, the snippet's "compare" rule plans
+a search. The backends are its ranking first, then the static order. Only
 `exclude` removes a backend, never the last one, and a router may set only
 search's `max_results` and `search_depth`, research's `effort`, and the URLs
 for extract and browse -- never an option you set yourself. A fallback never
-moves to another method. Attached with `router=`, a router also orders the
-backends of a plain `search`, `extract`, `answer`, `research` or `browse` sent
-to `auto`, without changing the method; `route_tools=` names fewer methods.
+moves to another method.
+
+Attached with `router=`, a router also orders the backends of a plain
+`search`, `extract`, `answer`, `research` or `browse` sent to `auto`, without
+changing the method. `route_tools=` limits that to some methods;
+`plan()` and `run()` always ask the router:
+
+```python
+wr = WebRouter(router=route, route_tools=("search", "research"))
+```
 
 ### `plan()` and `run()`
 
@@ -1937,7 +1946,8 @@ response: a `SearchResponse`, `ExtractResponse`, `AnswerResponse`,
 ### Budgets
 
 `budget=Budget(max_cost_usd=, time_limit_s=, strict=)` caps one call to
-`search`, `extract`, `answer`, `research`, `browse`, `plan` or `run`. Before
+`search`, `extract`, `answer`, `research`, `browse`, `plan` or `run`; a
+negative or NaN limit raises `ValueError`. Before
 each attempt web-router checks its estimate against what is left and skips it
 if it does not fit; when nothing fits, it raises `BudgetExceededError`, naming
 each skip. Costs are estimates from the list prices in
@@ -1945,15 +1955,22 @@ each skip. Costs are estimates from the list prices in
 failed attempt still counts.
 
 - **Unknown price.** Under a cost cap, a backend whose price is unknown never
-  runs: it is skipped, and the record says why. With no cost cap it runs.
+  runs: it is skipped, and the record says why. A price marked as a floor
+  (Brave's answer, Browser Use's browse) counts as unknown. With no cost cap
+  it runs.
+- **Free tiers.** The keyless MCP search endpoints (`you-mcp`, `exa-mcp`,
+  `parallel-mcp`) are priced $0, so a cost cap never skips them; they stay
+  last in the order.
 - **Unknown p90.** Under a time cap, a backend with no measured p90 runs
   within the time left; `strict=True` skips it instead. One whose p90 does not
   fit the time left is skipped.
-- **Research and browse.** The time cap limits the wait, not the job: they
-  wait at most `min(timeout, time left)`, then raise their own timeout error
-  with the job's handle.
-- **Research effort.** On `plan()`, `run()` and a routed call, the budget picks
-  research's `effort` when neither you nor the router set one.
+- **Time cap.** Search, extract and answer stop at it and raise
+  `DeadlineExceededError`. Research and browse are capped on the wait, not the
+  job: they wait at most `min(timeout, time left)`, then raise their own
+  timeout error with the job's handle.
+- **Research effort.** A budgeted `research()` call, routed or not, and a
+  research plan get the `effort` the budget picks when neither you nor the
+  router set one.
 
 To spend several calls from one budget:
 
@@ -1964,6 +1981,8 @@ with wr.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
     b.status()  # spent, reserved, remaining, elapsed, time left
 ```
 
+Every `search`, `extract`, `answer`, `research`, `browse`, `plan` and `run`
+inside the block spends from it; `run_template` and `open_browser` do not.
 Each attempt reserves its estimate before it starts, so parallel threads and
 tasks never overspend together. A thread started inside the block calls
 through `b`. On `AsyncWebRouter`, every method here is awaited and the scope is
@@ -1974,18 +1993,31 @@ through `b`. On `AsyncWebRouter`, every method here is awaited and the scope is
 `url_policy="public_only"` refuses loopback, link-local, cloud-metadata,
 private, shared and reserved hosts, and URLs a browser could read another host
 from, among the URLs a plan finds in a prompt and those a router supplies; the
-record lists each refusal under `dropped` or `ignored`, by scheme and host. It
-is a hostname check before
-dispatch: it resolves no DNS and follows no redirect. It is off by default, and
-leaves the URLs you pass to `extract` yourself alone.
+record lists each refusal under `dropped` or `ignored`, by scheme and host. A
+refused URL is never fetched or passed to a backend as a URL, but it stays in
+the prompt, which still goes out as the search query or the browse task. It is
+a hostname check before dispatch: it resolves no DNS and follows no redirect.
+It is off by default, and leaves the URLs you pass to `extract` yourself alone.
 
 ### The decision record
 
-`response.decision` and `plan.decision` hold a `DecisionRecord` on every
-routed or budgeted call, and `None` on any other: the candidates offered, the
-router's ranking and the merged order, which one answered (`ran`), each
-attempt with its estimated cost, each candidate moved past and why, and the
-router's time and reason. It never holds the prompt or a browse task -- only
+`response.decision` and `plan.decision` hold a `DecisionRecord` (`from
+web_router import DecisionRecord`) on every routed or budgeted call, and
+`None` on any other. Every field may be `None`:
+
+- `decision_id`, `router`, `router_ms`, `router_timeout`, `reason`;
+- `offered`, the candidates the router saw; `dropped`, those left out before
+  it, with why; `ranked`, its picks that survived the budget; `excluded` and
+  `ignored`, what it excluded and what of its answer was set aside, including
+  picks the budget had removed;
+- `merged`, the order tried; `ran`, the position in it that answered;
+  `attempts`, each try with `est_cost_usd` and `seconds`; `hops`, each
+  candidate moved past and why;
+- `params`, `params_source` and `params_reason`, the options set and who set
+  them;
+- `estimated_cost_usd`, `cost_is_estimate`, `unmeasured`, `prompt_sha256`.
+
+It never holds the prompt or a browse task -- only
 the prompt's SHA-256, which is not anonymisation: a short prompt can be
 guessed from it -- never a whole URL, only its scheme and host, and no key
 values. Candidate ids do show which backends you have configured, and
@@ -2238,8 +2270,8 @@ keyless endpoints, redirects, and reusing an existing provider's normalization.
 
 ## Errors
 
-Every exception the router raises derives from `WebRouterError`, so one `except`
-covers the lot:
+Every exception the router raises derives from `WebRouterError` and imports
+from `web_router`, so one `except` covers the lot:
 
 ```python
 from web_router import Provider, WebRouter, WebRouterError
@@ -2263,6 +2295,9 @@ except WebRouterError as exc:
 | `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers` — the other rows are unaffected |
 | `ProviderError` | The backend itself failed — HTTP error, SDK exception, bad credentials | Depends on the backend; the original error is wrapped, not swallowed |
 | `BrowserActionError` | A page action on a browser handle failed; subclasses say how — see [Driving the page](#driving-the-page) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
+| `BudgetExceededError` | Nothing the call could run fits its `Budget` (experimental, see [Budgets](#budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
+| `DeadlineExceededError` | A search, extract, template run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
+| `RouterError` | With `fail_on_router_error=True`, the attached router raised, ran out of time or answered something other than a `RouteDecision` (experimental) | Fix the router, or raise its `timeout_s`; `code` says which, and what it raised is on `__cause__` |
 
 These are **siblings, not a hierarchy**: `ProviderNotInstalledError` is not a
 subclass of `ConfigurationError`, so `except ConfigurationError` will not catch
