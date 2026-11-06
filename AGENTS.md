@@ -405,8 +405,9 @@ names the judge and has no cost column. Its recommended order alone reads list
 prices from `web_router.prices`, as estimates, to break ties. That order is
 route-eval's ranking (`route_eval_rank.py`), so the repository suggests only one
 order. `route_eval.py` replays a router over the frozen results offline and
-scores it against the static order, held out and in-sample, against the twin
-run's noise floor; an unknown price stays unknown there, never $0. `--combine` merges scans only when
+scores it against the static order, held out and in-sample, against each
+method's noise floor (its own rerun's, else search's twin run) and ranks a
+backend only on 20 counted questions or more; an unknown price stays unknown there, never $0. `--combine` merges scans only when
 their questions, search size and judge match. Keep a scan's report to compare
 the next one against: only runs graded by the same judge compare. `extract.py`
 beside it is the extract scan: every configured extract backend through

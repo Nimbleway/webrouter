@@ -36,9 +36,8 @@ MIXED_INTRO = (
     "the questions given their pages. The static order is what a caller with no router does today: `search` "
     "through `auto`'s order, then read the top pages -- the first `search+extract` path; the other paths follow "
     "only as its fallback (extract, answer, then research, each by its `auto` order, research lowest effort first). "
-    "The oracle is the path that got each question right, cheapest then fastest. The noise floor above was measured "
-    "on search rows: no twin run of this set exists. With {held_out} questions held out, one question moves "
-    "accuracy by {step:.1f} points: read the 95% interval before any margin.\n"
+    "The oracle is the path that got each question right, cheapest then fastest. With {held_out} questions held "
+    "out, one question moves accuracy by {step:.1f} points: read the 95% interval before any margin.\n"
 )
 EFFORT_INTRO = (
     "### Research by effort, over every question\n\n"

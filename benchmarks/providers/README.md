@@ -422,8 +422,11 @@ Every router is scored on one seeded split (`--seed 0`, half held out by
 `--test-fraction`), in-sample and held out side by side: on SealQA, routing by
 gold labels once scored 75 in-sample and 46 held out. The **noise floor** is
 the widest accuracy gap one backend shows between `sealqa-hard-254` and its
-twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points); it is
-the only twin run, so it serves every set. It is rerun noise, not sampling
+twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points). Each
+method is ranked and judged with its own rerun's spread where one is frozen
+(`RERUNS` in `route_eval_sets.py`), else with search's; that twin is the only
+rerun today, so `answer` and `tools-effort-60` fall back to it, and each set's
+report names the floor it used. It is rerun noise, not sampling
 error, so a held-out verdict needs both: a router is a *gain* only when its
 margin over the static order is wider than the floor and the static order's
 held-out accuracy falls below the router's 95% interval, a *loss* only when
@@ -434,7 +437,10 @@ Each set ends with the **recommended order**, ranked on every question of the
 set, since nothing is fit to it: by correct out of every question; within the
 noise floor of the best not yet placed, the cheaper backend at known cost
 first, then the faster, then the name. An unknown or $0 cost never moves a backend up, and the keyless tier
-stays last. `run.py`'s recommended order calls the same ranking. AIQ and the
+stays last. A backend counted on fewer than 20 questions (`MIN_QUESTIONS` in
+`route_eval_rank.py`, which says why 20) is not ranked: it is listed after the
+ranked ones as *too few questions*. `run.py`'s recommended order calls the same
+ranking without the minimum, since one scan is often smaller than 20 questions. AIQ and the
 cost and latency curves wait for the first real router. `--json PATH` writes
 the numbers as well.
 
@@ -454,7 +460,12 @@ every question makes it slightly harder for a router to beat there, on purpose:
   have no SealQA rows.
 - **answer** ranks on `answer-simpleqa-300`, the one answer set.
 
-The rule is the recommended order's, above; `chains.json` states it as `rule`.
+The rule is the recommended order's, above; `chains.json` states it as `rule`,
+and the minimum count as `min_questions`. Each method's entry names the floor
+it was ranked with as `noise_floor`: search's own rerun; answer has none
+frozen, so it is ranked with search's (`"fallback": true`). A member counted on
+too few questions keeps its place after the ranked ones, as
+`too_few_questions`.
 
 On `sealqa-hard-254`, judged by `openai:gpt-4o`, frozen from the run of
 2026-10-07, WebIQ (51 of 254), Nimble (49) and Perplexity (48) sit within the
@@ -522,7 +533,10 @@ uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort
 60 questions is small. Each held-out half is 30, where one question is 3.3
 points and the 95% interval runs some 30 points wide, which is why a verdict
 needs the static order outside it: here neither example router is a gain or a
-loss. The noise floor was measured on search rows; this set has no twin run.
+loss. The noise floor is search's: this set has no twin run. A path counted on
+fewer than 20 questions is listed as *too few questions*, not ranked: today
+`extract:nimble` (asked on 10), `research:perplexity:low` (4 counted) and
+`research:perplexity:medium` (19).
 A set that mixes methods other than these paths is refused by name.
 
 ## Keeping results

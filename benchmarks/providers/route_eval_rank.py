@@ -1,5 +1,10 @@
 """route-eval's ranking: each backend's numbers over a set, the noise floor, and the one order the repo recommends.
 
+Each method is ranked with its own floor, the spread of its own rerun, where
+one is frozen (:data:`~route_eval_sets.RERUNS`), else with search's
+(:func:`floor_for`); a backend counted on too few questions is not ranked
+(:data:`MIN_QUESTIONS`).
+
 ``route_eval.py`` prints this order for each set and ``run.py``'s report
 prints it for a scan, so the repository never suggests two orders. Imported as
 a sibling, by name, as ``_common`` is.
@@ -9,6 +14,7 @@ from __future__ import annotations
 
 import statistics
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -16,7 +22,7 @@ from typing import Any
 from _frozen_checks import ACCOUNT_ERRORS, JUDGE_ERROR, LEAKED_ERROR
 from _report_tables import correct_of_all, grade_stats
 from frozen import FROZEN_DIR, price_mode
-from route_eval_sets import TWIN_SETS, Question, load_set
+from route_eval_sets import FALLBACK_FLOOR, RERUNS, TWIN_SETS, Question, load_set
 
 from web_router import prices
 from web_router.constants import AUTO_KEYLESS
@@ -36,6 +42,18 @@ RANKING_RULE = (
     "the run with a rate-limit or quota error: not counted a miss, nor in that backend's total."
 )
 """The rule :func:`rank_backends` applies, in words, for a report or a reader that prints it."""
+MIN_QUESTIONS = 20
+"""The fewest counted questions a backend or path is ranked on; below it, :func:`recommended` lists it apart.
+
+At 20 questions one answer moves accuracy 5 points, four times search's
+1.2-point floor, and a 95% interval spans some 35 points: fewer, and one
+question can carry a backend across several tiers. It is a third of
+``tools-effort-60``, the smallest set route-eval ranks, so a path that lost
+most of its rows to rate limits (``research:perplexity:low``, 4 counted) or
+is asked on a few questions only (``extract:nimble``, 10) is held back, while
+one that lost a third (``answer:brave``, 38) is still ranked. The shipped
+orders rank on 254 and 300 questions, far above it.
+"""
 
 
 def cost_of(row: Mapping[str, Any]) -> float | None:
@@ -133,23 +151,72 @@ def backend_stats(questions: Sequence[Question]) -> dict[str, dict[str, Any]]:
     return out
 
 
-def recommended(stats: Mapping[str, Mapping[str, Any]], noise_floor: float) -> list[str]:
-    """The one recommended order: :func:`rank_backends` over the backends that served anything."""
+def too_few(stats: Mapping[str, Mapping[str, Any]], min_questions: int = MIN_QUESTIONS) -> list[str]:
+    """The backends that served something but were counted on fewer than ``min_questions``: listed apart, unranked."""
+    return [p for p, s in stats.items() if s["served"] and s["questions"] < min_questions]
+
+
+def recommended(
+    stats: Mapping[str, Mapping[str, Any]], noise_floor: float, min_questions: int = MIN_QUESTIONS
+) -> list[str]:
+    """The one recommended order: :func:`rank_backends` over the backends that served anything, on enough questions."""
+    left_out = set(too_few(stats, min_questions))
     return ranked_with_best(
         {
             p: {"accuracy": s["accuracy_all"], "cost_usd": s["cost_usd"], "latency_p50": s["latency_p50"]}
             for p, s in stats.items()
-            if s["served"]
+            if s["served"] and p not in left_out
         },
         noise_floor,
     )[0]
 
 
 @lru_cache(maxsize=4)
-def noise_floor(folder: Path = FROZEN_DIR) -> tuple[float, dict[str, tuple[float, float]]]:
+def noise_floor(
+    folder: Path = FROZEN_DIR, twins: tuple[str, str] = TWIN_SETS
+) -> tuple[float, dict[str, tuple[float, float]]]:
     """The rerun spread: the largest accuracy gap one backend shows between the twin runs, and each backend's pair."""
-    accuracies = [
-        {p: s["accuracy_all"] for p, s in backend_stats(load_set(name, folder)[1]).items()} for name in TWIN_SETS
-    ]
+    accuracies = [{p: s["accuracy_all"] for p, s in backend_stats(load_set(name, folder)[1]).items()} for name in twins]
     pairs = {p: (accuracies[0][p], accuracies[1][p]) for p in sorted(set(accuracies[0]) & set(accuracies[1]))}
     return max((abs(a - b) for a, b in pairs.values()), default=0.0), pairs
+
+
+@dataclass(frozen=True)
+class Floor:
+    """The noise floor one method is ranked with, and the rerun that measured it."""
+
+    method: str
+    value: float
+    measured_on: str | None
+    """The method whose rerun gave ``value``; ``None`` when the caller set it."""
+    rerun: tuple[str, ...] = ()
+
+    @property
+    def fallback(self) -> bool:
+        """Measured on another method's rerun: this one has none frozen."""
+        return self.measured_on is not None and self.measured_on != self.method
+
+    @classmethod
+    def from_json(cls, method: str, data: Mapping[str, Any]) -> Floor:
+        """The floor :meth:`as_json` wrote, as a set's summary holds it."""
+        return cls(method, data["value"], data["measured_on"], tuple(data["rerun"]))
+
+    def as_json(self, ndigits: int | None = None) -> dict[str, Any]:
+        value = self.value if ndigits is None else round(self.value, ndigits)
+        return {"value": value, "measured_on": self.measured_on, "rerun": list(self.rerun), "fallback": self.fallback}
+
+    def describe(self) -> str:
+        """The floor in words, for a report: its value and where it came from."""
+        if self.measured_on is None:
+            return f"{self.value * 100:.1f} points, as given"
+        twins = " vs ".join(f"`{name}`" for name in self.rerun)
+        if self.fallback:
+            return f"{self.value * 100:.1f} points, {self.measured_on}'s ({twins}): no rerun of {self.method} is frozen"
+        return f"{self.value * 100:.1f} points, {self.method}'s own rerun ({twins})"
+
+
+def floor_for(method: str, folder: Path = FROZEN_DIR) -> Floor:
+    """The floor ``method`` is ranked with: its own rerun's spread when one is frozen, else search's."""
+    measured_on = method if method in RERUNS else FALLBACK_FLOOR
+    twins = RERUNS[measured_on]
+    return Floor(method, noise_floor(folder, twins)[0], measured_on, twins)

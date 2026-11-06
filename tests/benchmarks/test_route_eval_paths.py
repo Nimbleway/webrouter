@@ -63,7 +63,8 @@ def test_an_extract_path_is_ranked_on_the_questions_where_it_is_a_candidate(
 
     extract = summary["backends"]["extract:nimble"]
     assert (extract["correct"], extract["questions"]) == (4, 4), "a question given no pages is not a miss for extract"
-    assert summary["recommended_order"][0] == "extract:nimble", "as right as research:parallel:high, and cheaper"
+    assert "extract:nimble" not in summary["recommended_order"], "4 counted questions are too few to rank"
+    assert summary["too_few_questions"] == ["extract:nimble", "research:perplexity:low"]
 
 
 def test_a_set_mixing_methods_that_are_not_paths_is_refused(route_eval: ModuleType, tmp_path: Path) -> None:
@@ -148,7 +149,7 @@ def test_a_mixed_set_scores_its_example_routers_against_static_and_oracle(
 
 def test_the_report_ends_with_research_by_effort(route_eval: ModuleType, tmp_path: Path) -> None:
     _mixed_set(tmp_path)
-    summary = route_eval.evaluate_set("mixed-tiny", [], floor=0.05, folder=tmp_path)
+    summary = route_eval.evaluate_set("mixed-tiny", [], folder=tmp_path)
 
     efforts = [
         (e["backend"], e["effort"], e["correct"], e["questions"], e["failed"], e["excluded"])
@@ -160,7 +161,9 @@ def test_the_report_ends_with_research_by_effort(route_eval: ModuleType, tmp_pat
         ("perplexity", "low", 3, 5, 2, 15),
     ], "rows failed on a rate-limit error are left out of the count and shown apart; the timeouts are misses"
     report = route_eval.markdown([summary], 0.05, {})
-    assert "| Order | Path |" in report and "measured on search rows" in report
+    assert "| Order | Path |" in report and "search's (`sealqa-hard-254` vs" in report, "the search floor, named"
+    assert "no rerun of mixed is frozen" in report
+    assert "| too few questions | `research:perplexity:low` | 60% (3/5) |" in report, "listed after, unranked"
     assert report.index("Recommended order") < report.index("Research by effort")
     assert "| `parallel` | low | 80% (16/20) | $0.0050 | 1.0s | 0 | 0 |" in report
     assert "| `perplexity` | low | 60% (3/5) | $0.0020 | 1.0s | 2 | 15 |" in report
@@ -179,14 +182,17 @@ def test_an_always_router_on_a_mixed_set_must_name_a_path_in_it(route_eval: Modu
 
 
 def test_the_committed_tool_and_effort_set_replays_offline(route_eval: ModuleType) -> None:
-    floor, _ = route_eval.noise_floor()
-    summary = route_eval.evaluate_set("tools-effort-60", None, floor=floor)
+    summary = route_eval.evaluate_set("tools-effort-60", None)
 
     assert summary["method"] == "mixed" and summary["questions"] == 60
     assert summary["static_order"][0].startswith("search+extract:")
     assert {(e["backend"], e["effort"]) for e in summary["efforts"]} >= {("parallel", "max"), ("nimble", "low")}
     left_out = {p: b["excluded"] for p, b in summary["backends"].items() if b["excluded"]}
     assert left_out == {"answer:brave": 22, "research:perplexity:low": 56, "research:perplexity:medium": 41}
+    few = ["extract:nimble", "research:perplexity:low", "research:perplexity:medium"]
+    assert summary["too_few_questions"] == few, "10, 4 and 19 counted; answer:brave's 38 is enough"
+    assert not set(few) & set(summary["recommended_order"])
+    assert summary["noise_floor"]["measured_on"] == "search" and summary["noise_floor"]["fallback"]
     oracle = summary["routers"]["oracle"]["held_out"]["accuracy"]
     assert all(r["held_out"]["accuracy"] <= oracle for r in summary["routers"].values())
     assert "tools-effort-60" in route_eval.DEFAULT_SETS
