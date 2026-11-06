@@ -34,12 +34,15 @@ from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import (
     AUTO_GETTERS,
     KEYLESS_OPTION,
+    MSG_DROPPED_NOT_CONFIGURED,
+    MSG_DROPPED_NOT_INSTALLED,
     MSG_DROPPED_OVER_COST,
     MSG_DROPPED_OVER_TIME,
     MSG_DROPPED_UNKNOWN_COST,
     MSG_DROPPED_UNKNOWN_LATENCY,
     RANKED_METHODS,
 )
+from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import (
     ConfigurationError,
     MissingParameterError,
@@ -122,7 +125,8 @@ def build_candidates(
     unmeasured: list[str] = []
     seen: set[str] = set()
     for tool, request in requests.items():
-        for name, keyless in _eligible(router, tool, request):
+        eligible, unbuilt = _eligible(router, tool, request)
+        for name, keyless in eligible:
             cost, p90 = _estimates(tool, name, request, budget)
             candidate = Candidate(tool=tool, provider=name, est_cost_usd=cost, est_latency_s=p90)
             if candidate.id in seen:
@@ -134,45 +138,64 @@ def build_candidates(
             kept.append(candidate)
             if cost is None or p90 is None or keyless or request.provider_options or name not in _ranked(tool):
                 unmeasured.append(candidate.id)
+        for name, why in unbuilt.items():
+            if (unbuilt_id := f"{tool}{CANDIDATE_ID_SEPARATOR}{name}") not in seen:  # built at another place
+                dropped[unbuilt_id] = why
     return CandidateSet(candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured))
 
 
-def _eligible(router: Any, tool: ToolName, request: NormalizedRequest) -> list[tuple[str, bool]]:
-    """The members of ``tool``'s ``auto`` that can serve ``request``, in chain order, each with whether it is keyless.
+def _eligible(router: Any, tool: ToolName, request: NormalizedRequest) -> tuple[list[tuple[str, bool]], dict[str, str]]:
+    """The members of ``tool``'s ``auto`` that can serve ``request``, and the ones it cannot build.
 
-    ``auto`` passes over a member that does not map an option the request sets,
-    and raises when none is left; here that is a method with no candidates. Any
+    The first list is in chain order, each member with whether it is keyless;
+    the mapping names each member that cannot be built, with why. ``auto``
+    passes over a member that does not map an option the request sets, and
+    raises when none is left; here that is a method with no candidates. Any
     other error is the caller's setup, and raises as it would from ``auto``.
     """
     auto = getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO)
+    built, unbuilt = _built(auto)
+    # A member that cannot be built may not be readable either, which research's and
+    # browse's eligibility would raise on: they read an auto of the built members alone.
+    view = auto
+    if unbuilt:
+        view = type(auto)(chain={tool: [auto._chain[at] for at in built]}, members_config=auto._members_config)
     try:
         if isinstance(request, ExtractRequest):
-            members = auto._eligible(auto.format_of(request))
+            members = view._eligible(view.format_of(request))
         else:
-            members = auto._eligible(request)
+            members = view._eligible(request)
     except _NO_MEMBER_LEFT:
-        return []
+        return [], unbuilt
     chain = auto._chain  # the keyless tier is hand-ordered, whatever route-eval ranked the keyed member
     return [
-        (name, bool(chain[position][1].get(KEYLESS_OPTION)))
-        for position, name in members
-        if _serves(auto, position, request)
-    ]
+        (name, bool(chain[built[at]][1].get(KEYLESS_OPTION)))
+        for at, name in members
+        if request.specified_parameters() <= auto._member(built[at]).supported_parameters
+    ], unbuilt
 
 
-def _serves(auto: Any, position: int, request: NormalizedRequest) -> bool:
-    """Whether ``auto`` can build the member at ``position`` and it maps every option ``request`` sets.
+def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
+    """The positions of the members ``auto`` can build, and why each other member cannot be built.
 
-    Built as ``auto`` builds it, and cached there for the call that tries it: a
-    member with no credential, and no keyless tier to fall back on, or whose
+    Built as ``auto`` builds them, and cached there for the call that tries one:
+    a member with no credential and no keyless tier to fall back on, or whose
     extra is not installed, refuses to be built and is no candidate. Extract's
-    ``_eligible`` reads only the format, so its other options are checked here.
+    ``_eligible`` reads only the format, so its other options are checked
+    against the built member.
     """
-    try:
-        supported: frozenset[str] = auto._member(position).supported_parameters
-    except (ConfigurationError, ProviderNotInstalledError):
-        return False
-    return request.specified_parameters() <= supported
+    built: list[int] = []
+    unbuilt: dict[str, str] = {}
+    for position, (name, _) in enumerate(auto._chain):
+        try:
+            auto._member(position)
+        except ConfigurationError:
+            unbuilt.setdefault(name, MSG_DROPPED_NOT_CONFIGURED)
+        except ProviderNotInstalledError:
+            unbuilt.setdefault(name, MSG_DROPPED_NOT_INSTALLED)
+        else:
+            built.append(position)
+    return built, unbuilt
 
 
 def _estimates(
