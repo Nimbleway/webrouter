@@ -12,7 +12,13 @@ import ipaddress
 import re
 import socket
 
-from web_router.constants_urls import LEGACY_IPV4_PATTERN, LOOPBACK_NAMES, METADATA_HOSTS
+from web_router.constants_urls import (
+    IPV4_COMPATIBLE_PREFIX,
+    LEGACY_IPV4_PATTERN,
+    LOOPBACK_NAMES,
+    METADATA_HOSTS,
+    NAT64_PREFIX,
+)
 
 _LEGACY_IPV4 = re.compile(LEGACY_IPV4_PATTERN)
 
@@ -27,9 +33,22 @@ def host_address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | N
         if legacy is None:
             return None
         address = legacy
-    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:
-        return address.ipv4_mapped
+    if isinstance(address, ipaddress.IPv6Address):
+        return _embedded_ipv4(address) or address
     return address
+
+
+def _embedded_ipv4(address: ipaddress.IPv6Address) -> ipaddress.IPv4Address | None:
+    """The IPv4 address an IPv6 one carries and reaches: IPv4-mapped, NAT64 (``64:ff9b::/96``) or the deprecated
+    IPv4-compatible form (``::a.b.c.d``, but not ``::`` or ``::1``, which are IPv6's own)."""
+    if address.ipv4_mapped is not None:
+        return address.ipv4_mapped
+    low = ipaddress.IPv4Address(int(address) & 0xFFFFFFFF)
+    if address in NAT64_PREFIX:
+        return low
+    if address in IPV4_COMPATIBLE_PREFIX and int(address) > 1:
+        return low
+    return None
 
 
 def legacy_ipv4(host: str) -> ipaddress.IPv4Address | None:

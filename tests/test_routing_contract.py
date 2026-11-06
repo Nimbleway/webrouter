@@ -37,11 +37,6 @@ def test_every_type_is_frozen_and_keyword_only(cls: type) -> None:
     assert all(f.kw_only for f in dataclasses.fields(cls))
 
 
-def test_a_budget_cannot_be_changed_once_made() -> None:
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        Budget(max_cost_usd=0.01).max_cost_usd = 1.0  # type: ignore[misc]
-
-
 def test_a_candidate_is_named_by_its_tool_and_provider() -> None:
     candidate = Candidate(tool="search", provider="exa", est_cost_usd=0.005, est_latency_s=1.2)
     assert candidate.id == "search:exa"
@@ -147,3 +142,15 @@ def test_a_provider_named_twice_in_the_order_keeps_its_first_place() -> None:
     eligible = [(0, "first"), (1, "second")]
     with call_route(CallRoute(order={"search": ["second", "first", "second"]})):
         assert in_call_order("search", eligible) == [(1, "second"), (0, "first")]
+
+
+@pytest.mark.parametrize("field", ["max_cost_usd", "time_limit_s"])
+@pytest.mark.parametrize("value", [-0.01, float("nan"), True])
+def test_a_budget_refuses_a_cap_that_is_negative_or_not_a_number(field: str, value: object) -> None:
+    with pytest.raises(ValueError, match=field):
+        Budget(**{field: value})  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("value", [0, 0.0, 2.5, float("inf"), None])
+def test_a_budget_takes_zero_a_positive_cap_or_none(value: float | None) -> None:
+    assert Budget(max_cost_usd=value, time_limit_s=value).max_cost_usd == value

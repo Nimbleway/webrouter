@@ -1,5 +1,7 @@
 """Constants for finding URLs in prose and judging their hosts. Kept apart so ``constants.py`` stops growing."""
 
+import ipaddress
+
 URL_TRAILING_PUNCTUATION = ".,;:!?"
 """Stripped from a URL found in prose: the end of a sentence, not part of the address."""
 
@@ -31,9 +33,6 @@ Only a host of this shape is handed to ``inet_aton``, which would otherwise be
 asked to read names it has no business reading.
 """
 
-URL_POLICY_PUBLIC_ONLY = "public_only"
-"""The ``url_policy`` that refuses private, loopback, link-local and cloud metadata hosts before a call."""
-
 URL_SCHEMES: frozenset[str] = frozenset({"http", "https"})
 """The schemes a routed call's URLs may use, with any ``url_policy`` or none."""
 
@@ -57,3 +56,9 @@ userinfo, and a browser decodes a ``%``-encoded host, so each can make it connec
 
 MSG_PLAN_EXTRACT_NO_URL = "plan(tool='extract') found no http(s) URL in the prompt: write the URL into it."
 MSG_PLAN_EXTRACT_REFUSED = "plan(tool='extract') found only URLs url_policy refuses ({refused})."
+
+NAT64_PREFIX = ipaddress.IPv6Network("64:ff9b::/96")
+"""The well-known NAT64 prefix (RFC 6052): an address in it reaches the IPv4 address in its low 32 bits."""
+
+IPV4_COMPATIBLE_PREFIX = ipaddress.IPv6Network("::/96")
+"""The deprecated IPv4-compatible form (RFC 4291): ``::a.b.c.d`` is read as the IPv4 address it carries."""

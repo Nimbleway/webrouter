@@ -18,7 +18,8 @@ budget's research effort -- and recorded on the response's ``decision``.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Collection
+from collections.abc import Awaitable, Callable, Collection, Iterator
+from contextlib import contextmanager
 from dataclasses import replace
 from typing import Any, TypeVar, get_args
 
@@ -27,12 +28,13 @@ from pydantic import BaseModel
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS
 from web_router.constants_invoke import MSG_ROUTE_TOOLS
+from web_router.constants_params import PARAMS_SOURCE_BUDGET
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, call_route, current_route
-from web_router.routing.budget import budget_scope, recorded
+from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
-from web_router.routing.decide import decided
+from web_router.routing.decide import budget_effort, decided
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge import UrlCheck
 from web_router.routing.record import prompt_of
@@ -126,6 +128,24 @@ class RouterSetup:
         )
         return req, found
 
+    def _attached(self) -> AttachedRouter:
+        assert self._router is not None  # a call is routed only with a router attached
+        return self._router
+
+    def _prepared(
+        self,
+        chain: Any,
+        request: _RequestT,
+        budget: Budget | None,
+        routed: tuple[RouteRequest, CandidateSet] | None,
+        outcome: RouterOutcome | None,
+    ) -> tuple[CallRoute | None, _RequestT, DecisionRecord | None]:
+        """The order in force, the request and the record: the router's merged, or with none the budget's effort."""
+        if routed is None or outcome is None:
+            request, mapped = _unrouted(chain, request, budget)
+            return None, request, mapped
+        return self._merged(routed, outcome, request)
+
     def _merged(
         self, routed: tuple[RouteRequest, CandidateSet], outcome: RouterOutcome, request: _RequestT
     ) -> tuple[CallRoute, _RequestT, DecisionRecord]:
@@ -137,6 +157,41 @@ class RouterSetup:
         if out.params:
             request = request.model_copy(update=dict(out.params))
         return CallRoute(order={out.tool: out.providers}), request, out.record
+
+
+def _unrouted(chain: Any, request: _RequestT, budget: Budget | None) -> tuple[_RequestT, DecisionRecord | None]:
+    """A call no router orders: with a budget, research still runs at the effort the budget maps.
+
+    The effort is the one :func:`~web_router.routing.decide.budget_effort` picks over the backends the budget
+    leaves in the chain's order -- one that fits on every one of them -- unless the caller set one.
+    """
+    capped = budget is not None and (budget.max_cost_usd is not None or budget.time_limit_s is not None)
+    if not capped or not isinstance(request, ResearchRequest) or getattr(chain, "name", None) != PROVIDER_AUTO:
+        return request, None
+    found = build_candidates(_Only("research", chain), {"research": request}, budget=budget)
+    params: dict[str, Any] = {}
+    caller_set = request.specified_parameters()
+    choice = budget_effort("research", tuple(c.provider for c in found.candidates), params, caller_set, budget)
+    if choice is None:
+        return request, None
+    if choice.effort is None:
+        return request, DecisionRecord(params_reason=choice.reason)
+    record = DecisionRecord(params=dict(params), params_source=PARAMS_SOURCE_BUDGET, params_reason=choice.reason)
+    return request.model_copy(update=params), record
+
+
+def _decided(response: _ResponseT, record: DecisionRecord | None) -> _ResponseT:
+    return response if record is None else response.model_copy(update={"decision": record})
+
+
+@contextmanager
+def _logged(scope: BudgetedCall[Any], route: CallRoute | None) -> Iterator[BudgetedCall[Any]]:
+    """``route`` in force beside the budget's hook, and a ledger logging its attempts; nothing for an unrouted call."""
+    if route is None:
+        yield scope
+        return
+    with recorded(scope) as logged, call_route(in_force_with(route)):
+        yield logged
 
 
 def in_force_with(route: CallRoute) -> CallRoute:
@@ -159,13 +214,10 @@ class SyncRouted(RouterSetup):
         """
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
             routed = self._route_request(chain, request, scope.budget)
-            if routed is None:
-                return scope.settle(call(request))
-            assert self._router is not None  # a request is built only with a router attached
-            route, request, record = self._merged(routed, self._router.call(routed[0]), request)
-            with recorded(scope) as logged, call_route(in_force_with(route)):
-                response = call(request)
-            return logged.settle(response.model_copy(update={"decision": record}))
+            outcome = None if routed is None else self._attached().call(routed[0])
+            route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
+            with _logged(scope, route) as logged:
+                return logged.settle(_decided(call(request), record))
 
 
 class AsyncRouted(RouterSetup):
@@ -179,10 +231,7 @@ class AsyncRouted(RouterSetup):
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
             routed = self._route_request(chain, request, scope.budget)
-            if routed is None:
-                return scope.settle(await call(request))
-            assert self._router is not None  # a request is built only with a router attached
-            route, request, record = self._merged(routed, await self._router.acall(routed[0]), request)
-            with recorded(scope) as logged, call_route(in_force_with(route)):
-                response = await call(request)
-            return logged.settle(response.model_copy(update={"decision": record}))
+            outcome = None if routed is None else await self._attached().acall(routed[0])
+            route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
+            with _logged(scope, route) as logged:
+                return logged.settle(_decided(await call(request), record))

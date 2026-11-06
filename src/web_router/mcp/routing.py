@@ -35,6 +35,8 @@ from web_router.constants_mcp import (
     MCP_MSG_ROUTER_IMPORT,
     MCP_MSG_ROUTER_SPEC,
     MCP_PROMPTS_IN_PROCESS,
+    MCP_PROMPTS_OPERATOR,
+    MCP_PROMPTS_OPERATOR_NOTE,
     MCP_ROUTER_OFF,
     MCP_TOOL_BUDGET_START,
     MCP_TOOL_BUDGET_STATUS,
@@ -104,9 +106,18 @@ class McpRouting:
 
     def capabilities(self, budget: dict[str, Any] | None) -> dict[str, Any]:
         """The capabilities resource's ``routing`` section, with ``budget``, where the connection's budget stands."""
+        own = self.router_name in (RULES_ROUTER_NAME, MCP_ROUTER_OFF)
+        prompts = (
+            {"prompts": MCP_PROMPTS_IN_PROCESS}
+            if own
+            else {
+                "prompts": MCP_PROMPTS_OPERATOR,
+                "prompts_note": MCP_PROMPTS_OPERATOR_NOTE,
+            }
+        )
         return {
             "router": self.router_name,
-            "prompts": MCP_PROMPTS_IN_PROCESS,
+            **prompts,
             "url_policy": MCP_URL_POLICY,
             "ceiling": {"max_cost_usd": self.ceiling.max_cost_usd, "time_limit_s": self.ceiling.time_limit_s},
             "budget": budget,

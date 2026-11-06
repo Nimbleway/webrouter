@@ -218,3 +218,34 @@ def test_the_check_and_the_reservation_are_one_step_however_long_the_check_takes
         thread.join(WAIT_S)
     assert refused.count(None) == FITS
     assert pool.status().reserved_usd == 0.09
+
+
+class _SlowSum(float):
+    """A cost whose arithmetic with the pool's totals takes a while, so an update's read and write are far apart."""
+
+    def __radd__(self, other: object) -> float:
+        time.sleep(0.01)
+        return float(other) + float(self)  # type: ignore[arg-type]
+
+    def __rsub__(self, other: object) -> float:
+        time.sleep(0.01)
+        return float(other) - float(self)  # type: ignore[arg-type]
+
+
+def test_settlements_from_many_threads_at_once_lose_no_update() -> None:
+    pool = BudgetPool(Budget(max_cost_usd=1.0))
+    for _ in range(CALLS):
+        assert pool.reserve(COST) is None
+    start = threading.Barrier(CALLS)
+
+    def run() -> None:
+        start.wait()
+        pool.settle(_SlowSum(COST))
+
+    threads = [threading.Thread(target=run) for _ in range(CALLS)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(WAIT_S)
+    status = pool.status()
+    assert (status.spent_usd, status.reserved_usd) == (round(CALLS * COST, 9), 0.0)

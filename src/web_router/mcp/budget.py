@@ -84,9 +84,10 @@ class ConnectionBudget:
             status.remaining_usd for status in (pool.status() for pool in pools) if status.remaining_usd is not None
         ]
         limits = self.task.limit(None)
+        ends = self.task.expires_at()  # the earliest clock up the chain: the task's, or the ceiling's if sooner
         return {
             "max_cost_usd": limits.max_cost_usd,
-            "time_limit_s": self.task.budget.time_limit_s,
+            "time_limit_s": None if ends is None else round(ends - self.task.started, 3),
             "spent_usd": now.spent_usd,
             "reserved_usd": now.reserved_usd,
             "remaining_usd": min(left) if left else None,

@@ -17,11 +17,11 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Collection, Mapping, Sequence
 from typing import Any, get_args, overload
-from urllib.parse import urlsplit
 
 from web_router import registry
+from web_router._urls import host_of
+from web_router.constants_budget import OVER_COST
 from web_router.constants_merge import (
-    HOST_CHARS,
     MSG_PARAM_CALLER,
     MSG_PARAM_DEPTH_COST,
     MSG_PARAM_DEPTH_UNKNOWN_PRICE,
@@ -32,13 +32,13 @@ from web_router.constants_merge import (
     MSG_PARAM_UNDECLARED,
     MSG_PARAM_URL_REFUSED,
     ROUTER_PARAMS,
-    URL_HIDDEN,
     URL_IN_TEXT,
 )
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.routing.contract import Budget, RouteDecision
 from web_router.routing.params import EFFORTS, effort_misfit
-from web_router.routing.pricing import mode_cost, over_cost
+from web_router.routing.pricing import misfit as misfit_code
+from web_router.routing.pricing import mode_cost
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -63,17 +63,6 @@ DECLARED: dict[str, tuple[type[NormalizedRequest], Callable[[str], type[Any]]]] 
 """Per method, its request (whose ``always_sent`` every backend takes) and its registry's class lookup."""
 
 
-def host_of(url: str) -> str:
-    """What a note or a record shows of ``url``: its scheme and host, never its path, query or credentials."""
-    try:
-        parts = urlsplit(url)
-        host = parts.hostname
-    except ValueError:
-        return URL_HIDDEN
-    kept = re.match(HOST_CHARS, host or "")
-    return f"{parts.scheme}://{kept.group(0)}" if parts.scheme and kept else URL_HIDDEN
-
-
 def _hide(match: re.Match[str]) -> str:
     """The whole matched URL, and whatever ran on after it, as its scheme and host only."""
     return host_of(match.group(0))
@@ -86,16 +75,6 @@ def hide_urls(text: None) -> None: ...
 def hide_urls(text: str | None) -> str | None:
     """``text`` with every URL in it cut to its scheme and host: for anything a router wrote, ids included."""
     return None if text is None else re.sub(URL_IN_TEXT, _hide, text)
-
-
-def shown(params: Mapping[str, Any]) -> dict[str, Any]:
-    """``params`` as a record or a ``repr`` shows them: each URL cut to its scheme and host."""
-    out = dict(params)
-    if "urls" in out:
-        out["urls"] = [host_of(u) for u in out["urls"]]
-    if "start_url" in out:
-        out["start_url"] = host_of(out["start_url"])
-    return out
 
 
 def _valid(key: str, value: Any) -> bool:
@@ -122,14 +101,14 @@ def _url_refusal(key: str, value: Any, url_check: UrlCheck | None) -> str | None
 
 
 def _depth_misfit(provider: str, depth: str, budget: Budget) -> str | None:
-    if budget.max_cost_usd is None:
+    """Why ``depth`` does not fit the cost cap on ``provider``: by the one fit rule, the cost half only."""
+    cap = budget.max_cost_usd
+    cost = None if cap is None else mode_cost(provider, "search", depth)
+    code = misfit_code(cost, None, cap, None, strict=False)
+    if code is None:
         return None
-    cost = mode_cost(provider, "search", depth)
-    if cost is None:
-        return MSG_PARAM_DEPTH_UNKNOWN_PRICE.format(provider=provider, depth=depth)
-    if over_cost(cost, budget.max_cost_usd):
-        return MSG_PARAM_DEPTH_COST.format(provider=provider, depth=depth, cost=cost, cap=budget.max_cost_usd)
-    return None
+    wording = MSG_PARAM_DEPTH_COST if code == OVER_COST else MSG_PARAM_DEPTH_UNKNOWN_PRICE
+    return wording.format(provider=provider, depth=depth, cost=cost, cap=cap)
 
 
 def misfit(key: str, value: str, providers: Sequence[str], budget: Budget | None) -> str | None:
@@ -169,10 +148,16 @@ def _undeclared(tool: str, key: str, providers: Sequence[str]) -> str | None:
     return None
 
 
+def router_url_refusal(decision: RouteDecision, url_check: UrlCheck | None, caller_set: Collection[str]) -> str | None:
+    """Why the router's extract URLs fail a check; ``None`` when they pass, or when it gave none."""
+    urls = (decision.params or {}).get("extract", {}).get("urls")
+    return None if urls is None else _refusal("extract", "urls", urls, caller_set, url_check)
+
+
 def router_urls(decision: RouteDecision, url_check: UrlCheck | None, caller_set: Collection[str]) -> bool:
     """Whether the router gave extract URLs that pass every check: rule 7 reads it before the method is final."""
-    urls = (decision.params or {}).get("extract", {}).get("urls")
-    return urls is not None and _refusal("extract", "urls", urls, caller_set, url_check) is None
+    gave = (decision.params or {}).get("extract", {}).get("urls") is not None
+    return gave and router_url_refusal(decision, url_check, caller_set) is None
 
 
 def checked_params(

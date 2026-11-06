@@ -171,6 +171,7 @@ async def _record(seen: list[object]) -> dict[str, Any]:
 
 
 ASKED: list[RouteRequest] = []
+SPYING = f"{__name__}:spying"
 
 
 def spying(req: RouteRequest) -> RouteDecision:
@@ -323,3 +324,27 @@ def test_a_free_browser_needs_no_lifetime(priced: Table) -> None:
     with budget.bound(), charged("open_browser", ["local"], BrowserRequest()):
         pass
     assert budget.status()["spent_usd"] == 0.0
+
+
+@pytest.mark.parametrize(
+    ("environ", "prompts"),
+    [
+        ({}, "in_process"),
+        ({ENV_MCP_ROUTER: MCP_ROUTER_OFF}, "in_process"),
+        ({ENV_MCP_ROUTER: SPYING}, "operator_router"),
+    ],
+)
+def test_prompts_are_reported_in_process_only_for_the_built_in_router_or_none(
+    environ: dict[str, str], prompts: str
+) -> None:
+    routing = _tools(**environ).capabilities()["routing"]
+    assert routing["prompts"] == prompts
+    assert ("prompts_note" in routing) == (prompts == "operator_router"), "an operator's router may send them elsewhere"
+
+
+async def test_budget_status_reports_the_limits_in_force_cut_to_the_ceiling() -> None:
+    tools = _tools(Budget(max_cost_usd=1.0, time_limit_s=60))
+    started = (await _ok(tools, MCP_TOOL_BUDGET_START, max_cost_usd=5.0, time_limit_s=1000))["budget"]
+    assert started["max_cost_usd"] == 1.0 and started["time_limit_s"] <= 60
+    shorter = (await _ok(tools, MCP_TOOL_BUDGET_START, max_cost_usd=0.5, time_limit_s=10))["budget"]
+    assert (shorter["max_cost_usd"], shorter["time_limit_s"]) == (0.5, 10.0)

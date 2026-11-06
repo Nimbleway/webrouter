@@ -21,17 +21,13 @@ an effort that came from elsewhere, such as a router's ``params``.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from functools import lru_cache
-from importlib import resources
 from typing import Any, Literal, cast, get_args
 
+from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
 from web_router.constants_params import (
     DEFAULT_EFFORT_NAME,
-    EFFORTS_DATA_DIR,
-    EFFORTS_DATA_FILE,
     FLOOR_TOLERANCE,
     MIN_MEASURED_EFFORTS,
     MSG_EFFORT_CALLER,
@@ -46,8 +42,9 @@ from web_router.constants_params import (
     PARAMS_SOURCE_BUDGET,
     PARAMS_SOURCE_CALLER,
 )
+from web_router.routing import pricing
 from web_router.routing.contract import Budget, ToolName, candidate_id
-from web_router.routing.pricing import mode_cost, mode_p90, over_cost, research_mode
+from web_router.routing.pricing import measured_efforts, misfit, mode_cost, mode_p90, research_mode
 from web_router.types import Provider, ResearchEffort, provider_name
 
 RESEARCH: ToolName = "research"
@@ -83,24 +80,9 @@ class EffortChoice:
         }
 
 
-@lru_cache(maxsize=1)
-def effort_table() -> dict[str, Any]:
-    """The whole generated research effort table."""
-    text = (resources.files("web_router") / EFFORTS_DATA_DIR / EFFORTS_DATA_FILE).read_text(encoding="utf-8")
-    data: dict[str, Any] = json.loads(text)
-    return data
-
-
 def noise_floor() -> float:
     """The accuracy gap, as a fraction, two efforts must exceed to be told apart: route-eval's floor for the set."""
-    return float(effort_table()["noise_floor"]["value"])
-
-
-def measured_efforts(provider: str | Provider) -> Mapping[str, Mapping[str, Any]]:
-    """``provider``'s measured research efforts, by name, each with its ``accuracy`` and latency; empty if none."""
-    entry = effort_table()["research"].get(provider_name(provider), {})
-    measured: Mapping[str, Mapping[str, Any]] = entry.get("measured", {})
-    return measured
+    return float(pricing.effort_table()["noise_floor"]["value"])
 
 
 def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) -> str | None:
@@ -111,20 +93,22 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
     within it, and an unknown p90 fits unless the budget is ``strict``.
     """
     name = provider_name(provider)
-    shown = effort or DEFAULT_EFFORT_NAME
-    if budget.max_cost_usd is not None:
-        cost = mode_cost(name, RESEARCH, effort)
-        if cost is None:
-            return MSG_MISFIT_UNKNOWN_PRICE.format(provider=name, effort=shown)
-        if over_cost(cost, budget.max_cost_usd):
-            return MSG_MISFIT_COST.format(provider=name, effort=shown, cost=cost, cap=budget.max_cost_usd)
-    if budget.time_limit_s is not None:
-        p90 = mode_p90(name, RESEARCH, effort)
-        if p90 is None and budget.strict:
-            return MSG_MISFIT_STRICT.format(provider=name, effort=shown)
-        if p90 is not None and p90 > budget.time_limit_s:
-            return MSG_MISFIT_TIME.format(provider=name, effort=shown, p90=p90, cap=budget.time_limit_s)
-    return None
+    cap, limit = budget.max_cost_usd, budget.time_limit_s
+    cost = None if cap is None else mode_cost(name, RESEARCH, effort)
+    p90 = None if limit is None else mode_p90(name, RESEARCH, effort)
+    code = misfit(cost, p90, cap, limit, budget.strict)
+    if code is None:
+        return None
+    shown_cap = limit if code == OVER_TIME else cap  # the time wording names the time limit as its cap
+    return _MISFITS[code].format(provider=name, effort=effort or DEFAULT_EFFORT_NAME, cost=cost, cap=shown_cap, p90=p90)
+
+
+_MISFITS = {
+    UNKNOWN_PRICE: MSG_MISFIT_UNKNOWN_PRICE,
+    OVER_COST: MSG_MISFIT_COST,
+    UNKNOWN_P90: MSG_MISFIT_STRICT,
+    OVER_TIME: MSG_MISFIT_TIME,
+}
 
 
 def _is_measured(provider: str, effort: str | None) -> bool:
@@ -182,10 +166,14 @@ def map_effort(provider: str | Provider, budget: Budget | None, effort: Research
     if budget is None or (budget.max_cost_usd is None and budget.time_limit_s is None):
         return EffortChoice(effort=None, source=None, reason=MSG_EFFORT_NO_BUDGET.format(provider=name))
     measured = {e: float(s["accuracy"]) for e, s in measured_efforts(name).items() if e in EFFORTS}
-    if len(measured) < MIN_MEASURED_EFFORTS:
-        unmeasured = MSG_EFFORT_UNMEASURED.format(provider=name, min=MIN_MEASURED_EFFORTS, set=effort_table()["set"])
-        return _default(name, budget, unmeasured)
     fitting = {e: accuracy for e, accuracy in measured.items() if effort_misfit(name, e, budget) is None}
+    if len(measured) < MIN_MEASURED_EFFORTS:
+        # Too few to rank: the default stands while it fits; when it does not, a measured effort that fits runs.
+        unmeasured = MSG_EFFORT_UNMEASURED.format(
+            provider=name, min=MIN_MEASURED_EFFORTS, set=pricing.effort_table()["set"]
+        )
+        default = _default(name, budget, unmeasured)
+        return default if default.misfit is None or not fitting else _chosen(name, fitting)
     if not fitting:
         return _default(name, budget, MSG_EFFORT_NONE_FITS.format(provider=name))
     return _chosen(name, fitting)

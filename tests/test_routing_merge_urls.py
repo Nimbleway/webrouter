@@ -92,3 +92,13 @@ def test_a_url_inside_an_id_or_a_note_the_router_wrote_is_hidden() -> None:
         text = repr(notes)
         assert "s3cr3t" not in text and "pw@" not in text
     assert "search:https://a.example" in merged.notes.ignored
+
+
+def test_a_refused_router_url_is_noted_when_the_call_searches_instead() -> None:
+    params = {"extract": {"urls": ["http://10.0.0.1/x?t=s3cr3t"]}}
+    merged = _merge(RouteDecision(tools=["extract"], params=params), url_check=lambda u: "a private address")
+    assert merged.tool == "search" and "extract" in merged.notes.ignored
+    note = merged.notes.ignored["params.extract.urls"]
+    assert note == "a URL on http://10.0.0.1 is refused by the URL policy: a private address"
+    unset = _merge(RouteDecision(tools=["extract"]))
+    assert "params.extract.urls" not in unset.notes.ignored, "no router URL, nothing refused"

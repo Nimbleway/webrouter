@@ -7,7 +7,8 @@ from typing import Any
 
 import pytest
 
-from tests.test_auto_seam import MEMBERS, TOOLS, _member
+from tests.routing_helpers import MEMBERS, TOOLS, wr
+from tests.routing_helpers import member as _member
 from web_router import RouteDecision, RouteRequest, WebRouter
 from web_router._urls import urls_in
 from web_router.constants_urls import MSG_URL_LOOPBACK, MSG_URL_METADATA
@@ -132,7 +133,7 @@ def test_one_trailing_dot_is_dropped_before_the_host_is_judged(url: str, why: st
 @pytest.mark.usefixtures("members")
 def test_public_only_refuses_a_bracketed_loopback_the_finder_now_reads_whole() -> None:
     with pytest.raises(MissingParameterError, match="the host is loopback"):
-        _wr(url_policy="public_only").plan("open http://[::1]/admin", tool="extract")
+        wr(url_policy="public_only").plan("open http://[::1]/admin", tool="extract")
 
 
 def test_a_backslash_or_userinfo_in_the_path_or_query_is_no_host_confusion() -> None:
@@ -171,16 +172,12 @@ def members() -> Iterator[None]:
             tool.unregister(name)
 
 
-def _wr(router: Any = None, **kwargs: Any) -> WebRouter:
-    return WebRouter(provider_config={"auto": {"chain": list(MEMBERS)}}, router=router, **kwargs)
-
-
 PRIVATE_PROMPT = "read http://169.254.169.254/latest and https://example.com/a"
 
 
 @pytest.mark.usefixtures("members")
 def test_with_the_policy_off_a_private_url_is_planned_as_any_other() -> None:
-    plan = _wr().plan(PRIVATE_PROMPT, tool="extract")
+    plan = wr().plan(PRIVATE_PROMPT, tool="extract")
     assert plan.params["urls"] == ["http://169.254.169.254/latest", "https://example.com/a"]
     assert plan.decision.dropped is None
 
@@ -193,7 +190,7 @@ def test_public_only_refuses_a_private_url_before_any_candidate_and_records_why(
         seen.append(req)
         return RouteDecision(tools=["extract"])
 
-    plan = _wr(router, url_policy="public_only").plan(PRIVATE_PROMPT)
+    plan = wr(router=router, url_policy="public_only").plan(PRIVATE_PROMPT)
     assert seen[0].urls == ("https://example.com/a",), "the router never sees the refused URL"
     assert plan.params["urls"] == ["https://example.com/a"]
     assert plan.decision.dropped == {"url:http://169.254.169.254": "the host is a cloud metadata endpoint"}
@@ -201,15 +198,16 @@ def test_public_only_refuses_a_private_url_before_any_candidate_and_records_why(
 
 @pytest.mark.usefixtures("members")
 def test_when_every_url_is_refused_a_pinned_extract_is_refused_and_browse_has_no_start() -> None:
-    wr = _wr(url_policy="public_only")
+    router = wr(url_policy="public_only")
     with pytest.raises(MissingParameterError, match=r"url_policy refuses .*url:http://10\.0\.0\.1"):
-        wr.plan("read http://10.0.0.1/x", tool="extract")
-    assert wr.plan("open http://10.0.0.1/x", tool="browse").params["start_url"] is None
+        router.plan("read http://10.0.0.1/x", tool="extract")
+    assert router.plan("open http://10.0.0.1/x", tool="browse").params["start_url"] is None
 
 
 @pytest.mark.usefixtures("members")
 def test_when_every_url_is_refused_an_unpinned_plan_never_picks_extract() -> None:
-    plan = _wr(lambda req: RouteDecision(tools=["extract"]), url_policy="public_only").plan("read http://10.0.0.1/x")
+    picks_extract = wr(router=lambda req: RouteDecision(tools=["extract"]), url_policy="public_only")
+    plan = picks_extract.plan("read http://10.0.0.1/x")
     assert plan.tool == "search" and "url:http://10.0.0.1" in (plan.decision.dropped or {})
 
 
@@ -220,7 +218,7 @@ def _url_router(url: str) -> Any:
 @pytest.mark.usefixtures("members")
 @pytest.mark.parametrize(("policy", "kept"), [(None, True), ("public_only", False)])
 def test_urls_a_router_supplies_go_through_the_policy(policy: str | None, kept: bool) -> None:
-    plan = _wr(_url_router("http://192.168.0.10/admin"), url_policy=policy).plan("summarize the admin page")
+    plan = wr(router=_url_router("http://192.168.0.10/admin"), url_policy=policy).plan("summarize the admin page")
     assert (plan.tool == "extract") is kept
     if kept:
         assert plan.params["urls"] == ["http://192.168.0.10/admin"]
@@ -228,7 +226,7 @@ def test_urls_a_router_supplies_go_through_the_policy(policy: str | None, kept: 
 
 @pytest.mark.usefixtures("members")
 def test_a_public_url_a_router_supplies_is_planned_under_public_only() -> None:
-    plan = _wr(_url_router("https://example.com/a"), url_policy="public_only").plan("summarize it")
+    plan = wr(router=_url_router("https://example.com/a"), url_policy="public_only").plan("summarize it")
     assert (plan.tool, plan.params["urls"]) == ("extract", ["https://example.com/a"])
 
 
@@ -239,3 +237,32 @@ def test_a_metadata_address_in_any_spelling_is_named_as_one(url: str) -> None:
     from web_router.constants_urls import MSG_URL_METADATA
 
     assert public_only(url) == MSG_URL_METADATA
+
+
+@pytest.mark.parametrize("url", ["http://010.0.0.1/", "http://0127.0.0.1/", "http://010.8.8.8/"])
+def test_public_only_refuses_a_numeric_spelling_resolvers_read_differently(url: str) -> None:
+    # A browser reads 010 as octal (8), macOS's getaddrinfo as decimal (10): no public URL needs the spelling.
+    from web_router.constants_urls import MSG_URL_AMBIGUOUS
+
+    assert public_only(url) == MSG_URL_AMBIGUOUS
+
+
+@pytest.mark.parametrize(
+    ("url", "why"),
+    [
+        ("http://[64:ff9b::a9fe:a9fe]/", MSG_URL_METADATA),  # NAT64 169.254.169.254
+        ("http://[64:ff9b::127.0.0.1]/", MSG_URL_LOOPBACK),
+        ("http://[::127.0.0.1]/", MSG_URL_LOOPBACK),  # IPv4-compatible
+        ("http://[::7f00:1]/", MSG_URL_LOOPBACK),
+    ],
+)
+def test_an_ipv4_address_carried_in_ipv6_is_judged_as_that_ipv4(url: str, why: str) -> None:
+    assert public_only(url) == why
+
+
+def test_the_ipv6_forms_of_a_public_ipv4_and_ipv6_loopback_are_read_right() -> None:
+    from web_router._hosts import host_address, is_loopback
+
+    assert public_only("http://[64:ff9b::808:808]/") is None
+    assert str(host_address("64:ff9b::808:808")) == "8.8.8.8"
+    assert is_loopback("::1") and str(host_address("::1")) == "::1", "::1 is IPv6's own loopback, not 0.0.0.1"
