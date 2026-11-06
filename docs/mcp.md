@@ -246,7 +246,9 @@ options and the backend order -- and the server runs it. The result is the
 method's own tool output (`search`'s, `extract`'s, ...) with `tool`, the
 method that ran, a `handle` for `fetch_raw`, and the `decision` record.
 `dry_run=true` returns the plan alone and calls nothing. `max_cost_usd` and
-`time_limit_s` cap that one call, within the budget below. When the router
+`time_limit_s` cap that one call, within the budget below; each must be a
+positive, finite number. A job still running when that cap's time runs out
+comes back as a handle too. When the router
 picks `research` or `browse`, `web_run` waits as those tools do, 25 seconds,
 and then hands back a handle for `research_status` or `browse_status` with the
 run still going, never losing a run that bills. The other tools

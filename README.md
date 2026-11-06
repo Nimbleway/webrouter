@@ -1906,8 +1906,9 @@ plan = wr.plan("read https://example.com/pricing")  # runs nothing
 response = wr.run(plan, budget=Budget(max_cost_usd=0.05))
 ```
 
-A router takes a `RouteRequest` and returns a `RouteDecision`: a function or
-coroutine function, or an object with `route(req)` or `aroute(req)`. `RouteRequest` holds the `prompt`, its `urls`, the `budget`
+A router takes a `RouteRequest` and returns a `RouteDecision`: a function,
+method, `functools.partial` or coroutine function, or an object with
+`route(req)` or `aroute(req)`; an object that is only callable is refused. `RouteRequest` holds the `prompt`, its `urls`, the `budget`
 and the `candidates`, each a `Candidate` named `tool:provider` (`search:exa`)
 with `est_cost_usd` and `est_latency_s` (p90), `None` when unknown. Every
 `RouteDecision` field is optional: `tools` and `providers`, best first,
@@ -1949,7 +1950,7 @@ re-route, call `plan()` again.
 
 `budget=Budget(max_cost_usd=, time_limit_s=, strict=)` caps one call to
 `search`, `extract`, `answer`, `research`, `browse`, `plan` or `run`; a
-negative or NaN limit raises `ValueError`. Before
+limit that is not a finite number of 0 or more raises `ValueError`. Before
 each attempt web-router checks its estimate against what is left and skips it
 if it does not fit; when nothing fits, it raises `BudgetExceededError`, naming
 each skip. Costs are estimates from the list prices in
@@ -1958,14 +1959,17 @@ failed attempt still counts.
 
 - **Unknown price.** Under a cost cap, a backend whose price is unknown never
   runs: it is skipped, and the record says why. A price marked as a floor
-  (Brave's answer, Browser Use's browse) counts as unknown. With no cost cap
-  it runs.
+  (Brave's answer, Browser Use's browse, Anchor's browser) counts as unknown,
+  and so does a search asking for more results than its price assumes
+  (Nimble's and You.com's deep search, Exa's search). With no cost cap it
+  runs.
 - **Free tiers.** The keyless MCP search endpoints (`you-mcp`, `exa-mcp`,
   `parallel-mcp`) are priced $0, so a cost cap never skips them; they stay
   last in the order.
 - **Unknown p90.** Under a time cap, a backend with no measured p90 runs
   within the time left; `strict=True` skips it instead. One whose p90 does not
-  fit the time left is skipped.
+  fit the time left is skipped. A router's `search_depth` is held to the same
+  rules.
 - **Time cap.** Search, extract and answer stop at it and raise
   `DeadlineExceededError`. Research and browse are capped on the wait, not the
   job: they wait at most `min(timeout, time left)`, then raise their own
