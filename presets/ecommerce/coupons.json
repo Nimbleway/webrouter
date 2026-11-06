@@ -1,0 +1,29 @@
+{
+  "spec_version": 1,
+  "id": "ecommerce.coupons",
+  "version": "1.0.0",
+  "title": "Find current coupons and promo codes for a store or product",
+  "applies_to": [
+    "search"
+  ],
+  "components": {
+    "search": {
+      "defaults": {
+        "max_results": 10,
+        "include_domains": [
+          "retailmenot.com",
+          "coupons.com",
+          "couponfollow.com",
+          "couponbirds.com",
+          "knoji.com",
+          "dealspotr.com",
+          "joinhoney.com"
+        ]
+      },
+      "overridable": [
+        "max_results",
+        "include_domains"
+      ]
+    }
+  }
+}

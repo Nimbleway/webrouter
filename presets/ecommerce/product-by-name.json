@@ -1,0 +1,30 @@
+{
+  "spec_version": 1,
+  "id": "ecommerce.product-by-name",
+  "version": "1.0.0",
+  "title": "Find where a product is sold from its name or model",
+  "applies_to": [
+    "search"
+  ],
+  "components": {
+    "search": {
+      "defaults": {
+        "max_results": 10,
+        "exclude_domains": [
+          "reddit.com",
+          "youtube.com",
+          "pinterest.com",
+          "facebook.com",
+          "tiktok.com",
+          "instagram.com",
+          "x.com",
+          "quora.com"
+        ]
+      },
+      "overridable": [
+        "max_results",
+        "exclude_domains"
+      ]
+    }
+  }
+}

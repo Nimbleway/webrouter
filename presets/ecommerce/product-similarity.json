@@ -1,0 +1,24 @@
+{
+  "spec_version": 1,
+  "id": "ecommerce.product-similarity",
+  "version": "1.0.0",
+  "title": "Compare two or more products and say how similar they are, with sources",
+  "applies_to": [
+    "answer"
+  ],
+  "components": {
+    "answer": {
+      "defaults": {
+        "exclude_domains": [
+          "pinterest.com",
+          "facebook.com",
+          "tiktok.com",
+          "instagram.com"
+        ]
+      },
+      "overridable": [
+        "exclude_domains"
+      ]
+    }
+  }
+}
