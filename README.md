@@ -1906,8 +1906,8 @@ plan = wr.plan("read https://example.com/pricing")  # runs nothing
 response = wr.run(plan, budget=Budget(max_cost_usd=0.05))
 ```
 
-A router is a function or coroutine function, or an object with `route(req)`
-or `aroute(req)`. `RouteRequest` holds the `prompt`, its `urls`, the `budget`
+A router takes a `RouteRequest` and returns a `RouteDecision`: a function or
+coroutine function, or an object with `route(req)` or `aroute(req)`. `RouteRequest` holds the `prompt`, its `urls`, the `budget`
 and the `candidates`, each a `Candidate` named `tool:provider` (`search:exa`)
 with `est_cost_usd` and `est_latency_s` (p90), `None` when unknown. Every
 `RouteDecision` field is optional: `tools` and `providers`, best first,
@@ -1941,7 +1941,9 @@ wr = WebRouter(router=route, route_tools=("search", "research"))
 decision record. With no router it is a search, unless `tool` pins a method.
 `run(plan)` calls that method on `auto` in that order and returns its own
 response: a `SearchResponse`, `ExtractResponse`, `AnswerResponse`,
-`ResearchResponse` or `BrowseResponse`. `run(prompt)` does both.
+`ResearchResponse` or `BrowseResponse`. `run(prompt)` does both. A saved
+`Plan` runs as planned: `run(plan)` does not ask the router again, so to
+re-route, call `plan()` again.
 
 ### Budgets
 
@@ -2026,7 +2028,8 @@ values. Candidate ids do show which backends you have configured, and
 Four example routers, tested offline: [rules](examples/router_rules.py), a
 [scikit-learn classifier](examples/router_classifier.py), an
 [OpenAI-compatible model](examples/router_llm.py) and
-[Jev](examples/router_jev.py). The MCP server brings the same to an agent with
+[Jev](examples/router_jev.py). The last two are model routers: each sends
+the prompt to that model's server, which bills for it. The MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
 
