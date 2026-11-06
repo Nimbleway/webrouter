@@ -24,6 +24,8 @@ from web_router.constants_merge import (
     HOST_CHARS,
     MSG_PARAM_CALLER,
     MSG_PARAM_DEPTH_COST,
+    MSG_PARAM_DEPTH_STRICT,
+    MSG_PARAM_DEPTH_TIME,
     MSG_PARAM_DEPTH_UNKNOWN_PRICE,
     MSG_PARAM_INVALID,
     MSG_PARAM_NO_URL_POLICY,
@@ -63,14 +65,19 @@ DECLARED: dict[str, tuple[type[NormalizedRequest], Callable[[str], type[Any]]]] 
 
 
 def host_of(url: str) -> str:
-    """What a note or a record shows of ``url``: its scheme and host, never its path, query or credentials."""
+    """What a note or a record shows of ``url``: its scheme and host, never its path, query or credentials.
+
+    A scheme-relative URL (``//host/path``) shows as ``//host``.
+    """
     try:
         parts = urlsplit(url)
         host = parts.hostname
     except ValueError:
         return URL_HIDDEN
     kept = re.match(HOST_CHARS, host or "")
-    return f"{parts.scheme}://{kept.group(0)}" if parts.scheme and kept else URL_HIDDEN
+    if kept is None or not (parts.scheme or url.startswith("//")):
+        return URL_HIDDEN
+    return f"{parts.scheme}{':' if parts.scheme else ''}//{kept.group(0)}"
 
 
 def _hide(match: re.Match[str]) -> str:
@@ -121,13 +128,19 @@ def _url_refusal(key: str, value: Any, url_check: UrlCheck | None) -> str | None
 
 
 def _depth_misfit(provider: str, depth: str, budget: Budget) -> str | None:
-    if budget.max_cost_usd is None:
-        return None
-    cost = prices.estimate(provider, "search", depth)
-    if cost is None:
-        return MSG_PARAM_DEPTH_UNKNOWN_PRICE.format(provider=provider, depth=depth)
-    if cost > budget.max_cost_usd:
-        return MSG_PARAM_DEPTH_COST.format(provider=provider, depth=depth, cost=cost, cap=budget.max_cost_usd)
+    """Why ``depth`` does not fit ``budget`` on ``provider``, by the rule ``effort_misfit`` applies to research."""
+    if budget.max_cost_usd is not None:
+        cost = prices.estimate(provider, "search", depth)
+        if cost is None:
+            return MSG_PARAM_DEPTH_UNKNOWN_PRICE.format(provider=provider, depth=depth)
+        if cost > budget.max_cost_usd:
+            return MSG_PARAM_DEPTH_COST.format(provider=provider, depth=depth, cost=cost, cap=budget.max_cost_usd)
+    if budget.time_limit_s is not None:
+        latency = prices.estimate_latency(provider, "search", depth)
+        if latency is None and budget.strict:
+            return MSG_PARAM_DEPTH_STRICT.format(provider=provider, depth=depth)
+        if latency is not None and latency[1] > budget.time_limit_s:
+            return MSG_PARAM_DEPTH_TIME.format(provider=provider, depth=depth, p90=latency[1], cap=budget.time_limit_s)
     return None
 
 

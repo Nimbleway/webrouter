@@ -339,3 +339,23 @@ def test_rule_1_a_tool_set_aside_for_want_of_a_candidate_is_noted() -> None:
     excluded = _merge(RouteDecision(tools=["answer"], exclude={"answer:perplexity": "down"}))
     assert excluded.tool == "search" and "answer" in excluded.notes.ignored
     assert "research" not in _merge(RouteDecision(tools=["research", "answer"])).notes.ignored, "chosen: no note"
+
+
+@pytest.mark.parametrize(
+    ("latency", "budget", "kept"),
+    [
+        ((1.0, 30.0), Budget(time_limit_s=10.0), False),
+        ((1.0, 5.0), Budget(time_limit_s=10.0), True),
+        (None, Budget(time_limit_s=10.0), True),
+        (None, Budget(time_limit_s=10.0, strict=True), False),
+    ],
+)
+def test_rule_5_a_search_depth_must_fit_the_time_cap_too(
+    monkeypatch: pytest.MonkeyPatch, latency: tuple[float, float] | None, budget: Budget, kept: bool
+) -> None:
+    from web_router import prices
+
+    monkeypatch.setattr(prices, "estimate_latency", lambda *_: latency)
+    decision = RouteDecision(params={"search": {"search_depth": "deep"}}, exclude=NO_UNDECLARED)
+    merged = _merge(decision, pinned="search", budget=budget)
+    assert ("search_depth" in merged.params) is kept

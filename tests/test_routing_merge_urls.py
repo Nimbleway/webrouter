@@ -102,3 +102,20 @@ def test_a_refused_router_url_is_noted_when_the_call_searches_instead() -> None:
     assert note == "a URL on http://10.0.0.1 is refused by the URL policy: a private address"
     unset = _merge(RouteDecision(tools=["extract"]))
     assert "params.extract.urls" not in unset.notes.ignored, "no router URL, nothing refused"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("see //a.example/page?session=secret now", "see //a.example now"),
+        ("(//a.example/x'session=secret)", "(//a.example"),
+        ("a//b and http://a.example/x?t=secret", "a//b and http://a.example"),
+        ("x//a.example/?t=secret", "x//a.example"),
+    ],
+)
+def test_a_scheme_relative_url_keeps_only_its_host(text: str, expected: str) -> None:
+    from web_router.routing.merge_params import hide_urls
+
+    assert hide_urls(text) == expected
+    merged = _merge(RouteDecision(providers={"search": ["exa"]}, reason=text), pinned="search")
+    assert "secret" not in repr(merged) and "secret" not in str(merged.record())
