@@ -11,10 +11,11 @@ the router scores. Nothing is called; the numbers are the committed rows in
 A router is ``static`` (today's ``auto`` order; on a mixed set, search then
 read), ``oracle`` (the best backend or path for each question, known after the
 fact), ``always:<backend>`` (``always:<path>`` on a mixed set), or your own
-callable named ``module:attr`` or ``path/to/file.py:attr``. Yours takes
-``(prompt, candidates)`` and returns the candidate ids best first, or a
-mapping ``{"ranked": [...], "cost_usd": 0.0001}`` when it bills for itself;
-``prompt`` is ``None`` unless ``--joined`` names the folder ``frozen.py join``
+callable named ``module:attr`` or ``path/to/file.py:attr``. Yours is a
+router of the library's contract: it takes a ``RouteRequest`` and returns a
+``RouteDecision``, or ``{"decision": ..., "cost_usd": 0.0001}`` when it bills
+for itself, and the replay merges it as a routed call would. The request's
+``prompt`` is empty unless ``--joined`` names the folder ``frozen.py join``
 wrote. If it has a ``fit`` method, it is called with the training questions
 before scoring.
 
@@ -37,6 +38,7 @@ from _common import _pct, _wilson
 from frozen import FROZEN_DIR
 from route_eval_cli import DEFAULT_ROUTERS, DEFAULT_SEED, DEFAULT_TEST_FRACTION, run, skip_absent_specs
 from route_eval_cli import DEFAULT_SETS as DEFAULT_SETS
+from route_eval_merge import walk
 from route_eval_paths import DEFAULT_PATH_ROUTERS, MIXED, research_by_effort
 from route_eval_rank import KEYLESS as KEYLESS
 from route_eval_rank import Floor, backend_stats, cost_of, floor_for, is_served, recommended, too_few
@@ -49,6 +51,9 @@ from route_eval_routers import always_router as always_router
 from route_eval_routers import oracle_router as oracle_router
 from route_eval_sets import TWIN_SETS as TWIN_SETS
 from route_eval_sets import Question, load_set
+
+from web_router.constants_merge import ROUTER_ERROR
+from web_router.routing.merge import FallbackReason
 
 BASELINE = "baseline"
 NO_GAIN_FLOOR = "no gain (within noise floor)"
@@ -92,50 +97,56 @@ def split(questions: Sequence[Question], seed: int, test_fraction: float) -> tup
     return shuffled[:cut], shuffled[cut:]
 
 
-def _decision(decision: Any) -> tuple[list[str], float]:
+def _decision(decision: Any) -> tuple[Any, float]:
+    """A router's answer -- a ``RouteDecision``, a ranking, or either with its stated cost -- and that cost."""
     if isinstance(decision, Mapping):
         cost = float(decision.get("cost_usd") or 0.0)
         if not math.isfinite(cost) or cost < 0:
             raise ValueError(MSG_BAD_COST.format(cost=cost))
+        if "decision" in decision:
+            return decision["decision"], cost
         return [str(p) for p in decision.get("ranked") or ()], cost
     if isinstance(decision, str):
         return [decision], 0.0
-    return [str(p) for p in decision or ()], 0.0
+    if isinstance(decision, list | tuple):
+        return [str(p) for p in decision], 0.0
+    return decision, 0.0
 
 
 def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
     """One question through a router, walked as ``auto`` walks its chain.
 
-    A row whose backend answered but went ungraded (the judge failed, or the
-    answer leaked the set's own pages) serves the question: no fallback, not
-    correct, counted as ungraded. A router that raises, ranks nothing, or names any backend that is not a
-    candidate falls back to the static order and counts as failed. A failed row is passed over -- its time to failure
-    charged, its cost not, since a failed call is not billed by most backends --
-    and the next one tried; the first choice not serving is a fallback. A
+    The router's answer goes through the library's merge rule
+    (:func:`route_eval_merge.walk`): its ranking first, an id that is not a
+    candidate dropped, then every other candidate in the static order. A row
+    whose backend answered but went ungraded (the judge failed, or the answer
+    leaked the set's own pages) serves the question: no fallback, not correct,
+    counted as ungraded. A router that raises, answers with no well-formed
+    decision, or ranks no candidate at all counts as failed, and the static
+    order is walked. A failed row is passed over -- its time to failure and its
+    estimated cost charged, as a routed call's budget charges a failed attempt
+    -- and the next one tried; the first choice not serving is a fallback. A
     question nobody served is a miss. The router's own time and stated cost
     are charged on every question.
     """
     started = time.perf_counter()
     error: str | None = None
+    failure: FallbackReason | None = None
     try:
-        ranked, cost = _decision(router(q))
-        router_failed = False
+        answer, cost = _decision(router(q))
     except Exception as exc:  # a router that raises is scored as failed, not fatal to the replay
-        ranked, cost, router_failed = [], 0.0, True
+        answer, cost, failure = None, 0.0, ROUTER_ERROR
         error = f"{type(exc).__name__}: {exc}"
     overhead = time.perf_counter() - started
-    ranked = list(dict.fromkeys(ranked))
-    if not ranked or any(p not in q.rows for p in ranked):
-        router_failed = True
-        ranked = fallback_order(q)
+    ranked, router_failed = walk(answer, q, fallback_order, failure)
     latency: float | None = overhead
     total: float | None = cost
     for i, provider in enumerate(ranked):
         row = q.rows[provider]
         latency = None if latency is None or row["latency_s"] is None else latency + row["latency_s"]
+        price = cost_of(row)
+        total = None if total is None or price is None else total + price
         if is_served(row):
-            price = cost_of(row)
-            total = None if price is None else cost + price
             fallback = router_failed or i > 0
             ungraded = row["error"] is not None
             correct = not ungraded and row["grade"] == "correct"

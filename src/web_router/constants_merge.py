@@ -1,0 +1,45 @@
+"""The merge rule's fixed values: the options a router may set, and the notes it records.
+
+Experimental: :mod:`web_router.routing.merge` is new and may change before 1.0.
+Kept apart from :mod:`web_router.constants`, so that file stops growing.
+"""
+
+from __future__ import annotations
+
+from typing import Final
+
+ROUTER_PARAMS: dict[str, frozenset[str]] = {
+    "search": frozenset({"max_results", "search_depth"}),
+    "research": frozenset({"effort"}),
+    "extract": frozenset({"urls"}),
+    "browse": frozenset({"start_url"}),
+    "answer": frozenset(),
+}
+"""Per method, the only options a router may set. Anything else -- ``provider``, ``provider_options``,
+``timeout``, ``output_schema``, ``allowed_domains``, ``max_steps`` -- is dropped: ``provider_options`` goes
+into the vendor's request as it is, where a budget cannot see what it spends."""
+
+LAST_RESORT_TOOL: Final = "search"
+"""The method a call runs when nothing pins one and the router names none that has a candidate."""
+
+ROUTER_TIMEOUT: Final = "router_timeout"
+ROUTER_ERROR: Final = "router_error"
+ROUTER_INVALID: Final = "router_invalid"
+"""Why a decision was set aside for the static order: the router ran out of time, raised, or answered with
+something that is not a well-formed ``RouteDecision``."""
+
+NOTE_EXCLUDE = "exclude"
+NOTE_EXTRACT = "extract"
+"""The keys of the notes that are about the decision as a whole rather than one id or option."""
+
+MSG_UNKNOWN_ID = "{id} is not a candidate for this call"
+MSG_UNKNOWN_TOOL = "{tool} is not a method a router can choose"
+MSG_EXCLUSIONS_EMPTY = "excluding {ids} would leave {tool} no backend to try, so the exclusions were ignored"
+MSG_EXTRACT_NO_URL = "extract was chosen with no URL to read, so the call searches instead"
+MSG_PARAM_NOT_ALLOWED = "a router may not set {tool}'s {key}"
+MSG_PARAM_CALLER = "the caller set {key}, and a router never changes it"
+MSG_PARAM_INVALID = "{value!r} is not a valid {key} for {tool}"
+MSG_PARAM_NO_URL_POLICY = "no URL policy is in force, so a router may not set {key}"
+MSG_PARAM_URL_REFUSED = "{url} is refused by the URL policy: {why}"
+MSG_PARAM_DEPTH_UNKNOWN_PRICE = "search:{provider} at depth {depth} has no known price, so it never fits a cost cap"
+MSG_PARAM_DEPTH_COST = "search:{provider} at depth {depth} is estimated at ${cost:g}, over the ${cap:g} cost cap"

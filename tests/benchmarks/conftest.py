@@ -154,6 +154,7 @@ ROUTE_EVAL_SIBLINGS = (
     "route_eval_paths",
     "route_eval_sets",
     "route_eval_rank",
+    "route_eval_merge",
     "route_eval_routers",
     "route_eval_report",
     "route_eval_cli",

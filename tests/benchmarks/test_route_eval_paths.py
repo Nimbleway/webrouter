@@ -212,3 +212,30 @@ def test_a_backend_router_is_skipped_on_a_mixed_default_set_and_refused_on_a_nam
     monkeypatch.setattr(route_eval, "DEFAULT_SETS", ("mixed-tiny",))
     with pytest.raises(SystemExit, match="a candidate in none of the sets: mixed-tiny"):
         route_eval.main(["--router", "always:nimble"])
+
+
+def test_a_decision_on_a_mixed_set_picks_one_tool_and_its_effort(route_eval: ModuleType, tmp_path: Path) -> None:
+    from web_router import RouteDecision
+
+    _mixed_set(tmp_path)
+    _, questions = route_eval.load_set("mixed-tiny", tmp_path)
+    request = sys.modules["route_eval_merge"].request_for(questions[0])
+    assert request.pinned_tool is None and request.urls, "a question given its pages offers extract a URL"
+    assert {"research:parallel", "search:nimble", "extract:nimble"} <= {c.id for c in request.candidates}
+    high = {"research": {"effort": "high"}}
+    decision = RouteDecision(tools=["research"], providers={"research": ["parallel"]}, params=high)
+    static = route_eval.static_router(route_eval.MIXED)
+    outcome = route_eval.replay(lambda _: decision, questions[-1], static)
+    assert outcome.served_by == "research:parallel:high" and not outcome.fallback and not outcome.router_failed
+    unset = route_eval.replay(lambda _: RouteDecision(tools=["research"]), questions[-1], static)
+    assert unset.served_by == "research:parallel:low", "no effort: the static order's first, the lowest"
+    raised = route_eval.replay(lambda _: 1 / 0, questions[-1], static)
+    assert raised.router_failed and raised.served_by == "search+extract:perplexity:top3", "the static path order"
+
+
+def test_a_ranking_on_a_mixed_set_is_followed_by_the_static_path_order(route_eval: ModuleType, tmp_path: Path) -> None:
+    _mixed_set(tmp_path)
+    _, questions = route_eval.load_set("mixed-tiny", tmp_path)
+    static = route_eval.static_router(route_eval.MIXED)
+    outcome = route_eval.replay(lambda _: ["research:perplexity:low"], questions[0], static)
+    assert outcome.served_by == "search+extract:perplexity:top3" and outcome.fallback and not outcome.router_failed
