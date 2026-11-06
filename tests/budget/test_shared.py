@@ -23,7 +23,9 @@ from web_router import (
     ResearchTimeoutError,
     WebRouter,
 )
+from web_router.constants_budget import SKIP_OVER_SHARED, SKIP_ROUTE_REFUSED
 from web_router.exceptions import ConfigurationError
+from web_router.routing.attempts import CallRoute, call_route
 from web_router.routing.pool import BudgetPool, current_pool
 
 SHARED = Budget(max_cost_usd=0.10)
@@ -49,6 +51,36 @@ def test_calls_through_the_scope_spend_from_it_on_every_tool(chain: Chain, price
             _scoped(chain, shared)
     assert chain.called == ["first", "first"]
     assert shared.status().spent_usd == 0.08
+
+
+def test_a_named_backend_in_a_scope_reserves_and_settles_its_estimate_and_one_that_does_not_fit_never_runs(
+    chain: Chain, priced: Table
+) -> None:
+    priced.update(second=(0.06, None))
+    with WebRouter().budget(SHARED) as shared:
+        response = _scoped_named(chain, shared, "second")
+        with pytest.raises(BudgetExceededError) as raised:
+            _scoped_named(chain, shared, "second")
+    assert chain.called == ["second"]
+    assert response.decision.estimated_cost_usd == 0.06
+    left = SKIP_OVER_SHARED.format(cost="$0.06", left="$0.04")
+    assert raised.value.skipped == {f"{chain.tool.name}:second": left}
+    assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.06, 0.0)
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+def test_a_named_backend_an_outer_route_refuses_is_never_reserved(chain: Chain, priced: Table) -> None:
+    priced.update(second=(0.06, None))
+    refuse_all = CallRoute(before_attempt=lambda attempt: False)
+    shared = WebRouter().budget(SHARED)
+    with shared, call_route(refuse_all), pytest.raises(BudgetExceededError) as raised:
+        _scoped_named(chain, shared, "second")
+    assert raised.value.skipped == {"search:second": SKIP_ROUTE_REFUSED}
+    assert (chain.called, shared.status().spent_usd, shared.status().reserved_usd) == ([], 0.0, 0.0)
+
+
+def _scoped_named(chain: Chain, scope: BudgetScope, name: str) -> object:
+    return getattr(scope, chain.tool.name)(ARGS[chain.tool.name], provider=name)
 
 
 @pytest.mark.parametrize("tool", ["research"], indirect=True)
