@@ -24,6 +24,10 @@ exactly as it would without one. With a budget:
 
 :func:`recorded` gives a routed call with no budget the same record of its
 attempts, from a ledger that caps nothing.
+
+Inside a shared budget (:mod:`.pool`), a call runs here even with no
+``budget=`` of its own: its budget is the tighter of the two, each attempt it
+admits is reserved in the pool, and what it reserved is settled when it ends.
 """
 
 from __future__ import annotations
@@ -36,13 +40,14 @@ from typing import Generic, TypeVar
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_budget import SKIP_ROUTE_REFUSED
+from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
-from web_router.exceptions import WebRouterError
-from web_router.providers._deadline import call_deadline
+from web_router.exceptions import DeadlineExceededError, WebRouterError
+from web_router.providers._deadline import Deadline, call_deadline, current_deadline, job_deadline
 from web_router.routing.attempts import CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
+from web_router.routing.pool import current_pool, limited
 from web_router.routing.record import prompt_of, stamp
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -57,6 +62,11 @@ class BudgetedCall(Generic[_BackendT]):
 
     backend: _BackendT
     ledger: Ledger | None = None
+
+    @property
+    def budget(self) -> Budget | None:
+        """The budget the call runs under: its own, held to a shared budget in force; ``None`` with neither."""
+        return None if self.ledger is None else self.ledger.budget
 
     def settle(self, response: _ResponseT) -> _ResponseT:
         """``response`` with the call's estimated spend in its decision record; as it came with no budget."""
@@ -76,14 +86,32 @@ def budget_scope(
     Raises:
         BudgetExceededError: when the budget skips every candidate, before any starts.
     """
+    pool, budget = current_pool(), limited(budget)
     if budget is None:
         yield BudgetedCall(backend)
         return
-    ledger = Ledger(budget, stamp=stamp(prompt_of(tool, request)[0]))
-    with call_deadline(budget.time_limit_s), call_route(_hooked(ledger)):
+    ledger = Ledger(budget, pool, stamp=stamp(prompt_of(tool, request)[0]))
+    try:
+        with _held(ledger, tool, backend, request) as call:
+            yield call
+    finally:
+        if pool is not None:
+            pool.settle(ledger.spent)
+
+
+@contextmanager
+def _held(
+    ledger: Ledger, tool: ToolName, backend: _BackendT, request: NormalizedRequest
+) -> Iterator[BudgetedCall[_BackendT]]:
+    """The block under ``ledger``: its deadline, its check before each attempt, and its refusal."""
+    expires = None if ledger.pool is None else ledger.pool.expires_at()
+    outside = current_deadline()
+    with call_deadline(ledger.budget.time_limit_s), job_deadline(expires), call_route(_hooked(ledger)):
         name = getattr(backend, "name", PROVIDER_AUTO)
+        _refuse_late(ledger, f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", name, outside)
         if name != PROVIDER_AUTO and not admitted(tool, name, request):
-            # Through the same hook auto's members pass, so a route in force can refuse it too.
+            # Through the same hook auto's members pass, so a route in force can refuse it too;
+            # the ledger's admit, last in that hook, reserves it in a shared budget.
             ledger.skipped.setdefault(f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", SKIP_ROUTE_REFUSED)
             raise ledger.refusal()
         try:
@@ -105,6 +133,23 @@ def recorded(scope: BudgetedCall[_BackendT]) -> Iterator[BudgetedCall[_BackendT]
     ledger = Ledger(Budget())
     with call_route(_hooked(ledger)):
         yield replace(scope, ledger=ledger)
+
+
+def _refuse_late(ledger: Ledger, call_id: str, name: str, outside: Deadline | None) -> None:
+    """Refuse the call before anything is admitted or reserved when its deadline has already passed.
+
+    The budget's own deadline -- its time cap or the shared clock -- raises
+    :class:`~web_router.BudgetExceededError`. A deadline the budget did not set,
+    an enclosing call's, raises :class:`~web_router.DeadlineExceededError`, as
+    the call would with no budget.
+    """
+    deadline = current_deadline()
+    if deadline is None or deadline.left() > 0:
+        return
+    if deadline is outside:
+        raise DeadlineExceededError(name, deadline.seconds)
+    ledger.skipped[call_id] = SKIP_NO_TIME
+    raise ledger.refusal()
 
 
 def _hooked(ledger: Ledger) -> CallRoute:

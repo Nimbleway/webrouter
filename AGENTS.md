@@ -96,6 +96,8 @@ src/web_router/
 ├── client_plan.py      plan() and run(), prompt-level routing, mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
+├── client_budget.py   budget(), mixed into both routers; client_scope.py the
+│                       BudgetScope / AsyncBudgetScope it returns
 ├── client_requests.py  the routers' request builders: a method's arguments in, its
 │                       normalized request out; JsonSchema; the sync router's
 │                       async_client check
@@ -138,6 +140,7 @@ src/web_router/
 │   │                   the check before each attempt, BudgetExceededError, the record
 │   ├── ledger.py       one budgeted or routed call's ledger: what each attempt is charged,
 │   │                   the spend, the hops, the position that ran
+│   ├── pool.py         a shared budget: reservations under one lock, its clock, status()
 │   ├── record.py       the record's own fields: decision_id, the prompt's hash, a failure's code
 │   ├── pricing.py      the one cost and p90 rule: price list, floor and provider_options
 │   │                   unknown, research's p90 from the effort table
@@ -251,7 +254,7 @@ src/web_router/
 tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         tests/mcp/ the server, tests/max_extract/ the race
                         (its conftest holds the fake members), tests/budget/
-                        the per-call budget (its conftest the priced chain).
+                        the per-call and shared budgets (its conftest the priced chain).
                         test_contract.py, test_extract_contract.py, test_template_contract.py,
                         test_research_contract.py, test_answer_contract.py,
                         test_browse_contract.py and

@@ -11,7 +11,9 @@ is unknown -- no row, ``unknown``, or billed by tokens -- never runs; with no
 cost cap it runs and the record names it unmeasured. Time is the call's
 deadline: a candidate whose measured p90 latency does not fit the time left
 is skipped, and one with no measured p90 runs under the deadline, which
-bounds it, unless the budget is strict.
+bounds it, unless the budget is strict. Inside a shared budget
+(:mod:`.pool`) an attempt that fits the call is then reserved in the pool,
+and skipped when the pool refuses it.
 
 A routed call with no budget keeps a ledger too, on a :class:`~web_router.Budget`
 that caps nothing: it skips nothing, and records what the call tried and the
@@ -28,6 +30,7 @@ from web_router.constants_budget import (
     SKIP_LATENCY_UNKNOWN,
     SKIP_NO_TIME,
     SKIP_OVER_COST,
+    SKIP_OVER_SHARED,
     SKIP_OVER_TIME,
     SKIP_PRICE_UNKNOWN,
 )
@@ -36,6 +39,7 @@ from web_router.exceptions import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
+from web_router.routing.pool import BudgetPool
 from web_router.routing.pricing import attempt_cost, attempt_p90, over_cost
 from web_router.routing.record import error_code
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
@@ -57,6 +61,8 @@ class Ledger:
     """What one call has tried, skipped and spent under its :class:`~web_router.Budget`."""
 
     budget: Budget
+    pool: BudgetPool | None = None
+    """The shared budget the call also spends from, if any; :attr:`spent` is what it reserved there."""
     spent: float = 0.0
     tried: list[_Tried] = field(default_factory=list)
     skipped: dict[str, str] = field(default_factory=dict)
@@ -72,7 +78,7 @@ class Ledger:
         cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
         if (cost is None or p90 is None) and name not in self.unmeasured:
             self.unmeasured.append(name)
-        reason = self._over_cost(cost) or self._over_time(p90)
+        reason = self._over_cost(cost) or self._over_time(p90) or self._unreserved(cost)
         if reason is not None:
             self.skipped[name] = self.passed[name] = reason
             return False
@@ -90,6 +96,15 @@ class Ledger:
         if over_cost(cost, left):
             return SKIP_OVER_COST.format(cost=_usd(cost), left=_usd(max(left, 0.0)))
         return None
+
+    def _unreserved(self, cost: float | None) -> str | None:
+        """Why the shared budget refused to reserve ``cost``, or ``None`` once reserved (or with no pool)."""
+        if self.pool is None or cost is None:
+            return None
+        left = self.pool.reserve(cost)
+        if left is None:
+            return None
+        return SKIP_OVER_SHARED.format(cost=_usd(cost), left=_usd(max(left, 0.0)))
 
     def _over_time(self, p90: float | None) -> str | None:
         if self.budget.time_limit_s is None:

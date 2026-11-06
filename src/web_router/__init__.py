@@ -42,6 +42,7 @@ holding it ends:
 
 from web_router._version import __version__
 from web_router.client import AsyncWebRouter, WebRouter
+from web_router.client_scope import AsyncBudgetScope, BudgetScope
 from web_router.constants import DEFAULT_PROVIDER
 from web_router.exceptions import (
     BenchmarkTimeoutError,
@@ -113,6 +114,7 @@ from web_router.registry_answer import (
     unregister_answer_provider,
 )
 from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, RouterLike, ToolName
+from web_router.routing.pool import BudgetStatus
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -174,6 +176,7 @@ __all__ = [
     "AnswerRequest",
     "AnswerResponse",
     "AsyncBrowserHandle",
+    "AsyncBudgetScope",
     "AsyncWebRouter",
     "BenchmarkReport",
     "BenchmarkRun",
@@ -195,6 +198,8 @@ __all__ = [
     "BrowserState",
     "Budget",
     "BudgetExceededError",
+    "BudgetScope",
+    "BudgetStatus",
     "Candidate",
     "Citation",
     "ConfigurationError",
