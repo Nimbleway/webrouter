@@ -6,6 +6,7 @@ Two URL-in-text patterns exist on purpose: :data:`_URL` here finds URLs to fetch
 
 from __future__ import annotations
 
+import ipaddress
 import re
 from collections.abc import Mapping
 from typing import Any
@@ -45,6 +46,11 @@ def host_of(url: str) -> str:
         host = parts.hostname
     except ValueError:
         return URL_HIDDEN
+    if parts.scheme and host and ":" in host:  # an IPv6 literal, shown in its brackets
+        try:
+            return f"{parts.scheme}://[{ipaddress.IPv6Address(host)}]"
+        except ValueError:
+            return URL_HIDDEN
     kept = re.match(HOST_CHARS, host or "")
     return f"{parts.scheme}://{kept.group(0)}" if parts.scheme and kept else URL_HIDDEN
 
