@@ -246,7 +246,7 @@ def evaluate_set(
     ``floor`` of ``None`` ranks and judges with the method's own floor (:func:`~route_eval_rank.floor_for`).
     """
     method, questions = load_set(name, folder, joined)
-    ranked_with = floor_for(method, folder) if floor is None else Floor(method, floor, None)
+    ranked_with = floor_for(method) if floor is None else Floor(method, floor, None)
     if specs is None:
         specs = DEFAULT_PATH_ROUTERS if method == MIXED else DEFAULT_ROUTERS
     train, test = split(questions, seed, test_fraction)
