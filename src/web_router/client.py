@@ -378,7 +378,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
         >>> router.extract(response.urls[:3], format="markdown")
 
     ``search``, ``extract``, ``answer``, ``research`` and ``browse`` take ``budget=``, a
-    :class:`~web_router.Budget` (experimental). It is not enforced yet: a call with one runs as one without.
+    :class:`~web_router.Budget` (experimental): see :mod:`web_router.routing.budget` for how it holds the call.
     """
 
     def __init__(
@@ -459,8 +459,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
             locale=locale,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return self.get_provider(provider).search(request)
+        with budget_scope(budget, "search", self.get_provider(provider), request) as call:
+            return call.settle(call.backend.search(request))
 
     def extract(
         self,
@@ -479,8 +479,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
         nothing came back raises instead.
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
-        with budget_scope(budget):
-            return self.get_extract_provider(provider).extract(request)
+        with budget_scope(budget, "extract", self.get_extract_provider(provider), request) as call:
+            return call.settle(call.backend.extract(request))
 
     def templates(
         self,
@@ -577,8 +577,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return self.get_research_provider(provider).research(request, timeout=timeout)
+        with budget_scope(budget, "research", self.get_research_provider(provider), request) as call:
+            return call.settle(call.backend.research(request, timeout=timeout))
 
     def submit_research(
         self,
@@ -649,8 +649,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark):
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return self.get_browse_provider(provider).browse(request, timeout=timeout)
+        with budget_scope(budget, "browse", self.get_browse_provider(provider), request) as call:
+            return call.settle(call.backend.browse(request, timeout=timeout))
 
     def submit_browse(
         self,
@@ -830,8 +830,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             locale=locale,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return await self.get_provider(provider).asearch(request)
+        with budget_scope(budget, "search", self.get_provider(provider), request) as call:
+            return call.settle(await call.backend.asearch(request))
 
     async def extract(
         self,
@@ -849,8 +849,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
         where nothing came back raises.
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
-        with budget_scope(budget):
-            return await self.get_extract_provider(provider).aextract(request)
+        with budget_scope(budget, "extract", self.get_extract_provider(provider), request) as call:
+            return call.settle(await call.backend.aextract(request))
 
     async def templates(
         self,
@@ -919,8 +919,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return await self.get_research_provider(provider).aresearch(request, timeout=timeout)
+        with budget_scope(budget, "research", self.get_research_provider(provider), request) as call:
+            return call.settle(await call.backend.aresearch(request, timeout=timeout))
 
     async def submit_research(
         self,
@@ -974,8 +974,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget):
-            return await self.get_browse_provider(provider).abrowse(request, timeout=timeout)
+        with budget_scope(budget, "browse", self.get_browse_provider(provider), request) as call:
+            return call.settle(await call.backend.abrowse(request, timeout=timeout))
 
     async def submit_browse(
         self,

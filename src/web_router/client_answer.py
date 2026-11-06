@@ -89,8 +89,8 @@ class SyncAnswer(_AnswerLookup):
             locale=locale,
             recency=recency,
         )
-        with budget_scope(budget):
-            return self.get_answer_provider(provider).answer(request)
+        with budget_scope(budget, "answer", self.get_answer_provider(provider), request) as call:
+            return call.settle(call.backend.answer(request))
 
 
 class AsyncAnswer(_AnswerLookup):
@@ -117,5 +117,5 @@ class AsyncAnswer(_AnswerLookup):
             locale=locale,
             recency=recency,
         )
-        with budget_scope(budget):
-            return await self.get_answer_provider(provider).aanswer(request)
+        with budget_scope(budget, "answer", self.get_answer_provider(provider), request) as call:
+            return call.settle(await call.backend.aanswer(request))
