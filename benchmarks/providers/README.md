@@ -512,11 +512,14 @@ effort). A question's candidates are the paths it has rows for, so `extract`
 is one only on the ten questions given their pages. A router is shown one
 candidate per method and backend, with no method pinned, and decides the
 method, the backends and research's `effort`; the merge rule picks one method,
-and each backend runs its path at that effort (with none, its lowest). A
-backend with no row at the chosen effort cannot be scored: it is passed over
-and counted in the summary's `unscorable`. A decision never moves to another
-method, so the paths of the others are not tried after it; a decision that
-fails or decides nothing walks the static path order. On a question given its
+and each backend runs its path at that effort, or with none at its own default
+effort from the price list, as a real call would. A backend with no row at that
+effort cannot be scored: it keeps its place in the order as a miss with no
+cost, so a later backend serving still counts as a fallback, and it is counted
+in the summary's `unscorable`. A decision never moves to another method, so the
+paths of the others are not tried after it; a decision that fails or decides
+nothing walks the static order of the merged method only (search's, unpinned),
+as a routed call would, not the full static path order. On a question given its
 pages the request's `urls` is the placeholder `frozen:pages`, since the frozen
 rows keep no page URLs. The yardsticks still rank paths, walked as ranked and then in
 the static path order. The scores, the split, the noise floor and the

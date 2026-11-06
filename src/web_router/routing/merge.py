@@ -1,8 +1,10 @@
 """The merge rule: a router's decision and the static order, made into one method, one order and checked options.
 
-Experimental. :func:`merge` is pure -- no I/O, no clock, nothing read but the
-price list and the effort table -- so route-eval replays a decision exactly as
-a routed call would run it. The rules:
+Experimental. :func:`merge` has no clock and no network: it reads the price
+list and the effort table, and looks backend classes up in the registry to see
+which options each takes, which may import a backend's module on first use.
+Its answer depends on its arguments alone, so route-eval replays a decision
+exactly as a routed call would run it. The rules:
 
 1. **Method.** The pinned one, when the caller called a method; else the
    first of ``decision.tools`` that still has a candidate; else ``search``.
@@ -151,8 +153,13 @@ def well_formed(decision: object) -> bool:
         and isinstance(exclude, Mapping)
         and all(isinstance(k, str) and isinstance(v, str) for k, v in exclude.items())
         and (decision.reason is None or isinstance(decision.reason, str))
-        and (confidence is None or (isinstance(confidence, int | float) and not isinstance(confidence, bool)))
+        and (confidence is None or _probability(confidence))
     )
+
+
+def _probability(value: object) -> bool:
+    """A finite number from 0 to 1: what ``confidence`` must be when set."""
+    return isinstance(value, int | float) and not isinstance(value, bool) and 0 <= value <= 1
 
 
 def _empty(decision: RouteDecision) -> bool:
@@ -258,7 +265,7 @@ def merge(
         ranked=tuple(candidate_id(tool, p) for p in ranked),
         merged=tuple(candidate_id(tool, p) for p in providers),
         excluded=excluded,
-        ignored=ignored,
+        ignored={hide_urls(key): hide_urls(why) for key, why in ignored.items()},
         reason=hide_urls(decision.reason),
     )
     return Merged(tool=cast(ToolName, tool), providers=providers, params=params, notes=notes)
