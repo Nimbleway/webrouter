@@ -18,7 +18,7 @@ from tests.test_auto_seam import MEMBERS, TOOLS, _member, _Tool
 from web_router import AsyncWebRouter, RouteDecision, RouteRequest, RouterError, WebRouter
 from web_router.exceptions import ConfigurationError
 
-SECRET = "sk-never-shown-to-a-router"
+SECRET = "secret-value-never-shown-to-a-router"
 ARGS: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "search": (("who won",), {}),
     "extract": ((["https://a.test", "https://b.test"],), {}),
