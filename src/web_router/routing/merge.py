@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, cast, get_args
 
 from web_router.constants_merge import (
+    EXTRACT_TOOL,
     LAST_RESORT_TOOL,
     MSG_EXCLUSIONS_EMPTY,
     MSG_EXTRACT_NO_URL,
@@ -43,8 +44,9 @@ from web_router.constants_merge import (
     ROUTER_INVALID,
     ROUTER_TIMEOUT,
 )
+from web_router.constants_params import PARAMS_SOURCE_ROUTER
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
-from web_router.routing.merge_params import UrlCheck, checked_params, router_urls, shown
+from web_router.routing.merge_params import UrlCheck, checked_params, hide_urls, router_urls, shown
 
 FallbackReason = Literal["router_timeout", "router_error", "router_invalid"]
 """Why the static order was used instead of a decision."""
@@ -77,7 +79,7 @@ class MergeNotes:
     """The router answered with a well-formed decision that decides nothing: the static order, and no failure."""
 
     reason: str | None = None
-    """The router's own reason."""
+    """The router's own reason. Here, as in ``excluded``, any URL in a router's words shows as its scheme and host."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -111,7 +113,7 @@ class Merged:
             "reason": notes.fallback or (ROUTER_EMPTY if notes.empty else notes.reason),
             "router_timeout": True if notes.fallback == ROUTER_TIMEOUT else None,
             "params": shown(self.params) or None,
-            "params_source": "router" if self.params else None,
+            "params_source": PARAMS_SOURCE_ROUTER if self.params else None,
         }
 
 
@@ -127,7 +129,8 @@ def _by_tool(value: object, check: Callable[[object], bool]) -> bool:
     return isinstance(value, Mapping) and all(k in TOOLS and check(v) for k, v in value.items())
 
 
-def _options(value: object) -> bool:
+def _keyed_by_name(value: object) -> bool:
+    """A method's options: a mapping keyed by option names, which are strings."""
     return isinstance(value, Mapping) and all(isinstance(k, str) for k in value)
 
 
@@ -143,7 +146,7 @@ def _well_formed(decision: object) -> bool:
     return (
         (decision.tools is None or _names(decision.tools))
         and _by_tool(decision.providers, _names)
-        and _by_tool(decision.params, _options)
+        and _by_tool(decision.params, _keyed_by_name)
         and isinstance(exclude, Mapping)
         and all(isinstance(k, str) and isinstance(v, str) for k, v in exclude.items())
         and (decision.reason is None or isinstance(decision.reason, str))
@@ -171,7 +174,7 @@ def _static(request: RouteRequest, static: Mapping[Any, Any], why: FallbackReaso
     tool = request.pinned_tool or LAST_RESORT_TOOL
     providers = _order(tool, request, (), (), static)
     merged = tuple(candidate_id(tool, p) for p in providers)
-    notes = MergeNotes(merged=merged, fallback=why, empty=why is None, reason=reason)
+    notes = MergeNotes(merged=merged, fallback=why, empty=why is None, reason=hide_urls(reason))
     return Merged(tool=tool, providers=providers, params={}, notes=notes)
 
 
@@ -179,7 +182,7 @@ def _exclusions(decision: RouteDecision, known: Collection[str], ignored: dict[s
     excluded = {}
     for cid, why in decision.exclude.items():
         if cid in known:
-            excluded[cid] = why
+            excluded[cid] = hide_urls(why) or ""
         else:
             ignored[cid] = MSG_UNKNOWN_ID.format(id=cid)
     return excluded
@@ -239,7 +242,7 @@ def merge(
     excluded = _exclusions(decision, known, ignored)
     tool = _tool(request, decision, excluded, ignored)
     no_url = request.pinned_tool is None and not request.urls and not router_urls(decision, url_check, caller_set)
-    if tool == "extract" and no_url:
+    if tool == EXTRACT_TOOL and no_url:
         ignored[NOTE_EXTRACT] = MSG_EXTRACT_NO_URL
         tool = LAST_RESORT_TOOL
     ranked = _ranked(tool, decision, known, ignored)
@@ -255,6 +258,6 @@ def merge(
         merged=tuple(candidate_id(tool, p) for p in providers),
         excluded=excluded,
         ignored=ignored,
-        reason=decision.reason,
+        reason=hide_urls(decision.reason),
     )
     return Merged(tool=cast(ToolName, tool), providers=providers, params=params, notes=notes)

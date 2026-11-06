@@ -14,6 +14,7 @@ policy that allows it, and is never written into a note or a record whole:
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Collection, Mapping, Sequence
 from typing import Any, get_args
 from urllib.parse import urlsplit
@@ -26,11 +27,14 @@ from web_router.constants_merge import (
     MSG_PARAM_INVALID,
     MSG_PARAM_NO_URL_POLICY,
     MSG_PARAM_NOT_ALLOWED,
+    MSG_PARAM_UNCHECKED,
     MSG_PARAM_UNDECLARED,
     MSG_PARAM_URL_REFUSED,
     ROUTER_PARAMS,
     URL_HIDDEN,
+    URL_IN_TEXT,
 )
+from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.routing.contract import Budget, RouteDecision
 from web_router.routing.params import EFFORTS, effort_misfit
 from web_router.types import (
@@ -65,6 +69,11 @@ def host_of(url: str) -> str:
     except ValueError:
         return URL_HIDDEN
     return f"{parts.scheme}://{host}" if parts.scheme and host else URL_HIDDEN
+
+
+def hide_urls(text: str | None) -> str | None:
+    """``text`` with every URL in it cut to its scheme and host: for a router's free-form reasons."""
+    return None if text is None else re.sub(URL_IN_TEXT, lambda m: host_of(m.group(0)), text)
 
 
 def shown(params: Mapping[str, Any]) -> dict[str, Any]:
@@ -141,8 +150,8 @@ def _undeclared(tool: str, key: str, providers: Sequence[str]) -> str | None:
     for provider in providers:
         try:
             declared = class_of(provider).supported_parameters
-        except Exception:  # an unknown backend, or one whose module will not import, declares nothing
-            declared = frozenset()
+        except (ProviderNotFoundError, ProviderNotInstalledError) as exc:  # not registered, or its SDK is missing
+            return MSG_PARAM_UNCHECKED.format(tool=tool, provider=provider, key=key, error=type(exc).__name__)
         if key not in declared:
             return MSG_PARAM_UNDECLARED.format(tool=tool, provider=provider, key=key)
     return None
