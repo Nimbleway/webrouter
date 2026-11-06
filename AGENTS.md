@@ -267,7 +267,10 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         providers/_browser_live.py is the live browser
                         tests' shared check, and test_shape.py the file
                         length limit, against shape_baseline.json
-examples/               runnable scripts, indexed by examples/README.md
+examples/               runnable scripts, indexed by examples/README.md;
+                        router_*.py the example routers (rules, a
+                        scikit-learn classifier, an OpenAI-compatible
+                        model, Jev), tested offline in tests/examples/
 benchmarks/agent/       one agent over FRAMES on its platform's built-in web
                         search and on web-router — Claude on Managed Agents or
                         OpenAI on the Responses API; a script, not a method;
