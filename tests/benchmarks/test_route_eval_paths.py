@@ -229,7 +229,7 @@ def test_a_decision_on_a_mixed_set_picks_one_tool_and_its_effort(route_eval: Mod
     outcome = route_eval.replay(lambda _: decision, questions[-1], static)
     assert outcome.served_by == "research:parallel:high" and not outcome.fallback and not outcome.router_failed
     unset = route_eval.replay(lambda _: RouteDecision(tools=["research"]), questions[-1], static)
-    assert unset.served_by == "research:parallel:low", "no effort: the static order's first, the lowest"
+    assert unset.served_by is None and unset.unscorable == 2, "no effort: each default, medium, which has no row"
     raised = route_eval.replay(lambda _: 1 / 0, questions[-1], static)
     assert raised.router_failed and raised.served_by == "search+extract:perplexity:top3", "the static path order"
 
@@ -242,8 +242,9 @@ def test_a_ranking_on_a_mixed_set_is_followed_by_the_static_path_order(route_eva
     assert outcome.served_by == "search+extract:perplexity:top3" and outcome.fallback and not outcome.router_failed
 
 
-def test_an_empty_decision_on_a_mixed_set_walks_the_whole_static_path_order(
-    route_eval: ModuleType, tmp_path: Path
+@pytest.mark.parametrize("failure", [None, "router_error"])
+def test_an_empty_or_failed_decision_on_a_mixed_set_stays_on_one_method(
+    route_eval: ModuleType, tmp_path: Path, failure: str | None
 ) -> None:
     from web_router import RouteDecision
 
@@ -251,8 +252,9 @@ def test_an_empty_decision_on_a_mixed_set_walks_the_whole_static_path_order(
     _, questions = route_eval.load_set("mixed-tiny", tmp_path)
     q = questions[-1]
     static = route_eval.static_router(route_eval.MIXED)
-    walked, failed, _ = sys.modules["route_eval_merge"].walk(RouteDecision(), q, static, None)
-    assert walked == static(q) and not failed, "every path, as the static yardstick walks them"
+    walked, failed = sys.modules["route_eval_merge"].walk(RouteDecision(), q, static, failure)
+    assert walked == [p for p in static(q) if p.startswith("search+extract:")], "search's paths only, as production"
+    assert failed is (failure is not None)
 
 
 def test_a_research_backend_with_no_row_at_the_effort_is_counted_unscorable(
@@ -268,3 +270,20 @@ def test_a_research_backend_with_no_row_at_the_effort_is_counted_unscorable(
     outcome = route_eval.replay(lambda _: decision, questions[-1], route_eval.static_router(route_eval.MIXED))
     assert outcome.served_by == "research:parallel:high", "perplexity has no high row; the walk goes on"
     assert outcome.unscorable == 1 and route_eval.score([outcome])["unscorable"] == 1
+    assert outcome.fallback, "the unscorable first choice keeps its place: parallel served second"
+    assert outcome.cost_usd == pytest.approx(0.1), "the unscorable miss costs nothing"
+
+
+def test_a_research_backend_with_no_effort_set_runs_at_its_default(route_eval: ModuleType, tmp_path: Path) -> None:
+    from web_router import RouteDecision
+
+    rows = [
+        _path_row("q", "search+extract:nimble:top3", "incorrect"),
+        _path_row("q", "research:parallel:low", "incorrect"),
+        _path_row("q", "research:parallel:medium", "correct"),
+    ]
+    write_frozen_set(tmp_path, "mixed-default", rows)
+    _, (q,) = route_eval.load_set("mixed-default", tmp_path)
+    decision = RouteDecision(tools=["research"], providers={"research": ["parallel"]})
+    outcome = route_eval.replay(lambda _: decision, q, route_eval.static_router(route_eval.MIXED))
+    assert outcome.served_by == "research:parallel:medium" and outcome.correct, "parallel's default is medium"

@@ -39,6 +39,8 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers._deadline import current_deadline
+from web_router.routing.attempts import noted
+from web_router.routing.contract import ToolName
 from web_router.types import ExtractResponse, SearchResponse
 from web_router.types import provider_name as _lookup_name
 from web_router.types_answer import AnswerResponse
@@ -334,12 +336,16 @@ def _held_or_late(
     failures: dict[str, WebRouterError],
     late: DeadlineExceededError | None = None,
     member: str | None = None,
+    tool: ToolName | None = None,
 ) -> _Answer:
     """The first empty answer when one came back before the deadline, else the deadline, naming what was tried.
 
     ``late`` is the deadline error ``member`` raised, when it was one that ran
-    into it rather than the chain finding no time left before the next.
+    into it rather than the chain finding no time left before the next; it is
+    reported to the call's failure hook as ``tool``'s.
     """
+    if late is not None and member is not None and tool is not None:
+        noted(tool, member, late)
     if held is not None:
         return held
     raise _deadline_error(provider, failures, late, member) from late

@@ -61,7 +61,9 @@ class Ledger:
     tried: list[_Tried] = field(default_factory=list)
     skipped: dict[str, str] = field(default_factory=dict)
     passed: dict[str, str | None] = field(default_factory=dict)
-    """Every candidate skipped or failed, in the order it happened, with why."""
+    """Every candidate moved past, in the order it happened, with why: ``None`` for one that answered empty."""
+    _open: str | None = None
+    """The last candidate tried, until the call fails it or moves past it: an empty answer, unless it answered."""
     unmeasured: list[str] = field(default_factory=list)
     stamp: dict[str, Any] = field(default_factory=dict)
     """The ``decision_id`` and ``prompt_sha256`` of a record this ledger starts, with no router's to write into."""
@@ -73,9 +75,11 @@ class Ledger:
         if (cost is None or p90 is None) and name not in self.unmeasured:
             self.unmeasured.append(name)
         reason = self._over_cost(cost) or self._over_time(p90)
+        self._moved_on()
         if reason is not None:
             self.skipped[name] = self.passed[name] = reason
             return False
+        self._open = name
         self.spent += cost or 0.0
         self.tried.append(_Tried(name, cost, time.monotonic()))
         return True
@@ -106,7 +110,15 @@ class Ledger:
 
     def failed(self, tool: str, provider: str, exc: BaseException) -> None:
         """Note that ``provider`` failed and the call moved on, by :func:`~.record.error_code`."""
-        self.passed[f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"] = error_code(exc)
+        name = f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"
+        self.passed[name] = error_code(exc)
+        self._open = None if self._open == name else self._open
+
+    def _moved_on(self) -> None:
+        """The call went on past the open candidate without its failing: it answered empty."""
+        if self._open is not None:
+            self.passed.setdefault(self._open, None)
+            self._open = None
 
     def _answered(self, provider: str | None) -> str | None:
         """The candidate that answered: the last tried by ``provider``'s name, else the last tried."""
@@ -115,10 +127,9 @@ class Ledger:
         return (named or ids)[-1] if ids else None
 
     def _hops(self, answered: str | None) -> list[DecisionHop] | None:
-        """Every candidate moved past: skipped, failed, or tried and left for another (empty) answer."""
-        hops = [DecisionHop(id=name, error=reason) for name, reason in self.passed.items()]
-        empty = [t.id for t in self.tried if t.id != answered and t.id not in self.passed]
-        return hops + [DecisionHop(id=name) for name in dict.fromkeys(empty)] or None
+        """Every candidate moved past, in order; an empty answer the call came back to and returned is not one."""
+        passed = {name: why for name, why in self.passed.items() if not (name == answered and why is None)}
+        return [DecisionHop(id=name, error=why) for name, why in passed.items()] or None
 
     def refusal(self) -> BudgetExceededError:
         """The error for a call that started nothing: every candidate skipped, each with its reason."""
