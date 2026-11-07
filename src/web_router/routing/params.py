@@ -24,7 +24,6 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast, get_args
 
-from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
 from web_router.constants_params import (
     DEFAULT_EFFORT_NAME,
     FLOOR_TOLERANCE,
@@ -33,18 +32,24 @@ from web_router.constants_params import (
     MSG_EFFORT_CHOSEN,
     MSG_EFFORT_NO_BUDGET,
     MSG_EFFORT_NONE_FITS,
+    MSG_EFFORT_PRICED,
     MSG_EFFORT_UNMEASURED,
-    MSG_MISFIT_COST,
-    MSG_MISFIT_STRICT,
-    MSG_MISFIT_TIME,
-    MSG_MISFIT_UNKNOWN_PRICE,
     PARAMS_SOURCE_BUDGET,
     PARAMS_SOURCE_CALLER,
+    PRICED_QUERY,
 )
 from web_router.routing import pricing
+from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, candidate_id
-from web_router.routing.pricing import RESEARCH, measured_efforts, misfit, mode_cost, mode_p90, research_mode
-from web_router.types import Provider, ResearchEffort, provider_name
+from web_router.routing.pricing import (
+    RESEARCH,
+    fit_reason,
+    measured_efforts,
+    mode_cost,
+    mode_p90,
+    research_mode,
+)
+from web_router.types import Provider, ResearchEffort, ResearchRequest, provider_name
 
 EFFORTS: tuple[str, ...] = get_args(ResearchEffort)
 """Research efforts, lowest first: the last tie-break prefers the lower."""
@@ -92,22 +97,9 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
     within it, and an unknown p90 fits unless the budget is ``strict``.
     """
     name = provider_name(provider)
-    cap, limit = budget.max_cost_usd, budget.time_limit_s
-    cost = None if cap is None else mode_cost(name, RESEARCH, effort)
-    p90 = None if limit is None else mode_p90(name, RESEARCH, effort)
-    code = misfit(cost, p90, cap, limit, budget.strict)
-    if code is None:
-        return None
-    shown_cap = limit if code == OVER_TIME else cap  # the time wording names the time limit as its cap
-    return _MISFITS[code].format(provider=name, effort=effort or DEFAULT_EFFORT_NAME, cost=cost, cap=shown_cap, p90=p90)
-
-
-_MISFITS = {
-    UNKNOWN_PRICE: MSG_MISFIT_UNKNOWN_PRICE,
-    OVER_COST: MSG_MISFIT_COST,
-    UNKNOWN_P90: MSG_MISFIT_STRICT,
-    OVER_TIME: MSG_MISFIT_TIME,
-}
+    request = ResearchRequest(query=PRICED_QUERY, effort=cast(ResearchEffort | None, effort))
+    attempt = Attempt(tool="research", provider=name, request=request)
+    return fit_reason(attempt, budget, MSG_EFFORT_PRICED.format(provider=name, effort=effort or DEFAULT_EFFORT_NAME))
 
 
 def _is_measured(provider: str, effort: str | None) -> bool:

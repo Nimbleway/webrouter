@@ -92,6 +92,9 @@ class CandidateSet:
     effort: EffortChoice | None = None
     """The research effort the budget chose for the call, which every research candidate is priced at."""
 
+    requests: Mapping[ToolName, NormalizedRequest] = field(default_factory=dict)
+    """Per method, the request its candidates were priced at: the router's options are priced on it."""
+
 
 REQUEST_OF: dict[ToolName, type[NormalizedRequest]] = {
     "search": SearchRequest,
@@ -151,11 +154,13 @@ def build_candidates(
     unmeasured: list[str] = []
     seen: set[str] = set()
     effort: EffortChoice | None = None
+    priced: dict[ToolName, NormalizedRequest] = {}
     for tool, request in requests.items():
         eligible, unbuilt = _eligible(router, tool, request)
         if isinstance(request, ResearchRequest) and request.effort is None:
             effort = shared_effort([name for name, _ in eligible], budget)
             request = request if effort is None else request.model_copy(update={"effort": effort.effort})
+        priced[tool] = request
         for name, keyless in eligible:
             attempt = Attempt(tool=tool, provider=name, request=request)
             cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
@@ -172,7 +177,9 @@ def build_candidates(
         for name, why in unbuilt.items():
             if (unbuilt_id := candidate_id(tool, name)) not in seen:  # built at another place
                 dropped[unbuilt_id] = why
-    return CandidateSet(candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured), effort=effort)
+    return CandidateSet(
+        candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured), effort=effort, requests=priced
+    )
 
 
 def _eligible(router: Any, tool: ToolName, request: NormalizedRequest) -> tuple[list[tuple[str, bool]], dict[str, str]]:

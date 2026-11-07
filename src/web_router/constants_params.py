@@ -49,7 +49,7 @@ MSG_EFFORT_CHOSEN = (
     "{floor:.1f}-point noise floor of the most accurate one that fits the budget, {best} ({best_accuracy:.1%})"
 )
 
-MSG_MISFIT_UNKNOWN_PRICE = "research:{provider} at effort {effort} has no known price, so it never fits a cost cap"
-MSG_MISFIT_COST = "research:{provider} at effort {effort} is estimated at ${cost:g}, over the ${cap:g} cost cap"
-MSG_MISFIT_TIME = "research:{provider} at effort {effort} has a p90 of {p90:g}s, over the {cap:g}s time limit"
-MSG_MISFIT_STRICT = "research:{provider} at effort {effort} has no measured p90, and the budget is strict"
+MSG_EFFORT_PRICED = "research:{provider} at effort {effort}"
+"""How a misfit names the effort it priced (:data:`~web_router.constants_budget.FIT_REASONS` words the rest)."""
+PRICED_QUERY = "-"
+"""The query of the request an effort is priced on: research is priced by backend and effort, never by its query."""

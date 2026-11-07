@@ -58,7 +58,15 @@ def decided(
     """
     decision: object = RouteDecision() if outcome is None else outcome.decision
     failure = None if outcome is None else cast("FallbackReason | None", outcome.failure)
-    merged = merge(req, decision, static_order(found), failure=failure, caller_set=caller_set, url_check=url_check)
+    merged = merge(
+        req,
+        decision,
+        static_order(found),
+        failure=failure,
+        caller_set=caller_set,
+        url_check=url_check,
+        requests=found.requests,
+    )
     params = dict(merged.params)
     fields = merged.record()
     if merged.tool == "research" and found.effort is not None and "effort" not in params:

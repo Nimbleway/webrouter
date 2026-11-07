@@ -135,7 +135,7 @@ def test_an_option_no_member_maps_leaves_the_method_with_no_candidates(keys: pyt
     _set_keys(keys, "perplexity")
     found = build_candidates(WebRouter(), {"research": ResearchRequest(query="q", output_schema={"type": "object"})})
     assert "output_schema" not in get_research_provider_class("perplexity").supported_parameters
-    assert found == CandidateSet()
+    assert (found.candidates, dict(found.dropped), found.unmeasured) == ((), {}, ())
 
 
 def test_a_member_whose_extra_is_missing_is_no_candidate(keys: pytest.MonkeyPatch) -> None:
