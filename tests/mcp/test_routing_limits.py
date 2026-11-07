@@ -290,3 +290,19 @@ async def test_the_research_tool_under_a_ceiling_runs_at_the_effort_the_budget_m
     tools = WebRouterTools(routing.build(provider_config={"auto": {"chain": ["nimble"]}}), routing=routing)
     await ok_on(tools, "research", query="q")
     assert [request.effort for request in nimble_sent] == ["low"], "nimble's default has no price: it would refuse"
+
+
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_a_submitted_runs_answer_records_the_effort_the_budget_mapped(
+    nimble_sent: list[ResearchRequest], asynchronous: bool
+) -> None:
+    from web_router import AsyncWebRouter, WebRouter
+
+    if asynchronous:
+        async with AsyncWebRouter() as client, client.budget(Budget(max_cost_usd=0.10)):
+            answer = await (await client.submit_research("q", provider="nimble")).aresult()
+    else:
+        with WebRouter() as client, client.budget(Budget(max_cost_usd=0.10)):
+            answer = client.submit_research("q", provider="nimble").result()
+    assert [request.effort for request in nimble_sent] == ["low"]
+    assert answer.decision is not None and answer.decision.params == {"effort": "low"}, "as research() records it"

@@ -29,6 +29,7 @@ from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS
 from web_router.constants_invoke import MSG_ROUTE_TOOLS
 from web_router.exceptions import ConfigurationError
+from web_router.providers.base import Job
 from web_router.routing.attempts import CallRoute, call_route, current_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
@@ -236,7 +237,7 @@ class AsyncRouted(RouterSetup):
                 return logged.settle(_decided(await call(request), record or named))
 
 
-_JobT = TypeVar("_JobT", covariant=True)
+_JobT = TypeVar("_JobT", bound="Job[Any, Any, Any]", covariant=True)
 
 
 class _Submits(Protocol[_JobT]):
@@ -255,13 +256,17 @@ def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedReque
     at the one the budget maps, as ``research()`` does; with no shared budget
     it starts as it would without one.
     """
-    request = _unrouted(backend, request, limited(None, router))[0]  # before the scope, which admits a named one
+    request, record = _unrouted(backend, request, limited(None, router))  # before the scope, which admits a named one
     with budget_scope(None, tool, backend, request, router):
-        return backend.submit(request)
+        job = backend.submit(request)
+    job.decision = record
+    return job
 
 
 async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: NormalizedRequest, router: object) -> _JobT:
     """As :func:`submitted`, awaited."""
-    request = _unrouted(backend, request, limited(None, router))[0]
+    request, record = _unrouted(backend, request, limited(None, router))
     with budget_scope(None, tool, backend, request, router):
-        return await backend.asubmit(request)
+        job = await backend.asubmit(request)
+    job.decision = record
+    return job
