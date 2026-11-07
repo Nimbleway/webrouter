@@ -1923,8 +1923,11 @@ left, else search: without a research key, the snippet's "compare" rule plans
 a search. The backends are its ranking first, then the static order. Only
 `exclude` removes a backend, never the last one, and a router may set only
 search's `max_results` and `search_depth`, research's `effort`, and the URLs
-for extract and browse -- never an option you set yourself. A fallback never
-moves to another method.
+for extract and browse -- never an option you set yourself. Each option is
+priced on the request the call runs (an `effort`, a `search_depth`, more
+`max_results` than a price assumes, extract's URLs per page), and one that
+does not fit the budget is set aside in the record's `ignored`. A fallback
+never moves to another method.
 
 Attached with `router=`, a router also orders the backends of a plain
 `search`, `extract`, `answer`, `research` or `browse` sent to `auto`, without
@@ -1968,15 +1971,16 @@ failed attempt still counts.
   last in the order.
 - **Unknown p90.** Under a time cap, a backend with no measured p90 runs
   within the time left; `strict=True` skips it instead. One whose p90 does not
-  fit the time left is skipped. A router's `search_depth` is held to the same
-  rules.
+  fit the time left is skipped.
 - **Time cap.** Search, extract and answer stop at it and raise
   `DeadlineExceededError`. Research and browse are capped on the wait, not the
   job: they wait at most `min(timeout, time left)`, then raise their own
   timeout error with the job's handle.
-- **Research effort.** A budgeted `research()` call, routed or not, and a
-  research plan get the `effort` the budget picks when neither you nor the
-  router set one.
+- **Research effort.** A budgeted research call runs at one `effort`, chosen
+  once, before the router is asked, to fit every backend it may try; its
+  candidates are priced at it. That holds on `auto` or a named backend,
+  routed or not, for `plan()`/`run()` and for `submit_research`. An effort
+  you or the router set is kept.
 
 To spend several calls from one budget:
 
@@ -1989,7 +1993,10 @@ with wr.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
 
 Every `search`, `extract`, `answer`, `research`, `browse`, `plan` and `run`
 inside the block spends from it; `run_template` and `open_browser` do not,
-nor do the calls of another router.
+nor do the calls of another router. Each call is capped at what is left, in
+dollars and seconds, and that is what a router is shown. A call spends from
+every scope of its router in force when it starts, wherever the scope was
+made, so a scope made before an outer block cannot escape that block's cap.
 Each attempt reserves its estimate before it starts, so parallel threads and
 tasks never overspend together. A thread started inside the block calls
 through `b`. On `AsyncWebRouter`, every method here is awaited and the scope is
@@ -2004,7 +2011,8 @@ record lists each refusal under `dropped` or `ignored`, by scheme and host. A
 refused URL is never fetched or passed to a backend as a URL, but it stays in
 the prompt, which still goes out as the search query or the browse task. It is
 a hostname check before dispatch: it resolves no DNS and follows no redirect.
-It is off by default, and leaves the URLs you pass to `extract` yourself alone.
+It is off by default, and leaves the URLs you pass to `extract` yourself
+alone; on the MCP server it holds for `web_run`'s plans only.
 
 ### The decision record
 
