@@ -42,7 +42,7 @@ from web_router.registry import (
 )
 from web_router.routing import Budget
 from web_router.routing.attempts import Attempt
-from web_router.routing.pool import current_pool
+from web_router.routing.pool import chain_in_force
 from web_router.routing.pricing import attempt_cost
 from web_router.types import BrowserRequest, ResearchProgress, ResearchRequest
 
@@ -127,8 +127,8 @@ def test_a_charged_call_runs_on_the_shared_clock(priced: Table) -> None:
     priced.update(cheap=0.0)
     budget = ConnectionBudget(Budget(time_limit_s=30))
     with budget.bound(), charged("run_template", ["cheap"], BrowserRequest(), ANY):
-        deadline, pool = current_deadline(), current_pool()
-        assert deadline is not None and pool is not None and deadline.at == pool.expires_at()
+        deadline, chain = current_deadline(), chain_in_force(ANY)
+        assert deadline is not None and chain is not None and deadline.at == chain.expires_at()
 
 
 def test_a_job_tool_waits_no_longer_than_the_budget_has_left() -> None:

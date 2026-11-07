@@ -46,7 +46,7 @@ from web_router.providers._deadline import Deadline, call_deadline, current_dead
 from web_router.routing.attempts import CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.ledger import Ledger
-from web_router.routing.pool import current_pool
+from web_router.routing.pool import chain_in_force
 from web_router.routing.record import prompt_of, stamp
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -91,7 +91,7 @@ def budget_scope(
     Raises:
         BudgetExceededError: when the budget skips every candidate, before any starts.
     """
-    pool = None if router is None else current_pool(router)
+    pool = None if router is None else chain_in_force(router)
     if pool is not None:
         budget = pool.limit(budget)
     if budget is None:

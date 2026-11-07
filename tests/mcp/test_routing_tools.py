@@ -197,7 +197,7 @@ async def test_budget_start_is_capped_by_what_the_ceiling_has_left(members: list
     assert started["max_cost_usd"] == 0.1 and started["remaining_usd"] == pytest.approx(0.06)
     await ok_on(tools, "search", query="q", provider="first")
     failed, message = await outcome(tools, "search", query="q", provider="first")
-    assert failed and "left in the shared budget" in message, "the task allows it; the ceiling does not"
+    assert failed and "$0.02 left" in message, "the task allows it; the ceiling does not"
 
 
 async def test_the_task_clock_runs_from_budget_start_and_a_new_task_restarts_it(

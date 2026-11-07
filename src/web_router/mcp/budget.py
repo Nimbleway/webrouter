@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_ARG_PROVIDER
+from web_router.constants_budget import STATUS_DIGITS
 from web_router.constants_mcp import (
     MCP_MSG_BUDGET_LIMIT,
     MCP_PRICE_OPEN_BROWSER,
@@ -44,7 +45,7 @@ from web_router.providers.auto_browser import AutoBrowserProvider
 from web_router.routing.attempts import Attempt
 from web_router.routing.budget import budget_scope
 from web_router.routing.contract import Budget, ToolName
-from web_router.routing.pool import BudgetPool, bind, current_pool, unbind
+from web_router.routing.pool import BudgetPool, PoolChain, bind, chain_in_force, current_pool, unbind
 from web_router.routing.pricing import attempt_cost
 from web_router.types import BrowserRequest, NormalizedRequest, TemplateRequest
 
@@ -55,8 +56,11 @@ if TYPE_CHECKING:
 class ConnectionBudget:
     """The connection's own budget, capped by the ceiling if one is set, and the task in force inside it.
 
-    The connection's budget holds everything every task spent, so what one
-    ``budget_start`` closes still counts against the ceiling and is reported.
+    Two pools with no owner, so every router the session builds spends from
+    them: the connection's, made once, and the task's, which ``budget_start``
+    replaces. A call binds both, the task's innermost, so each reservation must
+    fit the task and what the ceiling has left, and the connection's pool keeps
+    what every task spent.
     """
 
     def __init__(self, ceiling: Budget) -> None:
@@ -66,38 +70,47 @@ class ConnectionBudget:
 
     def start(self, max_cost_usd: float, time_limit_s: float) -> None:
         """Open a new task with these limits, inside the connection's budget; the previous one closes."""
-        self.task = BudgetPool(Budget(max_cost_usd=max_cost_usd, time_limit_s=time_limit_s), parent=self.connection)
+        self.task = BudgetPool(Budget(max_cost_usd=max_cost_usd, time_limit_s=time_limit_s))
+
+    def _chain(self) -> PoolChain | None:
+        """The pools a call spends from, innermost first: the task's, then the connection's if they differ."""
+        if self.task is None:
+            return None
+        return PoolChain(tuple(dict.fromkeys((self.task, self.connection))))
 
     @contextmanager
     def bound(self) -> Iterator[None]:
-        """The task in force over the block, so every call made in it spends from it; nothing with no budget."""
-        if self.task is None:
+        """The connection's pool and the task's in force over the block; nothing with no budget."""
+        chain = self._chain()
+        if chain is None:
             yield
             return
-        token = bind(self.task)
+        tokens = [bind(pool) for pool in reversed(chain.pools)]  # outermost first, so the task's is innermost
         try:
             yield
         finally:
-            unbind(token)
+            for token in reversed(tokens):
+                unbind(token)
 
     def status(self) -> dict[str, Any] | None:
         """Where the task stands, what is left counted against the ceiling too, and what the connection spent.
 
         ``None`` with no budget at all: no ceiling and no ``budget_start``.
         """
-        if self.task is None:
+        chain = self._chain()
+        if chain is None or self.task is None:
             return None
         now, total = self.task.status(), self.connection.status()
-        left = [usd for usd in (now.remaining_usd, total.remaining_usd) if usd is not None]
-        ends = self.task.expires_at()  # the earliest clock up the chain: the task's, or the ceiling's if sooner
+        ends, left = chain.expires_at(), chain.time_left()
+        caps = [pool.budget.max_cost_usd for pool in chain.pools if pool.budget.max_cost_usd is not None]
         return {
-            "max_cost_usd": self.task.limit(None).max_cost_usd,
+            "max_cost_usd": min(caps) if caps else None,
             "time_limit_s": None if ends is None else round(max(0.0, ends - self.task.started), 3),
             "spent_usd": now.spent_usd,
             "reserved_usd": now.reserved_usd,
-            "remaining_usd": min(left) if left else None,
+            "remaining_usd": None if (usd := chain.left()) is None else round(usd, STATUS_DIGITS),
             "elapsed_s": round(now.elapsed_s, 3),
-            "time_left_s": None if now.time_left_s is None else round(now.time_left_s, 3),
+            "time_left_s": None if left is None else round(left, 3),
             "connection": {"spent_usd": total.spent_usd, "reserved_usd": total.reserved_usd},
         }
 
@@ -114,7 +127,7 @@ def charged(method: str, providers: Sequence[str], request: NormalizedRequest, r
     Raises:
         BudgetExceededError: when the call does not fit what is left, or its price is unknown under a cost cap.
     """
-    if current_pool(router) is None:
+    if chain_in_force(router) is None:
         yield
         return
     costs = [attempt_cost(Attempt(tool=cast("ToolName", method), provider=name, request=request)) for name in providers]
@@ -125,8 +138,8 @@ def charged(method: str, providers: Sequence[str], request: NormalizedRequest, r
 
 def wait_left(wait: float) -> float:
     """``wait``, cut to the time the budget in force has left, so a job tool never waits past the deadline."""
-    pool = current_pool()
-    left = None if pool is None else pool.time_left()
+    chain = chain_in_force(None)
+    left = None if chain is None else chain.time_left()
     return wait if left is None else min(wait, left)
 
 
