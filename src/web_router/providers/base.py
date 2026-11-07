@@ -36,7 +36,7 @@ import time
 import warnings
 from collections.abc import Awaitable, Callable, Iterator, Mapping
 from types import MappingProxyType, TracebackType
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar, cast
 
 from pydantic import SecretStr
 
@@ -812,6 +812,9 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     poll_max_interval: ClassVar[float] = JOB_POLL_MAX_INTERVAL
     """The ceiling that gap backs off to and stays at."""
 
+    decision: Any = None
+    """The :class:`~web_router.DecisionRecord` of the effort a budget mapped at the start; the answer carries it."""
+
     def __init__(
         self,
         provider: JobProvider[_RequestT, _ProgressT, _ResponseT],
@@ -848,11 +851,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         return self._provider.resumable
 
     def status(self) -> _ProgressT:
-        """Ask the backend where the run is now.
-
-        A run that has already finished is not asked about again: its last
-        progress is returned as it stands.
-        """
+        """Ask the backend where the run is now; a finished run is not asked again, and its last progress stands."""
         if not self._progress.is_terminal:
             self._progress = self._provider.poll(self._request, self.job_id)
         return self._progress
@@ -971,9 +970,8 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         if progress.state == "cancelled":
             raise ProviderError(self.provider, MSG_JOB_CANCELLED)
         if progress.state == "failed" or response is None:
-            detail = progress.detail or MSG_JOB_NO_DETAIL
-            raise ProviderError(self.provider, MSG_JOB_RUN_FAILED.format(detail=detail))
-        return response
+            raise ProviderError(self.provider, MSG_JOB_RUN_FAILED.format(detail=progress.detail or MSG_JOB_NO_DETAIL))
+        return response if self.decision is None else cast(Any, response).model_copy(update={"decision": self.decision})
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__} provider={self.provider!r} job_id={self.job_id!r} state={self.state!r}>"
