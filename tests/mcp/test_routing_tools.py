@@ -1,7 +1,7 @@
 """The MCP routing tools: ``web_run``, ``budget_start`` / ``budget_status``, the operator's ceiling, capabilities.
 
 Every method's ``auto`` runs over the fake members ``first``, ``second`` and
-``third`` from :mod:`tests.test_auto_seam`, all answering, so ``first`` is the
+``third`` from :mod:`tests.routing_helpers`, all answering, so ``first`` is the
 one that runs; prices are the test's own, by member name.
 """
 
@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 from tests.mcp.conftest import URL, Table, ok_on, outcome, routed
-from tests.test_auto_seam import MEMBERS
+from tests.routing_helpers import MEMBERS
 from web_router import RouteDecision, RouteRequest
 from web_router.constants_budget import SKIP_NO_TIME, SKIP_PRICE_UNKNOWN
 from web_router.constants_mcp import (

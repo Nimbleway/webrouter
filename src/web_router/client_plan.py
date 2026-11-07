@@ -32,7 +32,7 @@ from web_router.exceptions import MissingParameterError
 from web_router.providers._deadline import call_deadline
 from web_router.routing.attempts import CallRoute, call_route
 from web_router.routing.budget import budget_scope, recorded
-from web_router.routing.candidates import CandidateSet, build_candidates, default_requests
+from web_router.routing.candidates import REQUEST_OF, CandidateSet, base_params, build_candidates, default_requests
 from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
 from web_router.routing.decide import decided
 from web_router.routing.invoke import RouterOutcome
@@ -41,37 +41,17 @@ from web_router.routing.record import stamp
 from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted, in_force_with
 from web_router.routing.url_policy import screened
 from web_router.types import (
-    BrowseRequest,
     BrowseResponse,
     ExtractRequest,
     ExtractResponse,
     NormalizedRequest,
-    ResearchRequest,
     ResearchResponse,
-    SearchRequest,
     SearchResponse,
 )
-from web_router.types_answer import AnswerRequest, AnswerResponse
+from web_router.types_answer import AnswerResponse
 
 RunResponse = SearchResponse | ExtractResponse | AnswerResponse | ResearchResponse | BrowseResponse
 """What :meth:`~web_router.WebRouter.run` returns: the planned method's own response."""
-
-_REQUEST: dict[str, type[NormalizedRequest]] = {
-    "search": SearchRequest,
-    "extract": ExtractRequest,
-    "answer": AnswerRequest,
-    "research": ResearchRequest,
-    "browse": BrowseRequest,
-}
-
-
-def _base_params(tool: ToolName, prompt: str, urls: Sequence[str]) -> dict[str, Any]:
-    """What ``tool`` is called with for ``prompt``, before a router's or the budget's options."""
-    if tool == "extract":
-        return {"urls": list(urls)}
-    if tool == "browse":
-        return {"task": prompt, "start_url": urls[0] if urls else None}
-    return {"query": prompt}
 
 
 class _Planner(RouterSetup):
@@ -108,7 +88,7 @@ class _Planner(RouterSetup):
         req, found, kept, refused = plan_for
         name = None if self._router is None else self._router.name
         out = decided(req, found, outcome, router=name, url_check=self._url_check, refused=refused)
-        params = {**_base_params(out.tool, req.prompt, kept), **out.params}
+        params = {**base_params(out.tool, req.prompt, kept), **out.params}
         if out.tool == "extract" and not params["urls"]:
             # Only a pinned extract gets here: unpinned, the merge rule searches instead. A pin is never moved.
             refusals = "; ".join(f"{host}: {why}" for host, why in refused.items())
@@ -124,7 +104,7 @@ class _Planner(RouterSetup):
     def _run_scope(self, stack: ExitStack, plan: Plan, budget: Budget | None) -> tuple[Any, NormalizedRequest, Any]:
         """The ``auto`` the plan runs on, its request, and the budget's scope, entered with the plan's order."""
         chain = getattr(self, AUTO_GETTERS[plan.tool])(PROVIDER_AUTO)
-        request = _REQUEST[plan.tool](**{k: v for k, v in plan.params.items() if v is not None})
+        request = REQUEST_OF[plan.tool](**{k: v for k, v in plan.params.items() if v is not None})
         scope = stack.enter_context(
             recorded(stack.enter_context(budget_scope(budget, plan.tool, chain, request, self)))
         )

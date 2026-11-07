@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from tests.budget.conftest import Chain, Table
-from tests.test_auto_seam import MEMBERS
+from tests.routing_helpers import MEMBERS
 from web_router import AsyncBudgetScope, AsyncWebRouter, Budget, BudgetScope, RouteDecision, RouteRequest, WebRouter
 
 SHARED = Budget(max_cost_usd=0.10)

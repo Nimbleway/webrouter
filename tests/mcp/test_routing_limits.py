@@ -17,7 +17,7 @@ import pytest
 
 from tests.conftest import FakeBrowserProvider, FakeResearchProvider
 from tests.mcp.conftest import CONFIG, Table, ok_on, outcome, routed
-from tests.test_auto_seam import MEMBERS
+from tests.routing_helpers import MEMBERS
 from web_router import RouteDecision, RouteRequest, prices
 from web_router.constants_budget import SKIP_PRICE_UNKNOWN
 from web_router.constants_mcp import (

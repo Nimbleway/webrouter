@@ -25,6 +25,16 @@ OVER_TIME = "over_time"
 """Why an estimate does not fit what is left, as :func:`web_router.routing.pricing.misfit` answers: each
 caller words the code its own way."""
 
+FIT_REASONS = {
+    UNKNOWN_PRICE: "{what} has no known price, so it never fits a cost cap",
+    OVER_COST: "{what} is estimated at ${cost:g}, over the ${cap:g} cost cap",
+    UNKNOWN_P90: "{what} has no measured p90, and the budget is strict",
+    OVER_TIME: "{what} has a p90 of {p90:g}s, over the {cap:g}s time limit",
+}
+"""Why a priced request does not fit a budget, in words: ``what`` names it, as ``research:nimble at effort high``.
+
+The one wording for the effort mapping's misfits and the merge rule's refused router options."""
+
 COST_TOLERANCE_USD = 1e-9
 """An estimate this close to what is left still fits: sums of list prices are not exact in binary."""
 

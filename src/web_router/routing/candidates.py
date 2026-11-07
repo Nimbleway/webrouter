@@ -48,7 +48,6 @@ from web_router.constants_candidates import (
     MSG_DROPPED_UNKNOWN_LATENCY,
     RANKED_METHODS,
 )
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import (
     ConfigurationError,
     MissingParameterError,
@@ -59,8 +58,8 @@ from web_router.exceptions import (
     UnsupportedParameterError,
 )
 from web_router.routing.attempts import Attempt
-from web_router.routing.contract import Budget, Candidate, ToolName
-from web_router.routing.params import map_effort
+from web_router.routing.contract import Budget, Candidate, ToolName, candidate_id
+from web_router.routing.params import EffortChoice, shared_effort
 from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
 from web_router.types import (
     BrowseRequest,
@@ -90,20 +89,41 @@ class CandidateSet:
     unmeasured: tuple[str, ...] = ()
     """The ids of the candidates whose price or p90 is unknown or uncertain, or whose place route-eval did not rank."""
 
+    effort: EffortChoice | None = None
+    """The research effort the budget chose for the call, which every research candidate is priced at."""
+
+    requests: Mapping[ToolName, NormalizedRequest] = field(default_factory=dict)
+    """Per method, the request its candidates were priced at: the router's options are priced on it."""
+
+
+REQUEST_OF: dict[ToolName, type[NormalizedRequest]] = {
+    "search": SearchRequest,
+    "extract": ExtractRequest,
+    "answer": AnswerRequest,
+    "research": ResearchRequest,
+    "browse": BrowseRequest,
+}
+"""Each routable method's request: the one table the routing modules read, both ways."""
+
+
+def base_params(tool: ToolName, prompt: str, urls: Sequence[str]) -> dict[str, Any]:
+    """What ``tool`` is called with for ``prompt``: extract its URLs, browse the task and its first URL, else the
+    prompt as the query. Before any option a router or the budget sets."""
+    if tool == "extract":
+        return {"urls": list(urls)}
+    if tool == "browse":
+        return {"task": prompt, "start_url": urls[0] if urls else None}
+    return {"query": prompt}
+
 
 def default_requests(prompt: str, urls: Sequence[str] = ()) -> dict[ToolName, NormalizedRequest]:
     """One request per routable method for ``prompt``, as the call that sets no option would send it.
 
     Extract is left out when there are no ``urls``: it has nothing to fetch.
-    Browse starts on the first URL when there is one.
     """
-    requests: dict[ToolName, NormalizedRequest] = {"search": SearchRequest(query=prompt)}
-    if urls:
-        requests["extract"] = ExtractRequest(urls=list(urls))
-    requests["answer"] = AnswerRequest(query=prompt)
-    requests["research"] = ResearchRequest(query=prompt)
-    requests["browse"] = BrowseRequest(task=prompt, start_url=urls[0] if urls else None)
-    return requests
+    return {
+        tool: cls(**base_params(tool, prompt, urls)) for tool, cls in REQUEST_OF.items() if tool != "extract" or urls
+    }
 
 
 def build_candidates(
@@ -133,10 +153,17 @@ def build_candidates(
     dropped: dict[str, str] = {}
     unmeasured: list[str] = []
     seen: set[str] = set()
+    effort: EffortChoice | None = None
+    priced: dict[ToolName, NormalizedRequest] = {}
     for tool, request in requests.items():
         eligible, unbuilt = _eligible(router, tool, request)
+        if isinstance(request, ResearchRequest) and request.effort is None:
+            effort = shared_effort([name for name, _ in eligible], budget)
+            request = request if effort is None else request.model_copy(update={"effort": effort.effort})
+        priced[tool] = request
         for name, keyless in eligible:
-            cost, p90 = _estimates(tool, name, request, budget)
+            attempt = Attempt(tool=tool, provider=name, request=request)
+            cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
             candidate = Candidate(tool=tool, provider=name, est_cost_usd=cost, est_latency_s=p90)
             if candidate.id in seen:
                 continue  # a member listed twice is one candidate, at its first place
@@ -148,9 +175,11 @@ def build_candidates(
             if cost is None or p90 is None or keyless or request.provider_options or name not in _ranked(tool):
                 unmeasured.append(candidate.id)
         for name, why in unbuilt.items():
-            if (unbuilt_id := f"{tool}{CANDIDATE_ID_SEPARATOR}{name}") not in seen:  # built at another place
+            if (unbuilt_id := candidate_id(tool, name)) not in seen:  # built at another place
                 dropped[unbuilt_id] = why
-    return CandidateSet(candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured))
+    return CandidateSet(
+        candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured), effort=effort, requests=priced
+    )
 
 
 def _eligible(router: Any, tool: ToolName, request: NormalizedRequest) -> tuple[list[tuple[str, bool]], dict[str, str]]:
@@ -211,19 +240,6 @@ def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
         else:
             built.append(position)
     return built, unbuilt
-
-
-def _estimates(
-    tool: ToolName, name: str, request: NormalizedRequest, budget: Budget | None
-) -> tuple[float | None, float | None]:
-    """The candidate's estimated cost in US dollars and its p90 seconds, by the one pricing rule.
-
-    Research runs at the effort the caller set, else the one the budget picks for this backend.
-    """
-    if isinstance(request, ResearchRequest) and request.effort is None:
-        request = request.model_copy(update={"effort": map_effort(name, budget).effort})
-    attempt = Attempt(tool=tool, provider=name, request=request)
-    return attempt_cost(attempt), attempt_p90(attempt)
 
 
 _DROPPED = {

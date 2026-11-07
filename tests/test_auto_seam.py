@@ -12,13 +12,10 @@ from typing import Any
 
 import pytest
 
-from tests.routing_helpers import MEMBERS, TOOLS
+from tests.routing_helpers import MEMBERS
 from tests.routing_helpers import Tool as _Tool
-from tests.routing_helpers import member as _member
 from web_router.exceptions import WebRouterError
 from web_router.routing.attempts import Attempt, CallRoute, call_route
-
-__all__ = ["MEMBERS", "TOOLS", "_Tool", "_member"]  # where they lived: tests on other branches import them here
 
 
 def _hooked(seen: list[Attempt], refuse: str | None = None) -> Callable[[Attempt], bool]:

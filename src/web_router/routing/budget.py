@@ -41,11 +41,10 @@ from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._deadline import Deadline, call_deadline, current_deadline, job_deadline
 from web_router.routing.attempts import CallRoute, admitted, call_route, current_route
-from web_router.routing.contract import Budget, ToolName
+from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.ledger import Ledger
 from web_router.routing.pool import current_pool
 from web_router.routing.record import prompt_of, stamp
@@ -116,11 +115,11 @@ def _held(
     outside = current_deadline()
     with call_deadline(ledger.budget.time_limit_s), job_deadline(expires), call_route(_hooked(ledger)):
         name = getattr(backend, "name", PROVIDER_AUTO)
-        _refuse_late(ledger, f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", name, outside)
+        _refuse_late(ledger, candidate_id(tool, name), name, outside)
         if name != PROVIDER_AUTO and not admitted(tool, name, request):
             # Through the same hook auto's members pass, so a route in force can refuse it too;
             # the ledger's admit, last in that hook, reserves it in a shared budget.
-            ledger.skipped.setdefault(f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", SKIP_ROUTE_REFUSED)
+            ledger.skipped.setdefault(candidate_id(tool, name), SKIP_ROUTE_REFUSED)
             raise ledger.refusal()
         try:
             yield BudgetedCall(backend, ledger)
