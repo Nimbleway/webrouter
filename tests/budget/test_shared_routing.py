@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from tests.budget.conftest import Chain, Table
-from tests.test_auto_seam import MEMBERS
+from tests.routing_helpers import MEMBERS
 from web_router import AsyncBudgetScope, AsyncWebRouter, Budget, BudgetScope, RouteDecision, RouteRequest, WebRouter
 
 SHARED = Budget(max_cost_usd=0.10)
@@ -66,7 +66,7 @@ def test_a_plan_in_a_scope_shows_the_router_the_scope_budget(chain: Chain, price
         shared.run("q", tool="search")
         shared.plan("q", tool="search")
     shown = router.seen[-1].budget
-    assert shown is not None and shown.max_cost_usd == SHARED.max_cost_usd
+    assert shown is not None and shown.max_cost_usd == pytest.approx(0.06), "what the scope has left"
 
 
 @pytest.mark.parametrize("tool", ["search"], indirect=True)

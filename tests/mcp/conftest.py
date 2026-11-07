@@ -12,7 +12,8 @@ import pytest
 # Every module here drives the server, which is the mcp extra's.
 pytest.importorskip("mcp", reason="mcp extra not installed")
 
-from tests.test_auto_seam import MEMBERS, TOOLS, _member
+from tests.routing_helpers import MEMBERS, TOOLS
+from tests.routing_helpers import member as _member
 from web_router import prices
 from web_router.client import AsyncWebRouter
 from web_router.constants import (

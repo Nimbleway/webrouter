@@ -15,7 +15,7 @@ from web_router.constants_budget import SKIP_NO_TIME
 from web_router.exceptions import ConfigurationError, WebRouterError
 from web_router.providers._deadline import call_deadline, current_deadline
 from web_router.routing import ledger
-from web_router.routing.pool import BudgetPool, current_pool
+from web_router.routing.pool import PoolChain, current_pool
 from web_router.types import SearchResponse
 
 WAIT_S = 5.0
@@ -120,10 +120,10 @@ def test_a_call_that_starts_late_gets_only_the_time_the_clock_has_left(
     priced: Table, fake_provider: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     limit, late = 5.0, 0.3  # a wide margin: only the upper bound is the rule, the lower one need only hold
-    real_limit, real_admit = BudgetPool.limit, ledger.Ledger.admit
+    real_limit, real_admit = PoolChain.limit, ledger.Ledger.admit
     left: list[float] = []
 
-    def delayed(self: BudgetPool, budget: Budget | None) -> Budget:
+    def delayed(self: PoolChain, budget: Budget | None) -> Budget:
         limited = real_limit(self, budget)
         time.sleep(late)  # the time left was read; the call's deadline is not set yet
         return limited
@@ -133,7 +133,7 @@ def test_a_call_that_starts_late_gets_only_the_time_the_clock_has_left(
         left.append(-1.0 if deadline is None else deadline.left())
         return real_admit(self, attempt)
 
-    monkeypatch.setattr(BudgetPool, "limit", delayed)
+    monkeypatch.setattr(PoolChain, "limit", delayed)
     monkeypatch.setattr(ledger.Ledger, "admit", spy)
     with WebRouter().budget(Budget(time_limit_s=limit)) as scope:
         scope.search("q", provider="fake")

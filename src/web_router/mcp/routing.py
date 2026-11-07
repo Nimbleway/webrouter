@@ -56,6 +56,7 @@ from web_router.constants_mcp import (
     MCP_TOOL_BUDGET_STATUS,
     MCP_TOOL_WEB_RUN,
     MCP_URL_POLICY,
+    MCP_URL_POLICY_NOTE,
 )
 from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import BrowseTimeoutError, ConfigurationError, DeadlineExceededError, ResearchTimeoutError
@@ -156,6 +157,7 @@ class McpRouting:
             **runs,
             "prompt_note": MCP_PROMPT_NOTE,
             "url_policy": MCP_URL_POLICY,
+            "url_policy_note": MCP_URL_POLICY_NOTE,
             "ceiling": {"max_cost_usd": self.ceiling.max_cost_usd, "time_limit_s": self.ceiling.time_limit_s},
             "budget": budget,
         }
@@ -202,9 +204,15 @@ async def web_run(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[s
     caps = {name: positive_limit(kwargs, name, MCP_TOOL_WEB_RUN) for name in _CAPS if name in kwargs}
     budget = Budget(max_cost_usd=caps.get("max_cost_usd"), time_limit_s=caps.get("time_limit_s")) if caps else None
     prompt = str(kwargs["prompt"])
-    plan = await tools.router.plan(prompt, budget=budget)
-    if kwargs.get("dry_run"):
-        return {"dry_run": True, **_plan_payload(plan)}
+    with call_deadline(caps.get("time_limit_s")):  # the call's own time limit covers its planning too
+        plan = await tools.router.plan(prompt, budget=budget)
+        if kwargs.get("dry_run"):
+            return {"dry_run": True, **_plan_payload(plan)}
+        return await _ran(tools, plan, budget)
+
+
+async def _ran(tools: WebRouterTools, plan: Plan, budget: Budget | None) -> dict[str, Any]:
+    """``plan`` run, shaped as its method's own tool shapes it; a job still going after its wait, as a handle."""
     wait = {MCP_TOOL_RESEARCH: tools.research_wait, MCP_TOOL_BROWSE: tools.browse_wait}.get(plan.tool)
     waited = None if wait is None else wait_left(wait)
     started = _started(tools, plan.tool)

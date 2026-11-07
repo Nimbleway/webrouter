@@ -1,7 +1,7 @@
 """The MCP routing tools: ``web_run``, ``budget_start`` / ``budget_status``, the operator's ceiling, capabilities.
 
 Every method's ``auto`` runs over the fake members ``first``, ``second`` and
-``third`` from :mod:`tests.test_auto_seam`, all answering, so ``first`` is the
+``third`` from :mod:`tests.routing_helpers`, all answering, so ``first`` is the
 one that runs; prices are the test's own, by member name.
 """
 
@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 from tests.mcp.conftest import URL, Table, ok_on, outcome, routed
-from tests.test_auto_seam import MEMBERS
+from tests.routing_helpers import MEMBERS
 from web_router import RouteDecision, RouteRequest
 from web_router.constants_budget import SKIP_NO_TIME, SKIP_PRICE_UNKNOWN
 from web_router.constants_mcp import (
@@ -34,6 +34,10 @@ from web_router.mcp.tools import WebRouterTools
 from web_router.routing import Budget
 from web_router.routing.pool import current_pool
 from web_router.types import BrowserRequest
+
+ANY = object()
+"""Any router: the connection's budget has no owner, so it holds every router's calls."""
+
 
 # -- web_run -------------------------------------------------------------------
 
@@ -193,7 +197,7 @@ async def test_budget_start_is_capped_by_what_the_ceiling_has_left(members: list
     assert started["max_cost_usd"] == 0.1 and started["remaining_usd"] == pytest.approx(0.06)
     await ok_on(tools, "search", query="q", provider="first")
     failed, message = await outcome(tools, "search", query="q", provider="first")
-    assert failed and "left in the shared budget" in message, "the task allows it; the ceiling does not"
+    assert failed and "$0.02 left" in message, "the task allows it; the ceiling does not"
 
 
 async def test_the_task_clock_runs_from_budget_start_and_a_new_task_restarts_it(
@@ -227,6 +231,7 @@ def test_the_capabilities_routing_section() -> None:
         "url_policy": "public_only",
     }
     assert routing["ceiling"] == {"max_cost_usd": 2.0, "time_limit_s": 600.0}
+    assert "web_run's plans only" in routing["url_policy_note"], "the direct tools take the URLs they are given"
     assert routing["budget"]["remaining_usd"] == 2.0
 
 
@@ -254,9 +259,9 @@ def test_a_browser_is_charged_per_minute_of_its_lifetime_on_the_dearest_backend_
 ) -> None:
     priced.update(cheap=0.001, dear=0.01)
     budget = ConnectionBudget(Budget(max_cost_usd=0.05))
-    with budget.bound(), charged("open_browser", ["cheap", "dear"], BrowserRequest(timeout=120)):
+    with budget.bound(), charged("open_browser", ["cheap", "dear"], BrowserRequest(timeout=120), ANY):
         assert budget.status()["reserved_usd"] == pytest.approx(0.02)
-    unknown = charged("open_browser", ["cheap", "dear"], BrowserRequest(timeout=None))
+    unknown = charged("open_browser", ["cheap", "dear"], BrowserRequest(timeout=None), ANY)
     with budget.bound(), pytest.raises(BudgetExceededError) as refused, unknown:
         pass
     assert refused.value.skipped == {"open_browser:cheap": SKIP_PRICE_UNKNOWN}, "no lifetime, no price"
@@ -266,7 +271,7 @@ def test_a_browser_is_charged_per_minute_of_its_lifetime_on_the_dearest_backend_
 def test_a_free_browser_needs_no_lifetime(priced: Table) -> None:
     priced.update(local=0.0)
     budget = ConnectionBudget(Budget(max_cost_usd=0.05))
-    with budget.bound(), charged("open_browser", ["local"], BrowserRequest()):
+    with budget.bound(), charged("open_browser", ["local"], BrowserRequest(), ANY):
         pass
     assert budget.status()["spent_usd"] == 0.0
 

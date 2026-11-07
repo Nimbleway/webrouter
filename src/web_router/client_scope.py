@@ -16,7 +16,7 @@ from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.routing.contract import Budget
-from web_router.routing.pool import BudgetPool, BudgetStatus, bind, current_pool, unbind
+from web_router.routing.pool import BudgetPool, BudgetStatus, bind, unbind
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
@@ -29,11 +29,11 @@ _ENTRIES: ContextVar[tuple[tuple[_Scope, Token[tuple[BudgetPool, ...]]], ...]] =
 
 
 class _Scope:
-    """What both scopes share: the pool, made where the scope is, and entering and leaving it."""
+    """What both scopes share: the pool, and entering and leaving it."""
 
     def __init__(self, router: Any, budget: Budget) -> None:
         self.router = router
-        self.pool = BudgetPool(budget, parent=current_pool(router), owner=router)
+        self.pool = BudgetPool(budget, owner=router)
 
     def status(self) -> BudgetStatus:
         """What is spent, reserved and left, and the clock: see :class:`~web_router.routing.pool.BudgetStatus`."""

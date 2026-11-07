@@ -22,10 +22,10 @@ from web_router import (
     ResearchTimeoutError,
     WebRouter,
 )
-from web_router.constants_budget import SKIP_OVER_SHARED, SKIP_ROUTE_REFUSED
+from web_router.constants_budget import SKIP_OVER_COST, SKIP_ROUTE_REFUSED
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, call_route
-from web_router.routing.pool import BudgetPool, current_pool
+from web_router.routing.pool import BudgetPool, PoolChain, chain_in_force, current_pool
 
 SHARED = Budget(max_cost_usd=0.10)
 
@@ -55,10 +55,10 @@ def test_another_routers_calls_inside_the_block_neither_spend_from_it_nor_are_re
         response = other.search("q", provider="fake")
         with other.budget(Budget(max_cost_usd=1.0)) as theirs:
             other.search("q", provider="fake")
+            assert theirs.status().remaining_usd == 0.99, "a scope on another router does not nest in this one"
         with pytest.raises(BudgetExceededError):
             mine.search("q", provider="fake")
     assert response.decision is None, "the other router's call ran as it would outside any budget"
-    assert theirs.pool.parent is None, "a scope on another router does not nest in this one"
     assert (shared.status().spent_usd, theirs.status().spent_usd) == (0.0, 0.01)
 
 
@@ -67,7 +67,7 @@ def test_calls_through_the_scope_spend_from_it_on_every_tool(chain: Chain, price
     with WebRouter().budget(SHARED) as shared:
         _scoped(chain, shared)
         _scoped(chain, shared)
-        with pytest.raises(BudgetExceededError, match=r"est\. \$0\.04 > \$0\.02 left in the shared budget"):
+        with pytest.raises(BudgetExceededError, match=r"est\. \$0\.04 > \$0\.02 left;"):
             _scoped(chain, shared)
     assert chain.called == ["first", "first"]
     assert shared.status().spent_usd == 0.08
@@ -83,7 +83,7 @@ def test_a_named_backend_in_a_scope_reserves_and_settles_its_estimate_and_one_th
             _scoped_named(chain, shared, "second")
     assert chain.called == ["second"]
     assert response.decision.estimated_cost_usd == 0.06
-    left = SKIP_OVER_SHARED.format(cost="$0.06", left="$0.04")
+    left = SKIP_OVER_COST.format(cost="$0.06", left="$0.04")
     assert raised.value.skipped == {f"{chain.tool.name}:second": left}
     assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.06, 0.0)
 
@@ -141,7 +141,7 @@ def test_a_call_whose_own_budget_is_looser_is_held_to_what_is_left_in_the_scope(
         _scoped(chain, shared)
         response = _scoped(chain, shared, budget=Budget(max_cost_usd=1.0))
     assert chain.called == ["first", "second"]
-    error = "est. $0.08 > $0.02 left in the shared budget"
+    error = SKIP_OVER_COST.format(cost="$0.08", left="$0.02")
     assert response.decision.hops == [DecisionHop(id="search:first", error=error)]
     assert shared.status().spent_usd == 0.085
 
@@ -225,7 +225,7 @@ def test_a_scope_inside_another_spends_from_both(chain: Chain, priced: Table) ->
     router = WebRouter()
     with router.budget(SHARED) as outer, router.budget(Budget(max_cost_usd=1.0)) as inner:
         _scoped(chain, inner)
-        with pytest.raises(BudgetExceededError, match=r"\$0\.04 left in the shared budget"):
+        with pytest.raises(BudgetExceededError, match=r"\$0\.04 left;"):
             _scoped(chain, inner)
     assert (outer.status().spent_usd, inner.status().spent_usd) == (0.06, 0.06)
     assert (outer.status().reserved_usd, inner.status().reserved_usd) == (0.0, 0.0), "the refusal released the inner"
@@ -234,7 +234,9 @@ def test_a_scope_inside_another_spends_from_both(chain: Chain, priced: Table) ->
 def test_a_nested_scopes_status_counts_what_its_parent_has_left() -> None:
     router = WebRouter()
     with router.budget(SHARED) as outer, router.budget(Budget(max_cost_usd=1.0)) as inner:
-        assert inner.pool.reserve(0.06) is None
+        chain = chain_in_force(router)
+        assert chain is not None
+        assert chain.reserve(0.06) is None
         assert (inner.status().remaining_usd, outer.status().remaining_usd) == (0.04, 0.04)
     with router.budget(Budget()) as uncapped, router.budget(Budget(max_cost_usd=1.0)) as capped:
         assert (uncapped.status().remaining_usd, capped.status().remaining_usd) == (None, 1.0)
@@ -247,7 +249,7 @@ async def test_an_async_scope_spends_as_a_sync_one_does(chain: Chain, priced: Ta
         await shared.answer("q", provider=chain.auto())
         response = await shared.answer("q", provider=chain.auto())
     assert chain.called == ["first", "second"]
-    error = "est. $0.07 > $0.03 left in the shared budget"
+    error = SKIP_OVER_COST.format(cost="$0.07", left="$0.03")
     assert response.decision.hops == [DecisionHop(id="answer:first", error=error)]
     assert shared.status().spent_usd == 0.09
     assert current_pool() is None
@@ -255,8 +257,34 @@ async def test_an_async_scope_spends_as_a_sync_one_does(chain: Chain, priced: Ta
 
 def test_a_pool_with_nothing_set_caps_nothing_and_reports_no_remainder() -> None:
     pool = BudgetPool(Budget())
-    assert pool.reserve(5.0) is None
-    pool.settle(5.0)
+    chain = PoolChain((pool,))
+    assert chain.reserve(5.0) is None
+    chain.settle(5.0)
     status = pool.status()
     assert (status.spent_usd, status.remaining_usd, status.time_left_s) == (5.0, None, None)
-    assert pool.limit(None) == Budget()
+    assert chain.limit(None) == Budget()
+
+
+def test_a_calls_cost_cap_is_what_the_shared_budget_has_left_not_its_whole_cap() -> None:
+    pool = BudgetPool(Budget(max_cost_usd=1.00))
+    chain = PoolChain((pool,))
+    assert chain.reserve(0.95) is None
+    chain.settle(0.95)
+    assert chain.limit(None).max_cost_usd == pytest.approx(0.05)
+    assert chain.limit(Budget(max_cost_usd=0.01)).max_cost_usd == 0.01, "a tighter cap of the call's own still holds"
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+def test_a_scope_made_before_an_outer_block_is_entered_still_spends_within_the_outer_cap(
+    chain: Chain, priced: Table
+) -> None:
+    priced.update(first=(1.0, None))
+    router = WebRouter()
+    inner = router.budget(Budget(max_cost_usd=5.0))
+    with router.budget(Budget(max_cost_usd=0.01)) as outer:
+        with inner, pytest.raises(BudgetExceededError):
+            _scoped(chain, inner)
+        with pytest.raises(BudgetExceededError):
+            _scoped(chain, inner)  # called through, not entered
+    assert chain.called == []
+    assert (outer.status().spent_usd, inner.status().spent_usd) == (0.0, 0.0)

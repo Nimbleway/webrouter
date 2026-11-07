@@ -21,11 +21,10 @@ an effort that came from elsewhere, such as a router's ``params``.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast, get_args
 
-from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
 from web_router.constants_params import (
     DEFAULT_EFFORT_NAME,
     FLOOR_TOLERANCE,
@@ -34,20 +33,26 @@ from web_router.constants_params import (
     MSG_EFFORT_CHOSEN,
     MSG_EFFORT_NO_BUDGET,
     MSG_EFFORT_NONE_FITS,
+    MSG_EFFORT_NONE_FITS_EVERY,
+    MSG_EFFORT_PRICED,
     MSG_EFFORT_UNMEASURED,
-    MSG_MISFIT_COST,
-    MSG_MISFIT_STRICT,
-    MSG_MISFIT_TIME,
-    MSG_MISFIT_UNKNOWN_PRICE,
     PARAMS_SOURCE_BUDGET,
     PARAMS_SOURCE_CALLER,
+    PRICED_QUERY,
 )
 from web_router.routing import pricing
-from web_router.routing.contract import Budget, ToolName, candidate_id
-from web_router.routing.pricing import measured_efforts, misfit, mode_cost, mode_p90, research_mode
-from web_router.types import Provider, ResearchEffort, provider_name
+from web_router.routing.attempts import Attempt
+from web_router.routing.contract import Budget, candidate_id
+from web_router.routing.pricing import (
+    RESEARCH,
+    fit_reason,
+    measured_efforts,
+    mode_cost,
+    mode_p90,
+    research_mode,
+)
+from web_router.types import Provider, ResearchEffort, ResearchRequest, provider_name
 
-RESEARCH: ToolName = "research"
 EFFORTS: tuple[str, ...] = get_args(ResearchEffort)
 """Research efforts, lowest first: the last tie-break prefers the lower."""
 
@@ -71,13 +76,15 @@ class EffortChoice:
     unmeasured: bool = False
     """The effort's accuracy is not measured: the table has no row for it."""
 
+    def fields(self) -> dict[str, Any]:
+        """The :class:`~web_router.DecisionRecord` fields this choice sets on a call: its params, their source, why."""
+        params = None if self.effort is None else {"effort": self.effort}
+        return {"params": params, "params_source": self.source, "params_reason": self.reason}
+
     def record(self, provider: str | Provider) -> dict[str, Any]:
-        """The :class:`~web_router.DecisionRecord` fields this choice fills: params, their source, unmeasured."""
-        return {
-            "params": None if self.effort is None else {"effort": self.effort},
-            "params_source": self.source,
-            "unmeasured": [candidate_id(RESEARCH, provider_name(provider))] if self.unmeasured else None,
-        }
+        """:meth:`fields`, and ``unmeasured`` naming ``provider`` when the effort's accuracy is not measured."""
+        unmeasured = [candidate_id(RESEARCH, provider_name(provider))] if self.unmeasured else None
+        return {**self.fields(), "unmeasured": unmeasured}
 
 
 def noise_floor() -> float:
@@ -93,22 +100,9 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
     within it, and an unknown p90 fits unless the budget is ``strict``.
     """
     name = provider_name(provider)
-    cap, limit = budget.max_cost_usd, budget.time_limit_s
-    cost = None if cap is None else mode_cost(name, RESEARCH, effort)
-    p90 = None if limit is None else mode_p90(name, RESEARCH, effort)
-    code = misfit(cost, p90, cap, limit, budget.strict)
-    if code is None:
-        return None
-    shown_cap = limit if code == OVER_TIME else cap  # the time wording names the time limit as its cap
-    return _MISFITS[code].format(provider=name, effort=effort or DEFAULT_EFFORT_NAME, cost=cost, cap=shown_cap, p90=p90)
-
-
-_MISFITS = {
-    UNKNOWN_PRICE: MSG_MISFIT_UNKNOWN_PRICE,
-    OVER_COST: MSG_MISFIT_COST,
-    UNKNOWN_P90: MSG_MISFIT_STRICT,
-    OVER_TIME: MSG_MISFIT_TIME,
-}
+    request = ResearchRequest(query=PRICED_QUERY, effort=cast(ResearchEffort | None, effort))
+    attempt = Attempt(tool="research", provider=name, request=request)
+    return fit_reason(attempt, budget, MSG_EFFORT_PRICED.format(provider=name, effort=effort or DEFAULT_EFFORT_NAME))
 
 
 def _is_measured(provider: str, effort: str | None) -> bool:
@@ -177,3 +171,27 @@ def map_effort(provider: str | Provider, budget: Budget | None, effort: Research
     if not fitting:
         return _default(name, budget, MSG_EFFORT_NONE_FITS.format(provider=name))
     return _chosen(name, fitting)
+
+
+def shared_effort(providers: Sequence[str], budget: Budget | None) -> EffortChoice | None:
+    """The one research effort a call sends, whichever of ``providers`` runs it; ``None`` sends none.
+
+    The request is shared by every backend the call may try, so the effort is
+    chosen once, before candidates are priced or a router is asked: the first
+    backend's :func:`map_effort` pick, in ``providers``' order, that fits the
+    budget on every backend that can run at all -- at its own pick or its
+    default. With none that fits all of them, each runs at its own default, and
+    the choice, with no effort, says so.
+    """
+    if budget is None or (budget.max_cost_usd is None and budget.time_limit_s is None):
+        return None
+    picks = {provider: map_effort(provider, budget) for provider in providers}
+    runnable = [provider for provider, pick in picks.items() if effort_misfit(provider, pick.effort, budget) is None]
+    for pick in picks.values():
+        if pick.effort is not None and all(effort_misfit(p, pick.effort, budget) is None for p in runnable):
+            return pick
+    efforts = ", ".join(dict.fromkeys(pick.effort for pick in picks.values() if pick.effort is not None))
+    if not efforts:
+        return None
+    reason = MSG_EFFORT_NONE_FITS_EVERY.format(efforts=efforts, providers=", ".join(runnable or picks))
+    return EffortChoice(effort=None, source=None, reason=reason)

@@ -246,8 +246,8 @@ options and the backend order -- and the server runs it. The result is the
 method's own tool output (`search`'s, `extract`'s, ...) with `tool`, the
 method that ran, a `handle` for `fetch_raw`, and the `decision` record.
 `dry_run=true` returns the plan alone and calls nothing. `max_cost_usd` and
-`time_limit_s` cap that one call, within the budget below; each must be a
-positive, finite number. A job still running when that cap's time runs out
+`time_limit_s` cap that one call, planning included, within the budget
+below; each must be a positive, finite number. A job still running when that cap's time runs out
 comes back as a handle too. When the router
 picks `research` or `browse`, `web_run` waits as those tools do, 25 seconds,
 and then hands back a handle for `research_status` or `browse_status` with the
@@ -265,8 +265,13 @@ The router is set by the operator, once, when the server starts:
 
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
 loopback, private or cloud-metadata host is never fetched or passed to a
-backend as a URL. It stays in the prompt text, though, and the prompt itself
-goes to the backend that serves it, as its search query or browse task, as it
+backend as a URL. It holds for `web_run`'s plans only. The direct `extract`
+and `browse` tools send the URLs the agent passes as they are, and the browser
+tools have their own guard ([Where the browser may go](#where-the-browser-may-go)),
+which checks DNS answers and redirects but refuses only cloud metadata hosts
+and the browser's debugging port: other loopback and private hosts are
+admitted there. A refused URL stays in the prompt text, though, and the prompt
+itself goes to the backend that serves it, as its search query or browse task, as it
 would through `search`. The built-in router runs in the server's process and
 sends nothing out; an operator's router runs there too, but it is your code,
 and may send the prompt on, to a model's server for instance.
@@ -326,7 +331,8 @@ starting rather than leaving the connection without the ceiling you meant. The c
 all of it under `routing`: the router (`rules`, your `<module>:<attribute>`, or
 `off`), where it runs (`router_runs`: `in_process` for the built-in router or
 none, `operator` with a `router_note` for yours), a `prompt_note` saying the
-prompt goes to the backend, the `url_policy`, the ceiling, and the budget in
+prompt goes to the backend, the `url_policy` with a `url_policy_note` saying it
+holds for `web_run` alone, the ceiling, and the budget in
 force (`null` with none).
 
 ### A browse result never carries its session

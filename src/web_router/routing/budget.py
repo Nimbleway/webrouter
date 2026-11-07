@@ -35,34 +35,24 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._deadline import Deadline, call_deadline, current_deadline, job_deadline
 from web_router.routing.attempts import CallRoute, admitted, call_route, current_route
-from web_router.routing.contract import Budget, ToolName
+from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.ledger import Ledger
-from web_router.routing.pool import current_pool
+from web_router.routing.pool import chain_in_force
 from web_router.routing.record import prompt_of, stamp
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
 _BackendT = TypeVar("_BackendT")
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
-_JobT = TypeVar("_JobT", covariant=True)
-
-
-class _Submits(Protocol[_JobT]):
-    def submit(self, request: Any) -> _JobT: ...
-
-
-class _ASubmits(Protocol[_JobT]):
-    async def asubmit(self, request: Any) -> _JobT: ...
 
 
 @dataclass(frozen=True)
@@ -101,7 +91,7 @@ def budget_scope(
     Raises:
         BudgetExceededError: when the budget skips every candidate, before any starts.
     """
-    pool = None if router is None else current_pool(router)
+    pool = None if router is None else chain_in_force(router)
     if pool is not None:
         budget = pool.limit(budget)
     if budget is None:
@@ -125,11 +115,11 @@ def _held(
     outside = current_deadline()
     with call_deadline(ledger.budget.time_limit_s), job_deadline(expires), call_route(_hooked(ledger)):
         name = getattr(backend, "name", PROVIDER_AUTO)
-        _refuse_late(ledger, f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", name, outside)
+        _refuse_late(ledger, candidate_id(tool, name), name, outside)
         if name != PROVIDER_AUTO and not admitted(tool, name, request):
             # Through the same hook auto's members pass, so a route in force can refuse it too;
             # the ledger's admit, last in that hook, reserves it in a shared budget.
-            ledger.skipped.setdefault(f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", SKIP_ROUTE_REFUSED)
+            ledger.skipped.setdefault(candidate_id(tool, name), SKIP_ROUTE_REFUSED)
             raise ledger.refusal()
         try:
             yield BudgetedCall(backend, ledger)
@@ -181,20 +171,3 @@ def _hooked(ledger: Ledger) -> CallRoute:
         ledger.failed(tool, provider, exc)
 
     return replace(route, before_attempt=admit, on_failure=note)
-
-
-def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedRequest, router: object) -> _JobT:
-    """``backend``'s job for ``request``, its start held to ``router``'s shared budget in force, if any (:mod:`.pool`).
-
-    A job's start is what bills, so inside ``wr.budget(...)`` each attempt to
-    start one is reserved like any other; with no shared budget it starts as
-    it would without one.
-    """
-    with budget_scope(None, tool, backend, request, router):
-        return backend.submit(request)
-
-
-async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: NormalizedRequest, router: object) -> _JobT:
-    """As :func:`submitted`, awaited."""
-    with budget_scope(None, tool, backend, request, router):
-        return await backend.asubmit(request)

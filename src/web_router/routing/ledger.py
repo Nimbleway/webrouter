@@ -42,8 +42,8 @@ from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
-from web_router.routing.contract import Budget
-from web_router.routing.pool import BudgetPool
+from web_router.routing.contract import Budget, candidate_id
+from web_router.routing.pool import PoolChain
 from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
 from web_router.routing.record import error_code
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
@@ -69,7 +69,7 @@ class Ledger:
     """What one call has tried, skipped and spent under its :class:`~web_router.Budget`."""
 
     budget: Budget
-    pool: BudgetPool | None = None
+    pool: PoolChain | None = None
     """The shared budget the call also spends from, if any; :attr:`spent` is what it reserved there."""
     spent: float = 0.0
     tried: list[_Tried] = field(default_factory=list)
@@ -85,7 +85,7 @@ class Ledger:
 
     def admit(self, attempt: Attempt) -> bool:
         """Whether ``attempt`` fits what is left; if it does, charge it, and if not, record why."""
-        name = f"{attempt.tool}{CANDIDATE_ID_SEPARATOR}{attempt.provider}"
+        name = candidate_id(attempt.tool, attempt.provider)
         cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
         if (cost is None or p90 is None) and name not in self.unmeasured:
             self.unmeasured.append(name)
@@ -127,7 +127,7 @@ class Ledger:
 
     def failed(self, tool: str, provider: str, exc: BaseException) -> None:
         """Note that ``provider`` failed and the call moved on, by :func:`~.record.error_code`."""
-        name = f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"
+        name = candidate_id(tool, provider)
         attempt = self._open if self._open is not None and self.tried[self._open].id == name else None
         self.passed.append((attempt, name, error_code(exc)))
         self._open = None if attempt is not None else self._open
@@ -140,9 +140,10 @@ class Ledger:
 
     def _answered(self, provider: str | None) -> int | None:
         """The attempt that answered: the open one when ``provider`` names it, else the last by that name or tried."""
-        if self._open is not None and self.tried[self._open].id.partition(CANDIDATE_ID_SEPARATOR)[2] == provider:
+        names = [tried.id.partition(CANDIDATE_ID_SEPARATOR)[2] for tried in self.tried]
+        if self._open is not None and names[self._open] == provider:
             return self._open
-        named = [i for i, tried in enumerate(self.tried) if tried.id.partition(CANDIDATE_ID_SEPARATOR)[2] == provider]
+        named = [i for i, name in enumerate(names) if name == provider]
         return named[-1] if named else (len(self.tried) - 1 if self.tried else None)
 
     def _hops(self, answered: int | None) -> list[DecisionHop] | None:
