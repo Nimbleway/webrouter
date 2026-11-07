@@ -150,10 +150,10 @@ def test_a_router_failure_plans_the_static_order() -> None:
 
 @pytest.mark.usefixtures("called")
 def test_a_budget_maps_research_effort_into_the_plan(monkeypatch: pytest.MonkeyPatch) -> None:
-    from web_router.routing import decide
+    from web_router.routing import params
     from web_router.routing.params import EffortChoice
 
-    monkeypatch.setattr(decide, "map_effort", lambda *_: EffortChoice(effort="low", source="budget", reason="r"))
+    monkeypatch.setattr(params, "map_effort", lambda *_: EffortChoice(effort="low", source="budget", reason="r"))
     plan = _wr(router=_chooser("research")).plan(PROMPT, budget=Budget(time_limit_s=600.0))
     assert dict(plan.params) == {"query": PROMPT, "effort": "low"}
     assert plan.decision.params_source == "budget"

@@ -37,11 +37,10 @@ from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_budget import SKIP_ROUTE_REFUSED
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import WebRouterError
 from web_router.providers._deadline import call_deadline
 from web_router.routing.attempts import CallRoute, admitted, call_route, current_route
-from web_router.routing.contract import Budget, ToolName
+from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.ledger import Ledger
 from web_router.routing.record import prompt_of, stamp
 from web_router.types import NormalizedRequest
@@ -84,7 +83,7 @@ def budget_scope(
         name = getattr(backend, "name", PROVIDER_AUTO)
         if name != PROVIDER_AUTO and not admitted(tool, name, request):
             # Through the same hook auto's members pass, so a route in force can refuse it too.
-            ledger.skipped.setdefault(f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", SKIP_ROUTE_REFUSED)
+            ledger.skipped.setdefault(candidate_id(tool, name), SKIP_ROUTE_REFUSED)
             raise ledger.refusal()
         try:
             yield BudgetedCall(backend, ledger)

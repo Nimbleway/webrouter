@@ -38,7 +38,12 @@ def test_the_table_measures_what_the_cases_below_assume() -> None:
 def test_no_cap_changes_nothing(provider: str, budget: Budget | None) -> None:
     choice = map_effort(provider, budget)
     assert (choice.effort, choice.source, choice.misfit) == (None, None, None)
-    assert choice.record(provider) == {"params": None, "params_source": None, "unmeasured": None}
+    assert choice.record(provider) == {
+        "params": None,
+        "params_source": None,
+        "params_reason": choice.reason,
+        "unmeasured": None,
+    }
 
 
 @pytest.mark.parametrize(

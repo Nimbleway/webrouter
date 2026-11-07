@@ -3,8 +3,9 @@
 Experimental. The one path a routed call and :meth:`~web_router.WebRouter.plan`
 share: :func:`static_order` reads the candidate builder's order,
 :func:`~web_router.routing.merge.merge` merges the router's decision into it,
-and :func:`decided` adds the budget's research effort and writes the decision
-record, stamped with a fresh ``decision_id``. Nothing here sends or waits.
+and :func:`decided` keeps the research effort the candidates were priced at,
+unless the router set one, and writes the decision record, stamped with a fresh
+``decision_id``. Nothing here sends or waits.
 """
 
 from __future__ import annotations
@@ -14,13 +15,10 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 from web_router._urls import shown
-from web_router.constants_params import MSG_EFFORT_NONE_FITS_EVERY, PARAMS_SOURCE_BUDGET
 from web_router.routing.candidates import CandidateSet
-from web_router.routing.contract import Budget, RouteDecision, RouteRequest, ToolName
+from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
-from web_router.routing.merge_params import misfit
-from web_router.routing.params import EffortChoice, map_effort
 from web_router.routing.record import stamp
 from web_router.types_decision import DecisionRecord
 
@@ -43,35 +41,6 @@ def static_order(found: CandidateSet) -> dict[ToolName, list[str]]:
     return order
 
 
-def budget_effort(
-    tool: ToolName,
-    providers: tuple[str, ...],
-    params: dict[str, Any],
-    caller_set: Collection[str],
-    budget: Budget | None,
-) -> EffortChoice | None:
-    """Set the research ``effort`` the budget maps, unless the router or the caller set one; the choice, and why.
-
-    The request is shared by every backend in the order, so the effort must fit the budget on all of them,
-    by the rule the merge holds a router's effort to: the first backend's pick that does, then the next's;
-    when none fits every backend, none is set, each runs at its own default, and the choice says so.
-    ``None`` when the mapping does not apply.
-    """
-    if tool != "research" or not providers or "effort" in params or "effort" in caller_set:
-        return None
-    choices = [map_effort(provider, budget) for provider in providers]
-    for choice in choices:
-        effort = choice.effort
-        if effort is not None and budget is not None and misfit("effort", effort, providers, budget) is None:
-            params["effort"] = effort
-            return choice
-    if any(choice.effort is not None for choice in choices):
-        efforts = ", ".join(dict.fromkeys(c.effort for c in choices if c.effort is not None))
-        reason = MSG_EFFORT_NONE_FITS_EVERY.format(efforts=efforts, providers=", ".join(providers))
-        return EffortChoice(effort=None, source=None, reason=reason)
-    return choices[0]
-
-
 def decided(
     req: RouteRequest,
     found: CandidateSet,
@@ -90,14 +59,23 @@ def decided(
     """
     decision: object = RouteDecision() if outcome is None else outcome.decision
     failure = None if outcome is None else cast("FallbackReason | None", outcome.failure)
-    merged = merge(req, decision, static_order(found), failure=failure, caller_set=caller_set, url_check=url_check)
+    merged = merge(
+        req,
+        decision,
+        static_order(found),
+        failure=failure,
+        caller_set=caller_set,
+        url_check=url_check,
+        requests=found.requests,
+    )
     params = dict(merged.params)
     fields = merged.record()
-    choice = budget_effort(merged.tool, merged.providers, params, caller_set, req.budget)
-    if choice is not None:
-        fields["params_reason"] = choice.reason
-        if choice.effort is not None:
-            fields.update(params=shown(params), params_source=PARAMS_SOURCE_BUDGET)
+    effort = found.effort if merged.tool == "research" and "effort" not in params else None
+    if effort is not None:
+        # The effort the candidates were priced at: unless a router changed it, it is the one that runs.
+        if effort.effort is not None:
+            params["effort"] = effort.effort
+        fields.update(effort.fields(), params=shown(params) or None)
     if outcome is None:
         fields["reason"] = None  # no router: the static order is no router's empty answer
     out = DecisionRecord(
