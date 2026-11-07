@@ -261,7 +261,12 @@ The router is set by the operator, once, when the server starts:
   order, which is `search`.
 
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
-loopback, private or cloud-metadata host is never sent to a backend. The
+loopback, private or cloud-metadata host is never sent to a backend. It holds
+for `web_run`'s plans only. The direct `extract` and `browse` tools send the
+URLs the agent passes as they are, and the browser tools have their own guard
+([Where the browser may go](#where-the-browser-may-go)), which checks DNS
+answers and redirects but refuses only cloud metadata hosts and the browser's
+debugging port: other loopback and private hosts are admitted there. The
 prompt itself goes to the backend that serves it, as its query or task, as it
 would through `search`. The built-in router runs in the server's process and
 sends nothing out; an operator's router runs there too, but it is your code,
@@ -308,7 +313,8 @@ starting rather than leaving the connection without the ceiling you meant. The c
 all of it under `routing`: the router (`rules`, your `<module>:<attribute>`, or
 `off`), where it runs (`router_runs`: `in_process` for the built-in router or
 none, `operator` with a `router_note` for yours), a `prompt_note` saying the
-prompt goes to the backend, the `url_policy`, the ceiling, and the budget in
+prompt goes to the backend, the `url_policy` with a `url_policy_note` saying it
+holds for `web_run` alone, the ceiling, and the budget in
 force (`null` with none).
 
 ### A browse result never carries its session

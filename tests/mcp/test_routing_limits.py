@@ -46,6 +46,10 @@ from web_router.routing.pool import current_pool
 from web_router.routing.pricing import attempt_cost
 from web_router.types import BrowserRequest, ResearchProgress, ResearchRequest
 
+ANY = object()
+"""Any router: the connection's budget has no owner, so it holds every router's calls."""
+
+
 # -- startup and budget_start refuse what is not a limit ---------------------------
 
 
@@ -122,7 +126,7 @@ def test_a_browser_open_prices_only_the_members_that_can_serve_it(priced: Table)
 def test_a_charged_call_runs_on_the_shared_clock(priced: Table) -> None:
     priced.update(cheap=0.0)
     budget = ConnectionBudget(Budget(time_limit_s=30))
-    with budget.bound(), charged("run_template", ["cheap"], BrowserRequest()):
+    with budget.bound(), charged("run_template", ["cheap"], BrowserRequest(), ANY):
         deadline, pool = current_deadline(), current_pool()
         assert deadline is not None and pool is not None and deadline.at == pool.expires_at()
 
@@ -245,3 +249,44 @@ async def test_web_run_refuses_a_cap_that_is_not_a_finite_positive_number(member
 def test_a_ceiling_that_is_not_finite_stops_the_server(value: str) -> None:
     with pytest.raises(ConfigurationError):
         McpRouting.from_environ({ENV_MCP_MAX_COST_USD: value})
+
+
+async def route_slowly(req: RouteRequest) -> RouteDecision:
+    """An operator's router that takes longer than the call's own time limit to answer."""
+    await asyncio.sleep(0.3)
+    return RouteDecision(tools=["search"])
+
+
+route_slowly.timeout_s = 5.0  # type: ignore[attr-defined]
+
+
+async def test_web_runs_time_limit_covers_its_planning(members: list[str]) -> None:
+    tools = routed(**{ENV_MCP_ROUTER: f"{__name__}:route_slowly"})
+    failed, message = await outcome(tools, MCP_TOOL_WEB_RUN, prompt="q", time_limit_s=0.2)
+    assert failed and "deadline" in message.lower() and members == [], "the time went on planning: none is left"
+
+
+@pytest.fixture
+def nimble_sent() -> Iterator[list[ResearchRequest]]:
+    """A fake research backend registered as ``nimble``, so the real price list and effort table apply to it."""
+    sent: list[ResearchRequest] = []
+
+    class SentNimble(FakeResearchProvider):
+        name = "nimble"
+
+        def _start(self, request: ResearchRequest) -> ResearchProgress:
+            sent.append(request)
+            return super()._start(request)
+
+    register_research_provider("nimble", SentNimble)
+    yield sent
+    unregister_research_provider("nimble")
+
+
+async def test_the_research_tool_under_a_ceiling_runs_at_the_effort_the_budget_maps(
+    nimble_sent: list[ResearchRequest],
+) -> None:
+    routing = McpRouting(ceiling=Budget(max_cost_usd=0.10))
+    tools = WebRouterTools(routing.build(provider_config={"auto": {"chain": ["nimble"]}}), routing=routing)
+    await ok_on(tools, "research", query="q")
+    assert [request.effort for request in nimble_sent] == ["low"], "nimble's default has no price: it would refuse"

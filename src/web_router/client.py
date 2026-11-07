@@ -90,8 +90,7 @@ from web_router.registry import (
 )
 from web_router.registry_answer import every_provider_name
 from web_router.routing import Budget, RouterLike, ToolName
-from web_router.routing.budget import asubmitted, submitted
-from web_router.routing.routed import RouterSetup
+from web_router.routing.routed import RouterSetup, asubmitted, submitted
 from web_router.routing.url_policy import UrlPolicy
 from web_router.types import (
     BrowseResponse,

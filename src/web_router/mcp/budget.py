@@ -29,6 +29,7 @@ from __future__ import annotations
 import math
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager, contextmanager, nullcontext
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
 
 from web_router.client import AsyncWebRouter
@@ -39,11 +40,10 @@ from web_router.constants_mcp import (
     MCP_PRICE_RUN_TEMPLATE,
     MCP_TOOL_BUDGET_START,
 )
-from web_router.providers._deadline import job_deadline
 from web_router.providers.auto_browser import AutoBrowserProvider
 from web_router.routing.attempts import Attempt
+from web_router.routing.budget import budget_scope
 from web_router.routing.contract import Budget, ToolName
-from web_router.routing.ledger import Ledger
 from web_router.routing.pool import BudgetPool, bind, current_pool, unbind
 from web_router.routing.pricing import attempt_cost
 from web_router.types import BrowserRequest, NormalizedRequest, TemplateRequest
@@ -103,30 +103,24 @@ class ConnectionBudget:
 
 
 @contextmanager
-def charged(method: str, providers: Sequence[str], request: NormalizedRequest) -> Iterator[None]:
-    """Reserve one call of ``method`` that no ``auto`` hooks, in the budget in force; settled when the block ends.
+def charged(method: str, providers: Sequence[str], request: NormalizedRequest, router: object) -> Iterator[None]:
+    """Hold one call of ``method`` that no ``auto`` hooks to the budget in force, as a call on its dearest backend.
 
-    ``providers`` are the backends that may serve it; the dearest is reserved, and
-    one whose price is unknown is unknown for the call.
+    ``providers`` are the backends that may serve it; the dearest is the one
+    held, and one whose price is unknown is unknown for the call. The block runs
+    in :func:`~web_router.routing.budget.budget_scope` on that backend, so it is
+    admitted, reserved, timed and settled as any named backend's call.
 
     Raises:
         BudgetExceededError: when the call does not fit what is left, or its price is unknown under a cost cap.
     """
-    pool = current_pool()
-    if pool is None:
+    if current_pool(router) is None:
         yield
         return
-    attempts = [Attempt(tool=cast("ToolName", method), provider=name, request=request) for name in providers]
-    costs = [attempt_cost(attempt) for attempt in attempts]
+    costs = [attempt_cost(Attempt(tool=cast("ToolName", method), provider=name, request=request)) for name in providers]
     dearest = costs.index(None) if None in costs else max(range(len(costs)), key=lambda at: costs[at] or 0.0)
-    ledger = Ledger(pool.limit(None), pool)
-    if not ledger.admit(attempts[dearest]):
-        raise ledger.refusal()
-    try:
-        with job_deadline(pool.expires_at()):  # the call itself runs on the shared clock
-            yield
-    finally:
-        pool.settle(ledger.spent)
+    with budget_scope(None, cast("ToolName", method), SimpleNamespace(name=providers[dearest]), request, router):
+        yield
 
 
 def wait_left(wait: float) -> float:
@@ -162,7 +156,7 @@ def template_charged(router: AsyncWebRouter, kwargs: Mapping[str, Any]) -> Abstr
     if current_pool() is None:
         return nullcontext()
     backend = router.get_template_provider(kwargs[MCP_ARG_PROVIDER])
-    return charged(MCP_PRICE_RUN_TEMPLATE, [backend.name], TemplateRequest(template=str(kwargs["template"])))
+    return charged(MCP_PRICE_RUN_TEMPLATE, [backend.name], TemplateRequest(template=str(kwargs["template"])), router)
 
 
 def browser_charged(router: AsyncWebRouter, kwargs: Mapping[str, Any]) -> AbstractContextManager[None]:
@@ -174,4 +168,4 @@ def browser_charged(router: AsyncWebRouter, kwargs: Mapping[str, Any]) -> Abstra
     # Only the members that can serve this request may open it, so only theirs are priced.
     eligible = backend._eligible(request) if isinstance(backend, AutoBrowserProvider) else ()
     members = [name for _, name in eligible] or [backend.name]
-    return charged(MCP_PRICE_OPEN_BROWSER, members, request)
+    return charged(MCP_PRICE_OPEN_BROWSER, members, request, router)

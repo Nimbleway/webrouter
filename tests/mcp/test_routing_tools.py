@@ -35,6 +35,10 @@ from web_router.routing import Budget
 from web_router.routing.pool import current_pool
 from web_router.types import BrowserRequest
 
+ANY = object()
+"""Any router: the connection's budget has no owner, so it holds every router's calls."""
+
+
 # -- web_run -------------------------------------------------------------------
 
 
@@ -227,6 +231,7 @@ def test_the_capabilities_routing_section() -> None:
         "url_policy": "public_only",
     }
     assert routing["ceiling"] == {"max_cost_usd": 2.0, "time_limit_s": 600.0}
+    assert "web_run's plans only" in routing["url_policy_note"], "the direct tools take the URLs they are given"
     assert routing["budget"]["remaining_usd"] == 2.0
 
 
@@ -254,9 +259,9 @@ def test_a_browser_is_charged_per_minute_of_its_lifetime_on_the_dearest_backend_
 ) -> None:
     priced.update(cheap=0.001, dear=0.01)
     budget = ConnectionBudget(Budget(max_cost_usd=0.05))
-    with budget.bound(), charged("open_browser", ["cheap", "dear"], BrowserRequest(timeout=120)):
+    with budget.bound(), charged("open_browser", ["cheap", "dear"], BrowserRequest(timeout=120), ANY):
         assert budget.status()["reserved_usd"] == pytest.approx(0.02)
-    unknown = charged("open_browser", ["cheap", "dear"], BrowserRequest(timeout=None))
+    unknown = charged("open_browser", ["cheap", "dear"], BrowserRequest(timeout=None), ANY)
     with budget.bound(), pytest.raises(BudgetExceededError) as refused, unknown:
         pass
     assert refused.value.skipped == {"open_browser:cheap": SKIP_PRICE_UNKNOWN}, "no lifetime, no price"
@@ -266,7 +271,7 @@ def test_a_browser_is_charged_per_minute_of_its_lifetime_on_the_dearest_backend_
 def test_a_free_browser_needs_no_lifetime(priced: Table) -> None:
     priced.update(local=0.0)
     budget = ConnectionBudget(Budget(max_cost_usd=0.05))
-    with budget.bound(), charged("open_browser", ["local"], BrowserRequest()):
+    with budget.bound(), charged("open_browser", ["local"], BrowserRequest(), ANY):
         pass
     assert budget.status()["spent_usd"] == 0.0
 
