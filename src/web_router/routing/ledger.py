@@ -30,11 +30,10 @@ from web_router.constants_budget import (
     UNKNOWN_P90,
     UNKNOWN_PRICE,
 )
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
-from web_router.routing.contract import Budget
+from web_router.routing.contract import Budget, candidate_id
 from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
 from web_router.types import DecisionAttempt, DecisionHop, DecisionRecord
 
@@ -66,7 +65,7 @@ class Ledger:
 
     def admit(self, attempt: Attempt) -> bool:
         """Whether ``attempt`` fits what is left; if it does, charge it, and if not, record why."""
-        name = f"{attempt.tool}{CANDIDATE_ID_SEPARATOR}{attempt.provider}"
+        name = candidate_id(attempt.tool, attempt.provider)
         cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
         if (cost is None or p90 is None) and name not in self.unmeasured:
             self.unmeasured.append(name)

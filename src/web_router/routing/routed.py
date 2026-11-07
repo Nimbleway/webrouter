@@ -32,32 +32,22 @@ from web_router.constants_params import PARAMS_SOURCE_BUDGET
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, call_route, current_route
 from web_router.routing.budget import budget_scope
-from web_router.routing.candidates import CandidateSet, build_candidates
+from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
 from web_router.routing.decide import budget_effort, decided
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge import UrlCheck
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import (
-    BrowseRequest,
     DecisionRecord,
-    ExtractRequest,
     NormalizedRequest,
     ResearchRequest,
-    SearchRequest,
 )
-from web_router.types_answer import AnswerRequest
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 _RequestT = TypeVar("_RequestT", bound=NormalizedRequest)
 
-_TOOL_OF: dict[type[NormalizedRequest], ToolName] = {
-    SearchRequest: "search",
-    ExtractRequest: "extract",
-    AnswerRequest: "answer",
-    ResearchRequest: "research",
-    BrowseRequest: "browse",
-}
+_TOOL_OF: dict[type[NormalizedRequest], ToolName] = {cls: tool for tool, cls in REQUEST_OF.items()}
 """The tool a request is for, read from its type."""
 
 

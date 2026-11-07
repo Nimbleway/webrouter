@@ -42,11 +42,10 @@ from web_router.constants_params import (
     PARAMS_SOURCE_CALLER,
 )
 from web_router.routing import pricing
-from web_router.routing.contract import Budget, ToolName, candidate_id
-from web_router.routing.pricing import measured_efforts, misfit, mode_cost, mode_p90, research_mode
+from web_router.routing.contract import Budget, candidate_id
+from web_router.routing.pricing import RESEARCH, measured_efforts, misfit, mode_cost, mode_p90, research_mode
 from web_router.types import Provider, ResearchEffort, provider_name
 
-RESEARCH: ToolName = "research"
 EFFORTS: tuple[str, ...] = get_args(ResearchEffort)
 """Research efforts, lowest first: the last tie-break prefers the lower."""
 

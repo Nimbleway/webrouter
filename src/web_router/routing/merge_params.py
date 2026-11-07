@@ -37,17 +37,14 @@ from web_router.constants_merge import (
     URL_IN_TEXT,
 )
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
-from web_router.routing.contract import Budget, RouteDecision
+from web_router.routing.candidates import REQUEST_OF
+from web_router.routing.contract import Budget, RouteDecision, ToolName
 from web_router.routing.params import EFFORTS, effort_misfit
 from web_router.routing.pricing import misfit as misfit_code
 from web_router.routing.pricing import mode_cost, mode_p90
 from web_router.types import (
-    BrowseRequest,
-    ExtractRequest,
     NormalizedRequest,
-    ResearchRequest,
     SearchDepth,
-    SearchRequest,
 )
 
 UrlCheck = Callable[[str], str | None]
@@ -56,11 +53,14 @@ UrlCheck = Callable[[str], str | None]
 DEPTHS: tuple[str, ...] = get_args(SearchDepth)
 URL_KEYS = frozenset({"urls", "start_url"})
 
+_CLASS_OF: dict[ToolName, Callable[[str], type[Any]]] = {
+    "search": registry.get_provider_class,
+    "extract": registry.get_extract_provider_class,
+    "research": registry.get_research_provider_class,
+    "browse": registry.get_browse_provider_class,
+}
 DECLARED: dict[str, tuple[type[NormalizedRequest], Callable[[str], type[Any]]]] = {
-    "search": (SearchRequest, registry.get_provider_class),
-    "extract": (ExtractRequest, registry.get_extract_provider_class),
-    "research": (ResearchRequest, registry.get_research_provider_class),
-    "browse": (BrowseRequest, registry.get_browse_provider_class),
+    tool: (REQUEST_OF[tool], class_of) for tool, class_of in _CLASS_OF.items()
 }
 """Per method, its request (whose ``always_sent`` every backend takes) and its registry's class lookup."""
 
