@@ -25,9 +25,17 @@ from importlib import resources
 from typing import Any
 
 from web_router import prices
-from web_router.constants_budget import COST_TOLERANCE_USD, OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
+from web_router.constants_budget import (
+    COST_TOLERANCE_USD,
+    FIT_REASONS,
+    OVER_COST,
+    OVER_TIME,
+    UNKNOWN_P90,
+    UNKNOWN_PRICE,
+)
 from web_router.constants_params import EFFORTS_DATA_DIR, EFFORTS_DATA_FILE
 from web_router.routing.attempts import Attempt
+from web_router.routing.contract import Budget
 from web_router.types import ExtractRequest, Provider, ResearchRequest, SearchRequest, provider_name
 
 RESEARCH = "research"
@@ -88,6 +96,21 @@ def misfit(
         if p90 > time_left:
             return OVER_TIME
     return None
+
+
+def fit_reason(attempt: Attempt, budget: Budget, what: str) -> str | None:
+    """Why ``attempt`` does not fit ``budget``, worded with ``what`` naming it; ``None`` when it fits.
+
+    Priced by the attempt rule -- the whole request, its effort, depth, result count and URLs -- and judged
+    by :func:`misfit`: the one check a router's option and a mapped effort are held to.
+    """
+    cost = None if budget.max_cost_usd is None else attempt_cost(attempt)  # each read only under its cap
+    p90 = None if budget.time_limit_s is None else attempt_p90(attempt)
+    code = misfit(cost, p90, budget.max_cost_usd, budget.time_limit_s, budget.strict)
+    if code is None:
+        return None
+    cap = budget.time_limit_s if code == OVER_TIME else budget.max_cost_usd  # each wording names its own cap
+    return FIT_REASONS[code].format(what=what, cost=cost, cap=cap, p90=p90)
 
 
 def mode_p90(provider: str, tool: str, mode: str | None) -> float | None:

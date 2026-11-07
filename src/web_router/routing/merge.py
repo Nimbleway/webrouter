@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, TypeGuard, cast, get_args
 
 from web_router._urls import shown
+from web_router.constants_candidates import ONE_PAGE_URL
 from web_router.constants_merge import (
     EXTRACT_TOOL,
     LAST_RESORT_TOOL,
@@ -49,15 +50,16 @@ from web_router.constants_merge import (
     ROUTER_INVALID,
     ROUTER_TIMEOUT,
 )
-from web_router.constants_params import PARAMS_SOURCE_ROUTER
+from web_router.constants_params import PARAMS_SOURCE_ROUTER, PRICED_QUERY
+from web_router.routing.candidates import REQUEST_OF, base_params
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
 from web_router.routing.merge_params import (
     UrlCheck,
     checked_params,
     hide_urls,
     router_url_refusal,
-    router_urls,
 )
+from web_router.types import NormalizedRequest
 
 FallbackReason = Literal["router_timeout", "router_error", "router_invalid"]
 """Why the static order was used instead of a decision."""
@@ -230,6 +232,12 @@ def _ranked(tool: str, decision: RouteDecision, known: Collection[str], ignored:
     return tuple(ranked)
 
 
+def _prompt_request(tool: ToolName, request: RouteRequest) -> NormalizedRequest:
+    """The request ``tool`` runs ``request``'s prompt with, extract on one page when the prompt names no URL."""
+    prompt = request.prompt or PRICED_QUERY  # priced by backend and options, never by the prompt
+    return REQUEST_OF[tool](**base_params(tool, prompt, request.urls or (ONE_PAGE_URL,)))
+
+
 def merge(
     request: RouteRequest,
     decision: object,
@@ -238,6 +246,7 @@ def merge(
     failure: FallbackReason | None = None,
     caller_set: Collection[str] = (),
     url_check: UrlCheck | None = None,
+    requests: Mapping[ToolName, NormalizedRequest] | None = None,
 ) -> Merged:
     """``decision`` for ``request``, merged with ``static_order`` by the rules above.
 
@@ -245,7 +254,10 @@ def merge(
     ``failure`` says the router timed out or raised; ``decision`` is then not
     read. ``caller_set`` names the options the caller set, which a router never
     changes. ``url_check`` is the URL policy: it returns why a URL is refused,
-    ``None`` when it is allowed. With none, a router sets no URL.
+    ``None`` when it is allowed. With none, a router sets no URL. ``requests``
+    are what each method runs with no router option -- the ones the candidates
+    were priced at -- and the router's options are priced on them; with none,
+    the prompt's own requests.
     """
     if failure is None and not well_formed(decision):
         failure = ROUTER_INVALID
@@ -258,10 +270,10 @@ def merge(
     ignored: dict[str, str] = {}
     excluded = _exclusions(decision, known, ignored)
     tool = _tool(request, decision, excluded, ignored)
-    no_url = request.pinned_tool is None and not request.urls and not router_urls(decision, url_check, caller_set)
-    if tool == EXTRACT_TOOL and no_url:
+    refused = router_url_refusal(decision, url_check, caller_set)
+    gave_urls = (decision.params or {}).get(EXTRACT_TOOL, {}).get("urls") is not None
+    if tool == EXTRACT_TOOL and request.pinned_tool is None and not request.urls and (not gave_urls or refused):
         ignored[NOTE_EXTRACT] = MSG_EXTRACT_NO_URL
-        refused = router_url_refusal(decision, url_check, caller_set)
         if refused is not None:
             ignored[NOTE_EXTRACT_URLS] = refused
         tool = LAST_RESORT_TOOL
@@ -272,7 +284,8 @@ def merge(
         ignored[NOTE_EXCLUDE] = MSG_EXCLUSIONS_EMPTY.format(ids=", ".join(mine), tool=tool)
         excluded = {cid: why for cid, why in excluded.items() if cid not in mine}
         providers = _order(tool, request, ranked, (), static_order)
-    params = checked_params(tool, decision, providers, request.budget, caller_set, url_check, ignored)
+    base = (requests or {}).get(cast(ToolName, tool)) or _prompt_request(cast(ToolName, tool), request)
+    params = checked_params(tool, decision, providers, base, request.budget, caller_set, url_check, ignored)
     notes = MergeNotes(
         ranked=tuple(candidate_id(tool, p) for p in ranked),
         merged=tuple(candidate_id(tool, p) for p in providers),

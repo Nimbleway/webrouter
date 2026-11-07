@@ -17,11 +17,13 @@ hosts, and a backend registered to fetch locally may be meant for an intranet.
 
 It holds the URLs :meth:`~web_router.WebRouter.plan` finds in a prompt, before
 any candidate is built, and the URLs a router sets in ``params``, through the
-merge rule. A refused URL is never fetched and never passed as ``urls`` or
-``start_url``, but it is not cut from the prompt: the prompt's text, the URL
-in it, is still what a search, answer or research backend gets as its query
-and a browse agent as its task. The MCP browser tools keep their own, stricter
-guard.
+merge rule -- only those: a URL the caller passes to ``extract()`` or
+``browse()`` directly is not held to it. A refused URL is never fetched and
+never passed as ``urls`` or ``start_url``, but it is not cut from the prompt:
+the prompt's text, the URL in it, is still what a search, answer or research
+backend gets as its query and a browse agent as its task. The MCP browser
+tools have their own guard, a different one: it resolves DNS and follows
+redirects, but admits loopback and private hosts.
 """
 
 from __future__ import annotations
