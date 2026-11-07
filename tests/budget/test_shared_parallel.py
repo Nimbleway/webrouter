@@ -19,7 +19,8 @@ import pytest
 from tests.budget.conftest import Table
 from tests.conftest import FakeProvider
 from web_router import AsyncWebRouter, Budget, BudgetExceededError, WebRouter, registry
-from web_router.routing.pool import BudgetPool
+from web_router.constants_budget import SKIP_OVER_COST, SKIP_OVER_SHARED
+from web_router.routing.pool import BudgetPool, PoolChain
 from web_router.types import SearchRequest, SearchResponse
 
 CALLS = 8
@@ -121,7 +122,11 @@ def test_a_refused_call_fails_fast_with_the_reservations_in_flight_named(gate: G
     with WebRouter().budget(SHARED) as shared:
         _in_threads(gate, lambda: shared.search("q", provider="gated"))
     error = gate.refused[0]
-    assert error.skipped == {"search:gated": "est. $0.03 > $0.01 left in the shared budget"}
+    # Refused by the snapshot the call started with, or, racing a reservation made since, by the pool itself.
+    assert error.skipped["search:gated"] in {
+        SKIP_OVER_COST.format(cost="$0.03", left="$0.01"),
+        SKIP_OVER_SHARED.format(cost="$0.03", left="$0.01"),
+    }
 
 
 def test_a_call_in_flight_holds_a_reservation_until_it_ends_then_settles_at_its_estimate(gate: Gate) -> None:
@@ -203,7 +208,7 @@ class _SlowCost(float):
 
 
 def test_the_check_and_the_reservation_are_one_step_however_long_the_check_takes() -> None:
-    pool = BudgetPool(SHARED)
+    pool = PoolChain((BudgetPool(SHARED),))
     start = threading.Barrier(CALLS)
     refused: list[float | None] = []
 
@@ -217,7 +222,7 @@ def test_the_check_and_the_reservation_are_one_step_however_long_the_check_takes
     for thread in threads:
         thread.join(WAIT_S)
     assert refused.count(None) == FITS
-    assert pool.status().reserved_usd == 0.09
+    assert pool.pools[0].status().reserved_usd == 0.09
 
 
 class _SlowSum(float):
@@ -233,7 +238,8 @@ class _SlowSum(float):
 
 
 def test_settlements_from_many_threads_at_once_lose_no_update() -> None:
-    pool = BudgetPool(Budget(max_cost_usd=1.0))
+    budget = BudgetPool(Budget(max_cost_usd=1.0))
+    pool = PoolChain((budget,))
     for _ in range(CALLS):
         assert pool.reserve(COST) is None
     start = threading.Barrier(CALLS)
@@ -247,7 +253,7 @@ def test_settlements_from_many_threads_at_once_lose_no_update() -> None:
         thread.start()
     for thread in threads:
         thread.join(WAIT_S)
-    status = pool.status()
+    status = budget.status()
     assert (status.spent_usd, status.reserved_usd) == (round(CALLS * COST, 9), 0.0)
 
 
@@ -268,7 +274,8 @@ class _ReportingCost(float):
 
 def test_a_nested_reservation_the_outer_pool_refuses_never_blocks_another_call_in_the_inner_one() -> None:
     outer = BudgetPool(Budget(max_cost_usd=0.10))
-    inner = BudgetPool(Budget(max_cost_usd=0.5), parent=outer)
+    inner_pool = BudgetPool(Budget(max_cost_usd=0.5))
+    inner = PoolChain((inner_pool, outer))
     big = _ReportingCost(0.5)
     refused: list[float | None] = []
     worker = threading.Thread(target=lambda: refused.append(inner.reserve(big)))
@@ -277,4 +284,4 @@ def test_a_nested_reservation_the_outer_pool_refuses_never_blocks_another_call_i
     assert inner.reserve(0.05) is None, "the refused reservation was never visible in the inner pool"
     worker.join(WAIT_S)
     assert refused == [pytest.approx(0.10)]
-    assert (inner.status().reserved_usd, outer.status().reserved_usd) == (0.05, 0.05)
+    assert (inner_pool.status().reserved_usd, outer.status().reserved_usd) == (0.05, 0.05)

@@ -3,26 +3,28 @@
 Experimental. A pool keeps one :class:`~web_router.Budget` for every call
 made through its scope, and is the only state those calls share:
 
-- each call's budget is the tighter of its own ``budget=`` and the pool's
-  (:meth:`BudgetPool.limit`): its cost cap, the pool's time left, and strict
-  if either is;
+- each call's budget is the tighter of its own ``budget=`` and what the
+  pools in force have left (:meth:`PoolChain.limit`): the dollars and the
+  seconds, and strict if any is;
 - the pool's clock runs from when the pool is made, not from each call;
 - before each attempt, the call's :class:`~.ledger.Ledger` reserves the
-  attempt's estimate here (:meth:`BudgetPool.reserve`). A reservation is
+  attempt's estimate here (:meth:`PoolChain.reserve`). A reservation is
   checked against the cap less what is spent and what every call in flight
   has reserved, under one lock, so calls in parallel -- threads or asyncio
   tasks -- can never reserve more than the cap between them. One that does not
   fit is refused at once; nothing waits for another call to finish;
 - when a call ends, however it ends, what it reserved is settled
-  (:meth:`BudgetPool.settle`): moved from reserved to spent, at the estimate,
+  (:meth:`PoolChain.settle`): moved from reserved to spent, at the estimate,
   since no call reports what it was billed. A failed attempt stays charged.
 
 A pool belongs to the router that made it: only that router's calls spend
 from it, and another router's calls inside the block run as they would
-outside it. A pool made while another of the same router's is in force
-spends from both: each reservation must fit every pool up the chain, checked
-and taken under all their locks at once, and the clock is the earliest of
-theirs.
+outside it. A call spends from every pool of its router in force where it
+starts -- its :class:`PoolChain`, taken once when the call starts --
+whichever scope it is made through and wherever that scope was made, so an
+outer block's cap holds for a scope made before the block was entered. Each
+reservation must fit every pool in the chain, checked and taken under all
+their locks at once, and the clock is the earliest of theirs.
 
 The pools in force are held in a context variable, as the per-call deadline
 is, so a call made on the router inside ``with wr.budget(...)`` spends from
@@ -32,9 +34,9 @@ through the scope (``b.search``), which binds the pool for the call.
 
 from __future__ import annotations
 
+import itertools
 import threading
 import time
-from collections.abc import Iterator
 from contextlib import ExitStack
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
@@ -54,7 +56,10 @@ class BudgetStatus:
     """The estimates reserved by calls still running."""
 
     remaining_usd: float | None
-    """The least, up the chain, of each cap less what is spent and reserved; ``None`` with no cost cap."""
+    """The least, over this pool and the ones in force outside it, of each cap less what is spent and reserved.
+
+    ``None`` with no cost cap.
+    """
 
     elapsed_s: float
     """Seconds since the budget was made."""
@@ -63,77 +68,32 @@ class BudgetStatus:
     """Seconds left on the budget's clock, never below zero; ``None`` with no time limit."""
 
 
-class BudgetPool:
-    """One :class:`~web_router.Budget` that every call made through its scope reserves from and settles to."""
+_ORDER = itertools.count()
+"""Every pool's place in the one order locks are taken in, so two chains never wait on each other."""
 
-    def __init__(self, budget: Budget, parent: BudgetPool | None = None, owner: object = None) -> None:
+
+class BudgetPool:
+    """One :class:`~web_router.Budget`: its money, its lock and its clock."""
+
+    def __init__(self, budget: Budget, owner: object = None) -> None:
         self.budget = budget
-        self.parent = parent
         self.owner = owner
         """The router whose calls spend from this pool."""
         self.started = time.monotonic()
+        self.order = next(_ORDER)
         self._lock = threading.Lock()
         self._spent = 0.0
         self._reserved = 0.0
 
-    def _chain(self) -> Iterator[BudgetPool]:
-        pool: BudgetPool | None = self
-        while pool is not None:
-            yield pool
-            pool = pool.parent
+    def ends_at(self) -> float | None:
+        """When this pool's clock runs out, on :func:`time.monotonic`'s clock; ``None`` with no limit."""
+        limit = self.budget.time_limit_s
+        return None if limit is None else self.started + limit
 
-    def limit(self, budget: Budget | None) -> Budget:
-        """One call's budget: the tighter of its own ``budget`` and this pool's, with the time left now.
-
-        The time left is a snapshot for what the call shows a router and records;
-        the call's deadline is held to :meth:`expires_at` itself, so a call that
-        starts late gets no more time than the clock has left.
-        """
-        own = budget or Budget()
-        caps = [own.max_cost_usd, *(pool.budget.max_cost_usd for pool in self._chain())]
-        return Budget(
-            max_cost_usd=_least(caps),
-            time_limit_s=_least([own.time_limit_s, self.time_left()]),
-            strict=own.strict or any(pool.budget.strict for pool in self._chain()),
-        )
-
-    def expires_at(self) -> float | None:
-        """The earliest clock up the chain runs out at this :func:`time.monotonic` instant; ``None`` with no limit."""
-        ends = [
-            pool.started + pool.budget.time_limit_s for pool in self._chain() if pool.budget.time_limit_s is not None
-        ]
-        return min(ends) if ends else None
-
-    def time_left(self) -> float | None:
-        """Seconds left on the earliest clock up the chain, never below zero; ``None`` when none has a limit."""
-        ends = self.expires_at()
-        return None if ends is None else max(0.0, ends - time.monotonic())
-
-    def reserve(self, cost: float) -> float | None:
-        """Reserve ``cost`` in this pool and every one up the chain, or in none of them.
-
-        Every pool's lock is held at once, outermost first, so no other call
-        sees a reservation that is about to be undone.
-
-        Returns ``None`` once reserved; otherwise the dollars left in the
-        innermost pool that refused, which ``cost`` does not fit.
-        """
-        chain = list(self._chain())
-        with ExitStack() as held:
-            for pool in reversed(chain):
-                held.enter_context(pool._lock)
-            for pool in chain:
-                left = pool._left()
-                if left is not None and cost > left + COST_TOLERANCE_USD:
-                    return left
-            for pool in chain:
-                pool._reserved += cost
-        return None
-
-    def settle(self, cost: float) -> None:
-        """Move ``cost``, what a call that has ended reserved, from reserved to spent, all up the chain."""
-        for pool in self._chain():
-            pool._move(cost, spent=True)
+    def left(self) -> float | None:
+        """The cap less what is spent and reserved, now; ``None`` with no cost cap."""
+        with self._lock:
+            return self._left()
 
     def _left(self) -> float | None:
         cap = self.budget.max_cost_usd
@@ -146,21 +106,80 @@ class BudgetPool:
                 self._spent += cost
 
     def status(self) -> BudgetStatus:
-        """Spent and reserved dollars here, what is left up the chain, and the clock, as of now."""
+        """Spent and reserved dollars here, what is left counting the pools in force outside it, and the clock."""
         with self._lock:
             spent, reserved = round(self._spent, STATUS_DIGITS), round(self._reserved, STATUS_DIGITS)
-        lefts: list[float | None] = []
-        for pool in self._chain():
-            with pool._lock:
-                lefts.append(pool._left())
-        remaining = _least(lefts)
+        chain = _around(self)
+        remaining = chain.left()
         return BudgetStatus(
             spent_usd=spent,
             reserved_usd=reserved,
             remaining_usd=None if remaining is None else round(remaining, STATUS_DIGITS),
             elapsed_s=time.monotonic() - self.started,
-            time_left_s=self.time_left(),
+            time_left_s=chain.time_left(),
         )
+
+
+@dataclass(frozen=True)
+class PoolChain:
+    """The pools one call spends from, innermost first: every one must fit each reservation."""
+
+    pools: tuple[BudgetPool, ...]
+
+    def limit(self, budget: Budget | None) -> Budget:
+        """One call's budget: the tighter of its own ``budget`` and what the chain has left now.
+
+        Both are snapshots, for what the call shows a router and records. The
+        call's deadline is held to :meth:`expires_at` itself, so a call that
+        starts late gets no more time than the clock has left, and each
+        attempt is reserved against what is left when it starts.
+        """
+        own = budget or Budget()
+        return Budget(
+            max_cost_usd=_least([own.max_cost_usd, self.left()]),
+            time_limit_s=_least([own.time_limit_s, self.time_left()]),
+            strict=own.strict or any(pool.budget.strict for pool in self.pools),
+        )
+
+    def left(self) -> float | None:
+        """The least any pool in the chain has left, never below zero; ``None`` when none has a cost cap."""
+        left = _least([pool.left() for pool in self.pools])
+        return None if left is None else max(0.0, left)
+
+    def expires_at(self) -> float | None:
+        """The earliest clock in the chain runs out at this :func:`time.monotonic` instant; ``None`` with no limit."""
+        return _least([pool.ends_at() for pool in self.pools])
+
+    def time_left(self) -> float | None:
+        """Seconds left on the earliest clock in the chain, never below zero; ``None`` when none has a limit."""
+        ends = self.expires_at()
+        return None if ends is None else max(0.0, ends - time.monotonic())
+
+    def reserve(self, cost: float) -> float | None:
+        """Reserve ``cost`` in every pool of the chain, or in none of them.
+
+        Every pool's lock is held at once, taken in one order shared by all
+        chains, so no other call sees a reservation that is about to be undone
+        and no two chains wait on each other.
+
+        Returns ``None`` once reserved; otherwise the dollars left in the
+        innermost pool that refused, which ``cost`` does not fit.
+        """
+        with ExitStack() as held:
+            for pool in sorted(self.pools, key=lambda pool: pool.order):
+                held.enter_context(pool._lock)
+            for pool in self.pools:
+                left = pool._left()
+                if left is not None and cost > left + COST_TOLERANCE_USD:
+                    return left
+            for pool in self.pools:
+                pool._reserved += cost
+        return None
+
+    def settle(self, cost: float) -> None:
+        """Move ``cost``, what a call that has ended reserved, from reserved to spent in every pool of the chain."""
+        for pool in self.pools:
+            pool._move(cost, spent=True)
 
 
 def _least(values: list[float | None]) -> float | None:
@@ -188,3 +207,17 @@ def current_pool(owner: object = None) -> BudgetPool | None:
         if owner is None or pool.owner is owner:
             return pool
     return None
+
+
+def chain_in_force(owner: object) -> PoolChain | None:
+    """Every pool of ``owner``'s in force in this context, innermost first, once each; ``None`` when there is none."""
+    pools = tuple(dict.fromkeys(pool for pool in reversed(_POOLS.get()) if pool.owner is owner))
+    return PoolChain(pools) if pools else None
+
+
+def _around(pool: BudgetPool) -> PoolChain:
+    """``pool`` and the pools of its router in force outside its innermost binding here; ``pool`` alone if unbound."""
+    chain = chain_in_force(pool.owner)
+    if chain is None or pool not in chain.pools:
+        return PoolChain((pool,))
+    return PoolChain(chain.pools[chain.pools.index(pool) :])

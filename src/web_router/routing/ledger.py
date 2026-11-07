@@ -36,7 +36,7 @@ from web_router.exceptions import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
-from web_router.routing.pool import BudgetPool
+from web_router.routing.pool import PoolChain
 from web_router.types import (
     DecisionAttempt,
     DecisionHop,
@@ -100,7 +100,7 @@ class Ledger:
     """What one call has tried, skipped and spent under its :class:`~web_router.Budget`."""
 
     budget: Budget
-    pool: BudgetPool | None = None
+    pool: PoolChain | None = None
     """The shared budget the call also spends from, if any; :attr:`spent` is what it reserved there."""
     spent: float = 0.0
     tried: list[_Tried] = field(default_factory=list)
