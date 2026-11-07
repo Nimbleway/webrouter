@@ -59,7 +59,7 @@ from web_router.exceptions import (
 )
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, Candidate, ToolName, candidate_id
-from web_router.routing.params import map_effort
+from web_router.routing.params import EffortChoice, shared_effort
 from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
 from web_router.types import (
     BrowseRequest,
@@ -88,6 +88,9 @@ class CandidateSet:
 
     unmeasured: tuple[str, ...] = ()
     """The ids of the candidates whose price or p90 is unknown or uncertain, or whose place route-eval did not rank."""
+
+    effort: EffortChoice | None = None
+    """The research effort the budget chose for the call, which every research candidate is priced at."""
 
 
 REQUEST_OF: dict[ToolName, type[NormalizedRequest]] = {
@@ -147,10 +150,15 @@ def build_candidates(
     dropped: dict[str, str] = {}
     unmeasured: list[str] = []
     seen: set[str] = set()
+    effort: EffortChoice | None = None
     for tool, request in requests.items():
         eligible, unbuilt = _eligible(router, tool, request)
+        if isinstance(request, ResearchRequest) and request.effort is None:
+            effort = shared_effort([name for name, _ in eligible], budget)
+            request = request if effort is None else request.model_copy(update={"effort": effort.effort})
         for name, keyless in eligible:
-            cost, p90 = _estimates(tool, name, request, budget)
+            attempt = Attempt(tool=tool, provider=name, request=request)
+            cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
             candidate = Candidate(tool=tool, provider=name, est_cost_usd=cost, est_latency_s=p90)
             if candidate.id in seen:
                 continue  # a member listed twice is one candidate, at its first place
@@ -164,7 +172,7 @@ def build_candidates(
         for name, why in unbuilt.items():
             if (unbuilt_id := candidate_id(tool, name)) not in seen:  # built at another place
                 dropped[unbuilt_id] = why
-    return CandidateSet(candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured))
+    return CandidateSet(candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured), effort=effort)
 
 
 def _eligible(router: Any, tool: ToolName, request: NormalizedRequest) -> tuple[list[tuple[str, bool]], dict[str, str]]:
@@ -225,19 +233,6 @@ def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
         else:
             built.append(position)
     return built, unbuilt
-
-
-def _estimates(
-    tool: ToolName, name: str, request: NormalizedRequest, budget: Budget | None
-) -> tuple[float | None, float | None]:
-    """The candidate's estimated cost in US dollars and its p90 seconds, by the one pricing rule.
-
-    Research runs at the effort the caller set, else the one the budget picks for this backend.
-    """
-    if isinstance(request, ResearchRequest) and request.effort is None:
-        request = request.model_copy(update={"effort": map_effort(name, budget).effort})
-    attempt = Attempt(tool=tool, provider=name, request=request)
-    return attempt_cost(attempt), attempt_p90(attempt)
 
 
 _DROPPED = {

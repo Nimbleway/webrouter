@@ -28,20 +28,21 @@ from pydantic import BaseModel
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS
 from web_router.constants_invoke import MSG_ROUTE_TOOLS
-from web_router.constants_params import PARAMS_SOURCE_BUDGET
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, call_route, current_route
 from web_router.routing.budget import budget_scope
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
-from web_router.routing.decide import budget_effort, decided
+from web_router.routing.decide import decided
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge import UrlCheck
+from web_router.routing.params import shared_effort
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import (
     DecisionRecord,
     NormalizedRequest,
     ResearchRequest,
+    provider_name,
 )
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
@@ -160,19 +161,25 @@ class RouterSetup:
 def _unrouted(chain: Any, request: _RequestT, budget: Budget | None) -> tuple[_RequestT, DecisionRecord | None]:
     """A call no router orders: with a budget, research still runs at the effort the budget maps.
 
-    The effort is the one :func:`~web_router.routing.decide.budget_effort` picks over the backends the budget
-    leaves in the chain's order -- one that fits on every one of them -- unless the caller set one.
+    The effort is :func:`~web_router.routing.params.shared_effort`'s, over the backends of the chain the call
+    runs on -- or over the one backend the caller named -- unless the caller set one.
     """
-    capped = budget is not None and (budget.max_cost_usd is not None or budget.time_limit_s is not None)
-    if not capped or not isinstance(request, ResearchRequest) or getattr(chain, "name", None) != PROVIDER_AUTO:
+    if not isinstance(request, ResearchRequest) or request.effort is not None or budget is None:
         return request, None
-    found = build_candidates(_Only("research", chain), {"research": request}, budget=budget)
-    params: dict[str, Any] = {}
-    caller_set = request.specified_parameters()
-    if not budget_effort("research", tuple(c.provider for c in found.candidates), params, caller_set, budget):
+    if getattr(chain, "name", None) == PROVIDER_AUTO:
+        effort = build_candidates(_Only("research", chain), {"research": request}, budget=budget).effort
+    else:
+        effort = shared_effort([provider_name(chain.name)], budget)
+    if effort is None:
         return request, None
-    record = DecisionRecord(params=dict(params), params_source=PARAMS_SOURCE_BUDGET)
-    return request.model_copy(update=params), record
+    return request.model_copy(update={"effort": effort.effort}), DecisionRecord(**effort.fields())
+
+
+def _named(chain: Any, request: _RequestT, budget: Budget | None) -> tuple[_RequestT, DecisionRecord | None]:
+    """A call to a backend the caller named: its research effort, as :func:`_unrouted` maps it; else unchanged."""
+    if getattr(chain, "name", PROVIDER_AUTO) == PROVIDER_AUTO:
+        return request, None
+    return _unrouted(chain, request, budget)
 
 
 def _decided(response: _ResponseT, record: DecisionRecord | None) -> _ResponseT:
@@ -202,12 +209,13 @@ class SyncRouted(RouterSetup):
 
         A routed call runs in the order the router chose, and its response records how.
         """
+        request, named = _named(chain, request, budget)  # before the scope, which admits a named backend
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
             routed = self._route_request(chain, request, budget)
             outcome = None if routed is None else self._attached().call(routed[0])
             route, request, record = self._prepared(chain, request, budget, routed, outcome)
             with _in_route(route):
-                return scope.settle(_decided(call(request), record))
+                return scope.settle(_decided(call(request), record or named))
 
 
 class AsyncRouted(RouterSetup):
@@ -219,9 +227,10 @@ class AsyncRouted(RouterSetup):
         call: Callable[[_RequestT], Awaitable[_ResponseT]],
     ) -> _ResponseT:
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
+        request, named = _named(chain, request, budget)  # before the scope, which admits a named backend
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
             routed = self._route_request(chain, request, budget)
             outcome = None if routed is None else await self._attached().acall(routed[0])
             route, request, record = self._prepared(chain, request, budget, routed, outcome)
             with _in_route(route):
-                return scope.settle(_decided(await call(request), record))
+                return scope.settle(_decided(await call(request), record or named))
