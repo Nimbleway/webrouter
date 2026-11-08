@@ -154,11 +154,18 @@ ROUTE_EVAL_SIBLINGS = (
     "route_eval_paths",
     "route_eval_sets",
     "route_eval_rank",
+    "route_eval_floor",
+    "route_eval_merge",
+    "route_eval_replay",
     "route_eval_routers",
     "route_eval_report",
     "route_eval_cli",
 )
 """What route-eval imports from its folder, under plain names, so they are forgotten once it is."""
+CHAINS_SIBLINGS = (*ROUTE_EVAL_SIBLINGS, "_emit")
+"""What ``chains.py`` imports from its folder, under plain names: route-eval's and ``_emit``."""
+EFFORTS_SIBLINGS = (*ROUTE_EVAL_SIBLINGS, "_emit")
+"""What ``efforts.py`` imports from its folder, under plain names: route-eval's and ``_emit``."""
 
 
 @pytest.fixture(scope="module")
@@ -171,6 +178,12 @@ def route_eval() -> Iterator[ModuleType]:
 def route_eval_rank(route_eval: ModuleType) -> ModuleType:
     """The ranking, as route-eval imported it."""
     return sys.modules["route_eval_rank"]
+
+
+@pytest.fixture(scope="module")
+def route_eval_floor(route_eval: ModuleType) -> ModuleType:
+    """The noise floors, as route-eval imported them."""
+    return sys.modules["route_eval_floor"]
 
 
 @pytest.fixture(scope="module")
@@ -237,7 +250,10 @@ def scan() -> Iterator[ModuleType]:
 
 
 def scan_row(provider: str, question: str, grade: str | None, topic: str = "Science", **extra: Any) -> dict[str, Any]:
-    """One backend's graded search on one question, as ``rows.jsonl`` holds it; ``grade=None`` is a failed search."""
+    """One backend's graded search on one question, as ``rows.jsonl`` holds it.
+
+    ``grade=None`` is a failed search, a server error a ranking counts as a miss; ``error=`` gives another.
+    """
     failed = grade is None
     return {
         "provider": provider,
@@ -246,7 +262,7 @@ def scan_row(provider: str, question: str, grade: str | None, topic: str = "Scie
         "latency": 1.0,
         "answer": None if failed else "a",
         "grade": grade,
-        "error": "HTTP 402" if failed else None,
+        "error": "HTTP 500" if failed else None,
         "failed_at": "search" if failed else None,
         "topic": topic,
         "answer_type": "Date",
@@ -262,3 +278,35 @@ SCAN_SETUP = {
     "started": "2026-09-30T00:00:00+00:00",
 }
 """A search scan's ``run.json``, minus the backends, which each test names."""
+
+
+def path_row(qid: str, path: str, grade: str | None, **extra: Any) -> dict[str, Any]:
+    method, provider, *mode = path.split(":")
+    return route_row(provider, grade, qid=qid, method=method, mode=mode[0] if mode else "default", **extra)
+
+
+def _perplexity_low(qid: str, i: int) -> dict[str, Any]:
+    """A `rate_limit` error on the first 15 questions, timed out on two, right on the last three."""
+    if i < 15:
+        return path_row(qid, "research:perplexity:low", None, latency=None, error="rate_limit")
+    if i < 17:
+        return path_row(qid, "research:perplexity:low", None, latency=None, error="timeout")
+    return path_row(qid, "research:perplexity:low", "correct", cost=0.002)
+
+
+def write_mixed_set(folder: Path) -> None:
+    """20 questions; ``research:parallel:high`` right on all, ``extract:nimble`` asked on the first four only."""
+    rows = []
+    for i in range(20):
+        qid = f"q{i:02d}"
+        rows += [
+            path_row(qid, "search+extract:nimble:top3", "correct" if i < 8 else "incorrect", cost=0.008),
+            path_row(qid, "search+extract:perplexity:top3", "incorrect", cost=0.007),
+            path_row(qid, "answer:perplexity", "correct" if i < 12 else "incorrect", cost=0.002),
+            path_row(qid, "research:parallel:low", "correct" if i < 16 else "incorrect", cost=0.005),
+            path_row(qid, "research:parallel:high", "correct", cost=0.1, latency=30.0),
+            _perplexity_low(qid, i),
+        ]
+        if i < 4:
+            rows.append(path_row(qid, "extract:nimble", "correct", cost=0.001))
+    write_frozen_set(folder, "mixed-tiny", rows)

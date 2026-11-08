@@ -1,7 +1,7 @@
 """The answer method's request and response.
 
 Kept apart so ``types.py`` stops growing. ``web_router`` exports them too; ``types.py``
-imports nothing of ours, so this module imports it, never the other way round.
+never imports this module, so this module imports it, never the other way round.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from typing import Annotated, Any, ClassVar, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from web_router.types import Citation, NormalizedRequest, ResearchOutcome
+from web_router.types_decision import DECISION_DESCRIPTION, DecisionRecord
 
 __all__ = ["ANSWER_ALWAYS_SENT", "ANSWER_PARAMETERS", "AnswerRequest", "AnswerResponse", "Recency"]
 
@@ -69,3 +70,4 @@ class AnswerResponse(BaseModel):
         default=None,
         description="The provider's untouched payloads, one per call the answer took.",
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)

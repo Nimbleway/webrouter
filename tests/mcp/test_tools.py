@@ -55,6 +55,7 @@ from web_router.constants import (
     PROVIDER_YOU_MCP,
 )
 from web_router.mcp.env import user_config_dir
+from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.server import call_tool, list_resources, list_tools, read_resource
 from web_router.mcp.tools import WebRouterTools
 from web_router.registry import (
@@ -73,11 +74,10 @@ def _tool(session: WebRouterTools, name: str) -> Any:
 
 def _payload(result: Any) -> dict[str, Any]:
     assert not result.is_error, result.content[0].text
-    parsed: dict[str, Any] = json.loads(result.content[0].text)
-    return parsed
+    return dict(json.loads(result.content[0].text))
 
 
-def test_serves_exactly_twenty_one_tools(tools: WebRouterTools) -> None:
+def test_serves_exactly_twenty_four_tools(tools: WebRouterTools) -> None:
     assert [tool.name for tool in list_tools(tools).tools] == [
         MCP_TOOL_SEARCH,
         MCP_TOOL_EXTRACT,
@@ -91,6 +91,7 @@ def test_serves_exactly_twenty_one_tools(tools: WebRouterTools) -> None:
         MCP_TOOL_BROWSE_STATUS,
         MCP_TOOL_FETCH_RAW,
         MCP_TOOL_LOAD_ENV,
+        *ROUTING_TOOLS,
         *MCP_BROWSER_TOOLS,
     ]
 
@@ -880,10 +881,8 @@ async def test_answer_round_trip_and_fetch_raw(tools: WebRouterTools, fake_answe
 
 
 async def test_answer_needs_no_provider_argument(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    """With one answer backend configured, `provider` is offered but not required, and a bare query goes to it.
-
-    Unnamed, the router's `auto` serves the call, and its only member is that backend.
-    """
+    """With one answer backend configured, `provider` is offered but not required, and a bare query goes to it:
+    unnamed, the router's `auto` serves the call, and its only member is that backend."""
     monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
     session = WebRouterTools(AsyncWebRouter())
     schema = _tool(session, MCP_TOOL_ANSWER).input_schema

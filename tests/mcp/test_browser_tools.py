@@ -84,14 +84,7 @@ from web_router.mcp.server import call_tool, list_tools, serve
 from web_router.mcp.tools import WebRouterTools
 from web_router.providers.base import AsyncBrowserHandle
 from web_router.registry import register_browser_provider, unregister_browser_provider
-from web_router.types import (
-    BrowserRequest,
-    ExtractedDocument,
-    PageSnapshot,
-    PageState,
-    Screenshot,
-    StealthLevel,
-)
+from web_router.types import BrowserRequest, ExtractedDocument, PageSnapshot, PageState, Screenshot, StealthLevel
 
 SECRET = "SEKRIT-cdp-0123456789"
 """The account key the fake provider's CDP URL carries."""
@@ -523,7 +516,7 @@ async def test_an_open_whose_session_cannot_be_read_releases_it(
     def unparseable(cdp_url: str) -> Any:
         raise ValueError("Invalid IPv6 URL")
 
-    monkeypatch.setattr(browsers_module.UrlPolicy, "for_session", unparseable)
+    monkeypatch.setattr(browsers_module.NavigationPolicy, "for_session", unparseable)
 
     with pytest.raises(ValueError, match="IPv6"):
         await session.browsers.open(lambda: _provider(session).aopen(BrowserRequest()))
