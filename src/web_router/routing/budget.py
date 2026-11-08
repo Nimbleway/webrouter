@@ -64,6 +64,11 @@ class BudgetedCall(Generic[_BackendT]):
     backend: _BackendT
     ledger: Ledger | None = None
 
+    @property
+    def budget(self) -> Budget | None:
+        """The budget the call is held to: its own, tightened by a shared budget's remainder; ``None`` with neither."""
+        return None if self.ledger is None else self.ledger.budget
+
     def settle(self, response: _ResponseT) -> _ResponseT:
         """``response`` with the call's estimated spend in its decision record; as it came with no budget."""
         if self.ledger is None:

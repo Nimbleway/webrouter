@@ -149,7 +149,7 @@ class SyncRouted(RouterSetup):
         A routed call runs in the order the router chose, and its response records how.
         """
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
-            req = self._route_request(chain, request, budget)
+            req = self._route_request(chain, request, scope.budget)
             if req is None:
                 return scope.settle(call())
             assert self._router is not None  # a request is built only with a router attached
@@ -169,7 +169,7 @@ class AsyncRouted(RouterSetup):
     ) -> _ResponseT:
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
-            req = self._route_request(chain, request, budget)
+            req = self._route_request(chain, request, scope.budget)
             if req is None:
                 return scope.settle(await call())
             assert self._router is not None  # a request is built only with a router attached
