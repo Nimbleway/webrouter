@@ -134,6 +134,7 @@ src/web_router/
 │   │                   the check before each attempt, BudgetExceededError, the record
 │   ├── ledger.py       one budgeted call's ledger: the cost and p90 rules, the spend
 │   ├── pool.py         a shared budget: reservations under one lock, its clock, status()
+│   ├── pool_status.py  BudgetStatus, where a shared budget stands
 │   └── candidates.py, invoke.py, merge.py, params.py   empty until their parts land
 ├── _urls.py            urls_in(): the URLs written in a query's prose
 ├── constants_urls.py   the punctuation stripped from the end of a URL found in prose

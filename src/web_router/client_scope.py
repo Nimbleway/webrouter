@@ -16,7 +16,8 @@ from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.routing.contract import Budget
-from web_router.routing.pool import BudgetPool, BudgetStatus, bind, unbind
+from web_router.routing.pool import BudgetPool, bind, unbind
+from web_router.routing.pool_status import BudgetStatus
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
@@ -36,7 +37,7 @@ class _Scope:
         self.pool = BudgetPool(budget, owner=router)
 
     def status(self) -> BudgetStatus:
-        """What is spent, reserved and left, and the clock: see :class:`~web_router.routing.pool.BudgetStatus`."""
+        """What is spent, reserved and left, and the clock: see :class:`~web_router.BudgetStatus`."""
         return self.pool.status()
 
     def _enter(self) -> None:
