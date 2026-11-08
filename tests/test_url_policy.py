@@ -142,7 +142,18 @@ def test_a_metadata_address_in_any_spelling_is_named_as_one(url: str) -> None:
     assert public_only(url) == MSG_URL_METADATA
 
 
-@pytest.mark.parametrize("url", ["http://010.8.8.8/"])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://010.8.8.8/",
+        # Not octal, as an 8 or 9 follows the 0, so inet_aton refuses them; macOS's getaddrinfo reads them as decimal.
+        "http://127.0.0.09/",
+        "http://127.09/",
+        "http://10.0.0.09/",
+        "http://0192.168.0.1/",
+        "http://0169.254.169.254/",
+    ],
+)
 def test_public_only_refuses_a_numeric_spelling_resolvers_read_differently(url: str) -> None:
     # A browser reads 010 as octal (8), macOS's getaddrinfo as decimal (10): no public URL needs the spelling.
     from web_router.constants_urls import MSG_URL_AMBIGUOUS
