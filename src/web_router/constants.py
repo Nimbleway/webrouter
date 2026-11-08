@@ -3027,14 +3027,6 @@ BRAVE_HIGHLIGHT_TAGS = ("<strong>", "</strong>")
 EXA_BASE_URL = "https://api.exa.ai"
 EXA_SEARCH_PATH = "/search"
 EXA_API_KEY_HEADER = "x-api-key"
-EXA_PARAM_NAMES = {"max_results": "numResults"}
-EXA_CONTENTS = {"text": True}
-"""Exa returns links only unless contents are requested, so ask for text.
-
-Not an enrichment: without it ``SearchResult.content`` would always be empty,
-which every other provider fills.
-"""
-
 EXA_CONTENTS_PATH = "/contents"
 
 EXA_EXTRACT_FORMATS: dict[ExtractFormat, dict[str, Any]] = {
