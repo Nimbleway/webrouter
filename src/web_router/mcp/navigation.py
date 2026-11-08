@@ -2,7 +2,7 @@
 
 A model driving a browser takes instructions from the pages it reads, so the
 browser tools cannot trust the URL a model asks for any more than the links a
-page offers. :class:`UrlPolicy` decides; :class:`NavigationGuard` enforces it on
+page offers. :class:`NavigationPolicy` decides; :class:`NavigationGuard` enforces it on
 a live session:
 
 - before ``browser_goto`` touches the page, on the URL it was given;
@@ -76,7 +76,7 @@ def files_allowed() -> bool:
 
 
 @dataclass(frozen=True)
-class UrlPolicy:
+class NavigationPolicy:
     """The rules for one session: its own debugging endpoint is off limits, and so is everything else listed."""
 
     cdp_host: str | None = None
@@ -84,7 +84,7 @@ class UrlPolicy:
     allow_files: bool = False
 
     @classmethod
-    def for_session(cls, cdp_url: str, *, allow_files: bool | None = None) -> UrlPolicy:
+    def for_session(cls, cdp_url: str, *, allow_files: bool | None = None) -> NavigationPolicy:
         """The policy for a session whose CDP endpoint is ``cdp_url``; ``file:`` per the environment unless given."""
         host, port = _host_port(cdp_url)
         return cls(host, port, files_allowed() if allow_files is None else allow_files)
@@ -146,9 +146,9 @@ class UrlPolicy:
 
 
 class NavigationGuard:
-    """Holds one session to its :class:`UrlPolicy`, once :meth:`install` has run on its connected page."""
+    """Holds one session to its :class:`NavigationPolicy`, once :meth:`install` has run on its connected page."""
 
-    def __init__(self, policy: UrlPolicy) -> None:
+    def __init__(self, policy: NavigationPolicy) -> None:
         self.policy = policy
         self._page: Page | None = None
         self._blocked: str | None = None

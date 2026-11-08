@@ -808,7 +808,7 @@ sends a lifetime clamped to `MCP_BROWSER_SESSION_TIMEOUT_LIMIT`, action
 timeouts and `max_chars` are clamped in the handlers as well as capped in the
 schemas, and the open runs shielded under `MCP_BROWSER_OPEN_TIMEOUT` and
 releases its session if the call was cancelled — never leave a billed session
-nobody holds. Where a session may go is `mcp/navigation.py`'s `UrlPolicy`:
+nobody holds. Where a session may go is `mcp/navigation.py`'s `NavigationPolicy`:
 only http(s) and `about:blank`, `file:` only under
 `WEB_ROUTER_MCP_ALLOW_FILE_URLS`, never metadata hosts or the session's own CDP
 host:port, with IPv4 read in every spelling a browser accepts. It is enforced
