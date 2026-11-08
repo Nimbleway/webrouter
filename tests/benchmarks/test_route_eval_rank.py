@@ -52,7 +52,7 @@ def test_backend_stats_leave_an_unrecorded_latency_out_of_the_median(route_eval_
 def test_the_noise_floor_is_the_twin_runs_widest_gap(route_eval_rank: ModuleType) -> None:
     floor, pairs = route_eval_rank.noise_floor()
     assert floor == max(abs(main - rerun) for main, rerun in pairs.values()), "the widest gap between the twin runs"
-    assert floor == pytest.approx(chains()["noise_floor"], abs=1e-6), "the floor chains.json was ranked with"
+    assert floor == pytest.approx(chains()["search"]["noise_floor"]["value"], abs=1e-6), "chains.json ranked with it"
 
 
 def test_the_best_are_every_backend_within_the_floor_of_the_most_accurate_wherever_cost_put_them(
@@ -97,3 +97,27 @@ def test_a_vendor_mode_or_depth_row_is_priced_as_the_price_list_keys_it(route_ev
     depth = route_eval_rank.cost_of(_row("tavily", "correct", mode="@deep"))
     assert vendor is not None and vendor == prices.estimate("tavily", "search", ":ultra-fast")
     assert depth is not None and depth == prices.estimate("tavily", "search", "deep") and depth != vendor
+
+
+def _counted(correct: int, questions: int) -> dict[str, object]:
+    """What ``backend_stats`` gives a backend that served every one of ``questions`` it was counted on."""
+    return {
+        "questions": questions,
+        "served": questions,
+        "correct": correct,
+        "accuracy_all": correct / questions,
+        "cost_usd": 0.001,
+        "latency_p50": 1.0,
+    }
+
+
+def test_a_backend_counted_on_fewer_than_the_minimum_is_listed_apart_not_ranked(route_eval_rank: ModuleType) -> None:
+    minimum = route_eval_rank.MIN_QUESTIONS
+    stats = {
+        "lucky": _counted(minimum - 1, minimum - 1),
+        "enough": _counted(minimum // 2, minimum),
+        "none": {**_counted(0, minimum - 1), "served": 0},
+    }
+    assert route_eval_rank.recommended(stats, 0.01) == ["enough"], "all right on too few is no evidence"
+    assert route_eval_rank.too_few(stats) == ["lucky"], "a backend that served nothing is not 'too few'"
+    assert route_eval_rank.recommended(stats, 0.01, min_questions=1) == ["lucky", "enough"]

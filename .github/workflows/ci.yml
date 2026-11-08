@@ -225,6 +225,18 @@ jobs:
         run: |
           uv sync --all-extras --dev
           make check
+      - name: pre-commit
+        if: env.FULL != 'true'
+        env:
+          SKIP: no-commit-to-branch
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+      - name: No .env file committed
+        if: env.FULL != 'true'
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "::error::.env is tracked by git. Remove it: git rm --cached .env"
+            exit 1
+          fi
       - name: No credentials in tracked files
         if: env.FULL != 'true'
         run: bash scripts/check_credentials.sh

@@ -15,7 +15,8 @@ from typing import Any
 
 import pytest
 
-from tests.test_auto_seam import MEMBERS, TOOLS, _Tool
+from tests.routing_helpers import MEMBERS, TOOLS
+from tests.routing_helpers import Tool as _Tool
 from web_router import AsyncWebRouter, Budget, WebRouter, prices
 
 ARGS = {"search": "q", "extract": "https://a.test", "answer": "q", "research": "q", "browse": "t"}
