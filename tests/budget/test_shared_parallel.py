@@ -116,14 +116,9 @@ def test_parallel_threads_never_reserve_more_than_the_cap_between_them(gate: Gat
         status = shared.status()
     assert (status.spent_usd, status.reserved_usd, status.remaining_usd) == (0.09, 0.0, 0.01)
     assert all(result.decision.estimated_cost_usd == COST for result in results)
-
-
-def test_a_refused_call_fails_fast_with_the_reservations_in_flight_named(gate: Gate) -> None:
-    with WebRouter().budget(SHARED) as shared:
-        _in_threads(gate, lambda: shared.search("q", provider="gated"))
-    error = gate.refused[0]
-    # Refused by the snapshot the call started with, or, racing a reservation made since, by the pool itself.
-    assert error.skipped["search:gated"] in {
+    # A refused call fails fast, naming the reservations in flight: refused by the snapshot the call started
+    # with, or, racing a reservation made since, by the pool itself.
+    assert gate.refused[0].skipped["search:gated"] in {
         SKIP_OVER_COST.format(cost="$0.03", left="$0.01"),
         SKIP_OVER_SHARED.format(cost="$0.03", left="$0.01"),
     }
