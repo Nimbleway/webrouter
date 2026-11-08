@@ -1,0 +1,167 @@
+{
+  "vendor": "scrubby",
+  "name": "Scrubby",
+  "category": "email-verification",
+  "summary": "Email validation with instant single checks, queued bulk batches and slower deep verification.",
+  "docs_url": "https://docs.scrubby.io/",
+  "base_url": "https://api.scrubby.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SCRUBBY_API_KEY"
+        ],
+        "description": "a Scrubby API key (your Scrubby account settings)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is a POST with a JSON body. Credits are used per email submitted.",
+    "Rate limit: 25 requests per second per API key.",
+    "Bulk flow: submit the list to scrubby.bulk.submit, wait retry_after_seconds, then poll scrubby.bulk.results with the identifier every 30 to 60 seconds until status is completed. Deep flow works the same with scrubby.deep.submit and scrubby.deep.results, but takes up to 72 hours."
+  ],
+  "sources": [
+    "https://docs.scrubby.io/",
+    "https://docs.scrubby.io/scrubby-openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "scrubby.email.validate",
+      "name": "Validate one email",
+      "summary": "Result, status and quick status for one address, returned immediately.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/validate_email",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The email address to validate.",
+          "example": "john.doe@company.com"
+        }
+      },
+      "notes": [
+        "A read over POST: it only checks an address.",
+        "Server timeout is 100 seconds; a 408 still costs the credit, and resending the same request within 24 hours is free and returns the same verification."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://docs.scrubby.io/",
+      "verified": {
+        "docs": "https://docs.scrubby.io/"
+      }
+    },
+    {
+      "id": "scrubby.bulk.submit",
+      "name": "Submit a batch for validation",
+      "summary": "Queues a list of emails and returns an identifier and retry_after_seconds.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/validate_bulk_emails",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "List of email addresses to validate.",
+          "example": [
+            "john.doe@company.com",
+            "jane.smith@agency.com"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data and uses credits. Fetch the outcome with scrubby.bulk.results."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.scrubby.io/",
+      "verified": {
+        "docs": "https://docs.scrubby.io/"
+      }
+    },
+    {
+      "id": "scrubby.bulk.results",
+      "name": "Fetch a batch's results",
+      "summary": "Status (processing or completed) and per-email results for a quick batch.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/fetch_bulk_results",
+      "params": {
+        "identifier": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The identifier returned by the submit call."
+        }
+      },
+      "notes": [
+        "A read over POST. While status is processing, emails show result 'pending'; poll every 30 to 60 seconds."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.scrubby.io/",
+      "verified": {
+        "docs": "https://docs.scrubby.io/"
+      }
+    },
+    {
+      "id": "scrubby.deep.submit",
+      "name": "Submit a batch for deep verification",
+      "summary": "A slower, more thorough batch check; returns an identifier and a retry_after_seconds of up to 86400.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/validate_bulk_emails/deep/",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "List of email addresses to validate.",
+          "example": [
+            "john.doe@company.com",
+            "jane.smith@agency.com"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data. Fetch the outcome with scrubby.deep.results."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.scrubby.io/",
+      "verified": {
+        "docs": "https://docs.scrubby.io/"
+      }
+    },
+    {
+      "id": "scrubby.deep.results",
+      "name": "Fetch deep verification results",
+      "summary": "Status and results in three windows: results_24, results_48 and results_72.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/fetch_bulk_results/deep",
+      "params": {
+        "identifier": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The identifier returned by the submit call."
+        }
+      },
+      "notes": [
+        "A read over POST. Stop polling when status is completed; all three windows are then final."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.scrubby.io/",
+      "verified": {
+        "docs": "https://docs.scrubby.io/"
+      }
+    }
+  ]
+}

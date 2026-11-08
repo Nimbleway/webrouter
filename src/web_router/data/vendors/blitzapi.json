@@ -1,0 +1,643 @@
+{
+  "vendor": "blitzapi",
+  "name": "BlitzAPI",
+  "category": "enrichment",
+  "summary": "B2B people and company search, LinkedIn-based enrichment, verified work emails, phone numbers and job postings from BlitzAPI.",
+  "docs_url": "https://docs.blitz-api.ai",
+  "pricing_url": "https://docs.blitz-api.ai/guide/concepts/pricing",
+  "base_url": "https://api.blitz-api.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BLITZ_API_KEY"
+        ],
+        "description": "a BlitzAPI key from the dashboard (https://app.blitz-api.ai)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Nearly every call is a POST that only reads. Usage is metered in records per month by plan (fair-use policy); rate limits are per endpoint and shown by account.key_info.",
+    "Search endpoints page with a cursor (max_results plus the returned cursor); employee_finder pages by page number.",
+    "Person and company lookups are keyed by LinkedIn URL."
+  ],
+  "sources": [
+    "https://docs.blitz-api.ai/llms.txt",
+    "https://docs.blitz-api.ai/api-reference/v2.openapi.json",
+    "https://docs.blitz-api.ai/guide/getting-started/authentication.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "blitzapi.account.key_info",
+      "name": "Get API key details",
+      "summary": "Key validity, remaining records, per-endpoint rate limits and active plans.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/account/key-info",
+      "job": "account.usage",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/account/get-api-key-details.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/account/get-api-key-details.md"
+      }
+    },
+    {
+      "id": "blitzapi.people.search",
+      "name": "Find people across companies",
+      "summary": "Decision-makers matching person and company filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/search/people",
+      "params": {
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company criteria: name, industry, type, employee_count {min,max}, revenue, naics_code, keywords, founded_year, hq {city,state,country_code,continent,sales_region}, funding fields; text lists take {include, exclude}."
+        },
+        "people": {
+          "in": "body",
+          "type": "object",
+          "description": "Person criteria: job_title {include, exclude, include_linkedin_headline}, job_description, job_function, job_level, min_connections, is_recent_hire, location, education, include_active_jobs, include_past_jobs."
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return (default 10)."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor from the previous page; null or omitted for the first page."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries.",
+        "Page with the returned cursor until it is null."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/people-search/find-people.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/people-search/find-people.md"
+      }
+    },
+    {
+      "id": "blitzapi.people.employee_finder",
+      "name": "List employees of one company",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/search/employee-finder",
+      "params": {
+        "company_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn company URL.",
+          "example": "https://www.linkedin.com/company/openai"
+        },
+        "country_code": {
+          "in": "body",
+          "type": "array",
+          "description": "ISO country codes (default WORLD).",
+          "example": [
+            "US",
+            "FR"
+          ]
+        },
+        "continent": {
+          "in": "body",
+          "type": "array",
+          "description": "Continents."
+        },
+        "sales_region": {
+          "in": "body",
+          "type": "array",
+          "description": "NORAM, LATAM, EMEA or APAC."
+        },
+        "job_level": {
+          "in": "body",
+          "type": "array",
+          "description": "C-Team, Director, Manager, Other, Staff or VP."
+        },
+        "job_function": {
+          "in": "body",
+          "type": "array",
+          "description": "Job functions, e.g. Advertising & Marketing."
+        },
+        "min_connections_count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum LinkedIn connections."
+        },
+        "is_recent_hire": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only people whose job at the company started in the last 90 days."
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return (default 10)."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number, starting at 1."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. Pages by page number, not cursor."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/people-search/employee-finder.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/people-search/employee-finder.md"
+      }
+    },
+    {
+      "id": "blitzapi.people.waterfall_icp",
+      "name": "Waterfall search for the best decision-maker",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/search/waterfall-icp-keyword",
+      "params": {
+        "company_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn company URL.",
+          "example": "https://www.linkedin.com/company/openai"
+        },
+        "cascade": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Ordered tiers (1 to 10), each {include_title (1-50 phrases), exclude_title, location, ...}. Tier 1 fills max_results first, later tiers fill the rest."
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return (default 10)."
+        },
+        "profile_min_connections": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum LinkedIn connections a profile must have."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/people-search/waterfall-icp-search.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/people-search/waterfall-icp-search.md"
+      }
+    },
+    {
+      "id": "blitzapi.company.search",
+      "name": "Search companies",
+      "summary": "Companies matching ICP criteria such as industry, size, location and keywords.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/search/companies",
+      "params": {
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company criteria: name, industry, type, employee_count {min,max}, revenue, naics_code, keywords, founded_year, hq {city,state,country_code,continent,sales_region}, funding fields; text lists take {include, exclude}."
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return (default 10)."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor from the previous page; null or omitted for the first page."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/company-search/company-search.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/company-search/company-search.md"
+      }
+    },
+    {
+      "id": "blitzapi.company.tam_by_jobs",
+      "name": "Count companies hiring for matching jobs",
+      "summary": "Distinct companies hiring for matching jobs, each with a matched-jobs count.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/company/tam-by-jobs",
+      "params": {
+        "job": {
+          "in": "body",
+          "type": "object",
+          "description": "Job criteria; job.min_per_company floors the matched-jobs count."
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company criteria: name, industry, type, employee_count {min,max}, revenue, naics_code, keywords, founded_year, hq {city,state,country_code,continent,sales_region}, funding fields; text lists take {include, exclude}."
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return (default 10)."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor from the previous page; null or omitted for the first page."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 record per result; keep paging until cursor is null."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/company-search/tam-by-jobs.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/company-search/tam-by-jobs.md"
+      }
+    },
+    {
+      "id": "blitzapi.company.tam_by_people",
+      "name": "Count companies employing matching people",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/company/tam-by-people",
+      "params": {
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company criteria: name, industry, type, employee_count {min,max}, revenue, naics_code, keywords, founded_year, hq {city,state,country_code,continent,sales_region}, funding fields; text lists take {include, exclude}."
+        },
+        "people": {
+          "in": "body",
+          "type": "object",
+          "description": "Same person criteria as people.search, except include_active_jobs and include_past_jobs."
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return (default 10)."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor from the previous page; null or omitted for the first page."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/company-search/tam-by-people.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/company-search/tam-by-people.md"
+      }
+    },
+    {
+      "id": "blitzapi.jobs.search",
+      "name": "Search job postings",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/jobs/search",
+      "params": {
+        "job": {
+          "in": "body",
+          "type": "object",
+          "description": "Job criteria: title, description, ai_keywords, field, seniority, employment_type, work_arrangement, location, date_posted {last_days}."
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company criteria: is_agency, industry, employee_count, size, keywords, hq, mx."
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return (default 10)."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor from the previous page; null or omitted for the first page."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/job-search/search-jobs.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/job-search/search-jobs.md"
+      }
+    },
+    {
+      "id": "blitzapi.jobs.company",
+      "name": "List job postings at one company",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/jobs/company",
+      "params": {
+        "company_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn company URL.",
+          "example": "https://www.linkedin.com/company/openai"
+        },
+        "job": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional job filters, same as jobs.search."
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return (default 10)."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor from the previous page; null or omitted for the first page."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/job-search/company-jobs.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/job-search/company-jobs.md"
+      }
+    },
+    {
+      "id": "blitzapi.people.enrich",
+      "name": "Enrich a person from LinkedIn",
+      "summary": "Full profile and career history.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrichment/person",
+      "params": {
+        "person_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/antoine-blitz-5581b7373"
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/people-enrichment/person-enrichment.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/people-enrichment/person-enrichment.md"
+      }
+    },
+    {
+      "id": "blitzapi.people.find_email",
+      "name": "Find a work email from LinkedIn",
+      "summary": "A verified work email for a LinkedIn profile.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrichment/email",
+      "params": {
+        "person_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/antoine-blitz-5581b7373"
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/people-enrichment/find-work-email.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/people-enrichment/find-work-email.md"
+      }
+    },
+    {
+      "id": "blitzapi.people.find_phone",
+      "name": "Find a mobile or direct phone",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrichment/phone",
+      "params": {
+        "person_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/antoine-blitz-5581b7373"
+        }
+      },
+      "notes": [
+        "A read over POST. Phone coverage is mostly US numbers."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/people-enrichment/find-mobile-&-direct-phone.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/people-enrichment/find-mobile-&-direct-phone.md"
+      }
+    },
+    {
+      "id": "blitzapi.people.reverse_email",
+      "name": "Identify a person from a work email",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrichment/email-to-person",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A verified work email address.",
+          "example": "jane.doe@example.com"
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/people-enrichment/reverse-email-lookup.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/people-enrichment/reverse-email-lookup.md"
+      }
+    },
+    {
+      "id": "blitzapi.people.reverse_phone",
+      "name": "Identify a person from a phone number",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrichment/phone-to-person",
+      "params": {
+        "phone": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Phone number with country code; a number without one is read as US.",
+          "example": "+14155550123"
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/people-enrichment/reverse-phone-lookup.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/people-enrichment/reverse-phone-lookup.md"
+      }
+    },
+    {
+      "id": "blitzapi.company.enrich",
+      "name": "Enrich a company from LinkedIn URL",
+      "summary": "Full company profile, including MX records of its domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrichment/company",
+      "params": {
+        "company_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn company URL.",
+          "example": "https://www.linkedin.com/company/blitz-api"
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/company-enrichment/company-enrichment.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/company-enrichment/company-enrichment.md"
+      }
+    },
+    {
+      "id": "blitzapi.company.domain_to_linkedin",
+      "name": "Convert a domain to a LinkedIn company URL",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrichment/domain-to-linkedin",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Website domain.",
+          "example": "https://www.blitz-agency.com"
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/company-enrichment/domain-to-linkedin-url.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/company-enrichment/domain-to-linkedin-url.md"
+      }
+    },
+    {
+      "id": "blitzapi.company.linkedin_to_domain",
+      "name": "Get the email domain of a LinkedIn company URL",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrichment/linkedin-to-domain",
+      "params": {
+        "company_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn company URL.",
+          "example": "https://www.linkedin.com/company/blitz-api"
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/company-enrichment/linkedin-url-to-domain.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/company-enrichment/linkedin-url-to-domain.md"
+      }
+    },
+    {
+      "id": "blitzapi.company.employees_by_country",
+      "name": "Employee distribution by country",
+      "summary": "Counts people, not jobs, per ISO country code.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrichment/company-distribution-by-country",
+      "params": {
+        "company_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn company URL.",
+          "example": "https://www.linkedin.com/company/openai"
+        },
+        "is_recent_hire": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only count people whose job started in the last 90 days."
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/utilities/company-employment-distribution.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/utilities/company-employment-distribution.md"
+      }
+    },
+    {
+      "id": "blitzapi.company.employees_by_department",
+      "name": "Employee distribution by department",
+      "summary": "Counts current jobs, so a person with two jobs there counts twice.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrichment/company-distribution-by-department",
+      "params": {
+        "company_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn company URL.",
+          "example": "https://www.linkedin.com/company/openai"
+        },
+        "is_recent_hire": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only count jobs that started in the last 90 days."
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.blitz-api.ai/api-reference/utilities/company-department-distribution.md",
+      "verified": {
+        "docs": "https://docs.blitz-api.ai/api-reference/utilities/company-department-distribution.md"
+      }
+    }
+  ]
+}

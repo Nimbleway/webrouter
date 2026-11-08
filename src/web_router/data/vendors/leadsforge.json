@@ -1,0 +1,977 @@
+{
+  "vendor": "leadsforge",
+  "name": "Leadsforge",
+  "category": "enrichment",
+  "summary": "B2B lead search with email, phone and LinkedIn enrichment, lookalike companies, company followers and Google Maps business discovery.",
+  "docs_url": "https://api.leadsforge.ai/public/swagger/index.html",
+  "base_url": "https://api.leadsforge.ai/public/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "LEADSFORGE_API_KEY"
+        ],
+        "description": "a Leadsforge API key (API settings in your Leadsforge account)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The Swagger file declares an apiKey in the Authorization header; this entry sends the bare key with no Bearer prefix.",
+    "Credits: search gives 1,000 free requests a month (each cursor page counts), then 1 credit; email enrichment 1 credit per hit, phone 10 per hit, misses free; lookalike search 1 credit per company, preview 300 free a month. GET /balance lists the current prices.",
+    "Async flow for enrichment, company followers, maps discovery and Sales Navigator: start a job (returns a jobID), poll its status endpoint until status is completed, then page through the results endpoint with offset and limit. A webhookURL can be given instead of polling.",
+    "Send an Idempotency-Key header on job starts to retry safely: a repeat returns the existing job instead of charging again.",
+    "Controlled search filters (industries, seniorities, departments, company types, funding types, revenue ranges) need exact values from the /search/filters endpoints, which this entry leaves out."
+  ],
+  "sources": [
+    "https://api.leadsforge.ai/public/swagger/doc.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "leadsforge.account.balance",
+      "name": "Get credit balance",
+      "summary": "Available and reserved credits, and the price of each enrichment and search type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/balance",
+      "job": "account.usage",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.people.search",
+      "name": "Search people",
+      "summary": "People matching company and person filters, paged by cursor.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from the previous page."
+        },
+        "companyDomains": {
+          "in": "body",
+          "type": "object",
+          "description": "Company domains. {include: [...], exclude: [...]}."
+        },
+        "companyIndustries": {
+          "in": "body",
+          "type": "object",
+          "description": "Industries, exact values from /search/filters/industries. {include: [...], exclude: [...]}."
+        },
+        "companyLocations": {
+          "in": "body",
+          "type": "object",
+          "description": "Company locations. {include: [...], exclude: [...]}."
+        },
+        "companyKeywords": {
+          "in": "body",
+          "type": "object",
+          "description": "{include, exclude, matchAll}: company keywords."
+        },
+        "companyEmployeeNumberRange": {
+          "in": "body",
+          "type": "object",
+          "description": "{min, max} employee count."
+        },
+        "companyRevenueRanges": {
+          "in": "body",
+          "type": "array",
+          "description": "Revenue range values from /search/filters/revenue-ranges."
+        },
+        "companyTechnologies": {
+          "in": "body",
+          "type": "object",
+          "description": "{all: [...], any: [...]} technologies used."
+        },
+        "companyNames": {
+          "in": "body",
+          "type": "object",
+          "description": "Company names. {include: [...], exclude: [...]}."
+        },
+        "leadJobTitles": {
+          "in": "body",
+          "type": "object",
+          "description": "{include, exclude, exactMatch} job titles; free text."
+        },
+        "leadSeniorities": {
+          "in": "body",
+          "type": "object",
+          "description": "Seniorities, exact values from /search/filters/seniorities. {include: [...], exclude: [...]}."
+        },
+        "leadDepartments": {
+          "in": "body",
+          "type": "object",
+          "description": "Departments, exact values from /search/filters/departments. {include: [...], exclude: [...]}."
+        },
+        "leadLocations": {
+          "in": "body",
+          "type": "object",
+          "description": "Person locations. {include: [...], exclude: [...]}."
+        },
+        "maxContactsPerCompany": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap on people returned per company."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return."
+        }
+      },
+      "notes": [
+        "A read over POST. The first 1,000 requests a month are free; every cursor page counts as one request.",
+        "Pass a returned person id to the enrichment calls to get an email or phone."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.people.count",
+      "name": "Count people matching filters",
+      "summary": "The total number of matches for a filter set, without paging.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search/count",
+      "params": {
+        "companyDomains": {
+          "in": "body",
+          "type": "object",
+          "description": "Company domains. {include: [...], exclude: [...]}."
+        },
+        "companyIndustries": {
+          "in": "body",
+          "type": "object",
+          "description": "Industries, exact values from /search/filters/industries. {include: [...], exclude: [...]}."
+        },
+        "companyLocations": {
+          "in": "body",
+          "type": "object",
+          "description": "Company locations. {include: [...], exclude: [...]}."
+        },
+        "companyKeywords": {
+          "in": "body",
+          "type": "object",
+          "description": "{include, exclude, matchAll}: company keywords."
+        },
+        "companyEmployeeNumberRange": {
+          "in": "body",
+          "type": "object",
+          "description": "{min, max} employee count."
+        },
+        "companyRevenueRanges": {
+          "in": "body",
+          "type": "array",
+          "description": "Revenue range values from /search/filters/revenue-ranges."
+        },
+        "companyTechnologies": {
+          "in": "body",
+          "type": "object",
+          "description": "{all: [...], any: [...]} technologies used."
+        },
+        "companyNames": {
+          "in": "body",
+          "type": "object",
+          "description": "Company names. {include: [...], exclude: [...]}."
+        },
+        "leadJobTitles": {
+          "in": "body",
+          "type": "object",
+          "description": "{include, exclude, exactMatch} job titles; free text."
+        },
+        "leadSeniorities": {
+          "in": "body",
+          "type": "object",
+          "description": "Seniorities, exact values from /search/filters/seniorities. {include: [...], exclude: [...]}."
+        },
+        "leadDepartments": {
+          "in": "body",
+          "type": "object",
+          "description": "Departments, exact values from /search/filters/departments. {include: [...], exclude: [...]}."
+        },
+        "leadLocations": {
+          "in": "body",
+          "type": "object",
+          "description": "Person locations. {include: [...], exclude: [...]}."
+        },
+        "maxContactsPerCompany": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap on people returned per company."
+        }
+      },
+      "notes": [
+        "A read over POST. 1,000 free counts a month, then 1 credit each."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.email.find",
+      "name": "Find one work email (synchronous)",
+      "summary": "Looks up one person's work email and answers in the same response.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrichment/email",
+      "params": {
+        "personID": {
+          "in": "body",
+          "type": "string",
+          "description": "A person id from the search call."
+        },
+        "linkedinURL": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/john-doe"
+        },
+        "firstName": {
+          "in": "body",
+          "type": "string",
+          "description": "First name; use with lastName and a company signal."
+        },
+        "lastName": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "companyDomain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain; preferred over company name."
+        },
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name, not a URL."
+        },
+        "externalID": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own id, up to 128 characters, echoed back."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit on a hit, a miss is free. Give personID, linkedinURL, or firstName + lastName + a company signal."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.phone.find",
+      "name": "Find one phone number (synchronous)",
+      "summary": "Looks up one person's phone number and answers in the same response.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrichment/phone",
+      "params": {
+        "personID": {
+          "in": "body",
+          "type": "string",
+          "description": "A person id from the search call."
+        },
+        "linkedinURL": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/john-doe"
+        },
+        "firstName": {
+          "in": "body",
+          "type": "string",
+          "description": "First name; use with lastName and a company signal."
+        },
+        "lastName": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "companyDomain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain; preferred over company name."
+        },
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name, not a URL."
+        },
+        "externalID": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own id, up to 128 characters, echoed back."
+        }
+      },
+      "notes": [
+        "A read over POST. 10 credits on a hit, a miss is free."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.email.find_batch",
+      "name": "Find emails for many people (job)",
+      "summary": "Starts an async job that finds emails for up to 500 people.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrichment/emails",
+      "params": {
+        "personIDs": {
+          "in": "body",
+          "type": "array",
+          "description": "Person ids from the search call. Exclusive with people."
+        },
+        "people": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 500 objects, each with linkedinURL, or firstName + lastName + company; optional companyDomain and externalID. Exclusive with personIDs.",
+          "example": [
+            {
+              "linkedinURL": "https://www.linkedin.com/in/john-doe"
+            }
+          ]
+        },
+        "clientRequestID": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own id for the request."
+        },
+        "saveToList": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Save the results to a lead list."
+        },
+        "webhookURL": {
+          "in": "body",
+          "type": "string",
+          "description": "URL that gets a POST when the job completes."
+        },
+        "Idempotency-Key": {
+          "in": "header",
+          "type": "string",
+          "description": "Idempotency key: a repeat with the same key returns the existing job and never charges twice.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data and reserves credits. Poll leadsforge.enrichment.job with the jobID, then read leadsforge.enrichment.results."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.phone.find_batch",
+      "name": "Find phone numbers for many people (job)",
+      "summary": "Starts an async job that finds phone numbers for up to 500 people.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrichment/phones",
+      "params": {
+        "personIDs": {
+          "in": "body",
+          "type": "array",
+          "description": "Person ids from the search call. Exclusive with people."
+        },
+        "people": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 500 objects, each with linkedinURL, or firstName + lastName + company; optional companyDomain and externalID. Exclusive with personIDs.",
+          "example": [
+            {
+              "linkedinURL": "https://www.linkedin.com/in/john-doe"
+            }
+          ]
+        },
+        "clientRequestID": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own id for the request."
+        },
+        "saveToList": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Save the results to a lead list."
+        },
+        "webhookURL": {
+          "in": "body",
+          "type": "string",
+          "description": "URL that gets a POST when the job completes."
+        },
+        "Idempotency-Key": {
+          "in": "header",
+          "type": "string",
+          "description": "Idempotency key: a repeat with the same key returns the existing job and never charges twice.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data and reserves credits. Poll leadsforge.enrichment.job, then read leadsforge.enrichment.results."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.linkedin.find_batch",
+      "name": "Find LinkedIn profiles for many people (job)",
+      "summary": "Starts an async job that finds LinkedIn profiles for up to 500 people.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrichment/linkedin",
+      "params": {
+        "personIDs": {
+          "in": "body",
+          "type": "array",
+          "description": "Person ids from the search call. Exclusive with people."
+        },
+        "people": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 500 objects, each with linkedinURL, or firstName + lastName + company; optional companyDomain and externalID. Exclusive with personIDs.",
+          "example": [
+            {
+              "linkedinURL": "https://www.linkedin.com/in/john-doe"
+            }
+          ]
+        },
+        "clientRequestID": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own id for the request."
+        },
+        "saveToList": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Save the results to a lead list."
+        },
+        "webhookURL": {
+          "in": "body",
+          "type": "string",
+          "description": "URL that gets a POST when the job completes."
+        },
+        "Idempotency-Key": {
+          "in": "header",
+          "type": "string",
+          "description": "Idempotency key: a repeat with the same key returns the existing job and never charges twice.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data. Poll leadsforge.enrichment.job, then read leadsforge.enrichment.results."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.enrichment.jobs",
+      "name": "List enrichment jobs",
+      "summary": "Your enrichment jobs, filterable by status, channel and time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enrichment/jobs",
+      "params": {
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page size."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by status.",
+          "enum": [
+            "in_progress",
+            "completed",
+            "failed"
+          ]
+        },
+        "channel": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by channel.",
+          "enum": [
+            "email",
+            "phone",
+            "linkedin"
+          ]
+        },
+        "clientRequestID": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by your clientRequestID."
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Created-at lower bound, RFC3339."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "Created-at upper bound, RFC3339."
+        }
+      },
+      "notes": [
+        "limit is required, at most 100."
+      ],
+      "job": "jobs.list",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.enrichment.job",
+      "name": "Get an enrichment job",
+      "summary": "Status, counts and credits of one enrichment job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enrichment/jobs/{jobID}",
+      "params": {
+        "jobID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.enrichment.results",
+      "name": "List an enrichment job's results",
+      "summary": "The results of an enrichment job, paged.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enrichment/jobs/{jobID}/results",
+      "params": {
+        "jobID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job id."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page size."
+        }
+      },
+      "notes": [
+        "limit is required."
+      ],
+      "job": "jobs.results",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.company.lookalikes_preview",
+      "name": "Preview lookalike companies",
+      "summary": "Company metadata for companies similar to the given domains; no people.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/lookalikes/preview",
+      "params": {
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Seed company domains.",
+          "example": [
+            "stripe.com"
+          ]
+        },
+        "categories": {
+          "in": "body",
+          "type": "array",
+          "description": "Category filters."
+        },
+        "employeeRanges": {
+          "in": "body",
+          "type": "array",
+          "description": "Employee range values."
+        },
+        "fundingStages": {
+          "in": "body",
+          "type": "array",
+          "description": "Funding stage values."
+        },
+        "locations": {
+          "in": "body",
+          "type": "array",
+          "description": "Objects {id, type} where type is region or country."
+        }
+      },
+      "notes": [
+        "A read over POST. 300 free previews a month, then 1 credit each."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.company.lookalikes_search",
+      "name": "Search lookalike companies",
+      "summary": "Companies similar to the given domains, paged.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/lookalikes/search",
+      "params": {
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Seed company domains.",
+          "example": [
+            "stripe.com"
+          ]
+        },
+        "categories": {
+          "in": "body",
+          "type": "array",
+          "description": "Category filters."
+        },
+        "employeeRanges": {
+          "in": "body",
+          "type": "array",
+          "description": "Employee range values."
+        },
+        "fundingStages": {
+          "in": "body",
+          "type": "array",
+          "description": "Funding stage values."
+        },
+        "locations": {
+          "in": "body",
+          "type": "array",
+          "description": "Objects {id, type} where type is region or country."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number; at most 100."
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page size; at most 100."
+        },
+        "Idempotency-Key": {
+          "in": "header",
+          "type": "string",
+          "description": "Idempotency key: a repeat with the same key returns the existing job and never charges twice.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per company returned; credits are reserved first, then settled on actual results."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.followers.search",
+      "name": "Search a LinkedIn company page's followers (job)",
+      "summary": "Starts an async job that collects followers of a LinkedIn company page.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company-followers/search",
+      "params": {
+        "linkedinUrl": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn company page URL."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Followers to collect; required, at most 50,000."
+        },
+        "countries": {
+          "in": "body",
+          "type": "array",
+          "description": "Country filters."
+        },
+        "states": {
+          "in": "body",
+          "type": "array",
+          "description": "State filters."
+        },
+        "metros": {
+          "in": "body",
+          "type": "array",
+          "description": "Metro filters."
+        },
+        "departments": {
+          "in": "body",
+          "type": "array",
+          "description": "Department filters."
+        },
+        "jobTitles": {
+          "in": "body",
+          "type": "array",
+          "description": "Job title filters."
+        },
+        "levels": {
+          "in": "body",
+          "type": "array",
+          "description": "Level filters."
+        },
+        "clientRequestID": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own id."
+        },
+        "webhookURL": {
+          "in": "body",
+          "type": "string",
+          "description": "URL that gets a POST when the job ends."
+        },
+        "Idempotency-Key": {
+          "in": "header",
+          "type": "string",
+          "description": "Idempotency key: a repeat with the same key returns the existing job and never charges twice.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data. Poll leadsforge.followers.job, then read leadsforge.followers.results."
+      ],
+      "job": "social.search",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.followers.job",
+      "name": "Get a company followers job",
+      "summary": "Status of a followers job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company-followers/jobs/{jobID}",
+      "params": {
+        "jobID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.followers.results",
+      "name": "List a company followers job's results",
+      "summary": "The followers found, paged.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company-followers/jobs/{jobID}/results",
+      "params": {
+        "jobID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job id."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        }
+      },
+      "job": "jobs.results",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.maps.search",
+      "name": "Search local businesses on Google Maps (job)",
+      "summary": "Starts an async search for businesses of given categories within a radius of a point.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/maps-discovery/search",
+      "params": {
+        "categories": {
+          "in": "body",
+          "type": "array",
+          "description": "Business categories; free text works, GET /maps-discovery/filters/categories lists recommended ones.",
+          "example": [
+            "coffee shop"
+          ]
+        },
+        "lat": {
+          "in": "body",
+          "type": "number",
+          "description": "Latitude."
+        },
+        "lng": {
+          "in": "body",
+          "type": "number",
+          "description": "Longitude."
+        },
+        "radiusKm": {
+          "in": "body",
+          "type": "number",
+          "required": true,
+          "description": "Search radius in kilometres."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Businesses to find."
+        },
+        "language": {
+          "in": "body",
+          "type": "string",
+          "description": "Result language."
+        },
+        "clientRequestID": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own id."
+        },
+        "webhookURL": {
+          "in": "body",
+          "type": "string",
+          "description": "URL that gets a POST when the job ends."
+        },
+        "Idempotency-Key": {
+          "in": "header",
+          "type": "string",
+          "description": "Idempotency key: a repeat with the same key returns the existing job and never charges twice.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "A read over POST: starts a job; the search also creates a list named Public API: Local Businesses in the app; credits are reserved for limit and settled on businesses found. Poll leadsforge.maps.job, then read leadsforge.maps.results."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.maps.job",
+      "name": "Get a maps search job",
+      "summary": "Status of a Google Maps search job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/maps-discovery/jobs/{jobID}",
+      "params": {
+        "jobID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    },
+    {
+      "id": "leadsforge.maps.results",
+      "name": "List a maps search job's businesses",
+      "summary": "Businesses found so far; readable while the job runs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/maps-discovery/jobs/{jobID}/results",
+      "params": {
+        "jobID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job id."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset; at most 5000."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, at most 200 (default 50)."
+        }
+      },
+      "job": "jobs.results",
+      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
+      "verified": {
+        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
+      }
+    }
+  ]
+}

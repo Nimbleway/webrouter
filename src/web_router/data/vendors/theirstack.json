@@ -1,0 +1,806 @@
+{
+  "vendor": "theirstack",
+  "name": "TheirStack",
+  "category": "company-data",
+  "summary": "Job postings and company technographics: search jobs and companies by hiring signals, technologies and firmographics.",
+  "docs_url": "https://theirstack.com/en/docs/what-is-theirstack",
+  "pricing_url": "https://theirstack.com/en/pricing",
+  "base_url": "https://api.theirstack.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "THEIRSTACK_API_KEY"
+        ],
+        "description": "a TheirStack API key (theirstack.com account, API keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-priced: 1 credit per job and 3 per company returned by API calls; credits are spent only when data comes back.",
+    "Searches take one large JSON body of filters; list filters end in _or, _and or _not. Page with page, offset or cursor.",
+    "Saved searches, webhooks, company lists, datasets and email preferences exist but are not listed (they change your account)."
+  ],
+  "sources": [
+    "https://theirstack.com/llms.txt",
+    "https://api.theirstack.com/openapi.json",
+    "https://theirstack.com/en/docs/api-reference/jobs/search_jobs_v1.md",
+    "https://theirstack.com/en/docs/api-reference/companies/search_companies_v1.md"
+  ],
+  "endpoints": [
+    {
+      "id": "theirstack.billing.credit_balance",
+      "name": "Get credit balance",
+      "summary": "The team's remaining credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/billing/credit-balance",
+      "job": "account.usage",
+      "docs_url": "https://theirstack.com/en/docs/api-reference/billing/get_billing_credit_balance_v0.md",
+      "verified": {
+        "docs": "https://theirstack.com/en/docs/api-reference/billing/get_billing_credit_balance_v0.md"
+      }
+    },
+    {
+      "id": "theirstack.billing.credit_usage",
+      "name": "Get daily credit usage",
+      "summary": "Credits consumed per day, optionally grouped.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/teams/credits_consumption",
+      "params": {
+        "start_datetime": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, ISO datetime.",
+          "example": "2026-11-01T00:00:00"
+        },
+        "end_datetime": {
+          "in": "query",
+          "type": "string",
+          "description": "End, ISO datetime.",
+          "example": "2026-11-08T23:59:59"
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA timezone.",
+          "example": "Europe/Madrid"
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://theirstack.com/en/docs/api-reference/credit-consumption/get_teams_credits_consumption_v0.md",
+      "verified": {
+        "docs": "https://theirstack.com/en/docs/api-reference/credit-consumption/get_teams_credits_consumption_v0.md"
+      }
+    },
+    {
+      "id": "theirstack.jobs.search",
+      "name": "Search jobs",
+      "summary": "Job postings from thousands of sites, filtered by title, location, date, technology, description and company attributes.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/jobs/search",
+      "params": {
+        "job_title_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Title keyword patterns; a job matches if its title contains all the words of any pattern.",
+          "example": [
+            "software engineer",
+            "data scientist"
+          ]
+        },
+        "job_title_not": {
+          "in": "body",
+          "type": "array",
+          "description": "Title keyword patterns to exclude."
+        },
+        "job_country_code_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Job location ISO2 country codes.",
+          "example": [
+            "US",
+            "GB"
+          ]
+        },
+        "job_country_code_not": {
+          "in": "body",
+          "type": "array",
+          "description": "Country codes to exclude."
+        },
+        "posted_at_max_age_days": {
+          "in": "body",
+          "type": "integer",
+          "description": "Posted at most this many days ago; 0 means today.",
+          "example": 7
+        },
+        "posted_at_gte": {
+          "in": "body",
+          "type": "string",
+          "description": "Posted on or after this date (YYYY-MM-DD).",
+          "example": "2025-05-25"
+        },
+        "posted_at_lte": {
+          "in": "body",
+          "type": "string",
+          "description": "Posted on or before this date (YYYY-MM-DD)."
+        },
+        "discovered_at_max_age_days": {
+          "in": "body",
+          "type": "integer",
+          "description": "Discovered by TheirStack at most this many days ago."
+        },
+        "job_description_contains_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Literal whole words or phrases in the description (any matches).",
+          "example": [
+            "python",
+            "javascript"
+          ]
+        },
+        "job_description_contains_not": {
+          "in": "body",
+          "type": "array",
+          "description": "Words or phrases that must not appear in the description."
+        },
+        "workplace_types_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Workplace types, such as remote, hybrid, on_site."
+        },
+        "job_seniority_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Seniorities, such as junior, mid_level, senior."
+        },
+        "employment_statuses_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Employment types, such as full_time, part_time."
+        },
+        "min_salary_usd": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum annual salary in USD."
+        },
+        "max_salary_usd": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum annual salary in USD."
+        },
+        "job_technology_slug_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Technology slugs in the job; case-sensitive, from keywords.find.",
+          "example": [
+            "python"
+          ]
+        },
+        "job_technology_slug_and": {
+          "in": "body",
+          "type": "array",
+          "description": "All of these technology slugs."
+        },
+        "job_technology_slug_not": {
+          "in": "body",
+          "type": "array",
+          "description": "None of these technology slugs."
+        },
+        "is_closed": {
+          "in": "body",
+          "type": "boolean",
+          "description": "True for closed jobs only, false for open only."
+        },
+        "job_id_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Only these job ids."
+        },
+        "job_id_not": {
+          "in": "body",
+          "type": "array",
+          "description": "Exclude these job ids."
+        },
+        "order_by": {
+          "in": "body",
+          "type": "array",
+          "description": "Column objects {field, desc}; desc defaults to true."
+        },
+        "include_total_results": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return total_results; slows the response."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number (0-indexed) for page-based paging."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, for offset-based paging."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor for cursor paging."
+        },
+        "company_name_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Exact company names, case-sensitive."
+        },
+        "company_name_case_insensitive_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Exact company names, case-insensitive."
+        },
+        "company_domain_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains; full URLs and emails are accepted.",
+          "example": [
+            "stripe.com"
+          ]
+        },
+        "company_domain_not": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains to exclude."
+        },
+        "company_linkedin_url_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Company LinkedIn URLs."
+        },
+        "company_name_partial_match_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Substrings of company names."
+        },
+        "company_country_code_or": {
+          "in": "body",
+          "type": "array",
+          "description": "HQ country ISO2 codes, case-sensitive.",
+          "example": [
+            "US"
+          ]
+        },
+        "min_employee_count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum employees."
+        },
+        "max_employee_count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum employees."
+        },
+        "min_revenue_usd": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum revenue in USD."
+        },
+        "max_revenue_usd": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum revenue in USD."
+        },
+        "min_funding_usd": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum total funding in USD."
+        },
+        "max_funding_usd": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum total funding in USD."
+        },
+        "funding_stage_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Funding stages, such as angel, private_equity."
+        },
+        "industry_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Industry names, case-insensitive; list them with industries.list."
+        },
+        "company_technology_slug_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Technology slugs the company mentioned in its jobs; get slugs from keywords.find.",
+          "example": [
+            "python"
+          ]
+        },
+        "company_technology_slug_and": {
+          "in": "body",
+          "type": "array",
+          "description": "All of these technology slugs."
+        },
+        "company_technology_slug_not": {
+          "in": "body",
+          "type": "array",
+          "description": "None of these technology slugs."
+        },
+        "company_keyword_slug_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Keyword slugs the company mentioned in its jobs."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body.",
+        "1 credit per job returned. A search needs at least one qualifying filter (the discovered_at filters alone do not count); the docs' page lists the rule.",
+        "Page with page or offset, or cursor.",
+        "Many filters here are company filters that apply to the job's company."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://theirstack.com/en/docs/api-reference/jobs/search_jobs_v1.md",
+      "verified": {
+        "docs": "https://theirstack.com/en/docs/api-reference/jobs/search_jobs_v1.md"
+      }
+    },
+    {
+      "id": "theirstack.companies.search",
+      "name": "Search companies",
+      "summary": "Companies by technology stack, hiring signals and firmographics.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/companies/search",
+      "params": {
+        "company_name_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Exact company names, case-sensitive."
+        },
+        "company_name_case_insensitive_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Exact company names, case-insensitive."
+        },
+        "company_domain_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains; full URLs and emails are accepted.",
+          "example": [
+            "stripe.com"
+          ]
+        },
+        "company_domain_not": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains to exclude."
+        },
+        "company_linkedin_url_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Company LinkedIn URLs."
+        },
+        "company_name_partial_match_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Substrings of company names."
+        },
+        "company_country_code_or": {
+          "in": "body",
+          "type": "array",
+          "description": "HQ country ISO2 codes, case-sensitive.",
+          "example": [
+            "US"
+          ]
+        },
+        "min_employee_count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum employees."
+        },
+        "max_employee_count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum employees."
+        },
+        "min_revenue_usd": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum revenue in USD."
+        },
+        "max_revenue_usd": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum revenue in USD."
+        },
+        "min_funding_usd": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum total funding in USD."
+        },
+        "max_funding_usd": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum total funding in USD."
+        },
+        "funding_stage_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Funding stages, such as angel, private_equity."
+        },
+        "industry_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Industry names, case-insensitive; list them with industries.list."
+        },
+        "company_technology_slug_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Technology slugs the company mentioned in its jobs; get slugs from keywords.find.",
+          "example": [
+            "python"
+          ]
+        },
+        "company_technology_slug_and": {
+          "in": "body",
+          "type": "array",
+          "description": "All of these technology slugs."
+        },
+        "company_technology_slug_not": {
+          "in": "body",
+          "type": "array",
+          "description": "None of these technology slugs."
+        },
+        "company_keyword_slug_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Keyword slugs the company mentioned in its jobs."
+        },
+        "job_filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Job-level filters (same names as jobs.search) that select companies by their hiring."
+        },
+        "min_num_jobs_found": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum number of matching jobs the company has."
+        },
+        "expand_technology_slugs": {
+          "in": "body",
+          "type": "array",
+          "description": "Technology slugs to include detailed usage for, as technologies_found."
+        },
+        "order_by": {
+          "in": "body",
+          "type": "array",
+          "description": "Column objects {field, desc}."
+        },
+        "include_total_results": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return totals; slows the response."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number (0-indexed) for page-based paging."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, for offset-based paging."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor for cursor paging."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "3 credits per company returned."
+      ],
+      "job": "company.search",
+      "docs_url": "https://theirstack.com/en/docs/api-reference/companies/search_companies_v1.md",
+      "verified": {
+        "docs": "https://theirstack.com/en/docs/api-reference/companies/search_companies_v1.md"
+      }
+    },
+    {
+      "id": "theirstack.companies.technographics",
+      "name": "Get a company's technology stack",
+      "summary": "Technologies a company uses, with job counts, rank and first and last detection dates.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/companies/technologies",
+      "params": {
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain; full URLs and emails accepted.",
+          "example": "stripe.com"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Exact company name, case-sensitive."
+        },
+        "company_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Company LinkedIn URL."
+        },
+        "company_id": {
+          "in": "body",
+          "type": "string",
+          "description": "TheirStack company id (temporary, internal)."
+        },
+        "keyword_slug_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Only these keywords (technologies or buying-intent topics); slugs from keywords.find."
+        },
+        "keyword_category_slug_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Only keywords from these categories."
+        },
+        "min_jobs": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum jobs in which the company mentions each keyword."
+        },
+        "confidence_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Detection confidence levels, such as high."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number (0-indexed)."
+        }
+      },
+      "notes": [
+        "A read over POST. Identify the company by domain, name, LinkedIn URL or id."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://theirstack.com/en/docs/api-reference/companies/technographics_v1.md",
+      "verified": {
+        "docs": "https://theirstack.com/en/docs/api-reference/companies/technographics_v1.md"
+      }
+    },
+    {
+      "id": "theirstack.companies.buying_intents",
+      "name": "Get a company's buying intents",
+      "summary": "Buying-intent topics detected for a company, with job counts and dates.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/companies/buying_intents",
+      "params": {
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain; full URLs and emails accepted.",
+          "example": "stripe.com"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Exact company name, case-sensitive."
+        },
+        "company_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Company LinkedIn URL."
+        },
+        "company_id": {
+          "in": "body",
+          "type": "string",
+          "description": "TheirStack company id (temporary, internal)."
+        },
+        "keyword_slug_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Only these keywords (technologies or buying-intent topics); slugs from keywords.find."
+        },
+        "keyword_category_slug_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Only keywords from these categories."
+        },
+        "min_jobs": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum jobs in which the company mentions each keyword."
+        },
+        "confidence_or": {
+          "in": "body",
+          "type": "array",
+          "description": "Detection confidence levels, such as high."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number (0-indexed)."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://theirstack.com/en/docs/api-reference/companies/buying_intents_v1.md",
+      "verified": {
+        "docs": "https://theirstack.com/en/docs/api-reference/companies/buying_intents_v1.md"
+      }
+    },
+    {
+      "id": "theirstack.keywords.find",
+      "name": "Find technologies and topics",
+      "summary": "Technology and buying-intent keywords with their slugs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/catalog/keywords",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "General search across name, type, category and parent category.",
+          "example": "kubernetes"
+        },
+        "name_pattern": {
+          "in": "query",
+          "type": "string",
+          "description": "Text in the keyword name."
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "A single keyword slug."
+        },
+        "slugs": {
+          "in": "query",
+          "type": "string",
+          "description": "One or more keyword slugs."
+        },
+        "category_slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Keyword category slug."
+        },
+        "parent_category_slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Keyword parent category slug."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        }
+      },
+      "notes": [
+        "Use it to get slugs for the technology filters."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://theirstack.com/en/docs/api-reference/catalog/get_catalog_keywords_v0.md",
+      "verified": {
+        "docs": "https://theirstack.com/en/docs/api-reference/catalog/get_catalog_keywords_v0.md"
+      }
+    },
+    {
+      "id": "theirstack.locations.find",
+      "name": "Find locations",
+      "summary": "Standardized locations by name, id or country, for job location filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/catalog/locations",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Location name search.",
+          "example": "madrid"
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Location ids."
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to a country code."
+        },
+        "feature_code": {
+          "in": "query",
+          "type": "string",
+          "description": "GeoNames feature code, e.g. PPL, ADM1."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return."
+        }
+      },
+      "job": "jobs.search",
+      "docs_url": "https://theirstack.com/en/docs/api-reference/catalog/get_catalog_locations_v0.md",
+      "verified": {
+        "docs": "https://theirstack.com/en/docs/api-reference/catalog/get_catalog_locations_v0.md"
+      }
+    },
+    {
+      "id": "theirstack.industries.list",
+      "name": "List industries",
+      "summary": "Industry names and codes with job and company counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/catalog/industries",
+      "params": {
+        "industry": {
+          "in": "query",
+          "type": "string",
+          "description": "Text in the industry name, hierarchy or description."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://theirstack.com/en/docs/api-reference/catalog/get_catalog_industries_v0.md",
+      "verified": {
+        "docs": "https://theirstack.com/en/docs/api-reference/catalog/get_catalog_industries_v0.md"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

@@ -1,0 +1,816 @@
+{
+  "vendor": "branddev",
+  "name": "Context.dev",
+  "category": "company-data",
+  "summary": "Brand and company data, natural-language company and people search, person enrichment, news, plus web scrape, crawl, map and search from Context.dev.",
+  "docs_url": "https://docs.context.dev",
+  "pricing_url": "https://www.context.dev/pricing",
+  "base_url": "https://api.context.dev/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CONTEXT_DEV_API_KEY"
+        ],
+        "description": "a Context.dev API key from the dashboard (https://www.context.dev)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-based; each endpoint states its cost. account.usage shows the balance.",
+    "Most POST endpoints take optional timeoutOpts {milliseconds, behavior}; return-partial gives partial results at the deadline (partial flag set).",
+    "Paged endpoints return next_cursor; send it back with the same query."
+  ],
+  "sources": [
+    "https://docs.context.dev/llms.txt",
+    "https://docs.context.dev/openapi.json",
+    "https://docs.context.dev/api-reference/brand-intelligence/brand.md",
+    "https://docs.context.dev/api-reference/company/search.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "branddev.brand.retrieve",
+      "name": "Retrieve a brand profile",
+      "summary": "Logos, colors, company details and social links for one company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/brand/retrieve",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "How to look the brand up.",
+          "enum": [
+            "by_domain",
+            "by_name",
+            "by_email",
+            "by_ticker",
+            "by_direct_url"
+          ]
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Domain, with type by_domain.",
+          "example": "stripe.com"
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name, with type by_name.",
+          "example": "Apple Inc"
+        },
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email address, with type by_email.",
+          "example": "jane@stripe.com"
+        },
+        "ticker": {
+          "in": "body",
+          "type": "string",
+          "description": "Stock ticker, with type by_ticker.",
+          "example": "AAPL"
+        },
+        "maxSpeed": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip slow steps for a faster, less complete answer."
+        },
+        "maxAgeMs": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum cache age in milliseconds; default 3 months, 0 refreshes."
+        },
+        "timeoutOpts": {
+          "in": "body",
+          "type": "object",
+          "description": "Request deadline: {milliseconds, behavior} where behavior is fail (408) or return-partial."
+        },
+        "tags": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for filtering usage in the dashboard.",
+          "example": [
+            "production"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data. 10 credits per call.",
+        "The body is a union keyed by type: send type plus the one field it names (domain, name, email or ticker). by_direct_url takes a url field; its page was not checked."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.context.dev/api-reference/brand-intelligence/brand.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/brand-intelligence/brand.md"
+      }
+    },
+    {
+      "id": "branddev.brand.search",
+      "name": "Autocomplete brands",
+      "summary": "Up to 10 brands ordered by popularity; use the returned domain to retrieve a full profile.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/brand/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search term matched against name and domain.",
+          "example": "stripe"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Only brands in this country, ISO alpha-2 uppercase.",
+          "example": "US"
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Only brands with this primary language, e.g. english."
+        },
+        "autocomplete": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Prefix matching (default true)."
+        },
+        "queryBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to match: name, domain, or both comma-separated."
+        },
+        "typoTolerance": {
+          "in": "query",
+          "type": "integer",
+          "description": "Typos tolerated, 0 to 2 (default 0)."
+        }
+      },
+      "notes": [
+        "1 credit per call; free on Pro, Growth and Scale."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.context.dev/api-reference/brand-intelligence/search.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/brand-intelligence/search.md"
+      }
+    },
+    {
+      "id": "branddev.brand.styleguide",
+      "name": "Extract a website styleguide",
+      "summary": "Colors, typography, spacing and component styles.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/web/styleguide",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain to inspect, e.g. example.com. Give domain or directUrl, not both."
+        },
+        "directUrl": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact URL to inspect."
+        },
+        "maxAgeMs": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum cache age in ms; default 3 months."
+        },
+        "colorScheme": {
+          "in": "query",
+          "type": "string",
+          "description": "Emulate a color scheme.",
+          "enum": [
+            "light",
+            "dark"
+          ]
+        }
+      },
+      "notes": [
+        "10 credits per call."
+      ],
+      "docs_url": "https://docs.context.dev/api-reference/brand-intelligence/styleguide.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/brand-intelligence/styleguide.md"
+      }
+    },
+    {
+      "id": "branddev.company.search",
+      "name": "Search companies in natural language",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Describe the companies to find; up to 500 characters (5000 in ultra).",
+          "example": "Solar startups in California that raised a Series B"
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "fast (about 2 s) or ultra (up to 20 s, checks each criterion).",
+          "enum": [
+            "fast",
+            "ultra"
+          ]
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "{countries: [two-letter HQ codes], employees_min, employees_max}."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor from the previous page, with the same query, mode and filters."
+        },
+        "tags": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for filtering usage in the dashboard.",
+          "example": [
+            "production"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. 2 credits (ultra 10)."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.context.dev/api-reference/company/search.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/company/search.md"
+      }
+    },
+    {
+      "id": "branddev.people.search",
+      "name": "Search people in natural language",
+      "kind": "read",
+      "method": "POST",
+      "path": "/people/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Describe the people to find; up to 500 characters (5000 in ultra).",
+          "example": "VPs of sales at solar companies in California"
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "fast or ultra (up to 30 s).",
+          "enum": [
+            "fast",
+            "ultra"
+          ]
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "{countries, years_of_experience_min, years_of_experience_max}."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor from the previous page."
+        },
+        "tags": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for filtering usage in the dashboard.",
+          "example": [
+            "production"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. 10 credits (ultra 50)."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.context.dev/api-reference/people/search.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/people/search.md"
+      }
+    },
+    {
+      "id": "branddev.people.enrich",
+      "name": "Enrich a person from identity clues",
+      "summary": "Profile and match score for the person the clues point to.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/people/enrich",
+      "params": {
+        "social_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Public profile URLs; a person-profile URL can identify them alone."
+        },
+        "name": {
+          "in": "body",
+          "type": "object",
+          "description": "{first, last}; without an email or profile URL also give company, education or location."
+        },
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email address; free or disposable addresses return 422."
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "{name, domain} of an associated company."
+        },
+        "education": {
+          "in": "body",
+          "type": "array",
+          "description": "Items {institution, degree, field_of_study, graduation_year}."
+        },
+        "location": {
+          "in": "body",
+          "type": "object",
+          "description": "{city, region, country}."
+        },
+        "timeoutOpts": {
+          "in": "body",
+          "type": "object",
+          "description": "Request deadline: {milliseconds, behavior} where behavior is fail (408) or return-partial."
+        },
+        "tags": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for filtering usage in the dashboard.",
+          "example": [
+            "production"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data. 20 credits per match; beta."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.context.dev/api-reference/people/enrich.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/people/enrich.md"
+      }
+    },
+    {
+      "id": "branddev.web.scrape",
+      "name": "Scrape a URL",
+      "summary": "The URL as Markdown, HTML, screenshot, product data or JSON matching your schema.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/web/scrape",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Public HTTP or HTTPS URL.",
+          "example": "https://example.com"
+        },
+        "formats": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Outputs to return, at least one true: html, markdown, screenshot, images, bytes, parse, product, highlights, json.",
+          "example": {
+            "markdown": true
+          }
+        },
+        "sharedParams": {
+          "in": "body",
+          "type": "object",
+          "description": "Browser and content settings: country, headers, viewport, waitFor, mainContentOnly, includeSelectors, excludeSelectors, actions (paid plans).",
+          "example": {
+            "mainContentOnly": true
+          }
+        },
+        "markdownParams": {
+          "in": "body",
+          "type": "object",
+          "description": "Markdown options."
+        },
+        "highlightsParams": {
+          "in": "body",
+          "type": "object",
+          "description": "{query, maxCharacters}; needed with formats.highlights."
+        },
+        "jsonParams": {
+          "in": "body",
+          "type": "object",
+          "description": "{schema, instructions}; needed with formats.json."
+        },
+        "maxAgeMs": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum cache age in ms; default 3 days, 0 fetches fresh."
+        },
+        "timeoutOpts": {
+          "in": "body",
+          "type": "object",
+          "description": "Request deadline: {milliseconds, behavior} where behavior is fail (408) or return-partial."
+        },
+        "tags": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for filtering usage in the dashboard.",
+          "example": [
+            "production"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. From 1 credit per call; each extra format adds cost.",
+        "Requests with custom headers or actions skip the cache."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.context.dev/api-reference/web-scraping/scrape.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/web-scraping/scrape.md"
+      }
+    },
+    {
+      "id": "branddev.web.search",
+      "name": "Search the web",
+      "kind": "read",
+      "method": "POST",
+      "path": "/web/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural language or Google-style operators.",
+          "example": "context.dev pricing"
+        },
+        "numResults": {
+          "in": "body",
+          "type": "integer",
+          "description": "1 to 100 (default 10)."
+        },
+        "includeDomains": {
+          "in": "body",
+          "type": "array",
+          "description": "Allowlist of up to 100 domains."
+        },
+        "excludeDomains": {
+          "in": "body",
+          "type": "array",
+          "description": "Blocklist of up to 100 domains."
+        },
+        "freshness": {
+          "in": "body",
+          "type": "string",
+          "description": "Recency window.",
+          "enum": [
+            "last_24_hours",
+            "last_week",
+            "last_month",
+            "last_year"
+          ]
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Lowercase two-letter country code to localize results."
+        },
+        "markdownOptions": {
+          "in": "body",
+          "type": "object",
+          "description": "Set enabled true to return each result as Markdown."
+        },
+        "highlightsOptions": {
+          "in": "body",
+          "type": "object",
+          "description": "Return passages relevant to the query."
+        },
+        "timeoutOpts": {
+          "in": "body",
+          "type": "object",
+          "description": "Request deadline: {milliseconds, behavior} where behavior is fail (408) or return-partial."
+        },
+        "tags": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for filtering usage in the dashboard.",
+          "example": [
+            "production"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. From 1 credit per 10 results."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.context.dev/api-reference/web-scraping/search.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/web-scraping/search.md"
+      }
+    },
+    {
+      "id": "branddev.web.map",
+      "name": "Map a site's URLs",
+      "kind": "read",
+      "method": "GET",
+      "path": "/web/urls",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain to map.",
+          "example": "stripe.com"
+        },
+        "includeSubdomains": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include subdomain URLs."
+        },
+        "maxLinks": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum URLs (default 10000)."
+        },
+        "sitemapUrl": {
+          "in": "query",
+          "type": "string",
+          "description": "Use this sitemap instead of discovery."
+        },
+        "urlRegex": {
+          "in": "query",
+          "type": "string",
+          "description": "Only URLs matching this regex."
+        },
+        "excludeUrlRegex": {
+          "in": "query",
+          "type": "string",
+          "description": "Drop URLs matching this regex."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Order URLs by relevance to a topic."
+        }
+      },
+      "notes": [
+        "From 1 credit per call."
+      ],
+      "job": "web.map",
+      "docs_url": "https://docs.context.dev/api-reference/web-scraping/map.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/web-scraping/map.md"
+      }
+    },
+    {
+      "id": "branddev.web.crawl",
+      "name": "Crawl a website to Markdown",
+      "summary": "Page content as Markdown for up to a few hundred pages.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/web/crawl",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Start URL.",
+          "example": "https://example.com"
+        },
+        "maxPages": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum pages (default 100)."
+        },
+        "maxDepth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Link depth from the start page; 0 is only that page."
+        },
+        "urlRegex": {
+          "in": "body",
+          "type": "string",
+          "description": "Only follow URLs matching this regex."
+        },
+        "excludeUrlRegex": {
+          "in": "body",
+          "type": "string",
+          "description": "Never follow URLs matching this regex."
+        },
+        "useMainContentOnly": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Strip headers, footers and navigation."
+        },
+        "followSubdomains": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Follow subdomain links."
+        },
+        "stopAfterMs": {
+          "in": "body",
+          "type": "integer",
+          "description": "Soft deadline in ms (default 80000); returns pages collected so far."
+        },
+        "tags": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for filtering usage in the dashboard.",
+          "example": [
+            "production"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it only fetches pages. 1 credit per page. Use a batch for crawls beyond 500 pages."
+      ],
+      "job": "web.crawl",
+      "docs_url": "https://docs.context.dev/api-reference/web-scraping/crawl.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/web-scraping/crawl.md"
+      }
+    },
+    {
+      "id": "branddev.web.answers",
+      "name": "Research a task and return a sourced answer",
+      "kind": "read",
+      "method": "POST",
+      "path": "/web/answers",
+      "params": {
+        "task": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Research task; include domains or URLs to focus it.",
+          "example": "What does stripe.com charge for card payments?"
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "fast or ultra (default, deeper).",
+          "enum": [
+            "fast",
+            "ultra"
+          ]
+        },
+        "json_format": {
+          "in": "body",
+          "type": "object",
+          "description": "An example answer object (not JSON Schema) to shape the answer."
+        },
+        "timeoutOpts": {
+          "in": "body",
+          "type": "object",
+          "description": "Request deadline: {milliseconds, behavior} where behavior is fail (408) or return-partial."
+        },
+        "tags": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for filtering usage in the dashboard.",
+          "example": [
+            "production"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. 10 credits in fast mode, 100 in ultra."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.context.dev/api-reference/web-extraction/answers.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/web-extraction/answers.md"
+      }
+    },
+    {
+      "id": "branddev.news.search",
+      "name": "Search news",
+      "kind": "read",
+      "method": "POST",
+      "path": "/news/search",
+      "params": {
+        "searchBy": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{type: \"entity\", entity: {type: name|domain|ticker|isin, plus that field}} for one company, or {type: \"natural_language\", query} for all news.",
+          "example": {
+            "type": "entity",
+            "entity": {
+              "type": "domain",
+              "domain": "apple.com"
+            }
+          }
+        },
+        "filterBy": {
+          "in": "body",
+          "type": "object",
+          "description": "Use at most one of sourceDomain, sourceCountry, articleLanguage or articleType; a date range {from, to} may accompany it."
+        },
+        "sortBy": {
+          "in": "body",
+          "type": "object",
+          "description": "{type: relevance|newest}."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results (default 10)."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor from the previous page."
+        },
+        "tags": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for filtering usage in the dashboard.",
+          "example": [
+            "production"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. 1 credit per 10 results."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.context.dev/api-reference/news/search.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/news/search.md"
+      }
+    },
+    {
+      "id": "branddev.account.usage",
+      "name": "Retrieve credit balance and usage",
+      "summary": "Credit balance, current-period usage and next refill.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/org/usage",
+      "job": "account.usage",
+      "docs_url": "https://docs.context.dev/api-reference/usage/retrieve.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/usage/retrieve.md"
+      }
+    },
+    {
+      "id": "branddev.account.usage_history",
+      "name": "Retrieve usage history",
+      "kind": "read",
+      "method": "GET",
+      "path": "/org/usage/history",
+      "params": {
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Range start, ISO 8601."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "Range end, ISO 8601; default now."
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "description": "Bucket size.",
+          "enum": [
+            "hour",
+            "day",
+            "month"
+          ]
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Split buckets by.",
+          "enum": [
+            "path",
+            "key_id",
+            "status_code"
+          ]
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.context.dev/api-reference/usage/history.md",
+      "verified": {
+        "docs": "https://docs.context.dev/api-reference/usage/history.md"
+      }
+    }
+  ]
+}

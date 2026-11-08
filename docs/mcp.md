@@ -189,6 +189,9 @@ the client's `env` block or a file the server already read takes a restart.
 | `templates` | List a vendor's templates: saved, site-specific extractions, each turning one kind of page into a record. Each row names the inputs a run must pass (`required_inputs`) and one input the vendor recorded a run with (`sample_inputs`). `provider` is required, as on the two tools below. Paged with `limit` and `offset`. | about a second, and free |
 | `template` | Describe one template: the `input_schema` a run must pass as `inputs`, the `output_schema` of the record, and `samples`, recorded runs to copy a first call from. | about a second, and free |
 | `run_template` | Run a template on one page and get its record back. | about a second, and it bills one template run -- on Nimble, one flat rate for every template, on [its pricing page](https://www.nimbleway.com/pricing) |
+| `vendors` | Find a vendor API to call with the user's own account: with `query` ("google ads spend by campaign"), matching endpoints best first; without, the vendors in the catalog. Each row says whether its credentials are set here, and which variables to set when not. | instant, and free |
+| `vendor_endpoint` | Describe one vendor endpoint: every input and where it goes, the notes a caller gets wrong without (units, paging), and the credentials it needs. | instant, and free |
+| `call_vendor` | Call a vendor's API with the user's credentials -- a catalog `endpoint` with its `params`, or a raw `vendor` + `method` + `path` -- and get the vendor's own JSON back. Writes are refused unless the server was started with `WEB_ROUTER_ALLOW_VENDOR_WRITES=1` **and** the call passes `allow_writes: true`. | as long as the vendor takes; billed by the vendor, if at all |
 | `answer` | One question, answered by the backend in a few sentences, with the sources it rests on. A source the answer cites inline carries the marker in `field`. Unnamed, the configured answer backends are tried in ranked order, and one that fails is passed over. | a few seconds; each backend tried bills one call |
 | `research` | Start an agentic run that searches, reads and cross-checks over many turns. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the run** |
 | `research_status` | Poll a handle from `research`: its state, or the answer once it has one. | about a second, and free |
@@ -206,7 +209,7 @@ the client's `env` block or a file the server already read takes a restart.
 | `browser_read` | The page as it is now, as text or HTML, shaped like `extract`. | about a second |
 | `browser_close` | End the session and stop paying for it. | about a second |
 
-The descriptions the model reads say the same thing, because with twenty-one tools in
+The descriptions the model reads say the same thing, because with twenty-four tools in
 front of it the model *is* the router: what it needs to choose on is what each
 tool is for, what it costs and how long it takes.
 
@@ -514,8 +517,10 @@ variable, or pass provider_config={'tavily': {'api_key': ...}} ...
 | `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
+| `WEB_ROUTER_ALLOW_VENDOR_WRITES` | unset | `1` lets `call_vendor` send calls that change data on a vendor (a budget change, a deleted monitor), and only those the model marks `allow_writes: true`. Off by default: the model can read your vendor accounts but not change them. |
+| `WEB_ROUTER_VENDOR_CATALOG` | unset | A directory of extra vendor files, read after the shipped ones; one named for a shipped vendor replaces it. |
 
-Everything else it reads is a provider credential, and belongs to the provider.
+Everything else it reads is a provider or vendor credential, and belongs to the provider or vendor. `load_env` takes every variable a vendor's catalog file lists, settings such as `DD_SITE` included.
 
 ## Sharing it with your team
 

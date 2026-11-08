@@ -1,4 +1,4 @@
-"""The twenty-one tools, and the session state they share.
+"""The twenty-four tools, and the session state they share.
 
 Everything here is a thin projection of :class:`~web_router.AsyncWebRouter`:
 each tool's arguments are the library's own keyword names, passed through
@@ -105,11 +105,20 @@ from web_router.constants import (
     RESEARCH_ENV_BY_PROVIDER,
     TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.constants_vendors import (
+    MCP_MSG_VENDOR_CALL_ARGS,
+    MCP_TOOL_CALL_VENDOR,
+    MCP_TOOL_VENDOR_ENDPOINT,
+    MCP_TOOL_VENDORS,
+    MSG_VENDOR_MCP_WRITE_REFUSED,
+    VENDOR_ENV_ALLOW_WRITES,
+)
 from web_router.exceptions import (
     BrowseTimeoutError,
     ProviderNotFoundError,
     ProviderNotInstalledError,
     ResearchTimeoutError,
+    VendorWriteRefusedError,
 )
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
 from web_router.mcp.env import EnvSources, user_config_dir
@@ -129,6 +138,12 @@ from web_router.mcp.shaping import (
     shape_search,
 )
 from web_router.mcp.shaping_templates import shape_template, shape_template_run, shape_templates
+from web_router.mcp.shaping_vendors import (
+    shape_endpoint,
+    shape_endpoint_list,
+    shape_vendor_list,
+    shape_vendor_response,
+)
 from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider
 from web_router.providers.auto_answer import AutoAnswerProvider
 from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
@@ -160,6 +175,7 @@ from web_router.types import (
     StealthLevel,
 )
 from web_router.types_answer import ANSWER_PARAMETERS
+from web_router.vendors.catalog import get_catalog
 
 _CONFIGURED: dict[str, Callable[[], list[str]]] = {
     MCP_TOOL_SEARCH: configured_providers,
@@ -328,6 +344,9 @@ class WebRouterTools:
             MCP_TOOL_TEMPLATES: self._templates,
             MCP_TOOL_TEMPLATE: self._template,
             MCP_TOOL_RUN_TEMPLATE: self._run_template,
+            MCP_TOOL_VENDORS: self._vendors,
+            MCP_TOOL_VENDOR_ENDPOINT: self._vendor_endpoint,
+            MCP_TOOL_CALL_VENDOR: self._call_vendor,
             MCP_TOOL_ANSWER: self._answer,
             MCP_TOOL_RESEARCH: self._research,
             MCP_TOOL_RESEARCH_STATUS: self._research_status,
@@ -443,6 +462,53 @@ class WebRouterTools:
         response = await self.router.run_template(**self._kwargs(MCP_TOOL_RUN_TEMPLATE, arguments))
         record = self.store.add(MCP_TOOL_RUN_TEMPLATE, raw=response.raw)
         return shape_template_run(response, record.handle, budget=max_response_chars())
+
+    async def _vendors(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        query, vendor = arguments.get("query"), arguments.get("vendor")
+        if query or vendor:
+            endpoints = self.router.find_vendor_endpoints(
+                query or "", vendor=vendor, category=arguments.get("category"), limit=arguments.get("limit")
+            )
+            return shape_endpoint_list(
+                endpoints, get_catalog(), self.router.vendor_credential_source(), budget=max_response_chars()
+            )
+        rows = self.router.vendors(category=arguments.get("category"), configured=arguments.get("configured"))
+        return shape_vendor_list(rows, budget=max_response_chars())
+
+    async def _vendor_endpoint(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        name = arguments.get("endpoint")
+        if not name:
+            raise ValueError(MCP_MSG_MISSING_ARGUMENT.format(tool=MCP_TOOL_VENDOR_ENDPOINT, name="endpoint"))
+        endpoint = self.router.vendor_endpoint(name)
+        vendor = self.router.vendor(endpoint.vendor)
+        return shape_endpoint(endpoint, vendor, self.router.vendor_credential_source(), budget=max_response_chars())
+
+    async def _call_vendor(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        endpoint = arguments.get("endpoint")
+        raw = [arguments.get(name) for name in ("vendor", "method", "path")]
+        if not ((endpoint and not any(raw)) or (not endpoint and all(raw))):
+            raise ValueError(MCP_MSG_VENDOR_CALL_ARGS)
+        # Writes need both: the user started this server allowing them, and the model asked for this one.
+        allow = arguments.get("allow_writes") is True and os.environ.get(VENDOR_ENV_ALLOW_WRITES) == "1"
+        try:
+            if endpoint:
+                response = await self.router.call_vendor(endpoint, arguments.get("params"), allow_writes=allow)
+            else:
+                vendor, method, path = (str(value) for value in raw)
+                response = await self.router.vendor_request(
+                    vendor,
+                    method,
+                    path,
+                    query=arguments.get("query"),
+                    body=arguments.get("body"),
+                    host=arguments.get("host"),
+                    allow_writes=allow,
+                )
+        except VendorWriteRefusedError as exc:
+            message = MSG_VENDOR_MCP_WRITE_REFUSED.format(target=exc.target, vendor=exc.vendor)
+            raise VendorWriteRefusedError(exc.vendor, exc.target, message) from None
+        record = self.store.add(MCP_TOOL_CALL_VENDOR, raw=response.model_dump())
+        return shape_vendor_response(response, record.handle, budget=max_response_chars())
 
     async def _answer(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         response = await self.router.answer(**self._kwargs(MCP_TOOL_ANSWER, arguments))

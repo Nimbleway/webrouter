@@ -67,14 +67,21 @@ from web_router.constants import (
     MCP_USER_CONFIG_ROOT_DEFAULT,
     RESEARCH_ENV_BY_PROVIDER,
 )
+from web_router.vendors.catalog import get_catalog
 
 
 def credential_variables() -> frozenset[str]:
-    """Every provider credential variable, from the tables that already name them."""
+    """Every provider credential variable, from the tables that already name them, and every vendor's from its file.
+
+    A vendor's settings (its region, its API version) are taken too: they are
+    read from the same place, and a ``.env`` that sets ``DD_SITE`` beside
+    ``DD_API_KEY`` means both.
+    """
     tables = (EXTRACT_ENV_BY_PROVIDER, RESEARCH_ENV_BY_PROVIDER, BROWSER_ENV_BY_PROVIDER, BROWSE_ENV_BY_PROVIDER)
     single = {var for var in ENV_BY_PROVIDER.values() if var}
     grouped = {var for table in tables for env_vars in table.values() for var in env_vars}
-    return frozenset(single | grouped)
+    vendors = {var for vendor in get_catalog().all() for var in vendor.credential_variables()}
+    return frozenset(single | grouped | vendors)
 
 
 def _set_in_environment() -> tuple[str, ...]:

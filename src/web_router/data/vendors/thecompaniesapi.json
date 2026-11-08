@@ -1,0 +1,483 @@
+{
+  "vendor": "thecompaniesapi",
+  "name": "The Companies API",
+  "category": "company-data",
+  "summary": "Company enrichment from a domain, email or social URL, plus segmentation search over millions of companies.",
+  "docs_url": "https://www.thecompaniesapi.com/api",
+  "pricing_url": "https://www.thecompaniesapi.com/pricing",
+  "base_url": "https://api.thecompaniesapi.com",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "THECOMPANIESAPI_API_TOKEN"
+        ],
+        "description": "a The Companies API token (API tokens page of your account)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Basic {api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-priced: 1 credit per company enriched or returned; empty lookups are not charged. New accounts get 500 free credits.",
+    "The docs also accept the token as a ?token= query parameter.",
+    "Search conditions are objects with attribute, operator, sign and values; the docs page has a generator for them.",
+    "Lists, actions, prompts and analytics endpoints exist but are not listed."
+  ],
+  "sources": [
+    "https://www.thecompaniesapi.com/api",
+    "https://api.thecompaniesapi.com/v2/openapi",
+    "https://www.thecompaniesapi.com/api/authentication",
+    "https://www.thecompaniesapi.com/api/enrich-company-from-domain"
+  ],
+  "endpoints": [
+    {
+      "id": "thecompaniesapi.company.get",
+      "name": "Enrich a company from its domain",
+      "summary": "Company profile with 80+ data points from a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/{domain}",
+      "params": {
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company domain.",
+          "example": "microsoft.com"
+        },
+        "refresh": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Refresh the company data."
+        },
+        "simplified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return a simplified, smaller company object."
+        }
+      },
+      "notes": [
+        "1 credit per request; an empty object comes back, uncharged, when no company is found."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://www.thecompaniesapi.com/api/enrich-company-from-domain",
+      "verified": {
+        "docs": "https://www.thecompaniesapi.com/api/enrich-company-from-domain"
+      }
+    },
+    {
+      "id": "thecompaniesapi.company.by_email",
+      "name": "Enrich a company from an email address",
+      "summary": "Company profile from the domain of an email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/by-email",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "An email at the company.",
+          "example": "jane@microsoft.com"
+        },
+        "refresh": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Refresh the company data."
+        },
+        "simplified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return a simplified, smaller company object."
+        }
+      },
+      "notes": [
+        "1 credit per request."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://www.thecompaniesapi.com/api/enrich-company-from-email",
+      "verified": {
+        "docs": "https://www.thecompaniesapi.com/api/enrich-company-from-email"
+      }
+    },
+    {
+      "id": "thecompaniesapi.company.by_social",
+      "name": "Enrich a company from a social URL",
+      "summary": "Company profile from a social network profile URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/by-social",
+      "params": {
+        "linkedin": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL.",
+          "example": "https://www.linkedin.com/company/microsoft"
+        },
+        "twitter": {
+          "in": "query",
+          "type": "string",
+          "description": "Twitter/X URL."
+        },
+        "facebook": {
+          "in": "query",
+          "type": "string",
+          "description": "Facebook URL."
+        },
+        "instagram": {
+          "in": "query",
+          "type": "string",
+          "description": "Instagram URL."
+        },
+        "github": {
+          "in": "query",
+          "type": "string",
+          "description": "GitHub URL."
+        },
+        "youtube": {
+          "in": "query",
+          "type": "string",
+          "description": "YouTube URL."
+        },
+        "tiktok": {
+          "in": "query",
+          "type": "string",
+          "description": "TikTok URL."
+        },
+        "refresh": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Refresh the company data."
+        },
+        "simplified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return a simplified, smaller company object."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://www.thecompaniesapi.com/api/enrich-company-from-social-network-url",
+      "verified": {
+        "docs": "https://www.thecompaniesapi.com/api/enrich-company-from-social-network-url"
+      }
+    },
+    {
+      "id": "thecompaniesapi.companies.search",
+      "name": "Search companies with a segmentation query",
+      "summary": "Companies matching conditions on industry, size, location, technology, revenue and more, or a text search.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "array",
+          "description": "Conditions: objects {attribute, operator: and|or, sign: equals|exactEquals|greater|lower|notEquals, values: [...]}. Attributes include about.industries, about.totalEmployees, locations.headquarters.country.code, technologies.active, finances.revenue, domain.tld, ai.search.",
+          "example": [
+            {
+              "attribute": "locations.headquarters.country.code",
+              "operator": "and",
+              "sign": "equals",
+              "values": [
+                "us"
+              ]
+            }
+          ]
+        },
+        "search": {
+          "in": "body",
+          "type": "string",
+          "description": "Text to search for."
+        },
+        "searchFields": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields the text is matched against.",
+          "example": [
+            "about.name",
+            "domain.domain"
+          ]
+        },
+        "page": {
+          "in": "body",
+          "type": "number",
+          "description": "Page number."
+        },
+        "size": {
+          "in": "body",
+          "type": "number",
+          "description": "Companies per page, 1 to 100."
+        },
+        "sortFields": {
+          "in": "body",
+          "type": "array",
+          "description": "Objects {key, order} to sort by."
+        },
+        "simplified": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Simplified company objects."
+        },
+        "domainsToExclude": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated domains to leave out."
+        },
+        "linkedinToExclude": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated LinkedIn ids to leave out."
+        }
+      },
+      "notes": [
+        "A read over POST: the query is in the body.",
+        "1 credit per company returned."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.thecompaniesapi.com/api/search-companies",
+      "verified": {
+        "docs": "https://www.thecompaniesapi.com/api/search-companies"
+      }
+    },
+    {
+      "id": "thecompaniesapi.companies.count",
+      "name": "Count companies matching a query",
+      "summary": "How many companies match, before paying to fetch them.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/count",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "array",
+          "description": "Conditions: objects {attribute, operator: and|or, sign: equals|exactEquals|greater|lower|notEquals, values: [...]}. Attributes include about.industries, about.totalEmployees, locations.headquarters.country.code, technologies.active, finances.revenue, domain.tld, ai.search.",
+          "example": [
+            {
+              "attribute": "locations.headquarters.country.code",
+              "operator": "and",
+              "sign": "equals",
+              "values": [
+                "us"
+              ]
+            }
+          ]
+        },
+        "search": {
+          "in": "body",
+          "type": "string",
+          "description": "Text to search for."
+        },
+        "searchFields": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields the text is matched against."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.thecompaniesapi.com/api/count-companies",
+      "verified": {
+        "docs": "https://www.thecompaniesapi.com/api/count-companies"
+      }
+    },
+    {
+      "id": "thecompaniesapi.companies.by_name",
+      "name": "Search companies by name",
+      "summary": "All companies matching a name; names are not unique.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/by-name",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company name.",
+          "example": "Bolt"
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to these countries."
+        },
+        "exactWordsMatch": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Match whole words only."
+        },
+        "page": {
+          "in": "query",
+          "type": "number",
+          "description": "Page number."
+        },
+        "size": {
+          "in": "query",
+          "type": "number",
+          "description": "Companies per page."
+        },
+        "simplified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return a simplified, smaller company object."
+        }
+      },
+      "notes": [
+        "1 credit per company returned. Prefer the domain when you have it."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.thecompaniesapi.com/api/search-companies-name",
+      "verified": {
+        "docs": "https://www.thecompaniesapi.com/api/search-companies-name"
+      }
+    },
+    {
+      "id": "thecompaniesapi.companies.by_prompt",
+      "name": "Search companies with a plain-language prompt",
+      "summary": "Companies matching a description such as 'fast-growing SaaS companies with remote teams'.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/by-prompt",
+      "params": {
+        "prompt": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The description of the companies you want.",
+          "example": "Fast-growing SaaS companies with remote teams"
+        },
+        "page": {
+          "in": "query",
+          "type": "number",
+          "description": "Page number."
+        },
+        "size": {
+          "in": "query",
+          "type": "number",
+          "description": "Companies per page."
+        },
+        "similarity": {
+          "in": "query",
+          "type": "number",
+          "description": "Similarity threshold."
+        },
+        "simplified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return a simplified, smaller company object."
+        }
+      },
+      "notes": [
+        "1 credit per company returned."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.thecompaniesapi.com/api/search-companies-prompt",
+      "verified": {
+        "docs": "https://www.thecompaniesapi.com/api/search-companies-prompt"
+      }
+    },
+    {
+      "id": "thecompaniesapi.companies.similar",
+      "name": "Find similar companies",
+      "summary": "Companies similar to one or more domains.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/similar",
+      "params": {
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One or more domains, comma-separated.",
+          "example": "stripe.com"
+        },
+        "proximityTerm": {
+          "in": "query",
+          "type": "string",
+          "description": "How alike.",
+          "enum": [
+            "close",
+            "near",
+            "far"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "number",
+          "description": "Page number."
+        },
+        "size": {
+          "in": "query",
+          "type": "number",
+          "description": "Companies per page."
+        },
+        "simplified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return a simplified, smaller company object."
+        }
+      },
+      "notes": [
+        "1 credit per company returned."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.thecompaniesapi.com/api/search-similar-companies",
+      "verified": {
+        "docs": "https://www.thecompaniesapi.com/api/search-similar-companies"
+      }
+    },
+    {
+      "id": "thecompaniesapi.company.email_patterns",
+      "name": "Get a company's email patterns",
+      "summary": "The email address patterns used at a company's domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/{domain}/email-patterns",
+      "params": {
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company domain.",
+          "example": "stripe.com"
+        },
+        "emailsCount": {
+          "in": "query",
+          "type": "number",
+          "description": "Emails count."
+        },
+        "precision": {
+          "in": "query",
+          "type": "string",
+          "description": "Precision."
+        }
+      },
+      "job": "people.email.find",
+      "docs_url": "https://www.thecompaniesapi.com/api/fetch-company-email-patterns",
+      "verified": {
+        "docs": "https://www.thecompaniesapi.com/api/fetch-company-email-patterns"
+      }
+    },
+    {
+      "id": "thecompaniesapi.technologies.search",
+      "name": "Search technologies",
+      "summary": "Technologies tracked by the API, usable in the technologies.active condition.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/technologies",
+      "job": "company.technologies",
+      "docs_url": "https://www.thecompaniesapi.com/api/search-technologies",
+      "verified": {
+        "docs": "https://www.thecompaniesapi.com/api/search-technologies"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

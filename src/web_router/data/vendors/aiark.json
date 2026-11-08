@@ -1,0 +1,497 @@
+{
+  "vendor": "aiark",
+  "name": "AI Ark",
+  "category": "enrichment",
+  "summary": "B2B people and company search, verified email and mobile finding, job posts and lookalike company discovery from AI Ark.",
+  "docs_url": "https://docs.ai-ark.com",
+  "base_url": "https://api.ai-ark.com/api/developer-portal",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AIARK_API_KEY"
+        ],
+        "description": "an AI Ark API key from the API Management dashboard (https://app.ai-ark.com/settings/api-management/dashboard)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-TOKEN",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Search endpoints are POST with page (zero-based) and size (max 100) required in the body.",
+    "Credit-based: people.search 0.5 per person, company.search 0.1 per company, preview 1 per page. Check account.credits before large jobs.",
+    "Filters nest as {field: {any|all: {include, exclude}}}; text filters take a match mode (SMART or WORD) with content."
+  ],
+  "sources": [
+    "https://docs.ai-ark.com/docs/get-started.md",
+    "https://docs.ai-ark.com/reference/people-search-1.md",
+    "https://docs.ai-ark.com/reference/company-search-1.md",
+    "https://docs.ai-ark.com/reference/job-post-search.md",
+    "https://docs.ai-ark.com/reference/people-export-single.md",
+    "https://docs.ai-ark.com/reference/people-mobile-phone-finder.md",
+    "https://docs.ai-ark.com/reference/people-reverse-lookup.md",
+    "https://docs.ai-ark.com/reference/people-email-finder-by-track-id.md",
+    "https://docs.ai-ark.com/reference/fetch-credit.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "aiark.people.search",
+      "name": "Search people",
+      "summary": "People matching person and company filters, with profile and company data but no email or phone.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people",
+      "params": {
+        "account": {
+          "in": "body",
+          "type": "object",
+          "description": "Company filters. Each field takes {any|all: {include, exclude}} or a RANGE, e.g. industries, location, employeeSize, revenue, technologies, name, domain.",
+          "example": {
+            "industries": {
+              "any": {
+                "include": {
+                  "mode": "SMART",
+                  "content": [
+                    "software development"
+                  ]
+                }
+              }
+            },
+            "location": {
+              "any": {
+                "include": [
+                  "Germany"
+                ]
+              }
+            },
+            "employeeSize": {
+              "type": "RANGE",
+              "range": [
+                {
+                  "start": 51,
+                  "end": 200
+                }
+              ]
+            }
+          }
+        },
+        "contact": {
+          "in": "body",
+          "type": "object",
+          "description": "Person filters, same shape as the company filters: e.g. jobTitle, seniority, department and function, location, skills."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Zero-based page number (required). Results are capped at 10,000 per search.",
+          "example": 0
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page, max 100 (required; default 10).",
+          "example": 10
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. 0.5 credit per returned person.",
+        "The response trackId feeds people.find_emails; it can be used once and expires after 6 hours."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.ai-ark.com/reference/people-search-1.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/people-search-1.md"
+      }
+    },
+    {
+      "id": "aiark.people.preview",
+      "name": "Preview a people search",
+      "summary": "Same filters as people.search for a flat 1 credit per page; check totalElements and match quality first.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/preview",
+      "params": {
+        "account": {
+          "in": "body",
+          "type": "object",
+          "description": "Company filters. Each field takes {any|all: {include, exclude}} or a RANGE, e.g. industries, location, employeeSize, revenue, technologies, name, domain.",
+          "example": {
+            "industries": {
+              "any": {
+                "include": {
+                  "mode": "SMART",
+                  "content": [
+                    "software development"
+                  ]
+                }
+              }
+            },
+            "location": {
+              "any": {
+                "include": [
+                  "Germany"
+                ]
+              }
+            },
+            "employeeSize": {
+              "type": "RANGE",
+              "range": [
+                {
+                  "start": 51,
+                  "end": 200
+                }
+              ]
+            }
+          }
+        },
+        "contact": {
+          "in": "body",
+          "type": "object",
+          "description": "Person filters, same shape as the company filters: e.g. jobTitle, seniority, department and function, location, skills."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Zero-based page number (required). Results are capped at 10,000 per search.",
+          "example": 0
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page, max 100 (required; default 25).",
+          "example": 10
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.ai-ark.com/reference/people-preview.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/people-preview.md"
+      }
+    },
+    {
+      "id": "aiark.company.search",
+      "name": "Search companies",
+      "summary": "Company profiles matching account filters, with optional lookalike search.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/companies",
+      "params": {
+        "account": {
+          "in": "body",
+          "type": "object",
+          "description": "Company filters. Each field takes {any|all: {include, exclude}} or a RANGE, e.g. industries, location, employeeSize, revenue, technologies, name, domain.",
+          "example": {
+            "industries": {
+              "any": {
+                "include": {
+                  "mode": "SMART",
+                  "content": [
+                    "software development"
+                  ]
+                }
+              }
+            },
+            "location": {
+              "any": {
+                "include": [
+                  "Germany"
+                ]
+              }
+            },
+            "employeeSize": {
+              "type": "RANGE",
+              "range": [
+                {
+                  "start": 51,
+                  "end": 200
+                }
+              ]
+            }
+          }
+        },
+        "lookalikeDomains": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 5 company domains or LinkedIn company URLs; returns similar companies. Combine with account filters.",
+          "example": [
+            "raisin.com"
+          ]
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Zero-based page number (required). Results are capped at 10,000 per search.",
+          "example": 0
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page, max 100 (required; default 10).",
+          "example": 10
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. 0.1 credit per returned company."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.ai-ark.com/reference/company-search-1.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/company-search-1.md"
+      }
+    },
+    {
+      "id": "aiark.jobs.search",
+      "name": "Search job posts",
+      "summary": "Job posts, refreshed daily, to find companies hiring now.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/job-posts",
+      "params": {
+        "job": {
+          "in": "body",
+          "type": "object",
+          "description": "Job filters: title, description, location, employmentType, seniority, industries, technologies, yearlySalaryUsd, language, hiringModel (DIRECT or agency), postedAt.",
+          "example": {
+            "title": {
+              "any": {
+                "include": {
+                  "mode": "SMART",
+                  "content": [
+                    "sales manager"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company filters for the employer, same shape as company.search account."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Zero-based page number (required). Results are capped at 10,000 per search.",
+          "example": 0
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page, max 100 (required; default 25).",
+          "example": 10
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.ai-ark.com/reference/job-post-search.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/job-post-search.md"
+      }
+    },
+    {
+      "id": "aiark.people.export_single",
+      "name": "Find one person with verified email",
+      "summary": "Full profile plus a real-time verified email for one person.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/export/single",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "AI Ark person id from a people search. Provide id or url."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Person LinkedIn profile URL. Provide id or url.",
+          "example": "https://www.linkedin.com/in/john-doe"
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit on success, 0 if no valid email; answers 404 when none is found (the v2 path /v2/people/export/single answers 200 for not-found)."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.ai-ark.com/reference/people-export-single.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/people-export-single.md"
+      }
+    },
+    {
+      "id": "aiark.people.find_phone",
+      "name": "Find a mobile number",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/mobile-phone-finder",
+      "params": {
+        "linkedin": {
+          "in": "body",
+          "type": "string",
+          "description": "Person LinkedIn URL; alternative to domain plus name."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain; use with name.",
+          "example": "cnyric.org"
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Person full name; use with domain.",
+          "example": "Melissa Deyneka"
+        }
+      },
+      "notes": [
+        "A read over POST. About 5 credits per result."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://docs.ai-ark.com/reference/people-mobile-phone-finder.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/people-mobile-phone-finder.md"
+      }
+    },
+    {
+      "id": "aiark.people.reverse_lookup",
+      "name": "Identify a person from an email or phone",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/reverse-lookup",
+      "params": {
+        "search": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "An email address or a mobile number in international format.",
+          "example": "bnorris@cnyric.org"
+        }
+      },
+      "notes": [
+        "A read over POST. Returns a profile without email or phone."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.ai-ark.com/reference/people-reverse-lookup.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/people-reverse-lookup.md"
+      }
+    },
+    {
+      "id": "aiark.people.find_emails",
+      "name": "Find emails for a search result set",
+      "summary": "Starts an asynchronous job to find verified emails for a previous search; poll people.find_emails_status then read people.find_emails_results.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v1/people/email-finder",
+      "params": {
+        "trackId": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "trackId from a people.search response; single use, expires after 6 hours."
+        },
+        "webhook": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "HTTPS URL notified when the job completes."
+        }
+      },
+      "notes": [
+        "Spends credits: 1 per found valid email. Needs an HTTPS webhook."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.ai-ark.com/reference/people-email-finder-by-track-id.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/people-email-finder-by-track-id.md"
+      }
+    },
+    {
+      "id": "aiark.people.find_emails_status",
+      "name": "Email finder job statistics",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/people/email-finder/{trackId}/statistics",
+      "params": {
+        "trackId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "trackId from people.find_emails."
+        }
+      },
+      "notes": [
+        "Poll until the state is done."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.ai-ark.com/reference/get-email-finder-statistics-by-track-id.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/get-email-finder-statistics-by-track-id.md"
+      }
+    },
+    {
+      "id": "aiark.people.find_emails_results",
+      "name": "Email finder job results",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/people/email-finder/{trackId}/inquiries",
+      "params": {
+        "trackId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "trackId from people.find_emails."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based page index."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100 (default 10)."
+        }
+      },
+      "job": "people.email.find",
+      "docs_url": "https://docs.ai-ark.com/reference/get-email-finder-results-by-track-id.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/get-email-finder-results-by-track-id.md"
+      }
+    },
+    {
+      "id": "aiark.account.credits",
+      "name": "Get remaining credits",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/payments/credits",
+      "job": "account.usage",
+      "docs_url": "https://docs.ai-ark.com/reference/fetch-credit.md",
+      "verified": {
+        "docs": "https://docs.ai-ark.com/reference/fetch-credit.md"
+      }
+    }
+  ]
+}

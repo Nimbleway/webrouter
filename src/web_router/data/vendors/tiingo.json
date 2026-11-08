@@ -1,0 +1,260 @@
+{
+  "vendor": "tiingo",
+  "name": "Tiingo",
+  "category": "finance",
+  "summary": "End-of-day and intraday stock prices, crypto prices and financial news from Tiingo.",
+  "docs_url": "https://www.tiingo.com/documentation/general/overview",
+  "pricing_url": "https://www.tiingo.com/pricing",
+  "base_url": "https://api.tiingo.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TIINGO_API_KEY"
+        ],
+        "description": "a Tiingo API token (tiingo.com/account/api/token)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Token {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Limits are per account: hourly and daily request caps and a monthly bandwidth cap, with no per-second limits; values depend on the plan.",
+    "Dates are YYYY-MM-DD; Tiingo also accepts YYYY-M-D.",
+    "Crypto tickers are lowercase pairs such as btcusd.",
+    "Forex, fundamentals, dividends, splits and the 24x5 feeds exist but are not listed here."
+  ],
+  "sources": [
+    "https://www.tiingo.com/documentation/general/overview",
+    "https://www.tiingo.com/documentation/general/connecting",
+    "https://www.tiingo.com/documentation/end-of-day",
+    "https://www.tiingo.com/documentation/iex",
+    "https://www.tiingo.com/documentation/crypto",
+    "https://www.tiingo.com/documentation/news"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "tiingo.eod.meta",
+      "name": "Get end-of-day ticker metadata",
+      "summary": "Whether a ticker is available, its name and the first and last dates with price data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tiingo/daily/{ticker}",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. aapl.",
+          "example": "aapl"
+        }
+      },
+      "notes": [
+        "startDate and endDate in the answer are null when the ticker has no price data."
+      ],
+      "docs_url": "https://www.tiingo.com/documentation/end-of-day",
+      "verified": {
+        "docs": "https://www.tiingo.com/documentation/end-of-day"
+      }
+    },
+    {
+      "id": "tiingo.eod.prices",
+      "name": "Get end-of-day prices",
+      "summary": "The latest daily price, or daily history between two dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tiingo/daily/{ticker}/prices",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. aapl.",
+          "example": "aapl"
+        },
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "description": "First date, e.g. 2012-1-1."
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Last date, e.g. 2016-1-1."
+        },
+        "resampleFreq": {
+          "in": "query",
+          "type": "string",
+          "description": "Resample to a lower frequency, e.g. monthly."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format, e.g. csv; JSON by default."
+        }
+      },
+      "notes": [
+        "With no dates it returns only the latest price.",
+        "Adjusted fields (adjClose and others) account for splits and dividends."
+      ],
+      "job": "market.history",
+      "docs_url": "https://www.tiingo.com/documentation/end-of-day",
+      "verified": {
+        "docs": "https://www.tiingo.com/documentation/end-of-day"
+      }
+    },
+    {
+      "id": "tiingo.iex.quote",
+      "name": "Get IEX top-of-book and last price",
+      "summary": "Current quote and last price for one ticker (or all tickers when the path has none).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/iex/{ticker}",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. aapl.",
+          "example": "aapl"
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://www.tiingo.com/documentation/iex",
+      "verified": {
+        "docs": "https://www.tiingo.com/documentation/iex"
+      }
+    },
+    {
+      "id": "tiingo.iex.prices",
+      "name": "Get IEX intraday prices",
+      "summary": "Historical intraday bars for a ticker.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/iex/{ticker}/prices",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. aapl.",
+          "example": "aapl"
+        },
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, e.g. 2019-01-02."
+        },
+        "resampleFreq": {
+          "in": "query",
+          "type": "string",
+          "description": "Bar interval, e.g. 5min."
+        },
+        "columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return; volume only appears when requested, e.g. open,high,low,close,volume."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://www.tiingo.com/documentation/iex",
+      "verified": {
+        "docs": "https://www.tiingo.com/documentation/iex"
+      }
+    },
+    {
+      "id": "tiingo.crypto.meta",
+      "name": "Get crypto ticker metadata",
+      "summary": "Base and quote currency, name and description of crypto tickers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tiingo/crypto",
+      "params": {
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated tickers, e.g. btcusd; omit for all."
+        }
+      },
+      "docs_url": "https://www.tiingo.com/documentation/crypto",
+      "verified": {
+        "docs": "https://www.tiingo.com/documentation/crypto"
+      }
+    },
+    {
+      "id": "tiingo.crypto.prices",
+      "name": "Get crypto prices",
+      "summary": "Latest or historical intraday prices for crypto pairs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tiingo/crypto/prices",
+      "params": {
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated tickers, e.g. btcusd,fldcbtc.",
+          "example": "btcusd"
+        },
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, e.g. 2019-01-02."
+        },
+        "resampleFreq": {
+          "in": "query",
+          "type": "string",
+          "description": "Bar interval, e.g. 5min."
+        },
+        "includeRawExchangeData": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return per-exchange data in exchangeData."
+        }
+      },
+      "notes": [
+        "Without startDate it returns intraday data for the current day or the last business day.",
+        "The top-of-book endpoint /tiingo/crypto/top is deprecated and left out."
+      ],
+      "job": "crypto.price",
+      "docs_url": "https://www.tiingo.com/documentation/crypto",
+      "verified": {
+        "docs": "https://www.tiingo.com/documentation/crypto"
+      }
+    },
+    {
+      "id": "tiingo.news.list",
+      "name": "Get financial news",
+      "summary": "News articles tagged with tickers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tiingo/news",
+      "params": {
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated tickers, e.g. aapl,googl."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, e.g. crawlDate (when Tiingo added the article)."
+        }
+      },
+      "notes": [
+        "News access depends on the account plan."
+      ],
+      "job": "news.search",
+      "docs_url": "https://www.tiingo.com/documentation/news",
+      "verified": {
+        "docs": "https://www.tiingo.com/documentation/news"
+      }
+    }
+  ]
+}

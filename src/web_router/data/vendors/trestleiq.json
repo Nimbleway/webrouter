@@ -1,0 +1,249 @@
+{
+  "vendor": "trestleiq",
+  "name": "Trestle",
+  "category": "email-verification",
+  "summary": "Phone validation, caller identification and lead-contact grading (phone, email, address, IP) from Trestle's identity data.",
+  "docs_url": "https://docs.trestleiq.com/api-reference",
+  "base_url": "https://api.trestleiq.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TRESTLEIQ_API_KEY"
+        ],
+        "description": "a Trestle API key (sign up and manage keys at portal.trestleiq.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is a GET with the key in the x-api-key header.",
+    "Problems with the input come back as warnings on a 200 response, not as a 400.",
+    "Add-ons (litigator_checks, spam_checks, email_checks_deliverability, email_checks_age) are comma-separated in add_ons and cost extra.",
+    "Trestle data is not a consumer report: do not use it for credit, insurance, employment, housing or benefits decisions.",
+    "The docs also list reverse phone, reverse address, address validation, smart CNAM, phone feedback and decision signals APIs, which this entry leaves out."
+  ],
+  "sources": [
+    "https://docs.trestleiq.com/api-reference/phone-validation-api",
+    "https://docs.trestleiq.com/api-reference/caller-identification-api",
+    "https://docs.trestleiq.com/api-reference/real-contact-api",
+    "https://docs.trestleiq.com/llms.txt",
+    "https://docs.trestleiq.com/openapi/phone-validation.openapi.yaml",
+    "https://docs.trestleiq.com/openapi/caller-identification.openapi.yaml",
+    "https://docs.trestleiq.com/openapi/real-contact.openapi.yaml"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "trestleiq.phone.validate",
+      "name": "Validate a phone number",
+      "summary": "Validity, carrier, line type, prepaid flag, country and a 0-100 activity score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/3.0/phone_intel",
+      "params": {
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Phone number in E.164 or local format.",
+          "example": "2069735100"
+        },
+        "country_hint": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-3166 alpha-2 country of the number, used to read a local-format number.",
+          "example": "US",
+          "wire_name": "phone.country_hint"
+        },
+        "add_ons": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated add-ons: litigator_checks (extra charge).",
+          "example": "litigator_checks"
+        },
+        "source_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Groups queries by source, campaign or channel; up to 255 characters of letters, numbers, spaces and . _ - : / | #. An invalid value is dropped, not an error."
+        }
+      },
+      "notes": [
+        "A low activity score points to a disconnected number."
+      ],
+      "job": "phone.verify",
+      "docs_url": "https://docs.trestleiq.com/api-reference/phone-validation-api",
+      "verified": {
+        "docs": "https://docs.trestleiq.com/api-reference/phone-validation-api"
+      }
+    },
+    {
+      "id": "trestleiq.phone.caller_id",
+      "name": "Identify the top owner of a phone number",
+      "summary": "Line type, carrier, and the highest-ranked owner with their current address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/3.1/caller_id",
+      "params": {
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Phone number in E.164 or local format; default country calling code is +1.",
+          "example": "2069735100"
+        },
+        "country_hint": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-3166 alpha-2 country of the number.",
+          "example": "US",
+          "wire_name": "phone.country_hint"
+        },
+        "name_hint": {
+          "in": "query",
+          "type": "string",
+          "description": "Name linked to the phone; ranks the matching owner higher.",
+          "wire_name": "phone.name_hint"
+        },
+        "postal_code_hint": {
+          "in": "query",
+          "type": "string",
+          "description": "Postal code of the subscriber address; ranks the matching owner and address higher.",
+          "wire_name": "phone.postal_code_hint"
+        },
+        "add_ons": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated add-ons: litigator_checks, spam_checks (extra charge)."
+        },
+        "source_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Groups queries by source, campaign or channel; up to 255 characters of letters, numbers, spaces and . _ - : / | #. An invalid value is dropped, not an error."
+        }
+      },
+      "notes": [
+        "US-focused data; returns only the best-ranked owner."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.trestleiq.com/api-reference/caller-identification-api",
+      "verified": {
+        "docs": "https://docs.trestleiq.com/api-reference/caller-identification-api"
+      }
+    },
+    {
+      "id": "trestleiq.contact.grade",
+      "name": "Verify and grade a lead's contact details",
+      "summary": "A-F grades and activity scores across name, phone, email, address and IP, with name-match flags and IP trust signals.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/2.0/real_contact",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full name of the lead.",
+          "example": "John Doe"
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "business_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Business name.",
+          "wire_name": "business.name"
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Phone number the lead gave.",
+          "example": "4259853735"
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Email the lead gave.",
+          "example": "john.doe@example.com"
+        },
+        "street_line_1": {
+          "in": "query",
+          "type": "string",
+          "description": "First street line.",
+          "example": "100 Syrws St",
+          "wire_name": "address.street_line_1"
+        },
+        "street_line_2": {
+          "in": "query",
+          "type": "string",
+          "description": "Second street line.",
+          "wire_name": "address.street_line_2"
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City.",
+          "wire_name": "address.city"
+        },
+        "state_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state code or full state name.",
+          "wire_name": "address.state_code"
+        },
+        "postal_code": {
+          "in": "query",
+          "type": "string",
+          "description": "5-digit ZIP or ZIP+4.",
+          "wire_name": "address.postal_code"
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-3166 alpha-2 country of the address.",
+          "example": "US",
+          "wire_name": "address.country_code"
+        },
+        "ip_address": {
+          "in": "query",
+          "type": "string",
+          "description": "IPv4 or IPv6 address captured when the lead submitted the form.",
+          "example": "192.0.0.1"
+        },
+        "add_ons": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated add-ons: email_checks_deliverability, email_checks_age, litigator_checks (extra charge)."
+        },
+        "source_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Groups queries by source, campaign or channel; up to 255 characters of letters, numbers, spaces and . _ - : / | #. An invalid value is dropped, not an error."
+        }
+      },
+      "notes": [
+        "Name and phone are required; the more of email, address and IP you send, the more grades come back."
+      ],
+      "job": "contact.verify",
+      "docs_url": "https://docs.trestleiq.com/api-reference/real-contact-api",
+      "verified": {
+        "docs": "https://docs.trestleiq.com/api-reference/real-contact-api"
+      }
+    }
+  ]
+}

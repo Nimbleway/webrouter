@@ -1,0 +1,518 @@
+{
+  "vendor": "tavily",
+  "name": "Tavily",
+  "category": "search",
+  "summary": "Tavily's web search, extraction, crawl, map and research APIs for AI agents.",
+  "docs_url": "https://docs.tavily.com/documentation/api-reference",
+  "pricing_url": "https://www.tavily.com/pricing",
+  "base_url": "https://api.tavily.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TAVILY_API_KEY"
+        ],
+        "description": "a Tavily API key, starting tvly- (app.tavily.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is 'Authorization: Bearer <key>'.",
+    "Credits: basic search 1 credit, advanced 2; crawl and map cost per 10 pages and double with instructions.",
+    "Research is asynchronous: create, then poll by request_id."
+  ],
+  "sources": [
+    "https://docs.tavily.com/llms.txt",
+    "https://docs.tavily.com/documentation/api-reference/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "tavily.search.query",
+      "name": "Search the web",
+      "summary": "Real-time web search for AI agents with optional answer, raw content and images.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query.",
+          "example": "who is Leo Messi?"
+        },
+        "search_depth": {
+          "in": "body",
+          "type": "string",
+          "description": "Latency versus relevance tradeoff.",
+          "enum": [
+            "ultra-fast",
+            "fast",
+            "basic",
+            "advanced"
+          ]
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most results to return."
+        },
+        "topic": {
+          "in": "body",
+          "type": "string",
+          "description": "Search category.",
+          "enum": [
+            "general",
+            "news",
+            "finance"
+          ]
+        },
+        "time_range": {
+          "in": "body",
+          "type": "string",
+          "description": "Window back from now.",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year",
+            "d",
+            "w",
+            "m",
+            "y"
+          ]
+        },
+        "start_date": {
+          "in": "body",
+          "type": "string",
+          "description": "Results after this date, YYYY-MM-DD."
+        },
+        "end_date": {
+          "in": "body",
+          "type": "string",
+          "description": "Results before this date, YYYY-MM-DD."
+        },
+        "include_answer": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add an LLM-written answer; basic or advanced also accepted by the API."
+        },
+        "include_raw_content": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add each result's cleaned page content; markdown or text also accepted."
+        },
+        "include_images": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include images."
+        },
+        "include_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains to include, at most 300."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains to exclude, at most 150."
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Boost results from a country, by lowercase English name (e.g. germany)."
+        },
+        "exact_match": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only results containing the quoted phrases in the query."
+        },
+        "include_usage": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Report credit usage in the response."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account.",
+        "Credits: advanced depth costs more than basic; see the response usage field."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.tavily.com/documentation/api-reference/endpoint/search.md",
+      "verified": {
+        "docs": "https://docs.tavily.com/documentation/api-reference/endpoint/search.md"
+      }
+    },
+    {
+      "id": "tavily.extract.urls",
+      "name": "Extract content from URLs",
+      "summary": "Clean content for one URL or a batch of up to 20.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/extract",
+      "params": {
+        "urls": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "URLs to extract, a string or an array of up to 20.",
+          "example": [
+            "https://en.wikipedia.org/wiki/Artificial_intelligence"
+          ]
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Reranks content chunks by relevance to this intent."
+        },
+        "chunks_per_source": {
+          "in": "body",
+          "type": "integer",
+          "description": "Max chunks per source."
+        },
+        "extract_depth": {
+          "in": "body",
+          "type": "string",
+          "description": "advanced gets tables and embedded content at higher cost.",
+          "enum": [
+            "basic",
+            "advanced"
+          ]
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "Content format.",
+          "enum": [
+            "markdown",
+            "text"
+          ]
+        },
+        "include_images": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include extracted images."
+        },
+        "timeout": {
+          "in": "body",
+          "type": "number",
+          "description": "Seconds before timing out, 1-60."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches pages and changes nothing in your account.",
+        "Per-URL failures come back in failed_results, not as an HTTP error."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.tavily.com/documentation/api-reference/endpoint/extract.md",
+      "verified": {
+        "docs": "https://docs.tavily.com/documentation/api-reference/endpoint/extract.md"
+      }
+    },
+    {
+      "id": "tavily.crawl.site",
+      "name": "Crawl a site",
+      "summary": "Graph-based site traversal with built-in extraction; returns pages in the same call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/crawl",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Root URL to begin from.",
+          "example": "docs.tavily.com"
+        },
+        "instructions": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language guidance for the crawler; raises the cost to 2 credits per 10 pages."
+        },
+        "max_depth": {
+          "in": "body",
+          "type": "integer",
+          "description": "How far from the base URL to explore."
+        },
+        "max_breadth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Links to follow per page."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Total links to process before stopping."
+        },
+        "select_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes selecting URL paths."
+        },
+        "select_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes selecting domains."
+        },
+        "exclude_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes excluding URL paths."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes excluding domains."
+        },
+        "allow_external": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include external-domain links in results."
+        },
+        "timeout": {
+          "in": "body",
+          "type": "number",
+          "description": "Seconds before timing out, 10-150."
+        },
+        "chunks_per_source": {
+          "in": "body",
+          "type": "integer",
+          "description": "Max chunks per page."
+        },
+        "extract_depth": {
+          "in": "body",
+          "type": "string",
+          "description": "advanced gets more data at higher cost.",
+          "enum": [
+            "basic",
+            "advanced"
+          ]
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "Content format.",
+          "enum": [
+            "markdown",
+            "text"
+          ]
+        },
+        "include_images": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include images."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches pages and changes nothing in your account.",
+        "Synchronous: returns the crawled pages in the response; bound it with limit, max_depth and timeout."
+      ],
+      "job": "web.crawl",
+      "docs_url": "https://docs.tavily.com/documentation/api-reference/endpoint/crawl.md",
+      "verified": {
+        "docs": "https://docs.tavily.com/documentation/api-reference/endpoint/crawl.md"
+      }
+    },
+    {
+      "id": "tavily.map.site",
+      "name": "Map a site",
+      "summary": "Traverse a site like a graph and return its URLs without page content.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/map",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Root URL to begin from.",
+          "example": "docs.tavily.com"
+        },
+        "instructions": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language guidance for the crawler; raises the cost to 2 credits per 10 pages."
+        },
+        "max_depth": {
+          "in": "body",
+          "type": "integer",
+          "description": "How far from the base URL to explore."
+        },
+        "max_breadth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Links to follow per page."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Total links to process before stopping."
+        },
+        "select_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes selecting URL paths."
+        },
+        "select_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes selecting domains."
+        },
+        "exclude_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes excluding URL paths."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes excluding domains."
+        },
+        "allow_external": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include external-domain links in results."
+        },
+        "timeout": {
+          "in": "body",
+          "type": "number",
+          "description": "Seconds before timing out, 10-150."
+        }
+      },
+      "notes": [
+        "A read over POST: it lists URLs and changes nothing in your account."
+      ],
+      "job": "web.map",
+      "docs_url": "https://docs.tavily.com/documentation/api-reference/endpoint/map.md",
+      "verified": {
+        "docs": "https://docs.tavily.com/documentation/api-reference/endpoint/map.md"
+      }
+    },
+    {
+      "id": "tavily.research.create",
+      "name": "Start a research task",
+      "summary": "Run a multi-search research agent that writes a cited report.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/research",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The research question or task.",
+          "example": "What are the latest developments in AI?"
+        },
+        "model": {
+          "in": "body",
+          "type": "string",
+          "description": "mini for narrow questions, pro for broad ones, auto to choose.",
+          "enum": [
+            "mini",
+            "pro",
+            "auto"
+          ]
+        },
+        "output_schema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema for a structured report."
+        },
+        "citation_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Citation style.",
+          "enum": [
+            "numbered",
+            "mla",
+            "apa",
+            "chicago"
+          ]
+        },
+        "output_length": {
+          "in": "body",
+          "type": "string",
+          "description": "Target response size.",
+          "enum": [
+            "short",
+            "standard",
+            "long"
+          ]
+        },
+        "include_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Soft source preference."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Hard blocklist."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data (it uses credits).",
+        "Async: returns a request_id; poll research.get until the status is completed."
+      ],
+      "job": "research.start",
+      "docs_url": "https://docs.tavily.com/documentation/api-reference/endpoint/research.md",
+      "verified": {
+        "docs": "https://docs.tavily.com/documentation/api-reference/endpoint/research.md"
+      }
+    },
+    {
+      "id": "tavily.research.get",
+      "name": "Get a research task",
+      "summary": "Status and results of a research task.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/research/{request_id}",
+      "params": {
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The research task's request id."
+        },
+        "include_usage": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Report credit usage."
+        }
+      },
+      "job": "research.status",
+      "docs_url": "https://docs.tavily.com/documentation/api-reference/endpoint/research-get.md",
+      "verified": {
+        "docs": "https://docs.tavily.com/documentation/api-reference/endpoint/research-get.md"
+      }
+    },
+    {
+      "id": "tavily.account.usage",
+      "name": "Get API key and account usage",
+      "summary": "Credit usage for your key and plan.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usage",
+      "params": {
+        "X-Project-ID": {
+          "in": "header",
+          "type": "string",
+          "description": "Scope the query to one project."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.tavily.com/documentation/api-reference/endpoint/usage.md",
+      "verified": {
+        "docs": "https://docs.tavily.com/documentation/api-reference/endpoint/usage.md"
+      }
+    }
+  ]
+}

@@ -63,6 +63,8 @@ from web_router.exceptions import (
     TemplateNotFoundError,
     UnsupportedFormatError,
     UnsupportedParameterError,
+    VendorNotFoundError,
+    VendorWriteRefusedError,
     WebRouterError,
 )
 from web_router.providers.answer import AnswerProvider
@@ -160,6 +162,7 @@ from web_router.types import (
     Viewport,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
+from web_router.vendors import Vendor, VendorEndpoint, VendorResponse, VendorSummary
 
 __all__ = [
     "ANSWER_PARAMETERS",
@@ -244,6 +247,12 @@ __all__ = [
     "TemplateSample",
     "UnsupportedFormatError",
     "UnsupportedParameterError",
+    "Vendor",
+    "VendorEndpoint",
+    "VendorNotFoundError",
+    "VendorResponse",
+    "VendorSummary",
+    "VendorWriteRefusedError",
     "Viewport",
     "WebRouter",
     "WebRouterError",

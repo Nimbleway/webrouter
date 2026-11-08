@@ -1,0 +1,434 @@
+{
+  "vendor": "bravesearch",
+  "name": "Brave Search",
+  "category": "search",
+  "summary": "Web, news, video and image search plus LLM-ready page context from Brave's independent index.",
+  "docs_url": "https://api-dashboard.search.brave.com/documentation",
+  "pricing_url": "https://api-dashboard.search.brave.com/documentation/pricing/index.html.md",
+  "base_url": "https://api.search.brave.com/res",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BRAVE_SEARCH_API_KEY"
+        ],
+        "description": "a Brave Search API subscription token (api-dashboard.search.brave.com > API Keys); each product plan has its own token"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Subscription-Token",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is the X-Subscription-Token header. Tokens are per plan: Search, LLM Context and Autosuggest plans each issue their own, and a token only works on endpoints its plan covers.",
+    "Brave's Answers API is a separate product with its own key (BRAVE_ANSWER_API_KEY) and is not in this entry.",
+    "Rate limits are per plan and reported in X-RateLimit-* response headers.",
+    "Result counts and page offsets are capped (offset max 9); a page may return fewer results than count."
+  ],
+  "sources": [
+    "https://api-dashboard.search.brave.com/llms.txt",
+    "https://api-dashboard.search.brave.com/api-reference/web/search/get/index.html.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "bravesearch.web.search",
+      "name": "Search the web",
+      "summary": "Ranked web results for human consumption, with optional news, video and other result types mixed in.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/web/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search query, up to 600 characters and 75 words.",
+          "example": "brave search api"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code the results come from; default US."
+        },
+        "search_lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Search language code, e.g. en; default en."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1-20; default 20."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based results-page offset, 0-9; default 0."
+        },
+        "safesearch": {
+          "in": "query",
+          "type": "string",
+          "description": "Adult-content filter.",
+          "enum": [
+            "off",
+            "moderate",
+            "strict"
+          ]
+        },
+        "freshness": {
+          "in": "query",
+          "type": "string",
+          "description": "Page-age filter: pd, pw, pm, py, or a YYYY-MM-DDtoYYYY-MM-DD range."
+        },
+        "spellcheck": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Spell-check the query first; default true."
+        },
+        "result_filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated result types to include, e.g. web,news."
+        },
+        "extra_snippets": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return up to 5 extra snippets per result."
+        },
+        "goggles": {
+          "in": "query",
+          "type": "string",
+          "description": "A Goggle (re-ranking rules) as a URL or inline definition."
+        }
+      },
+      "notes": [
+        "offset pages through results in units of count, max 9."
+      ],
+      "job": "web.search",
+      "docs_url": "https://api-dashboard.search.brave.com/api-reference/web/search/get/index.html.md",
+      "verified": {
+        "docs": "https://api-dashboard.search.brave.com/api-reference/web/search/get/index.html.md"
+      }
+    },
+    {
+      "id": "bravesearch.news.search",
+      "name": "Search news",
+      "summary": "News articles with freshness filtering.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/news/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search query, up to 400 characters and 50 words.",
+          "example": "ai regulation"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code the results come from; default US."
+        },
+        "search_lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Search language code, e.g. en; default en."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1-50; default 20."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based results-page offset, 0-9; default 0."
+        },
+        "safesearch": {
+          "in": "query",
+          "type": "string",
+          "description": "Adult-content filter.",
+          "enum": [
+            "off",
+            "moderate",
+            "strict"
+          ]
+        },
+        "freshness": {
+          "in": "query",
+          "type": "string",
+          "description": "Page-age filter: pd, pw, pm, py, or a YYYY-MM-DDtoYYYY-MM-DD range."
+        },
+        "spellcheck": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Spell-check the query first; default true."
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://api-dashboard.search.brave.com/api-reference/news/news_search/get/index.html.md",
+      "verified": {
+        "docs": "https://api-dashboard.search.brave.com/api-reference/news/news_search/get/index.html.md"
+      }
+    },
+    {
+      "id": "bravesearch.videos.search",
+      "name": "Search videos",
+      "summary": "Video results with metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/videos/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search query, up to 400 characters and 50 words.",
+          "example": "espresso machine review"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code the results come from; default US."
+        },
+        "search_lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Search language code, e.g. en; default en."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1-50; default 20."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based results-page offset, 0-9; default 0."
+        },
+        "safesearch": {
+          "in": "query",
+          "type": "string",
+          "description": "Adult-content filter.",
+          "enum": [
+            "off",
+            "moderate",
+            "strict"
+          ]
+        },
+        "freshness": {
+          "in": "query",
+          "type": "string",
+          "description": "Page-age filter: pd, pw, pm, py, or a YYYY-MM-DDtoYYYY-MM-DD range."
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://api-dashboard.search.brave.com/api-reference/videos/video_search/get/index.html.md",
+      "verified": {
+        "docs": "https://api-dashboard.search.brave.com/api-reference/videos/video_search/get/index.html.md"
+      }
+    },
+    {
+      "id": "bravesearch.images.search",
+      "name": "Search images",
+      "summary": "Image results from Brave's image index.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/images/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search query, up to 400 characters and 50 words.",
+          "example": "golden gate bridge"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code the results come from; default US."
+        },
+        "search_lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Search language code, e.g. en; default en."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1-200; default 50."
+        },
+        "safesearch": {
+          "in": "query",
+          "type": "string",
+          "description": "Adult-content filter.",
+          "enum": [
+            "off",
+            "strict"
+          ]
+        },
+        "spellcheck": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Spell-check the query first; default true."
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://api-dashboard.search.brave.com/api-reference/images/image_search/index.html.md",
+      "verified": {
+        "docs": "https://api-dashboard.search.brave.com/api-reference/images/image_search/index.html.md"
+      }
+    },
+    {
+      "id": "bravesearch.llm.context",
+      "name": "Get LLM-ready web context",
+      "summary": "Pre-extracted page content selected for a query, sized for LLM grounding and RAG.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/llm/context",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search query, up to 600 characters and 75 words.",
+          "example": "how does rust ownership work"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code the results come from; default US."
+        },
+        "search_lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Search language code, e.g. en; default en."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1-50; default 20."
+        },
+        "maximum_number_of_urls": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most distinct URLs to include, 1-50."
+        },
+        "maximum_number_of_tokens": {
+          "in": "query",
+          "type": "integer",
+          "description": "Approximate token budget, 1024-32768; default 8192."
+        },
+        "maximum_number_of_tokens_per_url": {
+          "in": "query",
+          "type": "integer",
+          "description": "Token budget per URL, 512-8192."
+        },
+        "context_threshold_mode": {
+          "in": "query",
+          "type": "string",
+          "description": "How strictly content is filtered by relevance.",
+          "enum": [
+            "disabled",
+            "strict",
+            "lenient",
+            "balanced"
+          ]
+        },
+        "freshness": {
+          "in": "query",
+          "type": "string",
+          "description": "Page-age filter: pd, pw, pm, py, or a YYYY-MM-DDtoYYYY-MM-DD range."
+        }
+      },
+      "notes": [
+        "Token budgets bound the size of the answer; count only bounds how many results are considered."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://api-dashboard.search.brave.com/api-reference/ai/llm_context/get/index.html.md",
+      "verified": {
+        "docs": "https://api-dashboard.search.brave.com/api-reference/ai/llm_context/get/index.html.md"
+      }
+    },
+    {
+      "id": "bravesearch.suggest.search",
+      "name": "Get search suggestions",
+      "summary": "Autocomplete suggestions for a partial query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/suggest/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Partial query to complete.",
+          "example": "how to"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code the results come from; default US."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Suggestions to return, 1-20; default 5."
+        },
+        "rich": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add rich results; needs a paid autosuggest plan."
+        }
+      },
+      "job": "web.suggest",
+      "docs_url": "https://api-dashboard.search.brave.com/api-reference/other/suggestions/index.html.md",
+      "verified": {
+        "docs": "https://api-dashboard.search.brave.com/api-reference/other/suggestions/index.html.md"
+      }
+    },
+    {
+      "id": "bravesearch.spellcheck.search",
+      "name": "Spell-check a query",
+      "summary": "Corrected spelling for a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/spellcheck/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Phrase to check, up to 400 characters.",
+          "example": "helo wrld"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code the results come from; default US."
+        }
+      },
+      "job": "web.spellcheck",
+      "docs_url": "https://api-dashboard.search.brave.com/api-reference/other/spell_check/index.html.md",
+      "verified": {
+        "docs": "https://api-dashboard.search.brave.com/api-reference/other/spell_check/index.html.md"
+      }
+    }
+  ]
+}

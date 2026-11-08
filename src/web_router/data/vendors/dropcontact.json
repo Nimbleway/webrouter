@@ -1,0 +1,146 @@
+{
+  "vendor": "dropcontact",
+  "name": "Dropcontact",
+  "category": "enrichment",
+  "summary": "Find and verify professional emails and add company data to contact lists, asynchronously, paying only for verified emails.",
+  "docs_url": "https://developer.dropcontact.com/",
+  "pricing_url": "https://www.dropcontact.com/pricing",
+  "base_url": "https://api.dropcontact.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DROPCONTACT_API_KEY"
+        ],
+        "description": "A Dropcontact API key (Dropcontact app > API). Sent raw in X-Access-Token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Access-Token",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Enrichment is asynchronous: submit with enrich.batch, then poll enrich.results by request_id or use a webhook.",
+    "Pay on success: one credit per verified email found; credits_left is in batch and result responses.",
+    "The default-webhook endpoints (set, get, delete) are not in this entry."
+  ],
+  "sources": [
+    "https://developer.dropcontact.com/",
+    "https://developer.dropcontact.com/en/authentication/",
+    "https://developer.dropcontact.com/en/credits/",
+    "https://developer.dropcontact.com/en/reference/enrich-a-batch-of-records/",
+    "https://developer.dropcontact.com/en/reference/fetch-enrichment-results/",
+    "https://developer.dropcontact.com/en/reference/get-credits/",
+    "https://developer.dropcontact.com/en/reference/input-record/"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "dropcontact.account.credits",
+      "name": "Get credit balance",
+      "summary": "Credits left on the account, free credits included.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/credits",
+      "notes": [
+        "The call uses no credits."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://developer.dropcontact.com/en/reference/get-credits/",
+      "verified": {
+        "docs": "https://developer.dropcontact.com/en/reference/get-credits/"
+      }
+    },
+    {
+      "id": "dropcontact.enrich.batch",
+      "name": "Enrich a batch of contacts",
+      "summary": "Submit up to 250 contacts to find and verify emails and add company data. Returns a request_id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrich/all",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 250 records, each at most 15 kB. Fields: first_name, last_name, full_name, email, linkedin, job, company, website, country, num_siren, siret, custom_fields and more. A record needs a company identifier, an email or a LinkedIn URL.",
+          "example": [
+            {
+              "first_name": "Denis",
+              "last_name": "Cohen",
+              "company": "Dropcontact",
+              "website": "dropcontact.com"
+            }
+          ]
+        },
+        "siren": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add the company SIREN and SIRET to results. Default false."
+        },
+        "language": {
+          "in": "body",
+          "type": "string",
+          "description": "Language of the email qualification label, fr or en. Default fr.",
+          "enum": [
+            "fr",
+            "en"
+          ]
+        },
+        "custom_callback_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Webhook for this request only, replacing the default webhook."
+        },
+        "hashedInputs": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add a hashedInputs field to the response. Default false."
+        }
+      },
+      "notes": [
+        "Starts a job that only produces data: it returns request_id, and the enriched records come from dropcontact.enrich.results (or the webhook).",
+        "One credit per record only when a verified email is returned, deducted at submit and refunded if none is found. A record that carries an \"email\" field (verification only) costs one credit and is not refunded.",
+        "If credits do not cover every record, the whole request is refused with 403."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://developer.dropcontact.com/en/reference/enrich-a-batch-of-records/",
+      "verified": {
+        "docs": "https://developer.dropcontact.com/en/reference/enrich-a-batch-of-records/"
+      }
+    },
+    {
+      "id": "dropcontact.enrich.results",
+      "name": "Fetch enrichment results",
+      "summary": "Enriched records for a request_id, in input order.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enrich/all/{request_id}",
+      "params": {
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Id returned by the batch call."
+        },
+        "forceResults": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return records already enriched instead of waiting for the whole batch; adds a status of ready or in_progress."
+        }
+      },
+      "notes": [
+        "Poll until success is true: while the batch is incomplete the answer is 200 with success false."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://developer.dropcontact.com/en/reference/fetch-enrichment-results/",
+      "verified": {
+        "docs": "https://developer.dropcontact.com/en/reference/fetch-enrichment-results/"
+      }
+    }
+  ]
+}

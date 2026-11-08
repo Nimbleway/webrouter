@@ -14,6 +14,17 @@ from pydantic import BaseModel
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_vendors import (
+    MCP_CALL_VENDOR_PROPERTIES,
+    MCP_DESC_CALL_VENDOR,
+    MCP_DESC_VENDOR_ENDPOINT,
+    MCP_DESC_VENDORS,
+    MCP_TOOL_CALL_VENDOR,
+    MCP_TOOL_VENDOR_ENDPOINT,
+    MCP_TOOL_VENDORS,
+    MCP_VENDOR_ENDPOINT_PROPERTIES,
+    MCP_VENDORS_PROPERTIES,
+)
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -106,6 +117,7 @@ EXTRA_EXTRACT = "extract"
 EXTRA_RESEARCH = "research"
 EXTRA_ANSWER = "answer"
 EXTRA_BROWSER = "browser"
+EXTRA_VENDORS = "vendors"
 """Playwright, for the page actions on a browser handle. Opening a session needs no extra."""
 EXTRA_ALL = "all"
 
@@ -4205,6 +4217,9 @@ MCP_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_BROWSER_SCREENSHOT: MCP_BROWSER_SCREENSHOT_PROPERTIES,
     MCP_TOOL_BROWSER_READ: MCP_BROWSER_READ_PROPERTIES,
     MCP_TOOL_BROWSER_CLOSE: MCP_BROWSER_CLOSE_PROPERTIES,
+    MCP_TOOL_VENDORS: MCP_VENDORS_PROPERTIES,
+    MCP_TOOL_VENDOR_ENDPOINT: MCP_VENDOR_ENDPOINT_PROPERTIES,
+    MCP_TOOL_CALL_VENDOR: MCP_CALL_VENDOR_PROPERTIES,
 }
 """Each tool's input schema, minus the ``provider`` argument.
 
@@ -4238,6 +4253,10 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_BROWSER_SCREENSHOT: (MCP_ARG_SESSION_ID,),
     MCP_TOOL_BROWSER_READ: (MCP_ARG_SESSION_ID,),
     MCP_TOOL_BROWSER_CLOSE: (MCP_ARG_SESSION_ID,),
+    MCP_TOOL_VENDORS: (),
+    MCP_TOOL_VENDOR_ENDPOINT: ("endpoint",),
+    # `endpoint` or `vendor`+`method`+`path`: one-of, which a flat `required` cannot say; the tool checks it.
+    MCP_TOOL_CALL_VENDOR: (),
 }
 
 MCP_PROVIDER_DESCRIPTION = (
@@ -4435,6 +4454,9 @@ MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
     MCP_TOOL_BROWSER_SCREENSHOT: MCP_DESC_BROWSER_SCREENSHOT,
     MCP_TOOL_BROWSER_READ: MCP_DESC_BROWSER_READ,
     MCP_TOOL_BROWSER_CLOSE: MCP_DESC_BROWSER_CLOSE,
+    MCP_TOOL_VENDORS: MCP_DESC_VENDORS,
+    MCP_TOOL_VENDOR_ENDPOINT: MCP_DESC_VENDOR_ENDPOINT,
+    MCP_TOOL_CALL_VENDOR: MCP_DESC_CALL_VENDOR,
 }
 
 MCP_MSG_NO_BACKEND = " NOTHING IS CONFIGURED FOR THIS METHOD on this machine, so every call will fail."

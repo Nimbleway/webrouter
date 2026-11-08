@@ -1,0 +1,692 @@
+{
+  "vendor": "moltsets",
+  "name": "MoltSets",
+  "category": "enrichment",
+  "summary": "B2B people and company search, email and mobile lookup, email validation and reverse lookups.",
+  "docs_url": "https://developer.moltsets.com",
+  "pricing_url": "https://moltsets.com/pricing/",
+  "base_url": "https://api.moltsets.com/api/v1/tools",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MOLTSETS_API_KEY"
+        ],
+        "description": "a MoltSets API key, ms_... (app.moltsets.com > API keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "User-Agent": "web-router"
+  },
+  "notes": [
+    "Every call is a POST with a JSON body to /<tool_name>; reads are still POSTs. A non-empty User-Agent header is required (this entry sends one).",
+    "Completed calls answer HTTP 200 with {results, status: ok|not_found, metadata}. Misses are uncharged but count as a request against fair-use limits shown in metadata.fair_use.",
+    "Plans cap records and requests in rolling 5-hour and weekly windows; some tools are plan-restricted.",
+    "The ad-audience tools (hashed emails, MAIDs) and website scraping are not listed here."
+  ],
+  "sources": [
+    "https://developer.moltsets.com/openapi.json",
+    "https://developer.moltsets.com/llms-full.txt",
+    "https://moltsets.com/llms.txt"
+  ],
+  "endpoints": [
+    {
+      "id": "moltsets.account.get",
+      "name": "Get account details",
+      "summary": "Plan, status, token balance, fair-use standing, phone token balance and key count.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/get_account",
+      "notes": [
+        "A read over POST (every MoltSets call is a POST); the body is empty."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://developer.moltsets.com/api-reference/account/get-account",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/account/get-account"
+      }
+    },
+    {
+      "id": "moltsets.account.usage",
+      "name": "Get usage breakdown",
+      "summary": "Day-by-day calls, credits used, hits, misses and failures for a period.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/get_usage",
+      "params": {
+        "period": {
+          "in": "body",
+          "type": "string",
+          "description": "Time window, default today.",
+          "enum": [
+            "today",
+            "week",
+            "month",
+            "billing_cycle"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://developer.moltsets.com/api-reference/account/get-usage",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/account/get-usage"
+      }
+    },
+    {
+      "id": "moltsets.people.search",
+      "name": "Search people",
+      "summary": "People search by title, company, location, seniority, industry, department and employer size, with exclusions.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search_people",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Full-text over name, company, title and headline."
+        },
+        "title": {
+          "in": "body",
+          "type": "string",
+          "description": "Job title filter; the precise way to search by role. A single value, or an array for any-of.",
+          "example": "Account Executive"
+        },
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Employer name filter; every word must appear in the name. A single value, or an array for any-of."
+        },
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Employer website domain; URLs are normalized. A single value, or an array for any-of.",
+          "example": "moltsets.com"
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Exact country name. A single value, or an array for any-of.",
+          "example": "United States"
+        },
+        "state": {
+          "in": "body",
+          "type": "string",
+          "description": "State or region, full name or abbreviation. A single value, or an array for any-of.",
+          "example": "Texas"
+        },
+        "city": {
+          "in": "body",
+          "type": "string",
+          "description": "Exact city name, standard capitalization. A single value, or an array for any-of.",
+          "example": "Austin"
+        },
+        "seniority": {
+          "in": "body",
+          "type": "string",
+          "description": "Seniority level, one of: Intern, Entry, Senior, Manager, Director, VP, Head, C Suite, Owner, Partner. Note 'C Suite' has a space. A single value, or an array for any-of."
+        },
+        "industry": {
+          "in": "body",
+          "type": "string",
+          "description": "One of 22 fixed industry buckets, matched exactly; see the docs for the list. A single value, or an array for any-of."
+        },
+        "department": {
+          "in": "body",
+          "type": "string",
+          "description": "Exact department; shares data with functional_area, use one or the other. A single value, or an array for any-of."
+        },
+        "functional_area": {
+          "in": "body",
+          "type": "string",
+          "description": "Exact functional area; shares data with department. A single value, or an array for any-of."
+        },
+        "employee_range": {
+          "in": "body",
+          "type": "string",
+          "description": "Employer size band, one of: 1-10, 11-20, 21-50, 51-200, 201-500, 501-1000, 1001-5000, 5001+. A single value, or an array for any-of."
+        },
+        "revenue_range": {
+          "in": "body",
+          "type": "string",
+          "description": "Employer revenue band, one of: Below $500k; $500k - $1M; $1M - $5M; $5M - $10M; $10M - $20M; $20M - $50M; Above $50M. A single value, or an array for any-of."
+        },
+        "naics_code": {
+          "in": "body",
+          "type": "string",
+          "description": "NAICS code of the employer at any level, 2 to 6 digits. A single value, or an array for any-of.",
+          "example": "541120"
+        },
+        "linkedin_industry": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn's own industry label of the employer. A single value, or an array for any-of.",
+          "example": "Software Development"
+        },
+        "exclude_company_domain": {
+          "in": "body",
+          "type": "array",
+          "description": "Employer domains to drop (a suppression list)."
+        },
+        "exclude_country": {
+          "in": "body",
+          "type": "array",
+          "description": "Countries to drop."
+        },
+        "exclude_state": {
+          "in": "body",
+          "type": "array",
+          "description": "States or regions to drop."
+        },
+        "exclude_industry": {
+          "in": "body",
+          "type": "array",
+          "description": "Industries to drop."
+        },
+        "exclude_seniority": {
+          "in": "body",
+          "type": "array",
+          "description": "Seniority levels to drop."
+        },
+        "exclude_employee_range": {
+          "in": "body",
+          "type": "array",
+          "description": "Employer size bands to drop."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per call, default 10, max 25."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, for paging."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body. All filters are exact-match except query, title and company.",
+        "Billed per record returned; the free plan caps a call at 10 records. Searches count against a per-plan concurrent-search limit (3 to 8); over it answers 429 search_concurrency_exceeded.",
+        "Emails come back in the search results.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "people.search",
+      "docs_url": "https://developer.moltsets.com/api-reference/search/search-for-people",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/search/search-for-people"
+      }
+    },
+    {
+      "id": "moltsets.company.search",
+      "name": "Search companies",
+      "summary": "Company search by name, domain, industry, size, revenue and location, with exclusions.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search_companies",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Full-text over company name only."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Exact company domain; URLs are normalized. A single value, or an array for any-of.",
+          "example": "moltsets.com"
+        },
+        "industry": {
+          "in": "body",
+          "type": "string",
+          "description": "One of 22 fixed industry buckets, matched exactly. A single value, or an array for any-of."
+        },
+        "employee_range": {
+          "in": "body",
+          "type": "string",
+          "description": "Size band, one of: 1-10, 11-20, 21-50, 51-200, 201-500, 501-1000, 1001-5000, 5001+. A single value, or an array for any-of."
+        },
+        "revenue_range": {
+          "in": "body",
+          "type": "string",
+          "description": "Revenue band, one of: Below $500k; $500k - $1M; $1M - $5M; $5M - $10M; $10M - $20M; $20M - $50M; Above $50M. A single value, or an array for any-of."
+        },
+        "naics_code": {
+          "in": "body",
+          "type": "string",
+          "description": "NAICS code at any level. A single value, or an array for any-of.",
+          "example": "541120"
+        },
+        "linkedin_industry": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn industry label. A single value, or an array for any-of.",
+          "example": "Software Development"
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Exact country name of the company's location. A single value, or an array for any-of.",
+          "example": "United States"
+        },
+        "state": {
+          "in": "body",
+          "type": "string",
+          "description": "State or region, full name or abbreviation. A single value, or an array for any-of.",
+          "example": "Texas"
+        },
+        "exclude_domain": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains to drop."
+        },
+        "exclude_industry": {
+          "in": "body",
+          "type": "array",
+          "description": "Industries to drop."
+        },
+        "exclude_employee_range": {
+          "in": "body",
+          "type": "array",
+          "description": "Size bands to drop."
+        },
+        "exclude_revenue_range": {
+          "in": "body",
+          "type": "array",
+          "description": "Revenue bands to drop."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per call, default 10, max 25."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, for paging."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body.",
+        "Billed per record returned. Company location is derived from where the team is based; large multinationals are attributed to a single office, so combine country with other filters.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "company.search",
+      "docs_url": "https://developer.moltsets.com/api-reference/search/search-for-companies",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/search/search-for-companies"
+      }
+    },
+    {
+      "id": "moltsets.people.email_by_name",
+      "name": "Find a business email from a name and company",
+      "summary": "A business email with an A-F risk score and LinkedIn URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search_business_email_by_name",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name, parsed into first and last.",
+          "example": "John Smith"
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name, used when name is not given."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name, used when name is not given."
+        },
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain or URL, normalized to a domain.",
+          "example": "acme.com"
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://developer.moltsets.com/api-reference/search/search-business-email-by-name",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/search/search-business-email-by-name"
+      }
+    },
+    {
+      "id": "moltsets.people.profile_by_name",
+      "name": "Find a business profile from a name and company",
+      "summary": "Profile record: current role, company, emails; full job history optional.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search_business_profile_by_name",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name, parsed into first and last.",
+          "example": "John Smith"
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name, used when name is not given."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name, used when name is not given."
+        },
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain or URL, normalized to a domain.",
+          "example": "acme.com"
+        },
+        "include_experience": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add the full job history as experience."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://developer.moltsets.com/api-reference/search/search-business-profile-by-name",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/search/search-business-profile-by-name"
+      }
+    },
+    {
+      "id": "moltsets.linkedin.find_profile",
+      "name": "Find a LinkedIn profile from a name and company",
+      "summary": "The LinkedIn profile URL for a person; count_only is a free preview of how many match.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search_linkedin_profile",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name, parsed into first and last.",
+          "example": "John Smith"
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name, used when name is not given."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name, used when name is not given."
+        },
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain or URL, normalized to a domain.",
+          "example": "acme.com"
+        },
+        "count_only": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Free: return only the count of matches."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://developer.moltsets.com/api-reference/search/search-for-linkedin-profile",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/search/search-for-linkedin-profile"
+      }
+    },
+    {
+      "id": "moltsets.email.from_linkedin",
+      "name": "Find the best email for a LinkedIn profile",
+      "summary": "A valid business email, falling back to a personal email; the type field says which.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/linkedin_to_best_email",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "A single LinkedIn profile URL or slug.",
+          "example": "https://linkedin.com/in/john-smith-123"
+        },
+        "linkedin_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "A batch of LinkedIn profile URLs or slugs, up to 100."
+        }
+      },
+      "notes": [
+        "A read over POST. Give linkedin_url or linkedin_urls.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://developer.moltsets.com/api-reference/get-valid-emails/linkedin-to-best-email",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/get-valid-emails/linkedin-to-best-email"
+      }
+    },
+    {
+      "id": "moltsets.email.business_from_linkedin",
+      "name": "Find the business email for a LinkedIn profile",
+      "summary": "A validated business email for a LinkedIn profile.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/linkedin_to_business_email",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "A single LinkedIn profile URL or slug.",
+          "example": "https://linkedin.com/in/john-smith-123"
+        },
+        "linkedin_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "A batch of LinkedIn profile URLs or slugs, up to 100."
+        }
+      },
+      "notes": [
+        "A read over POST. Give linkedin_url or linkedin_urls.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://developer.moltsets.com/api-reference/get-valid-emails/linkedin-to-business-email",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/get-valid-emails/linkedin-to-business-email"
+      }
+    },
+    {
+      "id": "moltsets.email.validate",
+      "name": "Validate emails",
+      "summary": "Deliverability check with an A-F risk score for up to 1,000 emails.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/validate_emails",
+      "params": {
+        "emails": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "1 to 1,000 email addresses; duplicates collapse.",
+          "example": [
+            "john.smith@example.com"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://developer.moltsets.com/api-reference/get-valid-emails/validate-emails",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/get-valid-emails/validate-emails"
+      }
+    },
+    {
+      "id": "moltsets.phone.mobile_from_linkedin",
+      "name": "Find a carrier-verified mobile number",
+      "summary": "Mobile number for a LinkedIn profile with its last-validated date.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/linkedin_to_mobile_phone",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "A single LinkedIn profile URL."
+        },
+        "linkedin_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "A batch of LinkedIn profile URLs, up to 100."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Spends 1 phone token per result; phone tokens come from a separate paid subscription, not any plan. Numbers are not screened against Do Not Call lists.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://developer.moltsets.com/api-reference/get-carrier-verified-mobile-phones/linkedin-to-mobile-phone",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/get-carrier-verified-mobile-phones/linkedin-to-mobile-phone"
+      }
+    },
+    {
+      "id": "moltsets.people.reverse_email",
+      "name": "Look up a person from an email",
+      "summary": "Profile behind one email or a batch.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/reverse_email_lookup",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "A single email address."
+        },
+        "emails": {
+          "in": "body",
+          "type": "array",
+          "description": "A batch of up to 100 emails; not with email."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://developer.moltsets.com/api-reference/reverse-lookups/reverse-email-lookup",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/reverse-lookups/reverse-email-lookup"
+      }
+    },
+    {
+      "id": "moltsets.people.reverse_linkedin",
+      "name": "Look up a person from a LinkedIn URL",
+      "summary": "Profile record for a LinkedIn URL; full job history optional.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/reverse_linkedin_lookup",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL.",
+          "example": "https://linkedin.com/in/retentionadam"
+        },
+        "include_experience": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add the full job history as experience."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://developer.moltsets.com/api-reference/reverse-lookups/reverse-linkedin-lookup",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/reverse-lookups/reverse-linkedin-lookup"
+      }
+    },
+    {
+      "id": "moltsets.linkedin.from_email",
+      "name": "Find the LinkedIn profile for an email",
+      "summary": "The highest-confidence LinkedIn URL for an email address.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/email_to_linkedin",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email address.",
+          "example": "john@example.com"
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://developer.moltsets.com/api-reference/get-linkedin/email-to-linkedin",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/get-linkedin/email-to-linkedin"
+      }
+    },
+    {
+      "id": "moltsets.company.from_ip",
+      "name": "Identify the company behind an IP address",
+      "summary": "The organization domain for an IPv4 address; best for B2B traffic, consumer ISPs rarely resolve.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/ip_to_company",
+      "params": {
+        "ip_address": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "IPv4 address.",
+          "example": "8.8.8.8"
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Branch on status ('ok' or 'not_found') rather than the HTTP code; a not_found miss is uncharged but counts as one request."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://developer.moltsets.com/api-reference/get-company/ip-to-company",
+      "verified": {
+        "docs": "https://developer.moltsets.com/api-reference/get-company/ip-to-company"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

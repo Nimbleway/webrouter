@@ -1,0 +1,224 @@
+{
+  "vendor": "reapi",
+  "name": "reAPI",
+  "category": "media-generation",
+  "summary": "One API and prepaid credits for many image, video, audio and chat models, with an asynchronous task model.",
+  "docs_url": "https://reapi.ai/docs",
+  "pricing_url": "https://reapi.ai/pricing",
+  "base_url": "https://reapi.ai/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "REAPI_API_KEY"
+        ],
+        "description": "a reAPI API key (reapi.ai/settings/apikeys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Image, video and audio models are asynchronous: submit, then poll reapi.task.get; chat models answer in the same request (not listed here).",
+    "Prepaid credits, 1 credit is $0.001; failed tasks are refunded automatically.",
+    "Preview models are not callable; check a model's availability on its models page first. Media inputs must be public HTTP(S) URLs.",
+    "The catalog changes often; the per-model request fields live in https://reapi.ai/models/<slug>/llms.txt."
+  ],
+  "sources": [
+    "https://reapi.ai/llms.txt",
+    "https://reapi.ai/openapi.json",
+    "https://reapi.ai/docs/api/agents",
+    "https://reapi.ai/models/kling-4-0-flash/llms.txt",
+    "https://reapi.ai/models/nano-banana-2-1/llms.txt"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "reapi.image.generate",
+      "name": "Submit an image generation task",
+      "summary": "Starts an asynchronous image job on one of reAPI's image models (GPT Image, Nano Banana, Seedream, FLUX, Imagen, Qwen and more).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/images/generations",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model id, e.g. nano-banana-2-1 or flux-2-pro; the slug of its models page.",
+          "example": "nano-banana-2-1"
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "What to generate.",
+          "example": "A clean infographic poster of how coffee is made"
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "Output aspect ratio, e.g. auto, 1:1, 16:9, 9:16; the allowed set depends on the model."
+        },
+        "resolution": {
+          "in": "body",
+          "type": "string",
+          "description": "Resolution tier, e.g. 1k, 2k, 4k; the allowed set depends on the model."
+        },
+        "image_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Public HTTP(S) URLs of reference or source images; base64 is rejected."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Public https URL that receives one POST with the finished task."
+        }
+      },
+      "notes": [
+        "Asynchronous: the response is {id, model, status: processing}. Poll reapi.task.get with that id every 1 to 2 seconds until status is completed (output holds the result URLs) or failed (credits refunded).",
+        "The accepted fields differ per model: each model's own page at https://reapi.ai/models/<slug>/llms.txt lists them; only the common ones are declared here.",
+        "Billing: prepaid credits (1 credit is $0.001), charged per completed output; failed tasks are refunded."
+      ],
+      "job": "ai.image.generate",
+      "docs_url": "https://reapi.ai/openapi.json",
+      "verified": {
+        "docs": "https://reapi.ai/openapi.json"
+      }
+    },
+    {
+      "id": "reapi.video.generate",
+      "name": "Submit a video generation task",
+      "summary": "Starts an asynchronous video job on one of reAPI's video models (Seedance, Kling, Veo, Wan, MiniMax, Vidu and more).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/videos/generations",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model id, the slug of its models page.",
+          "example": "kling-4-0-flash"
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Description of the video.",
+          "example": "A clay lighthouse keeper climbs a spiral staircase"
+        },
+        "duration": {
+          "in": "body",
+          "type": "integer",
+          "description": "Length in seconds; limits depend on the model (3 to 20 for kling-4-0-flash)."
+        },
+        "resolution": {
+          "in": "body",
+          "type": "string",
+          "description": "Resolution tier, e.g. 720p; depends on the model."
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "Aspect ratio, e.g. auto, 16:9, 9:16, 1:1, 21:9; depends on the model."
+        },
+        "image_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Public HTTP(S) URLs of reference or first-frame images."
+        },
+        "video_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Public HTTP(S) URLs of source or reference videos."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Public https URL that receives one POST with the finished task."
+        }
+      },
+      "notes": [
+        "Asynchronous: the response is {id, model, status: processing}. Poll reapi.task.get with that id every 1 to 2 seconds until status is completed (output holds the result URLs) or failed (credits refunded).",
+        "The accepted fields differ per model: each model's own page at https://reapi.ai/models/<slug>/llms.txt lists them; only the common ones are declared here.",
+        "Billed per second of output for most video models; see the model page for the live price."
+      ],
+      "job": "ai.video.generate",
+      "docs_url": "https://reapi.ai/openapi.json",
+      "verified": {
+        "docs": "https://reapi.ai/openapi.json"
+      }
+    },
+    {
+      "id": "reapi.audio.generate",
+      "name": "Submit an audio or music generation task",
+      "summary": "Starts an asynchronous audio job on a model such as Suno or Mureka.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/audio/generations",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model id, the slug of its models page.",
+          "example": "suno"
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Description or lyrics, as the model expects."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Public https URL that receives one POST with the finished task."
+        }
+      },
+      "notes": [
+        "Asynchronous: the response is {id, model, status: processing}. Poll reapi.task.get with that id every 1 to 2 seconds until status is completed (output holds the result URLs) or failed (credits refunded).",
+        "The accepted fields differ per model: each model's own page at https://reapi.ai/models/<slug>/llms.txt lists them; only the common ones are declared here."
+      ],
+      "job": "ai.speech.generate",
+      "docs_url": "https://reapi.ai/openapi.json",
+      "verified": {
+        "docs": "https://reapi.ai/openapi.json"
+      }
+    },
+    {
+      "id": "reapi.task.get",
+      "name": "Get a task's status and output",
+      "summary": "Status and result of a task started by reapi.image.generate, reapi.video.generate or reapi.audio.generate.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tasks/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id returned when the task was submitted."
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated extras, e.g. billing or webhook."
+        }
+      },
+      "notes": [
+        "Polls the task started by reapi.image.generate, reapi.video.generate or reapi.audio.generate. status is processing, completed or failed.",
+        "Output URLs are rehosted on reAPI's CDN and do not expire. The rate limit is 50 requests a second per user, polling included."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://reapi.ai/openapi.json",
+      "verified": {
+        "docs": "https://reapi.ai/openapi.json"
+      }
+    }
+  ]
+}

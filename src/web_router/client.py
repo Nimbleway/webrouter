@@ -46,6 +46,7 @@ from pydantic import BaseModel
 
 from web_router._benchmark import Stragglers, afan_out, fan_out, members_of
 from web_router.client_answer import AsyncAnswer, SyncAnswer
+from web_router.client_vendors import AsyncVendors, SyncVendors, VendorCredentials, _VendorLookup
 from web_router.constants import (
     AUTO_CLIENT_OPTION,
     BENCHMARK_EXCLUDED,
@@ -135,7 +136,7 @@ JsonSchema = dict[str, Any] | type[BaseModel]
 _HandleT = TypeVar("_HandleT", BrowserHandle, AsyncBrowserHandle)
 
 
-class _BaseRouter(Generic[_HandleT]):
+class _BaseRouter(_VendorLookup, Generic[_HandleT]):
     """Provider resolution and caching shared by the sync and async routers.
 
     Generic only in the browser handle each one hands out, which is the one
@@ -147,6 +148,7 @@ class _BaseRouter(Generic[_HandleT]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
+        vendor_credentials: VendorCredentials = None,
     ) -> None:
         """
         Args:
@@ -154,8 +156,13 @@ class _BaseRouter(Generic[_HandleT]):
                 :attr:`Provider.NIMBLE`. Omit it to let ``auto`` choose.
             provider_config: Constructor kwargs per provider, keyed by provider
                 name -- ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is
-                the only place credentials are passed explicitly; everything
-                else comes from the environment.
+                the only place backend credentials are passed explicitly;
+                everything else comes from the environment.
+            vendor_credentials: Credentials for :meth:`WebRouter.call_vendor`,
+                as ``{vendor: {name: value}}`` read before the environment, or
+                a :class:`~web_router.vendors.CredentialSource` that answers
+                instead of it. Names are the ones the vendor's catalog entry
+                lists under ``auth.credentials`` and ``settings``.
         """
         name = provider_name(provider)
         # Either registry is enough to name a default: a router defaulted to a
@@ -205,6 +212,7 @@ class _BaseRouter(Generic[_HandleT]):
         # Rows the sync benchmark() gave up on whose calls still run; close()
         # waits for them so it never shuts a provider under a live search.
         self._stragglers = Stragglers()
+        self._init_vendors(vendor_credentials)
 
     def _config_for(self, key: str) -> dict[str, Any]:
         """Constructor kwargs for one backend: its ``provider_config`` entry, and every entry for a delegating one.
@@ -507,7 +515,7 @@ def _async_client_holders(config: dict[str, dict[str, Any]]) -> set[str]:
     }
 
 
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncVendors):
     """Synchronous router.
 
     Example:
@@ -524,6 +532,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         provider_config: dict[str, dict[str, Any]] | None = None,
         decider: str | Any | None = None,
         decider_config: dict[str, Any] | None = None,
+        vendor_credentials: VendorCredentials = None,
     ) -> None:
         """
         Args:
@@ -549,7 +558,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
                 or for ``decider_config`` with a decider that is not a name;
                 or for a decider whose ``passthrough`` is not an exception class or a tuple of them.
         """
-        super().__init__(provider, provider_config=provider_config)
+        super().__init__(provider, provider_config=provider_config, vendor_credentials=vendor_credentials)
         async_only = sorted(_async_client_holders(self._config))
         if async_only:
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
@@ -1062,6 +1071,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
             # release that fails does not stop the rest.
             for instance in self._all_instances():
                 stack.callback(instance.close)
+            stack.callback(self._close_vendors)
             for handle in self._open_handles():
                 stack.callback(self._release_tracked, handle)
             if self._owns_decider and self.decider is not None:
@@ -1083,7 +1093,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         self.close()
 
 
-class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
+class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncVendors):
     """Asynchronous router.
 
     Example:
@@ -1414,6 +1424,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         async with AsyncExitStack() as stack:
             for instance in self._all_instances():
                 stack.push_async_callback(instance.aclose)
+            stack.push_async_callback(self._aclose_vendors)
             for handle in self._open_handles():
                 stack.push_async_callback(self._release_tracked, handle)
 

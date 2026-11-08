@@ -1,0 +1,638 @@
+{
+  "vendor": "apify",
+  "name": "Apify",
+  "category": "scraping",
+  "summary": "Run Apify Actors (ready-made scrapers for Google, LinkedIn, Meta ads, TikTok, Lazada, Weibo and more), poll their runs and read the datasets they produce.",
+  "docs_url": "https://docs.apify.com/api/v2",
+  "pricing_url": "https://apify.com/pricing",
+  "base_url": "https://api.apify.com",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "APIFY_API_TOKEN"
+        ],
+        "description": "Apify API token (Apify Console > Settings > API & Integrations)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Apify is a platform of Actors: the data source is the Actor you run (store.search finds them), and each Actor defines its own JSON input. This catalog covers the platform calls; Actor inputs go through the raw call.",
+    "Runs are asynchronous: actors.run, then poll actor_runs.get until finished, then read actor_runs.dataset_items (or use actors.run_sync_items for runs under 300 seconds).",
+    "Runs cost money (compute units plus any pay-per-result or pay-per-event fees); maxTotalChargeUsd caps a run.",
+    "Lists page by offset and limit; results come wrapped in data with total, count and items. Actor ids are id or username~actor-name."
+  ],
+  "sources": [
+    "https://docs.apify.com/api/v2",
+    "https://docs.apify.com/api/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "apify.users.me",
+      "name": "Get your account",
+      "summary": "Private account data: username, plan and profile.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/users/me",
+      "params": {},
+      "job": "account.usage",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "apify.users.limits",
+      "name": "Get your account limits",
+      "summary": "Plan limits and current usage against them.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/users/me/limits",
+      "params": {},
+      "job": "account.usage",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "apify.users.usage_monthly",
+      "name": "Get monthly usage",
+      "summary": "Usage and cost for a billing cycle.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/users/me/usage/monthly",
+      "params": {
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD inside the cycle."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "apify.store.search",
+      "name": "Search the Apify Store",
+      "summary": "Public Actors (scrapers and tools) by keyword, category or pricing model.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/store",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords."
+        },
+        "category": {
+          "in": "query",
+          "type": "string"
+        },
+        "username": {
+          "in": "query",
+          "type": "string",
+          "description": "Only Actors of this author."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "relevance (default), popularity, ..."
+        },
+        "pricingModel": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "FREE",
+            "PRICE_PER_DATASET_ITEM",
+            "PAY_PER_EVENT"
+          ]
+        },
+        "includeInputSchema": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add each Actor's compact input schema."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max items (default and max 1000 for lists)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "apify.actors.list",
+      "name": "List your Actors",
+      "summary": "Actors you created or used.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/actors",
+      "params": {
+        "my": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only Actors you own."
+        },
+        "desc": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max items (default and max 1000 for lists)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "apify.actors.get",
+      "name": "Get an Actor",
+      "summary": "Details of one Actor, including its default run options.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/actors/{actorId}",
+      "params": {
+        "actorId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Actor id, or username~actor-name."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "apify.actors.run",
+      "name": "Start an Actor run",
+      "summary": "Starts a run and returns at once; poll actor_runs.get, then read actor_runs.dataset_items.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v2/actors/{actorId}/runs",
+      "params": {
+        "actorId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Actor id, or username~actor-name."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Run timeout in seconds."
+        },
+        "memory": {
+          "in": "query",
+          "type": "integer",
+          "description": "Memory in MB, a power of 2, min 128."
+        },
+        "maxItems": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cap on charged dataset items for pay-per-result Actors."
+        },
+        "maxTotalChargeUsd": {
+          "in": "query",
+          "type": "number",
+          "description": "Cap on the run's total cost in USD."
+        },
+        "build": {
+          "in": "query",
+          "type": "string",
+          "description": "Build tag or number; default is the Actor's default build."
+        },
+        "waitForFinish": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds the server may wait for the run to finish, up to 60."
+        }
+      },
+      "job": "scraper.run",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      },
+      "notes": [
+        "Starts a job that bills your Apify account (compute and pay-per-result fees): set maxTotalChargeUsd. A read here because scrapers only produce data, but an Actor can have side effects: run only Actors you know. The JSON body is the Actor's own input and varies per Actor: send it through the raw call (the endpoint declares no body fields).",
+        "Marked write: an Actor runs arbitrary code with your account and can post, send or change things on other sites, and it bills compute."
+      ]
+    },
+    {
+      "id": "apify.actors.run_sync_items",
+      "name": "Run an Actor and return its items",
+      "summary": "Runs an Actor and returns its dataset items in one call; must finish within 300 seconds.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v2/actors/{actorId}/run-sync-get-dataset-items",
+      "params": {
+        "actorId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Actor id, or username~actor-name."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Run timeout in seconds."
+        },
+        "memory": {
+          "in": "query",
+          "type": "integer",
+          "description": "Memory in MB, a power of 2, min 128."
+        },
+        "maxItems": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cap on charged dataset items for pay-per-result Actors."
+        },
+        "maxTotalChargeUsd": {
+          "in": "query",
+          "type": "number",
+          "description": "Cap on the run's total cost in USD."
+        },
+        "build": {
+          "in": "query",
+          "type": "string",
+          "description": "Build tag or number; default is the Actor's default build."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default), jsonl, csv, html, xlsx, xml or rss."
+        },
+        "clean": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only non-empty items, no hidden fields."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max items; no limit by default."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to keep."
+        },
+        "omit": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to drop."
+        },
+        "desc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Reverse the stored order."
+        }
+      },
+      "job": "scraper.run",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      },
+      "notes": [
+        "A read over POST: it starts a run that produces data and waits (up to 300 s) for it. It bills your Apify account: set maxTotalChargeUsd. The JSON body is the Actor's own input and varies per Actor: send it through the raw call (the endpoint declares no body fields).",
+        "Marked write: an Actor runs arbitrary code with your account and can post, send or change things on other sites, and it bills compute."
+      ]
+    },
+    {
+      "id": "apify.actor_runs.list",
+      "name": "List your Actor runs",
+      "summary": "Runs across all your Actors, with status and time filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/actor-runs",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max items (default and max 1000 for lists)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        },
+        "desc": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "One status or comma-separated list, e.g. SUCCEEDED,FAILED."
+        },
+        "startedAfter": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601."
+        },
+        "startedBefore": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "apify.actor_runs.get",
+      "name": "Get an Actor run",
+      "summary": "Status, timing, cost and default storage ids (defaultDatasetId) of a run.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/actor-runs/{runId}",
+      "params": {
+        "runId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Run id."
+        },
+        "waitForFinish": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds to wait for the run to finish, up to 60."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      },
+      "notes": [
+        "Poll until status is SUCCEEDED, FAILED, ABORTED or TIMED-OUT."
+      ]
+    },
+    {
+      "id": "apify.actor_runs.dataset_items",
+      "name": "Get a run's output items",
+      "summary": "The items a run stored in its default dataset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/actor-runs/{runId}/dataset/items",
+      "params": {
+        "runId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Run id."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default), jsonl, csv, html, xlsx, xml or rss."
+        },
+        "clean": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only non-empty items, no hidden fields."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max items; no limit by default."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to keep."
+        },
+        "omit": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to drop."
+        },
+        "desc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Reverse the stored order."
+        }
+      },
+      "job": "scraper.results",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "apify.datasets.items",
+      "name": "Get dataset items",
+      "summary": "Items of any dataset by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/datasets/{datasetId}/items",
+      "params": {
+        "datasetId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset id or username~dataset-name."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default), jsonl, csv, html, xlsx, xml or rss."
+        },
+        "clean": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only non-empty items, no hidden fields."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max items; no limit by default."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to keep."
+        },
+        "omit": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to drop."
+        },
+        "desc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Reverse the stored order."
+        }
+      },
+      "job": "scraper.results",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "apify.actor_runs.abort",
+      "name": "Abort an Actor run",
+      "summary": "Stops a run that is starting or running.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v2/actor-runs/{runId}/abort",
+      "params": {
+        "runId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Run id."
+        },
+        "gracefully": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Let the Actor persist its state first."
+        }
+      },
+      "job": "jobs.cancel",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      },
+      "notes": [
+        "Changes a running job; its results so far stay in the dataset."
+      ]
+    },
+    {
+      "id": "apify.actor_tasks.list",
+      "name": "List your Actor tasks",
+      "summary": "Saved Actor configurations (a task is an Actor plus preset input).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/actor-tasks",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max items (default and max 1000 for lists)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        },
+        "desc": {
+          "in": "query",
+          "type": "boolean"
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "apify.actor_tasks.run",
+      "name": "Start an Actor task run",
+      "summary": "Runs a saved task with its stored input and returns at once.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v2/actor-tasks/{actorTaskId}/runs",
+      "params": {
+        "actorTaskId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Task id or username~task-name."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Run timeout in seconds."
+        },
+        "memory": {
+          "in": "query",
+          "type": "integer",
+          "description": "Memory in MB, a power of 2, min 128."
+        },
+        "maxItems": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cap on charged dataset items for pay-per-result Actors."
+        },
+        "maxTotalChargeUsd": {
+          "in": "query",
+          "type": "number",
+          "description": "Cap on the run's total cost in USD."
+        },
+        "build": {
+          "in": "query",
+          "type": "string",
+          "description": "Build tag or number; default is the Actor's default build."
+        },
+        "waitForFinish": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds the server may wait, up to 60."
+        }
+      },
+      "job": "scraper.run",
+      "docs_url": "https://docs.apify.com/api/v2",
+      "verified": {
+        "docs": "https://docs.apify.com/api/openapi.json"
+      },
+      "notes": [
+        "Starts a job that bills your Apify account. A read because the task's preset input decides what it does: run only tasks you know. An optional JSON body overrides fields of the task input; send it through the raw call.",
+        "Marked write: an Actor runs arbitrary code with your account and can post, send or change things on other sites, and it bills compute."
+      ]
+    }
+  ]
+}

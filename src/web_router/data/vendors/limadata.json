@@ -1,0 +1,172 @@
+{
+  "vendor": "limadata",
+  "name": "Limadata",
+  "category": "company-data",
+  "summary": "Real-time B2B people and company enrichment, database search, contact finding and company job postings.",
+  "docs_url": "https://limadata.com/api",
+  "pricing_url": "https://limadata.com/pricing",
+  "base_url": "https://api.limadata.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "LIMADATA_API_KEY"
+        ],
+        "description": "a Limadata API key (app.limadata.com, after signing in)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Limadata's full API reference (api.limadata.com/docs/basic_v2) sits behind a login, so this entry lists only the endpoints and parameters shown on the public product pages. Others exist (enrich person, search companies, search employees, phone, email verify, web search, extract) but their bodies are not public.",
+    "Credit-priced; every response has an x-credits-cost header. Most find endpoints charge only on a match, and 400, 402 and 429 answers are free.",
+    "Default rate limit is 1 request per second per account across all keys; some enrich and find endpoints are exempt."
+  ],
+  "sources": [
+    "https://limadata.com/api",
+    "https://limadata.com/company-data",
+    "https://limadata.com/job-data",
+    "https://limadata.com/people-data",
+    "https://limadata.com/pricing"
+  ],
+  "endpoints": [
+    {
+      "id": "limadata.company.enrich",
+      "name": "Enrich a company from its domain",
+      "summary": "Firmographic profile: industry, size, locations, funding and tech stack.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/enrich/company",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Company website domain.",
+          "example": "stripe.com"
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Flat 1 credit per request. The response carries an x-credits-cost header.",
+        "The product pages say a professional-network company URL also works as the identifier; its field name is only in the login-gated reference, so it is not listed here."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://limadata.com/company-data",
+      "verified": {
+        "docs": "https://limadata.com/company-data"
+      }
+    },
+    {
+      "id": "limadata.people.search",
+      "name": "Search people in the database",
+      "summary": "Prospect search over 90+ attributes such as title, seniority, location and skills.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/database/search_people",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "List of filter objects, each {field, in: [values]}.",
+          "example": [
+            {
+              "field": "title",
+              "in": [
+                "CTO"
+              ]
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body.",
+        "0.1 credits per record returned. Valid field names are in the login-gated reference; the example field is title.",
+        "Only the filters parameter is listed because the other body fields (paging, limits) are not on the public pages."
+      ],
+      "job": "people.search",
+      "docs_url": "https://limadata.com/api",
+      "verified": {
+        "docs": "https://limadata.com/api"
+      }
+    },
+    {
+      "id": "limadata.email.find_work",
+      "name": "Find a work email",
+      "summary": "The most likely business email for a person, with a confidence rating.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/find/email_work",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Person's full name.",
+          "example": "Jane Doe"
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Company domain.",
+          "example": "techflow.com"
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Costs 1 to 3 credits and is charged only on a successful match. A professional profile URL can replace name and domain; that field's name is not on the public pages."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://limadata.com/api",
+      "verified": {
+        "docs": "https://limadata.com/api"
+      }
+    },
+    {
+      "id": "limadata.jobs.company",
+      "name": "List a company's live job postings",
+      "summary": "Open roles pulled from the company's professional network page, 20 per page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/jobs",
+      "params": {
+        "company": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company domain (a professional network URL also works).",
+          "example": "stripe.com"
+        },
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "description": "Keep only roles matching this word.",
+          "example": "engineer"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, 20 listings per page.",
+          "example": 1
+        }
+      },
+      "notes": [
+        "Flat 2 credits per request however many roles return."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://limadata.com/job-data",
+      "verified": {
+        "docs": "https://limadata.com/job-data"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

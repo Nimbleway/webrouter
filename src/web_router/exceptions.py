@@ -16,6 +16,8 @@ handle failures uniformly regardless of which backend served the request:
     ├── BenchmarkTimeoutError       one benchmark row outlasted the comparison's timeout
     ├── DeadlineExceededError       a call outlasted its per-call deadline
     ├── ProviderError               the backend itself failed
+    ├── VendorNotFoundError         no vendor, or no endpoint, under that name in the vendor catalog
+    ├── VendorWriteRefusedError     a vendor call would change data and allow_writes was not given
     └── BrowserActionError          a page action on an open browser session failed
         ├── StaleElementError           a snapshot ref no longer names an element
         ├── ElementNotFoundError        a selector matched nothing in time
@@ -310,6 +312,32 @@ class TemplateNotFoundError(ProviderError):
     def __init__(self, provider: str, template: str, *, original: BaseException | None = None) -> None:
         self.template = template
         super().__init__(provider, MSG_TEMPLATE_NOT_FOUND.format(name=template), original=original)
+
+
+class VendorNotFoundError(WebRouterError):
+    """A vendor call named a vendor or an endpoint the catalog does not hold.
+
+    Its own class rather than :class:`ProviderNotFoundError`: vendors are not
+    providers of a method, and the message lists what the catalog does hold.
+    """
+
+    def __init__(self, name: str, message: str) -> None:
+        self.name = name
+        super().__init__(message)
+
+
+class VendorWriteRefusedError(WebRouterError):
+    """A vendor call would change data on the vendor's side, and was not allowed to.
+
+    Raised before anything is sent. A read never raises it; a catalog endpoint
+    marked ``write``, or a raw request with a method other than GET, HEAD or
+    OPTIONS, does until the call passes ``allow_writes=True``.
+    """
+
+    def __init__(self, vendor: str, target: str, message: str) -> None:
+        self.vendor = vendor
+        self.target = target
+        super().__init__(message)
 
 
 class BrowserActionError(WebRouterError):

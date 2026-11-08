@@ -54,6 +54,7 @@ from web_router.constants import (
     PROVIDER_TAVILY,
     PROVIDER_YOU_MCP,
 )
+from web_router.constants_vendors import MCP_TOOL_CALL_VENDOR, MCP_TOOL_VENDOR_ENDPOINT, MCP_TOOL_VENDORS
 from web_router.mcp.env import user_config_dir
 from web_router.mcp.server import call_tool, list_resources, list_tools, read_resource
 from web_router.mcp.tools import WebRouterTools
@@ -77,13 +78,16 @@ def _payload(result: Any) -> dict[str, Any]:
     return parsed
 
 
-def test_serves_exactly_twenty_one_tools(tools: WebRouterTools) -> None:
+def test_serves_exactly_twenty_four_tools(tools: WebRouterTools) -> None:
     assert [tool.name for tool in list_tools(tools).tools] == [
         MCP_TOOL_SEARCH,
         MCP_TOOL_EXTRACT,
         MCP_TOOL_TEMPLATES,
         MCP_TOOL_TEMPLATE,
         MCP_TOOL_RUN_TEMPLATE,
+        MCP_TOOL_VENDORS,
+        MCP_TOOL_VENDOR_ENDPOINT,
+        MCP_TOOL_CALL_VENDOR,
         MCP_TOOL_ANSWER,
         MCP_TOOL_RESEARCH,
         MCP_TOOL_RESEARCH_STATUS,

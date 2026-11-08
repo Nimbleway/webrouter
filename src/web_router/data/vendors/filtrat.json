@@ -1,0 +1,368 @@
+{
+  "vendor": "filtrat",
+  "name": "Filtrat",
+  "category": "email-verification",
+  "summary": "Email verification, work-email finding from a name and domain or a LinkedIn URL, bulk list jobs, and email-to-LinkedIn lookup.",
+  "docs_url": "https://filtrat.io/v1/docs",
+  "base_url": "https://api.filtrat.io/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FILTRAT_API_KEY"
+        ],
+        "description": "a Filtrat API key starting ak_ (API > API keys in the Filtrat app)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits per call: verify 1 credit for a valid or invalid result (unknown is free, repeats within 180 days are free); finder 20 credits when found; LinkedIn-URL finder 10 for the profile plus 20; email-to-LinkedIn 30 for a verified profile.",
+    "resolve_catchall costs 5 extra credits and only when it reaches a clear answer.",
+    "Bulk flow: filtrat.bulk.create (JSON list, 1 to 100,000 emails, 5 requests a minute) returns a job; poll filtrat.bulk.get (60 per minute) until state is done, then read rows with filtrat.bulk.rows (paged) or filtrat.bulk.get with include=rows for jobs up to 10,000 rows. CSV-file upload is not in this entry.",
+    "The OpenAPI file at https://filtrat.io/openapi.json lists many more endpoints (monitors, lead lists, webhooks, AI columns) that this entry leaves out."
+  ],
+  "sources": [
+    "https://filtrat.io/v1/docs",
+    "https://filtrat.io/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "filtrat.email.verify",
+      "name": "Verify an email",
+      "summary": "Status (verified, invalid, catchall, risky, unknown), a confidence score and the domain's mail setup.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/verify/email",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Email address to verify.",
+          "example": "anna.lee@acme.com"
+        },
+        "resolve_catchall": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Resolve a catch-all result to verified or invalid (+5 credits, only on a clear answer)."
+        },
+        "skip_cache": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Bypass the result cache and probe again; billable even if cached."
+        }
+      },
+      "notes": [
+        "A read over POST: it only checks an address."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://filtrat.io/v1/docs",
+      "verified": {
+        "docs": "https://filtrat.io/v1/docs"
+      }
+    },
+    {
+      "id": "filtrat.email.find",
+      "name": "Find a work email from a name and domain",
+      "summary": "The person's work email from a name and a company domain or website.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/finder/search",
+      "params": {
+        "full_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name; use instead of, or with, first_name and last_name."
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name; pass with last_name."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name; pass with first_name."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Company domain or website URL.",
+          "example": "stripe.com"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name, to correct a domain that does not receive mail."
+        },
+        "company_country": {
+          "in": "body",
+          "type": "string",
+          "description": "Company HQ country for disambiguation.",
+          "example": "united states"
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL; enables a fallback when the main search fails."
+        },
+        "skip_cache": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Force a fresh search, bypassing cached results."
+        },
+        "resolve_catchall": {
+          "in": "body",
+          "type": "boolean",
+          "description": "On a catch-all domain, resolve the address to a confirmed one (+5 credits, 25 in all). Off: the most likely address is returned unverified."
+        },
+        "Idempotency-Key": {
+          "in": "header",
+          "type": "string",
+          "description": "Send the same key to retry safely: a repeat gets the first call's answer and is never charged twice.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks an email up. Answers within 175 seconds; not found is free.",
+        "Rate limit: 200 requests a minute."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://filtrat.io/v1/docs",
+      "verified": {
+        "docs": "https://filtrat.io/v1/docs"
+      }
+    },
+    {
+      "id": "filtrat.email.find_by_linkedin",
+      "name": "Find a work email from a LinkedIn URL",
+      "summary": "Reads the person's name and current company from LinkedIn, then finds their work email.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/finder/linkedin-search",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL."
+        },
+        "skip_cache": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Force a fresh search, bypassing cached results."
+        },
+        "resolve_catchall": {
+          "in": "body",
+          "type": "boolean",
+          "description": "On a catch-all domain, resolve the address to a confirmed one (+5 credits, 25 in all). Off: the most likely address is returned unverified."
+        }
+      },
+      "notes": [
+        "A read over POST. 10 credits for the profile (free if unreadable) plus 20 when an email is found. Rate limit: 100 requests a minute."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://filtrat.io/v1/docs",
+      "verified": {
+        "docs": "https://filtrat.io/v1/docs"
+      }
+    },
+    {
+      "id": "filtrat.person.from_email",
+      "name": "Find a LinkedIn profile from a work email",
+      "summary": "linkedin_url, name, job title, company and location for a work email; verified is true when they work there now.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/email-to-linkedin",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A work email.",
+          "example": "anna.lee@acme.com"
+        },
+        "deep": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Search a larger database too when the usual lookup cannot verify the person (priced differently, only when found)."
+        },
+        "details": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return work_history and company details, at no extra charge."
+        },
+        "fresh": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Search again instead of using a kept answer from the last 30 days."
+        }
+      },
+      "notes": [
+        "A read over POST. Takes 5 to 20 seconds; not found and unverified answers are free."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://filtrat.io/v1/docs",
+      "verified": {
+        "docs": "https://filtrat.io/v1/docs"
+      }
+    },
+    {
+      "id": "filtrat.bulk.create",
+      "name": "Start a bulk verification from a list",
+      "summary": "Verifies a list of emails in the background and returns the job.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/bulk/jobs/from-list",
+      "params": {
+        "emails": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Emails to verify, 1 to 100,000; duplicates are removed.",
+          "example": [
+            "a@acme.com",
+            "b@acme.com"
+          ]
+        },
+        "auto_resolve_catchall": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Resolve catch-all addresses during the job (+5 credits each resolved)."
+        },
+        "file_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Label for the job."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data and uses credits. Rate limit: 5 requests a minute. Poll filtrat.bulk.get with the job id."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://filtrat.io/v1/docs",
+      "verified": {
+        "docs": "https://filtrat.io/v1/docs"
+      }
+    },
+    {
+      "id": "filtrat.bulk.get",
+      "name": "Get a bulk job",
+      "summary": "Status, progress and the count of each result; state is done when finished.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/bulk/jobs/{job_id}",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The verification job's ID."
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "rows: once done, also return every row (jobs up to 10,000 rows).",
+          "enum": [
+            "rows"
+          ]
+        }
+      },
+      "notes": [
+        "Rate limit: 60 requests a minute."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://filtrat.io/v1/docs",
+      "verified": {
+        "docs": "https://filtrat.io/v1/docs"
+      }
+    },
+    {
+      "id": "filtrat.bulk.rows",
+      "name": "Get a bulk job's rows",
+      "summary": "One row per address, paginated and filterable by status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/bulk/jobs/{job_id}/rows",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The verification job's ID."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows per page, 1 to 500 (default 200)."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number from 1; replaces offset when set."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Only rows with this status: verified, catchall, invalid, unknown, skipped or queued."
+        }
+      },
+      "notes": [
+        "Rate limit: 60 requests a minute."
+      ],
+      "job": "jobs.results",
+      "docs_url": "https://filtrat.io/v1/docs",
+      "verified": {
+        "docs": "https://filtrat.io/v1/docs"
+      }
+    },
+    {
+      "id": "filtrat.bulk.delete",
+      "name": "Delete a bulk job",
+      "summary": "Deletes a verification job and its rows.",
+      "kind": "write",
+      "method": "DELETE",
+      "path": "/bulk/jobs/{job_id}",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The verification job's ID."
+        }
+      },
+      "job": "jobs.delete",
+      "docs_url": "https://filtrat.io/v1/docs",
+      "verified": {
+        "docs": "https://filtrat.io/v1/docs"
+      }
+    },
+    {
+      "id": "filtrat.account.credits",
+      "name": "Get the credit balance",
+      "summary": "Subscription and pay-as-you-go credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/credits/balance",
+      "job": "account.usage",
+      "docs_url": "https://filtrat.io/v1/docs",
+      "verified": {
+        "docs": "https://filtrat.io/v1/docs"
+      }
+    }
+  ]
+}

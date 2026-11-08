@@ -1,0 +1,456 @@
+{
+  "vendor": "quickenrich",
+  "name": "Quick Enrich",
+  "category": "enrichment",
+  "summary": "Work email and phone lookup by LinkedIn URL or name and company, reverse email lookup, domain and contact discovery, and company search.",
+  "docs_url": "https://app.quickenrich.io/docs",
+  "base_url": "https://app.quickenrich.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "QUICKENRICH_API_KEY"
+        ],
+        "description": "a Quick Enrich API key (the docs say to contact support to get one)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limits per API key: 1,000 per minute for search, phone and email lookups; 300 for domain search; 120 for contact and company finders; 6,000 for GTM Unlimited.",
+    "Credits: person lookups use one credit only when an email or phone comes back; contact finder search is free; company finder costs 1 credit per company returned; domain search by title costs 1 credit per employee on the page with an email or phone, flat 1 without a title.",
+    "Bulk find and verify (submit and status) is only for the GTM Unlimited plan. Flow: quickenrich.bulk.submit returns data.task_id, then poll quickenrich.bulk.status until data.status is completed or failed; completed results are paged with page and per_page.",
+    "Finder filters take {include: [...], exclude: [...]} objects. Some fields (country_code, region_code, industry, number_of_employees, revenue, services) need exact values from the public /api/lookups/* endpoints, otherwise 422. Use region_code abbreviations, not full state names.",
+    "Paging past 10,000 rows: send the previous meta.next_cursor as cursor; page is then ignored."
+  ],
+  "sources": [
+    "https://app.quickenrich.io/docs"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "quickenrich.person.enrich",
+      "name": "Find a person's email and profile",
+      "summary": "Email, phone, title, LinkedIn and company details for one person.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/employees/search",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL (exact match).",
+          "example": "https://www.linkedin.com/in/johndoe"
+        },
+        "company_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website URL (exact match).",
+          "example": "https://techcorp.com"
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Employee first name (exact match)."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Employee last name (exact match)."
+        }
+      },
+      "notes": [
+        "Give linkedin_url, or company_url with first_name and last_name; with all four it tries LinkedIn first. The response carries email_verification_date."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://app.quickenrich.io/docs",
+      "verified": {
+        "docs": "https://app.quickenrich.io/docs"
+      }
+    },
+    {
+      "id": "quickenrich.phone.find",
+      "name": "Find a person's phone number",
+      "summary": "Phone for one person, by the same inputs as quickenrich.person.enrich.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/employees/phone-search",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL (exact match).",
+          "example": "https://www.linkedin.com/in/johndoe"
+        },
+        "company_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website URL (exact match).",
+          "example": "https://techcorp.com"
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Employee first name (exact match)."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Employee last name (exact match)."
+        }
+      },
+      "notes": [
+        "Give linkedin_url, or company_url with first_name and last_name. One credit only when a phone is returned."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://app.quickenrich.io/docs",
+      "verified": {
+        "docs": "https://app.quickenrich.io/docs"
+      }
+    },
+    {
+      "id": "quickenrich.person.from_email",
+      "name": "Reverse email lookup",
+      "summary": "The best matching employee record for one email address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/employees/email-search",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Email address to look up (exact match).",
+          "example": "john.doe@company.com"
+        }
+      },
+      "notes": [
+        "One credit only when a match is found."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://app.quickenrich.io/docs",
+      "verified": {
+        "docs": "https://app.quickenrich.io/docs"
+      }
+    },
+    {
+      "id": "quickenrich.domain.contacts",
+      "name": "Search contacts by company URL and title",
+      "summary": "Up to 20 contacts per page at a company, optionally by title.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/employees/dataset-search",
+      "params": {
+        "company_url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company URL or domain.",
+          "example": "example.com"
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "A title or comma-separated titles; matches any.",
+          "example": "CEO, CFO"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number (default 1)."
+        },
+        "has_email": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only contacts with an email in the database."
+        }
+      },
+      "job": "company.employees",
+      "docs_url": "https://app.quickenrich.io/docs",
+      "verified": {
+        "docs": "https://app.quickenrich.io/docs"
+      }
+    },
+    {
+      "id": "quickenrich.contacts.find",
+      "name": "Find contacts by company and person filters",
+      "summary": "Discovery search that returns contacts without email or phone values, flagging has_email and has_phone.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/employees/contact-finder",
+      "params": {
+        "title": {
+          "in": "body",
+          "type": "object",
+          "description": "Job titles; open text. {include: [...], exclude: [...]}."
+        },
+        "locality": {
+          "in": "body",
+          "type": "object",
+          "description": "Employee localities; open text. {include: [...], exclude: [...]}."
+        },
+        "company_name": {
+          "in": "body",
+          "type": "object",
+          "description": "Company names; open text. {include: [...], exclude: [...]}."
+        },
+        "company_url": {
+          "in": "body",
+          "type": "object",
+          "description": "Company websites or domains; open text. {include: [...], exclude: [...]}."
+        },
+        "city": {
+          "in": "body",
+          "type": "object",
+          "description": "Company cities; open text. {include: [...], exclude: [...]}."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "object",
+          "description": "ISO 2-letter company countries; exact values. {include: [...], exclude: [...]}."
+        },
+        "region_code": {
+          "in": "body",
+          "type": "object",
+          "description": "Company state abbreviations; exact values. {include: [...], exclude: [...]}."
+        },
+        "industry_linkedin": {
+          "in": "body",
+          "type": "object",
+          "description": "Company industries; exact values from /api/lookups/industries. {include: [...], exclude: [...]}."
+        },
+        "number_of_employees": {
+          "in": "body",
+          "type": "object",
+          "description": "Employee range labels; exact values. {include: [...], exclude: [...]}."
+        },
+        "revenue": {
+          "in": "body",
+          "type": "object",
+          "description": "Revenue range labels; exact values. {include: [...], exclude: [...]}."
+        },
+        "bio_li": {
+          "in": "body",
+          "type": "object",
+          "description": "Words in the company LinkedIn About text; open text. {include: [...], exclude: [...]}."
+        },
+        "services": {
+          "in": "body",
+          "type": "object",
+          "description": "Company services; exact values from /api/lookups/company-services. {include: [...], exclude: [...]}."
+        },
+        "has_email": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts that already have an email."
+        },
+        "has_phone": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts that already have a phone."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number (default 1); only the first 10,000 rows are reachable by page."
+        },
+        "per_page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page (default 10, max 100)."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque meta.next_cursor from the previous page; echo it unchanged. Overrides page."
+        }
+      },
+      "notes": [
+        "A read over POST. Free search (credits_used 0). At least one filter is required. Enrich a hit with quickenrich.person.enrich or quickenrich.phone.find using its employee_linkedin."
+      ],
+      "job": "people.search",
+      "docs_url": "https://app.quickenrich.io/docs",
+      "verified": {
+        "docs": "https://app.quickenrich.io/docs"
+      }
+    },
+    {
+      "id": "quickenrich.companies.find",
+      "name": "Find companies",
+      "summary": "Companies by website text, LinkedIn description, services, industry, size, revenue and location.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/companies/company-finder",
+      "params": {
+        "home_page_text": {
+          "in": "body",
+          "type": "object",
+          "description": "Words in scraped website copy; open text. {include: [...], exclude: [...]}."
+        },
+        "bio_li": {
+          "in": "body",
+          "type": "object",
+          "description": "Words in the company LinkedIn About text; open text. {include: [...], exclude: [...]}."
+        },
+        "services": {
+          "in": "body",
+          "type": "object",
+          "description": "Services; exact values. {include: [...], exclude: [...]}."
+        },
+        "industry": {
+          "in": "body",
+          "type": "object",
+          "description": "Industries; exact values from /api/lookups/industries. {include: [...], exclude: [...]}."
+        },
+        "number_of_employees": {
+          "in": "body",
+          "type": "object",
+          "description": "Employee range labels; exact values. {include: [...], exclude: [...]}."
+        },
+        "revenue": {
+          "in": "body",
+          "type": "object",
+          "description": "Revenue range labels; exact values. {include: [...], exclude: [...]}."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "object",
+          "description": "ISO 2-letter countries; exact values. {include: [...], exclude: [...]}."
+        },
+        "region_code": {
+          "in": "body",
+          "type": "object",
+          "description": "State abbreviations; exact values. {include: [...], exclude: [...]}."
+        },
+        "city": {
+          "in": "body",
+          "type": "object",
+          "description": "Cities; open text. {include: [...], exclude: [...]}."
+        },
+        "company_name": {
+          "in": "body",
+          "type": "object",
+          "description": "Company names; open text. {include: [...], exclude: [...]}."
+        },
+        "company_url": {
+          "in": "body",
+          "type": "string",
+          "description": "One domain or URL (no include/exclude lists).",
+          "example": "acme.com"
+        },
+        "include_full_text": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return full home_page_text (default false: snippet only)."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number (default 1); only the first 10,000 rows are reachable by page."
+        },
+        "per_page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page (default 10, max 100)."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque meta.next_cursor from the previous page; echo it unchanged. Overrides page."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per company returned, waived with a WebApp Unlimited plan. At least one filter is required."
+      ],
+      "job": "company.search",
+      "docs_url": "https://app.quickenrich.io/docs",
+      "verified": {
+        "docs": "https://app.quickenrich.io/docs"
+      }
+    },
+    {
+      "id": "quickenrich.bulk.submit",
+      "name": "Start a bulk find and verify task",
+      "summary": "Finds and verifies emails for up to 10,000 people; the lookup runs after the call returns.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/employees/bulk-find-verify",
+      "params": {
+        "people": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "1 to 10,000 objects; each needs linkedin_url, or first_name, last_name and company_url.",
+          "example": [
+            {
+              "linkedin_url": "https://www.linkedin.com/in/johndoe"
+            },
+            {
+              "first_name": "Jane",
+              "last_name": "Doe",
+              "company_url": "https://techcorp.com"
+            }
+          ]
+        },
+        "reverify": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Default false returns cached emails; true reverifies every stored email."
+        },
+        "include_risky": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Default false. Used only when reverify is true: also return risky and unknown emails."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data. GTM Unlimited plan only; 5 tasks may run at once. Returns data.task_id; poll quickenrich.bulk.status."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://app.quickenrich.io/docs",
+      "verified": {
+        "docs": "https://app.quickenrich.io/docs"
+      }
+    },
+    {
+      "id": "quickenrich.bulk.status",
+      "name": "Get a bulk task's status and results",
+      "summary": "Task status (pending, completed, failed) and, once completed, the rows as JSON.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/employees/bulk-verify/{task_id}",
+      "params": {
+        "task_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The 32-character task id from quickenrich.bulk.submit."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results (default 1); used once completed."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows per page (default 100, max 500)."
+        }
+      },
+      "notes": [
+        "GTM Unlimited plan only. One credit per real email in the finished result; a failed task uses none."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://app.quickenrich.io/docs",
+      "verified": {
+        "docs": "https://app.quickenrich.io/docs"
+      }
+    }
+  ]
+}

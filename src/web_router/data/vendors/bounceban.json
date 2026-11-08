@@ -1,0 +1,418 @@
+{
+  "vendor": "bounceban",
+  "name": "BounceBan",
+  "category": "email-verification",
+  "summary": "Email verification that also scores catch-all and gateway-protected addresses, with single, bulk-list and account calls.",
+  "docs_url": "https://bounceban.com/public/doc/api.html",
+  "pricing_url": "https://bounceban.com/pricing",
+  "base_url": "https://api.bounceban.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BOUNCEBAN_API_KEY"
+        ],
+        "description": "a BounceBan API key (API settings in your BounceBan dashboard)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The Authorization header carries the bare key, with no 'Bearer' prefix.",
+    "Each single or bulk verification costs 1 credit; credits for unknown results are refunded (bulk, at task end). /v1/check bills a separate Check Plan balance.",
+    "A key can have daily and monthly quotas; going over one answers 403 with error api_key_quota_exceeded and quota_resets_at.",
+    "Single verification waits up to 15 seconds, then answers status 'verifying' with an id; poll bounceban.single.status for it. Never resubmit while verifying, every request is billed.",
+    "Bulk flow: create a task from a JSON list (bounceban.bulk.create, up to about 500,000 emails), poll bounceban.bulk.status until status is finished, then read results with bounceban.bulk.dump (JSON, cursor-paged) or bounceban.bulk.export (a CSV download link valid 4 hours). CSV file upload (multipart) and the waterfall host api-waterfall.bounceban.com are not in this entry.",
+    "Results are kept for 90 days. Rate limits are per account, e.g. 25 per second for single verify, 3 per second for bulk create, 5 per second for account."
+  ],
+  "sources": [
+    "https://bounceban.com/public/doc/api.html",
+    "https://bounceban.com/public/doc/llms-full.txt"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "bounceban.email.verify",
+      "name": "Verify one email",
+      "summary": "Deliverable, risky, undeliverable or unknown, with a 0-100 score and accept-all, role, free and disposable flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/verify/single",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email to verify.",
+          "example": "dev@bounceban.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "regular (default), or deepverify to assume the domain is the owner's current company site.",
+          "enum": [
+            "regular",
+            "deepverify"
+          ]
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Webhook URL that receives the result by POST."
+        },
+        "disable_catchall_verify": {
+          "in": "query",
+          "type": "string",
+          "description": "1 to run only basic SMTP checks; catch-all addresses then return unknown, score -1, at no cost.",
+          "enum": [
+            "0",
+            "1"
+          ]
+        }
+      },
+      "notes": [
+        "A read: costs 1 credit per request, even for the same email. If status is 'verifying', poll bounceban.single.status with the returned id."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    },
+    {
+      "id": "bounceban.single.status",
+      "name": "Get a single verification's result",
+      "summary": "Fetch the result of an earlier single verification by id, free of charge.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/verify/single/status",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The id returned by a single verification.",
+          "example": "502abcde"
+        }
+      },
+      "notes": [
+        "Free. Keep to 10 polls per id per 5 minutes; after 5 minutes without a result, start a new verification."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    },
+    {
+      "id": "bounceban.email.check",
+      "name": "Check an email or domain without SMTP",
+      "summary": "Syntax validity, work/free/disposable domain type and personal/role username type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/check",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Email to check; wins over domain if both are sent.",
+          "example": "sales@example.com"
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain to check.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "Send at least one of email or domain. Costs 1 Check Plan credit, not a verification credit."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    },
+    {
+      "id": "bounceban.account.get",
+      "name": "Get credits and rate limits",
+      "summary": "Credit balance (-1 means unlimited), owner email and per-endpoint rate limits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/account",
+      "job": "account.usage",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    },
+    {
+      "id": "bounceban.bulk.create",
+      "name": "Start a bulk verification from a list",
+      "summary": "Submits a list of emails as an asynchronous task and returns its id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/verify/bulk",
+      "params": {
+        "emails": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Emails to verify; about 500,000 per task at most.",
+          "example": [
+            "dev@bounceban.com",
+            "support@bounceban.com"
+          ]
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Task name; generated if omitted."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Webhook URL, one POST per verified email."
+        },
+        "url_finished": {
+          "in": "body",
+          "type": "string",
+          "description": "Webhook URL called once when the task finishes."
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "regular (default) or deepverify, for every email.",
+          "enum": [
+            "regular",
+            "deepverify"
+          ]
+        },
+        "greylisting_bypass": {
+          "in": "body",
+          "type": "string",
+          "description": "auto (default), speed (about 1 minute retry delay, more risky flags) or robust (about 5 minutes, fewer risky flags).",
+          "enum": [
+            "auto",
+            "speed",
+            "robust"
+          ]
+        },
+        "disable_catchall_verify": {
+          "in": "body",
+          "type": "string",
+          "description": "1 makes catch-all addresses unknown, score -1, free.",
+          "enum": [
+            "0",
+            "1"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data, and bills 1 credit per email. Returns {id, credits_remaining}; poll bounceban.bulk.status with the id.",
+        "The whole task is rejected with 403 if credits or the key's quota cannot cover it."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    },
+    {
+      "id": "bounceban.bulk.status",
+      "name": "Get a bulk task's status",
+      "summary": "Task status (importing, verifying, finished), progress counts and, when finished, result counts and credits used.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/verify/bulk/status",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The bulk task id.",
+          "example": "6374973d2307debafb85a58d"
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    },
+    {
+      "id": "bounceban.bulk.dump",
+      "name": "Page through a bulk task's results",
+      "summary": "Per-email results as JSON, also while the task is still running.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/verify/bulk/dump",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The bulk task id."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this result; omit for all verified emails so far.",
+          "enum": [
+            "deliverable",
+            "risky",
+            "undeliverable",
+            "unknown"
+          ]
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from the previous page; repeat until it comes back null."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "100 to 3000, default 100."
+        },
+        "retrieve_all": {
+          "in": "query",
+          "type": "string",
+          "description": "1 returns everything at once, only for tasks of 20,000 emails or fewer; ignores cursor and page_size."
+        }
+      },
+      "job": "jobs.results",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    },
+    {
+      "id": "bounceban.bulk.emails",
+      "name": "Get bulk results for specific emails",
+      "summary": "Results for up to 100 named emails from one finished task.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/verify/bulk/emails",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The bulk task id."
+        },
+        "emails": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 emails, all from this task.",
+          "example": [
+            "dev@bounceban.com"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks results up. The answer has result 'err' if the task has not finished."
+      ],
+      "job": "jobs.results",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    },
+    {
+      "id": "bounceban.bulk.export",
+      "name": "Get a CSV download link for a finished task",
+      "summary": "A public CSV link, valid 4 hours, filtered by result type, score and email flags.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/verify/bulk/export",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A finished bulk task id."
+        },
+        "keep_all_rows": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Keep source rows without an email (only for tasks made from a file)."
+        },
+        "criteria": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters, all optional booleans: deliverable (default true), risky (false), risky_score (0-100, default 50), undeliverable (false), unknown (false), free (true), role (true), accept_all (true), disposable (false).",
+          "example": {
+            "deliverable": true,
+            "risky": true,
+            "risky_score": 70
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: it only builds a download link. Generation takes about 30 seconds per 100k emails; if download_url is not ready, retry after a few seconds (at most 15 requests per export per 15 minutes)."
+      ],
+      "job": "jobs.results",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    },
+    {
+      "id": "bounceban.bulk.stop",
+      "name": "Stop a bulk task",
+      "summary": "Stops a queued or verifying task; credits for unverified emails are refunded.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v1/verify/bulk/stop",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The bulk task id."
+        }
+      },
+      "notes": [
+        "Emails already in flight get up to 60 seconds to finish. Answers 400 if the task is importing or already finished."
+      ],
+      "job": "jobs.cancel",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    },
+    {
+      "id": "bounceban.bulk.delete",
+      "name": "Delete a bulk task",
+      "summary": "Permanently removes a task and all its results.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v1/verify/bulk/destroy",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The bulk task id."
+        }
+      },
+      "notes": [
+        "Irreversible."
+      ],
+      "job": "jobs.delete",
+      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
+      "verified": {
+        "docs": "https://bounceban.com/public/doc/llms-full.txt"
+      }
+    }
+  ]
+}

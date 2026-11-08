@@ -1,0 +1,716 @@
+{
+  "vendor": "sixtyfour",
+  "name": "Sixtyfour",
+  "category": "enrichment",
+  "summary": "Research agents and data for people and companies: enrichment, email and phone finding, reverse lookups and filter search.",
+  "docs_url": "https://docs.sixtyfour.ai/introduction",
+  "pricing_url": "https://docs.sixtyfour.ai/guides/credits-and-pricing",
+  "base_url": "https://api.sixtyfour.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SIXTYFOUR_API_KEY"
+        ],
+        "description": "a Sixtyfour API key starting api_ (app dashboard, Get an API Key)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-priced; see the notes per call and the Credit Costs page. Each key belongs to one team and counts toward its monthly spend limit.",
+    "Long research runs are async: the -async endpoints return a task_id, poll GET /job-status/{task_id}. Bulk and Atlas investigation endpoints exist but are not listed.",
+    "The lead and struct fields are free-form objects: struct maps each field you want to a description of it."
+  ],
+  "sources": [
+    "https://docs.sixtyfour.ai/llms.txt",
+    "https://docs.sixtyfour.ai/openapi.json",
+    "https://docs.sixtyfour.ai/api-reference/authentication.md",
+    "https://docs.sixtyfour.ai/guides/credits-and-pricing.md"
+  ],
+  "endpoints": [
+    {
+      "id": "sixtyfour.account.balance",
+      "name": "Check credit balance",
+      "summary": "Remaining credits of the team.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/check-balance",
+      "job": "account.usage",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/authentication",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/authentication"
+      }
+    },
+    {
+      "id": "sixtyfour.people.intelligence",
+      "name": "Research a person (sync)",
+      "summary": "Research one person and return the fields you ask for, with sources.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/people-intelligence",
+      "params": {
+        "lead_info": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "What you know about the person: any of name, title, company, location, linkedin, email.",
+          "example": {
+            "name": "Saarth Shah",
+            "company": "Sixtyfour"
+          }
+        },
+        "struct": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The fields to return, as {field_name: description of what to find}.",
+          "example": {
+            "email": "Work email",
+            "title": "Current job title"
+          }
+        },
+        "tier": {
+          "in": "body",
+          "type": "string",
+          "description": "Research depth, default low. micro up to 10 fields, medium deeper; high and scout (people) are on request.",
+          "enum": [
+            "micro",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "research_plan": {
+          "in": "body",
+          "type": "string",
+          "description": "Plain-language guidance on where and how to look, up to 100,000 chars."
+        },
+        "field_confidence": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return a confidence score, justification and sources for every field."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL that receives the result by POST when the job finishes."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Credits by tier per record: micro 0.3, low 1, medium 20; high and scout cost more and are on request. Use the async form in production."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/people-intelligence",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/endpoint/people-intelligence"
+      }
+    },
+    {
+      "id": "sixtyfour.people.intelligence_async",
+      "name": "Research a person (async)",
+      "summary": "Same as people.intelligence but returns a task_id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/people-intelligence-async",
+      "params": {
+        "lead_info": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "What you know about the person: any of name, title, company, location, linkedin, email.",
+          "example": {
+            "name": "Saarth Shah",
+            "company": "Sixtyfour"
+          }
+        },
+        "struct": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The fields to return, as {field_name: description of what to find}.",
+          "example": {
+            "email": "Work email",
+            "title": "Current job title"
+          }
+        },
+        "tier": {
+          "in": "body",
+          "type": "string",
+          "description": "Research depth, default low. micro up to 10 fields, medium deeper; high and scout (people) are on request.",
+          "enum": [
+            "micro",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "research_plan": {
+          "in": "body",
+          "type": "string",
+          "description": "Plain-language guidance on where and how to look, up to 100,000 chars."
+        },
+        "field_confidence": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return a confidence score, justification and sources for every field."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL that receives the result by POST when the job finishes."
+        },
+        "dispatch_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Idempotency key, 8 to 128 chars: a repeat returns the first job and charges nothing."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a research job that only produces data. Async: answers with a task_id; poll GET /job-status/{task_id} (sixtyfour.jobs.status)."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/people-intelligence",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/endpoint/people-intelligence"
+      }
+    },
+    {
+      "id": "sixtyfour.company.intelligence",
+      "name": "Research a company (sync)",
+      "summary": "Research one company and return the fields you ask for, optionally with its people.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company-intelligence",
+      "params": {
+        "target_company": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "What you know about the company: company_name, domain, website, linkedin, location.",
+          "example": {
+            "company_name": "Sixtyfour",
+            "domain": "sixtyfour.ai"
+          }
+        },
+        "struct": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The fields to return, as {field_name: description of what to find}.",
+          "example": {
+            "email": "Work email",
+            "title": "Current job title"
+          }
+        },
+        "tier": {
+          "in": "body",
+          "type": "string",
+          "description": "Research depth, default low. micro up to 10 fields, medium deeper; high and scout (people) are on request.",
+          "enum": [
+            "micro",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "research_plan": {
+          "in": "body",
+          "type": "string",
+          "description": "Plain-language guidance on where and how to look, up to 100,000 chars."
+        },
+        "find_people": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also find people at the company, returned in structured_data.leads."
+        },
+        "people_focus_prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Who to find when find_people is on.",
+          "example": "The VP of Marketing and the CTO"
+        },
+        "lead_struct": {
+          "in": "body",
+          "type": "object",
+          "description": "Fields to return for each person found."
+        },
+        "full_org_chart": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return a department-level view of the company's people."
+        },
+        "field_confidence": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return a confidence score, justification and sources for every field."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL that receives the result by POST when the job finishes."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Credits by tier per record: micro 0.3, low 1, medium 5, high 15 (on request)."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/company-intelligence",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/endpoint/company-intelligence"
+      }
+    },
+    {
+      "id": "sixtyfour.company.intelligence_async",
+      "name": "Research a company (async)",
+      "summary": "Same as company.intelligence but returns a task_id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company-intelligence-async",
+      "params": {
+        "target_company": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "What you know about the company: company_name, domain, website, linkedin, location.",
+          "example": {
+            "company_name": "Sixtyfour",
+            "domain": "sixtyfour.ai"
+          }
+        },
+        "struct": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The fields to return, as {field_name: description of what to find}.",
+          "example": {
+            "email": "Work email",
+            "title": "Current job title"
+          }
+        },
+        "tier": {
+          "in": "body",
+          "type": "string",
+          "description": "Research depth, default low. micro up to 10 fields, medium deeper; high and scout (people) are on request.",
+          "enum": [
+            "micro",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "research_plan": {
+          "in": "body",
+          "type": "string",
+          "description": "Plain-language guidance on where and how to look, up to 100,000 chars."
+        },
+        "find_people": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also find people at the company, returned in structured_data.leads."
+        },
+        "people_focus_prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Who to find when find_people is on.",
+          "example": "The VP of Marketing and the CTO"
+        },
+        "lead_struct": {
+          "in": "body",
+          "type": "object",
+          "description": "Fields to return for each person found."
+        },
+        "full_org_chart": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return a department-level view of the company's people."
+        },
+        "field_confidence": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return a confidence score, justification and sources for every field."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL that receives the result by POST when the job finishes."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a research job. Async: answers with a task_id; poll GET /job-status/{task_id} (sixtyfour.jobs.status)."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/company-intelligence",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/endpoint/company-intelligence"
+      }
+    },
+    {
+      "id": "sixtyfour.jobs.status",
+      "name": "Poll an async job",
+      "summary": "Status and, when finished, the result of an async job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/job-status/{task_id}",
+      "params": {
+        "task_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The task_id an async call returned."
+        }
+      },
+      "notes": [
+        "Respect the polling limits in the Rate Limits page."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/enrichment/job-status",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/enrichment/job-status"
+      }
+    },
+    {
+      "id": "sixtyfour.linkedin.enrich",
+      "name": "Read a LinkedIn profile into fields",
+      "summary": "Extract the fields you name from one LinkedIn profile, without researching other sources.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrich-linkedin",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The profile URL.",
+          "example": "https://www.linkedin.com/in/saarthshah"
+        },
+        "struct": {
+          "in": "body",
+          "type": "object",
+          "description": "Fields to extract, {name: description}. Without it a default set (name, headline, current company, skills, ...) is returned."
+        }
+      },
+      "notes": [
+        "A read over POST. Sync only."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/people-intelligence",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/endpoint/people-intelligence"
+      }
+    },
+    {
+      "id": "sixtyfour.email.find",
+      "name": "Find a person's email",
+      "summary": "A verified work or personal email.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/find-email",
+      "params": {
+        "lead": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The person: a LinkedIn URL, or a name with company or domain.",
+          "example": {
+            "name": "Saarth Shah",
+            "company": "Sixtyfour"
+          }
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "PROFESSIONAL finds a work address, PERSONAL a personal one. Default PROFESSIONAL.",
+          "enum": [
+            "PROFESSIONAL",
+            "PERSONAL"
+          ]
+        },
+        "verify_emails": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Check addresses with the mail server; default true."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Lead field names are matched loosely: linkedin or linkedin_url, name or first_name and last_name, company or company_name, domain or website.",
+        "0.5 credits per lead with an email found (2 for personal). Status per address is OK, RISKY or UNKNOWN."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/find-email",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/endpoint/find-email"
+      }
+    },
+    {
+      "id": "sixtyfour.email.verify",
+      "name": "Verify an email address",
+      "summary": "Whether an address can receive mail: OK, RISKY, INVALID or UNKNOWN, with a 0 to 100 score.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/verify-email",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The address to check.",
+          "example": "jane@example.com"
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.1 credits per request."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/verify-email",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/endpoint/verify-email"
+      }
+    },
+    {
+      "id": "sixtyfour.email.reverse",
+      "name": "Find the person behind an email",
+      "summary": "Name, title, employer and LinkedIn profile for an email address.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/reverse-email",
+      "params": {
+        "lead": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The lead, with an email.",
+          "example": {
+            "email": "saarth@sixtyfour.ai"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.5 credits per match found."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/reverse-email",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/endpoint/reverse-email"
+      }
+    },
+    {
+      "id": "sixtyfour.phone.find",
+      "name": "Find a person's phone number",
+      "summary": "A phone number for a person; not verified.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/find-phone",
+      "params": {
+        "lead": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The person: a LinkedIn URL, or a name with company.",
+          "example": {
+            "name": "Jane Doe",
+            "linkedin": "https://www.linkedin.com/in/janedoe"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Lead field names are matched loosely: linkedin or linkedin_url, name or first_name and last_name, company or company_name, domain or website.",
+        "3 credits per lead with a number found."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/find-phone",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/endpoint/find-phone"
+      }
+    },
+    {
+      "id": "sixtyfour.phone.reverse",
+      "name": "Find the person behind a phone number",
+      "summary": "Name, location, email, employer and LinkedIn for a number.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/reverse-phone",
+      "params": {
+        "lead": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The lead, with a phone number.",
+          "example": {
+            "phone": "+14155550123"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "3 credits per match found."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/reverse-phone",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/endpoint/reverse-phone"
+      }
+    },
+    {
+      "id": "sixtyfour.search.query",
+      "name": "Search people or companies",
+      "summary": "Structured, filter-based or natural-language search over Sixtyfour's people and company data, paged by cursor.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search/query",
+      "params": {
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "people or company.",
+          "enum": [
+            "people",
+            "company"
+          ]
+        },
+        "simple_filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Mongo-style filters ($eq, $in, $gte, $match, $and ...) on field names from search.filter_capabilities.",
+          "example": {
+            "hq_country_iso2": {
+              "$eq": "US"
+            },
+            "employees_count": {
+              "$gte": 100,
+              "$lte": 5000
+            }
+          }
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON query DSL (bool, term, range, ...) for what simple_filters cannot say."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "A natural-language query; cannot combine with the filter forms."
+        },
+        "page_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1 to 100."
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap across all pages; default 1000."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor from the previous response; send it alone for the next page."
+        },
+        "exclude_entity_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Identifiers to drop: LinkedIn public ids or URLs (people), company ids (company)."
+        },
+        "exclude_list_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Saved exclusion list ids to apply."
+        }
+      },
+      "notes": [
+        "A read over POST. Give exactly one of simple_filters, filters, query, parsed_query or search_id.",
+        "0.1 credits per result returned.",
+        "Rely on has_more and next_cursor; a page can be short while more remain."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/search/filter-search",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/search/filter-search"
+      }
+    },
+    {
+      "id": "sixtyfour.search.filter_capabilities",
+      "name": "List searchable fields",
+      "summary": "Which fields are queryable, sortable and rangeable, and the filter limits, for a search mode.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/filter-capabilities",
+      "params": {
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "people or company.",
+          "enum": [
+            "people",
+            "company"
+          ]
+        }
+      },
+      "notes": [
+        "Use it before building filters."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/search/filter-search",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/search/filter-search"
+      }
+    },
+    {
+      "id": "sixtyfour.search.field_values",
+      "name": "Get top values of a field",
+      "summary": "The most common values of a field, with ready-made filter snippets.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search/filter-field-values",
+      "params": {
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "people or company.",
+          "enum": [
+            "people",
+            "company"
+          ]
+        },
+        "field": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Canonical field path."
+        },
+        "top_k": {
+          "in": "body",
+          "type": "integer",
+          "description": "How many top values."
+        },
+        "simple_filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters that scope the counts."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.sixtyfour.ai/api-reference/search/filter-search",
+      "verified": {
+        "docs": "https://docs.sixtyfour.ai/api-reference/search/filter-search"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

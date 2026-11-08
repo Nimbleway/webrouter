@@ -1,0 +1,293 @@
+{
+  "vendor": "datadog",
+  "name": "Datadog",
+  "category": "observability",
+  "summary": "Metrics, logs, events, monitors, dashboards, hosts, incidents and SLOs from your Datadog organization.",
+  "docs_url": "https://docs.datadoghq.com/api/latest/",
+  "pricing_url": "https://www.datadoghq.com/pricing/",
+  "base_url": "https://api.{site}",
+  "settings": {
+    "site": {
+      "env": ["DD_SITE"],
+      "default": "datadoghq.com",
+      "choices": [
+        "datadoghq.com",
+        "us3.datadoghq.com",
+        "us5.datadoghq.com",
+        "datadoghq.eu",
+        "ap1.datadoghq.com",
+        "ap2.datadoghq.com",
+        "uk1.datadoghq.com",
+        "ddog-gov.com",
+        "us2.ddog-gov.com"
+      ],
+      "description": "Your Datadog site, the host your app runs on without 'app.': datadoghq.eu for app.datadoghq.eu. A key only works on the site it was created on."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": ["DD_API_KEY", "DATADOG_API_KEY"],
+        "description": "a Datadog API key (Organization Settings > API Keys)"
+      },
+      "app_key": {
+        "env": ["DD_APPLICATION_KEY", "DD_APP_KEY", "DATADOG_APP_KEY"],
+        "description": "a Datadog application key (Organization Settings > Application Keys); reads act with its owner's permissions"
+      }
+    },
+    "inject": [
+      {"in": "header", "name": "DD-API-KEY", "value": "{api_key}"},
+      {"in": "header", "name": "DD-APPLICATION-KEY", "value": "{app_key}"}
+    ]
+  },
+  "notes": [
+    "Every read needs both keys: the API key identifies the organization, the application key the user whose permissions apply. A scoped application key without the endpoint's permission answers 403.",
+    "Time units differ by API: v1 metric queries take epoch SECONDS and answer in epoch MILLISECONDS; v2 logs and events take date math ('now-15m') or millisecond timestamps.",
+    "Pagination differs by API: v2 endpoints return meta.page.after (or links.next) as a cursor to send back as page[cursor]; v1 endpoints page by number.",
+    "Datadog also accepts 'Authorization: Bearer' personal or service access tokens; this entry uses the API and application key pair, which every endpoint accepts."
+  ],
+  "sources": [
+    "https://docs.datadoghq.com/api/latest/",
+    "https://docs.datadoghq.com/api/latest/logs/search-logs-post.md",
+    "https://docs.datadoghq.com/api/latest/events/get-a-list-of-events.md",
+    "https://docs.datadoghq.com/api/latest/metrics/query-timeseries-points.md",
+    "https://docs.datadoghq.com/api/latest/monitors/monitors-search.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "datadog.auth.validate",
+      "name": "Check that the API key is valid",
+      "summary": "Answers {\"valid\": true} for a working API key. Needs only the API key, so it cannot tell whether the application key works.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/validate",
+      "job": "account.validate",
+      "docs_url": "https://docs.datadoghq.com/api/latest/authentication/",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/authentication/"}
+    },
+    {
+      "id": "datadog.metrics.query",
+      "name": "Query a metric's timeseries points",
+      "summary": "Run a metric query such as avg:system.cpu.user{env:prod} by {host} over a time window and get the series back.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/query",
+      "params": {
+        "query": {"in": "query", "type": "string", "required": true, "description": "A Datadog metric query.", "example": "avg:system.cpu.user{*} by {host}"},
+        "from": {"in": "query", "type": "integer", "required": true, "description": "Window start, epoch SECONDS.", "example": 1762560000},
+        "to": {"in": "query", "type": "integer", "required": true, "description": "Window end, epoch SECONDS.", "example": 1762563600}
+      },
+      "notes": [
+        "Points come back as [epoch_milliseconds, value] pairs in series[].pointlist, at a resolution Datadog picks from the window length.",
+        "Needs the timeseries_query permission on the application key."
+      ],
+      "job": "metrics.query",
+      "docs_url": "https://docs.datadoghq.com/api/latest/metrics/#query-timeseries-points",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/metrics/query-timeseries-points.md"}
+    },
+    {
+      "id": "datadog.metrics.list_active",
+      "name": "List metrics that reported since a time",
+      "summary": "The names of every metric actively reporting since 'from', optionally for one host or tag filter.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/metrics",
+      "params": {
+        "from": {"in": "query", "type": "integer", "required": true, "description": "Epoch SECONDS; metrics that reported since then are listed.", "example": 1762560000},
+        "host": {"in": "query", "type": "string", "description": "Only metrics this host reported."},
+        "tag_filter": {"in": "query", "type": "string", "description": "Only metrics with these tags, e.g. env:prod AND service:web."}
+      },
+      "job": "metrics.list",
+      "docs_url": "https://docs.datadoghq.com/api/latest/metrics/#get-active-metrics-list",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/metrics/"}
+    },
+    {
+      "id": "datadog.logs.search",
+      "name": "Search logs",
+      "summary": "Logs matching a log search query in a time window, newest or oldest first, one page at a time.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/logs/events/search",
+      "params": {
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "{query, from, to, indexes, storage_tier}. query uses log search syntax (default '*'); from/to take date math or epoch ms (default now-15m..now); indexes defaults to ['*']; storage_tier is indexes, online-archives or flex.",
+          "example": {"query": "service:web status:error", "from": "now-1h", "to": "now"}
+        },
+        "page": {"in": "body", "type": "object", "description": "{limit, cursor}. limit defaults to 10; cursor is meta.page.after from the previous answer.", "example": {"limit": 50}},
+        "sort": {"in": "body", "type": "string", "enum": ["timestamp", "-timestamp"], "description": "Oldest first, or newest first with '-'."}
+      },
+      "notes": [
+        "A read over POST: the search is in the body.",
+        "Needs the logs_read_data permission. Logs outside your retention window are not searchable."
+      ],
+      "job": "logs.search",
+      "docs_url": "https://docs.datadoghq.com/api/latest/logs/#search-logs-post",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/logs/search-logs-post.md"}
+    },
+    {
+      "id": "datadog.events.list",
+      "name": "List events",
+      "summary": "Events (deploys, alerts, config changes) matching a query in a time window.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/events",
+      "params": {
+        "query": {"in": "query", "wire_name": "filter[query]", "type": "string", "description": "Event search query.", "example": "source:github"},
+        "from": {"in": "query", "wire_name": "filter[from]", "type": "string", "description": "Window start: date math or epoch ms.", "example": "now-1d"},
+        "to": {"in": "query", "wire_name": "filter[to]", "type": "string", "description": "Window end: date math or epoch ms.", "example": "now"},
+        "sort": {"in": "query", "type": "string", "enum": ["timestamp", "-timestamp"]},
+        "cursor": {"in": "query", "wire_name": "page[cursor]", "type": "string", "description": "meta.page.after from the previous answer."},
+        "limit": {"in": "query", "wire_name": "page[limit]", "type": "integer", "description": "Events per page, default 10."}
+      },
+      "notes": ["Needs the events_read permission."],
+      "job": "events.list",
+      "docs_url": "https://docs.datadoghq.com/api/latest/events/#get-a-list-of-events",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/events/get-a-list-of-events.md"}
+    },
+    {
+      "id": "datadog.monitors.search",
+      "name": "Search monitors",
+      "summary": "Monitors matching attributes such as type:metric status:alert, with counts per status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/monitor/search",
+      "params": {
+        "query": {"in": "query", "type": "string", "description": "Space-separated attributes, e.g. 'status:alert tag:\"env:prod\"'.", "example": "status:alert"},
+        "page": {"in": "query", "type": "integer", "description": "Page number, from 0."},
+        "per_page": {"in": "query", "type": "integer", "description": "Monitors per page, default 30."},
+        "sort": {"in": "query", "type": "string", "description": "'field,direction': name, status or tags; asc or desc.", "example": "status,desc"}
+      },
+      "notes": ["Needs the monitors_read permission."],
+      "job": "monitors.search",
+      "docs_url": "https://docs.datadoghq.com/api/latest/monitors/#monitors-search",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/monitors/monitors-search.md"}
+    },
+    {
+      "id": "datadog.monitors.list",
+      "name": "List monitors",
+      "summary": "Every monitor's full definition, filtered by name or tags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/monitor",
+      "params": {
+        "name": {"in": "query", "type": "string", "description": "Monitors whose name contains this."},
+        "tags": {"in": "query", "type": "string", "description": "Comma-separated scope tags, e.g. host:web01,env:prod."},
+        "monitor_tags": {"in": "query", "type": "string", "description": "Comma-separated tags on the monitor itself, e.g. service:web."},
+        "group_states": {"in": "query", "type": "string", "description": "Comma-separated group states to include: all, alert, warn, no data."},
+        "with_downtimes": {"in": "query", "type": "boolean", "description": "Include each monitor's active downtimes."},
+        "page": {"in": "query", "type": "integer", "description": "Page number, from 0; paging starts only when page is set."},
+        "page_size": {"in": "query", "type": "integer", "description": "Monitors per page, at most 1000."}
+      },
+      "job": "monitors.list",
+      "docs_url": "https://docs.datadoghq.com/api/latest/monitors/#get-all-monitor-details",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/monitors/"}
+    },
+    {
+      "id": "datadog.monitors.get",
+      "name": "Get one monitor",
+      "summary": "One monitor's definition and current state by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/monitor/{monitor_id}",
+      "params": {
+        "monitor_id": {"in": "path", "type": "integer", "required": true, "example": 12345678},
+        "group_states": {"in": "query", "type": "string", "description": "Comma-separated group states to include: all, alert, warn, no data."},
+        "with_downtimes": {"in": "query", "type": "boolean"}
+      },
+      "job": "monitors.get",
+      "docs_url": "https://docs.datadoghq.com/api/latest/monitors/#get-a-monitors-details",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/monitors/"}
+    },
+    {
+      "id": "datadog.dashboards.list",
+      "name": "List dashboards",
+      "summary": "Every dashboard's id, title, author and URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/dashboard",
+      "params": {
+        "shared": {"in": "query", "wire_name": "filter[shared]", "type": "boolean", "description": "Only shared dashboards."},
+        "deleted": {"in": "query", "wire_name": "filter[deleted]", "type": "boolean", "description": "Only deleted dashboards."},
+        "count": {"in": "query", "type": "integer", "description": "Dashboards per page."},
+        "start": {"in": "query", "type": "integer", "description": "Offset of the first dashboard."}
+      },
+      "job": "dashboards.list",
+      "docs_url": "https://docs.datadoghq.com/api/latest/dashboards/#get-all-dashboards",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/dashboards/"}
+    },
+    {
+      "id": "datadog.dashboards.get",
+      "name": "Get one dashboard",
+      "summary": "A dashboard's full definition: widgets, queries, template variables.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/dashboard/{dashboard_id}",
+      "params": {
+        "dashboard_id": {"in": "path", "type": "string", "required": true, "description": "The id in the dashboard's URL, e.g. abc-def-ghi.", "example": "abc-def-ghi"}
+      },
+      "job": "dashboards.get",
+      "docs_url": "https://docs.datadoghq.com/api/latest/dashboards/#get-a-dashboard",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/dashboards/"}
+    },
+    {
+      "id": "datadog.hosts.list",
+      "name": "List hosts",
+      "summary": "Hosts reporting to Datadog, with their apps, tags, mute state and last report time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/hosts",
+      "params": {
+        "filter": {"in": "query", "type": "string", "description": "Hosts whose name, alias or tag matches, e.g. env:prod."},
+        "sort_field": {"in": "query", "type": "string", "description": "Field to sort by, e.g. cpu, iowait, apps."},
+        "sort_dir": {"in": "query", "type": "string", "enum": ["asc", "desc"]},
+        "start": {"in": "query", "type": "integer", "description": "Offset of the first host."},
+        "count": {"in": "query", "type": "integer", "description": "Hosts per page, at most 1000."},
+        "from": {"in": "query", "type": "integer", "description": "Only hosts that reported since this epoch SECOND."},
+        "include_muted_hosts_data": {"in": "query", "type": "boolean"},
+        "include_hosts_metadata": {"in": "query", "type": "boolean"}
+      },
+      "job": "infrastructure.hosts.list",
+      "docs_url": "https://docs.datadoghq.com/api/latest/hosts/#get-all-hosts",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/hosts/"}
+    },
+    {
+      "id": "datadog.incidents.list",
+      "name": "List incidents",
+      "summary": "Incidents in your organization, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/incidents",
+      "params": {
+        "page_size": {"in": "query", "wire_name": "page[size]", "type": "integer", "description": "Incidents per page."},
+        "page_offset": {"in": "query", "wire_name": "page[offset]", "type": "integer", "description": "Offset of the first incident."},
+        "include": {"in": "query", "type": "array", "description": "Related objects to include: users, attachments."}
+      },
+      "notes": ["Needs the incident_read permission. Datadog marks parts of the incidents API as preview."],
+      "job": "incidents.list",
+      "docs_url": "https://docs.datadoghq.com/api/latest/incidents/#get-a-list-of-incidents",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/incidents/"}
+    },
+    {
+      "id": "datadog.slos.list",
+      "name": "List service level objectives",
+      "summary": "SLO definitions, filtered by ids, name, tags or the metrics they use.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/slo",
+      "params": {
+        "ids": {"in": "query", "type": "string", "description": "Comma-separated SLO ids."},
+        "query": {"in": "query", "type": "string", "description": "SLOs whose name matches."},
+        "tags_query": {"in": "query", "type": "string", "description": "SLOs with these tags."},
+        "metrics_query": {"in": "query", "type": "string", "description": "SLOs that use this metric query."},
+        "limit": {"in": "query", "type": "integer"},
+        "offset": {"in": "query", "type": "integer"}
+      },
+      "job": "slos.list",
+      "docs_url": "https://docs.datadoghq.com/api/latest/service-level-objectives/#get-all-slos",
+      "verified": {"docs": "https://docs.datadoghq.com/api/latest/service-level-objectives/"}
+    }
+  ]
+}

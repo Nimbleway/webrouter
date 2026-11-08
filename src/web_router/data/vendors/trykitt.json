@@ -1,0 +1,190 @@
+{
+  "vendor": "trykitt",
+  "name": "Kitt",
+  "category": "email-verification",
+  "summary": "Find and verify work emails in real time, with a credit balance and job lookup.",
+  "docs_url": "https://documenter.getpostman.com/view/479833/2s93m62NHf",
+  "base_url": "https://api.trykitt.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TRYKITT_API_KEY"
+        ],
+        "description": "a Kitt API key (API section of your Kitt dashboard)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Real-time mode (realtime true) answers in the response; it is throttled by your concurrent request limit and over it answers with an error to retry.",
+    "HTTP 402 means a rate limit or insufficient funds; the body says which. 401 means a missing or wrong key.",
+    "With realtime false, a job is queued and its result is sent to callbackURL or fetched with trykitt.job.get; the docs mark this webhook path deprecated."
+  ],
+  "sources": [
+    "https://documenter.getpostman.com/view/479833/2s93m62NHf"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "trykitt.account.test_key",
+      "name": "Test the API key",
+      "summary": "200 means the key passed authentication, 401 a problem with the header or key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/test-key",
+      "job": "account.validate",
+      "docs_url": "https://documenter.getpostman.com/view/479833/2s93m62NHf",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/479833/2s93m62NHf"
+      }
+    },
+    {
+      "id": "trykitt.account.credits",
+      "name": "Get the credit balance",
+      "summary": "Credits left on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/credit",
+      "job": "account.usage",
+      "docs_url": "https://documenter.getpostman.com/view/479833/2s93m62NHf",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/479833/2s93m62NHf"
+      }
+    },
+    {
+      "id": "trykitt.email.find",
+      "name": "Find a work email",
+      "summary": "Finds a person's work email from a name and a company domain or website.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/job/find_email",
+      "params": {
+        "fullName": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The full name as listed on LinkedIn or another directory; do not clean it up.",
+          "example": "erol Toker"
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The company's email domain or website; a website is reduced to its domain.",
+          "example": "trykitt.ai"
+        },
+        "linkedinStandardProfileURL": {
+          "in": "body",
+          "type": "string",
+          "description": "The person's LinkedIn profile URL; helps when the full name is hidden.",
+          "example": "https://linkedin.com/in/someprofile"
+        },
+        "realtime": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true to get the result in the response.",
+          "example": true
+        },
+        "customData": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own id, returned with the result.",
+          "example": "myInternalId"
+        },
+        "callbackURL": {
+          "in": "body",
+          "type": "string",
+          "description": "Where to send the result; only used when realtime is false."
+        },
+        "strictNameMatches": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Example in the docs sets false; controls how strictly names must match."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a lookup job that only produces data and uses credits. Email domains give better results than websites, and websites better than company names."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://documenter.getpostman.com/view/479833/2s93m62NHf",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/479833/2s93m62NHf"
+      }
+    },
+    {
+      "id": "trykitt.email.verify",
+      "name": "Verify an email",
+      "summary": "Checks whether an email address is deliverable.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/job/verify_email",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The email to verify.",
+          "example": "erol@trykitt.ai"
+        },
+        "realtime": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true to get the result in the response.",
+          "example": true
+        },
+        "customData": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own id, returned with the result.",
+          "example": "myInternalId"
+        },
+        "callbackURL": {
+          "in": "body",
+          "type": "string",
+          "description": "Where to send the result; only used when realtime is false."
+        },
+        "treatAliasesAsValid": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Example in the docs sets true; whether alias addresses count as valid."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a verification job that only produces data and uses credits."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://documenter.getpostman.com/view/479833/2s93m62NHf",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/479833/2s93m62NHf"
+      }
+    },
+    {
+      "id": "trykitt.job.get",
+      "name": "Get a job's result",
+      "summary": "Fetches the result of a queued job by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/job",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The job id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://documenter.getpostman.com/view/479833/2s93m62NHf",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/479833/2s93m62NHf"
+      }
+    }
+  ]
+}

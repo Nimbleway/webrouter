@@ -1,0 +1,477 @@
+{
+  "vendor": "brightdata",
+  "name": "Bright Data",
+  "category": "scraping",
+  "summary": "Pre-built site scrapers, Web Unlocker, SERP API and Marketplace datasets from Bright Data.",
+  "docs_url": "https://docs.brightdata.com/",
+  "pricing_url": "https://brightdata.com/pricing",
+  "base_url": "https://api.brightdata.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BRIGHTDATA_API_TOKEN"
+        ],
+        "description": "a Bright Data API key (control panel > Account settings > API keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is 'Authorization: Bearer <API key>'.",
+    "Web Unlocker and SERP calls also need a zone name (BRIGHTDATA_ZONE in .env.example), passed as the zone body field.",
+    "Scraper results default to NDJSON; set format=json for an array.",
+    "New accounts get a monthly free credit allowance across Web Unlocker, SERP and Scraper APIs."
+  ],
+  "sources": [
+    "https://docs.brightdata.com/llms.txt",
+    "https://docs.brightdata.com/api-reference/scrapers/synchronous-requests.md",
+    "https://docs.brightdata.com/api-reference/rest-api/scraper/asynchronous-requests.md",
+    "https://docs.brightdata.com/api-reference/marketplace-dataset-api/overview.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "brightdata.scraper.scrape",
+      "name": "Run a pre-built scraper and return the records",
+      "summary": "Run one of Bright Data's pre-built site scrapers and get the records back in the same response.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/datasets/v3/scrape",
+      "params": {
+        "dataset_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Scraper dataset id (gd_...); look it up in https://docs.brightdata.com/scrapers.json.",
+          "example": "gd_l1vikfch901nx3by4"
+        },
+        "input": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Inputs to scrape, a list of objects whose fields depend on the scraper (e.g. url or user_name).",
+          "example": [
+            {
+              "url": "https://www.amazon.com/dp/B0FQFB8FMG"
+            }
+          ]
+        },
+        "limit_per_input": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most records to return per input; mainly for discovery requests."
+        },
+        "custom_output_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Output fields to keep, separated by a pipe, e.g. url|title."
+        },
+        "include_errors": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include an errors report with the results."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; default ndjson, one record per line.",
+          "example": "json",
+          "enum": [
+            "ndjson",
+            "json",
+            "csv"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "discover_new for scrapers with a discovery phase.",
+          "enum": [
+            "discover_new"
+          ]
+        },
+        "discover_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Discovery method for discover_new, which differs per scraper."
+        }
+      },
+      "notes": [
+        "A read over POST: it collects data and changes nothing in your account.",
+        "Times out after 1 minute with HTTP 202 and a snapshot_id; then poll scraper.progress and fetch scraper.snapshot. One input per call is recommended.",
+        "Billed per record collected."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.brightdata.com/api-reference/scrapers/synchronous-requests.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/scrapers/synchronous-requests.md"
+      }
+    },
+    {
+      "id": "brightdata.scraper.trigger",
+      "name": "Start an asynchronous scraper collection",
+      "summary": "Start a batch collection and get a snapshot_id to poll and download.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/datasets/v3/trigger",
+      "params": {
+        "dataset_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Scraper dataset id (gd_...); look it up in https://docs.brightdata.com/scrapers.json.",
+          "example": "gd_l1vikfch901nx3by4"
+        },
+        "input": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Inputs to scrape, a list of objects whose fields depend on the scraper (e.g. url or user_name).",
+          "example": [
+            {
+              "url": "https://www.amazon.com/dp/B0FQFB8FMG"
+            }
+          ]
+        },
+        "limit_per_input": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most records to return per input; mainly for discovery requests."
+        },
+        "custom_output_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Output fields to keep, separated by a pipe."
+        },
+        "include_errors": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include an errors report with the results."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "discover_new for scrapers with a discovery phase.",
+          "enum": [
+            "discover_new"
+          ]
+        },
+        "discover_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Discovery method for discover_new, which differs per scraper."
+        },
+        "notify": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Send a completion notification."
+        },
+        "endpoint": {
+          "in": "query",
+          "type": "string",
+          "description": "Webhook URL called when the collection finishes."
+        },
+        "auth_header": {
+          "in": "query",
+          "type": "string",
+          "description": "Authorization header sent with the webhook delivery."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data.",
+        "Async pattern: trigger returns snapshot_id; poll scraper.progress until status is ready; download with scraper.snapshot."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.brightdata.com/api-reference/rest-api/scraper/asynchronous-requests.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/rest-api/scraper/asynchronous-requests.md"
+      }
+    },
+    {
+      "id": "brightdata.scraper.progress",
+      "name": "Check a collection's progress",
+      "summary": "Status of a snapshot: collecting, processing or ready.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datasets/v3/progress/{snapshot_id}",
+      "params": {
+        "snapshot_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Snapshot id returned when a collection was triggered.",
+          "example": "s_m1a2b3c4d5e6f7g8h"
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.brightdata.com/api-reference/scrapers/management-apis/monitor-progress.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/scrapers/management-apis/monitor-progress.md"
+      }
+    },
+    {
+      "id": "brightdata.scraper.snapshot",
+      "name": "Download a collection's records",
+      "summary": "Download the records of a snapshot once its status is ready.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datasets/v3/snapshot/{snapshot_id}",
+      "params": {
+        "snapshot_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Snapshot id returned when a collection was triggered.",
+          "example": "s_m1a2b3c4d5e6f7g8h"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Download format; default ndjson, one record per line.",
+          "example": "json",
+          "enum": [
+            "json",
+            "ndjson",
+            "jsonl",
+            "csv"
+          ]
+        },
+        "compress": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Compress the download."
+        },
+        "batch_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Split into batches of this many records."
+        },
+        "part": {
+          "in": "query",
+          "type": "integer",
+          "description": "Which batch to download when batch_size is set."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://docs.brightdata.com/api-reference/scrapers/delivery-apis/download-snapshot.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/scrapers/delivery-apis/download-snapshot.md"
+      }
+    },
+    {
+      "id": "brightdata.unlocker.request",
+      "name": "Fetch a URL through Web Unlocker",
+      "summary": "Fetch any page past anti-bot protection and CAPTCHAs through a Web Unlocker zone.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/request",
+      "params": {
+        "zone": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Name of your Web Unlocker or SERP zone (BRIGHTDATA_ZONE in .env.example).",
+          "example": "web_unlocker1"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Full target URL, http or https."
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "raw returns the page body, json wraps status and body.",
+          "example": "raw",
+          "enum": [
+            "raw",
+            "json"
+          ]
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter proxy country code, e.g. us."
+        },
+        "data_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Extra transform of the body.",
+          "enum": [
+            "markdown",
+            "screenshot"
+          ]
+        },
+        "async_mode": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true makes the call asynchronous.",
+          "wire_name": "async"
+        },
+        "render": {
+          "in": "body",
+          "type": "string",
+          "description": "true forces JavaScript rendering; slower.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches the page and changes nothing in your account.",
+        "Needs a Web Unlocker zone created in the Bright Data control panel; pass its name as zone."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.brightdata.com/api-reference/rest-api/unlocker/unlock-website.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/rest-api/unlocker/unlock-website.md"
+      }
+    },
+    {
+      "id": "brightdata.serp.request",
+      "name": "Run a search-engine query through the SERP API",
+      "summary": "Structured results from Google, Bing, Yandex or DuckDuckGo, from a search URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/request",
+      "params": {
+        "zone": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Name of your Web Unlocker or SERP zone (BRIGHTDATA_ZONE in .env.example).",
+          "example": "web_unlocker1"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search-engine URL to fetch, e.g. https://www.google.com/search?q=pizza."
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "raw returns the page body, json wraps status and body.",
+          "example": "raw",
+          "enum": [
+            "raw",
+            "json"
+          ]
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter proxy country code, e.g. us."
+        },
+        "data_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Extra transform of the body.",
+          "enum": [
+            "markdown",
+            "screenshot"
+          ]
+        },
+        "async_mode": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true makes the call asynchronous.",
+          "wire_name": "async"
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account.",
+        "Needs a SERP API zone; pass its name as zone. Use format json for parsed results."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://docs.brightdata.com/api-reference/rest-api/serp/serp-api.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/rest-api/serp/serp-api.md"
+      }
+    },
+    {
+      "id": "brightdata.datasets.list",
+      "name": "List Marketplace datasets",
+      "summary": "The Marketplace datasets your account can query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datasets/list",
+      "job": "datasets.list",
+      "docs_url": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-dataset-list.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-dataset-list.md"
+      }
+    },
+    {
+      "id": "brightdata.datasets.metadata",
+      "name": "Get a Marketplace dataset's fields",
+      "summary": "Fields, types and descriptions of one dataset, to read before filtering it.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datasets/{dataset_id}/metadata",
+      "params": {
+        "dataset_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Marketplace dataset id (gd_...).",
+          "example": "gd_l1viktl72bvl7bjuj0"
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-dataset-metadata.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-dataset-metadata.md"
+      }
+    },
+    {
+      "id": "brightdata.datasets.filter",
+      "name": "Create a snapshot of a dataset filtered by field values",
+      "summary": "Start a bulk async job that selects records of a Marketplace dataset matching a filter.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/datasets/filter",
+      "params": {
+        "dataset_id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Dataset to filter.",
+          "example": "gd_l1viktl72bvl7bjuj0"
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filter object, e.g. {\"name\": \"name\", \"operator\": \"includes\", \"value\": \"Egor\"}; conditions can be combined."
+        },
+        "records_limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most records to include in the snapshot.",
+          "example": 1000
+        }
+      },
+      "notes": [
+        "A read over POST: it creates a data snapshot and changes nothing else.",
+        "Async: returns a snapshot_id; the docs say a job can take up to 5 minutes. Dataset records are billed at $2.5 per thousand records at the time of writing."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/filter-dataset.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/filter-dataset.md"
+      }
+    }
+  ]
+}

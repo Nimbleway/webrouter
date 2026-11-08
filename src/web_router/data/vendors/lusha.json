@@ -1,0 +1,418 @@
+{
+  "vendor": "lusha",
+  "name": "Lusha",
+  "category": "enrichment",
+  "summary": "Search B2B contacts and companies, then reveal emails, phones and firmographics for the ones you pick.",
+  "docs_url": "https://docs.lusha.com/",
+  "pricing_url": "https://www.lusha.com/pricing/",
+  "base_url": "https://api.lusha.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "LUSHA_API_KEY"
+        ],
+        "description": "A Lusha API key (Lusha dashboard > API settings). Sent in the api_key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "This entry covers the v3 API (the v2 endpoints are legacy).",
+    "Two steps: search or prospecting returns a no-PII preview and ids; enrich reveals emails and phones and spends credits.",
+    "Almost every call is a POST with a JSON body. Reveal calls can also write results into the user's Lusha tables when tableId is given.",
+    "Tables, subscriptions (webhooks), signals, lookalikes, ICP scoring and audit-log endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://docs.lusha.com/openapi.json",
+    "https://docs.lusha.com/tutorials/v3-migration-guide"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "lusha.account.usage",
+      "name": "Get account usage",
+      "summary": "Credits (total, used, remaining), rate limits, plan and the credit cost per action.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/account/usage",
+      "notes": [
+        "Limited to 5 requests per minute. Its pricing section lists the credit cost of each action."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    },
+    {
+      "id": "lusha.contacts.search",
+      "name": "Search contacts by identifier",
+      "summary": "Non-PII preview of up to 100 contacts: which data points exist and what revealing costs.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/contacts/search",
+      "params": {
+        "contacts": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 objects; each carries one identifier: id, linkedinUrl, email, or firstName+lastName with companyName or companyDomain; optional clientReferenceId."
+        },
+        "options": {
+          "in": "body",
+          "type": "object",
+          "description": "{includePartialProfiles: boolean}."
+        },
+        "signals": {
+          "in": "body",
+          "type": "object",
+          "description": "{types (required), startDate, maxResultsPerSignal}: narrow to contacts with recent activity such as a job change."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing in your account is changed.",
+        "Returns no emails or phones; use contacts.enrich with the returned ids. Charged per successful result (the api_search action)."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    },
+    {
+      "id": "lusha.contacts.enrich",
+      "name": "Reveal emails and phones for found contacts",
+      "summary": "Unlock contact data for ids returned by search or prospecting.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/contacts/enrich",
+      "params": {
+        "ids": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 contact ids from a search response."
+        },
+        "reveal": {
+          "in": "body",
+          "type": "array",
+          "description": "What to unlock: emails, phones. Omit for both.",
+          "example": [
+            "emails"
+          ]
+        },
+        "waterfallEnabled": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Set false to skip third-party waterfall providers for this call. Defaults to true when Data Waterfall is on for the account."
+        },
+        "tableId": {
+          "in": "body",
+          "type": "string",
+          "description": "Also add the contacts to this Lusha table; that writes to the user's table."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing in your account is changed. Passing tableId also writes to a Lusha table.",
+        "Spends credits per revealed field; billing.creditsCharged in the answer is the total.",
+        "With Data Waterfall enabled, results may carry a job; poll lusha.contacts.job."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    },
+    {
+      "id": "lusha.contacts.search_and_enrich",
+      "name": "Find contacts and reveal their data in one call",
+      "summary": "Search plus reveal for up to 100 contacts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/contacts/search-and-enrich",
+      "params": {
+        "contacts": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 objects; each carries one identifier: id, linkedinUrl, email, or firstName+lastName with companyName or companyDomain; optional clientReferenceId."
+        },
+        "reveal": {
+          "in": "body",
+          "type": "array",
+          "description": "emails, phones, or both."
+        },
+        "options": {
+          "in": "body",
+          "type": "object",
+          "description": "{includePartialProfiles: boolean}."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing in your account is changed.",
+        "Two charges: one per search (api_search) and one per revealed field; billing.creditsCharged is the total.",
+        "Data Waterfall runs automatically when enabled; this call never returns a job."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    },
+    {
+      "id": "lusha.contacts.job",
+      "name": "Get a waterfall enrich job",
+      "summary": "Poll the async job returned by contacts.enrich.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/contacts/jobs/{jobId}",
+      "params": {
+        "jobId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job.id returned by contacts.enrich."
+        }
+      },
+      "notes": [
+        "While status is processing, wait retryAfter seconds and poll again. Polling is free."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    },
+    {
+      "id": "lusha.contacts.prospecting",
+      "name": "Prospect contacts by ICP filters",
+      "summary": "Search contacts by title, seniority, department, location and company attributes.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/contacts/prospecting",
+      "params": {
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{page, size}, both required.",
+          "example": {
+            "page": 0,
+            "size": 25
+          }
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{contacts: {include, exclude}, companies: {include, exclude}}. Contact keys include jobTitles, seniorityIds, departments, countries, locations, existingDataPoints; company keys include names, domains, sizes, revenues, technologies, industriesLabels, intentTopics. Valid values come from the prospecting filter endpoints."
+        },
+        "options": {
+          "in": "body",
+          "type": "object",
+          "description": "{includePartialProfiles, excludeDnc, maxContactsPerCompany (1-20)}."
+        },
+        "tableId": {
+          "in": "body",
+          "type": "string",
+          "description": "Also persist results to this Lusha table."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing in your account is changed. Passing tableId also writes to a Lusha table.",
+        "Charged per result (api_search), plus a charge per matched signal when signals are requested. No emails or phones; use contacts.enrich."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    },
+    {
+      "id": "lusha.contacts.filter_values",
+      "name": "Get valid contact filter values",
+      "summary": "Allowed values for a contact filter type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/contacts/prospecting/filters/{filterType}",
+      "params": {
+        "filterType": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "departments, seniority, existingDataPoints, countries or locations.",
+          "enum": [
+            "departments",
+            "seniority",
+            "existingDataPoints",
+            "countries",
+            "locations"
+          ]
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Text to match; required (2 to 256 characters) for locations."
+        }
+      },
+      "job": "people.search",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    },
+    {
+      "id": "lusha.companies.search",
+      "name": "Search companies by identifier",
+      "summary": "Preview of up to 100 companies.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/companies/search",
+      "params": {
+        "companies": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 objects, each with id, name or domain, plus optional clientReferenceId."
+        },
+        "options": {
+          "in": "body",
+          "type": "object",
+          "description": "{includePartialProfiles: boolean}."
+        },
+        "signals": {
+          "in": "body",
+          "type": "object",
+          "description": "{types (required), startDate, maxResultsPerSignal}."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing in your account is changed.",
+        "Charged per successful result (api_search)."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    },
+    {
+      "id": "lusha.companies.enrich",
+      "name": "Enrich companies",
+      "summary": "Full company data for ids returned by search or prospecting.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/companies/enrich",
+      "params": {
+        "ids": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 company ids from search results."
+        },
+        "reveal": {
+          "in": "body",
+          "type": "array",
+          "description": "Extra premium fields (for example employeesByDepartment, directParent, ultimateParent); each is charged separately per result."
+        },
+        "tableId": {
+          "in": "body",
+          "type": "string",
+          "description": "Also add the companies to this Lusha table."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing in your account is changed. Passing tableId also writes to a Lusha table.",
+        "Charged per successful result (reveal_company), plus per revealed field."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    },
+    {
+      "id": "lusha.companies.search_and_enrich",
+      "name": "Find companies and reveal their data in one call",
+      "summary": "Search plus enrich for up to 100 companies.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/companies/search-and-enrich",
+      "params": {
+        "companies": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 objects, each with id, name or domain."
+        },
+        "reveal": {
+          "in": "body",
+          "type": "array",
+          "description": "Premium fields to unlock; they are never returned by default."
+        },
+        "options": {
+          "in": "body",
+          "type": "object",
+          "description": "{includePartialProfiles: boolean}."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing in your account is changed.",
+        "Charged per successful result (reveal_company), plus one charge per revealed field."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    },
+    {
+      "id": "lusha.companies.prospecting",
+      "name": "Prospect companies by filters",
+      "summary": "Search companies by size, revenue, industry, technology, location, intent and signals.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/companies/prospecting",
+      "params": {
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{page, size}, both required."
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{companies: {include (required), exclude}, contacts: {include, exclude}} with keys such as names, domains, sizes, revenues, technologies, mainIndustriesIds, sicCodes, naicsCodes, locations, intentTopics."
+        },
+        "options": {
+          "in": "body",
+          "type": "object",
+          "description": "{includePartialProfiles}."
+        },
+        "tableId": {
+          "in": "body",
+          "type": "string",
+          "description": "Also persist results to this Lusha table."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing in your account is changed. Passing tableId also writes to a Lusha table.",
+        "Charged per result (api_search), plus a charge per matched signal when signals are requested."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.lusha.com/api-reference/overview",
+      "verified": {
+        "docs": "https://docs.lusha.com/openapi.json"
+      }
+    }
+  ]
+}

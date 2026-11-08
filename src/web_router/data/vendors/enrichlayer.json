@@ -1,0 +1,1175 @@
+{
+  "vendor": "enrichlayer",
+  "name": "Enrich Layer",
+  "category": "enrichment",
+  "summary": "People, company, contact, job and school data: profile enrichment, lookups, search, emails and phone numbers from Enrich Layer.",
+  "docs_url": "https://enrichlayer.com/docs",
+  "pricing_url": "https://enrichlayer.com/pricing",
+  "base_url": "https://enrichlayer.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ENRICHLAYER_API_KEY"
+        ],
+        "description": "an Enrich Layer API key from your account dashboard (https://enrichlayer.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-based; each endpoint states its cost, and optional include flags add credits. account.credit_balance is free.",
+    "use_cache and live_fetch trade freshness for credits: a forced fresh fetch costs 9 extra credits.",
+    "Boolean flags and options are strings (include, exclude, skip, enrich), not true/false.",
+    "Paged endpoints return a next_page URL; send its cursor value (after, next_token or pagination) back."
+  ],
+  "sources": [
+    "https://enrichlayer.com/llms.txt",
+    "https://enrichlayer.com/docs/api/v2/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "enrichlayer.person.profile",
+      "name": "Get a person profile",
+      "summary": "Structured profile data for one person; 1 credit plus paid extras.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/profile",
+      "params": {
+        "profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Person profile URL.",
+          "example": "https://www.linkedin.com/in/williamhgates/"
+        },
+        "twitter_profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Twitter/X URL of the person, instead of profile_url."
+        },
+        "facebook_profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Facebook URL, instead of profile_url."
+        },
+        "extra": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra details (website link). include adds 1 credit; default exclude."
+        },
+        "github_profile_id": {
+          "in": "query",
+          "type": "string",
+          "description": "GitHub link. include adds 1 credit; default exclude."
+        },
+        "twitter_profile_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Twitter link. include adds 1 credit; default exclude."
+        },
+        "personal_contact_number": {
+          "in": "query",
+          "type": "string",
+          "description": "Personal phone numbers (per number). include adds 1 credit; default exclude."
+        },
+        "personal_email": {
+          "in": "query",
+          "type": "string",
+          "description": "Personal emails (per email). include adds 1 credit; default exclude."
+        },
+        "inferred_salary": {
+          "in": "query",
+          "type": "string",
+          "description": "Estimated salary. include adds 1 credit; default exclude."
+        },
+        "skills": {
+          "in": "query",
+          "type": "string",
+          "description": "Skills (free). include adds 1 credit; default exclude."
+        },
+        "use_cache": {
+          "in": "query",
+          "type": "string",
+          "description": "Cache policy: if-present (default), or if-recent to refetch stale data for 1 extra credit."
+        },
+        "fallback_to_cache": {
+          "in": "query",
+          "type": "string",
+          "description": "Behavior when a fresh fetch fails: on-error (default) or never."
+        },
+        "live_fetch": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to force to fetch a fresh profile for 9 extra credits."
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/people-api/person-profile",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/people-api/person-profile"
+      }
+    },
+    {
+      "id": "enrichlayer.person.picture",
+      "name": "Get a person profile picture",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/person/profile-picture",
+      "params": {
+        "person_profile_url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Person profile URL."
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/people-api/person-profile-picture",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/people-api/person-profile-picture"
+      }
+    },
+    {
+      "id": "enrichlayer.person.resolve",
+      "name": "Look up a person by name and company",
+      "summary": "2 credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/profile/resolve",
+      "params": {
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company domain.",
+          "example": "gatesfoundation.org"
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First name.",
+          "example": "Bill"
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Location."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Job title."
+        },
+        "similarity_checks": {
+          "in": "query",
+          "type": "string",
+          "description": "Whether to compare inputs with the result or return the closest match."
+        },
+        "enrich_profile": {
+          "in": "query",
+          "type": "string",
+          "description": "skip (default) or enrich to attach the cached profile."
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/people-api/person-lookup",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/people-api/person-lookup"
+      }
+    },
+    {
+      "id": "enrichlayer.person.role",
+      "name": "Find the person in a role at a company",
+      "summary": "3 credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/find/company/role/",
+      "params": {
+        "role": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Role title.",
+          "example": "CEO"
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company name.",
+          "example": "Microsoft"
+        },
+        "enrich_profile": {
+          "in": "query",
+          "type": "string",
+          "description": "skip (default) or enrich."
+        }
+      },
+      "job": "people.search",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/people-api/role-lookup",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/people-api/role-lookup"
+      }
+    },
+    {
+      "id": "enrichlayer.company.profile",
+      "name": "Get a company profile",
+      "summary": "Structured company data; 1 credit plus paid extras.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/company",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company profile URL.",
+          "example": "https://www.linkedin.com/company/google/"
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "Categories. include adds 1 credit; default exclude."
+        },
+        "funding_data": {
+          "in": "query",
+          "type": "string",
+          "description": "Funding rounds. include adds 1 credit; default exclude."
+        },
+        "exit_data": {
+          "in": "query",
+          "type": "string",
+          "description": "Portfolio exits. include adds 1 credit; default exclude."
+        },
+        "acquisitions": {
+          "in": "query",
+          "type": "string",
+          "description": "Acquisitions. include adds 1 credit; default exclude."
+        },
+        "extra": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra details (contact, Crunchbase ranking, stock). include adds 1 credit; default exclude."
+        },
+        "use_cache": {
+          "in": "query",
+          "type": "string",
+          "description": "Cache policy: if-present (default), or if-recent to refetch stale data for 1 extra credit."
+        },
+        "fallback_to_cache": {
+          "in": "query",
+          "type": "string",
+          "description": "on-error (default) or never."
+        },
+        "live_fetch": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to force to fetch a fresh profile for 9 extra credits."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/company-api/company-profile",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/company-api/company-profile"
+      }
+    },
+    {
+      "id": "enrichlayer.company.resolve",
+      "name": "Resolve a company from name, domain or location",
+      "summary": "2 credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/company/resolve",
+      "params": {
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name."
+        },
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain."
+        },
+        "company_location": {
+          "in": "query",
+          "type": "string",
+          "description": "Company location."
+        },
+        "enrich_profile": {
+          "in": "query",
+          "type": "string",
+          "description": "skip (default) or enrich."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/company-api/company-lookup",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/company-api/company-lookup"
+      }
+    },
+    {
+      "id": "enrichlayer.company.resolve_id",
+      "name": "Look up a company vanity ID by numeric ID",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/company/resolve-id",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Numeric company ID."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/company-api/company-id-lookup",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/company-api/company-id-lookup"
+      }
+    },
+    {
+      "id": "enrichlayer.company.picture",
+      "name": "Get a company logo",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/company/profile-picture",
+      "params": {
+        "company_profile_url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company profile URL."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/company-api/company-profile-picture",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/company-api/company-profile-picture"
+      }
+    },
+    {
+      "id": "enrichlayer.company.employees",
+      "name": "List employees of a company",
+      "summary": "3 credits per employee returned.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/company/employees/",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company profile URL."
+        },
+        "coy_name_match": {
+          "in": "query",
+          "type": "string",
+          "description": "Also include profiles matching the company name."
+        },
+        "use_cache": {
+          "in": "query",
+          "type": "string",
+          "description": "Cache policy: if-present (default), or if-recent to refetch stale data for 1 extra credit."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country codes, comma-separated, e.g. us,sg."
+        },
+        "enrich_profiles": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to enrich to return full cached profiles instead of URLs only."
+        },
+        "boolean_role_search": {
+          "in": "query",
+          "type": "string",
+          "description": "Boolean-syntax filter on job title."
+        },
+        "role_search": {
+          "in": "query",
+          "type": "string",
+          "description": "Regex filter on job title; boolean_role_search wins if both given."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "string",
+          "description": "Results per page."
+        },
+        "employment_status": {
+          "in": "query",
+          "type": "string",
+          "description": "current (default), past or all."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "recently-joined or recently-left."
+        },
+        "resolve_numeric_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolve numeric IDs to vanity IDs."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor taken from the previous response next_page URL."
+        }
+      },
+      "job": "company.employees",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/company-api/employee-listing",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/company-api/employee-listing"
+      }
+    },
+    {
+      "id": "enrichlayer.company.employee_count",
+      "name": "Get a company employee count",
+      "summary": "1 credit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/company/employees/count",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company profile URL."
+        },
+        "coy_name_match": {
+          "in": "query",
+          "type": "string",
+          "description": "Also match by company name."
+        },
+        "at_date": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD, to get the count at a past date (1 extra credit)."
+        },
+        "use_cache": {
+          "in": "query",
+          "type": "string",
+          "description": "Cache policy: if-present (default), or if-recent to refetch stale data for 1 extra credit."
+        },
+        "estimated_employee_count": {
+          "in": "query",
+          "type": "string",
+          "description": "include or exclude (default) the count from the company profile."
+        },
+        "employment_status": {
+          "in": "query",
+          "type": "string",
+          "description": "current (default), past or all."
+        }
+      },
+      "job": "company.employees",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/company-api/employee-count",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/company-api/employee-count"
+      }
+    },
+    {
+      "id": "enrichlayer.company.employee_search",
+      "name": "Search a company's employees by job title",
+      "summary": "10 credits per request.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/company/employee/search/",
+      "params": {
+        "company_profile_url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company profile URL."
+        },
+        "keyword_boolean": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Job title keywords in boolean syntax."
+        },
+        "keyword_regex": {
+          "in": "query",
+          "type": "string",
+          "description": "Regex alternative; keyword_boolean wins."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "string",
+          "description": "Results per page."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country codes."
+        },
+        "enrich_profiles": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to enrich to return full cached profiles instead of URLs only."
+        },
+        "resolve_numeric_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolve numeric IDs."
+        }
+      },
+      "job": "company.employees",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/company-api/employee-search",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/company-api/employee-search"
+      }
+    },
+    {
+      "id": "enrichlayer.search.company",
+      "name": "Search companies by criteria",
+      "summary": "3 credits per company URL returned.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/search/company",
+      "params": {
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Region."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Company type, e.g. PRIVATELY_HELD or NON_PROFIT."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name."
+        },
+        "industry": {
+          "in": "query",
+          "type": "string",
+          "description": "Industry."
+        },
+        "primary_industry": {
+          "in": "query",
+          "type": "string",
+          "description": "Primary industry."
+        },
+        "specialities": {
+          "in": "query",
+          "type": "string",
+          "description": "Specialities."
+        },
+        "description": {
+          "in": "query",
+          "type": "string",
+          "description": "Description keywords."
+        },
+        "domain_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain."
+        },
+        "employee_count_category": {
+          "in": "query",
+          "type": "string",
+          "description": "Employee count category; custom (default) uses the min and max."
+        },
+        "employee_count_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum employees."
+        },
+        "employee_count_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Maximum employees."
+        },
+        "founded_after_year": {
+          "in": "query",
+          "type": "string",
+          "description": "Founded after this year."
+        },
+        "founded_before_year": {
+          "in": "query",
+          "type": "string",
+          "description": "Founded before this year."
+        },
+        "funding_amount_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum funding in USD."
+        },
+        "funding_amount_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Maximum funding in USD."
+        },
+        "follower_count_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum followers."
+        },
+        "follower_count_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Maximum followers."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "string",
+          "description": "Results per page."
+        },
+        "enrich_profiles": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to enrich to return full cached profiles instead of URLs only."
+        },
+        "use_cache": {
+          "in": "query",
+          "type": "string",
+          "description": "Cache policy: if-present (default), or if-recent to refetch stale data for 1 extra credit."
+        },
+        "next_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token from the previous response next_page URL."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/search-api/company-search",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/search-api/company-search"
+      }
+    },
+    {
+      "id": "enrichlayer.search.person",
+      "name": "Search people by criteria",
+      "summary": "3 credits per profile URL returned. Many more filters exist (past and current company filters).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/search/person",
+      "params": {
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code."
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "current_role_title": {
+          "in": "query",
+          "type": "string",
+          "description": "Current job title."
+        },
+        "past_role_title": {
+          "in": "query",
+          "type": "string",
+          "description": "Past job title."
+        },
+        "current_company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Current employer name."
+        },
+        "current_company_profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Current employer profile URL."
+        },
+        "current_company_domain_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Current employer domain."
+        },
+        "past_company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Past employer name."
+        },
+        "education_school_name": {
+          "in": "query",
+          "type": "string",
+          "description": "School name."
+        },
+        "education_degree_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Degree."
+        },
+        "education_field_of_study": {
+          "in": "query",
+          "type": "string",
+          "description": "Field of study."
+        },
+        "headline": {
+          "in": "query",
+          "type": "string",
+          "description": "Headline keywords."
+        },
+        "summary": {
+          "in": "query",
+          "type": "string",
+          "description": "Summary keywords."
+        },
+        "skills": {
+          "in": "query",
+          "type": "string",
+          "description": "Skills."
+        },
+        "languages": {
+          "in": "query",
+          "type": "string",
+          "description": "Languages."
+        },
+        "industries": {
+          "in": "query",
+          "type": "string",
+          "description": "Industries."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Region."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City."
+        },
+        "current_company_industry": {
+          "in": "query",
+          "type": "string",
+          "description": "Current employer industry."
+        },
+        "current_company_employee_count_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Current employer minimum employees."
+        },
+        "current_company_employee_count_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Current employer maximum employees."
+        },
+        "follower_count_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum followers."
+        },
+        "follower_count_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Maximum followers."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "string",
+          "description": "Results per page."
+        },
+        "enrich_profiles": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to enrich to return full cached profiles instead of URLs only."
+        },
+        "use_cache": {
+          "in": "query",
+          "type": "string",
+          "description": "Cache policy: if-present (default), or if-recent to refetch stale data for 1 extra credit."
+        },
+        "next_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token from the previous response next_page URL."
+        }
+      },
+      "job": "people.search",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/search-api/person-search",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/search-api/person-search"
+      }
+    },
+    {
+      "id": "enrichlayer.contact.work_email",
+      "name": "Find a person's work email",
+      "summary": "3 credits per success.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/profile/email",
+      "params": {
+        "profile_url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Person profile URL."
+        },
+        "callback_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Webhook notified when processing finishes."
+        }
+      },
+      "notes": [
+        "May answer asynchronously; give callback_url to be notified."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/contact-api/work-email-lookup",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/contact-api/work-email-lookup"
+      }
+    },
+    {
+      "id": "enrichlayer.contact.personal_email",
+      "name": "Find personal emails",
+      "summary": "1 credit per email returned.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/contact-api/personal-email",
+      "params": {
+        "profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Person profile URL."
+        },
+        "twitter_profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Twitter/X URL."
+        },
+        "facebook_profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Facebook URL."
+        },
+        "email_validation": {
+          "in": "query",
+          "type": "string",
+          "description": "none (default), fast (free) or precise."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "string",
+          "description": "Results per page."
+        }
+      },
+      "job": "people.email.find",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/contact-api/personal-email-lookup",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/contact-api/personal-email-lookup"
+      }
+    },
+    {
+      "id": "enrichlayer.contact.personal_phone",
+      "name": "Find personal phone numbers",
+      "summary": "1 credit per number returned.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/contact-api/personal-contact",
+      "params": {
+        "profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Person profile URL."
+        },
+        "twitter_profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Twitter/X URL."
+        },
+        "facebook_profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Facebook URL."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "string",
+          "description": "Results per page."
+        }
+      },
+      "job": "people.phone.find",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/contact-api/personal-contact-number-lookup",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/contact-api/personal-contact-number-lookup"
+      }
+    },
+    {
+      "id": "enrichlayer.contact.reverse_email",
+      "name": "Resolve a person from an email",
+      "summary": "3 credits per success.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/profile/resolve/email",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Personal or work email."
+        },
+        "lookup_depth": {
+          "in": "query",
+          "type": "string",
+          "description": "superficial or deep lookup."
+        },
+        "enrich_profile": {
+          "in": "query",
+          "type": "string",
+          "description": "skip (default) or enrich."
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/contact-api/reverse-email-lookup",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/contact-api/reverse-email-lookup"
+      }
+    },
+    {
+      "id": "enrichlayer.contact.reverse_phone",
+      "name": "Resolve profiles from a phone number",
+      "summary": "3 credits; free when nothing is found.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/resolve/phone",
+      "params": {
+        "phone_number": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Phone number in E.164 format.",
+          "example": "+14155550100"
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/contact-api/reverse-contact-number-lookup",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/contact-api/reverse-contact-number-lookup"
+      }
+    },
+    {
+      "id": "enrichlayer.contact.disposable_check",
+      "name": "Check for a disposable email domain",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/disposable-email",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Email address."
+        }
+      },
+      "job": "email.verify",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/contact-api/disposable-email-address-check",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/contact-api/disposable-email-address-check"
+      }
+    },
+    {
+      "id": "enrichlayer.jobs.profile",
+      "name": "Get a job posting",
+      "summary": "2 credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/job",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Job posting URL."
+        }
+      },
+      "job": "jobs.search",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/jobs-api/job-profile",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/jobs-api/job-profile"
+      }
+    },
+    {
+      "id": "enrichlayer.jobs.company",
+      "name": "List jobs posted by a company",
+      "summary": "2 credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/company/job",
+      "params": {
+        "search_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Company search_id from company.profile."
+        },
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "description": "Keyword."
+        },
+        "job_type": {
+          "in": "query",
+          "type": "string",
+          "description": "full-time, part-time, contract, internship, temporary, volunteer or anything (default)."
+        },
+        "experience_level": {
+          "in": "query",
+          "type": "string",
+          "description": "internship, entry_level, associate, mid_senior_level, director or anything."
+        },
+        "when": {
+          "in": "query",
+          "type": "string",
+          "description": "yesterday, past-week, past-month or anytime."
+        },
+        "flexibility": {
+          "in": "query",
+          "type": "string",
+          "description": "remote, on-site, hybrid or anything."
+        },
+        "geo_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Location geo_id; 92000000 is worldwide."
+        },
+        "pagination": {
+          "in": "query",
+          "type": "string",
+          "description": "Token from the previous response next_page_api_url."
+        }
+      },
+      "job": "jobs.search",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/jobs-api/job-search",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/jobs-api/job-search"
+      }
+    },
+    {
+      "id": "enrichlayer.jobs.count",
+      "name": "Count jobs posted by a company",
+      "summary": "2 credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/company/job/count",
+      "params": {
+        "search_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Company search_id."
+        },
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "description": "Keyword."
+        },
+        "job_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Job type."
+        },
+        "experience_level": {
+          "in": "query",
+          "type": "string",
+          "description": "Experience level."
+        },
+        "when": {
+          "in": "query",
+          "type": "string",
+          "description": "Posting time window."
+        },
+        "flexibility": {
+          "in": "query",
+          "type": "string",
+          "description": "Flexibility."
+        },
+        "geo_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Location geo_id."
+        }
+      },
+      "job": "jobs.search",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/jobs-api/jobs-listing-count",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/jobs-api/jobs-listing-count"
+      }
+    },
+    {
+      "id": "enrichlayer.school.profile",
+      "name": "Get a school profile",
+      "summary": "1 credit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/school",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "School profile URL."
+        },
+        "use_cache": {
+          "in": "query",
+          "type": "string",
+          "description": "Cache policy: if-present (default), or if-recent to refetch stale data for 1 extra credit."
+        },
+        "live_fetch": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to force to fetch a fresh profile for 9 extra credits."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/school-api/school-profile",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/school-api/school-profile"
+      }
+    },
+    {
+      "id": "enrichlayer.account.credit_balance",
+      "name": "View the credit balance",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/credit-balance",
+      "job": "account.usage",
+      "docs_url": "https://enrichlayer.com/docs/api/v2/meta-api/view-credit-balance",
+      "verified": {
+        "docs": "https://enrichlayer.com/docs/api/v2/meta-api/view-credit-balance"
+      }
+    }
+  ]
+}
