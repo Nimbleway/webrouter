@@ -156,8 +156,12 @@ src/web_router/
 │   │                   can serve a request, and the ones it cannot build, with why
 │   ├── merge.py        merge(): a router's decision and the static order made into
 │   │                   one method, one order and checked options, pure
-│   └── merge_params.py the merge's check on a router's options: allowlist, values,
-│                       the caller's own, the budget, the URL policy
+│   ├── merge_types.py  Merged, MergeNotes and FallbackReason: what the merge answers
+│   ├── merge_shape.py  whether a router's answer is a well-formed decision that
+│   │                   decides something
+│   ├── merge_params.py the merge's check on a router's options: allowlist, values,
+│   │                   the caller's own, the budget, the URL policy
+│   └── merge_urls.py   a URL a router wrote, shown as its scheme and host only
 ├── constants_params.py the effort mapping's data path, rule and reasons
 ├── constants_merge.py  the options a router may set, and the merge's reasons and notes
 ├── _urls.py            urls_in(): the URLs written in a query's prose

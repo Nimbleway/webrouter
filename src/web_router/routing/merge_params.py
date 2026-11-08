@@ -9,19 +9,16 @@ the cost cap on every one. Every backend in the order must take the option --
 the request always sends it, or the backend's ``supported_parameters`` declares
 it -- since a backend that does not would refuse the call. A URL needs a URL
 policy that allows it, and is never written into a note or a record whole:
-:func:`shown` keeps its scheme and host.
+:mod:`.merge_urls` keeps its scheme and host.
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable, Collection, Mapping, Sequence
-from typing import Any, get_args, overload
-from urllib.parse import urlsplit
+from typing import Any, get_args
 
 from web_router import prices, registry
 from web_router.constants_merge import (
-    HOST_CHARS,
     MSG_PARAM_CALLER,
     MSG_PARAM_DEPTH_COST,
     MSG_PARAM_DEPTH_STRICT,
@@ -34,11 +31,10 @@ from web_router.constants_merge import (
     MSG_PARAM_UNDECLARED,
     MSG_PARAM_URL_REFUSED,
     ROUTER_PARAMS,
-    URL_HIDDEN,
-    URL_IN_TEXT,
 )
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.routing.contract import Budget, RouteDecision
+from web_router.routing.merge_urls import URL_KEYS, UrlCheck, hide_urls, host_of
 from web_router.routing.params import EFFORTS, effort_misfit
 from web_router.types import (
     BrowseRequest,
@@ -49,11 +45,7 @@ from web_router.types import (
     SearchRequest,
 )
 
-UrlCheck = Callable[[str], str | None]
-"""A URL policy: why a URL is refused, or ``None`` when it is allowed."""
-
 DEPTHS: tuple[str, ...] = get_args(SearchDepth)
-URL_KEYS = frozenset({"urls", "start_url"})
 
 DECLARED: dict[str, tuple[type[NormalizedRequest], Callable[[str], type[Any]]]] = {
     "search": (SearchRequest, registry.get_provider_class),
@@ -62,46 +54,6 @@ DECLARED: dict[str, tuple[type[NormalizedRequest], Callable[[str], type[Any]]]] 
     "browse": (BrowseRequest, registry.get_browse_provider_class),
 }
 """Per method, its request (whose ``always_sent`` every backend takes) and its registry's class lookup."""
-
-
-def host_of(url: str) -> str:
-    """What a note or a record shows of ``url``: its scheme and host, never its path, query or credentials.
-
-    A scheme-relative URL (``//host/path``) shows as ``//host``.
-    """
-    try:
-        parts = urlsplit(url)
-        host = parts.hostname
-    except ValueError:
-        return URL_HIDDEN
-    kept = re.match(HOST_CHARS, host or "")
-    if kept is None or not (parts.scheme or url.startswith("//")):
-        return URL_HIDDEN
-    return f"{parts.scheme}{':' if parts.scheme else ''}//{kept.group(0)}"
-
-
-def _hide(match: re.Match[str]) -> str:
-    """The whole matched URL, and whatever ran on after it, as its scheme and host only."""
-    return host_of(match.group(0))
-
-
-@overload
-def hide_urls(text: str) -> str: ...
-@overload
-def hide_urls(text: None) -> None: ...
-def hide_urls(text: str | None) -> str | None:
-    """``text`` with every URL in it cut to its scheme and host: for anything a router wrote, ids included."""
-    return None if text is None else re.sub(URL_IN_TEXT, _hide, text)
-
-
-def shown(params: Mapping[str, Any]) -> dict[str, Any]:
-    """``params`` as a record or a ``repr`` shows them: each URL cut to its scheme and host."""
-    out = dict(params)
-    if "urls" in out:
-        out["urls"] = [host_of(u) for u in out["urls"]]
-    if "start_url" in out:
-        out["start_url"] = host_of(out["start_url"])
-    return out
 
 
 def _valid(key: str, value: Any) -> bool:

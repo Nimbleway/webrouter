@@ -71,7 +71,7 @@ def test_a_url_in_the_routers_own_words_shows_as_its_scheme_and_host() -> None:
     ],
 )
 def test_nothing_after_a_urls_host_survives_in_free_text(text: str, expected: str) -> None:
-    from web_router.routing.merge_params import hide_urls
+    from web_router.routing.merge_urls import hide_urls
 
     assert hide_urls(text) == expected and "secret" not in hide_urls(text)
 
@@ -114,7 +114,7 @@ def test_a_refused_router_url_is_noted_when_the_call_searches_instead() -> None:
     ],
 )
 def test_a_scheme_relative_url_keeps_only_its_host(text: str, expected: str) -> None:
-    from web_router.routing.merge_params import hide_urls
+    from web_router.routing.merge_urls import hide_urls
 
     assert hide_urls(text) == expected
     merged = _merge(RouteDecision(providers={"search": ["exa"]}, reason=text), pinned="search")
