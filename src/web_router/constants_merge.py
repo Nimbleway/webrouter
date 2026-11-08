@@ -40,6 +40,7 @@ NOTE_EXTRACT_URLS = "params.extract.urls"
 """The note for the router's extract URLs when they were refused and the call searches instead."""
 
 MSG_UNKNOWN_ID = "{id} is not a candidate for this call"
+MSG_EXCLUDE_NO_REASON = "{id} was excluded with no reason, so the exclusion was ignored"
 MSG_UNKNOWN_TOOL = "{tool} is not a method a router can choose"
 MSG_TOOL_NO_CANDIDATE = (
     "{tool} was set aside: no candidate is left for it, since none was offered for this call (the budget or the "

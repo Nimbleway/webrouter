@@ -12,7 +12,8 @@ exactly as a routed call would run it. The rules:
 2. **Order.** The backends the router ranked for that method, in its order,
    then every other candidate in the static order.
 3. **Exclusions.** Only ``decision.exclude`` removes a candidate, each with
-   its reason. Exclusions that would leave the method no backend are ignored.
+   its reason; one with an empty reason is set aside and noted. Exclusions
+   that would leave the method no backend are ignored.
 4. **Unknown ids** -- a method, a backend or an exclusion that is not a
    candidate -- are set aside and noted, never an error.
 5. **Options.** ``decision.params`` for the method, by
@@ -35,6 +36,7 @@ from typing import Any, cast
 from web_router.constants_merge import (
     EXTRACT_TOOL,
     LAST_RESORT_TOOL,
+    MSG_EXCLUDE_NO_REASON,
     MSG_EXCLUSIONS_EMPTY,
     MSG_EXTRACT_NO_URL,
     MSG_TOOL_NO_CANDIDATE,
@@ -75,10 +77,12 @@ def _static(request: RouteRequest, static: Mapping[Any, Any], why: FallbackReaso
 def _exclusions(decision: RouteDecision, known: Collection[str], ignored: dict[str, str]) -> dict[str, str]:
     excluded = {}
     for cid, why in decision.exclude.items():
-        if cid in known:
-            excluded[cid] = hide_urls(why) or ""
-        else:
+        if cid not in known:
             ignored[cid] = MSG_UNKNOWN_ID.format(id=cid)
+        elif not why.strip():
+            ignored[cid] = MSG_EXCLUDE_NO_REASON.format(id=cid)
+        else:
+            excluded[cid] = hide_urls(why)
     return excluded
 
 

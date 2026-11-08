@@ -79,6 +79,12 @@ def test_rule_3_only_exclude_removes_a_candidate_and_never_the_last_one(
     assert set(merged.notes.ignored) == ignored
 
 
+@pytest.mark.parametrize("why", ["", "   "])
+def test_rule_3_an_exclusion_with_no_reason_is_set_aside_and_noted(why: str) -> None:
+    merged = merge_with(RouteDecision(exclude={"search:exa": why}), pinned="search")
+    assert "exa" in merged.providers and not merged.notes.excluded and "no reason" in merged.notes.ignored["search:exa"]
+
+
 def test_rule_3_a_ranked_backend_that_is_also_excluded_stays_out() -> None:
     merged = merge_with(RouteDecision(providers={"search": ["exa"]}, exclude={"search:exa": "down"}), pinned="search")
     assert "exa" not in merged.providers and merged.notes.excluded == {"search:exa": "down"}
