@@ -77,11 +77,10 @@ class BudgetPool:
         cap = self.budget.max_cost_usd
         return None if cap is None else cap - self._spent - self._reserved
 
-    def _move(self, cost: float, *, spent: bool) -> None:
+    def _settle(self, cost: float) -> None:
         with self._lock:
             self._reserved -= cost
-            if spent:
-                self._spent += cost
+            self._spent += cost
 
     def status(self) -> BudgetStatus:
         """Spent and reserved dollars here, what is left counting the pools in force outside it, and the clock."""
@@ -157,7 +156,7 @@ class PoolChain:
     def settle(self, cost: float) -> None:
         """Move ``cost``, what a call that has ended reserved, from reserved to spent in every pool of the chain."""
         for pool in self.pools:
-            pool._move(cost, spent=True)
+            pool._settle(cost)
 
 
 def _least(values: list[float | None]) -> float | None:

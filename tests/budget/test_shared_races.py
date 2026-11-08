@@ -84,7 +84,7 @@ def test_settlements_from_many_threads_at_once_lose_no_update() -> None:
 class _ReportingCost(float):
     """A cost that signals when the outer pool compares it, then takes a while there."""
 
-    def __init__(self, value: float) -> None:
+    def __init__(self, _value: float) -> None:  # the value is float.__new__'s; nothing more to keep
         self.compares = 0
         self.at_outer = threading.Event()
 
