@@ -2014,8 +2014,8 @@ every scope of its router in force when it starts, wherever the scope was
 made, so a scope made before an outer block cannot escape that block's cap.
 Each attempt reserves its estimate before it starts, so parallel threads and
 tasks cannot reserve past the cap together. The cap is on estimates, not on
-the bill. A call a backend makes on its own router inside a budgeted call is
-reserved once, by the call it is made in; it settles in the shared budget
+the bill. A call a backend makes inside a budgeted call, on its own router or
+another, is reserved once, by the call it is made in; it settles in the shared budget
 even when it runs in another thread or task, or after the call that started it
 has ended. A thread started inside the block calls through `b`. On
 `AsyncWebRouter`, every method here is awaited and the scope is
