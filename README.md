@@ -2077,8 +2077,9 @@ prompt with a URL is extracted, anything else searched. Four example routers,
 tested offline: [rules](examples/router_rules.py), a
 [scikit-learn classifier](examples/router_classifier.py), an
 [OpenAI-compatible model](examples/router_llm.py) and
-[Jev](examples/router_jev.py). The last two are model routers: each sends
-the prompt to that model's server, which bills for it. The MCP server brings the same to an agent with
+[Jev](examples/router_jev.py), TypeSafe's model. The last two are model
+routers: each sends the prompt to that model's server, which bills for it. The
+MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
 
