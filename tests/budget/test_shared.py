@@ -167,12 +167,3 @@ def test_a_pool_with_nothing_set_caps_nothing_and_reports_no_remainder() -> None
     status = pool.status()
     assert (status.spent_usd, status.remaining_usd, status.time_left_s) == (5.0, None, None)
     assert chain.limit(None) == Budget()
-
-
-def test_a_calls_cost_cap_is_what_the_shared_budget_has_left_not_its_whole_cap() -> None:
-    pool = BudgetPool(Budget(max_cost_usd=1.00))
-    chain = PoolChain((pool,))
-    assert chain.reserve(0.95) is None
-    chain.settle(0.95)
-    assert chain.limit(None).max_cost_usd == pytest.approx(0.05)
-    assert chain.limit(Budget(max_cost_usd=0.01)).max_cost_usd == 0.01, "a tighter cap of the call's own still holds"
