@@ -67,7 +67,7 @@ class CandidateSet:
     effort: EffortChoice | None = None
     """The research effort the budget chose for the call, which every research candidate is priced at."""
 
-    requests: Mapping[ToolName, NormalizedRequest] = field(default_factory=dict)
+    requests: Mapping[ToolName, NormalizedRequest] = field(default_factory=dict, repr=False)
     """Per method, the request its candidates were priced at: the router's options are priced on it."""
 
 
