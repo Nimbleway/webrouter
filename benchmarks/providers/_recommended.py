@@ -82,6 +82,25 @@ def _answered_ci(score: dict[str, Any]) -> tuple[float, float]:
     return _wilson(score["correct"], score["questions"]) or (0.0, 0.0)
 
 
+def _order_table(
+    order: list[tuple[str, bool | None]], few: list[str], ranking: Mapping[str, dict[str, Any]]
+) -> list[str]:
+    """The recommended order's table: the ranked backends, then those counted on too few questions."""
+    lines = [
+        "| Order | Backend | Correct of all questions | 95% CI | Failed | Rate limit or quota | Against the best |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    places = [(str(rank), p, ORDER_LABEL[behind]) for rank, (p, behind) in enumerate(order, 1)]
+    for place, p, against in places + [(TOO_FEW, p, TOO_FEW) for p in few]:
+        s = ranking[p]
+        ci = _answered_ci(s)
+        lines.append(
+            f"| {place} | `{p}` | {_p(s['accuracy_all'])} ({s['correct']}/{s['questions']}) | {_p(ci[0])}-{_p(ci[1])} "
+            f"| {s['failed']} | {s['excluded']} | {against} |"
+        )
+    return lines
+
+
 def recommendation(summary: dict[str, Any]) -> list[str]:
     """The report's recommended-order section: the order, how each stands against the best, and a chain to paste."""
     spread = noise_floor()[0]
@@ -108,18 +127,7 @@ def recommendation(summary: dict[str, Any]) -> list[str]:
         "the most accurate one's; the others are "
         "not shown apart by this run, and another could order them differently.\n"
     )
-    lines.append(
-        "| Order | Backend | Correct of all questions | 95% CI | Failed | Rate limit or quota | Against the best |"
-    )
-    lines.append("|---|---|---|---|---|---|---|")
-    places = [(str(rank), p, ORDER_LABEL[behind]) for rank, (p, behind) in enumerate(order, 1)]
-    for place, p, against in places + [(TOO_FEW, p, TOO_FEW) for p in few]:
-        s = ranking[p]
-        ci = _answered_ci(s)
-        lines.append(
-            f"| {place} | `{p}` | {_p(s['accuracy_all'])} ({s['correct']}/{s['questions']}) | {_p(ci[0])}-{_p(ci[1])} "
-            f"| {s['failed']} | {s['excluded']} | {against} |"
-        )
+    lines.extend(_order_table(order, few, ranking))
     if not order:
         lines.append(
             f"\nNo backend in this scan was counted on at least {MIN_QUESTIONS} questions, "
