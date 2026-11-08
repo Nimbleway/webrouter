@@ -29,7 +29,8 @@ from typing import Any
 
 from _common import _round
 from frozen import FROZEN_DIR
-from route_eval_rank import MIN_QUESTIONS, RANKING_RULE, Floor, backend_stats, floor_for, recommended, too_few
+from route_eval_floor import Floor, floor_for
+from route_eval_rank import MIN_QUESTIONS, RANKING_RULE, backend_stats, recommended, too_few
 from route_eval_sets import load_set
 
 CHAINS_FILE = Path(__file__).resolve().parents[2] / "src" / "web_router" / "data" / "chains.json"
@@ -41,7 +42,7 @@ scores 81-95% and today's order already came from it, while SealQA hard is
 where they differ; the noise floor is measured on SealQA's own rerun; and a
 pooled figure would need every member on both sets, which Keenable and DeepSeek
 are not. Answer has one set, and no rerun: it is ranked with search's floor,
-and its entry says so (:func:`route_eval_rank.floor_for`).
+and its entry says so (:func:`route_eval_floor.floor_for`).
 """
 CHAIN_PARTS = {"search": ("preferred", "appended"), "answer": ("preferred",)}
 """The lists each method's entry holds, in chain order: the members a set ranks lead the first."""
@@ -83,7 +84,7 @@ def chain_file(
     Not the held-out half routers are scored on: twice the data, and a
     baseline slightly harder for a router to beat there, on purpose.
     Membership never changes here: a backend joins by hand. Each method is
-    ranked with ``floors[method]``, by default :func:`route_eval_rank.floor_for`'s,
+    ranked with ``floors[method]``, by default :func:`route_eval_floor.floor_for`'s,
     and its entry names that floor. A member counted on fewer than
     :data:`~route_eval_rank.MIN_QUESTIONS` keeps its place after the ranked
     ones, listed as ``too_few_questions``.
