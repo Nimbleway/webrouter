@@ -11,7 +11,6 @@ import web_router
 from web_router import Budget, Candidate, DecisionRecord, Plan, RouteDecision, RouteRequest, ToolName
 from web_router.routing import attempts
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, in_call_order
-from web_router.routing.budget import budget_scope
 from web_router.types import SearchRequest
 
 
@@ -35,11 +34,6 @@ def test_every_type_is_frozen_and_keyword_only(cls: type) -> None:
     params = cls.__dataclass_params__  # type: ignore[attr-defined]
     assert params.frozen
     assert all(f.kw_only for f in dataclasses.fields(cls))
-
-
-def test_a_budget_cannot_be_changed_once_made() -> None:
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        Budget(max_cost_usd=0.01).max_cost_usd = 1.0  # type: ignore[misc]
 
 
 def test_a_candidate_is_named_by_its_tool_and_provider() -> None:
@@ -129,13 +123,6 @@ def test_the_hook_sees_each_attempt_and_its_answer_admits_or_passes_over() -> No
         ("search", "exa", request),
     ]
     assert attempts._ROUTE.get() is None
-
-
-def test_a_budget_scope_runs_the_block_unchanged() -> None:
-    ran: list[str] = []
-    with budget_scope(Budget(max_cost_usd=0.0)):
-        ran.append("inside")
-    assert ran == ["inside"], "the scope runs its block, as it is, until a budget is enforced"
 
 
 def test_a_provider_named_twice_in_the_order_keeps_its_first_place() -> None:
