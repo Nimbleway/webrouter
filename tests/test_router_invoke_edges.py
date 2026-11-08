@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from tests.test_router_invoke import DECISION, SLEEP_S, _async, _Both, _decorated, _req, _sleeper, _sync
+from tests.invoke_helpers import DECISION, SLEEP_S, Both, async_router, decorated, make_req, sleeper, sync_router
 from web_router import RouteDecision, RouteRequest
 from web_router.exceptions import ConfigurationError
 from web_router.providers._deadline import call_deadline
@@ -40,9 +40,9 @@ def test_an_object_that_is_only_callable_is_refused(router: Any) -> None:
 @pytest.mark.parametrize(
     ("router", "side"),
     [
-        (functools.partial(_sync), "sync"),
-        (functools.partial(_async), "async"),
-        (_Both().route, "sync"),
+        (functools.partial(sync_router), "sync"),
+        (functools.partial(async_router), "async"),
+        (Both().route, "sync"),
         (print, "sync"),
     ],
     ids=["partial", "async-partial", "method", "builtin"],
@@ -64,7 +64,7 @@ async def _areads_context(req: RouteRequest) -> RouteDecision:
 
 
 @pytest.mark.parametrize(
-    "router", [_reads_context, _areads_context, _decorated(_areads_context)], ids=["sync", "async", "decorated"]
+    "router", [_reads_context, _areads_context, decorated(_areads_context)], ids=["sync", "async", "decorated"]
 )
 @pytest.mark.parametrize("from_async", [False, True], ids=["from-sync", "from-async"])
 def test_the_router_runs_in_the_callers_context(router: Any, from_async: bool) -> None:
@@ -72,7 +72,7 @@ def test_the_router_runs_in_the_callers_context(router: Any, from_async: bool) -
 
     def ask() -> Any:
         _SEEN_BY_ROUTER.set("caller")
-        return asyncio.run(attached.acall(_req(1.0))) if from_async else attached.call(_req(1.0))
+        return asyncio.run(attached.acall(make_req(1.0))) if from_async else attached.call(make_req(1.0))
 
     outcome = contextvars.copy_context().run(ask)
     assert outcome.decision is not None
@@ -81,8 +81,8 @@ def test_the_router_runs_in_the_callers_context(router: Any, from_async: bool) -
 
 @pytest.mark.parametrize("from_async", [False, True], ids=["from-sync", "from-async"])
 def test_the_wait_never_passes_the_calls_own_deadline(from_async: bool) -> None:
-    attached = AttachedRouter(_sleeper)
-    req = _req(SLEEP_S)  # built while time was left; the call's deadline is nearer by the time it waits
+    attached = AttachedRouter(sleeper)
+    req = make_req(SLEEP_S)  # built while time was left; the call's deadline is nearer by the time it waits
     started = time.perf_counter()
     with call_deadline(0.1):
         outcome = asyncio.run(attached.acall(req)) if from_async else attached.call(req)
@@ -101,7 +101,7 @@ async def test_an_abandoned_awaitable_is_never_reported_unretrieved() -> None:
             raise ValueError("raised while being cancelled") from None
         return DECISION
 
-    outcome = await AttachedRouter(_decorated(fails_late)).acall(_req())
+    outcome = await AttachedRouter(decorated(fails_late)).acall(make_req())
     assert outcome.failure == "router_timeout"
     await asyncio.sleep(0.05)
     gc.collect()
@@ -121,8 +121,8 @@ def test_a_decorated_router_scheduled_past_the_deadline_is_a_timeout(
 
     name = "_on_caller_loop" if from_async else "_on_private_loop"
     monkeypatch.setattr(invoke, name, slow_scheduling(getattr(invoke, name)))
-    attached = AttachedRouter(_decorated(_async))
-    outcome = asyncio.run(attached.acall(_req(0.1))) if from_async else attached.call(_req(0.1))
+    attached = AttachedRouter(decorated(async_router))
+    outcome = asyncio.run(attached.acall(make_req(0.1))) if from_async else attached.call(make_req(0.1))
     assert outcome.failure == "router_timeout"
 
 
@@ -132,10 +132,10 @@ async def test_a_coroutine_a_worker_returns_after_its_caller_was_cancelled_is_cl
     def late(req: RouteRequest) -> Any:
         started.set()
         time.sleep(0.1)
-        coroutines.append(_async(req))
+        coroutines.append(async_router(req))
         return coroutines[-1]
 
-    waiting = asyncio.ensure_future(AttachedRouter(late).acall(_req(SLEEP_S)))
+    waiting = asyncio.ensure_future(AttachedRouter(late).acall(make_req(SLEEP_S)))
     await asyncio.to_thread(started.wait)
     waiting.cancel()
     with pytest.raises(asyncio.CancelledError):
