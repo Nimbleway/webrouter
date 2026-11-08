@@ -63,8 +63,7 @@ templates and researches through four classes, and `browserbase` both opens
 sessions and runs browse tasks through two. Each method has its own registry,
 and asking one for another's backend reports it as unknown.
 
-It is pre-1.0 and in alpha: shared with alpha users from this repository, not
-published to PyPI. Assume every change is read by people outside the team.
+It is pre-1.0 and in alpha. Assume every change is read by people outside the team.
 
 The whole value of the package is that **a call behaves the same whichever
 backend serves it**. Changes that leak provider-specific behavior into callers
