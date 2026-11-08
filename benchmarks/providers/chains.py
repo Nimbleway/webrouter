@@ -28,7 +28,8 @@ from pathlib import Path
 from typing import Any
 
 from frozen import FROZEN_DIR
-from route_eval_rank import RANKING_RULE, backend_stats, noise_floor, recommended
+from route_eval_floor import Floor, floor_for
+from route_eval_rank import MIN_QUESTIONS, RANKING_RULE, backend_stats, recommended, too_few
 from route_eval_sets import load_set
 
 CHAINS_FILE = Path(__file__).resolve().parents[2] / "src" / "web_router" / "data" / "chains.json"
@@ -39,7 +40,8 @@ Search ranks on SealQA hard, not SimpleQA: on SimpleQA every keyed backend
 scores 81-95% and today's order already came from it, while SealQA hard is
 where they differ; the noise floor is measured on SealQA's own rerun; and a
 pooled figure would need every member on both sets, which Keenable and DeepSeek
-are not. Answer has one set.
+are not. Answer has one set, and no rerun: it is ranked with search's floor,
+and its entry says so (:func:`route_eval_floor.floor_for`).
 """
 CHAIN_PARTS = {"search": ("preferred", "appended"), "answer": ("preferred",)}
 """The lists each method's entry holds, in chain order: the members a set ranks lead the first."""
@@ -75,35 +77,42 @@ def _measured(stats: Mapping[str, Mapping[str, Any]], ranked: Sequence[str]) -> 
 
 
 def chain_file(
-    floor: float,
     current: Mapping[str, Mapping[str, Sequence[str]]],
     *,
     folder: Path = FROZEN_DIR,
+    floors: Mapping[str, Floor] | None = None,
 ) -> dict[str, Any]:
     """What ``chains.json`` should hold, given its present members: each method ranked on every question of its set.
 
     Not the held-out half routers are scored on: twice the data, and a
     baseline slightly harder for a router to beat there, on purpose.
-    Membership never changes here: a backend joins by hand.
+    Membership never changes here: a backend joins by hand. Each method is
+    ranked with ``floors[method]``, by default :func:`route_eval_floor.floor_for`'s,
+    and its entry names that floor. A member counted on fewer than
+    :data:`~route_eval_rank.MIN_QUESTIONS` keeps its place after the ranked
+    ones, listed as ``too_few_questions``.
     """
     out: dict[str, Any] = {
         "generated_by": f"{CHAINS_COMMAND} (benchmarks/providers/chains.py); do not edit by hand",
         "rule": RANKING_RULE,
-        "noise_floor": _round(floor),
+        "min_questions": MIN_QUESTIONS,
     }
     for method, set_name in CHAIN_SETS.items():
+        floor = floor_for(method, folder) if floors is None else floors[method]
         _, questions = load_set(set_name, folder)
-        stats = backend_stats(questions)
         parts = {part: current[method][part] for part in CHAIN_PARTS[method]}
         members = [p for present in parts.values() for p in present]
         # Ranked among the chain's own members only: a backend outside the chain must not shift its tiers.
-        ranked = recommended({p: s for p, s in stats.items() if p in members}, floor)
+        stats = {p: s for p, s in backend_stats(questions).items() if p in members}
+        ranked, few = recommended(stats, floor.value), too_few(stats)
         out[method] = {
             "set": set_name,
             "questions": len(questions),
+            "noise_floor": floor.as_json(6),
             **_place(parts, ranked),
             "unmeasured": [p for p in members if p not in stats],
-            "no_row_served": [p for p in members if p in stats and p not in ranked],
+            "too_few_questions": [p for p in members if p in few],
+            "no_row_served": [p for p in members if p in stats and p not in ranked and p not in few],
             "measured": _measured(stats, ranked),
         }
     return out
@@ -111,9 +120,8 @@ def chain_file(
 
 def emit_chains(check: bool, path: Path = CHAINS_FILE) -> int:
     """Rewrite ``chains.json`` from the frozen results, or with ``check`` only say whether it is stale."""
-    floor, _ = noise_floor()
     current = json.loads(path.read_text(encoding="utf-8"))
-    wanted = json.dumps(chain_file(floor, current), indent=2) + "\n"
+    wanted = json.dumps(chain_file(current), indent=2) + "\n"
     if check:
         if path.read_text(encoding="utf-8") != wanted:
             print(MSG_CHAINS_STALE.format(path=path, command=CHAINS_COMMAND), file=sys.stderr)
