@@ -90,6 +90,11 @@ def _pct(values: list[float], fraction: float) -> float | None:
     return values[max(0, min(len(values) - 1, math.ceil(fraction * len(values)) - 1))] if values else None
 
 
+def _round(value: float | None) -> float | None:
+    """A figure as the generated data files hold it: six decimals, ``None`` kept."""
+    return None if value is None else round(value, 6)
+
+
 def _p(value: float | None) -> str:
     return "n/a" if value is None else f"{value:.0%}"
 

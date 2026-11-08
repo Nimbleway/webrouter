@@ -95,7 +95,8 @@ src/web_router/
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
 ├── client_requests.py  the routers' request builders: a method's arguments in, its
-│                       normalized request out; JsonSchema
+│                       normalized request out; JsonSchema; the sync router's
+│                       async_client check
 ├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
@@ -124,17 +125,34 @@ src/web_router/
 ├── constants_routing.py routing's candidate-id separator and messages
 ├── constants_candidates.py the candidate builder's getters and drop reasons,
 │                       kept apart so constants_routing.py stays small
+├── constants_invoke.py a router's default timeout, failure codes and messages
 ├── routing/            the router contract (experimental): what a router is shown
 │   │                   and what it may answer, one module per part
 │   ├── contract.py     ToolName, Budget, Candidate, RouteRequest, RouteDecision, Plan
 │   ├── attempts.py     the seam in auto's fallback loops: a per-call order and
 │   │                   a hook before each attempt, held in a context variable
 │   ├── budget.py       budget_scope(), which every budget= call runs in
+│   ├── invoke.py       router=: the two forms a router takes, called sync or async on
+│   │                   its own thread or loop within its timeout, and the failure policy
+│   ├── _runner.py      the worker thread and private loop a router runs on, the wait
+│   │                   within its deadline, and the cleanup of what it leaves behind
+│   ├── _forms.py       a router's sync and async sides, its declared timeout_s, and
+│   │                   whether its answer is a well-formed RouteDecision
+│   ├── routed.py       the routers' mixin every routable call runs through: whether
+│   │                   to ask the router (route_tools, auto only), what it is shown,
+│   │                   and the decision record
+│   ├── interim.py      stand-ins for the candidate builder and the merge rule, until
+│   │                   candidates.py and merge.py replace them
+│   ├── params.py       map_effort(): the research effort a budget picks, from
+│   │                   the effort table and the price list
+│   ├── effort_table.py reads data/efforts.json (`make efforts`): measured
+│   │                   efforts, the noise floor, an effort's p90
 │   ├── candidates.py   build_candidates(): every (tool, provider) a call's `auto`
 │   │                   chains can serve, priced, timed and prefiltered by the budget
 │   ├── eligible.py     eligible_members(): the members of a method's `auto` that
 │   │                   can serve a request, and the ones it cannot build, with why
-│   └── invoke.py, merge.py, params.py   empty until their parts land
+│   └── merge.py   empty until its part lands
+├── constants_params.py the effort mapping's data path, rule and reasons
 ├── _urls.py            urls_in(): the URLs written in a query's prose
 ├── constants_urls.py   the punctuation stripped from the end of a URL found in prose
 ├── constants_prices.py the price list's data path, unit divisors, messages and
@@ -256,7 +274,10 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         route_eval_paths.py, its command line in
                         route_eval_cli.py; chains.py (`make chains`): the
                         default auto orders ranked from them into
-                        data/chains.json — scripts; each
+                        data/chains.json; efforts.py (`make efforts`): each
+                        research effort's accuracy and p90 into
+                        data/efforts.json, both written or checked by
+                        _emit.py — scripts; each
                         run's report stays under results/
 ```
 
@@ -413,8 +434,9 @@ names the judge and has no cost column. Its recommended order alone reads list
 prices from `web_router.prices`, as estimates, to break ties. That order is
 route-eval's ranking (`route_eval_rank.py`), so the repository suggests only one
 order. `route_eval.py` replays a router over the frozen results offline and
-scores it against the static order, held out and in-sample, against the twin
-run's noise floor; an unknown price stays unknown there, never $0. `--combine` merges scans only when
+scores it against the static order, held out and in-sample, against each
+method's noise floor (its own rerun's, else search's twin run) and ranks a
+backend only on 20 counted questions or more; an unknown price stays unknown there, never $0. `--combine` merges scans only when
 their questions, search size and judge match. Keep a scan's report to compare
 the next one against: only runs graded by the same judge compare. `extract.py`
 beside it is the extract scan: every configured extract backend through

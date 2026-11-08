@@ -151,7 +151,9 @@ def test_the_report_shows_n_a_for_numbers_an_empty_score_cannot_have(route_eval:
         "static_order": [],
         "routers": {"static": {"in_sample": empty, "held_out": empty, "verdict": "baseline"}},
         "backends": {},
+        "noise_floor": {"value": 0.01, "measured_on": None, "rerun": [], "fallback": False},
         "recommended_order": [],
+        "too_few_questions": [],
     }
     assert "| n/a | baseline |" in route_eval.markdown([summary], 0.01, {})
 
