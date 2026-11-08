@@ -1993,13 +1993,13 @@ failed attempt still counts.
   `ResearchTimeoutError` or `BrowseTimeoutError` with the job id, the job
   still running.
 - **Research effort.** A budgeted research call runs at one `effort`, chosen
-  once, before the router is asked, to fit every backend it may try; its
-  candidates are priced at it. That holds on `auto` or a named backend,
-  routed or not, for `plan()`/`run()` and for `submit_research`. On a
-  routed `auto` call and in `plan()`, a backend that refuses that effort for
-  the request is left out, with why, in the record's `dropped`; on a named
-  backend, an unrouted call or `submit_research`, its refusal is raised as
-  that backend's own error. An effort you or the router set is kept.
+  once, before the router is asked, to fit every backend it may try and to be
+  one each of them takes for the request (Nimble refuses `low` on an
+  enrichment, so a $0.10 cap runs it at `medium`); its candidates are priced
+  at it. That holds on `auto` or a named backend, routed or not, for
+  `plan()`/`run()` and for `submit_research`. With no effort that fits and
+  that a backend takes, it runs at its default, which the budget checks like
+  any other. An effort you or the router set is kept.
 
 To spend several calls from one budget:
 
