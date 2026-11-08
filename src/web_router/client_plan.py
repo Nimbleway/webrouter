@@ -87,7 +87,7 @@ class _Planner(RouterSetup):
         out = decided(req, found, outcome, router=name, url_check=self._url_check, refused=refused)
         params = {**base_params(out.tool, req.prompt, kept), **out.params}
         if out.tool == "extract" and not params["urls"]:
-            # Only a pinned extract gets here: unpinned, the merge rule searches instead. A pin is never moved.
+            # A pinned extract, or one with no search backend to move to: unpinned, the merge rule searches instead.
             refusals = "; ".join(f"{host}: {why}" for host, why in refused.items())
             detail = MSG_PLAN_EXTRACT_REFUSED.format(refused=refusals) if refused else MSG_PLAN_EXTRACT_NO_URL
             raise MissingParameterError(PROVIDER_AUTO, ["urls"], detail=detail)
@@ -150,8 +150,9 @@ class SyncPlan(_Planner, SyncRouted):
             tool: Pins the method; the router then orders its backends only.
 
         Raises:
-            MissingParameterError: for ``tool="extract"`` when the prompt names no URL to fetch, or ``url_policy``
-                refused every one it names, and no router supplied one: a plan ``run`` could not execute.
+            MissingParameterError: for extract -- pinned with ``tool="extract"``, or the only method offered -- when
+                the prompt names no URL to fetch, or ``url_policy`` refused every one it names, and no router
+                supplied one: a plan ``run`` could not execute.
         """
         parts = self._plan_request(prompt, budget, tool)
         req = parts[0]
