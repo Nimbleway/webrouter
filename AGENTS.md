@@ -257,7 +257,8 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         default auto orders ranked from them into
                         data/chains.json; efforts.py (`make efforts`): each
                         research effort's accuracy and p90 into
-                        data/efforts.json — scripts; each
+                        data/efforts.json, both written or checked by
+                        _emit.py — scripts; each
                         run's report stays under results/
 ```
 

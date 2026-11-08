@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from _common import _round
+from _emit import write_or_check
 from frozen import FROZEN_DIR
 from route_eval_floor import Floor, floor_for
 from route_eval_rank import MIN_QUESTIONS, RANKING_RULE, backend_stats, recommended, too_few
@@ -47,8 +48,6 @@ and its entry says so (:func:`route_eval_floor.floor_for`).
 CHAIN_PARTS = {"search": ("preferred", "appended"), "answer": ("preferred",)}
 """The lists each method's entry holds, in chain order: the members a set ranks lead the first."""
 CHAINS_COMMAND = "make chains"
-MSG_CHAINS_STALE = "{path} is stale: run `{command}` and commit the result"
-MSG_CHAINS_WRITTEN = "wrote {path}"
 
 
 def _place(parts: Mapping[str, Sequence[str]], ranked: Sequence[str]) -> dict[str, list[str]]:
@@ -119,14 +118,7 @@ def emit_chains(check: bool, path: Path = CHAINS_FILE) -> int:
     """Rewrite ``chains.json`` from the frozen results, or with ``check`` only say whether it is stale."""
     current = json.loads(path.read_text(encoding="utf-8"))
     wanted = json.dumps(chain_file(current), indent=2) + "\n"
-    if check:
-        if path.read_text(encoding="utf-8") != wanted:
-            print(MSG_CHAINS_STALE.format(path=path, command=CHAINS_COMMAND), file=sys.stderr)
-            return 1
-        return 0
-    path.write_text(wanted, encoding="utf-8")
-    print(MSG_CHAINS_WRITTEN.format(path=path))
-    return 0
+    return write_or_check(wanted, path, check, CHAINS_COMMAND)
 
 
 def main(argv: list[str] | None = None) -> None:
