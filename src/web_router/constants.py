@@ -199,6 +199,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_KEENABLE: (ENV_KEENABLE_API_KEY,),
     PROVIDER_DEEPSEEK: (ENV_DEEPSEEK_API_KEY,),
     PROVIDER_JINA: (),
+    PROVIDER_BROWSERBASE: (ENV_BROWSERBASE_API_KEY,),
     PROVIDER_AUTO: (),
     PROVIDER_MAX: (),
 }
@@ -661,12 +662,16 @@ AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
     PROVIDER_WEBIQ,
     PROVIDER_KEENABLE,
     PROVIDER_DEEPSEEK,
+    PROVIDER_BROWSERBASE,
 )
 """Members added after the chain existed, tried after the keyless tier, as :data:`AUTO_APPENDED` is for search.
 
 ``exa`` returns plain text alone, so it serves only ``format="text"``.
 ``webiq`` reads only pages in WebIQ's own index; one it lacks fails, and the
-chain moves on. ``keenable`` and ``deepseek`` return markdown alone.
+chain moves on. ``keenable`` and ``deepseek`` return markdown alone. ``browserbase``
+joined last (2026-10-29): its Fetch API never renders a page, so it is the
+member of last resort for an ordinary fetch, and the only one that maps
+``profile`` -- a request setting it passes over every other member.
 """
 
 AUTO_EXTRACT_FORMATS: frozenset[ExtractFormat] = frozenset({"markdown", "html", "text"})
@@ -763,6 +768,12 @@ MSG_AUTO_EXTRACT_NO_MEMBER = (
     "credential for a backend that returns it, or name one -- see the extract table in README.md."
 )
 """Replaces the usual advice on the format error. Raised before any member is tried."""
+
+MSG_AUTO_EXTRACT_UNMAPPED = (
+    "No backend in its chain maps it, so nothing was fetched: {skipped}. Drop the option, set a "
+    "credential for a backend that maps it, or name one -- see the extract table in README.md."
+)
+"""The same for an option -- ``profile`` -- that no member returning the format maps."""
 
 # --- Benchmark --------------------------------------------------------------
 # One search, or one extract, fanned out across several backends, measured
@@ -1405,7 +1416,9 @@ BROWSERBASE_API_KEY_HEADER = "X-BB-API-Key"
 
 BROWSERBASE_STEALTH: dict[StealthLevel, dict[tuple[str, ...], Any]] = {
     # The reference deprecates `browserSettings.advancedStealth` in favor of
-    # `browserSettings.verified` -- same boolean, same Scale-plan gate -- so
+    # `browserSettings.verified` -- same boolean, plan-gated: on 2026-10-29 a
+    # live open with `high` answered 403 "Verified mode is only available on
+    # the Enterprise plan", so a lower plan gets that error, never `low` -- so
     # `verified` is what these levels set rather than the field the original
     # spec named. Sending `false` for `low` says "the ordinary session" rather
     # than leaving the option unread, matching the row for `high`. The
@@ -1489,6 +1502,32 @@ BROWSERBASE_BROWSE_STATES: dict[str, JobState] = {
     "STOPPED": "cancelled",
 }
 """Browserbase's run ``status`` -> the normalized state."""
+
+# --- Browserbase extract ----------------------------------------------------
+# From https://docs.browserbase.com/features/fetch and
+# https://www.browserbase.com/blog/introducing-authenticated-fetch, confirmed
+# live on 2026-10-29 in both formats and with a Context -- see
+# tests/providers/test_browserbase_extract.py. Fetch is a plain HTTP fetch --
+# it never renders the page in a browser -- that can send the cookies a Context
+# saved, which is what makes a page behind a login reachable without a session.
+
+BROWSERBASE_EXTRACT_PATH = "/v1/fetch"
+"""One URL per call; the base class fans a request out."""
+
+BROWSERBASE_EXTRACT_FORMATS: dict[ExtractFormat, str] = {
+    # `raw` is the body as the target served it, which for a page is its HTML;
+    # `contentType` in the document's `extra` says what it really was. Fetch's
+    # third format, `json`, needs a schema and is not an extract format.
+    "html": "raw",
+    "markdown": "markdown",
+}
+"""Normalized format -> Fetch's ``format`` field."""
+
+BROWSERBASE_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "html"
+"""Fetch returns ``raw`` when asked for nothing in particular."""
+
+BROWSERBASE_PROFILE_FIELD = "contextId"
+"""The Fetch field that names the Context whose saved cookies ride along with the request."""
 
 # --- Hyperbrowser browser ---------------------------------------------------
 # `timeout` is from Hyperbrowser's OpenAPI reference and the hyperbrowser
@@ -3913,6 +3952,8 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "locale": {"type": "string", "description": _described(SearchRequest, "locale")},
 }
 
+# `profile` is left out on purpose, as on `browser_open`: a saved, logged-in
+# identity is the user's own, set in code, never from a conversation.
 MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
     "urls": {
         "type": "array",

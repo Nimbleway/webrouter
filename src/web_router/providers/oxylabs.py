@@ -33,7 +33,6 @@ from web_router.constants import (
 from web_router.providers._http import HttpExtractProvider
 from web_router.providers._utils import build_payload, resolve_setting
 from web_router.types import (
-    EXTRACT_PARAMETERS,
     ExtractedDocument,
     ExtractFormat,
     ExtractRequest,
@@ -47,7 +46,7 @@ class OxylabsExtractProvider(HttpExtractProvider):
     """Fetches page contents through the Oxylabs Web Scraper API."""
 
     name: ClassVar[str] = PROVIDER_OXYLABS
-    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = frozenset({"format"})
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(OXYLABS_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = OXYLABS_EXTRACT_DEFAULT_FORMAT
 

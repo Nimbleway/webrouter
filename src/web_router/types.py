@@ -181,7 +181,9 @@ class ExtractRequest(NormalizedRequest):
     Only :attr:`urls` is required. :attr:`format` left as ``None`` means
     ``EXTRACT_DEFAULT_FORMAT`` (markdown) from every backend that can return it,
     and that backend's own default from one that cannot (Exa's text);
-    :attr:`ExtractedDocument.format` names which came back.
+    :attr:`ExtractedDocument.format` names which came back. :attr:`profile` is
+    the same saved identity a :class:`BrowserRequest` starts from, so a login
+    made in a browser session serves the fetches that follow it.
     """
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"urls", "provider_options"})
@@ -191,6 +193,10 @@ class ExtractRequest(NormalizedRequest):
         Field(min_length=1, description="The URLs to fetch, in the order the documents come back."),
     ]
     format: ExtractFormat | None = Field(default=None, description="Which representation of each page to return.")
+    profile: str | None = Field(
+        default=None,
+        description="The backend's id for a saved profile whose cookies are sent with each fetch.",
+    )
 
 
 EXTRACT_ALWAYS_SENT = ExtractRequest.always_sent

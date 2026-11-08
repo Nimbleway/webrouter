@@ -34,7 +34,6 @@ from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, 
 from web_router.providers._utils import as_snippet, best_text, build_payload
 from web_router.providers.answer import cited_marker
 from web_router.types import (
-    EXTRACT_PARAMETERS,
     Citation,
     ExtractedDocument,
     ExtractFailure,
@@ -102,7 +101,7 @@ class ExaExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_EXA
-    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = frozenset({"format"})
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(EXA_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = EXA_EXTRACT_DEFAULT_FORMAT
     batches_urls: ClassVar[bool] = True

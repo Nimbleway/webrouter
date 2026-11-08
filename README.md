@@ -206,7 +206,7 @@ uv run --env-file .env python examples/main.py
 A provider name serves the methods it serves and no others: `brave` searches
 and cannot extract, `oxylabs` extracts and cannot search, `nimble` searches,
 extracts, runs templates and researches, and `browserbase` opens
-sessions and runs browse tasks.
+sessions, runs browse tasks and extracts.
 Ask a method for another's backend and it says so, naming the backends that
 method does serve.
 
@@ -266,7 +266,8 @@ which ones this environment can use.
 | `Provider.KEENABLE` | `keenable` | [Keenable Fetch](https://docs.keenable.ai/api-reference/fetch) | `KEENABLE_API_KEY`, or keyless with `allow_keyless=True` (rate-limited per IP) | `markdown` |
 | `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Fetch](https://api-docs.deepseek.com/guides/search) | `DEEPSEEK_API_KEY` | `markdown` |
 | `Provider.JINA` | `jina` | [Jina Reader](https://jina.ai/reader) | **none** (`JINA_API_KEY` raises the rate limit) | `markdown`, `html`, `text` |
-| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable and DeepSeek | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it |
+| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Fetch](https://docs.browserbase.com/features/fetch) — a plain fetch, never a rendered page; the one backend that maps `profile` | `BROWSERBASE_API_KEY` | `markdown`, `html` |
+| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable, DeepSeek and Browserbase | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it; `profile` routed to one that maps it |
 | `Provider.MAX` | `max` | — | the same members as `auto`, **all at once**; the first document back wins, and every fetch started is paid for -- see [The fastest answer any backend can give](#the-fastest-answer-any-backend-can-give-max) | as `auto` |
 
 Two need more than a key. Oxylabs authenticates with the username and password
@@ -275,10 +276,34 @@ and Bright Data needs the zone that routes the request beside its token. Neither
 has a default worth guessing, so a missing one is an error naming the variable
 to set.
 
-> Nimble, Tavily, Jina, Linkup, Firecrawl, Oxylabs and Bright Data were verified
-> live — the last two on 2026-11-03. **Exa's extract mapping is taken from
-> documentation** and has not been confirmed against a real response; its
-> integration tests skip themselves until a working key is available.
+> Nimble, Tavily, Jina, Linkup, Firecrawl, Oxylabs, Bright Data and Browserbase
+> were verified live — Oxylabs and Bright Data on 2026-11-03, Browserbase (both
+> formats, and `profile` through the whole flow) on 2026-10-29. **Exa's extract
+> mapping is taken from documentation** and has not been confirmed against a
+> real response; its integration tests skip themselves until a working key is
+> available.
+
+#### Reading a page behind a login
+
+`profile` is the extract side of the browser's `profile`: a saved identity on
+the backend — its cookies and storage — whose cookies are sent with each fetch.
+Log in once in a browser session that persists to it, release the session, and
+the fetches that name the same id read the page as that user:
+
+```python
+with router.open_browser(provider="browserbase", profile=context_id, persist_profile=True) as browser:
+    browser.goto("https://example.com/login")
+    ...  # type the credentials, submit
+
+response = router.extract("https://example.com/account/orders", provider="browserbase", profile=context_id)
+```
+
+The fetch never writes cookies back, so an expired login means another
+session. Browserbase is the one backend that maps it, through its Contexts; a
+backend without saved profiles raises `UnsupportedParameterError` rather than
+fetching anonymously, and `auto` and `max` pass such members over. The MCP
+server never offers it: a logged-in identity is set in code, not from a
+conversation.
 
 ### Templates
 
@@ -432,7 +457,7 @@ Every backend you hold a key for is a candidate, in a fixed order:
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
 | `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore |
-| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek |
+| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
 Search's keyed order is generated, not hand-written: `make chains` ranks the
@@ -668,11 +693,11 @@ in the order you asked for them.
 `format` is the extract equivalent of `search_depth`: three names for what the
 page should come back as, mapped onto each backend's own vocabulary.
 
-| Format | What you get | Nimble | Tavily | Firecrawl | Oxylabs | Bright Data | Jina | Linkup |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `markdown` | Structure kept, markup dropped | `formats: [markdown]` | `format: markdown` | `formats: [markdown]` | `markdown: true` | `data_format: markdown` | `X-Return-Format: markdown` | always returned |
-| `html` | The page's HTML as fetched | `formats: [html]` | — | `formats: [html]` | default (`type: raw`) | default | `X-Return-Format: html` | `includeRawContent: true` |
-| `text` | Visible text, no markup | — | `format: text` | — | — | — | `X-Return-Format: text` | — |
+| Format | What you get | Nimble | Tavily | Firecrawl | Oxylabs | Bright Data | Jina | Linkup | Browserbase |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `markdown` | Structure kept, markup dropped | `formats: [markdown]` | `format: markdown` | `formats: [markdown]` | `markdown: true` | `data_format: markdown` | `X-Return-Format: markdown` | always returned | `format: markdown` |
+| `html` | The page's HTML as fetched | `formats: [html]` | — | `formats: [html]` | default (`type: raw`) | default | `X-Return-Format: html` | `includeRawContent: true` | `format: raw` (the body as served) |
+| `text` | Visible text, no markup | — | `format: text` | — | — | — | `X-Return-Format: text` | — | — |
 
 Exa is left out of the table because it has one row to give: its Contents API
 returns `text` and nothing else, asked for as `text: true`. WebIQ is left out

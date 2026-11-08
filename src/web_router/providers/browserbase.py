@@ -1,10 +1,23 @@
-"""Browserbase providers: browser sessions over the Sessions API, and browse tasks over the Agents API.
+"""Browserbase providers: browser sessions over the Sessions API, browse tasks over the Agents API, and
+extract over the Fetch API.
 
 Talks to the REST endpoints directly rather than through the ``browserbase``
 SDK: each method is a handful of requests, which an SDK dependency would not
-simplify. Install with the ``all`` extra. Both read
+simplify. Install with the ``all`` extra. All three read
 ``BROWSERBASE_API_KEY`` unless a key is passed explicitly. No project id is
 needed: Browserbase infers the project from the key.
+
+The three share one saved identity. A Browserbase Context holds the cookies and
+storage a session ends with, and the session provider maps ``profile`` onto
+its id and ``persist_profile`` onto whether the session writes back to it. The
+extract provider sends the same id as the Fetch API's ``contextId``, so a login
+made in a session serves the fetches that follow. Verified live on 2026-10-29:
+a session opened with ``persist_profile=True`` set a cookie, a fetch naming the
+same Context sent it back, and one naming no Context did not --
+``open_browser(profile=X, persist_profile=True)``, log in, release, then
+``extract(profile=X)``. Fetch never writes cookies back, and a Context has none
+to send until a persisting session has ended, so an expired login means
+another session.
 
 The session provider now also maps ``stealth``, ``solve_captchas`` and
 ``proxy_country`` -- all three **unverified**: taken from
@@ -62,8 +75,12 @@ from web_router.constants import (
     BROWSERBASE_BROWSE_STOP_PATH,
     BROWSERBASE_CONTROL_URL_FIELD,
     BROWSERBASE_DEBUG_PATH,
+    BROWSERBASE_EXTRACT_DEFAULT_FORMAT,
+    BROWSERBASE_EXTRACT_FORMATS,
+    BROWSERBASE_EXTRACT_PATH,
     BROWSERBASE_FIELDS,
     BROWSERBASE_OPEN_PATH,
+    BROWSERBASE_PROFILE_FIELD,
     BROWSERBASE_RELEASE_BODY,
     BROWSERBASE_RESULT_SCHEMA_FIELD,
     BROWSERBASE_RESULT_SUMMARY_FIELD,
@@ -74,7 +91,7 @@ from web_router.constants import (
     PROVIDER_BROWSERBASE,
 )
 from web_router.exceptions import ProviderError
-from web_router.providers._http import HttpBrowseProvider, HttpBrowserProvider, ReleaseMethod
+from web_router.providers._http import HttpBrowseProvider, HttpBrowserProvider, HttpExtractProvider, ReleaseMethod
 from web_router.providers._utils import build_browser_payload, build_payload
 from web_router.types import (
     BrowseProgress,
@@ -83,6 +100,10 @@ from web_router.types import (
     BrowserRequest,
     BrowserSession,
     BrowserState,
+    ExtractedDocument,
+    ExtractFormat,
+    ExtractRequest,
+    ExtractResponse,
     JobState,
     StealthLevel,
 )
@@ -160,6 +181,54 @@ class BrowserbaseBrowserProvider(HttpBrowserProvider):
 
     def _state(self, payload: dict[str, Any]) -> BrowserState:
         return self.state_of(payload["status"], BROWSERBASE_SESSION_STATES)
+
+
+class BrowserbaseExtractProvider(HttpExtractProvider):
+    """Fetches page contents through the Browserbase Fetch API.
+
+    A plain HTTP fetch, never a rendered page, so a page built by JavaScript
+    comes back as its shell; what Fetch adds is ``profile``, the Context whose
+    saved cookies ride along, which is how a page behind a login is read
+    without opening a session. Redirects are not followed unless
+    ``allowRedirects`` is passed through ``provider_options``, so a login that
+    has expired tends to come back as the target's redirect or 401, which is
+    reported on the document's ``status_code`` rather than invented into a
+    failure: Fetch itself answered, and the body is what the target served.
+    """
+
+    name: ClassVar[str] = PROVIDER_BROWSERBASE
+    supported_parameters: ClassVar[frozenset[str]] = frozenset({"format", "profile"})
+    supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(BROWSERBASE_EXTRACT_FORMATS)
+    default_format: ClassVar[ExtractFormat] = BROWSERBASE_EXTRACT_DEFAULT_FORMAT
+
+    base_url: ClassVar[str] = BROWSERBASE_BASE_URL
+    extract_path: ClassVar[str] = BROWSERBASE_EXTRACT_PATH
+    env_api_key: ClassVar[str] = ENV_BROWSERBASE_API_KEY
+    api_key_header: ClassVar[str] = BROWSERBASE_API_KEY_HEADER
+
+    def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
+        return build_payload(
+            request,
+            {"profile": BROWSERBASE_PROFILE_FIELD},
+            url=urls[0],
+            format=BROWSERBASE_EXTRACT_FORMATS[self.format_of(request)],
+        )
+
+    def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
+        content = payload.get("content")
+        document = ExtractedDocument(
+            # Fetch does not echo the URL, and with redirects off the one asked
+            # for is the one answered.
+            url=urls[0],
+            content=content if isinstance(content, str) else "",
+            format=self.format_of(request),
+            status_code=payload.get("statusCode"),
+            extra={key: value for key, value in payload.items() if key not in _MAPPED_FETCH_FIELDS},
+        )
+        return ExtractResponse(provider=self.name, documents=[document], raw=[payload])
+
+
+_MAPPED_FETCH_FIELDS = frozenset({"content", "statusCode"})
 
 
 class BrowserbaseBrowseProvider(HttpBrowseProvider):

@@ -371,6 +371,7 @@ class _BaseRouter(Generic[_HandleT]):
         urls: str | list[str],
         *,
         format: ExtractFormat | None,
+        profile: str | None,
         provider_options: dict[str, Any] | None,
     ) -> ExtractRequest:
         return ExtractRequest(
@@ -379,6 +380,7 @@ class _BaseRouter(Generic[_HandleT]):
             # and providers that do not see the same shape.
             urls=[urls] if isinstance(urls, str) else list(urls),
             format=format,
+            profile=profile,
             provider_options=provider_options or {},
         )
 
@@ -682,7 +684,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
                 default where it cannot; a format a backend cannot return is
                 that row's refusal, never a substitution.
         """
-        request = self._build_extract_request(urls, format=format, provider_options=None)
+        request = self._build_extract_request(urls, format=format, profile=None, provider_options=None)
         members = members_of(
             providers,
             default=self._default_extract_benchmark_providers,
@@ -760,6 +762,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         *,
         provider: str | Provider | ExtractProvider | None = None,
         format: ExtractFormat | None = None,
+        profile: str | None = None,
         provider_options: dict[str, Any] | None = None,
     ) -> ExtractResponse:
         """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
@@ -767,9 +770,11 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer):
         Several URLs can partly succeed: what came back is in
         :attr:`~web_router.ExtractResponse.documents` and everything that did
         not is in :attr:`~web_router.ExtractResponse.failures`. A call where
-        nothing came back raises instead.
+        nothing came back raises instead. ``profile`` names a saved identity on
+        the backend -- the one a browser session logged into -- whose cookies
+        are sent with each fetch; a backend without saved profiles refuses it.
         """
-        request = self._build_extract_request(urls, format=format, provider_options=provider_options)
+        request = self._build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         return self.get_extract_provider(provider).extract(request)
 
     def templates(
@@ -1167,7 +1172,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         As on the sync router, with the rows gathered on the event loop: a row
         that runs out of ``timeout`` is cancelled rather than left running.
         """
-        request = self._build_extract_request(urls, format=format, provider_options=None)
+        request = self._build_extract_request(urls, format=format, profile=None, provider_options=None)
         members = members_of(
             providers,
             default=self._default_extract_benchmark_providers,
@@ -1208,15 +1213,17 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer):
         *,
         provider: str | Provider | ExtractProvider | None = None,
         format: ExtractFormat | None = None,
+        profile: str | None = None,
         provider_options: dict[str, Any] | None = None,
     ) -> ExtractResponse:
         """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
 
         Backends that take one URL per call are fanned out concurrently. As on
         the sync router, a partly successful call returns its failures and one
-        where nothing came back raises.
+        where nothing came back raises, and ``profile`` is the saved identity
+        whose cookies each fetch carries.
         """
-        request = self._build_extract_request(urls, format=format, provider_options=provider_options)
+        request = self._build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         return await self.get_extract_provider(provider).aextract(request)
 
     async def templates(

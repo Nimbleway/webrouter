@@ -99,6 +99,7 @@ from web_router.constants import (
     MSG_AUTO_BROWSER_UNMAPPED,
     MSG_AUTO_BROWSER_UNSUPPORTED,
     MSG_AUTO_EXTRACT_NO_MEMBER,
+    MSG_AUTO_EXTRACT_UNMAPPED,
     MSG_AUTO_RESEARCH_NEEDS,
     MSG_AUTO_RESEARCH_NO_CAPABLE_BACKEND,
     MSG_AUTO_RESEARCH_REFUSES,
@@ -394,7 +395,7 @@ class AutoExtractProvider(ExtractProvider):
         delegated = self._delegated(request, urls)
         failures: dict[str, WebRouterError] = {}
         held: ExtractResponse | None = None
-        for position, provider_name in self._eligible(self.format_of(request)):
+        for position, provider_name in self._eligible(request):
             if (late := _late_answer(held, self.name, failures)) is not None:
                 return late
             try:
@@ -413,7 +414,7 @@ class AutoExtractProvider(ExtractProvider):
         delegated = self._delegated(request, urls)
         failures: dict[str, WebRouterError] = {}
         held: ExtractResponse | None = None
-        for position, provider_name in self._eligible(self.format_of(request)):
+        for position, provider_name in self._eligible(request):
             if (late := _late_answer(held, self.name, failures)) is not None:
                 return late
             try:
@@ -428,38 +429,57 @@ class AutoExtractProvider(ExtractProvider):
             held = response if held is None else held
         return _held_or_raise(held, self.name, failures)
 
-    def _eligible(self, wanted: ExtractFormat) -> list[tuple[int, str]]:
-        """The chain members that return ``wanted``, in order, read from their classes as search's are.
+    def _eligible(self, request: ExtractRequest) -> list[tuple[int, str]]:
+        """The chain members that return the format and map every other option set, in order.
+
+        Read from the members' classes as search's are. A member whose extra is
+        not installed cannot be read, and is kept.
 
         Raises:
-            UnsupportedFormatError: if no member returns it, naming what each one
-                returns instead. Nothing has been fetched.
+            UnsupportedParameterError: if an option the request sets -- ``profile``
+                -- is mapped by no member that could otherwise serve it, naming
+                what each one lacked. Nothing has been fetched.
+            UnsupportedFormatError: if no member returns the format, naming what
+                each one returns instead.
         """
         from web_router.registry import get_extract_provider_class
 
+        wanted_format = self.format_of(request)
+        wanted = request.specified_parameters() - {"format"}
         eligible: list[tuple[int, str]] = []
         skipped: list[str] = []
         returned: frozenset[ExtractFormat] = frozenset()
+        unmapped: frozenset[str] = frozenset()
+        widest: frozenset[str] = frozenset()
         for position, (provider_name, _) in enumerate(self._chain):
             try:
-                formats = get_extract_provider_class(provider_name).supported_formats
+                member_cls = get_extract_provider_class(provider_name)
             except ProviderNotInstalledError:
                 eligible.append((position, provider_name))
                 continue
-            returned |= formats
-            if wanted in formats:
+            returned |= member_cls.supported_formats
+            widest |= member_cls.supported_parameters
+            reasons: list[str] = []
+            if wanted_format not in member_cls.supported_formats:
+                reasons.append(MSG_AUTO_UNFORMATTED.format(formats=_quoted(member_cls.supported_formats)))
+            lacks = wanted - member_cls.supported_parameters
+            if lacks:
+                reasons.append(MSG_AUTO_UNMAPPED.format(names=_quoted(lacks)))
+                unmapped |= lacks
+            if not reasons:
                 eligible.append((position, provider_name))
                 continue
-            skipped.append(
-                MSG_AUTO_SKIPPED.format(
-                    name=provider_name, reasons=MSG_AUTO_UNFORMATTED.format(formats=_quoted(formats))
-                )
-            )
+            skipped.append(MSG_AUTO_SKIPPED.format(name=provider_name, reasons="; ".join(reasons)))
 
         if eligible or not skipped:
             return eligible
+        if unmapped:
+            # The option is the thing to drop: a format can be asked for another
+            # way, a profile no member maps cannot be served at all.
+            detail = MSG_AUTO_EXTRACT_UNMAPPED.format(skipped=", ".join(dict.fromkeys(skipped)))
+            raise UnsupportedParameterError(self.name, (wanted - widest) or unmapped, detail=detail)
         detail = MSG_AUTO_EXTRACT_NO_MEMBER.format(skipped=", ".join(dict.fromkeys(skipped)))
-        raise UnsupportedFormatError(self.name, wanted, returned, detail=detail)
+        raise UnsupportedFormatError(self.name, wanted_format, returned, detail=detail)
 
     def _delegated(self, request: ExtractRequest, urls: list[str]) -> ExtractRequest:
         """The request to hand a member, with the format named explicitly.

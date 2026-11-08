@@ -256,6 +256,7 @@ You.com's keyless MCP is priced in its own section above.
 | keenable | markdown, `max_chars` 500,000 | one credit per fetch, 100k requests a month free, then not published; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
 | deepseek | markdown | $0.75 per 1k; successful fetches only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
 | linkup | markdown (default) or html (`includeRawContent`), `mode=standard`, no rendering | $0.001 per request; $1 per 1k; `renderJs` or `mode=pro` $0.005, both $0.01; a `schema` adds $0.001 | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md) | 2026-10-07 |
+| browserbase | markdown | $1 per 1k; Fetch API calls past the included 1,000 (Free and Developer $20/mo); $0.50 per 1k past 10,000 on Startup ($99/mo); $4 per 1k with proxies, which web-router never turns on itself | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-11-08 |
 <!-- /prices -->
 
 ## Templates (Extract Templates)

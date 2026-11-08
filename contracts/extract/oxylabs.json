@@ -34,7 +34,9 @@
       }
     }
   },
-  "not_mapped": [],
+  "not_mapped": [
+    "profile"
+  ],
   "default_format": "html",
   "batches_urls": false,
   "source": [

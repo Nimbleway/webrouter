@@ -36,7 +36,6 @@ from web_router.constants import (
 from web_router.providers._http import HttpExtractProvider
 from web_router.providers._utils import build_payload, resolve_setting
 from web_router.types import (
-    EXTRACT_PARAMETERS,
     ExtractedDocument,
     ExtractFailure,
     ExtractFormat,
@@ -51,7 +50,7 @@ class BrightDataExtractProvider(HttpExtractProvider):
     """Fetches page contents through the Bright Data Web Unlocker."""
 
     name: ClassVar[str] = PROVIDER_BRIGHTDATA
-    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = frozenset({"format"})
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(BRIGHTDATA_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = BRIGHTDATA_EXTRACT_DEFAULT_FORMAT
 

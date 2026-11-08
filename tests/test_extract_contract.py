@@ -466,6 +466,8 @@ _STUB_PAYLOADS: dict[str, Any] = {
     "webiq": lambda urls: {"url": urls[0], "title": "", "content": _body(urls[0]), "traceId": "t"},
     "keenable": lambda urls: {"url": urls[0], "title": "", "content": _body(urls[0]), "description": ""},
     "deepseek": lambda urls: {"title": "", "content": _body(urls[0])},
+    # Fetch echoes no URL at all, like Bright Data.
+    "browserbase": lambda urls: {"statusCode": 200, "content": _body(urls[0]), "contentType": "text/html"},
 }
 """The shape each backend really answers with, trimmed to what is mapped.
 
