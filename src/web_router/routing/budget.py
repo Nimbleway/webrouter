@@ -20,29 +20,43 @@ exactly as it would without one. With a budget:
   :class:`~web_router.BudgetExceededError`, naming each skip;
 - the response's ``decision`` carries the estimated spend and every attempt,
   labelled an estimate.
+
+Inside a shared budget (:mod:`.pool`), a call runs here even with no
+``budget=`` of its own: its budget is the tighter of the two, each attempt it
+admits is reserved in the pool, and what it reserved is settled when it ends.
+A call a backend makes inside another budgeted call passes the enclosing
+call's check too, which counts it toward that call's own cap. Only the ledger
+of the call an attempt is made in reserves it in the shared budget and settles
+it, so each attempt is reserved there once, and a nested call that runs on
+after the call that started it still reserves and settles its own.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_budget import SKIP_ROUTE_REFUSED
+from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
-from web_router.exceptions import WebRouterError
-from web_router.providers._deadline import call_deadline
+from web_router.exceptions import DeadlineExceededError, WebRouterError
+from web_router.providers._deadline import Deadline, call_deadline, current_deadline, job_deadline
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
+from web_router.routing.pool import PoolChain, chain_in_force
 from web_router.types import DecisionRecord, NormalizedRequest
 
 _BackendT = TypeVar("_BackendT")
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
+
+_LEDGERS: ContextVar[tuple[Ledger, ...]] = ContextVar("web_router_budget_ledgers", default=())
+"""The ledgers of the budgeted calls in flight here, outermost first: each one checks every attempt made inside it."""
 
 
 @dataclass(frozen=True)
@@ -51,6 +65,11 @@ class BudgetedCall(Generic[_BackendT]):
 
     backend: _BackendT
     ledger: Ledger | None = None
+
+    @property
+    def budget(self) -> Budget | None:
+        """The budget the call is held to: its own, tightened by a shared budget's remainder; ``None`` with neither."""
+        return None if self.ledger is None else self.ledger.budget
 
     def settle(self, response: _ResponseT) -> _ResponseT:
         """``response`` with the call's estimated spend in its decision record; as it came with no budget."""
@@ -62,21 +81,62 @@ class BudgetedCall(Generic[_BackendT]):
 
 @contextmanager
 def budget_scope(
-    budget: Budget | None, tool: ToolName, backend: _BackendT, request: NormalizedRequest
+    budget: Budget | None,
+    tool: ToolName,
+    backend: _BackendT,
+    request: NormalizedRequest,
+    router: object = None,
 ) -> Iterator[BudgetedCall[_BackendT]]:
     """Hold ``budget`` over ``backend``'s call of ``tool`` with ``request``, made inside the block.
+
+    ``router`` is the router making the call: only a shared budget it opened applies.
 
     Raises:
         BudgetExceededError: when the budget skips every candidate, before any starts.
     """
+    pool = None if router is None else chain_in_force(router)
+    if pool is not None:
+        budget = pool.limit(budget)
     if budget is None:
         yield BudgetedCall(backend)
         return
-    ledger = Ledger(budget)
-    with call_deadline(budget.time_limit_s), call_route(_hooked(ledger.admit)):
+    held = _LEDGERS.get()
+    ledger = Ledger(budget, _with_enclosing(pool, held))
+    token = _LEDGERS.set((*held, ledger))
+    try:
+        with _held(ledger, held, tool, backend, request) as call:
+            yield call
+    finally:
+        _LEDGERS.reset(token)
+        reserved = ledger.close()
+        if ledger.pool is not None:
+            ledger.pool.settle(reserved)
+
+
+def _with_enclosing(chain: PoolChain | None, held: tuple[Ledger, ...]) -> PoolChain | None:
+    """``chain`` and every pool the enclosing calls in ``held`` spend from, innermost first, once each.
+
+    The call reserves its attempts in all of them: they are made on those calls'
+    behalf, whichever router makes them, and the enclosing calls reserve none.
+    """
+    enclosing = [pool for ledger in reversed(held) if ledger.pool is not None for pool in ledger.pool.pools]
+    pools = tuple(dict.fromkeys([*(chain.pools if chain is not None else ()), *enclosing]))
+    return PoolChain(pools) if pools else None
+
+
+@contextmanager
+def _held(
+    ledger: Ledger, held: tuple[Ledger, ...], tool: ToolName, backend: _BackendT, request: NormalizedRequest
+) -> Iterator[BudgetedCall[_BackendT]]:
+    """The block under ``ledger``, inside the calls ``held`` holds: its deadline, its check and its refusal."""
+    expires = None if ledger.pool is None else ledger.pool.expires_at()
+    outside = current_deadline()
+    with call_deadline(ledger.budget.time_limit_s), job_deadline(expires), call_route(_hooked(ledger, held)):
         name = getattr(backend, "name", PROVIDER_AUTO)
+        _refuse_late(ledger, f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", name, outside)
         if name != PROVIDER_AUTO and not admitted(tool, name, request):
-            # Through the same hook auto's members pass, so a route in force can refuse it too.
+            # Through the same hook auto's members pass, so a route in force can refuse it too;
+            # the ledger's admit, last in that hook, reserves it in a shared budget.
             ledger.skipped.setdefault(f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", SKIP_ROUTE_REFUSED)
             raise ledger.refusal()
         try:
@@ -89,10 +149,48 @@ def budget_scope(
             raise
 
 
-def _hooked(admit: Callable[[Attempt], bool]) -> CallRoute:
-    """The route in force, if any, with ``admit`` after its own hook: a member it refuses is never charged."""
+def _refuse_late(ledger: Ledger, call_id: str, name: str, outside: Deadline | None) -> None:
+    """Refuse the call before anything is admitted or reserved when its deadline has already passed.
+
+    The budget's own deadline -- its time cap or the shared clock -- raises
+    :class:`~web_router.BudgetExceededError`. A deadline the budget did not set,
+    an enclosing call's, raises :class:`~web_router.DeadlineExceededError`, as
+    the call would with no budget.
+    """
+    deadline = current_deadline()
+    if deadline is None or deadline.left() > 0:
+        return
+    if deadline is outside:
+        raise DeadlineExceededError(name, deadline.seconds)
+    ledger.skipped[call_id] = SKIP_NO_TIME
+    raise ledger.refusal()
+
+
+def _hooked(ledger: Ledger, held: tuple[Ledger, ...]) -> CallRoute:
+    """The route in force, if any, with ``ledger``'s check after its own hook: a member either refuses is never charged.
+
+    The hook in force runs the check of every enclosing call's ledger in
+    ``held``, each counting the attempt toward its own cap; when ``ledger``
+    then refuses it, each takes it back. Only the innermost ledger in force
+    where the attempt runs -- its own call's -- reserves it in the shared budget.
+    """
     route = current_route() or CallRoute()
     outer = route.before_attempt
+
+    def check(attempt: Attempt) -> bool:
+        in_force = _LEDGERS.get()
+        return ledger.admit(attempt, reserve=not in_force or in_force[-1] is ledger)
+
     if outer is None:
-        return replace(route, before_attempt=admit)
-    return replace(route, before_attempt=lambda attempt: outer(attempt) and admit(attempt))
+        return replace(route, before_attempt=check)
+
+    def admit(attempt: Attempt) -> bool:
+        if not outer(attempt):
+            return False
+        if check(attempt):
+            return True
+        for enclosing in held:
+            enclosing.undo(attempt)
+        return False
+
+    return replace(route, before_attempt=admit)

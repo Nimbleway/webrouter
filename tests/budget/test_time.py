@@ -58,10 +58,10 @@ def test_every_attempt_runs_under_the_per_call_deadline_set_to_the_time_limit(
     seen: list[float] = []
     admit = ledger.Ledger.admit
 
-    def spy(self: ledger.Ledger, attempt: ledger.Attempt) -> bool:
+    def spy(self: ledger.Ledger, attempt: ledger.Attempt, **options: bool) -> bool:
         deadline = current_deadline()
         seen.append(0.0 if deadline is None else deadline.seconds)
-        return admit(self, attempt)
+        return admit(self, attempt, **options)
 
     monkeypatch.setattr(ledger.Ledger, "admit", spy)
     call(chain, Budget(time_limit_s=7.0))
