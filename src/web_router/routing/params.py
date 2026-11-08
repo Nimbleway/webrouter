@@ -2,9 +2,9 @@
 
 Experimental. A pure selection with no model and no side effects: it reads the
 research effort table (``data/efforts.json``, written by ``make efforts`` from
-the frozen ``tools-effort-60`` results), the price list
-(:func:`web_router.prices.estimate`) and its latency priors
-(:func:`web_router.prices.estimate_latency`, else the table's own p90), and
+the frozen ``tools-effort-60`` results) with its measured p90s, the price list
+(:func:`web_router.prices.estimate`) and, for an effort the table has no p90
+for, the list's latency priors (:func:`web_router.prices.estimate_latency`), and
 answers which effort to run with and why. Nothing calls it yet; enforcing the
 budget is not its job.
 
@@ -113,12 +113,12 @@ def _effort_of(provider: str, effort: str | None) -> str | None:
 
 
 def _p90(provider: str, effort: str | None) -> float | None:
-    """The p90 seconds: the price list's latency prior, else the effort table's measured figure, else ``None``."""
-    prior = prices.estimate_latency(provider, RESEARCH, effort)
-    if prior is not None:
-        return prior[1]
+    """The p90 seconds: the effort table's measured figure, else the price list's latency prior, else ``None``."""
     p90 = measured_efforts(provider).get(_effort_of(provider, effort) or "", {}).get("latency_p90_s")
-    return None if p90 is None else float(p90)
+    if p90 is not None:
+        return float(p90)
+    prior = prices.estimate_latency(provider, RESEARCH, effort)
+    return None if prior is None else prior[1]
 
 
 def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) -> str | None:

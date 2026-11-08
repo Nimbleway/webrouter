@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from web_router import Budget, DecisionRecord
+from web_router import Budget, DecisionRecord, prices
 from web_router.constants_params import PARAMS_SOURCE_BUDGET, PARAMS_SOURCE_CALLER
 from web_router.routing import params
 from web_router.routing.params import EffortChoice, effort_misfit, map_effort
@@ -80,6 +80,12 @@ def test_with_nimbles_numbers_a_wider_floor_takes_low_over_high(monkeypatch: pyt
 def test_a_time_cap_leaves_out_the_efforts_whose_p90_is_over_it(provider: str, effort: str) -> None:
     # A 60s cap: Nimble medium (136s) and high (181s) are out; so is Parallel medium (74s).
     assert map_effort(provider, Budget(time_limit_s=60.0)).effort == effort
+
+
+def test_the_tables_p90_wins_over_a_price_list_prior(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A price-list p90 that disagrees with the measured one must not move the pick.
+    monkeypatch.setattr(prices, "estimate_latency", lambda *_: (1.0, 999.0))
+    assert map_effort("nimble", Budget(time_limit_s=60.0)).effort == "low"
 
 
 def test_when_no_measured_effort_fits_the_default_stays_and_says_whether_it_fits() -> None:
