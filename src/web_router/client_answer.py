@@ -12,6 +12,8 @@ from typing import Any
 from web_router.presets import PresetRegistry
 from web_router.providers.answer import AnswerProvider
 from web_router.registry_answer import create_answer_provider, default_answer_provider
+from web_router.routing import Budget
+from web_router.routing.routed import AsyncRouted, SyncRouted
 from web_router.types import Provider, provider_name
 from web_router.types_answer import AnswerRequest, AnswerResponse, Recency
 from web_router.types_presets import Preset
@@ -53,7 +55,7 @@ class _AnswerLookup:
         return AnswerRequest(query=query, provider_options=provider_options or {}, **options)
 
 
-class SyncAnswer(_AnswerLookup):
+class SyncAnswer(_AnswerLookup, SyncRouted):
     def answer(
         self,
         query: str,
@@ -65,6 +67,7 @@ class SyncAnswer(_AnswerLookup):
         locale: str | None = None,
         recency: Recency | None = None,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
         preset: str | Preset | None = None,
     ) -> AnswerResponse:
         """Ask ``provider`` one question and return its written answer with the sources it rests on.
@@ -96,12 +99,13 @@ class SyncAnswer(_AnswerLookup):
         )
         options = plan.options
         request = self._answer_request(query, options.pop("provider_options"), **options)
+        chain = self.get_answer_provider(plan.provider)
         with plan.explained():
-            response = self.get_answer_provider(plan.provider).answer(request)
+            response = self._routed(chain, request, budget, chain.answer)
         return plan.stamp(response)
 
 
-class AsyncAnswer(_AnswerLookup):
+class AsyncAnswer(_AnswerLookup, AsyncRouted):
     async def answer(
         self,
         query: str,
@@ -113,6 +117,7 @@ class AsyncAnswer(_AnswerLookup):
         locale: str | None = None,
         recency: Recency | None = None,
         provider_options: dict[str, Any] | None = None,
+        budget: Budget | None = None,
         preset: str | Preset | None = None,
     ) -> AnswerResponse:
         """Ask ``provider`` one question and await its written answer, as on the sync router."""
@@ -129,6 +134,7 @@ class AsyncAnswer(_AnswerLookup):
         )
         options = plan.options
         request = self._answer_request(query, options.pop("provider_options"), **options)
+        chain = self.get_answer_provider(plan.provider)
         with plan.explained():
-            response = await self.get_answer_provider(plan.provider).aanswer(request)
+            response = await self._arouted(chain, request, budget, chain.aanswer)
         return plan.stamp(response)

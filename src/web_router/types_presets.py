@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from web_router.types import PresetComponent, ResolvedPreset
+from web_router.types_meta import PresetComponent, ResolvedPreset
 
 __all__ = ["PRESET_ID_PATTERN", "PRESET_VERSION_PATTERN", "ComponentSettings", "Preset", "PresetCheck", "PresetIssue"]
 

@@ -42,6 +42,7 @@ holding it ends:
 
 from web_router._version import __version__
 from web_router.client import AsyncWebRouter, WebRouter
+from web_router.client_scope import AsyncBudgetScope, BudgetScope
 from web_router.constants import DEFAULT_PROVIDER
 from web_router.exceptions import (
     BenchmarkTimeoutError,
@@ -55,19 +56,23 @@ from web_router.exceptions import (
     NavigationError,
     NoAnswerProviderError,
     PageClosedError,
-    PresetCompatibilityError,
-    PresetError,
-    PresetNotFoundError,
-    PresetValidationError,
     ProviderError,
     ProviderNotFoundError,
     ProviderNotInstalledError,
     ResearchTimeoutError,
+    RouterError,
     StaleElementError,
     TemplateNotFoundError,
     UnsupportedFormatError,
     UnsupportedParameterError,
     WebRouterError,
+)
+from web_router.exceptions_budget import BudgetExceededError
+from web_router.exceptions_presets import (
+    PresetCompatibilityError,
+    PresetError,
+    PresetNotFoundError,
+    PresetValidationError,
 )
 from web_router.presets import PresetRegistry
 from web_router.providers.answer import AnswerProvider
@@ -115,6 +120,8 @@ from web_router.registry_answer import (
     register_answer_provider,
     unregister_answer_provider,
 )
+from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, RouterLike, ToolName
+from web_router.routing.pool_status import BudgetStatus
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -140,15 +147,6 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
-    PageFormat,
-    PageLoadState,
-    PageSnapshot,
-    PageState,
-    PresetComponent,
-    PresetMeta,
-    PresetSource,
-    PresetValidation,
-    PresetValidationState,
     Provider,
     ResearchEffort,
     ResearchOutcome,
@@ -156,9 +154,6 @@ from web_router.types import (
     ResearchRequest,
     ResearchResponse,
     ResearchState,
-    ResolvedPreset,
-    ResponseMeta,
-    Screenshot,
     SearchDepth,
     SearchRequest,
     SearchResponse,
@@ -172,6 +167,17 @@ from web_router.types import (
     Viewport,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
+from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
+from web_router.types_meta import (
+    PresetComponent,
+    PresetMeta,
+    PresetSource,
+    PresetValidation,
+    PresetValidationState,
+    ResolvedPreset,
+    ResponseMeta,
+)
+from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 from web_router.types_presets import ComponentSettings, Preset, PresetCheck, PresetIssue
 
 __all__ = [
@@ -187,6 +193,7 @@ __all__ = [
     "AnswerRequest",
     "AnswerResponse",
     "AsyncBrowserHandle",
+    "AsyncBudgetScope",
     "AsyncWebRouter",
     "BenchmarkReport",
     "BenchmarkRun",
@@ -206,10 +213,18 @@ __all__ = [
     "BrowserRequest",
     "BrowserSession",
     "BrowserState",
+    "Budget",
+    "BudgetExceededError",
+    "BudgetScope",
+    "BudgetStatus",
+    "Candidate",
     "Citation",
     "ComponentSettings",
     "ConfigurationError",
     "DeadlineExceededError",
+    "DecisionAttempt",
+    "DecisionHop",
+    "DecisionRecord",
     "ElementNotFoundError",
     "ExtractBenchmarkReport",
     "ExtractBenchmarkRun",
@@ -227,6 +242,7 @@ __all__ = [
     "PageLoadState",
     "PageSnapshot",
     "PageState",
+    "Plan",
     "Preset",
     "PresetCheck",
     "PresetCompatibilityError",
@@ -256,6 +272,10 @@ __all__ = [
     "ResearchTimeoutError",
     "ResolvedPreset",
     "ResponseMeta",
+    "RouteDecision",
+    "RouteRequest",
+    "RouterError",
+    "RouterLike",
     "Screenshot",
     "SearchDepth",
     "SearchProvider",
@@ -271,6 +291,7 @@ __all__ = [
     "TemplateRequest",
     "TemplateResponse",
     "TemplateSample",
+    "ToolName",
     "UnsupportedFormatError",
     "UnsupportedParameterError",
     "Viewport",

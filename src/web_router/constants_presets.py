@@ -16,12 +16,12 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     NormalizedRequest,
-    PresetComponent,
     ResearchRequest,
     SearchRequest,
     TemplateRequest,
 )
 from web_router.types_answer import AnswerRequest
+from web_router.types_meta import PresetComponent
 from web_router.types_presets import PRESET_ID_PATTERN, PRESET_VERSION_PATTERN
 
 __all__ = [

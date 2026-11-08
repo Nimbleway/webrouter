@@ -8,7 +8,8 @@ from web_router.exceptions import ConfigurationError
 from web_router.providers.auto_answer import AutoAnswerProvider
 from web_router.registry import available_extract_providers
 from web_router.registry_answer import available_answer_providers, default_answer_provider
-from web_router.types import PresetComponent, Provider, provider_name
+from web_router.types import Provider, provider_name
+from web_router.types_meta import PresetComponent
 
 
 def tool_provider(provider: str | Provider | None) -> str | None:

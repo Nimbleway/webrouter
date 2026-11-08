@@ -95,12 +95,18 @@ estimate, to break ties.
 After the overall table the report suggests an order for `auto`'s search
 chain: the plain backends ranked by [route-eval](#route-eval-replaying-a-router)'s
 rule -- correct answers out of every question; within the noise floor, the
-cheaper backend at list price first, then the faster; the keyless tier last --
+cheaper backend first (the cost a row states, else its list price), then the faster; the keyless tier last --
 each within the noise floor of the most accurate one marked *best, within the
 noise floor* wherever the tie-break put it, and of the rest each marked
 *behind* when its 95% interval stops short of the most accurate one's and *not
 shown apart* otherwise. It is the same ranking route-eval
-prints, so the repository never suggests two orders.
+prints, over the same rows, so the repository never suggests two orders: each
+row is classed as the frozen sets class it, a search that failed on a rate-limit
+or quota error is left out (not a miss, nor in the backend's total) and counted
+in the table's *Rate limit or quota* column, and the latency tie-break is the
+median over every served row, one the judge did not grade included.
+A backend counted on fewer than 20 questions is not ranked: as in route-eval,
+it is listed after the order as *too few questions* and left out of the chain.
 Depth and mode setups (`nimble@deep`, `tavily:ultra-fast`) are left out, since
 a chain member is a backend that `auto` sends whatever depth the request asks
 for, not a mode. It ends with a snippet to paste into your own router:
@@ -375,25 +381,30 @@ the control set where routing should gain nothing, and `tools-effort-60`
 (`auto`'s order today), `oracle` (the backend that got each question right,
 cheapest first: the ceiling), `always:<backend>`, or your own callable as
 `module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
-as the yardsticks. Your callable takes `(prompt, candidates)` and returns the
-candidate ids best first, or `{"ranked": [...], "cost_usd": ...}` when it bills
+as the yardsticks. Your callable is a router of the library's contract
+(`web_router.routing`): it takes a `RouteRequest` -- one candidate per backend
+the set has rows for, with its list price and p90, and the method pinned -- and
+returns a `RouteDecision`, or `{"decision": ..., "cost_usd": ...}` when it bills
 for itself; given a `fit` method, it is called with the training questions
-first. `prompt` is the question's text only when `--joined` names the folder
-`frozen.py join` wrote; otherwise it is `None` and the report says the prompt
-was unavailable. The interface is a thin adapter, experimental until 1.0, and
-will move to the routing contract when it lands.
+first. The request's `prompt` is the question's text only when `--joined`
+names the folder `frozen.py join` wrote; otherwise it is empty and the report
+says the prompt was unavailable. Experimental until 1.0.
 
 **It covers provider order for `search` and `answer`, and tool choice and
 research effort on `tools-effort-60`.**
 
 How a choice is scored:
 
-- The router's ranking is walked as `auto` walks its chain. The first backend
-  whose row did not fail serves the question. A failed row (`error` not null)
-  is passed over: its time to failure is charged, its cost is not, and the
-  question counts as a **fallback** -- as it does when the router raises,
-  ranks nothing, or names any backend that is not a candidate, which falls
-  back to the static order. Those router
+- The router's answer goes through `web_router.routing.merge.merge`, the
+  merge rule a routed call runs: its ranking first, a backend that is not a
+  candidate dropped, then every other candidate in the static order. The
+  yardsticks' rankings go through it too. The order is walked as `auto` walks
+  its chain. The first backend whose row did not fail serves the question. A
+  failed row (`error` not null) is passed over: its time to failure and its
+  estimated cost (stated, else list price) are charged, as a budget charges a
+  failed attempt, and the question counts as a **fallback** -- as it does when
+  the router raises, answers with no well-formed decision, or ranks no
+  candidate at all, which falls back to the static order. Those router
   failures also have their own column, and the first exception each router
   raises on a set is printed to stderr. A row whose `error` is `judge` or
   `leaked` is not a failed attempt: the backend answered, so it serves the
@@ -422,8 +433,11 @@ Every router is scored on one seeded split (`--seed 0`, half held out by
 `--test-fraction`), in-sample and held out side by side: on SealQA, routing by
 gold labels once scored 75 in-sample and 46 held out. The **noise floor** is
 the widest accuracy gap one backend shows between `sealqa-hard-254` and its
-twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points); it is
-the only twin run, so it serves every set. It is rerun noise, not sampling
+twin, the same questions run twice (WebIQ, 51 vs 54 of 254: 1.2 points). Each
+method is ranked and judged with its own rerun's spread where one is frozen
+(`RERUNS` in `route_eval_sets.py`), else with search's; that twin is the only
+rerun today, so `answer` and `tools-effort-60` fall back to it, and each set's
+report names the floor it used. It is rerun noise, not sampling
 error, so a held-out verdict needs both: a router is a *gain* only when its
 margin over the static order is wider than the floor and the static order's
 held-out accuracy falls below the router's 95% interval, a *loss* only when
@@ -434,7 +448,10 @@ Each set ends with the **recommended order**, ranked on every question of the
 set, since nothing is fit to it: by correct out of every question; within the
 noise floor of the best not yet placed, the cheaper backend at known cost
 first, then the faster, then the name. An unknown or $0 cost never moves a backend up, and the keyless tier
-stays last. `run.py`'s recommended order calls the same ranking. AIQ and the
+stays last. A backend counted on fewer than 20 questions (`MIN_QUESTIONS` in
+`route_eval_rank.py`, which says why 20) is not ranked: it is listed after the
+ranked ones as *too few questions*. `run.py`'s recommended order applies the
+same minimum, so a scan of fewer than 20 questions suggests no order. AIQ and the
 cost and latency curves wait for the first real router. `--json PATH` writes
 the numbers as well.
 
@@ -454,7 +471,12 @@ every question makes it slightly harder for a router to beat there, on purpose:
   have no SealQA rows.
 - **answer** ranks on `answer-simpleqa-300`, the one answer set.
 
-The rule is the recommended order's, above; `chains.json` states it as `rule`.
+The rule is the recommended order's, above; `chains.json` states it as `rule`,
+and the minimum count as `min_questions`. Each method's entry names the floor
+it was ranked with as `noise_floor`: search's own rerun; answer has none
+frozen, so it is ranked with search's (`"fallback": true`). A member counted on
+too few questions keeps its place after the ranked ones, as
+`too_few_questions`.
 
 On `sealqa-hard-254`, judged by `openai:gpt-4o`, frozen from the run of
 2026-10-07, WebIQ (51 of 254), Nimble (49) and Perplexity (48) sit within the
@@ -493,10 +515,22 @@ methods, a candidate is a **path**: method, backend and mode, written
 `method:backend[:mode]` -- `search+extract:nimble:top3`, `extract:nimble`,
 `answer:perplexity`, `research:parallel:low` (a research row's mode is its
 effort). A question's candidates are the paths it has rows for, so `extract`
-is one only on the ten questions given their pages. A router takes the same
-`(prompt, candidates)` and returns path ids best first; the replay, the
-scores, the split, the noise floor and the recommended order (here of paths)
-are the same as above.
+is one only on the ten questions given their pages. A router is shown one
+candidate per method and backend, with no method pinned, and decides the
+method, the backends and research's `effort`; the merge rule picks one method,
+and each backend runs its path at that effort, or with none set, its
+default-mode row, else the price list's default effort, as a real call would;
+a one-method research set is matched the same way, its rows being default-mode. A backend with no row at that
+effort cannot be scored: it keeps its place in the order as a miss with no
+cost, so a later backend serving still counts as a fallback, and it is counted
+in the summary's `unscorable`. A decision never moves to another method, so the
+paths of the others are not tried after it; a decision that fails or decides
+nothing walks the static order of the merged method only (search's, unpinned),
+as a routed call would, not the full static path order. On a question given its
+pages the request's `urls` is the placeholder `frozen:pages`, since the frozen
+rows keep no page URLs. The yardsticks still rank paths, walked as ranked and then in
+the static path order. The scores, the split, the noise floor and the
+recommended order (here of paths) are the same as above.
 
 ```bash
 uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60
@@ -522,7 +556,10 @@ uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort
 60 questions is small. Each held-out half is 30, where one question is 3.3
 points and the 95% interval runs some 30 points wide, which is why a verdict
 needs the static order outside it: here neither example router is a gain or a
-loss. The noise floor was measured on search rows; this set has no twin run.
+loss. The noise floor is search's: this set has no twin run. A path counted on
+fewer than 20 questions is listed as *too few questions*, not ranked: today
+`extract:nimble` (asked on 10), `research:perplexity:low` (4 counted) and
+`research:perplexity:medium` (19).
 A set that mixes methods other than these paths is refused by name.
 
 ## Keeping results

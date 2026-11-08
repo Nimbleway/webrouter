@@ -28,7 +28,7 @@ from web_router.registry_answer import (
 )
 from web_router.types_answer import ANSWER_ALWAYS_SENT, ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
 
-ROUTER_ONLY_ARGUMENTS = {"self", "query", "provider", "preset"}
+ROUTER_ONLY_ARGUMENTS = {"self", "query", "provider", "budget", "preset"}
 
 ENV_VARS = sorted({env_var for env_vars in ANSWER_ENV_BY_PROVIDER.values() for env_var in env_vars})
 

@@ -7,8 +7,7 @@ one per Playwright API, and each holds a single connection for the life of its
 handle: several backends end a session when its CDP client disconnects, so a
 connection per action would end the session after the first.
 
-Playwright is imported on the first action and not before, so a caller who only
-wants the CDP URL never needs it installed.
+Playwright is imported on the first action, so a caller who only wants the CDP URL never needs it.
 
 Refs come from ``aria_snapshot(mode="ai")`` and resolve through the
 ``aria-ref=`` selector engine, which knows only the most recent snapshot of
@@ -73,7 +72,8 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers._png import as_png, png_size
-from web_router.types import ExtractedDocument, PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
+from web_router.types import ExtractedDocument
+from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 if TYPE_CHECKING:
     from playwright.async_api import Browser as AsyncBrowser

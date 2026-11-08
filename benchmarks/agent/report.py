@@ -722,7 +722,7 @@ _STATS: dict[str, Callable[[list[float]], float | None]] = {
 }
 
 
-def _markdown(summary: dict[str, Any]) -> str:
+def _markdown(summary: dict[str, Any]) -> str:  # noqa: C901, PLR0915
     setup, arms = summary["setup"], summary["arms"]
     platforms = summary.get("platforms") or platforms_of(setup)
     both = len(platforms) > 1
@@ -1327,7 +1327,7 @@ def read(folder: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     return rows, json.loads((folder / RUN_FILE).read_text(encoding="utf-8"))
 
 
-def combine(
+def combine(  # noqa: C901
     runs: list[tuple[str, list[dict[str, Any]], dict[str, Any]]],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Several runs' rows and setups as one run of every platform they cover.

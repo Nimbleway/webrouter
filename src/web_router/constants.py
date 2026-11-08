@@ -14,6 +14,16 @@ from pydantic import BaseModel
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_mcp import (
+    MCP_BUDGET_START_PROPERTIES,
+    MCP_DESC_BUDGET_START,
+    MCP_DESC_BUDGET_STATUS,
+    MCP_DESC_WEB_RUN,
+    MCP_TOOL_BUDGET_START,
+    MCP_TOOL_BUDGET_STATUS,
+    MCP_TOOL_WEB_RUN,
+    MCP_WEB_RUN_PROPERTIES,
+)
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -27,8 +37,6 @@ from web_router.types import (
     ExtractRequest,
     FieldPath,
     JobState,
-    PageFormat,
-    PageLoadState,
     Provider,
     ResearchEffort,
     ResearchRequest,
@@ -37,6 +45,7 @@ from web_router.types import (
     SearchRequest,
     StealthLevel,
 )
+from web_router.types_page import PageFormat, PageLoadState
 
 # --- Router -----------------------------------------------------------------
 
@@ -2620,12 +2629,6 @@ MSG_AUTO_BROWSER_UNSUPPORTED = "does not support {values}"
 MSG_AUTO_BROWSER_NEEDS = "needs {names} beside {values}"
 """A member reason: an option it serves only beside partners the request left unset."""
 
-AUTO_BROWSER_OWN_OPTIONS = "provider_options"
-"""One backend's own options, which browser ``auto`` refuses: ``local`` would read them as Chrome switches."""
-
-AUTO_BROWSER_PROFILE_OPTIONS = ("profile", "persist_profile")
-"""A saved profile belongs to one backend, so browser ``auto`` refuses both options."""
-
 MSG_AUTO_BROWSER_NO_PROFILE = (
     "`auto` does not pass a saved profile on: its id or name belongs to one backend, and another member "
     "would refuse it, or -- Anchor, which keys profiles by name -- start a new, empty one under it. "
@@ -3366,33 +3369,6 @@ JINA_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
 
 MCP_SERVER_NAME = "web-router"
 
-MCP_SERVER_INSTRUCTIONS = (
-    "Search, read and research the web through whichever backends this machine holds keys for. "
-    "`search` and `extract` answer in about a second, and so does `run_template`, which runs a "
-    "backend's Extract Template -- a saved, site-specific extraction that turns one page into a "
-    "record; `templates` lists them and `template` describes one, inputs and all. `answer` returns a "
-    "backend's own written answer to one question, with its sources, in a few seconds. `research` runs an "
-    "agentic job that takes "
-    "minutes and bills for the run, and `browse` hands a task to a hosted browser agent on the same "
-    "terms. The `browser_*` tools let you drive a browser yourself: `browser_open` hands back a "
-    "session_id, the other tools act through it, and `browser_close` ends it. "
-    "When a lookup ends at a page that needs interaction -- a login, a form, a multi-step portal, a "
-    "result gated on the user's own details -- do not stop at describing the steps: tell the user a "
-    "browser could finish the task and ask before opening one. For a page that needs the user's own "
-    "credentials, offer `browser_open` with provider='local' and headless=false, a visible window on "
-    "their machine where they type their details themselves; never ask for a password, an ID number or "
-    "a date of birth in the conversation. "
-    "Results are shortened to fit a context window -- every one "
-    "carries a handle, and `fetch_raw` returns the backend's untouched payload for it. "
-    "Read the web-router://capabilities resource to see which backends are configured here, and "
-    "`load_env` to load API keys from a .env file the user names. "
-    "Every backend key the user adds unlocks more: more backends, more fallbacks and, for research, "
-    "browse and cloud browsers, methods that need a key at all -- with a key for every backend, every "
-    "capability is available. The resource's `unlock` lists, per method, each backend still missing a "
-    "key and the variable that would add it; when a method has nothing to run on, or the user wants "
-    "more, point them there and to .env.example, and have them put keys in their .env themselves."
-)
-
 MCP_MSG_INSTRUCTIONS_NO_KEYS = (
     " No API keys were found when this server started, so only the keyless backends are configured. If "
     "the user has a .env file with keys, ask them for its path and call `load_env` -- never ask them to "
@@ -3649,31 +3625,6 @@ MCP_BROWSER_REFUSED_SCHEMES: frozenset[str] = frozenset(
     {"file", "chrome", "chrome-untrusted", "devtools", "chrome-extension", "view-source", "javascript", "data", "blob"}
 )
 """Schemes named in a refusal. Anything outside the allowed set is refused too; these are the ones worth naming."""
-
-MCP_BROWSER_METADATA_HOSTS: frozenset[str] = frozenset(
-    {
-        "169.254.169.254",
-        "fd00:ec2::254",
-        "169.254.170.2",
-        "100.100.100.200",
-        "metadata",
-        "metadata.google.internal",
-        "metadata.goog",
-        "instance-data",
-        "instance-data.ec2.internal",
-    }
-)
-"""Cloud metadata endpoints, which hand out the machine's own credentials to whoever asks from inside it."""
-
-MCP_BROWSER_LOOPBACK_NAMES: frozenset[str] = frozenset({"localhost", "0.0.0.0"})
-"""Hostnames treated as the loopback interface, beside every 127/8 and ``::1`` address."""
-
-MCP_BROWSER_LEGACY_IPV4_PATTERN = r"(?:0x[0-9a-f]+|[0-9]+)(?:\.(?:0x[0-9a-f]+|[0-9]+)){0,3}"
-"""The decimal, hex, octal and short IPv4 spellings a browser accepts, as a lowercased host.
-
-Only a host of this shape is handed to ``inet_aton``, which would otherwise be
-asked to read names it has no business reading.
-"""
 
 MCP_BROWSER_DEFAULT_PORTS: dict[str, int] = {"http": 80, "https": 443, "ws": 80, "wss": 443}
 
@@ -4211,6 +4162,9 @@ MCP_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_BROWSER_SCREENSHOT: MCP_BROWSER_SCREENSHOT_PROPERTIES,
     MCP_TOOL_BROWSER_READ: MCP_BROWSER_READ_PROPERTIES,
     MCP_TOOL_BROWSER_CLOSE: MCP_BROWSER_CLOSE_PROPERTIES,
+    MCP_TOOL_WEB_RUN: MCP_WEB_RUN_PROPERTIES,
+    MCP_TOOL_BUDGET_START: MCP_BUDGET_START_PROPERTIES,
+    MCP_TOOL_BUDGET_STATUS: {},
 }
 """Each tool's input schema, minus the ``provider`` argument.
 
@@ -4244,6 +4198,9 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_BROWSER_SCREENSHOT: (MCP_ARG_SESSION_ID,),
     MCP_TOOL_BROWSER_READ: (MCP_ARG_SESSION_ID,),
     MCP_TOOL_BROWSER_CLOSE: (MCP_ARG_SESSION_ID,),
+    MCP_TOOL_WEB_RUN: ("prompt",),
+    MCP_TOOL_BUDGET_START: ("max_cost_usd", "time_limit_s"),
+    MCP_TOOL_BUDGET_STATUS: (),
 }
 
 MCP_PROVIDER_DESCRIPTION = (
@@ -4252,7 +4209,7 @@ MCP_PROVIDER_DESCRIPTION = (
 )
 
 # A tool description is the routing decision: the model choosing between these
-# twenty-one is the actual router, and latency and cost are what it has to choose on.
+# twenty-four is the actual router (`web_run` hands it to ours), and latency and cost are what it chooses on.
 
 MCP_DESC_SEARCH = (
     "Search the web: ranked links with their titles, descriptions and page text. Returns in about "
@@ -4441,6 +4398,9 @@ MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
     MCP_TOOL_BROWSER_SCREENSHOT: MCP_DESC_BROWSER_SCREENSHOT,
     MCP_TOOL_BROWSER_READ: MCP_DESC_BROWSER_READ,
     MCP_TOOL_BROWSER_CLOSE: MCP_DESC_BROWSER_CLOSE,
+    MCP_TOOL_WEB_RUN: MCP_DESC_WEB_RUN,
+    MCP_TOOL_BUDGET_START: MCP_DESC_BUDGET_START,
+    MCP_TOOL_BUDGET_STATUS: MCP_DESC_BUDGET_STATUS,
 }
 
 MCP_MSG_NO_BACKEND = " NOTHING IS CONFIGURED FOR THIS METHOD on this machine, so every call will fail."

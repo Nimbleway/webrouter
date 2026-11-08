@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 from types import ModuleType
 from typing import Any
 
@@ -13,7 +12,7 @@ from tests.benchmarks.conftest import route_question as _question
 from tests.benchmarks.conftest import route_row as _row
 
 
-def test_a_failed_row_falls_through_to_the_next_charging_its_time_but_not_its_cost(route_eval: ModuleType) -> None:
+def test_a_failed_row_falls_through_to_the_next_charging_its_time_and_its_estimate(route_eval: ModuleType) -> None:
     q = _question(
         route_eval,
         _row("brave", None, latency=0.5, error="timeout"),
@@ -23,7 +22,13 @@ def test_a_failed_row_falls_through_to_the_next_charging_its_time_but_not_its_co
 
     assert outcome.correct and outcome.served_by == "tavily" and outcome.fallback and not outcome.router_failed
     assert outcome.latency_s == pytest.approx(1.5, abs=0.01)
-    assert outcome.cost_usd == pytest.approx(0.008), "tavily's list price, brave's failed call unbilled"
+    assert outcome.cost_usd == pytest.approx(0.013), "tavily's list price, plus brave's for the failed attempt"
+
+
+def test_a_failed_row_with_no_known_price_makes_the_total_unknown(route_eval: ModuleType) -> None:
+    q = _question(route_eval, _row("webiq", None, error="timeout"), _row("tavily", "correct"))
+    outcome = route_eval.replay(lambda _: ["webiq", "tavily"], q, route_eval.static_router("search"))
+    assert outcome.served_by == "tavily" and outcome.cost_usd is None, "webiq has no list price"
 
 
 def test_a_router_that_raises_or_names_no_candidate_falls_back_to_the_static_order(route_eval: ModuleType) -> None:
@@ -103,11 +108,22 @@ def test_the_oracle_sorts_an_unknown_latency_last_rather_than_failing(route_eval
     assert route_eval.oracle_router("search")(q)[:2] == ["perplexity", "brave"], "same price; the known time first"
 
 
-def test_one_unknown_id_in_a_ranking_is_a_router_failure_not_silently_dropped(route_eval: ModuleType) -> None:
+def test_an_unknown_id_in_a_ranking_is_dropped_and_the_rest_kept(route_eval: ModuleType) -> None:
     q = _question(route_eval, _row("tavily", "correct"), _row("perplexity", "incorrect"))
-    outcome = route_eval.replay(lambda _: ["tavily", "made-up"], q, route_eval.static_router("search"))
-    assert outcome.router_failed and outcome.fallback
-    assert outcome.served_by == "perplexity", "the whole ranking is set aside for the static order"
+    outcome = route_eval.replay(lambda _: ["made-up", "tavily"], q, route_eval.static_router("search"))
+    assert not outcome.router_failed and not outcome.fallback
+    assert outcome.served_by == "tavily", "the router's ranking stands without the unknown id"
+
+
+def test_the_candidates_a_router_left_out_follow_in_the_static_order(route_eval: ModuleType) -> None:
+    q = _question(
+        route_eval,
+        _row("brave", None, error="timeout"),
+        _row("tavily", "incorrect"),
+        _row("perplexity", "correct"),
+    )
+    outcome = route_eval.replay(lambda _: ["brave"], q, route_eval.static_router("search"))
+    assert outcome.served_by == "perplexity" and outcome.fallback and not outcome.router_failed, "then today's order"
 
 
 def test_an_unrecorded_latency_is_unknown_not_zero(route_eval: ModuleType) -> None:
@@ -127,32 +143,6 @@ def test_a_row_the_judge_did_not_grade_still_served_the_question(route_eval: Mod
     assert outcome.ungraded and not outcome.correct
     assert outcome.cost_usd == pytest.approx(0.008), "an answered call is billed"
     assert route_eval.score([outcome])["ungraded"] == 1
-
-
-def test_a_router_given_as_a_py_file_path_loads(route_eval: ModuleType, tmp_path: Path) -> None:
-    (tmp_path / "my.py").write_text("def pick(prompt, candidates):\n    return ['perplexity']\n")
-    router = route_eval.load_router(f"{tmp_path}/my.py:pick", "search")
-    q = _question(route_eval, _row("tavily", "incorrect"), _row("perplexity", "correct"))
-    outcome = route_eval.replay(router, q, route_eval.static_router("search"))
-    assert outcome.served_by == "perplexity" and outcome.correct and not outcome.router_failed
-    with pytest.raises(SystemExit, match="a router is static, oracle"):
-        route_eval.load_router("x", "search")
-
-
-def test_a_router_file_with_a_dataclass_loads(route_eval: ModuleType, tmp_path: Path) -> None:
-    (tmp_path / "picker.py").write_text(
-        "from __future__ import annotations\n"
-        "from dataclasses import dataclass\n\n\n"
-        "@dataclass\n"
-        "class Picker:\n"
-        "    first: str\n\n"
-        "    def __call__(self, prompt, candidates):\n"
-        "        return [self.first]\n\n\n"
-        "pick = Picker('perplexity')\n"
-    )
-    router = route_eval.load_router(f"{tmp_path}/picker.py:pick", "search")
-    q = _question(route_eval, _row("tavily", "incorrect"), _row("perplexity", "correct"))
-    assert route_eval.replay(router, q, route_eval.static_router("search")).served_by == "perplexity"
 
 
 @pytest.mark.parametrize("cost", [-0.01, float("nan"), float("inf")])

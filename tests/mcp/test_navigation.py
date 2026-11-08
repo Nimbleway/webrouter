@@ -1,6 +1,6 @@
 """The URL policy the ``browser_*`` tools hold a session to, and the route that enforces it.
 
-Pure unit tests: :class:`UrlPolicy` is a function of a URL, and the guard is
+Pure unit tests: :class:`NavigationPolicy` is a function of a URL, and the guard is
 driven with stand-ins for Playwright's page, route and socket, so nothing here
 launches a browser. The real-browser checks live beside the other browser tests
 in ``test_browser_tools.py``.
@@ -22,11 +22,11 @@ from web_router.constants import (
     MCP_BROWSER_SETTLE_RESOLVE_LIMIT,
 )
 from web_router.mcp import navigation
-from web_router.mcp.navigation import NavigationGuard, UrlPolicy, files_allowed
+from web_router.mcp.navigation import NavigationGuard, NavigationPolicy, files_allowed
 
 CDP = "ws://127.0.0.1:9333/devtools/browser/abc"
 
-POLICY = UrlPolicy.for_session(CDP, allow_files=False)
+POLICY = NavigationPolicy.for_session(CDP, allow_files=False)
 
 PUBLIC = "93.184.215.14"
 
@@ -156,7 +156,7 @@ def test_numeric_looking_hosts_that_are_not_refused_addresses_stay_allowed(url: 
 
 
 def test_a_remote_cdp_address_is_matched_in_any_spelling() -> None:
-    policy = UrlPolicy.for_session("ws://10.0.0.5:9222/devtools/browser/x", allow_files=False)
+    policy = NavigationPolicy.for_session("ws://10.0.0.5:9222/devtools/browser/x", allow_files=False)
 
     assert policy.refusal("http://167772165:9222/json") is not None
     assert policy.refusal("http://10.5:9222/json") is not None
@@ -168,7 +168,7 @@ def test_a_socket_may_open_but_not_to_the_debugging_endpoint() -> None:
 
 
 def test_a_remote_cdp_host_is_refused_only_on_its_own_port() -> None:
-    policy = UrlPolicy.for_session("wss://connect.vendor.test/?apiKey=k", allow_files=False)
+    policy = NavigationPolicy.for_session("wss://connect.vendor.test/?apiKey=k", allow_files=False)
 
     assert policy.refusal("https://connect.vendor.test/json") is not None
     assert policy.refusal("http://connect.vendor.test:8080/") is None
@@ -186,11 +186,11 @@ def test_an_unparseable_url_is_refused() -> None:
 
 def test_file_urls_follow_the_operators_environment_variable(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(ENV_MCP_BROWSER_ALLOW_FILE_URLS, raising=False)
-    off = UrlPolicy.for_session(CDP)
+    off = NavigationPolicy.for_session(CDP)
     monkeypatch.setenv(ENV_MCP_BROWSER_ALLOW_FILE_URLS, "0")
-    zero = UrlPolicy.for_session(CDP)
+    zero = NavigationPolicy.for_session(CDP)
     monkeypatch.setenv(ENV_MCP_BROWSER_ALLOW_FILE_URLS, "1")
-    on = UrlPolicy.for_session(CDP)
+    on = NavigationPolicy.for_session(CDP)
 
     refusal = off.refusal("file:///etc/hosts")
     assert refusal is not None and f"{ENV_MCP_BROWSER_ALLOW_FILE_URLS}=1" in refusal
