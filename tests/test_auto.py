@@ -469,13 +469,13 @@ def test_a_depth_request_no_member_serves_names_each_ones_reason(monkeypatch: py
     for env_var in _EVERY_SEARCH_KEY:
         monkeypatch.delenv(env_var, raising=False)
 
-    router = WebRouter(provider_config={"auto": {"chain": [PROVIDER_PERPLEXITY, PROVIDER_BRAVE]}})
+    router = WebRouter(provider_config={"auto": {"chain": [PROVIDER_PERPLEXITY, PROVIDER_PARALLEL_MCP]}})
     with router, pytest.raises(UnsupportedParameterError) as caught:
         router.search("hi", search_depth="deep")
 
     message = str(caught.value)
     assert "perplexity (will not serve search_depth='deep')" in message
-    assert "brave (does not map 'search_depth')" in message
+    assert "parallel-mcp (does not map 'search_depth')" in message
     assert "nothing was searched" in message
 
 

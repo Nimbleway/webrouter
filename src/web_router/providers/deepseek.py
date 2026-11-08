@@ -5,11 +5,11 @@ route is the OpenAI SDK, which covers its models and not these tools. Install
 with the ``search`` or ``extract`` extra. Both read ``DEEPSEEK_API_KEY`` unless a
 key is passed explicitly.
 
-Search filters by domain and language through operators in the query rather
-than fields, so ``include_domains``, ``exclude_domains`` and ``locale`` are
-appended to it, and the whole query must fit DeepSeek's 128 characters.
-``need_content``, ``ori_question`` and ``localization`` are reachable through
-``provider_options``.
+Search filters by domain, language and date through operators in the query
+rather than fields, so ``include_domains``, ``exclude_domains``, ``locale`` and
+``recency`` are appended to it, and the whole query must fit DeepSeek's 128
+characters. ``search_depth`` serves ``lite`` and ``deep``, the page body.
+``ori_question`` and ``localization`` are reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -18,8 +18,11 @@ from typing import Any, ClassVar
 
 from web_router.constants import ENV_DEEPSEEK_API_KEY, MSG_EXTRACT_UNSUCCESSFUL, PROVIDER_DEEPSEEK
 from web_router.constants_deepseek import (
+    DEEPSEEK_AFTER,
     DEEPSEEK_API_KEY_PREFIX,
     DEEPSEEK_BASE_URL,
+    DEEPSEEK_DEEP,
+    DEEPSEEK_DEPTH_LEVELS,
     DEEPSEEK_EXCLUDE_DOMAIN,
     DEEPSEEK_FETCH_INTERVAL,
     DEEPSEEK_FETCH_PATH,
@@ -33,6 +36,7 @@ from web_router.constants_deepseek import (
     MSG_DEEPSEEK_QUERY_TOO_LONG,
 )
 from web_router.exceptions import ProviderError
+from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._utils import as_snippet, best_text, build_payload
 from web_router.types import (
@@ -42,6 +46,7 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
+    SearchDepth,
     SearchRequest,
     SearchResponse,
     SearchResult,
@@ -62,6 +67,7 @@ class DeepSeekProvider(HttpSearchProvider):
 
     name: ClassVar[str] = PROVIDER_DEEPSEEK
     supported_parameters: ClassVar[frozenset[str]] = DEEPSEEK_SEARCH_PARAMETERS
+    depth_levels: ClassVar[frozenset[SearchDepth]] = DEEPSEEK_DEPTH_LEVELS
 
     base_url: ClassVar[str] = DEEPSEEK_BASE_URL
     search_path: ClassVar[str] = DEEPSEEK_SEARCH_PATH
@@ -78,6 +84,7 @@ class DeepSeekProvider(HttpSearchProvider):
             request,
             query=query,
             count=min(request.max_results, DEEPSEEK_MAX_COUNT) if request.max_results else None,
+            **(DEEPSEEK_DEEP if request.search_depth == "deep" else {}),
         )
 
     @staticmethod
@@ -92,6 +99,8 @@ class DeepSeekProvider(HttpSearchProvider):
             # lang: takes bare language codes, so en-US and en_us both send lang:en.
             language = request.locale.replace("_", "-").split("-")[0].lower()
             operators.append(DEEPSEEK_LANGUAGE.format(language=language))
+        if since := recency_start(request.recency):
+            operators.append(DEEPSEEK_AFTER.format(day=since.isoformat()))
         return " ".join([request.query, *operators])
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:

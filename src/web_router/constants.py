@@ -404,14 +404,6 @@ YOU_API_KEY_HEADER = "X-API-Key"
 YOU_RESULT_SECTIONS = ("web", "news")
 YOU_KNOWLEDGE_ANSWER_TYPE = "answer"
 
-YOU_PARAM_NAMES = {"max_results": "count"}
-"""Normalized parameter -> You.com field. ``search_depth`` maps to an object, below.
-
-Kept minimal on purpose: web-router sends You.com only what a search needs. The
-rest of its API is reachable through ``provider_options`` and is the obvious
-thing for a contributor to map -- see CONTRIBUTING.md.
-"""
-
 YOU_EXTRACTION_BY_DEPTH: dict[SearchDepth, dict[str, Any] | None] = {
     # You.com always returns snippets; extraction controls how much page body
     # comes with them. `full_page` yields markdown on its own -- sending the
@@ -423,25 +415,12 @@ YOU_EXTRACTION_BY_DEPTH: dict[SearchDepth, dict[str, Any] | None] = {
 
 # --- Tavily -----------------------------------------------------------------
 
-TAVILY_PARAM_NAMES = {"max_results": "max_results"}
-"""Normalized parameter -> Tavily field. ``search_depth`` maps to two fields, below.
-
-Kept minimal on purpose: web-router sends Tavily only what a search needs. The
-rest of its API is reachable through ``provider_options`` and is the obvious
-thing for a contributor to map -- see CONTRIBUTING.md.
-
-One trap for whoever maps ``country`` here: Tavily takes a lowercase country
-*name* and rejects the ISO alpha-2 code the shared surface uses and every other
-backend requires, so it has to translate rather than pass the value through.
-"""
-
 TAVILY_PARAMS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
     # Tavily splits what we call depth across two knobs: search_depth sets how
     # much text each result carries, include_raw_content adds the page body.
     #
     # Two traps here, both of which have already caught this table once:
-    # `chunks_per_source` belongs to Tavily's extract and crawl endpoints, not
-    # to search -- sending it here rode **kwargs and did nothing, which made
+    # `chunks_per_source` rode **kwargs here once and did nothing, which made
     # `fast` an exact duplicate of `lite` (verified live: byte-identical
     # snippets across every query tried). And Tavily has since grown its own
     # `fast`/`ultra-fast` depths, which are latency tiers rather than content
@@ -451,6 +430,12 @@ TAVILY_PARAMS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
     # snippet, and steadier across queries -- and costs two API credits rather
     # than one. That is the honest middle rung: Tavily's own step change in
     # volume is raw content, which is what `deep` asks for.
+    #
+    # `lite` runs long of the shared definition (a snippet of about 500
+    # characters): `basic` returns up to three chunks of about 500 each. Tavily's
+    # docs now list `chunks_per_source` (1-3) for basic, fast and advanced
+    # search; one chunk would make lite a real snippet, so it is due a live
+    # re-measure before it joins this table.
     "lite": {"search_depth": "basic"},
     "fast": {"search_depth": "advanced"},
     "deep": {"search_depth": "advanced", "include_raw_content": "markdown"},
@@ -3001,7 +2986,6 @@ MSG_EVALS_ROW_OUTCOME = "an EvaluationRow carries exactly one of grade and error
 BRAVE_BASE_URL = "https://api.search.brave.com"
 BRAVE_SEARCH_PATH = "/res/v1/web/search"
 BRAVE_API_KEY_HEADER = "X-Subscription-Token"
-BRAVE_PARAM_NAMES = {"max_results": "count"}
 BRAVE_HIGHLIGHT_TAGS = ("<strong>", "</strong>")
 """Brave wraps query terms in these; they are its markup, not page content."""
 

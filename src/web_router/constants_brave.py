@@ -1,4 +1,4 @@
-"""Brave answer: its path, model, and how its streamed answer is read.
+"""Brave search's option mappings, and Brave answer: its path, model, and how its streamed answer is read.
 
 Kept apart from :mod:`web_router.constants`, which every other provider's
 settings share, so that file stops growing. Brave's host and auth header stay
@@ -6,6 +6,8 @@ there, beside its search settings.
 """
 
 from __future__ import annotations
+
+from web_router.types_options import Recency
 
 # Verified live on 2026-11-03. POST /res/v1/chat/completions with model `brave`
 # answers OpenAI-style. Citations come only on a streamed call with
@@ -37,3 +39,48 @@ BRAVE_FINISH_LENGTH = "length"
 MSG_BRAVE_ANSWER_STREAM_ERROR = "the answer stream reported an error: {error}"
 
 MSG_BRAVE_ANSWER_STREAM_CUT = "the answer stream ended before [DONE], after {count} events"
+
+# Search (api-dashboard.search.brave.com/api-reference/web/search/get and
+# .../documentation/resources/search-operators). Domain filters have no field:
+# they are search operators in q, which Brave marks experimental. Several sites
+# are joined with OR, as its own example does; one is left out with NOT site:.
+
+BRAVE_SEARCH_PARAM_NAMES = {"max_results": "count"}
+"""Normalized parameter -> Brave field; the rest are translated below."""
+
+BRAVE_SEARCH_PARAMETERS = frozenset(
+    {*BRAVE_SEARCH_PARAM_NAMES, "search_depth", "include_domains", "exclude_domains", "country", "locale", "recency"}
+)
+
+BRAVE_COUNTRIES = frozenset(
+    {
+        "AR", "AU", "AT", "BE", "BR", "CA", "CL", "DK", "FI", "FR", "DE", "GR", "HK", "IN", "ID", "IT", "JP", "KR",
+        "MY", "MX", "NL", "NZ", "NO", "CN", "PL", "PT", "PH", "RU", "SA", "ZA", "ES", "SE", "CH", "TW", "TR", "GB",
+        "US",
+    }
+)  # fmt: skip
+"""The 37 ISO codes Brave's ``country`` takes (its ``ALL`` is no country); another is refused before the call."""
+
+BRAVE_FRESHNESS: dict[Recency, str] = {"day": "pd", "week": "pw", "month": "pm", "year": "py"}
+"""``freshness`` by page age, "the most relevant date reported by the content, such as its published or last
+modified date": 24 hours, 7 days, 31 days and 365 days."""
+
+BRAVE_INCLUDE_DOMAIN = "site:{domain}"
+BRAVE_INCLUDE_JOINER = " OR "
+BRAVE_EXCLUDE_DOMAIN = "NOT site:{domain}"
+
+BRAVE_QUERY_MAX_CHARS = 600
+BRAVE_QUERY_MAX_WORDS = 75
+"""q's documented limits, operators included; a longer one is refused before it is sent, never cut."""
+
+MSG_BRAVE_QUERY_TOO_LONG = (
+    "Brave takes a query of at most {chars} characters and {words} words, and this one would be {length} "
+    "characters and {count} words; include_domains and exclude_domains are sent inside the query and count "
+    "toward it. Shorten the query, drop a filter, or use another provider."
+)
+
+MSG_BRAVE_SEARCH_VALUES = (
+    "Brave searches only the countries and languages it lists: country at {countries}, and locale at a language "
+    "it lists (pt and zh alone are refused, as each could be either of two). Ask for one of those, leave it "
+    "unset, or name another provider -- see the search table in README.md."
+)

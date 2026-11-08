@@ -1,4 +1,4 @@
-"""You.com research and answer: their endpoints, effort mapping, status table and answer fields.
+"""You.com search, research and answer: their endpoints, mappings, status table and answer fields.
 
 Kept apart from :mod:`web_router.constants`, which every other provider's
 settings share, so that file stops growing. The env var and the provider's
@@ -73,15 +73,63 @@ MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE = (
 )
 """Both domain lists answered 422 ``mutually_exclusive`` when sent together, so the pair is refused before the call."""
 
-YOU_ANSWER_FRESHNESS_FIELD = "freshness"
+YOU_FRESHNESS_FIELD = "freshness"
 
-YOU_ANSWER_RECENCY: dict[Recency, str] = {
+YOU_RECENCY: dict[Recency, str] = {
     "day": "day",
     "week": "week",
     "month": "month",
     "year": "year",
 }
-"""You.com's own values, one for one. Live, ``week`` kept every result to the last two weeks' pages."""
+"""You.com's own ``freshness`` values, one for one, on search, answer and the MCP tool alike. Live, on answer,
+``week`` kept every result to the last two weeks' pages."""
 
 YOU_ANSWER_MARKER = re.compile(r"\[\[(\d+(?:,\s*\d+)*)\]\]")
 """A citation marker in the answer: ``[[1, 2]]``, numbering ``citations`` from 1."""
+
+# Search (you.com/docs/api-reference/search/v1-search). `country` and
+# `language` take fixed lists and answer 422 for anything else; the MCP tool's
+# inline `loc:` and `lang:` accept any value and drop an unknown one silently,
+# so both are held to the lists before the call.
+
+YOU_SEARCH_PARAM_NAMES: dict[str, str] = {
+    "max_results": "count",
+    "include_domains": "include_domains",
+    "exclude_domains": "exclude_domains",
+}
+"""Normalized parameter -> You.com field. ``search_depth`` maps to ``extraction``, ``country`` and ``locale`` onto
+the fixed lists below, ``recency`` onto ``freshness``. The two domain lists cannot be sent together."""
+
+YOU_SEARCH_PARAMETERS = frozenset({*YOU_SEARCH_PARAM_NAMES, "search_depth", "country", "locale", "recency"})
+
+YOU_COUNTRIES = frozenset(
+    {
+        "AR", "AU", "AT", "BE", "BR", "CA", "CL", "DK", "FI", "FR", "DE", "HK", "IN", "ID", "IT", "JP", "KR", "MY",
+        "MX", "NL", "NZ", "NO", "CN", "PL", "PT", "PH", "RU", "SA", "ZA", "ES", "SE", "CH", "TW", "TR", "GB", "US",
+    }
+)  # fmt: skip
+"""The 36 ISO codes You.com's ``country`` takes; another is refused before the call."""
+
+MSG_YOU_SEARCH_VALUES = (
+    "You.com searches only the countries and languages it lists: country at {countries}, and locale at a language "
+    "it lists (see its language list; pt and zh alone are refused, as each could be either of two). Ask for one of "
+    "those, leave it unset, or name another provider -- see the search table in README.md."
+)
+
+MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE = (
+    "You.com searches with one domain list, not both: send include_domains or exclude_domains."
+)
+
+# The MCP tool `you-search` (tools/list on api.you.com/mcp?profile=free, and
+# keyless calls on 2026-11-09): it has no country, language or include_domains
+# argument; it reads them from `loc:`, `lang:` and `site:` in the query, strips
+# them (metadata.query came back without them), and several `site:` keep each
+# site. An inline site: cannot be combined with its exclude_domains argument.
+
+YOU_MCP_PARAM_NAMES: dict[str, str] = {"max_results": "count", "exclude_domains": "exclude_domains"}
+"""Normalized parameter -> argument of ``you-search``; the other filters go into the query, below."""
+
+YOU_MCP_SITE = "site:{domain}"
+YOU_MCP_LANGUAGE = "lang:{language}"
+YOU_MCP_COUNTRY = "loc:{country}"
+"""The inline operators ``you-search`` maps itself, appended to the query; values are You.com's list values."""

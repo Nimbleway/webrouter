@@ -11,6 +11,7 @@ Needs credentials; skips without them. Run with: make test-integration
 from __future__ import annotations
 
 import os
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -134,6 +135,28 @@ def test_recency_is_accepted_at_its_narrowest_and_widest(provider: str, recency:
     with WebRouter(provider) as router, billing_aware(provider):
         response = router.search("technology news", max_results=3, recency=recency)
     assert response.results
+
+
+@pytest.mark.parametrize("provider", _providers("recency"))
+def test_recency_keeps_dated_results_near_the_window(provider: str) -> None:
+    """A week's window: three in four of the results the backend dates are at most two weeks old.
+
+    Not all: a section front can carry a stale date and still pass a backend's filter (You.com MCP returned a
+    2014-dated hub page among nine recent ones). Look here when it fails: a backend that ignores the window, or
+    dates by discovery or last update rather than publication.
+    """
+    with WebRouter(provider) as router, billing_aware(provider):
+        response = router.search("technology news", max_results=10, recency="week")
+    oldest = datetime.now(timezone.utc).date() - timedelta(days=14)
+    dated = [(result.url, day) for result in response.results if (day := _day(result.published_date))]
+    assert sum(day >= oldest for _, day in dated) >= 0.75 * len(dated), f"{provider}: {dated}"
+
+
+def _day(published: str | None) -> date | None:
+    try:
+        return date.fromisoformat(published[:10]) if published else None
+    except ValueError:
+        return None
 
 
 @pytest.mark.parametrize("provider", _providers("effort"))

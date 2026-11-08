@@ -61,15 +61,15 @@ def test_rule_5_an_effort_must_fit_on_every_backend_in_the_order() -> None:
     assert merged.params == {"effort": "medium"}, "parallel's and nimble's medium are within $0.2"
 
 
-NO_UNDECLARED = {"search:exa": "no depth", "search:brave": "no depth"}
-"""Leaves tavily and nimble, which both take ``search_depth``."""
+NO_UNDECLARED = {"search:exa": "no depth", "search:brave": "lite only"}
+"""Leaves tavily and nimble, which both take ``search_depth`` at every level."""
 
 
 def test_rule_5_an_option_is_kept_only_when_every_backend_in_the_order_takes_it() -> None:
     depth = {"search": {"search_depth": "deep"}}
     merged = merge_with(RouteDecision(params=depth), pinned="search")
     assert merged.params == {}
-    assert merged.notes.ignored["params.search.search_depth"] == "search:brave does not take search_depth"
+    assert merged.notes.ignored["params.search.search_depth"] == "search:exa does not take search_depth"
     kept = merge_with(RouteDecision(params=depth, exclude=NO_UNDECLARED), pinned="search")
     assert kept.providers == ("tavily", "nimble") and kept.params == {"search_depth": "deep"}
 

@@ -5,10 +5,11 @@ Install with the ``search`` extra (the ``answer`` extra for answers). Search
 reads ``BRAVE_SEARCH_API_KEY`` and answers ``BRAVE_ANSWER_API_KEY`` -- Brave
 sells them as separate plans -- unless a key is passed explicitly.
 
-Slim by design: only ``max_results`` is mapped. ``search_depth`` is absent
-because the API has no content-depth control -- it returns a description and a
-few extra snippets, and that is all. Everything else is reachable through
-``provider_options``; mapping one properly is a welcome PR -- see CONTRIBUTING.md.
+Search maps every shared option but ``effort``, which Brave has no tier for.
+``search_depth`` serves ``lite`` alone: the endpoint returns a description and
+at most a few extra snippets, never a page body. The domain filters travel in
+the query as ``site:`` operators, which Brave marks experimental. Everything else
+is reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -23,7 +24,6 @@ from web_router.constants import (
     BRAVE_API_KEY_HEADER,
     BRAVE_BASE_URL,
     BRAVE_HIGHLIGHT_TAGS,
-    BRAVE_PARAM_NAMES,
     BRAVE_SEARCH_PATH,
     ENV_BRAVE_ANSWER_API_KEY,
     ENV_BRAVE_API_KEY,
@@ -35,15 +35,27 @@ from web_router.constants_brave import (
     BRAVE_ANSWER_MODEL,
     BRAVE_ANSWER_PATH,
     BRAVE_ANSWER_TAGS,
+    BRAVE_COUNTRIES,
+    BRAVE_EXCLUDE_DOMAIN,
     BRAVE_FINISH_LENGTH,
+    BRAVE_FRESHNESS,
+    BRAVE_INCLUDE_DOMAIN,
+    BRAVE_INCLUDE_JOINER,
+    BRAVE_QUERY_MAX_CHARS,
+    BRAVE_QUERY_MAX_WORDS,
+    BRAVE_SEARCH_PARAM_NAMES,
+    BRAVE_SEARCH_PARAMETERS,
     BRAVE_SSE_DONE,
     MSG_BRAVE_ANSWER_STREAM_CUT,
     MSG_BRAVE_ANSWER_STREAM_ERROR,
+    MSG_BRAVE_QUERY_TOO_LONG,
+    MSG_BRAVE_SEARCH_VALUES,
 )
-from web_router.exceptions import ProviderError
+from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers._http import HttpAnswerProvider, HttpSearchProvider
+from web_router.providers._language import language_tag
 from web_router.providers._utils import as_snippet, build_payload
-from web_router.types import Citation, SearchRequest, SearchResponse, SearchResult
+from web_router.types import Citation, SearchDepth, SearchRequest, SearchResponse, SearchResult
 from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "extra_snippets", "page_age"})
@@ -62,11 +74,23 @@ def _unmark(text: str) -> str:
     return text
 
 
+def _off_the_lists(request: SearchRequest) -> dict[str, Any]:
+    """A ``country`` or ``locale`` off Brave's lists, by name."""
+    refused: dict[str, Any] = {}
+    if request.country and request.country.upper() not in BRAVE_COUNTRIES:
+        refused["country"] = request.country
+    if request.locale and language_tag(request.locale) is None:
+        refused["locale"] = request.locale
+    return refused
+
+
 class BraveProvider(HttpSearchProvider):
     """Routes searches to the Brave Web Search API."""
 
     name: ClassVar[str] = PROVIDER_BRAVE
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(BRAVE_PARAM_NAMES)
+    supported_parameters: ClassVar[frozenset[str]] = BRAVE_SEARCH_PARAMETERS
+    # A description and at most five extra snippets: a snippet, never a truncated body or a page.
+    depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset({"lite"})
 
     base_url: ClassVar[str] = BRAVE_BASE_URL
     search_path: ClassVar[str] = BRAVE_SEARCH_PATH
@@ -74,8 +98,48 @@ class BraveProvider(HttpSearchProvider):
     api_key_header: ClassVar[str] = BRAVE_API_KEY_HEADER
     http_method: ClassVar[Literal["GET", "POST"]] = "GET"
 
+    def validate(self, request: SearchRequest) -> None:
+        """Also refuse a ``country`` or ``locale`` off Brave's lists, naming them, before anything is sent."""
+        self._reject_unmapped(request)
+        if refused := _off_the_lists(request):
+            detail = MSG_BRAVE_SEARCH_VALUES.format(countries=", ".join(sorted(BRAVE_COUNTRIES)))
+            raise UnsupportedParameterError(self.name, refused, values=refused, detail=detail)
+        super().validate(request)
+
+    @classmethod
+    def refused_values(cls, request: SearchRequest) -> dict[str, Any]:
+        """A depth it lacks, or a ``country`` or ``locale`` off its lists; read by ``auto`` keyless."""
+        return {**super().refused_values(request), **_off_the_lists(request)}
+
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        return build_payload(request, BRAVE_PARAM_NAMES, q=request.query)
+        query = self._query(request)
+        words = len(query.split())
+        if len(query) > BRAVE_QUERY_MAX_CHARS or words > BRAVE_QUERY_MAX_WORDS:
+            raise ProviderError(
+                self.name,
+                MSG_BRAVE_QUERY_TOO_LONG.format(
+                    chars=BRAVE_QUERY_MAX_CHARS, words=BRAVE_QUERY_MAX_WORDS, length=len(query), count=words
+                ),
+            )
+        language = language_tag(request.locale) if request.locale else None
+        return build_payload(
+            request,
+            BRAVE_SEARCH_PARAM_NAMES,
+            q=query,
+            country=request.country.upper() if request.country else None,
+            search_lang=language.lower() if language else None,
+            freshness=BRAVE_FRESHNESS[request.recency] if request.recency else None,
+        )
+
+    @staticmethod
+    def _query(request: SearchRequest) -> str:
+        operators = []
+        if request.include_domains:
+            operators.append(
+                BRAVE_INCLUDE_JOINER.join(BRAVE_INCLUDE_DOMAIN.format(domain=d) for d in request.include_domains)
+            )
+        operators.extend(BRAVE_EXCLUDE_DOMAIN.format(domain=d) for d in request.exclude_domains or ())
+        return " ".join([request.query, *operators])
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         hits = (payload.get("web") or {}).get("results") or []

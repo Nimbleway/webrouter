@@ -22,33 +22,86 @@ def test_only_the_query_is_sent_when_nothing_else_is_set(provider: YouProvider) 
     assert provider._build_payload(SearchRequest(query="hi")) == {"query": "hi"}
 
 
-def test_the_minimal_surface_is_query_max_results_and_depth(provider: YouProvider) -> None:
-    assert provider.supported_parameters == {"max_results", "search_depth"}
+def test_every_shared_option_but_effort_is_mapped(provider: YouProvider) -> None:
+    """You.com has no search tier, so effort is the one shared option it refuses."""
+    assert provider.supported_parameters == {
+        "max_results",
+        "search_depth",
+        "include_domains",
+        "exclude_domains",
+        "country",
+        "locale",
+        "recency",
+    }
+    with pytest.raises(UnsupportedParameterError, match="effort"):
+        provider.validate(SearchRequest(query="hi", effort="low"))
 
 
 def test_max_results_maps_onto_the_you_count_field(provider: YouProvider) -> None:
     assert provider._build_payload(SearchRequest(query="hi", max_results=5)) == {"query": "hi", "count": 5}
 
 
-@pytest.mark.parametrize("parameter", ["include_domains", "exclude_domains", "country", "locale"])
-def test_unmapped_parameters_are_rejected_not_dropped(provider: YouProvider, parameter: str) -> None:
-    """You.com is called with the minimum. Anything else must fail loudly, never silently."""
-    values = {"include_domains": ["a.com"], "exclude_domains": ["a.com"], "country": "US", "locale": "en"}
-    request = SearchRequest(query="hi", **{parameter: values.get(parameter, True)})
-    with pytest.raises(UnsupportedParameterError, match=parameter):
-        provider.validate(request)
+def test_filters_map_onto_you_fields(provider: YouProvider) -> None:
+    request = SearchRequest(query="hi", include_domains=["a.com"], country="gb", locale="en-GB", recency="week")
+    assert provider._build_payload(request) == {
+        "query": "hi",
+        "include_domains": ["a.com"],
+        "country": "GB",
+        "language": "EN-GB",
+        "freshness": "week",
+    }
+    assert provider._build_payload(SearchRequest(query="hi", exclude_domains=["b.com"]))["exclude_domains"] == ["b.com"]
 
 
-def test_the_rejection_points_at_the_way_forward(provider: YouProvider) -> None:
-    """The message is the contribution prompt, so it must name both routes."""
-    with pytest.raises(UnsupportedParameterError, match=r"provider_options.*CONTRIBUTING"):
-        provider.validate(SearchRequest(query="hi", country="US"))
+@pytest.mark.parametrize("recency", ["day", "week", "month", "year"])
+def test_every_recency_is_a_freshness_value(provider: YouProvider, recency: str) -> None:
+    assert provider._build_payload(SearchRequest(query="hi", recency=recency))["freshness"] == recency
+
+
+@pytest.mark.parametrize(
+    ("locale", "language"),
+    [
+        ("en", "EN"),
+        ("en-US", "EN"),
+        ("en_gb", "EN-GB"),
+        ("pt-BR", "PT-BR"),
+        ("pt-pt", "PT-PT"),
+        ("zh-CN", "ZH-HANS"),
+        ("zh-TW", "ZH-HANT"),
+        ("zh-Hant-HK", "ZH-HANT"),
+        ("no", "NB"),
+        ("fr-CA", "FR"),
+    ],
+)
+def test_a_locale_reaches_the_language_list(provider: YouProvider, locale: str, language: str) -> None:
+    assert provider._build_payload(SearchRequest(query="hi", locale=locale))["language"] == language
+
+
+@pytest.mark.parametrize(
+    ("option", "value"),
+    [("locale", "pt"), ("locale", "zh"), ("locale", "xx"), ("country", "GR"), ("country", "IL")],
+)
+def test_a_value_off_the_lists_is_refused_unsent(
+    provider: YouProvider, monkeypatch: pytest.MonkeyPatch, option: str, value: str
+) -> None:
+    """Upper-casing pt or zh sends a value You.com answers 422 for, and GR is not among its 36 countries."""
+    monkeypatch.setattr(provider, "_search", lambda request: pytest.fail("sent"))
+    with pytest.raises(UnsupportedParameterError, match=rf"{option}='{value}'") as caught:
+        provider.search(SearchRequest(query="hi", **{option: value}))
+    assert caught.value.values == {option: value}
+    assert YouProvider.refused_values(SearchRequest(query="hi", **{option: value})) == {option: value}
+
+
+def test_both_domain_lists_are_refused_unsent(provider: YouProvider, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(provider, "_search", lambda request: pytest.fail("sent"))
+    with pytest.raises(UnsupportedParameterError, match="one domain list"):
+        provider.search(SearchRequest(query="hi", include_domains=["a.com"], exclude_domains=["b.com"]))
 
 
 def test_provider_options_reach_the_api_untranslated(provider: YouProvider) -> None:
     """The escape hatch for anything You.com supports that we do not map."""
-    body = provider._build_payload(SearchRequest(query="hi", provider_options={"country": "FR"}))
-    assert body["country"] == "FR"
+    body = provider._build_payload(SearchRequest(query="hi", provider_options={"safesearch": "off"}))
+    assert body["safesearch"] == "off"
 
 
 @pytest.mark.parametrize(
@@ -125,8 +178,11 @@ def test_missing_knowledge_answer_stays_none(provider: YouProvider) -> None:
     assert provider._to_response(SearchRequest(query="hi"), payload).answer is None
 
 
+needs_key = pytest.mark.skipif(not os.getenv("YOU_API_KEY"), reason="YOU_API_KEY not set")
+
+
 @pytest.mark.integration
-@pytest.mark.skipif(not os.getenv("YOU_API_KEY"), reason="YOU_API_KEY not set")
+@needs_key
 def test_live_search_returns_results() -> None:
     from web_router import WebRouter
 
@@ -136,3 +192,14 @@ def test_live_search_returns_results() -> None:
     assert response.provider == "you"
     assert response.results
     assert all(result.url for result in response.results)
+
+
+@pytest.mark.integration
+@needs_key
+def test_live_a_regional_locale_and_country_are_accepted() -> None:
+    """pt-BR must reach You.com as PT-BR, a value it lists, and come back with results."""
+    from web_router import WebRouter
+
+    with WebRouter("you") as router:
+        response = router.search("futebol noticias", max_results=3, locale="pt-BR", country="BR")
+    assert response.results
