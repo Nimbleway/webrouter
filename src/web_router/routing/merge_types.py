@@ -9,10 +9,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from web_router._urls import shown
 from web_router.constants_merge import ROUTER_EMPTY, ROUTER_TIMEOUT
 from web_router.constants_params import PARAMS_SOURCE_ROUTER
 from web_router.routing.contract import ToolName
-from web_router.routing.merge_urls import shown
 
 FallbackReason = Literal["router_timeout", "router_error", "router_invalid"]
 """Why the static order was used instead of a decision."""

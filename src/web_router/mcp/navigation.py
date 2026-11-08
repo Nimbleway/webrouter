@@ -34,15 +34,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import ipaddress
 import os
-import re
 import socket
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
+from web_router._hosts import host_address, is_loopback, is_metadata
 from web_router.constants import (
     BROWSER_ACTION_TIMEOUT,
     ENV_MCP_BROWSER_ALLOW_FILE_URLS,
@@ -52,9 +51,6 @@ from web_router.constants import (
     MCP_BROWSER_DEFAULT_PORTS,
     MCP_BROWSER_ERROR_PAGE_SCHEMES,
     MCP_BROWSER_FILE_SCHEME,
-    MCP_BROWSER_LEGACY_IPV4_PATTERN,
-    MCP_BROWSER_LOOPBACK_NAMES,
-    MCP_BROWSER_METADATA_HOSTS,
     MCP_BROWSER_ROUTE_ABORT,
     MCP_BROWSER_ROUTE_PATTERN,
     MCP_BROWSER_SETTLE_RESOLVE_LIMIT,
@@ -72,9 +68,6 @@ from web_router.constants import (
 
 if TYPE_CHECKING:
     from playwright.async_api import Frame, Page, Request, Route, WebSocketRoute
-
-
-_LEGACY_IPV4 = re.compile(MCP_BROWSER_LEGACY_IPV4_PATTERN)
 
 
 def files_allowed() -> bool:
@@ -145,7 +138,7 @@ class UrlPolicy:
         return None
 
     def _host_refusal(self, host: str, port: int | None) -> str | None:
-        if _is_metadata(host):
+        if is_metadata(host):
             return MCP_MSG_BROWSER_REFUSED_METADATA
         if self.cdp_port is not None and port == self.cdp_port and _same_host(host, self.cdp_host):
             return MCP_MSG_BROWSER_REFUSED_CDP
@@ -218,7 +211,7 @@ class NavigationGuard:
 
     def _record(self, url: str) -> None:
         host, port = _host_port(url)
-        if host is None or _address(host) is not None:
+        if host is None or host_address(host) is not None:
             # A literal address was already judged as it stands; only a name has an answer to check.
             return
         if (host, port) in self._named:
@@ -260,7 +253,7 @@ class NavigationGuard:
 
     async def _resolved_refusal(self, url: str) -> str | None:
         host, port = _host_port(url)
-        if host is None or _address(host) is not None:
+        if host is None or host_address(host) is not None:
             # No name to look up: a literal address was judged as it stands.
             return None
         try:
@@ -291,51 +284,10 @@ def _host_port(url: str) -> tuple[str | None, int | None]:
         return None, None
 
 
-def _address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
-    address: ipaddress.IPv4Address | ipaddress.IPv6Address
-    try:
-        address = ipaddress.ip_address(host)
-    except ValueError:
-        legacy = _legacy_ipv4(host)
-        if legacy is None:
-            return None
-        address = legacy
-    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:
-        return address.ipv4_mapped
-    return address
-
-
-def _legacy_ipv4(host: str) -> ipaddress.IPv4Address | None:
-    """``host`` read as a browser reads an IPv4 address: ``2130706433``, ``0x7f000001``, ``127.1`` or ``0177.0.0.1``.
-
-    ``ipaddress`` accepts only dotted quads, but a browser canonicalizes all of
-    these to one before it connects, so each is checked as the address it is.
-    """
-    if not _LEGACY_IPV4.fullmatch(host):
-        return None
-    try:
-        return ipaddress.IPv4Address(socket.inet_aton(host))
-    except (OSError, ValueError):
-        return None
-
-
-def _is_loopback(host: str) -> bool:
-    address = _address(host)
-    return host in MCP_BROWSER_LOOPBACK_NAMES or (
-        address is not None and (address.is_loopback or address.is_unspecified)
-    )
-
-
-def _is_metadata(host: str) -> bool:
-    address = _address(host)
-    # All of link-local, not only the one address: the metadata service answers on 169.254/16 on several clouds.
-    return host in MCP_BROWSER_METADATA_HOSTS or (address is not None and address.is_link_local)
-
-
 def _same_host(host: str, cdp_host: str | None) -> bool:
     if cdp_host is None:
         return False
     # 127.0.0.1, localhost and [::1] all reach a debugger listening on loopback.
-    address = _address(host)
-    same = host == cdp_host or (address is not None and address == _address(cdp_host))
-    return same or (_is_loopback(host) and _is_loopback(cdp_host))
+    address = host_address(host)
+    same = host == cdp_host or (address is not None and address == host_address(cdp_host))
+    return same or (is_loopback(host) and is_loopback(cdp_host))

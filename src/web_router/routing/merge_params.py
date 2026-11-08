@@ -9,7 +9,7 @@ Every backend in the order must take the option -- the request always sends
 it, or the backend's ``supported_parameters`` declares it -- since a backend
 that does not would refuse the call. A URL needs a URL
 policy that allows it, and is never written into a note or a record whole:
-:mod:`.merge_urls` keeps its scheme and host.
+:func:`web_router._urls.host_of` keeps its scheme and host.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from typing import Any, get_args
 
 from web_router import registry
+from web_router._urls import host_of
 from web_router.constants_merge import (
     MSG_PARAM_CALLER,
     MSG_PARAM_INVALID,
@@ -30,7 +31,7 @@ from web_router.constants_merge import (
 )
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.routing.contract import Budget, RouteDecision
-from web_router.routing.merge_urls import URL_KEYS, UrlCheck, hide_urls, host_of
+from web_router.routing.merge_urls import URL_KEYS, UrlCheck, hide_urls
 from web_router.routing.params import EFFORTS, budget_misfit
 from web_router.types import (
     BrowseRequest,
