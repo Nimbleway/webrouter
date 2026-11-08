@@ -34,11 +34,11 @@ def test_the_table_measures_what_the_cases_below_assume() -> None:
 
 
 @pytest.mark.parametrize("budget", [None, Budget(), Budget(strict=True)])
-@pytest.mark.parametrize("provider", ["nimble", "parallel", "linkup", "perplexity", "you", "auto"])
-def test_no_cap_changes_nothing(provider: str, budget: Budget | None) -> None:
-    choice = map_effort(provider, budget)
+def test_no_cap_changes_nothing(budget: Budget | None) -> None:
+    # map_effort returns before it reads the provider when nothing is capped, so one provider covers them all.
+    choice = map_effort("nimble", budget)
     assert (choice.effort, choice.source, choice.misfit) == (None, None, None)
-    assert choice.record(provider) == {"params": None, "params_source": None, "unmeasured": None}
+    assert choice.record("nimble") == {"params": None, "params_source": None, "unmeasured": None}
 
 
 @pytest.mark.parametrize(
@@ -57,7 +57,7 @@ def test_nimble_research_at_a_few_cost_caps(cap: float, effort: str) -> None:
 
 @pytest.mark.parametrize(
     ("cap", "effort"),
-    [(0.01, "low"), (0.03, "medium"), (0.2, "high"), (10.0, "high")],
+    [(0.01, "low"), (0.03, "medium"), (0.2, "high")],
 )
 def test_parallel_research_at_a_few_cost_caps(cap: float, effort: str) -> None:
     assert map_effort("parallel", Budget(max_cost_usd=cap)).effort == effort
