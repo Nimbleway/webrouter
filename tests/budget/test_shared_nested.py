@@ -1,15 +1,16 @@
-"""A backend calling its own router: the inner call is charged once to a shared budget, and to the outer call."""
+"""A backend calling a router: the inner call is charged once to a shared budget, and to the outer call."""
 
 from __future__ import annotations
 
 from collections.abc import Iterator
+from contextlib import suppress
 from typing import Any
 
 import pytest
 
-from tests.budget.conftest import Table
+from tests.budget.conftest import Chain, Table
 from tests.conftest import FakeProvider
-from web_router import Budget, WebRouter
+from web_router import Budget, BudgetExceededError, WebRouter
 from web_router.exceptions import WebRouterError
 from web_router.providers.auto import AutoProvider
 from web_router.registry import register_provider, unregister_provider
@@ -110,3 +111,30 @@ def test_three_calls_deep_under_two_shared_budgets_each_attempt_is_reserved_once
         unregister_provider("outer")
         unregister_provider("middle")
     assert (first.status().spent_usd, scopes[0].status().spent_usd) == (0.07, 0.05)
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+@pytest.mark.parametrize("own", [None, Budget(max_cost_usd=1.0)], ids=["no-budget", "own-budget"])
+def test_a_nested_call_on_another_router_is_reserved_in_the_shared_budget(
+    chain: Chain, fake_provider: object, priced: Table, own: Budget | None
+) -> None:
+    priced.update(wrapper=(0.02, None), first=(0.05, None), fake=(0.05, None))
+    mine, other = WebRouter(), WebRouter()
+
+    def search(self: Any, search: SearchRequest) -> SearchResponse:
+        other.search("inner", provider=chain.auto(), budget=own)
+        return FakeProvider._respond(self, search)
+
+    _register("wrapper", search)
+    ran = ["wrapper"]
+    try:
+        with mine.budget(Budget(max_cost_usd=0.10)) as shared:
+            mine.search("q", provider="wrapper")
+            with suppress(BudgetExceededError):
+                mine.search("q", provider="fake")
+                ran.append("fake")
+    finally:
+        unregister_provider("wrapper")
+    ran += chain.called
+    assert ran == ["wrapper", "first"], "fake did not fit in what was left"
+    assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.07, 0.0)

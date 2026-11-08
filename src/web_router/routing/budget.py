@@ -49,7 +49,7 @@ from web_router.providers._deadline import Deadline, call_deadline, current_dead
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
-from web_router.routing.pool import chain_in_force
+from web_router.routing.pool import PoolChain, chain_in_force
 from web_router.types import DecisionRecord, NormalizedRequest
 
 _BackendT = TypeVar("_BackendT")
@@ -101,7 +101,7 @@ def budget_scope(
         yield BudgetedCall(backend)
         return
     held = _LEDGERS.get()
-    ledger = Ledger(budget, pool)
+    ledger = Ledger(budget, _with_enclosing(pool, held))
     token = _LEDGERS.set((*held, ledger))
     try:
         with _held(ledger, held, tool, backend, request) as call:
@@ -109,8 +109,19 @@ def budget_scope(
     finally:
         _LEDGERS.reset(token)
         reserved = ledger.close()
-        if pool is not None:
-            pool.settle(reserved)
+        if ledger.pool is not None:
+            ledger.pool.settle(reserved)
+
+
+def _with_enclosing(chain: PoolChain | None, held: tuple[Ledger, ...]) -> PoolChain | None:
+    """``chain`` and every pool the enclosing calls in ``held`` spend from, innermost first, once each.
+
+    The call reserves its attempts in all of them: they are made on those calls'
+    behalf, whichever router makes them, and the enclosing calls reserve none.
+    """
+    enclosing = [pool for ledger in reversed(held) if ledger.pool is not None for pool in ledger.pool.pools]
+    pools = tuple(dict.fromkeys([*(chain.pools if chain is not None else ()), *enclosing]))
+    return PoolChain(pools) if pools else None
 
 
 @contextmanager
