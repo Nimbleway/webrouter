@@ -46,7 +46,7 @@
   ],
   "verified": {
     "format": "live: tests/providers/test_browserbase_extract.py::test_live_fetch_returns_markdown_and_html",
-    "profile": "docs: https://www.browserbase.com/blog/introducing-authenticated-fetch -- also checked live by hand on 2026-10-29 (a cookie saved in a persisting session came back from a fetch naming its Context); tests/providers/test_browserbase_extract.py::test_live_a_cookie_saved_in_a_session_rides_along_on_a_fetch_naming_its_context automates that check and has not run yet"
+    "profile": "live: tests/providers/test_browserbase_extract.py::test_live_a_cookie_saved_in_a_session_rides_along_on_a_fetch_naming_its_context"
   },
   "vendor_options": {
     "allowRedirects": {

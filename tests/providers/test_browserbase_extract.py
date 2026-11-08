@@ -228,8 +228,9 @@ def test_live_a_cookie_saved_in_a_session_rides_along_on_a_fetch_naming_its_cont
                 cdp = playwright.chromium.connect_over_cdp(browser.cdp_url).contexts[0]
                 cdp.add_cookies([{"name": name, "value": "1", "url": COOKIE_ECHO, "expires": time.time() + 3600}])
             time.sleep(SAVE_DELAY)
-            signed_in = router.extract(COOKIE_ECHO, provider="browserbase", format="html", profile=context_id)
-            anonymous = router.extract(COOKIE_ECHO, provider="browserbase", format="html")
+            # Markdown, not html: the echo answers JSON, which an html request rightly refuses.
+            signed_in = router.extract(COOKIE_ECHO, provider="browserbase", profile=context_id)
+            anonymous = router.extract(COOKIE_ECHO, provider="browserbase")
     finally:
         contexts.delete(f"/v1/contexts/{context_id}")
         contexts.close()
