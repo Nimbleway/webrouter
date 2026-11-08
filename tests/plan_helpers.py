@@ -36,8 +36,7 @@ def called_fixture() -> Iterator[list[str]]:
     """``first``, ``second`` and ``third`` registered for every method; what was called, as ``tool:member``."""
     log: list[str] = []
     for tool in TOOLS:
-        seen: list[str] = []
-        log_for = _Tagged(log, tool.name, seen)
+        log_for = _Tagged(log, tool.name)
         for name in MEMBERS:
             tool.register(name, _member(tool, name, log_for, fails=name != "third"))
     yield log
@@ -49,7 +48,7 @@ def called_fixture() -> Iterator[list[str]]:
 class _Tagged(list):  # type: ignore[type-arg]
     """A log that records each member as ``tool:member`` in the shared one."""
 
-    def __init__(self, shared: list[str], tool: str, own: list[str]) -> None:
+    def __init__(self, shared: list[str], tool: str) -> None:
         super().__init__()
         self.shared, self.tool = shared, tool
 

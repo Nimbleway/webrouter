@@ -41,6 +41,7 @@ from web_router.constants_urls import (
     MSG_URL_AMBIGUOUS,
     MSG_URL_LOOPBACK,
     MSG_URL_METADATA,
+    MSG_URL_NO_HOST,
     MSG_URL_POLICY,
     MSG_URL_PRIVATE,
     MSG_URL_SCHEME,
@@ -62,8 +63,10 @@ def _scheme_refusal(url: str) -> tuple[str | None, str]:
         scheme, host = parts.scheme.lower(), parts.hostname or ""
     except ValueError:
         return MSG_URL_UNPARSEABLE, ""
-    if scheme not in URL_SCHEMES or not host:
-        return MSG_URL_SCHEME.format(scheme=scheme or ""), host
+    if scheme not in URL_SCHEMES:
+        return MSG_URL_SCHEME.format(scheme=scheme), host
+    if not host:
+        return MSG_URL_NO_HOST, host
     return None, host
 
 

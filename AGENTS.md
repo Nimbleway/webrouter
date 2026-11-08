@@ -191,7 +191,7 @@ src/web_router/
 ├── _urls.py            urls_in(): the URLs written in a query's prose; host_of(): a
 │                       URL shown as its scheme and host only
 ├── _hosts.py           a URL host's kind -- loopback, cloud metadata, private -- in
-│                       every spelling a browser reads; shared by the MCP navigation
+│                       the spellings a browser reads; shared by the MCP navigation
 │                       guard and url_policy
 ├── constants_urls.py   the punctuation stripped from a URL found in prose, and the
 │                       metadata, loopback and legacy-IPv4 host lists
@@ -305,7 +305,10 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         providers/_browser_live.py is the live browser
                         tests' shared check, and test_shape.py the file
                         length limit, against shape_baseline.json
-examples/               runnable scripts, indexed by examples/README.md
+examples/               runnable scripts, indexed by examples/README.md;
+                        router_*.py the example routers (rules, a
+                        scikit-learn classifier, an OpenAI-compatible
+                        model, Jev), tested offline in tests/examples/
 benchmarks/agent/       one agent over FRAMES on its platform's built-in web
                         search and on web-router — Claude on Managed Agents or
                         OpenAI on the Responses API; a script, not a method;
@@ -841,7 +844,7 @@ sends a lifetime clamped to `MCP_BROWSER_SESSION_TIMEOUT_LIMIT`, action
 timeouts and `max_chars` are clamped in the handlers as well as capped in the
 schemas, and the open runs shielded under `MCP_BROWSER_OPEN_TIMEOUT` and
 releases its session if the call was cancelled — never leave a billed session
-nobody holds. Where a session may go is `mcp/navigation.py`'s `UrlPolicy`:
+nobody holds. Where a session may go is `mcp/navigation.py`'s `NavigationPolicy`:
 only http(s) and `about:blank`, `file:` only under
 `WEB_ROUTER_MCP_ALLOW_FILE_URLS`, never metadata hosts or the session's own CDP
 host:port, with IPv4 read in every spelling a browser accepts. It is enforced
