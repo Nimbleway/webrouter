@@ -39,13 +39,39 @@
           "example.org"
         ]
       }
+    },
+    "recency": {
+      "day": {
+        "body.fromDate": "2026-01-14"
+      },
+      "week": {
+        "body.fromDate": "2026-01-08"
+      },
+      "month": {
+        "body.fromDate": "2025-12-16"
+      },
+      "year": {
+        "body.fromDate": "2025-01-15"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.depth": "flash"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "body.depth": "standard"
+      },
+      "max": {
+        "body.depth": "deep"
+      }
     }
   },
   "not_mapped": [
     "country",
-    "effort",
     "locale",
-    "recency",
     "search_depth"
   ],
   "source": [
@@ -54,16 +80,14 @@
   "verified": {
     "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
     "include_domains": "live: tests/test_integration_surface.py::test_domain_filters_are_honored",
-    "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back"
+    "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back",
+    "recency": "docs: https://docs.linkup.so/pages/documentation/endpoints/search/reference (fromDate checked live on answer, 2026-11-01)",
+    "effort": "docs: https://docs.linkup.so/pages/documentation/endpoints/search/reference (the four depths measured live on 2026-09-30)"
   },
   "vendor_options": {
-    "fromDate": {
-      "status": "passthrough",
-      "note": "YYYY-MM-DD."
-    },
     "toDate": {
       "status": "passthrough",
-      "note": "YYYY-MM-DD."
+      "note": "YYYY-MM-DD; recency sets only fromDate."
     },
     "includeImages": {
       "status": "passthrough",

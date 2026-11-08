@@ -3135,9 +3135,8 @@ on 2026-09-30, flash, fast, standard and deep all returned snippets of the same
 size (about 2.5K characters a result) and differed in latency -- roughly 0.4s,
 1s, 1.3s and 6-16s -- and in which pages ranked, and Linkup's docs bill deep at
 $0.05 a search against $0.005 for the others. Mapping ``deep`` onto it would
-charge a caller ten times more for no more text, so ``search_depth`` raises, as
-Tavily's latency tiers are left unmapped for the same reason. Linkup's depths
-stay reachable through ``provider_options={"depth": ...}``.
+charge a caller ten times more for no more text, so ``search_depth`` raises.
+``effort`` picks the depth instead (see ``LINKUP_DEPTH_BY_EFFORT``).
 """
 
 LINKUP_EXTRACT_FORMATS: dict[ExtractFormat, dict[str, Any]] = {
