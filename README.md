@@ -1400,8 +1400,11 @@ A preset is saved configuration a call names instead of repeating it: the same
 arguments each method already takes, under their own names, kept in a
 versioned file. It does not change what a method does or returns.
 
+[`presets/README.md`](presets/README.md) lists the starter presets that ship
+with the repo.
+
 ```yaml
-# presets/acme.supplier-research.yaml
+# my-presets/acme.supplier-research.yaml
 spec_version: 1
 id: acme.supplier-research
 version: 1.0.0
@@ -1417,7 +1420,7 @@ components:
 
 ```python
 router = WebRouter(preset="acme.supplier-research@1.0.0")  # the router's own
-router.presets.load("./presets")  # a file or a directory, JSON or YAML
+router.presets.load("./my-presets")  # a file or a directory, JSON or YAML
 
 router.search("warehouse robotics suppliers")  # max_results=5
 router.search("warehouse robotics suppliers", max_results=2)  # the argument wins

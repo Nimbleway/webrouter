@@ -2,7 +2,7 @@
   "spec_version": 1,
   "id": "ecommerce.shipping-info",
   "version": "1.0.0",
-  "title": "Shipping times, costs and return policies: ask about a store, or read a product page",
+  "title": "Answer only from sources of the past year, or read a page as Markdown, for shipping and returns questions",
   "applies_to": [
     "answer",
     "extract"

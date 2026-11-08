@@ -2,7 +2,7 @@
   "spec_version": 1,
   "id": "ecommerce.product-by-gtin",
   "version": "1.0.0",
-  "title": "Find a product by its GTIN, UPC, EAN or barcode number",
+  "title": "Search only barcode databases and large retailers, for a GTIN, UPC, EAN or barcode number",
   "applies_to": [
     "search"
   ],

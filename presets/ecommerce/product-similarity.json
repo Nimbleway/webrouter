@@ -2,7 +2,7 @@
   "spec_version": 1,
   "id": "ecommerce.product-similarity",
   "version": "1.0.0",
-  "title": "Compare two or more products and say how similar they are, with sources",
+  "title": "Answer without Pinterest, Facebook, TikTok or Instagram as sources, for comparing products",
   "applies_to": [
     "answer"
   ],

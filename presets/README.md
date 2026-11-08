@@ -1,30 +1,40 @@
 # Starter presets
 
-Ready-to-run presets for common tasks. Load a folder, then name a preset on any call:
+Presets for common tasks, to use as they are or copy and change. Load a folder, then name a preset on any call:
 
 ```python
 from web_router import WebRouter
 
-with WebRouter() as router:
-    router.presets.load("presets/ecommerce")
+with WebRouter("nimble") as router:
+    router.presets.load("presets/ecommerce")  # relative to the root of the clone
     results = router.search("UPC 049000028911", preset="ecommerce.product-by-gtin@1.0.0")
 ```
 
 Every setting a starter preset fixes can be overridden on the call, so treat each one as a starting point. Settings a preset leaves out work as usual.
 
+## Which backends serve them
+
+A preset's settings reach the backend like the same arguments would, so each preset needs a backend that maps them. Any other backend raises `UnsupportedParameterError` before anything is sent.
+
+- The three `search` presets set `include_domains` or `exclude_domains`. Nimble, Linkup and AWS AgentCore Web Search map them, so they need a key or credential for one of those. DeepSeek maps the lists too but writes them into the query as `site:` operators, and each list here is longer than its 128-character query limit. `auto` with no such key has no backend to send them to.
+- The two `answer` presets set `exclude_domains` or `recency`. Linkup, Perplexity and You.com map them.
+- The `extract` part of `ecommerce.shipping-info` sets only `format`, so any extract backend that returns Markdown serves it.
+
+A call can replace a preset's domain list with its own, but it can't remove it: passing `None` or `[]` leaves the preset's list in place. On a backend that doesn't map these settings, call without the preset.
+
 ## E-commerce
 
-| Preset | Method | What it does |
+| Preset | Method | What it sets |
 | --- | --- | --- |
-| `ecommerce.product-by-gtin@1.0.0` | `search` | Looks up a GTIN, UPC, EAN or barcode number in barcode databases and large retailers. Five results. |
-| `ecommerce.coupons@1.0.0` | `search` | Finds current promo codes for a store or product on coupon sites. Ten results. |
-| `ecommerce.product-by-name@1.0.0` | `search` | Finds where a product is sold from its name or model, leaving out social and video sites. Ten results. |
-| `ecommerce.product-similarity@1.0.0` | `answer` | Compares two or more products and says how similar they are, with sources. |
-| `ecommerce.shipping-info@1.0.0` | `answer`, `extract` | Answers questions about shipping times, costs and returns from recent sources, or reads a product page as Markdown. |
+| `ecommerce.product-by-gtin@1.0.0` | `search` | Searches only barcode databases and large retailers, for a GTIN, UPC, EAN or barcode number. Up to five results. |
+| `ecommerce.coupons@1.0.0` | `search` | Searches only coupon sites, for a store's or product's promo codes. Up to ten results. |
+| `ecommerce.product-by-name@1.0.0` | `search` | Leaves out social, video and forum sites, for finding where a product is sold. Up to ten results. |
+| `ecommerce.product-similarity@1.0.0` | `answer` | Leaves out Pinterest, Facebook, TikTok and Instagram as sources, for comparing products. |
+| `ecommerce.shipping-info@1.0.0` | `answer`, `extract` | Answers only from sources of the past year, for shipping and returns questions. Reads a page as Markdown. |
 
 ### Examples
 
-What came back through `auto` routing in November 2026. Results change as the web does.
+What came back through `auto` routing in November 2026, on a router with keys for the backends above. Results change as the web does.
 
 ```python
 router.search("UPC 049000028911", preset="ecommerce.product-by-gtin@1.0.0")
@@ -47,12 +57,12 @@ router.answer(
     preset="ecommerce.shipping-info@1.0.0",
 )
 # delivery date and cost depend on the item and are shown at checkout; many orders ship free
+```
 
-router.extract(
-    "https://shop.example.com/product/123",
-    preset="ecommerce.shipping-info@1.0.0",
-)
-# the page as Markdown, including any shipping and returns section
+To read a product page with the same preset, put the page's URL in place of this placeholder:
+
+```python
+router.extract("https://shop.example.com/product/123", preset="ecommerce.shipping-info@1.0.0")
 ```
 
 Barcode lookups are only as good as the databases they search, which sometimes hold a wrong record for a number. Putting `UPC` or `EAN` before the number helps.

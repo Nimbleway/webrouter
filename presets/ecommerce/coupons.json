@@ -2,7 +2,7 @@
   "spec_version": 1,
   "id": "ecommerce.coupons",
   "version": "1.0.0",
-  "title": "Find current coupons and promo codes for a store or product",
+  "title": "Search only coupon sites, for a store's or product's promo codes",
   "applies_to": [
     "search"
   ],

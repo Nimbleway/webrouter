@@ -2,7 +2,7 @@
   "spec_version": 1,
   "id": "ecommerce.product-by-name",
   "version": "1.0.0",
-  "title": "Find where a product is sold from its name or model",
+  "title": "Search without social, video and forum sites, for where a product is sold",
   "applies_to": [
     "search"
   ],
