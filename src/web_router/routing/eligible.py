@@ -94,3 +94,9 @@ def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
         else:
             built.append(position)
     return built, unbuilt
+
+
+def dropped_for_setup(why: str) -> bool:
+    """Whether a drop reason is the member's setup -- unbuilt, not a backend -- rather than the budget."""
+    setup = (MSG_DROPPED_NOT_CONFIGURED, MSG_DROPPED_NOT_INSTALLED, MSG_DROPPED_NOT_A_BACKEND)
+    return why in setup or why.startswith(MSG_DROPPED_BUILD_FAILED.partition("{")[0])

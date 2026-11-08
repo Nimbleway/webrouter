@@ -119,3 +119,28 @@ def test_a_plan_whose_router_urls_are_dropped_for_cost_searches_instead(
     assert notes[0][NOTE_EXTRACT] == MSG_EXTRACT_NO_URL and "cost cap" in notes[0]["params.extract.urls"]
     one = _wr(router=_urls_router(1)).plan("compare these pages", budget=cap)
     assert (one.tool, one.params["urls"]) == ("extract", ["https://site.test/0"])
+
+
+@pytest.mark.parametrize("budget", [None, Budget(max_cost_usd=1.0)], ids=["unbudgeted-run", "budgeted-run"])
+def test_a_plan_the_budget_left_no_backend_never_calls_one(
+    called: list[str], priced: Any, budget: Budget | None
+) -> None:
+    from web_router import BudgetExceededError
+
+    priced.update(first=(0.05, None), second=(0.05, None), third=(0.05, None))
+    wr = _wr()
+    plan = wr.plan(PROMPT, budget=Budget(max_cost_usd=0.01))
+    assert plan.tool == "search" and list(plan.providers["search"]) == []
+    with pytest.raises(BudgetExceededError, match="search:first skipped"):
+        wr.run(plan, budget=budget)
+    assert called == []
+
+
+@pytest.mark.usefixtures("called")
+def test_a_plan_with_an_empty_order_and_no_budget_drop_runs_no_backend(called: list[str]) -> None:
+    from web_router.exceptions import WebRouterError
+
+    plan = Plan(prompt="q", tool="search", params={"query": "q"}, providers={"search": ()})
+    with pytest.raises(WebRouterError):
+        _wr().run(plan)
+    assert called == []
