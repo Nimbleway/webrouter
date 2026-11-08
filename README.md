@@ -1934,8 +1934,10 @@ priced on the request the call runs (an `effort`, a `search_depth`, more
 does not fit the budget is set aside in the record's `ignored`. An extract you
 did not pin that is left with no URL to read -- none in the prompt, and every
 URL the router gave set aside by `url_policy` or the budget -- searches
-instead when a search backend is offered; with none, it stays extract, the
-refused URLs noted in `ignored`. A fallback never moves to another method.
+instead when a search backend is offered. With none, `plan()` and
+`run(prompt)` raise `MissingParameterError`; its message names the prompt's
+URLs that `url_policy` refused, by host, or says no URL was found. A fallback
+never moves to another method.
 
 Attached with `router=`, a router also orders the backends of a plain
 `search`, `extract`, `answer`, `research` or `browse` sent to `auto`, without
@@ -1993,9 +1995,11 @@ failed attempt still counts.
 - **Research effort.** A budgeted research call runs at one `effort`, chosen
   once, before the router is asked, to fit every backend it may try; its
   candidates are priced at it. That holds on `auto` or a named backend,
-  routed or not, for `plan()`/`run()` and for `submit_research`. A backend
-  that refuses that effort for the request is left out, with why, in the
-  record's `dropped`. An effort you or the router set is kept.
+  routed or not, for `plan()`/`run()` and for `submit_research`. On a
+  routed `auto` call and in `plan()`, a backend that refuses that effort for
+  the request is left out, with why, in the record's `dropped`; on a named
+  backend, an unrouted call or `submit_research`, its refusal is raised as
+  that backend's own error. An effort you or the router set is kept.
 
 To spend several calls from one budget:
 
