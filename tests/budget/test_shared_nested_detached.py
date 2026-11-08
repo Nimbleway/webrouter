@@ -79,9 +79,11 @@ def _interleave(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(prices, "estimate_latency", held)
 
 
+@pytest.mark.parametrize("cap", [None, Budget(max_cost_usd=0.025)], ids=["no-cap", "outer-cap"])
 async def test_a_call_a_backend_leaves_running_after_it_returns_settles_its_own_spend(
-    registered: Any, priced: Table
+    registered: Any, priced: Table, cap: Budget | None
 ) -> None:
+    """With ``outer-cap``, the later call would not fit the ended call's cap: that call is no longer its to check."""
     router, ended = AsyncWebRouter(), asyncio.Event()
     left: list[asyncio.Task[Any]] = []
 
@@ -96,9 +98,10 @@ async def test_a_call_a_backend_leaves_running_after_it_returns_settles_its_own_
     registered("wrapper", _asearch=wrapper)
     priced.update(wrapper=(0.02, None), fake=(0.01, None))
     async with router.budget(Budget(max_cost_usd=1.0)) as shared:
-        await router.search("q", provider="wrapper")
+        await router.search("q", provider="wrapper", budget=cap)
         ended.set()
-        await asyncio.wait_for(left[0], WAIT_S)
+        later_response = await asyncio.wait_for(left[0], WAIT_S)
+    assert later_response.provider == "fake"
     assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.03, 0.0)
 
 
