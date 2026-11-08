@@ -57,6 +57,10 @@ SAMPLE_VALUES: dict[str, object] = {
     "effort": "low",
 }
 
+SDK_FORWARDED: dict[str, set[str]] = {"tavily": {"filter_by_published_date"}}
+"""Fields the vendor documents for this endpoint that the SDK's ``search`` does not declare yet but writes into the
+request body from ``**kwargs`` (tavily-python's ``_search``: ``data.update(kwargs)``). Only such fields belong here."""
+
 ENV_VARS = (
     "NIMBLE_API_KEY",
     "TAVILY_API_KEY",
@@ -222,7 +226,7 @@ def test_every_mapped_key_is_a_parameter_the_sdk_declares(name: str, monkeypatch
     finally:
         provider.close()
 
-    sent = {key for payload in payloads for key in payload}
+    sent = {key for payload in payloads for key in payload} - SDK_FORWARDED.get(name, set())
     assert sent <= declared, f"{name} sends {sorted(sent - declared)}, which {class_name}.search does not declare"
 
 

@@ -5,11 +5,11 @@ the ``search`` extra or ``[extract]``. Both read
 ``TAVILY_API_KEY`` unless a key is passed explicitly, and both can run keyless
 against Tavily's anonymous tier -- see ``allow_keyless``.
 
-web-router sends Tavily the minimum each method needs: the query,
-``max_results`` and ``search_depth`` for a search, the URLs and ``format`` for
-an extract. Everything else its API offers is reachable through
-``provider_options``, and mapping one properly is a welcome PR -- see
-CONTRIBUTING.md.
+Search maps every shared option but ``effort``: Tavily's latency tiers share
+the ``search_depth`` field our depth uses. ``country`` reaches the country names
+Tavily lists, ``locale`` a strict language filter and ``recency`` a time range
+that drops undated pages. An extract sends the URLs and ``format``. Everything
+else its API offers is reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -26,12 +26,21 @@ from web_router.constants import (
     TAVILY_EXTRACT_FORMATS,
     TAVILY_EXTRACT_MIN_TIMEOUT,
     TAVILY_EXTRACT_RESULT_FIELD,
-    TAVILY_PARAM_NAMES,
     TAVILY_PARAMS_BY_DEPTH,
     TAVILY_SDK_EXTRACT_TIMEOUT,
     TAVILY_SDK_SEARCH_TIMEOUT,
 )
-from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.constants_tavily import (
+    MSG_TAVILY_COUNTRY,
+    TAVILY_COUNTRIES,
+    TAVILY_GENERAL_TOPIC,
+    TAVILY_LANGUAGE_FILTER,
+    TAVILY_PARAM_NAMES,
+    TAVILY_RECENCY_FILTER,
+    TAVILY_SEARCH_PARAMETERS,
+    TAVILY_TIME_RANGE,
+)
+from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
 from web_router.providers._deadline import call_budget, current_deadline
 from web_router.providers._utils import best_text, build_payload, compact, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
@@ -86,7 +95,7 @@ class TavilyProvider(SearchProvider):
     """Routes searches to the Tavily Search API."""
 
     name: ClassVar[str] = PROVIDER_TAVILY
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(TAVILY_PARAM_NAMES) | {"search_depth"}
+    supported_parameters: ClassVar[frozenset[str]] = TAVILY_SEARCH_PARAMETERS
 
     def __init__(
         self,
@@ -133,6 +142,22 @@ class TavilyProvider(SearchProvider):
     async def aclose(self) -> None:
         await self._async_client.close()
 
+    def validate(self, request: SearchRequest) -> None:
+        """Also refuse a ``country`` Tavily does not list, or one asked for on a topic other than general."""
+        self._reject_unmapped(request)
+        if "country" in (refused := self.refused_values(request)):
+            raise UnsupportedParameterError(self.name, refused, values=refused, detail=MSG_TAVILY_COUNTRY)
+        super().validate(request)
+
+    @classmethod
+    def refused_values(cls, request: SearchRequest) -> dict[str, Any]:
+        """A depth it lacks, or a ``country`` it cannot serve; read by ``auto`` keyless."""
+        refused = super().refused_values(request)
+        topic = request.provider_options.get("topic", TAVILY_GENERAL_TOPIC)
+        if request.country and (request.country.upper() not in TAVILY_COUNTRIES or topic != TAVILY_GENERAL_TOPIC):
+            refused["country"] = request.country
+        return refused
+
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``search()`` keyword arguments."""
         depth = TAVILY_PARAMS_BY_DEPTH.get(request.search_depth) if request.search_depth else None
@@ -141,7 +166,13 @@ class TavilyProvider(SearchProvider):
             TAVILY_PARAM_NAMES,
             query=request.query,
             timeout=self._timeout,
+            country=TAVILY_COUNTRIES[request.country.upper()] if request.country else None,
+            # The language alone, as the ISO 639-1 code Tavily documents.
+            language=request.locale.replace("_", "-").split("-")[0].lower() if request.locale else None,
+            time_range=TAVILY_TIME_RANGE[request.recency] if request.recency else None,
             **(depth or {}),
+            **(TAVILY_LANGUAGE_FILTER if request.locale else {}),
+            **(TAVILY_RECENCY_FILTER if request.recency else {}),
         )
         return _clamped(payload, TAVILY_SDK_SEARCH_TIMEOUT)
 
