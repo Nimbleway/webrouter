@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from web_router.constants import PROVIDER_AUTO
+from web_router.constants_candidates import MSG_DROPPED_REFUSES_EFFORT
 from web_router.routing.candidates_priced import Found, price_members
 from web_router.routing.contract import Budget, Candidate, ToolName, candidate_id
 from web_router.routing.effort_call import choose_effort
@@ -129,7 +130,10 @@ def build_candidates(
     for tool, request in requests.items():
         eligible, unbuilt = eligible_members(router, tool, request)
         request, chosen = choose_effort([name for name, _ in eligible], request, budget)
-        effort = chosen or effort
+        if chosen is not None:  # a backend may refuse the effort for this request: offered only as it will run
+            effort, taken = chosen, eligible_members(router, tool, request)[0]
+            unbuilt |= {name: MSG_DROPPED_REFUSES_EFFORT.format(effort=chosen.effort) for name, _ in eligible}
+            eligible = taken
         found.priced[tool] = request
         price_members(tool, request, eligible, budget, found)
         for name, why in unbuilt.items():
