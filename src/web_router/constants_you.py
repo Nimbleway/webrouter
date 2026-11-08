@@ -119,3 +119,17 @@ MSG_YOU_SEARCH_VALUES = (
 MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE = (
     "You.com searches with one domain list, not both: send include_domains or exclude_domains."
 )
+
+# The MCP tool `you-search` (tools/list on api.you.com/mcp?profile=free, and
+# keyless calls on 2026-11-09): it has no country, language or include_domains
+# argument; it reads them from `loc:`, `lang:` and `site:` in the query, strips
+# them (metadata.query came back without them), and several `site:` keep each
+# site. An inline site: cannot be combined with its exclude_domains argument.
+
+YOU_MCP_PARAM_NAMES: dict[str, str] = {"max_results": "count", "exclude_domains": "exclude_domains"}
+"""Normalized parameter -> argument of ``you-search``; the other filters go into the query, below."""
+
+YOU_MCP_SITE = "site:{domain}"
+YOU_MCP_LANGUAGE = "lang:{language}"
+YOU_MCP_COUNTRY = "loc:{country}"
+"""The inline operators ``you-search`` maps itself, appended to the query; values are You.com's list values."""

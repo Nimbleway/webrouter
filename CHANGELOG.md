@@ -24,6 +24,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Changed
 
+- You.com MCP (`you-mcp`) search maps what You.com search maps and refuses the same values: `include_domains`, `locale` and `country` go into the query as `site:`, `lang:` and `loc:`, which its tool takes out and applies, and `exclude_domains` and `recency` (`freshness`) as its arguments. Its tool drops an unknown `loc:` or `lang:` without a word, so the REST lists hold before the call.
 - You.com search maps `include_domains`, `exclude_domains`, `country`, `locale` and `recency` (as `freshness`). `country` takes its 36 codes and `locale` reaches its 51-language list (`pt-BR` is `PT-BR`, `zh-TW` is `ZH-HANT`); a value off either list, `pt` or `zh` alone among them, is refused before the call, as are both domain lists at once. `effort` stays refused: You.com has no search tier.
 - Parallel search moves from `/v1beta/search` to `/v1/search`, with `mode=fast` pinned (unset, `/v1` runs `advanced`, the old `agentic`, at five times the price). `max_results` now goes under `advanced_settings`, and an `advanced_settings` object in `provider_options` is merged with it rather than replacing it. The beta-only `processor`, `excerpts` and top-level `max_chars_per_result` are rejected by `/v1`.
 - Nimble sends `recency` as its `time_range` and refuses `effort`, which it has no search tier for. It used to take every shared search option under its own name, so a new option would have reached it unmapped.
