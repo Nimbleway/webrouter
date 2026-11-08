@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -14,9 +15,11 @@ from web_router import Budget, WebRouter
 from web_router.exceptions import WebRouterError
 from web_router.providers.auto import AutoProvider
 from web_router.registry import register_provider, unregister_provider
-from web_router.routing.attempts import Attempt
+from web_router.routing.attempts import Attempt, current_route
+from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.ledger import Ledger
 from web_router.types import SearchRequest, SearchResponse
+from web_router.types_decision import DecisionHop
 
 NAMED, AUTO = "named", "auto"
 """How ``wrapper`` calls ``fake``: by name, or as the one member of an ``auto`` chain."""
@@ -123,3 +126,25 @@ def test_an_attempt_taken_back_leaves_no_hop_in_the_enclosing_record(priced: Tab
     ledger.undo(nested)
     record = ledger.record(answered="first")
     assert [attempt.id for attempt in record.attempts or ()] == ["search:first"] and record.hops is None
+
+
+def test_a_nested_attempt_leaves_the_enclosing_attempt_open_so_its_failure_is_its_own(priced: Table) -> None:
+    priced.update(first=(0.01, None), second=(0.01, None))
+    ledger = Ledger(Budget(max_cost_usd=1.0))
+    own, nested = (Attempt(tool="search", provider=name, request=SearchRequest(query="q")) for name in MEMBERS[:2])
+    assert ledger.admit(own) and ledger.admit(nested, reserve=False)
+    ledger.failed("search", "first", RuntimeError("boom"))
+    assert ledger.record().hops == [DecisionHop(id="search:first", error="RuntimeError")], "never the nested one"
+
+
+def test_a_record_kept_with_no_budget_inside_a_budgeted_call_keeps_its_own_hops(priced: Table) -> None:
+    priced.update(first=(0.01, None), second=(0.01, None))
+    first, second = (Attempt(tool="search", provider=name, request=SearchRequest(query="q")) for name in MEMBERS[:2])
+    auto = SimpleNamespace(name="auto")
+    with budget_scope(Budget(max_cost_usd=1.0), "search", auto, first.request), recorded(BudgetedCall(auto)) as inner:
+        route = current_route()
+        assert route is not None and route.before_attempt is not None
+        assert route.before_attempt(first) and route.before_attempt(second)
+        assert inner.ledger is not None
+        hops = inner.ledger.record(answered="second").hops
+    assert hops == [DecisionHop(id="search:first", error=None)], "first answered empty: its own call's hop"

@@ -187,8 +187,9 @@ def _hooked(ledger: Ledger, held: tuple[Ledger, ...] = ()) -> CallRoute:
     outer, outer_failed = route.before_attempt, route.on_failure
 
     def check(attempt: Attempt) -> bool:
-        in_force = _LEDGERS.get()
-        return ledger.admit(attempt, reserve=not in_force or in_force[-1] is ledger)
+        in_force = _LEDGERS.get()  # a ledger not in it is a recorded call's own, never an enclosing one
+        own = not any(held is ledger for held in in_force) or in_force[-1] is ledger
+        return ledger.admit(attempt, reserve=own)
 
     def admit(attempt: Attempt) -> bool:
         if outer is None:

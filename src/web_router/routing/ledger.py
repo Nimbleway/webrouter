@@ -96,7 +96,8 @@ class Ledger:
         """Whether ``attempt`` fits what is left; if it does, charge it, and if not, record why.
 
         ``reserve`` is true for the call's own attempts, which it also reserves
-        in the shared budget; a nested call's attempt counts only toward the cap.
+        in the shared budget and keeps in its hop trail; a nested call's attempt
+        counts only toward the cap, and leaves the call's own attempt open.
         """
         name = candidate_id(attempt.tool, attempt.provider)
         cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
@@ -108,9 +109,11 @@ class Ledger:
             reason = self._misfit(cost, p90) or (self._unreserved(cost) if reserve else None)
             if reason is not None:
                 self.skipped[name] = reason
-                self.trail.skip(name, reason)
+                if reserve:
+                    self.trail.skip(name, reason)
                 return False
-            self.trail.start(len(self.tried), name)
+            if reserve:
+                self.trail.start(len(self.tried), name)
             self.spent += cost or 0.0
             self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic(), attempt))
             return True
