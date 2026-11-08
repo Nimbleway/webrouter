@@ -7,7 +7,7 @@ research settings stay there.
 
 from __future__ import annotations
 
-from web_router.types_options import Recency, ResearchEffort, SearchDepth
+from web_router.types_options import ResearchEffort, SearchDepth
 
 # The Search API on /v1, per Parallel's API reference and migration guide
 # (checked 2026-11-09; not yet run live). /v1beta/search took every setting at the
@@ -43,12 +43,6 @@ PARALLEL_EXCERPT_CHARS: dict[SearchDepth, int] = {"lite": 500, "fast": 3000}
 Parallel documents this as an upper bound per URL on excerpts chosen for the
 query, never the page, so ``deep`` is left out and refused: no setting returns
 a whole page.
-"""
-
-PARALLEL_RECENCY_DAYS: dict[Recency, int] = {"day": 1, "week": 7, "month": 30, "year": 365}
-"""How far back ``advanced_settings.source_policy.after_date`` is set for each ``recency``, counted from today.
-
-Parallel filters on the publication date it holds for a page, inclusive of the date sent.
 """
 
 PARALLEL_MODE_BY_EFFORT: dict[ResearchEffort, str] = {

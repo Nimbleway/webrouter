@@ -13,7 +13,6 @@ and ``recency`` under ``advanced_settings``. Everything else is reachable throug
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Any, ClassVar
 
 from web_router.constants import (
@@ -48,12 +47,11 @@ from web_router.constants_parallel import (
     PARALLEL_EXCERPT_CHARS,
     PARALLEL_LOCATIONS,
     PARALLEL_MODE_BY_EFFORT,
-    PARALLEL_RECENCY_DAYS,
     PARALLEL_SEARCH_MODE,
     PARALLEL_SEARCH_PARAMETERS,
     PARALLEL_SEARCH_PATH,
 )
-from web_router.providers._clock import today
+from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
 from web_router.providers._utils import as_snippet, build_payload, compact
 from web_router.providers._value_refusals import RefusesValues
@@ -164,7 +162,7 @@ class ParallelProvider(RefusesValues, HttpSearchProvider):
     @staticmethod
     def _advanced_settings(request: SearchRequest) -> dict[str, Any]:
         """The options /v1/search takes under ``advanced_settings``, unset ones left out."""
-        since = today() - timedelta(days=PARALLEL_RECENCY_DAYS[request.recency]) if request.recency else None
+        since = recency_start(request.recency)
         source_policy = compact(
             {
                 "include_domains": request.include_domains,
