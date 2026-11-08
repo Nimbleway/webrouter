@@ -16,6 +16,11 @@ ToolName = Literal["search", "extract", "answer", "research", "browse"]
 """The methods a router may choose between. ``run_template`` and ``open_browser`` are never routed."""
 
 
+def candidate_id(tool: str, provider: str) -> str:
+    """The id every decision field names a candidate by: ``tool:provider``, as ``search:exa``."""
+    return f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"
+
+
 @dataclass(frozen=True, kw_only=True)
 class Budget:
     """A cap on what one call may spend and how long it may wait.
@@ -60,7 +65,7 @@ class Candidate:
     """``tool:provider``, the name every decision field uses. Filled in when left empty."""
 
     def __post_init__(self) -> None:
-        expected = f"{self.tool}{CANDIDATE_ID_SEPARATOR}{self.provider}"
+        expected = candidate_id(self.tool, self.provider)
         if not self.id:
             object.__setattr__(self, "id", expected)
         elif self.id != expected:

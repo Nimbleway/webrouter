@@ -32,6 +32,8 @@ PARAMS_SOURCE_BUDGET: Final = "budget"
 """``params_source`` when the budget's mapping chose the params."""
 PARAMS_SOURCE_CALLER: Final = "caller"
 """``params_source`` when the caller set them; the budget never changes them."""
+PARAMS_SOURCE_ROUTER: Final = "router"
+"""``params_source`` when a router set them and they passed the merge rule's checks."""
 
 DEFAULT_EFFORT_NAME = "default"
 """How a reason names the effort a call gets when it sets none."""
@@ -47,7 +49,9 @@ MSG_EFFORT_CHOSEN = (
     "{floor:.1f}-point noise floor of the most accurate one that fits the budget, {best} ({best_accuracy:.1%})"
 )
 
-MSG_MISFIT_UNKNOWN_PRICE = "research:{provider} at effort {effort} has no known price, so it never fits a cost cap"
-MSG_MISFIT_COST = "research:{provider} at effort {effort} is estimated at ${cost:g}, over the ${cap:g} cost cap"
-MSG_MISFIT_TIME = "research:{provider} at effort {effort} has a p90 of {p90:g}s, over the {cap:g}s time limit"
-MSG_MISFIT_STRICT = "research:{provider} at effort {effort} has no measured p90, and the budget is strict"
+MODE_NAMES = {"research": "effort", "search": "depth"}
+"""What a budget-checked mode is called, per method, in the misfit messages."""
+MSG_MISFIT_UNKNOWN_PRICE = "{tool}:{provider} at {mode_name} {mode} has no known price, so it never fits a cost cap"
+MSG_MISFIT_COST = "{tool}:{provider} at {mode_name} {mode} is estimated at ${cost:g}, over the ${cap:g} cost cap"
+MSG_MISFIT_TIME = "{tool}:{provider} at {mode_name} {mode} has a p90 of {p90:g}s, over the {cap:g}s time limit"
+MSG_MISFIT_STRICT = "{tool}:{provider} at {mode_name} {mode} has no measured p90, and the budget is strict"

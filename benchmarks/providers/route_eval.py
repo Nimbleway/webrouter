@@ -11,10 +11,11 @@ the router scores. Nothing is called; the numbers are the committed rows in
 A router is ``static`` (today's ``auto`` order; on a mixed set, search then
 read), ``oracle`` (the best backend or path for each question, known after the
 fact), ``always:<backend>`` (``always:<path>`` on a mixed set), or your own
-callable named ``module:attr`` or ``path/to/file.py:attr``. Yours takes
-``(prompt, candidates)`` and returns the candidate ids best first, or a
-mapping ``{"ranked": [...], "cost_usd": 0.0001}`` when it bills for itself;
-``prompt`` is ``None`` unless ``--joined`` names the folder ``frozen.py join``
+callable named ``module:attr`` or ``path/to/file.py:attr``. Yours is a
+router of the library's contract: it takes a ``RouteRequest`` and returns a
+``RouteDecision``, or ``{"decision": ..., "cost_usd": 0.0001}`` when it bills
+for itself, and the replay merges it as a routed call would. The request's
+``prompt`` is empty unless ``--joined`` names the folder ``frozen.py join``
 wrote. If it has a ``fit`` method, it is called with the training questions
 before scoring.
 
@@ -23,13 +24,10 @@ Experimental until 1.0: the router interface and the report may change.
 
 from __future__ import annotations
 
-import math
 import random
 import statistics
 import sys
-import time
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -40,11 +38,12 @@ from route_eval_cli import DEFAULT_SETS as DEFAULT_SETS
 from route_eval_floor import Floor, floor_for
 from route_eval_paths import DEFAULT_PATH_ROUTERS, MIXED, research_by_effort
 from route_eval_rank import KEYLESS as KEYLESS
-from route_eval_rank import backend_stats, cost_of, is_served, recommended, too_few
+from route_eval_rank import backend_stats, recommended, too_few
 from route_eval_rank import noise_floor as noise_floor
 from route_eval_rank import rank_backends as rank_backends
+from route_eval_replay import Outcome, replay
 from route_eval_report import markdown as markdown
-from route_eval_routers import ALWAYS, ORACLE, STATIC, STATIC_ORDER, Router, load_router, static_router
+from route_eval_routers import ALWAYS, ORACLE, STATIC, STATIC_ORDER, load_router, static_router
 from route_eval_routers import adapt as adapt
 from route_eval_routers import always_router as always_router
 from route_eval_routers import oracle_router as oracle_router
@@ -61,28 +60,8 @@ MSG_EMPTY_SPLIT = (
     "{name}: --test-fraction {test_fraction} splits {questions} questions into {train} in-sample and {test} held "
     "out; the fraction must be between 0 and 1 and both parts non-empty"
 )
-MSG_BAD_COST = "the router stated a cost of {cost}; a cost is a finite number of dollars, 0 or more"
 MSG_SKIPPED = "{spec} is not a candidate in {set_name}; skipped there"
 MSG_NOT_A_CANDIDATE = "{spec!r}: {backend} has no rows in {set_name} (it has: {known})"
-
-
-@dataclass(frozen=True)
-class Outcome:
-    """What a router's choice came to on one question."""
-
-    correct: bool
-    served_by: str | None
-    latency_s: float | None
-    """``None`` when any attempt's latency is unknown: the total is then unknown too."""
-    cost_usd: float | None
-    fallback: bool
-    """The router's first choice did not serve: it failed, returned nothing usable, or its backend's row failed."""
-    router_failed: bool
-    overhead_s: float
-    router_error: str | None = None
-    """The exception the router raised, as ``Type: message``; ``None`` when it raised nothing."""
-    ungraded: bool = False
-    """The backend served, but the judge failed or the answer leaked the set's own pages: never correct."""
 
 
 def split(questions: Sequence[Question], seed: int, test_fraction: float) -> tuple[list[Question], list[Question]]:
@@ -91,57 +70,6 @@ def split(questions: Sequence[Question], seed: int, test_fraction: float) -> tup
     random.Random(seed).shuffle(shuffled)
     cut = len(shuffled) - round(len(shuffled) * test_fraction)
     return shuffled[:cut], shuffled[cut:]
-
-
-def _decision(decision: Any) -> tuple[list[str], float]:
-    if isinstance(decision, Mapping):
-        cost = float(decision.get("cost_usd") or 0.0)
-        if not math.isfinite(cost) or cost < 0:
-            raise ValueError(MSG_BAD_COST.format(cost=cost))
-        return [str(p) for p in decision.get("ranked") or ()], cost
-    if isinstance(decision, str):
-        return [decision], 0.0
-    return [str(p) for p in decision or ()], 0.0
-
-
-def replay(router: Router, q: Question, fallback_order: Router) -> Outcome:
-    """One question through a router, walked as ``auto`` walks its chain.
-
-    A row whose backend answered but went ungraded (the judge failed, or the
-    answer leaked the set's own pages) serves the question: no fallback, not
-    correct, counted as ungraded. A router that raises, ranks nothing, or names any backend that is not a
-    candidate falls back to the static order and counts as failed. A failed row is passed over -- its time to failure
-    charged, its cost not, since a failed call is not billed by most backends --
-    and the next one tried; the first choice not serving is a fallback. A
-    question nobody served is a miss. The router's own time and stated cost
-    are charged on every question.
-    """
-    started = time.perf_counter()
-    error: str | None = None
-    try:
-        ranked, cost = _decision(router(q))
-        router_failed = False
-    except Exception as exc:  # a router that raises is scored as failed, not fatal to the replay
-        ranked, cost, router_failed = [], 0.0, True
-        error = f"{type(exc).__name__}: {exc}"
-    overhead = time.perf_counter() - started
-    ranked = list(dict.fromkeys(ranked))
-    if not ranked or any(p not in q.rows for p in ranked):
-        router_failed = True
-        ranked = fallback_order(q)
-    latency: float | None = overhead
-    total: float | None = cost
-    for i, provider in enumerate(ranked):
-        row = q.rows[provider]
-        latency = None if latency is None or row["latency_s"] is None else latency + row["latency_s"]
-        if is_served(row):
-            price = cost_of(row)
-            total = None if price is None else cost + price
-            fallback = router_failed or i > 0
-            ungraded = row["error"] is not None
-            correct = not ungraded and row["grade"] == "correct"
-            return Outcome(correct, provider, latency, total, fallback, router_failed, overhead, error, ungraded)
-    return Outcome(False, None, latency, total, True, router_failed, overhead, error)
 
 
 def score(outcomes: Sequence[Outcome]) -> dict[str, Any]:
@@ -164,6 +92,7 @@ def score(outcomes: Sequence[Outcome]) -> dict[str, Any]:
         "router_failed": sum(o.router_failed for o in outcomes),
         "unserved": sum(o.served_by is None for o in outcomes),
         "ungraded": sum(o.ungraded for o in outcomes),
+        "unscorable": sum(o.unscorable for o in outcomes),
         "mean_overhead_s": statistics.fmean(o.overhead_s for o in outcomes) if outcomes else None,
     }
 

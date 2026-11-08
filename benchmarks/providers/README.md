@@ -379,25 +379,30 @@ the control set where routing should gain nothing, and `tools-effort-60`
 (`auto`'s order today), `oracle` (the backend that got each question right,
 cheapest first: the ceiling), `always:<backend>`, or your own callable as
 `module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
-as the yardsticks. Your callable takes `(prompt, candidates)` and returns the
-candidate ids best first, or `{"ranked": [...], "cost_usd": ...}` when it bills
+as the yardsticks. Your callable is a router of the library's contract
+(`web_router.routing`): it takes a `RouteRequest` -- one candidate per backend
+the set has rows for, with its list price and p90, and the method pinned -- and
+returns a `RouteDecision`, or `{"decision": ..., "cost_usd": ...}` when it bills
 for itself; given a `fit` method, it is called with the training questions
-first. `prompt` is the question's text only when `--joined` names the folder
-`frozen.py join` wrote; otherwise it is `None` and the report says the prompt
-was unavailable. The interface is a thin adapter, experimental until 1.0, and
-will move to the routing contract when it lands.
+first. The request's `prompt` is the question's text only when `--joined`
+names the folder `frozen.py join` wrote; otherwise it is empty and the report
+says the prompt was unavailable. Experimental until 1.0.
 
 **It covers provider order for `search` and `answer`, and tool choice and
 research effort on `tools-effort-60`.**
 
 How a choice is scored:
 
-- The router's ranking is walked as `auto` walks its chain. The first backend
-  whose row did not fail serves the question. A failed row (`error` not null)
-  is passed over: its time to failure is charged, its cost is not, and the
-  question counts as a **fallback** -- as it does when the router raises,
-  ranks nothing, or names any backend that is not a candidate, which falls
-  back to the static order. Those router
+- The router's answer goes through `web_router.routing.merge.merge`, the
+  merge rule a routed call runs: its ranking first, a backend that is not a
+  candidate dropped, then every other candidate in the static order. The
+  yardsticks' rankings go through it too. The order is walked as `auto` walks
+  its chain. The first backend whose row did not fail serves the question. A
+  failed row (`error` not null) is passed over: its time to failure and its
+  estimated cost (stated, else list price) are charged, as a budget charges a
+  failed attempt, and the question counts as a **fallback** -- as it does when
+  the router raises, answers with no well-formed decision, or ranks no
+  candidate at all, which falls back to the static order. Those router
   failures also have their own column, and the first exception each router
   raises on a set is printed to stderr. A row whose `error` is `judge` or
   `leaked` is not a failed attempt: the backend answered, so it serves the
@@ -508,10 +513,22 @@ methods, a candidate is a **path**: method, backend and mode, written
 `method:backend[:mode]` -- `search+extract:nimble:top3`, `extract:nimble`,
 `answer:perplexity`, `research:parallel:low` (a research row's mode is its
 effort). A question's candidates are the paths it has rows for, so `extract`
-is one only on the ten questions given their pages. A router takes the same
-`(prompt, candidates)` and returns path ids best first; the replay, the
-scores, the split, the noise floor and the recommended order (here of paths)
-are the same as above.
+is one only on the ten questions given their pages. A router is shown one
+candidate per method and backend, with no method pinned, and decides the
+method, the backends and research's `effort`; the merge rule picks one method,
+and each backend runs its path at that effort, or with none set, its
+default-mode row, else the price list's default effort, as a real call would;
+a one-method research set is matched the same way, its rows being default-mode. A backend with no row at that
+effort cannot be scored: it keeps its place in the order as a miss with no
+cost, so a later backend serving still counts as a fallback, and it is counted
+in the summary's `unscorable`. A decision never moves to another method, so the
+paths of the others are not tried after it; a decision that fails or decides
+nothing walks the static order of the merged method only (search's, unpinned),
+as a routed call would, not the full static path order. On a question given its
+pages the request's `urls` is the placeholder `frozen:pages`, since the frozen
+rows keep no page URLs. The yardsticks still rank paths, walked as ranked and then in
+the static path order. The scores, the split, the noise floor and the
+recommended order (here of paths) are the same as above.
 
 ```bash
 uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60

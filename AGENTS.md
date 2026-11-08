@@ -159,8 +159,16 @@ src/web_router/
 │   │                   can serve a request, and the ones it cannot build, with why
 │   ├── pool.py         a shared budget: reservations under one lock, its clock, status()
 │   ├── pool_status.py  BudgetStatus, where a shared budget stands
-│   └── merge.py   empty until its part lands
+│   ├── merge.py        merge(): a router's decision and the static order made into
+│   │                   one method, one order and checked options, pure
+│   ├── merge_types.py  Merged, MergeNotes and FallbackReason: what the merge answers
+│   ├── merge_shape.py  whether a router's answer is a well-formed decision that
+│   │                   decides something
+│   ├── merge_params.py the merge's check on a router's options: allowlist, values,
+│   │                   the caller's own, the budget, the URL policy
+│   └── merge_urls.py   a URL a router wrote, shown as its scheme and host only
 ├── constants_params.py the effort mapping's data path, rule and reasons
+├── constants_merge.py  the options a router may set, and the merge's reasons and notes
 ├── _urls.py            urls_in(): the URLs written in a query's prose
 ├── constants_urls.py   the punctuation stripped from the end of a URL found in prose
 ├── constants_prices.py the price list's data path, unit divisors, messages and
@@ -280,8 +288,10 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         route_eval.py: a router replayed over them and
                         scored against the static order, its ranking in
                         route_eval_rank.py, tool and effort paths in
-                        route_eval_paths.py, its command line in
-                        route_eval_cli.py; chains.py (`make chains`): the
+                        route_eval_paths.py, a decision merged by the
+                        library's merge rule in route_eval_merge.py, one
+                        question walked in route_eval_replay.py, its
+                        command line in route_eval_cli.py; chains.py (`make chains`): the
                         default auto orders ranked from them into
                         data/chains.json; efforts.py (`make efforts`): each
                         research effort's accuracy and p90 into
@@ -443,7 +453,8 @@ names the judge and has no cost column. Its recommended order alone reads list
 prices from `web_router.prices`, as estimates, to break ties. That order is
 route-eval's ranking (`route_eval_rank.py`), so the repository suggests only one
 order. `route_eval.py` replays a router over the frozen results offline and
-scores it against the static order, held out and in-sample, against each
+scores it against the static order through the library's own merge rule
+(`web_router.routing.merge`), held out and in-sample, against each
 method's noise floor (its own rerun's, else search's twin run) and ranks a
 backend only on 20 counted questions or more; an unknown price stays unknown there, never $0. `--combine` merges scans only when
 their questions, search size and judge match. Keep a scan's report to compare
