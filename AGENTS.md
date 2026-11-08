@@ -166,11 +166,18 @@ src/web_router/
 │   │                   decides something
 │   ├── merge_params.py the merge's check on a router's options: allowlist, values,
 │   │                   the caller's own, the budget, the URL policy
-│   └── merge_urls.py   a URL a router wrote, shown as its scheme and host only
+│   ├── merge_urls.py   a router's words with every URL cut to its scheme and host
+│   └── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
+│                       check before dispatch (no DNS, no redirects)
 ├── constants_params.py the effort mapping's data path, rule and reasons
 ├── constants_merge.py  the options a router may set, and the merge's reasons and notes
-├── _urls.py            urls_in(): the URLs written in a query's prose
-├── constants_urls.py   the punctuation stripped from the end of a URL found in prose
+├── _urls.py            urls_in(): the URLs written in a query's prose; host_of(): a
+│                       URL shown as its scheme and host only
+├── _hosts.py           a URL host's kind -- loopback, cloud metadata, private -- in
+│                       the spellings a browser reads; shared by the MCP navigation
+│                       guard and url_policy
+├── constants_urls.py   the punctuation stripped from a URL found in prose, and the
+│                       metadata, loopback and legacy-IPv4 host lists
 ├── constants_prices.py the price list's data path, unit divisors, messages and
 │                       PRICING.md wording, kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
@@ -806,7 +813,7 @@ sends a lifetime clamped to `MCP_BROWSER_SESSION_TIMEOUT_LIMIT`, action
 timeouts and `max_chars` are clamped in the handlers as well as capped in the
 schemas, and the open runs shielded under `MCP_BROWSER_OPEN_TIMEOUT` and
 releases its session if the call was cancelled — never leave a billed session
-nobody holds. Where a session may go is `mcp/navigation.py`'s `UrlPolicy`:
+nobody holds. Where a session may go is `mcp/navigation.py`'s `NavigationPolicy`:
 only http(s) and `about:blank`, `file:` only under
 `WEB_ROUTER_MCP_ALLOW_FILE_URLS`, never metadata hosts or the session's own CDP
 host:port, with IPv4 read in every spelling a browser accepts. It is enforced
