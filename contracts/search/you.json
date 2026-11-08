@@ -34,47 +34,65 @@
       "deep": {
         "body.extraction.extraction_mode": "full_page"
       }
+    },
+    "include_domains": {
+      "sample": {
+        "body.include_domains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.exclude_domains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.country": "US"
+      }
+    },
+    "locale": {
+      "sample": {
+        "body.language": "EN"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.freshness": "day"
+      },
+      "week": {
+        "body.freshness": "week"
+      },
+      "month": {
+        "body.freshness": "month"
+      },
+      "year": {
+        "body.freshness": "year"
+      }
     }
   },
   "not_mapped": [
-    "country",
-    "effort",
-    "exclude_domains",
-    "include_domains",
-    "locale",
-    "recency"
+    "effort"
   ],
   "source": [
     "https://you.com/docs/api-reference/search/v1-search"
   ],
   "verified": {
     "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
-    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content"
+    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content",
+    "include_domains": "docs: https://you.com/docs/api-reference/search/v1-search (up to 500; a strict allowlist; 422 with exclude_domains, refused before the call)",
+    "exclude_domains": "docs: https://you.com/docs/api-reference/search/v1-search (up to 5000)",
+    "country": "docs: https://you.com/docs/api-reference/search/v1-search (36 codes; any other refused before the call)",
+    "locale": "docs: https://you.com/docs/api-reference/search/v1-search (51 language tags; a locale reaches one through constants_languages.py, else refused)",
+    "recency": "docs: https://you.com/docs/api-reference/search/v1-search (freshness day | week | month | year)"
   },
   "vendor_options": {
-    "include_domains": {
-      "status": "passthrough",
-      "note": "Same meaning as the shared include_domains (up to 500); not mapped yet."
-    },
-    "exclude_domains": {
-      "status": "passthrough",
-      "note": "Same meaning as the shared exclude_domains; not mapped yet. Cannot be combined with include_domains."
-    },
     "boost_domains": {
       "status": "passthrough",
-      "note": "Ranks these domains higher without filtering; cannot be combined with include_domains."
-    },
-    "country": {
-      "status": "passthrough",
-      "note": "Uppercase ISO 3166 code from a fixed list; a candidate for the shared country option."
-    },
-    "language": {
-      "status": "passthrough",
-      "note": "Uppercase language code from a fixed list (EN, EN-GB, ZH-HANS ...); a candidate for the shared locale option."
-    },
-    "freshness": {
-      "status": "passthrough",
-      "note": "day | week | month | year, or a YYYY-MM-DDtoYYYY-MM-DD range."
+      "note": "Up to 500 domains ranked higher without filtering; combines with exclude_domains, not include_domains (422)."
     },
     "offset": {
       "status": "passthrough",
@@ -82,7 +100,7 @@
     },
     "safesearch": {
       "status": "passthrough",
-      "note": "off | moderate | strict."
+      "note": "off | moderate (default) | strict."
     },
     "knowledge": {
       "status": "passthrough",

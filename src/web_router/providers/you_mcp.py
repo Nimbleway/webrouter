@@ -24,18 +24,20 @@ from web_router.constants import (
     YOU_MCP_EXTRACTION_BY_DEPTH,
     YOU_MCP_SEARCH_PATH,
     YOU_MCP_SEARCH_TOOL,
-    YOU_PARAM_NAMES,
 )
 from web_router.providers._mcp import McpSearchMixin
 from web_router.providers._utils import build_payload
 from web_router.providers.you import YouProvider
 from web_router.types import SearchRequest
 
+_PARAM_NAMES = {"max_results": "count"}
+
 
 class YouMcpProvider(McpSearchMixin, YouProvider):
     """Routes searches to You.com's anonymous MCP endpoint."""
 
     name: ClassVar[str] = PROVIDER_YOU_MCP
+    supported_parameters: ClassVar[frozenset[str]] = frozenset({*_PARAM_NAMES, "search_depth"})
     mcp_tool: ClassVar[str] = YOU_MCP_SEARCH_TOOL
 
     base_url: ClassVar[str] = YOU_MCP_BASE_URL
@@ -45,4 +47,4 @@ class YouMcpProvider(McpSearchMixin, YouProvider):
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Same arguments as the REST provider, except how extraction is spelled."""
         extraction = YOU_MCP_EXTRACTION_BY_DEPTH.get(request.search_depth) if request.search_depth else None
-        return build_payload(request, YOU_PARAM_NAMES, query=request.query, extraction=extraction)
+        return build_payload(request, _PARAM_NAMES, query=request.query, extraction=extraction)

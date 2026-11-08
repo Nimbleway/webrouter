@@ -11,6 +11,7 @@ Needs credentials; skips without them. Run with: make test-integration
 from __future__ import annotations
 
 import os
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -134,6 +135,26 @@ def test_recency_is_accepted_at_its_narrowest_and_widest(provider: str, recency:
     with WebRouter(provider) as router, billing_aware(provider):
         response = router.search("technology news", max_results=3, recency=recency)
     assert response.results
+
+
+@pytest.mark.parametrize("provider", _providers("recency"))
+def test_recency_keeps_dated_results_near_the_window(provider: str) -> None:
+    """A week's window: every result the backend dates is at most two weeks old (slack for date estimates).
+
+    Look here when it fails: a backend that dates by discovery or last update rather than publication.
+    """
+    with WebRouter(provider) as router, billing_aware(provider):
+        response = router.search("technology news", max_results=10, recency="week")
+    oldest = datetime.now(timezone.utc).date() - timedelta(days=14)
+    dated = [(result.url, _day(result.published_date)) for result in response.results]
+    assert all(day >= oldest for _, day in dated if day), f"{provider}: {dated}"
+
+
+def _day(published: str | None) -> date | None:
+    try:
+        return date.fromisoformat(published[:10]) if published else None
+    except ValueError:
+        return None
 
 
 @pytest.mark.parametrize("provider", _providers("effort"))

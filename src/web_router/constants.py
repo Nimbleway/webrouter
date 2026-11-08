@@ -404,14 +404,6 @@ YOU_API_KEY_HEADER = "X-API-Key"
 YOU_RESULT_SECTIONS = ("web", "news")
 YOU_KNOWLEDGE_ANSWER_TYPE = "answer"
 
-YOU_PARAM_NAMES = {"max_results": "count"}
-"""Normalized parameter -> You.com field. ``search_depth`` maps to an object, below.
-
-Kept minimal on purpose: web-router sends You.com only what a search needs. The
-rest of its API is reachable through ``provider_options`` and is the obvious
-thing for a contributor to map -- see CONTRIBUTING.md.
-"""
-
 YOU_EXTRACTION_BY_DEPTH: dict[SearchDepth, dict[str, Any] | None] = {
     # You.com always returns snippets; extraction controls how much page body
     # comes with them. `full_page` yields markdown on its own -- sending the

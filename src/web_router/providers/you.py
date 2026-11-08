@@ -6,10 +6,10 @@ background task; :class:`YouAnswerProvider` answers one question in one call.
 Install with the ``search``, ``research`` or ``answer`` extra.
 Reads ``YOU_API_KEY`` unless a key is passed explicitly.
 
-web-router sends You.com the minimum a search needs: the query, ``max_results``
-and ``search_depth``. Everything else its API offers is reachable through
-``provider_options``, and mapping one properly is a welcome PR -- see
-CONTRIBUTING.md.
+Search maps every shared option but ``effort``, which You.com has no tier for.
+``country`` and ``locale`` reach fixed lists of 36 countries and 51 languages,
+and a value off them is refused before the call. Everything else its API offers
+is reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -24,25 +24,31 @@ from web_router.constants import (
     YOU_BASE_URL,
     YOU_EXTRACTION_BY_DEPTH,
     YOU_KNOWLEDGE_ANSWER_TYPE,
-    YOU_PARAM_NAMES,
     YOU_RESULT_SECTIONS,
     YOU_SEARCH_PATH,
 )
 from web_router.constants_you import (
     MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE,
-    YOU_ANSWER_FRESHNESS_FIELD,
+    MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE,
+    MSG_YOU_SEARCH_VALUES,
     YOU_ANSWER_MARKER,
     YOU_ANSWER_PARAM_NAMES,
     YOU_ANSWER_PATH,
-    YOU_ANSWER_RECENCY,
+    YOU_COUNTRIES,
+    YOU_FRESHNESS_FIELD,
+    YOU_RECENCY,
     YOU_RESEARCH_BACKGROUND,
     YOU_RESEARCH_BASE_URL,
     YOU_RESEARCH_EFFORTS,
     YOU_RESEARCH_PATH,
     YOU_RESEARCH_STATES,
     YOU_RESEARCH_STATUS_PATH,
+    YOU_SEARCH_PARAM_NAMES,
+    YOU_SEARCH_PARAMETERS,
 )
+from web_router.exceptions import UnsupportedParameterError
 from web_router.providers._http import HttpAnswerProvider, HttpPolledResearchProvider, HttpSearchProvider
+from web_router.providers._language import language_tag
 from web_router.providers._utils import best_text, build_payload
 from web_router.providers.answer import refuse_domain_pair
 from web_router.types import (
@@ -60,11 +66,21 @@ _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "contents", "p
 _MAPPED_SOURCE_FIELDS = frozenset({"url", "title", "snippets"})
 
 
+def _off_the_lists(request: SearchRequest) -> dict[str, Any]:
+    """A ``country`` or ``locale`` off You.com's lists, by name; the MCP tool is held to the same lists."""
+    refused: dict[str, Any] = {}
+    if request.country and request.country.upper() not in YOU_COUNTRIES:
+        refused["country"] = request.country
+    if request.locale and language_tag(request.locale) is None:
+        refused["locale"] = request.locale
+    return refused
+
+
 class YouProvider(HttpSearchProvider):
     """Routes searches to the You.com Search API."""
 
     name: ClassVar[str] = PROVIDER_YOU
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(YOU_PARAM_NAMES) | {"search_depth"}
+    supported_parameters: ClassVar[frozenset[str]] = YOU_SEARCH_PARAMETERS
 
     base_url: ClassVar[str] = YOU_BASE_URL
     search_path: ClassVar[str] = YOU_SEARCH_PATH
@@ -73,11 +89,34 @@ class YouProvider(HttpSearchProvider):
     env_api_key: ClassVar[str | None] = ENV_YOU_API_KEY
     api_key_header: ClassVar[str] = YOU_API_KEY_HEADER
 
+    def validate(self, request: SearchRequest) -> None:
+        """Also refuse both domain lists at once, and a ``country`` or ``locale`` off You.com's lists, unsent."""
+        self._reject_unmapped(request)
+        refuse_domain_pair(self.name, request, MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE)
+        if refused := _off_the_lists(request):
+            countries = ", ".join(sorted(YOU_COUNTRIES))
+            detail = MSG_YOU_SEARCH_VALUES.format(countries=countries)
+            raise UnsupportedParameterError(self.name, refused, values=refused, detail=detail)
+        super().validate(request)
+
+    @classmethod
+    def refused_values(cls, request: SearchRequest) -> dict[str, Any]:
+        """A depth it lacks, or a ``country`` or ``locale`` off its lists; read by ``auto`` keyless."""
+        return {**super().refused_values(request), **_off_the_lists(request)}
+
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         # A depth of None, or "lite" which needs no extraction, both map to None
         # here and are dropped rather than sent.
         extraction = YOU_EXTRACTION_BY_DEPTH.get(request.search_depth) if request.search_depth else None
-        return build_payload(request, YOU_PARAM_NAMES, query=request.query, extraction=extraction)
+        return build_payload(
+            request,
+            YOU_SEARCH_PARAM_NAMES,
+            query=request.query,
+            extraction=extraction,
+            country=request.country.upper() if request.country else None,
+            language=language_tag(request.locale) if request.locale else None,
+            **{YOU_FRESHNESS_FIELD: YOU_RECENCY[request.recency] if request.recency else None},
+        )
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         sections = payload.get("results") or {}
@@ -209,7 +248,7 @@ class YouAnswerProvider(HttpAnswerProvider):
             request,
             YOU_ANSWER_PARAM_NAMES,
             query=request.query,
-            **{YOU_ANSWER_FRESHNESS_FIELD: YOU_ANSWER_RECENCY[request.recency] if request.recency else None},
+            **{YOU_FRESHNESS_FIELD: YOU_RECENCY[request.recency] if request.recency else None},
         )
 
     def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
