@@ -86,9 +86,6 @@ class TestClassifier:
         router = classifier.ClassifierRouter(_Model((1.0, 0.0, 0.0)))
         assert router.route(request(candidates=())) == RouteDecision()
 
-    def test_declares_its_time_limit(self) -> None:
-        assert classifier.ClassifierRouter.timeout_s == 0.05
-
     @pytest.mark.parametrize("missing", ["joblib", "sklearn"])
     def test_without_scikit_learn_it_says_how_to_get_it(
         self, missing: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]

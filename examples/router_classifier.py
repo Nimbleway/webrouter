@@ -7,7 +7,8 @@ order. It runs in-process in about a millisecond, so it declares
 
 The training set below is a toy, there so this runs with no data of your own.
 Train on your own prompts, labelled with the method that served each one best
--- route-eval's frozen sets are one source -- and load the file you saved.
+-- route-eval's frozen sets, in benchmarks/providers/route_eval.py, are one
+source -- and load the file you saved.
 
 scikit-learn is not a dependency of web-router. Runs offline with no key:
 

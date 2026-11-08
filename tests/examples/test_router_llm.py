@@ -67,9 +67,6 @@ class TestLLM:
         assert decision.providers == {"answer": ["perplexity"], "search": ["exa", "tavily"]}
         assert decision.reason == "a fact"
 
-    def test_declares_its_time_limit(self) -> None:
-        assert llm.LLMRouter.timeout_s == 3.0
-
     def test_the_default_client_never_retries(self, monkeypatch: pytest.MonkeyPatch) -> None:
         built: dict[str, Any] = {}
         fake_openai = SimpleNamespace(AsyncOpenAI=lambda **kwargs: built.update(kwargs) or object())

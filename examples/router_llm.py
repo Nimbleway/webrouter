@@ -50,6 +50,7 @@ def usable(req: RouteRequest) -> list[Candidate]:
     return [c for c in req.candidates if c.tool != "extract" or req.urls]
 
 
+# printable, decision and main's print loop repeat router_jev.py's on purpose: each example copies alone.
 def printable(text: str | None) -> str:
     """A model's words with control characters taken out, safe to print to a terminal."""
     return "".join(ch for ch in text or "" if ch.isprintable())
