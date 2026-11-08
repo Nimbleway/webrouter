@@ -9,8 +9,9 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from _common import _p, _s
+from route_eval_floor import Floor
 from route_eval_paths import EFFORT_INTRO, MIXED, MIXED_INTRO
-from route_eval_rank import MIN_QUESTIONS, RANKING_RULE, Floor
+from route_eval_rank import MIN_QUESTIONS, RANKING_RULE
 from route_eval_sets import TWIN_SETS
 
 TOO_FEW = "too few questions"

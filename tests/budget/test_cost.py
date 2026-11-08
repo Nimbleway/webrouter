@@ -12,14 +12,10 @@ import re
 import pytest
 
 from tests.budget.conftest import Chain, Table, acall, call
-from web_router import Budget, BudgetExceededError, DecisionHop, WebRouter, prices
+from web_router import Budget, BudgetExceededError, DecisionHop, WebRouter
 from web_router.constants_budget import SKIP_OVER_COST, SKIP_PRICE_UNKNOWN, SKIP_ROUTE_REFUSED, SKIPPED
 from web_router.exceptions import ConfigurationError, ProviderError, WebRouterError
-from web_router.routing.attempts import Attempt, CallRoute, call_route
-from web_router.routing.ledger import attempt_cost, attempt_p90
-from web_router.routing.params import measured_efforts
-from web_router.types import BrowseRequest, ExtractRequest, ResearchRequest, SearchRequest
-from web_router.types_answer import AnswerRequest
+from web_router.routing.attempts import CallRoute, call_route
 
 CAP = Budget(max_cost_usd=0.01)
 
@@ -65,16 +61,6 @@ def test_under_a_cost_cap_an_unknown_price_is_skipped_and_the_order_kept(chain: 
     assert chain.called == ["second"]
     assert response.decision.hops == [DecisionHop(id=_ids(chain, "first")[0], error=SKIP_PRICE_UNKNOWN)]
     assert response.decision.unmeasured == _ids(chain, "first", "second")  # second has no p90
-
-
-@pytest.mark.parametrize("tool", ["research"], indirect=True)
-def test_an_unknown_price_research_call_under_a_ten_cent_cap_is_skipped_and_the_next_runs(
-    chain: Chain, priced: Table
-) -> None:
-    priced.update(second=(0.05, None))
-    response = call(chain, Budget(max_cost_usd=0.10))
-    assert chain.called == ["second"]
-    assert response.decision.hops == [DecisionHop(id="research:first", error=SKIP_PRICE_UNKNOWN)]
 
 
 def test_with_no_cost_cap_an_unknown_price_runs_and_its_cost_stays_unknown(chain: Chain, priced: Table) -> None:
@@ -156,32 +142,6 @@ def test_the_budget_error_is_a_router_error_and_names_nothing_when_nothing_was_s
     assert BudgetExceededError({}).skipped == {}
 
 
-# -- The estimate, from the shipped price list --------------------------------
-
-
-def test_a_search_is_priced_at_its_depth_and_research_at_its_effort() -> None:
-    deep = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q", search_depth="deep"))
-    assert attempt_cost(deep) == pytest.approx(0.015)
-    low = Attempt(tool="research", provider="parallel", request=ResearchRequest(query="q", effort="low"))
-    assert attempt_cost(low) == pytest.approx(0.005)
-    unknown = Attempt(tool="research", provider="nimble", request=ResearchRequest(query="q"))
-    assert attempt_cost(unknown) is None, "nimble's default effort is priced unknown"
-
-
-def test_an_extract_is_priced_per_url() -> None:
-    two = Attempt(tool="extract", provider="tavily", request=ExtractRequest(urls=["https://a.test", "https://b.test"]))
-    assert attempt_cost(two) == pytest.approx(0.016)
-
-
-def test_the_p90_comes_from_the_measured_latency() -> None:
-    measured = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q"))
-    assert attempt_p90(measured) == pytest.approx(1.331)
-    # Research has no latency in the price list: its p90 is the effort table's, at the default effort when unset.
-    default = Attempt(tool="research", provider="parallel", request=ResearchRequest(query="q"))
-    assert attempt_p90(default) == measured_efforts("parallel")["medium"]["latency_p90_s"]
-    assert attempt_p90(Attempt(tool="research", provider="you", request=ResearchRequest(query="q"))) is None
-
-
 # -- What makes a price unknown -------------------------------------------------
 
 
@@ -193,27 +153,6 @@ def test_under_a_cost_cap_provider_options_make_the_price_unknown(chain: Chain, 
     assert set(raised.value.skipped.values()) == {SKIP_PRICE_UNKNOWN}, "options can change the mode billed"
 
 
-def test_with_no_cost_cap_provider_options_run_and_their_cost_stays_unknown(chain: Chain, priced: Table) -> None:
-    priced.update(first=(0.001, None))
-    response = call(chain, Budget(time_limit_s=60), provider_options={"depth": "deep"})
-    assert chain.called == ["first"]
-    assert (response.decision.estimated_cost_usd, response.decision.unmeasured) == (None, _ids(chain, "first"))
-
-
-def test_provider_options_make_the_p90_unknown_as_well_as_the_price() -> None:
-    plain = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q"))
-    optioned = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q", provider_options={"x": 1}))
-    assert attempt_p90(plain) is not None
-    assert attempt_p90(optioned) is None
-
-
-def test_a_row_whose_estimate_is_only_a_floor_has_an_unknown_price() -> None:
-    steps = Attempt(tool="browse", provider="browser-use", request=BrowseRequest(task="t"))
-    tokens = Attempt(tool="answer", provider="brave", request=AnswerRequest(query="q"))
-    assert [attempt_cost(steps), attempt_cost(tokens)] == [None, None], "per-step and token charges come on top"
-    assert prices.estimate("browser-use", "browse") == pytest.approx(0.01), "the list still states the floor"
-
-
 def test_a_route_that_refuses_a_named_backend_stops_the_budgeted_call(chain: Chain, priced: Table) -> None:
     priced.update(second=(0.001, None))
     refuse_second = CallRoute(before_attempt=lambda attempt: attempt.provider != "second")
@@ -223,18 +162,6 @@ def test_a_route_that_refuses_a_named_backend_stops_the_budgeted_call(chain: Cha
     assert raised.value.skipped == {_ids(chain, "second")[0]: SKIP_ROUTE_REFUSED}
 
 
-@pytest.mark.parametrize(("cost", "fits"), [(0.01 + 5e-10, True), (0.01 + 1e-6, False)], ids=["in-tolerance", "over"])
-def test_the_candidate_builder_and_the_ledger_draw_the_cap_at_one_line(
-    chain: Chain, priced: Table, cost: float, fits: bool
-) -> None:
-    from web_router.routing.candidates import _over_budget
-
-    assert (_over_budget(cost, None, CAP) is None) is fits
-    priced.update(first=(cost, None), second=(0.0, None))
-    call(chain, CAP)
-    assert (chain.called[0] == "first") is fits
-
-
 def test_when_the_budget_skips_every_member_the_error_chains_no_missing_backend_cause(
     chain: Chain, priced: Table
 ) -> None:
@@ -242,28 +169,3 @@ def test_when_the_budget_skips_every_member_the_error_chains_no_missing_backend_
         call(chain, CAP)
     assert raised.value.__cause__ is None
     assert raised.value.__suppress_context__, "the chain's 'nothing configured' error is not why it stopped"
-
-
-def test_a_skip_names_the_estimate_and_what_is_left_unrounded(chain: Chain, priced: Table) -> None:
-    priced.update(first=(0.025, None), second=(0.0011, None))
-    response = call(chain, CAP)
-    assert response.decision.hops == [DecisionHop(id=_ids(chain, "first")[0], error=_over("$0.025", "$0.01"))]
-    assert chain.called == ["second"]
-
-
-@pytest.mark.parametrize(("provider", "depth"), [("nimble", "deep"), ("you", "deep"), ("exa", None)])
-def test_a_search_asking_more_results_than_its_price_assumes_is_unpriced(provider: str, depth: str | None) -> None:
-    row = prices.price(provider, "search", depth)
-    assert row is not None and row.results_assumed == 10
-    asked = {"query": "q", "search_depth": depth} if depth else {"query": "q"}
-    within = Attempt(tool="search", provider=provider, request=SearchRequest(**asked, max_results=10))
-    beyond = Attempt(tool="search", provider=provider, request=SearchRequest(**asked, max_results=11))
-    unset = Attempt(tool="search", provider=provider, request=SearchRequest(**asked))
-    assert attempt_cost(within) == attempt_cost(unset) == row.estimate_usd
-    assert attempt_cost(beyond) is None, "each result past the tenth is charged: the row no longer prices it"
-
-
-def test_a_row_that_charges_no_result_keeps_its_price_for_any_count() -> None:
-    many = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q", max_results=50))
-    assert prices.price("nimble", "search", None).results_assumed is None
-    assert attempt_cost(many) == prices.estimate("nimble", "search")

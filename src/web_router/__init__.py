@@ -48,7 +48,6 @@ from web_router.exceptions import (
     BrowserActionError,
     BrowserActionTimeoutError,
     BrowseTimeoutError,
-    BudgetExceededError,
     ConfigurationError,
     DeadlineExceededError,
     ElementNotFoundError,
@@ -67,6 +66,7 @@ from web_router.exceptions import (
     UnsupportedParameterError,
     WebRouterError,
 )
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,

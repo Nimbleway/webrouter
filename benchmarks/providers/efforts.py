@@ -29,10 +29,12 @@ from pathlib import Path
 from typing import Any
 
 from _common import _pct, _round
+from _emit import write_or_check
 from _tools_effort_plan import RESEARCH
 from frozen import FROZEN_DIR
+from route_eval_floor import Floor, floor_for
 from route_eval_paths import path_id, research_by_effort
-from route_eval_rank import MIN_QUESTIONS, Floor, backend_stats, floor_for, is_served, too_few
+from route_eval_rank import MIN_QUESTIONS, backend_stats, is_served, too_few
 from route_eval_sets import Question, load_set
 
 from web_router.constants_params import EFFORT_RULE
@@ -42,8 +44,6 @@ EFFORT_SET = "tools-effort-60"
 """The frozen set every research effort was asked on: the same questions at each effort."""
 EFFORTS_COMMAND = "make efforts"
 P90 = 0.9
-MSG_EFFORTS_STALE = "{path} is stale: run `{command}` and commit the result"
-MSG_EFFORTS_WRITTEN = "wrote {path}"
 
 
 def _p90(questions: Sequence[Question], path: str) -> float | None:
@@ -94,14 +94,7 @@ def effort_file(*, folder: Path = FROZEN_DIR, floor: Floor | None = None) -> dic
 def emit_efforts(check: bool, path: Path = EFFORTS_FILE) -> int:
     """Rewrite ``efforts.json`` from the frozen results, or with ``check`` only say whether it is stale."""
     wanted = json.dumps(effort_file(), indent=2) + "\n"
-    if check:
-        if not path.is_file() or path.read_text(encoding="utf-8") != wanted:
-            print(MSG_EFFORTS_STALE.format(path=path, command=EFFORTS_COMMAND), file=sys.stderr)
-            return 1
-        return 0
-    path.write_text(wanted, encoding="utf-8")
-    print(MSG_EFFORTS_WRITTEN.format(path=path))
-    return 0
+    return write_or_check(wanted, path, check, EFFORTS_COMMAND)
 
 
 def main(argv: list[str] | None = None) -> None:
