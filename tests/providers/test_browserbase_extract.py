@@ -24,7 +24,7 @@ import pytest
 from tests.providers._browser_live import SAVE_DELAY
 from web_router import WebRouter
 from web_router.constants import BROWSERBASE_API_KEY_HEADER, BROWSERBASE_BASE_URL
-from web_router.exceptions import UnsupportedFormatError, UnsupportedParameterError
+from web_router.exceptions import ProviderError, UnsupportedFormatError, UnsupportedParameterError
 from web_router.providers.browserbase import BrowserbaseExtractProvider
 from web_router.providers.firecrawl import FirecrawlExtractProvider
 from web_router.types import ExtractRequest
@@ -131,6 +131,43 @@ def test_what_the_target_answered_is_reported_not_judged(monkeypatch: pytest.Mon
     assert response.failures == []
     assert response.documents[0].status_code == 401
     assert response.documents[0].content == "Sign in"
+
+
+@pytest.mark.parametrize("content", [{"title": "Orders"}, None], ids=["structured", "missing"])
+def test_a_body_with_no_text_is_a_failure_not_a_blank_page(monkeypatch: pytest.MonkeyPatch, content: Any) -> None:
+    """Fetch's `json` format, reachable through provider_options, answers a dict; neither it nor nothing is a page."""
+    monkeypatch.setenv("BROWSERBASE_API_KEY", KEY)
+    payload = {key: value for key, value in FETCHED.items() if key != "content"}
+    if content is not None:
+        payload["content"] = content
+
+    with pytest.raises(ProviderError, match="no text content"):
+        _provider(_Fetch(payload)).extract(ExtractRequest(urls=[URL]))
+
+
+@pytest.mark.parametrize(
+    ("content_type", "encoding"),
+    [("application/pdf", "base64"), ("application/json", "utf-8")],
+    ids=["binary", "json"],
+)
+def test_a_raw_body_that_is_not_html_is_not_labelled_html(
+    monkeypatch: pytest.MonkeyPatch, content_type: str, encoding: str
+) -> None:
+    monkeypatch.setenv("BROWSERBASE_API_KEY", KEY)
+    api = _Fetch({**FETCHED, "contentType": content_type, "encoding": encoding, "content": "JVBERi0x"})
+
+    with pytest.raises(ProviderError, match=f"Fetch returned {content_type}"):
+        _provider(api).extract(ExtractRequest(urls=[URL], format="html"))
+
+
+def test_an_html_body_with_a_charset_is_served(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BROWSERBASE_API_KEY", KEY)
+    api = _Fetch({**FETCHED, "contentType": "text/html; charset=utf-8", "content": "<html></html>"})
+
+    response = _provider(api).extract(ExtractRequest(urls=[URL], format="html"))
+
+    assert response.documents[0].format == "html"
+    assert response.documents[0].content == "<html></html>"
 
 
 def test_every_url_is_its_own_fetch(fetch: _Fetch) -> None:

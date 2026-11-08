@@ -449,7 +449,6 @@ class AutoExtractProvider(ExtractProvider):
         eligible: list[tuple[int, str]] = []
         skipped: list[str] = []
         returned: frozenset[ExtractFormat] = frozenset()
-        unmapped: frozenset[str] = frozenset()
         widest: frozenset[str] = frozenset()
         for position, (provider_name, _) in enumerate(self._chain):
             try:
@@ -465,7 +464,6 @@ class AutoExtractProvider(ExtractProvider):
             lacks = wanted - member_cls.supported_parameters
             if lacks:
                 reasons.append(MSG_AUTO_UNMAPPED.format(names=_quoted(lacks)))
-                unmapped |= lacks
             if not reasons:
                 eligible.append((position, provider_name))
                 continue
@@ -473,11 +471,12 @@ class AutoExtractProvider(ExtractProvider):
 
         if eligible or not skipped:
             return eligible
-        if unmapped:
-            # The option is the thing to drop: a format can be asked for another
-            # way, a profile no member maps cannot be served at all.
+        if wanted - widest:
+            # No member maps the option at all, so it is the thing to drop. When
+            # one does but cannot return the format, the format is the gap, and
+            # the skipped list below says which member maps what.
             detail = MSG_AUTO_EXTRACT_UNMAPPED.format(skipped=", ".join(dict.fromkeys(skipped)))
-            raise UnsupportedParameterError(self.name, (wanted - widest) or unmapped, detail=detail)
+            raise UnsupportedParameterError(self.name, wanted - widest, detail=detail)
         detail = MSG_AUTO_EXTRACT_NO_MEMBER.format(skipped=", ".join(dict.fromkeys(skipped)))
         raise UnsupportedFormatError(self.name, wanted_format, returned, detail=detail)
 

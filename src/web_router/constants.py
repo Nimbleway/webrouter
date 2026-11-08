@@ -1529,6 +1529,18 @@ BROWSERBASE_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "html"
 BROWSERBASE_PROFILE_FIELD = "contextId"
 """The Fetch field that names the Context whose saved cookies ride along with the request."""
 
+BROWSERBASE_FETCH_BINARY_ENCODING = "base64"
+"""Fetch's ``encoding`` for a body it could not return as text -- a PDF, an image."""
+
+BROWSERBASE_HTML_CONTENT_TYPES: tuple[str, ...] = ("text/html", "application/xhtml")
+"""``contentType`` prefixes that are a page's HTML, so a ``raw`` body may be labelled ``html``."""
+
+MSG_BROWSERBASE_FETCH_NO_TEXT = "Fetch returned no text content (got {kind})"
+"""A 200 whose ``content`` is missing or structured -- Fetch's ``json`` format -- is not a page's text."""
+
+MSG_BROWSERBASE_FETCH_NOT_FORMAT = "Fetch returned {content_type} ({encoding}), not {format}"
+"""A body that is binary, or not HTML when HTML was asked for, is reported rather than labelled as the format."""
+
 # --- Hyperbrowser browser ---------------------------------------------------
 # `timeout` is from Hyperbrowser's OpenAPI reference and the hyperbrowser
 # Python SDK's models, not a live call: no account was available. `stealth`,

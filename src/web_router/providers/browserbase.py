@@ -7,8 +7,9 @@ simplify. Install with the ``all`` extra. All three read
 ``BROWSERBASE_API_KEY`` unless a key is passed explicitly. No project id is
 needed: Browserbase infers the project from the key.
 
-The three share one saved identity. A Browserbase Context holds the cookies and
-storage a session ends with, and the session provider maps ``profile`` onto
+Sessions and Fetch share one saved identity; browse tasks do not map
+``profile``. A Browserbase Context holds the cookies and storage a session
+ends with, and the session provider maps ``profile`` onto
 its id and ``persist_profile`` onto whether the session writes back to it. The
 extract provider sends the same id as the Fetch API's ``contextId``, so a login
 made in a session serves the fetches that follow. Verified live on 2026-10-29:
@@ -78,7 +79,9 @@ from web_router.constants import (
     BROWSERBASE_EXTRACT_DEFAULT_FORMAT,
     BROWSERBASE_EXTRACT_FORMATS,
     BROWSERBASE_EXTRACT_PATH,
+    BROWSERBASE_FETCH_BINARY_ENCODING,
     BROWSERBASE_FIELDS,
+    BROWSERBASE_HTML_CONTENT_TYPES,
     BROWSERBASE_OPEN_PATH,
     BROWSERBASE_PROFILE_FIELD,
     BROWSERBASE_RELEASE_BODY,
@@ -88,6 +91,8 @@ from web_router.constants import (
     BROWSERBASE_SESSION_STATES,
     BROWSERBASE_STEALTH,
     ENV_BROWSERBASE_API_KEY,
+    MSG_BROWSERBASE_FETCH_NO_TEXT,
+    MSG_BROWSERBASE_FETCH_NOT_FORMAT,
     PROVIDER_BROWSERBASE,
 )
 from web_router.exceptions import ProviderError
@@ -101,6 +106,7 @@ from web_router.types import (
     BrowserSession,
     BrowserState,
     ExtractedDocument,
+    ExtractFailure,
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
@@ -215,17 +221,41 @@ class BrowserbaseExtractProvider(HttpExtractProvider):
         )
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
-        content = payload.get("content")
+        wanted = self.format_of(request)
+        error = _unservable(payload, wanted)
+        if error is not None:
+            return ExtractResponse(
+                provider=self.name, failures=[ExtractFailure(url=urls[0], error=error)], raw=[payload]
+            )
         document = ExtractedDocument(
             # Fetch does not echo the URL, and with redirects off the one asked
             # for is the one answered.
             url=urls[0],
-            content=content if isinstance(content, str) else "",
-            format=self.format_of(request),
+            content=payload["content"],
+            format=wanted,
             status_code=payload.get("statusCode"),
             extra={key: value for key, value in payload.items() if key not in _MAPPED_FETCH_FIELDS},
         )
         return ExtractResponse(provider=self.name, documents=[document], raw=[payload])
+
+
+def _unservable(payload: dict[str, Any], wanted: ExtractFormat) -> str | None:
+    """Why a 200 from Fetch is not a document in ``wanted``, or ``None`` when it is.
+
+    ``raw`` is the target's body unchanged, so a PDF comes back Base64-encoded
+    and a JSON endpoint as JSON; labelling either ``html`` would hand the caller
+    something the format does not describe.
+    """
+    content = payload.get("content")
+    if not isinstance(content, str):
+        return MSG_BROWSERBASE_FETCH_NO_TEXT.format(kind=type(content).__name__)
+    content_type = str(payload.get("contentType") or "")
+    encoding = str(payload.get("encoding") or "")
+    binary = encoding == BROWSERBASE_FETCH_BINARY_ENCODING
+    not_html = wanted == "html" and bool(content_type) and not content_type.startswith(BROWSERBASE_HTML_CONTENT_TYPES)
+    if binary or not_html:
+        return MSG_BROWSERBASE_FETCH_NOT_FORMAT.format(content_type=content_type, encoding=encoding, format=wanted)
+    return None
 
 
 _MAPPED_FETCH_FIELDS = frozenset({"content", "statusCode"})

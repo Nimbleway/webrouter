@@ -190,7 +190,8 @@ src/web_router/
     ├── jina.py         extract, keyless — Jina Reader
     ├── steel.py        browser, via httpx — the CDP URL carries the key
     ├── browserbase.py  browser + browse + extract, via httpx — Sessions, Agents
-    │                   and Fetch APIs; one Context serves `profile` on all three
+    │                   and Fetch APIs; one Context serves `profile` on sessions
+    │                   and Fetch (browse tasks do not map it)
     ├── hyperbrowser.py browser, via httpx — stops with a PUT
     ├── anchor.py       browser, via httpx — timeouts in whole minutes
     ├── kernel.py       browser, via httpx — an idle limit and no lifetime

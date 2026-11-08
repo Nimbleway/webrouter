@@ -719,6 +719,22 @@ def test_a_profile_no_member_maps_is_rejected_before_any_member_is_tried(extract
     assert provider._members == {}
 
 
+def test_a_profile_mapped_only_where_the_format_is_not_blames_the_format(extract_chain_members: _Recorder) -> None:
+    """The member that reads profiles is in the chain; telling the caller to add one would send them the wrong way."""
+    _extract_member(extract_chain_members, "first", supported=frozenset({"format"}))
+    _extract_member(extract_chain_members, "second", formats=frozenset({"markdown", "html"}))
+
+    provider = AutoExtractProvider(chain=(("first", {}), ("second", {})))
+    try:
+        with pytest.raises(UnsupportedFormatError) as caught:
+            provider.extract(ExtractRequest(urls=["https://example.com"], format="text", profile="ctx-1"))
+    finally:
+        provider.close()
+
+    assert "second (returns only 'html', 'markdown')" in str(caught.value)
+    assert extract_chain_members.called == []
+
+
 def test_a_text_extract_skips_to_a_member_that_returns_text(extract_chain_members: _Recorder) -> None:
     """Never relabelled: the member that answers is one that really returns text."""
     _extract_member(extract_chain_members, "first", formats=frozenset({"markdown", "html"}))
