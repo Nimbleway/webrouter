@@ -435,7 +435,7 @@ exactly as to the same argument. A section may hold only `PRESET_FIELDS`,
 derived from each request model less `PRESET_NATIVE_INPUTS`; a field added to a
 request model is presettable with no second edit, and a new native input goes
 into that table. A section locks every default its `overridable` list leaves
-out, as the spec has it, and a lock holds through every layer above it: a
+out, and a lock holds through every layer above it: a
 preset that repeats a locked value does not release it. Every refusal -- an
 unknown or malformed reference, a per-call preset for another method, a
 setting the method does not take, a bad value, a locked setting replaced -- is

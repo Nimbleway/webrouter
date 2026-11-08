@@ -499,7 +499,7 @@ def test_no_method_reports_a_preset_when_none_applied(
 
 
 def test_leaving_overridable_out_locks_every_default(fake_provider: Any) -> None:
-    """The spec's rule: only the defaults a section declares editable may change."""
+    """Only the defaults a section declares editable may change."""
     router = WebRouter("fake")
     router.presets.add(definition())
 

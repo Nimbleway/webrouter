@@ -41,7 +41,7 @@ class ComponentSettings(BaseModel):
         default_factory=list,
         description=(
             "The defaults a call or a per-call preset may replace. Every default left out is locked, "
-            "as the spec has it, and replacing a locked one with another value raises."
+            "and replacing a locked one with another value raises."
         ),
     )
 
