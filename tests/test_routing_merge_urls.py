@@ -64,8 +64,10 @@ def test_a_url_in_the_routers_own_words_shows_as_its_scheme_and_host() -> None:
         ("https://a.example/x>session=secret", "https://a.example"),
         (
             '"https://a.example/x?t=secret" and `https://b.example/y?t=secret`',
-            '"https://a.example" and `https://b.example`',
+            '"https://a.example and `https://b.example',
         ),
+        ('https://a.example/path?session="secret"', "https://a.example"),
+        ("https://a.example/path?session=`secret`", "https://a.example"),
         ("<https://a.example/x?t=secret>", "<https://a.example"),
         ("https://a.example/x?t=secret, then more", "https://a.example then more"),
     ],
