@@ -63,15 +63,17 @@ class McpRouting:
         """What the process environment sets: read once, at startup.
 
         Raises:
-            ConfigurationError: for a router that does not import, or a ceiling that is not a positive number.
+            ConfigurationError: for a router set empty or that does not import, or a ceiling that is not a positive
+                number.
         """
         env = os.environ if environ is None else environ
         ceiling = Budget(
             max_cost_usd=_positive(env, ENV_MCP_MAX_COST_USD), time_limit_s=_positive(env, ENV_MCP_TIME_LIMIT_S)
         )
-        spec = env.get(ENV_MCP_ROUTER, "").strip()
-        if not spec:
+        raw = env.get(ENV_MCP_ROUTER)
+        if raw is None:
             return cls(ceiling=ceiling)
+        spec = raw.strip()
         if spec == MCP_ROUTER_OFF:
             return cls(router=None, router_name=MCP_ROUTER_OFF, ceiling=ceiling)
         return cls(router=_imported(spec), router_name=MCP_ROUTER_OPERATOR, ceiling=ceiling)
