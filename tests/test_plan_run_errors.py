@@ -98,3 +98,24 @@ def test_a_plan_notes_a_router_url_the_policy_refused_when_it_searches_instead(
     plan = _wr(router=route, url_policy="public_only").plan("summarize it")
     assert plan.tool == "search"
     assert "10.0.0.1" in notes[0][NOTE_EXTRACT_URLS] and "/x" not in notes[0][NOTE_EXTRACT_URLS]
+
+
+def _urls_router(n: int) -> Any:
+    urls = [f"https://site.test/{i}" for i in range(n)]
+    return lambda req: RouteDecision(tools=["extract"], params={"extract": {"urls": urls}})
+
+
+@pytest.mark.usefixtures("called")
+def test_a_plan_whose_router_urls_are_dropped_for_cost_searches_instead(
+    monkeypatch: pytest.MonkeyPatch, priced: Any
+) -> None:
+    from web_router.constants_merge import MSG_EXTRACT_NO_URL, NOTE_EXTRACT
+
+    priced.update(first=(0.01, None), second=(0.01, None), third=(0.01, None))
+    notes = _merge_notes(monkeypatch)
+    cap = Budget(max_cost_usd=0.05)
+    plan = _wr(router=_urls_router(50)).plan("compare these pages", budget=cap)
+    assert (plan.tool, plan.params) == ("search", {"query": "compare these pages"})
+    assert notes[0][NOTE_EXTRACT] == MSG_EXTRACT_NO_URL and "cost cap" in notes[0]["params.extract.urls"]
+    one = _wr(router=_urls_router(1)).plan("compare these pages", budget=cap)
+    assert (one.tool, one.params["urls"]) == ("extract", ["https://site.test/0"])
