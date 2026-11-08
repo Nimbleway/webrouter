@@ -19,7 +19,8 @@ from web_router.constants_candidates import AUTO_GETTERS
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.eligible import eligible_members
 from web_router.routing.params import EffortChoice, shared_effort
-from web_router.types import DecisionRecord, NormalizedRequest, ResearchRequest, provider_name
+from web_router.types import NormalizedRequest, ResearchRequest, provider_name
+from web_router.types_decision import DecisionRecord
 
 _RequestT = TypeVar("_RequestT", bound=NormalizedRequest)
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)

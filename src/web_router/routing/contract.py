@@ -12,7 +12,7 @@ from typing import Any, Literal
 
 from web_router._urls import shown
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_BUDGET_VALUE, MSG_CANDIDATE_ID, PROMPT_PARAMS
-from web_router.types import DecisionRecord
+from web_router.types_decision import DecisionRecord
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
 """The methods a router may choose between. ``run_template`` and ``open_browser`` are never routed."""

@@ -19,7 +19,11 @@ exactly as it would without one. With a budget:
 - a call where the budget skipped every candidate raises
   :class:`~web_router.BudgetExceededError`, naming each skip;
 - the response's ``decision`` carries the estimated spend and every attempt,
-  labelled an estimate.
+  labelled an estimate, and every candidate moved past: skipped, failed, or
+  answered empty.
+
+:func:`recorded` gives a routed call with no budget the same record of its
+attempts, from a ledger that caps nothing.
 
 Inside a shared budget (:mod:`.pool`), a call runs here even with no
 ``budget=`` of its own: its budget is the tighter of the two, each attempt it
@@ -44,12 +48,15 @@ from pydantic import BaseModel
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
 from web_router.exceptions import DeadlineExceededError, WebRouterError
+from web_router.providers._chain import _empty_response
 from web_router.providers._deadline import Deadline, call_deadline, current_deadline, job_deadline
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.ledger import Ledger
 from web_router.routing.pool import PoolChain, chain_in_force
-from web_router.types import DecisionRecord, NormalizedRequest
+from web_router.routing.record import prompt_of, stamp
+from web_router.types import NormalizedRequest
+from web_router.types_decision import DecisionRecord
 
 _BackendT = TypeVar("_BackendT")
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
@@ -75,7 +82,9 @@ class BudgetedCall(Generic[_BackendT]):
         if self.ledger is None:
             return response
         decision: DecisionRecord | None = getattr(response, "decision", None)
-        return response.model_copy(update={"decision": self.ledger.record(decision)})
+        answered = getattr(response, "provider", None)
+        record = self.ledger.record(decision, answered=answered, empty=_empty_response(response))
+        return response.model_copy(update={"decision": record})
 
 
 @contextmanager
@@ -100,7 +109,7 @@ def budget_scope(
         yield BudgetedCall(backend)
         return
     held = _LEDGERS.get()
-    ledger = Ledger(budget, _with_enclosing(pool, held))
+    ledger = Ledger(budget, _with_enclosing(pool, held), stamp=stamp(prompt_of(tool, request)[0]))
     token = _LEDGERS.set((*held, ledger))
     try:
         with _held(ledger, held, tool, backend, request) as call:
@@ -148,6 +157,17 @@ def _held(
             raise
 
 
+@contextmanager
+def recorded(scope: BudgetedCall[_BackendT]) -> Iterator[BudgetedCall[_BackendT]]:
+    """``scope``; or, for a call with no budget, one whose ledger caps nothing, so its record holds what it tried."""
+    if scope.ledger is not None:
+        yield scope
+        return
+    ledger = Ledger(Budget())
+    with call_route(_hooked(ledger)):
+        yield replace(scope, ledger=ledger)
+
+
 def _refuse_late(ledger: Ledger, call_id: str, name: str, outside: Deadline | None) -> None:
     """Refuse the call before anything is admitted or reserved when its deadline has already passed.
 
@@ -165,25 +185,26 @@ def _refuse_late(ledger: Ledger, call_id: str, name: str, outside: Deadline | No
     raise ledger.refusal()
 
 
-def _hooked(ledger: Ledger, held: tuple[Ledger, ...]) -> CallRoute:
-    """The route in force, if any, with ``ledger``'s check after its own hook: a member either refuses is never charged.
+def _hooked(ledger: Ledger, held: tuple[Ledger, ...] = ()) -> CallRoute:
+    """The route in force, if any, with ``ledger``'s hooks after its own: a member either refuses is never charged.
 
     The hook in force runs the check of every enclosing call's ledger in
     ``held``, each counting the attempt toward its own cap; when ``ledger``
     then refuses it, each takes it back. Only the innermost ledger in force
     where the attempt runs -- its own call's -- reserves it in the shared budget.
+    A failure is noted in ``ledger``'s hop trail after the route's own note.
     """
     route = current_route() or CallRoute()
-    outer = route.before_attempt
+    outer, outer_failed = route.before_attempt, route.on_failure
 
     def check(attempt: Attempt) -> bool:
-        in_force = _LEDGERS.get()
-        return ledger.admit(attempt, reserve=not in_force or in_force[-1] is ledger)
-
-    if outer is None:
-        return replace(route, before_attempt=check)
+        in_force = _LEDGERS.get()  # a ledger not in it is a recorded call's own, never an enclosing one
+        own = not any(held is ledger for held in in_force) or in_force[-1] is ledger
+        return ledger.admit(attempt, reserve=own)
 
     def admit(attempt: Attempt) -> bool:
+        if outer is None:
+            return check(attempt)
         if not outer(attempt):
             return False
         if check(attempt):
@@ -192,4 +213,9 @@ def _hooked(ledger: Ledger, held: tuple[Ledger, ...]) -> CallRoute:
             enclosing.undo(attempt)
         return False
 
-    return replace(route, before_attempt=admit)
+    def note(tool: ToolName, provider: str, exc: BaseException) -> None:
+        if outer_failed is not None:
+            outer_failed(tool, provider, exc)
+        ledger.failed(tool, provider, exc)
+
+    return replace(route, before_attempt=admit, on_failure=note)

@@ -3,9 +3,10 @@
 Experimental. Every ``auto`` chain that can be routed -- search, extract,
 answer, research and browse -- passes the members eligible for a request
 through :func:`in_call_order` and asks :func:`admitted` before it tries each
-one. With no :class:`CallRoute` in force, as on every call today, the order is
-the configured chain and every member is admitted, so ``auto`` behaves exactly
-as it always has.
+one, and tells it through :func:`failed` when a member fails. With no
+:class:`CallRoute` in force, as on every call today, the order is the
+configured chain and every member is admitted, so ``auto`` behaves exactly as
+it always has.
 
 A route is held in a context variable, as the per-call deadline is, because it
 belongs to the call and not to the request, and would otherwise have to be
@@ -18,6 +19,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
+from typing import Any
 
 from web_router.routing.contract import ToolName
 from web_router.types import NormalizedRequest
@@ -40,6 +42,9 @@ class Attempt:
 AttemptHook = Callable[[Attempt], bool]
 """Called before each attempt; ``False`` passes over the member without calling it."""
 
+FailureHook = Callable[[ToolName, str, BaseException], None]
+"""Called when a member fails and ``auto`` moves on: the method, the member's name, and the failure."""
+
 
 @dataclass(frozen=True, kw_only=True)
 class CallRoute:
@@ -51,6 +56,9 @@ class CallRoute:
 
     before_attempt: AttemptHook | None = None
     """Called before each attempt. ``None`` admits every member."""
+
+    on_failure: FailureHook | None = None
+    """Called when a member fails and the chain moves on. ``None`` notes nothing."""
 
 
 _ROUTE: ContextVar[CallRoute | None] = ContextVar("web_router_call_route", default=None)
@@ -102,3 +110,16 @@ def admitted(tool: ToolName, provider: str, request: NormalizedRequest) -> bool:
     if route is None or route.before_attempt is None:
         return True
     return route.before_attempt(Attempt(tool=tool, provider=provider, request=request))
+
+
+def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseException) -> None:
+    """Note in ``failures`` that ``provider`` failed with ``exc``, and tell the call's failure hook, if any."""
+    failures[provider] = exc
+    noted(tool, provider, exc)
+
+
+def noted(tool: ToolName, provider: str, exc: BaseException) -> None:
+    """Tell the call's failure hook, if any, that ``exc`` moved ``auto`` past ``provider``: a deadline, a refusal."""
+    route = _ROUTE.get()
+    if route is not None and route.on_failure is not None:
+        route.on_failure(tool, provider, exc)

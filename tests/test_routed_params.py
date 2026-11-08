@@ -10,9 +10,11 @@ import pytest
 from tests.routing_helpers import MEMBERS, TOOLS
 from tests.routing_helpers import Tool as _Tool
 from web_router import Budget, RouteDecision, RouteRequest, WebRouter
+from web_router.constants_params import MSG_EFFORT_NONE_FITS_EVERY
 from web_router.routing import params
 from web_router.routing.params import EffortChoice
 
+NONE_FITS = MSG_EFFORT_NONE_FITS_EVERY.format(efforts="low, high", providers="third, first")
 RESEARCH = next(tool for tool in TOOLS if tool.name == "research")
 
 
@@ -58,6 +60,7 @@ def test_an_option_the_router_may_not_set_is_dropped(sent: list[Any]) -> None:
     response = _router({"output_schema": {"type": "object"}}).research("q")
     assert sent[0][1].output_schema is None
     assert response.decision.params is None
+    assert list(response.decision.ignored or {}) == ["params.research.output_schema"], "and the record says so"
 
 
 def test_with_no_effort_from_the_router_the_budget_maps_one(sent: list[Any], monkeypatch: pytest.MonkeyPatch) -> None:
@@ -73,6 +76,7 @@ def test_with_no_effort_from_the_router_the_budget_maps_one(sent: list[Any], mon
     assert asked == [(name, budget) for name in MEMBERS], "chosen once, over the static order, before the router"
     assert [request.effort for _, request in sent] == ["medium"]
     assert (response.decision.params, response.decision.params_source) == ({"effort": "medium"}, "budget")
+    assert response.decision.params_reason == "mapped", "the mapping's own reason, kept"
 
 
 @pytest.mark.parametrize("tool", [tool for tool in TOOLS if tool.name != "research"], ids=lambda tool: tool.name)
@@ -114,6 +118,17 @@ def test_with_no_effort_that_fits_every_backend_none_is_set(sent: list[Any], mon
     response = _two({}).research("q", budget=Budget(time_limit_s=600.0))
     assert [request.effort for _, request in sent] == [None], "each backend runs at its own default"
     assert response.decision.params is None
+    assert response.decision.params_reason == NONE_FITS, "and the record says why"
+
+
+def test_with_no_router_and_no_effort_that_fits_every_backend_the_record_says_why(
+    sent: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _two_backends(monkeypatch, {"third": "low", "first": "high"}, {"third": {"low"}, "first": {"high"}})
+    client = WebRouter(provider_config={"auto": {"chain": ["third", "first"]}})
+    response = client.research("q", budget=Budget(time_limit_s=600.0))
+    assert [request.effort for _, request in sent] == [None]
+    assert (response.decision.params, response.decision.params_reason) == (None, NONE_FITS)
 
 
 @pytest.fixture
@@ -135,6 +150,7 @@ def test_with_no_router_a_budget_still_maps_research_effort(nimble_sent: list[An
     response = wr.research("q", budget=Budget(max_cost_usd=0.10))
     assert [request.effort for request in nimble_sent] == ["low"], "nimble's default has no price: unmapped, refused"
     assert (response.decision.params, response.decision.params_source) == ({"effort": "low"}, "budget")
+    assert response.decision.params_reason and response.decision.decision_id, "with its reason, and stamped"
 
 
 async def test_with_no_router_an_async_budgeted_call_maps_it_too(nimble_sent: list[Any]) -> None:

@@ -32,6 +32,7 @@ from web_router.constants_params import (
     MSG_EFFORT_CHOSEN,
     MSG_EFFORT_NO_BUDGET,
     MSG_EFFORT_NONE_FITS,
+    MSG_EFFORT_NONE_FITS_EVERY,
     MSG_EFFORT_PRICED,
     MSG_EFFORT_UNMEASURED,
     PARAMS_SOURCE_BUDGET,
@@ -68,8 +69,9 @@ class EffortChoice:
     """The effort's accuracy is not measured: the table has no row for it."""
 
     def fields(self) -> dict[str, Any]:
-        """The :class:`~web_router.DecisionRecord` fields this choice sets on a call: its params and their source."""
-        return {"params": None if self.effort is None else {"effort": self.effort}, "params_source": self.source}
+        """The :class:`~web_router.DecisionRecord` fields this choice sets on a call: its params, their source, why."""
+        params = None if self.effort is None else {"effort": self.effort}
+        return {"params": params, "params_source": self.source, "params_reason": self.reason}
 
     def record(self, provider: str | Provider) -> dict[str, Any]:
         """:meth:`fields`, and ``unmeasured`` naming ``provider`` when the effort's accuracy is not measured."""
@@ -163,7 +165,8 @@ def shared_effort(providers: Sequence[str], budget: Budget | None) -> EffortChoi
     chosen once, before candidates are priced or a router is asked: the first
     backend's :func:`map_effort` pick, in ``providers``' order, that fits the
     budget on every backend that can run at all -- at its own pick or its
-    default. With none that fits all of them, each runs at its own default.
+    default. With none that fits all of them, each runs at its own default, and
+    the choice, with no effort, says so.
     """
     if budget is None or (budget.max_cost_usd is None and budget.time_limit_s is None):
         return None
@@ -172,4 +175,8 @@ def shared_effort(providers: Sequence[str], budget: Budget | None) -> EffortChoi
     for pick in picks.values():
         if pick.effort is not None and all(effort_misfit(p, pick.effort, budget) is None for p in runnable):
             return pick
-    return None
+    efforts = ", ".join(dict.fromkeys(pick.effort for pick in picks.values() if pick.effort is not None))
+    if not efforts:
+        return None
+    reason = MSG_EFFORT_NONE_FITS_EVERY.format(efforts=efforts, providers=", ".join(runnable or picks))
+    return EffortChoice(effort=None, source=None, reason=reason)

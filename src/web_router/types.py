@@ -1,14 +1,11 @@
 """Provider-agnostic request and response models.
 
-Every provider maps its own payload onto these types, so swapping Nimble for
-Tavily or You.com does not change the shape of what callers get back. Anything a
-provider returns that has no home here is preserved verbatim under
-``SearchResult.extra`` / ``SearchResponse.raw`` for a search, and under
-``ExtractedDocument.extra`` / ``ExtractResponse.raw`` for an extract, and under
-``TemplateResponse.extra`` / ``TemplateResponse.raw`` for an Extract Template run.
-
-A browser session is the exception to "a call returns an answer": it returns a
-:class:`BrowserSession` describing a browser the caller then drives itself.
+Every provider maps its own payload onto these types, so swapping Nimble for Tavily or You.com does not change the
+shape of what callers get back. Anything a provider returns that has no home here is preserved verbatim under
+``SearchResult.extra`` / ``SearchResponse.raw`` for a search, ``ExtractedDocument.extra`` / ``ExtractResponse.raw``
+for an extract, and ``TemplateResponse.extra`` / ``TemplateResponse.raw`` for an Extract Template run. A browser
+session is the exception to "a call returns an answer": it returns a :class:`BrowserSession` describing a browser the
+caller then drives itself.
 """
 
 from __future__ import annotations
@@ -21,6 +18,11 @@ from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Generic, Literal, TypeVar, cast
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_serializer, model_validator
+
+from web_router.types_decision import DECISION_DESCRIPTION
+from web_router.types_decision import DecisionAttempt as DecisionAttempt
+from web_router.types_decision import DecisionHop as DecisionHop
+from web_router.types_decision import DecisionRecord as DecisionRecord
 
 SearchDepth = Literal["lite", "fast", "deep"]
 """How much page content to retrieve per result.
@@ -198,59 +200,6 @@ EXTRACT_ALWAYS_SENT = ExtractRequest.always_sent
 
 EXTRACT_PARAMETERS: frozenset[str] = ExtractRequest.normalized_parameters()
 """Every optional parameter an extract provider may declare support for."""
-
-
-class DecisionHop(BaseModel):
-    """A candidate a routed call moved past, and why."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="The candidate, as ``tool:provider``.")
-    error: str | None = Field(default=None, description="The failure that moved the call on, when there was one.")
-
-
-class DecisionAttempt(BaseModel):
-    """A candidate a routed call tried: what it was estimated to cost, and how long it took."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(description="The candidate, as ``tool:provider``.")
-    est_cost_usd: float | None = Field(default=None, description="Its estimated cost; None when unknown.")
-    seconds: float | None = Field(default=None, description="Wall-clock seconds the attempt took.")
-
-
-class DecisionRecord(BaseModel):
-    """How a routed or budgeted call chose its backend. Experimental: it may change before 1.0.
-
-    Every field is optional, and ``None`` means not recorded. Candidates are named
-    ``tool:provider``, which shows the backends configured; no key values, and no
-    prompt text, only its hash (which is not anonymisation: a short one can be guessed).
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    decision_id: str | None = Field(default=None, description="A unique id for this decision.")
-    router: str | None = Field(default=None, description="The router that ranked the candidates.")
-    offered: list[str] | None = Field(default=None, description="Every candidate the router saw, in that order.")
-    ranked: list[str] | None = Field(default=None, description="The router's own ranking.")
-    merged: list[str] | None = Field(default=None, description="The order tried, after the merge rule.")
-    ran: int | None = Field(default=None, description="The position in `merged` that answered, from 0.")
-    hops: list[DecisionHop] | None = Field(default=None, description="The candidates the call moved past.")
-    attempts: list[DecisionAttempt] | None = Field(default=None, description="Every candidate tried, in order.")
-    reason: str | None = Field(default=None, description="The router's own reason, when it gave one.")
-    router_timeout: bool | None = Field(default=None, description="Whether the router ran out of time.")
-    router_ms: float | None = Field(default=None, description="Milliseconds the router took.")
-    dropped: dict[str, str] | None = Field(default=None, description="Candidates left out before routing -> why.")
-    excluded: dict[str, str] | None = Field(default=None, description="Candidates the router excluded -> why.")
-    params: dict[str, Any] | None = Field(default=None, description="The options the call ran with, prompt left out.")
-    params_source: Literal["budget", "router", "caller"] | None = Field(default=None, description="Who set `params`.")
-    estimated_cost_usd: float | None = Field(default=None, description="The call's estimated spend in US dollars.")
-    cost_is_estimate: bool | None = Field(default=None, description="Whether that spend is a list-price estimate.")
-    unmeasured: list[str] | None = Field(default=None, description="Candidates with no known price or latency.")
-    prompt_sha256: str | None = Field(default=None, description="The prompt's SHA-256; a short one can be guessed.")
-
-
-DECISION_DESCRIPTION = "How a routed or budgeted call chose its backend; None on any other call."
 
 
 class SearchResult(BaseModel):

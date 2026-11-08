@@ -5,7 +5,8 @@ a prompt calls, with which options and backends: it finds the ``http(s)``
 URLs in the prompt and holds them to ``url_policy``, builds every method's
 candidates, asks the attached router, and merges its answer by the merge rule.
 :meth:`run` calls the planned method on ``auto`` in the planned order, and
-returns that method's own response with the plan's decision record on it.
+returns that method's own response with the plan's decision record on it,
+and what the call tried: its attempts, its hops and the position that ran.
 With no router the plan is the static order: ``search``, unless ``tool``
 pins another method.
 
@@ -30,13 +31,14 @@ from web_router.exceptions import MissingParameterError
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers._deadline import call_deadline
 from web_router.routing.attempts import CallRoute, in_route
-from web_router.routing.budget import budget_scope
+from web_router.routing.budget import budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, base_params, build_candidates, default_requests
 from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName, candidate_id
 from web_router.routing.decide import decided
 from web_router.routing.eligible import dropped_for_setup
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.pool import limited
+from web_router.routing.record import stamp
 from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
 from web_router.routing.url_policy import screened
 from web_router.types import (
@@ -104,7 +106,9 @@ class _Planner(RouterSetup):
         """The ``auto`` the plan runs on, its request, and the budget's scope, entered with the plan's order."""
         chain = getattr(self, AUTO_GETTERS[plan.tool])(PROVIDER_AUTO)
         request = REQUEST_OF[plan.tool](**{k: v for k, v in plan.params.items() if v is not None})
-        scope = stack.enter_context(budget_scope(budget, plan.tool, chain, request, self))
+        scope = stack.enter_context(
+            recorded(stack.enter_context(budget_scope(budget, plan.tool, chain, request, self)))
+        )
         _ordered(stack, plan)
         return chain, request, scope
 
@@ -139,7 +143,9 @@ def _budget_dropped(plan: Plan) -> dict[str, str]:
 
 
 def _settled(response: Any, plan: Plan) -> Any:
-    return response.model_copy(update={"decision": plan.decision})
+    """``response`` with the plan's record; a plan made by hand, whose record has no id, is stamped here."""
+    record = plan.decision if plan.decision.decision_id else plan.decision.model_copy(update=stamp(plan.prompt))
+    return response.model_copy(update={"decision": record})
 
 
 class SyncPlan(_Planner, SyncRouted):

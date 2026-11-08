@@ -43,6 +43,11 @@ MSG_EFFORT_CALLER = "effort {effort} was set by the caller, and the budget never
 MSG_EFFORT_UNMEASURED = (
     "research:{provider} has fewer than {min} measured efforts in {set}: it runs at its default effort"
 )
+MSG_EFFORT_NONE_FITS_EVERY = (
+    "no research effort the budget maps ({efforts}) fits it on every backend in the order ({providers}): "
+    "none is set, and each runs at its own default"
+)
+"""``params_reason`` when the request, shared by every backend in the order, can carry no mapped effort."""
 MSG_EFFORT_NONE_FITS = "no measured effort of research:{provider} fits the budget: it runs at its default effort"
 MSG_EFFORT_CHOSEN = (
     "effort {effort} ({accuracy:.1%}): the cheapest measured effort of research:{provider} within the "

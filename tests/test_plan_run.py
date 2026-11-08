@@ -69,7 +69,10 @@ def test_run_of_a_plan_returns_the_methods_own_response_with_the_record(tool: st
     response = wr.run(plan)
     assert isinstance(response, RESPONSE[tool])
     assert called[0] == f"{tool}:third", "run in the plan's order"
-    assert response.decision == plan.decision
+    planned = plan.decision.model_dump(exclude_none=True, exclude={"unmeasured"})
+    assert response.decision.model_dump(include=set(planned)) == planned, "the plan's record, decision_id and all"
+    assert response.decision.ran == 0, "and what the run did: the position that answered"
+    assert [attempt.id for attempt in response.decision.attempts] == [f"{tool}:third"]
 
 
 @pytest.mark.parametrize("tool", list(PARAMS))

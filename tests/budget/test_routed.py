@@ -49,6 +49,16 @@ def test_a_routed_call_with_no_cap_runs_the_routers_first(chain: Chain, priced: 
     assert response.decision.merged[0] == _ids(chain, "third")[0]
 
 
+def test_a_routed_call_with_no_budget_never_skips_a_member_for_time(chain: Chain, priced: Table) -> None:
+    # The ledger a routed call keeps with no budget caps nothing: an hour-long measured p90 still runs.
+    priced.update(first=(0.0, 3600.0), second=(0.0, 3600.0), third=(0.0, 3600.0))
+    router = WebRouter(router=Ranker("third"))
+    response = getattr(router, chain.tool.name)(ARGS[chain.tool.name], provider=chain.auto())
+    assert chain.called == ["third"]
+    assert [attempt.id for attempt in response.decision.attempts] == _ids(chain, "third")
+    assert response.decision.hops is None, "nothing skipped"
+
+
 @pytest.mark.parametrize("tool", ["search"], indirect=True)
 @pytest.mark.parametrize("own", [None, Budget(max_cost_usd=1.0)])
 def test_a_router_in_a_shared_budget_is_shown_the_budget_the_call_is_held_to(

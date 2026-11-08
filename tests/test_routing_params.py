@@ -38,7 +38,12 @@ def test_no_cap_changes_nothing(budget: Budget | None) -> None:
     # map_effort returns before it reads the provider when nothing is capped, so one provider covers them all.
     choice = map_effort("nimble", budget)
     assert (choice.effort, choice.source, choice.misfit) == (None, None, None)
-    assert choice.record("nimble") == {"params": None, "params_source": None, "unmeasured": None}
+    assert choice.record("nimble") == {
+        "params": None,
+        "params_source": None,
+        "params_reason": choice.reason,
+        "unmeasured": None,
+    }
 
 
 @pytest.mark.parametrize(

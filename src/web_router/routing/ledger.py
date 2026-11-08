@@ -14,6 +14,10 @@ is skipped, and one with no measured p90 runs under the deadline, which
 bounds it, unless the budget is strict. Inside a shared budget
 (:mod:`.pool`) an attempt that fits the call is then reserved in the pool,
 and skipped when the pool refuses it.
+
+A routed call with no budget keeps a ledger too, on a :class:`~web_router.Budget`
+that caps nothing: it skips nothing, and records what the call tried and the
+failures it moved past.
 """
 
 from __future__ import annotations
@@ -21,6 +25,7 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass, field
+from typing import Any
 
 from web_router.constants_budget import (
     OVER_COST,
@@ -40,7 +45,9 @@ from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, candidate_id
 from web_router.routing.pool import PoolChain
 from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
-from web_router.types import DecisionAttempt, DecisionHop, DecisionRecord
+from web_router.routing.record import error_code
+from web_router.routing.trail import HopTrail
+from web_router.types_decision import DecisionAttempt, DecisionRecord
 
 _SKIPS = {UNKNOWN_PRICE: SKIP_PRICE_UNKNOWN, UNKNOWN_P90: SKIP_LATENCY_UNKNOWN}
 
@@ -54,6 +61,7 @@ def _usd(value: float) -> str:
 @dataclass
 class _Tried:
     id: str
+    provider: str
     est_cost_usd: float | None
     started: float
     attempt: Attempt | None = None
@@ -76,7 +84,10 @@ class Ledger:
     """What the call reserved in :attr:`pool` for its own attempts, settled when it ends."""
     tried: list[_Tried] = field(default_factory=list)
     skipped: dict[str, str] = field(default_factory=dict)
+    trail: HopTrail = field(default_factory=HopTrail)
     unmeasured: list[str] = field(default_factory=list)
+    stamp: dict[str, Any] = field(default_factory=dict)
+    """The ``decision_id`` and ``prompt_sha256`` of a record this ledger starts, with no router's to write into."""
     closed: bool = False
     """Set when the call ends: an attempt made later by work it left running is not this call's to check."""
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
@@ -85,7 +96,8 @@ class Ledger:
         """Whether ``attempt`` fits what is left; if it does, charge it, and if not, record why.
 
         ``reserve`` is true for the call's own attempts, which it also reserves
-        in the shared budget; a nested call's attempt counts only toward the cap.
+        in the shared budget and keeps in its hop trail; a nested call's attempt
+        counts only toward the cap, and leaves the call's own attempt open.
         """
         name = candidate_id(attempt.tool, attempt.provider)
         cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
@@ -97,18 +109,22 @@ class Ledger:
             reason = self._misfit(cost, p90) or (self._unreserved(cost) if reserve else None)
             if reason is not None:
                 self.skipped[name] = reason
+                if reserve:
+                    self.trail.skip(name, reason)
                 return False
+            if reserve:
+                self.trail.start(len(self.tried), name)
             self.spent += cost or 0.0
-            self.tried.append(_Tried(name, cost, time.monotonic(), attempt))
+            self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic(), attempt))
             return True
 
     def undo(self, attempt: Attempt) -> None:
         """Take back a nested call's ``attempt``, which that call then refused; nothing else is touched."""
         with self._lock:
-            tried = next((tried for tried in reversed(self.tried) if tried.attempt is attempt), None)
-            if tried is not None:
-                self.tried.remove(tried)
-                self.spent -= tried.est_cost_usd or 0.0
+            at = next((i for i in reversed(range(len(self.tried))) if self.tried[i].attempt is attempt), None)
+            if at is not None:
+                self.spent -= self.tried.pop(at).est_cost_usd or 0.0
+                self.trail.undo(at)
 
     def close(self) -> float:
         """End the call: later attempts are not its to check. Returns what it reserved, for the pool to settle."""
@@ -142,16 +158,48 @@ class Ledger:
             return SKIP_OVER_TIME.format(p90=p90, left=time_left)
         return None if code is None else _SKIPS[code]
 
+    def failed(self, tool: str, provider: str, exc: BaseException) -> None:
+        """Note that ``provider`` failed and the call moved on, by :func:`~.record.error_code`."""
+        with self._lock:
+            self.trail.fail(candidate_id(tool, provider), error_code(exc))
+
+    def _answered(self, provider: str | None, empty: bool) -> int | None:
+        """The attempt whose response the call returned, ``provider``'s.
+
+        A response with something in it is the open attempt's: ``auto`` returns it at once. An empty one is the
+        first empty answer by that name ``auto`` moved past, which it held while it tried the rest; else the last
+        attempt by that name, else the last tried.
+        """
+        opened = self.trail.open
+        named = [i for i, tried in enumerate(self.tried) if tried.provider == provider]
+        if not empty and opened is not None and opened.attempt in named:
+            return opened.attempt
+        held = [i for i in self.trail.answered_empty() if i in named]
+        if held:
+            return held[0]
+        return named[-1] if named else (len(self.tried) - 1 if self.tried else None)
+
     def refusal(self) -> BudgetExceededError:
         """The error for a call that started nothing: every candidate skipped, each with its reason."""
         return BudgetExceededError(self.skipped)
 
-    def record(self, into: DecisionRecord | None = None) -> DecisionRecord:
-        """The call's estimated spend and attempts, written into ``into`` (a router's record) or a new one."""
+    def record(
+        self, into: DecisionRecord | None = None, answered: str | None = None, empty: bool = False
+    ) -> DecisionRecord:
+        """The call's attempts, hops and estimated spend, written into ``into`` (a router's record) or a new one.
+
+        ``answered`` is the provider the response names, ``empty`` whether it is an empty answer; ``ran`` is its
+        position in ``into``'s ``merged``.
+        """
+        into = into or DecisionRecord()
+        into = into if into.decision_id else into.model_copy(update=self.stamp)
         with self._lock:
-            attempts, skipped, unmeasured = list(self.tried), dict(self.skipped), list(self.unmeasured)
+            attempts, unmeasured = list(self.tried), list(self.unmeasured)
+            answering = self._answered(answered, empty)
+            hops = self.trail.hops(answering)
         ends = [tried.started for tried in attempts[1:]] + [time.monotonic()]
         known = [tried.est_cost_usd for tried in attempts if tried.est_cost_usd is not None]
+        ran = None if answering is None else attempts[answering].id
         update = {
             "estimated_cost_usd": sum(known) if known else None,
             "cost_is_estimate": True,
@@ -159,7 +207,8 @@ class Ledger:
                 DecisionAttempt(id=tried.id, est_cost_usd=tried.est_cost_usd, seconds=end - tried.started)
                 for tried, end in zip(attempts, ends, strict=True)
             ],
-            "hops": [DecisionHop(id=name, error=reason) for name, reason in skipped.items()] or None,
-            "unmeasured": unmeasured or None,
+            "hops": hops,
+            "ran": into.merged.index(ran) if into.merged and ran in into.merged else into.ran,
+            "unmeasured": list(dict.fromkeys([*(into.unmeasured or ()), *unmeasured])) or None,
         }
-        return (into or DecisionRecord()).model_copy(update=update)
+        return into.model_copy(update=update)

@@ -78,9 +78,10 @@ src/web_router/
 │                       TemplateRequest/Response + Template/TemplatePage,
 │                       ResearchRequest/Response/Progress + Citation,
 │                       BrowserRequest/Session/State + Viewport,
-│                       BrowseRequest/Response/Progress + BrowseStep,
-│                       DecisionRecord, on every response a call can route
+│                       BrowseRequest/Response/Progress + BrowseStep
 │                       — the normalized contract, one request model per method
+├── types_decision.py   DecisionRecord + DecisionHop/DecisionAttempt, on every response a
+│                       call can route and on Plan; types re-exports it, it imports nothing
 ├── types_answer.py     AnswerRequest/Response + Recency: answer()'s contract, apart so
 │                       types.py stops growing; it imports types, never the reverse
 ├── types_page.py       PageState/PageSnapshot/Screenshot + PageLoadState/PageFormat:
@@ -137,7 +138,11 @@ src/web_router/
 │   │                   a hook before each attempt, held in a context variable
 │   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,
 │   │                   the check before each attempt, BudgetExceededError, the record
-│   ├── ledger.py       one budgeted call's ledger: what each attempt is charged, the spend
+│   ├── ledger.py       one budgeted or routed call's ledger: what each attempt is charged,
+│   │                   the spend, the position that ran
+│   ├── trail.py        the hop trail: every candidate a call moved past, skipped,
+│   │                   failed or empty, by attempt
+│   ├── record.py       the record's own fields: decision_id, the prompt's hash, a failure's code
 │   ├── pricing.py      the one cost and p90 rule: price list, floor, provider_options and
 │   │                   results past a row's price unknown, research's p90 from the effort table
 │   ├── invoke.py       router=: the two forms a router takes, called sync or async on
@@ -241,6 +246,8 @@ src/web_router/
     │                   handed back in the order they finished
     ├── _chain.py       what every auto chain is made of: resolving the members,
     │                   the caller's `chain`, what a member's failure means
+    ├── _chain_deadline.py a one-call chain out of time: the first empty
+    │                   answer it holds, else the deadline naming each reason
     ├── auto.py         the default for search, extract, research, browser and
     │                   browse: keyed backends, then keyless (research and browse
     │                   have no keyless tier, so their chains end there; a browser
@@ -505,15 +512,17 @@ does not publish is `unknown` and one billed by tokens is `token_billed`, never
 estimated. The library still never puts a price in a response outside
 `DecisionRecord`, where an estimate says so in `cost_is_estimate`.
 
-**`constants.py` imports `types.py`, so `types.py` imports nothing of ours.**
+**`constants.py` imports `types.py`, so `types.py` imports nothing of ours**
+but `types_decision`, a leaf that imports nothing of ours either.
 The import graph is `types` ← `constants` ← `exceptions` ← everything else. A
 model that needs an exception type or a message template cannot live in
 `types.py` — put it in a subpackage's own `types.py` (as `evals/types.py`
 does) or annotate the field as `Exception` and say why in its docstring (as
 `BenchmarkRun.error` does). Do not "fix" this by importing lazily inside a
 validator. A `constants_<provider>.py` sits at the same level as `constants`:
-it may import `types` (and `types_answer`, which imports only `types`, and
-`types_page`, which imports nothing of ours) and nothing else of ours.
+it may import `types` (and `types_answer`, which imports only `types` and
+`types_decision`, and `types_page` and `types_decision`, which import nothing
+of ours) and nothing else of ours.
 
 **Never override the public method in a provider.** `search`/`asearch`,
 `extract`/`aextract`, `run`/`templates`/`template`, `answer`/`aanswer`,

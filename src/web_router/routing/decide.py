@@ -4,7 +4,8 @@ Experimental. The one path a routed call and :meth:`~web_router.WebRouter.plan`
 share: :func:`static_order` reads the candidate builder's order,
 :func:`~web_router.routing.merge.merge` merges the router's decision into it,
 and :func:`decided` keeps the research effort the candidates were priced at,
-unless the router set one, and writes the decision record. Pure: nothing here sends or waits.
+unless the router set one, and writes the decision record, stamped with a fresh
+``decision_id``. Nothing here sends or waits.
 """
 
 from __future__ import annotations
@@ -14,12 +15,12 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 from web_router._urls import shown
-from web_router.constants_params import PARAMS_SOURCE_BUDGET
 from web_router.routing.candidates import CandidateSet
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
-from web_router.types import DecisionRecord
+from web_router.routing.record import stamp
+from web_router.types_decision import DecisionRecord
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -73,10 +74,12 @@ def decided(
     )
     params = dict(merged.params)
     fields = merged.record()
-    if merged.tool == "research" and found.effort is not None and "effort" not in params:
+    effort = found.effort if merged.tool == "research" and "effort" not in params else None
+    if effort is not None:
         # The effort the candidates were priced at: unless a router changed it, it is the one that runs.
-        params["effort"] = found.effort.effort
-        fields.update(params=shown(params), params_source=PARAMS_SOURCE_BUDGET)
+        if effort.effort is not None:
+            params["effort"] = effort.effort
+        fields.update(effort.fields(), params=shown(params) or None)
     if outcome is None:
         fields["reason"] = None  # no router: the static order is no router's empty answer
     out = DecisionRecord(
@@ -85,6 +88,7 @@ def decided(
         dropped={**(refused or {}), **found.dropped} or None,
         unmeasured=list(found.unmeasured) or None,
         router_ms=None if outcome is None else outcome.elapsed_ms,
+        **stamp(req.prompt),
         **fields,
     )
     return Decided(tool=merged.tool, providers=merged.providers, params=params, record=out)

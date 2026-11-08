@@ -61,43 +61,24 @@ def test_a_plans_repr_shows_neither_its_prompt_nor_a_whole_url() -> None:
     assert "SECRET" not in repr(searched)
 
 
-def _merge_notes(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
-    """The merge notes each plan's merge wrote: the decision record's ``ignored`` once it carries them."""
-    from web_router.routing import decide
-
-    seen: list[Any] = []
-    real = decide.merge
-
-    def spy(*args: Any, **kwargs: Any) -> Any:
-        merged = real(*args, **kwargs)
-        seen.append(merged.notes.ignored)
-        return merged
-
-    monkeypatch.setattr(decide, "merge", spy)
-    return seen
-
-
-def test_a_plan_whose_router_picks_a_method_the_budget_emptied_notes_why(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_plan_whose_router_picks_a_method_the_budget_emptied_notes_why() -> None:
     from web_router.constants_merge import MSG_TOOL_NO_CANDIDATE
 
-    notes = _merge_notes(monkeypatch)
     router = WebRouter(router=lambda req: RouteDecision(tools=["extract"]), url_policy="public_only")
     plan = router.plan("read https://example.com/", budget=Budget(max_cost_usd=0.0001))
     assert plan.tool == "search"
-    assert notes == [{"extract": MSG_TOOL_NO_CANDIDATE.format(tool="extract")}]
+    assert plan.decision.ignored == {"extract": MSG_TOOL_NO_CANDIDATE.format(tool="extract")}
 
 
 @pytest.mark.usefixtures("called")
-def test_a_plan_notes_a_router_url_the_policy_refused_when_it_searches_instead(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_a_plan_notes_a_router_url_the_policy_refused_when_it_searches_instead() -> None:
     from web_router.constants_merge import NOTE_EXTRACT_URLS
 
-    notes = _merge_notes(monkeypatch)
     route = lambda req: RouteDecision(tools=["extract"], params={"extract": {"urls": ["http://10.0.0.1/x"]}})  # noqa: E731
     plan = _wr(router=route, url_policy="public_only").plan("summarize it")
     assert plan.tool == "search"
-    assert "10.0.0.1" in notes[0][NOTE_EXTRACT_URLS] and "/x" not in notes[0][NOTE_EXTRACT_URLS]
+    note = (plan.decision.ignored or {})[NOTE_EXTRACT_URLS]
+    assert "10.0.0.1" in note and "/x" not in note
 
 
 def _urls_router(n: int) -> Any:
@@ -106,17 +87,15 @@ def _urls_router(n: int) -> Any:
 
 
 @pytest.mark.usefixtures("called")
-def test_a_plan_whose_router_urls_are_dropped_for_cost_searches_instead(
-    monkeypatch: pytest.MonkeyPatch, priced: Any
-) -> None:
+def test_a_plan_whose_router_urls_are_dropped_for_cost_searches_instead(priced: Any) -> None:
     from web_router.constants_merge import MSG_EXTRACT_NO_URL, NOTE_EXTRACT
 
     priced.update(first=(0.01, None), second=(0.01, None), third=(0.01, None))
-    notes = _merge_notes(monkeypatch)
     cap = Budget(max_cost_usd=0.05)
     plan = _wr(router=_urls_router(50)).plan("compare these pages", budget=cap)
     assert (plan.tool, plan.params) == ("search", {"query": "compare these pages"})
-    assert notes[0][NOTE_EXTRACT] == MSG_EXTRACT_NO_URL and "cost cap" in notes[0]["params.extract.urls"]
+    ignored = plan.decision.ignored or {}
+    assert ignored[NOTE_EXTRACT] == MSG_EXTRACT_NO_URL and "cost cap" in ignored["params.extract.urls"]
     one = _wr(router=_urls_router(1)).plan("compare these pages", budget=cap)
     assert (one.tool, one.params["urls"]) == ("extract", ["https://site.test/0"])
 

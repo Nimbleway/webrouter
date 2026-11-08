@@ -18,7 +18,8 @@ budget's research effort -- and recorded on the response's ``decision``.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Collection
+from collections.abc import Awaitable, Callable, Collection, Iterator
+from contextlib import contextmanager
 from typing import Any, TypeVar, get_args
 
 from pydantic import BaseModel
@@ -27,7 +28,7 @@ from web_router.constants import PROVIDER_AUTO
 from web_router.constants_invoke import MSG_ROUTE_TOOLS
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, in_route
-from web_router.routing.budget import budget_scope
+from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
 from web_router.routing.decide import decided
@@ -35,8 +36,10 @@ from web_router.routing.effort_call import Only, named, unrouted, with_record
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.pool import limited
+from web_router.routing.record import prompt_of
 from web_router.routing.url_policy import UrlPolicy, url_check
-from web_router.types import DecisionRecord, NormalizedRequest
+from web_router.types import NormalizedRequest
+from web_router.types_decision import DecisionRecord
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 _RequestT = TypeVar("_RequestT", bound=NormalizedRequest)
@@ -56,15 +59,6 @@ def _route_tools(route_tools: Collection[ToolName] | None) -> frozenset[ToolName
         known = ", ".join(get_args(ToolName))
         raise ConfigurationError(MSG_ROUTE_TOOLS.format(known=known, got=route_tools))
     return frozenset(route_tools)
-
-
-def _prompt(tool: ToolName, request: Any) -> tuple[str, tuple[str, ...]]:
-    """What the router reads for ``request``: the query or task, or for extract the URLs one per line; and its URLs."""
-    if tool == "extract":
-        return "\n".join(request.urls), tuple(request.urls)
-    if tool == "browse":
-        return request.task, (request.start_url,) if request.start_url else ()
-    return request.query, ()
 
 
 class RouterSetup:
@@ -102,7 +96,7 @@ class RouterSetup:
         found = build_candidates(Only(tool, chain), {tool: request}, budget=budget)
         if not found.candidates:
             return None
-        prompt, urls = _prompt(tool, request)
+        prompt, urls = prompt_of(tool, request)
         req = RouteRequest(
             prompt=prompt,
             candidates=found.candidates,
@@ -145,6 +139,16 @@ class RouterSetup:
         return CallRoute(order={out.tool: out.providers}), request, out.record
 
 
+@contextmanager
+def _logged(scope: BudgetedCall[Any], route: CallRoute | None) -> Iterator[BudgetedCall[Any]]:
+    """``route`` in force beside the budget's hook, and a ledger logging its attempts; nothing for an unrouted call."""
+    if route is None:
+        yield scope
+        return
+    with recorded(scope) as logged, in_route(route):
+        yield logged
+
+
 class SyncRouted(RouterSetup):
     def _routed(
         self,
@@ -162,8 +166,8 @@ class SyncRouted(RouterSetup):
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else self._attached().call(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
-            with in_route(route):
-                return scope.settle(with_record(call(request), record or chosen))
+            with _logged(scope, route) as logged:
+                return logged.settle(with_record(call(request), record or chosen))
 
 
 class AsyncRouted(RouterSetup):
@@ -180,5 +184,5 @@ class AsyncRouted(RouterSetup):
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else await self._attached().acall(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
-            with in_route(route):
-                return scope.settle(with_record(await call(request), record or chosen))
+            with _logged(scope, route) as logged:
+                return logged.settle(with_record(await call(request), record or chosen))
