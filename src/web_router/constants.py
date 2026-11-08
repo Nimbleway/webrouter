@@ -516,23 +516,6 @@ YOU_MCP_SSE_DATA_PREFIX = MCP_SSE_DATA_PREFIX
 MSG_MCP_ERROR = "MCP call failed: {error}"
 MSG_MCP_NO_RESULT = "MCP response carried no result payload"
 
-# --- Exa MCP, a keyless route -----------------------------------------------
-# Exa's hosted MCP server, documented as free and rate-limited without a key
-# (exa.ai/docs/reference/exa-mcp). Verified live on 2026-10-01: a lone
-# tools/call needs no initialize handshake, honours numResults, and answers in
-# text blocks rather than JSON, parsed by ExaMcpProvider.
-
-EXA_MCP_BASE_URL = "https://mcp.exa.ai"
-EXA_MCP_SEARCH_PATH = "/mcp"
-EXA_MCP_SEARCH_TOOL = "web_search_exa"
-EXA_MCP_PARAM_NAMES = {"max_results": "numResults"}
-EXA_MCP_FIELDS: dict[str, str] = {"Title": "title", "URL": "url", "Published": "publishedDate", "Author": "author"}
-"""Each result block's ``Label: value`` lines, by the key Exa's REST payload uses for the same value."""
-EXA_MCP_HIGHLIGHTS_LABEL = "Highlights"
-EXA_MCP_RESULT_START = "Title: "
-EXA_MCP_UNSET = "N/A"
-"""What Exa writes for a value it does not have; read as no value, not as text."""
-
 # --- Parallel MCP, a keyless route ------------------------------------------
 # Parallel's hosted Search MCP, documented as free without a key, with higher
 # limits for one (docs.parallel.ai/integrations/mcp/quickstart). Verified live on
@@ -3027,14 +3010,6 @@ BRAVE_HIGHLIGHT_TAGS = ("<strong>", "</strong>")
 EXA_BASE_URL = "https://api.exa.ai"
 EXA_SEARCH_PATH = "/search"
 EXA_API_KEY_HEADER = "x-api-key"
-EXA_PARAM_NAMES = {"max_results": "numResults"}
-EXA_CONTENTS = {"text": True}
-"""Exa returns links only unless contents are requested, so ask for text.
-
-Not an enrichment: without it ``SearchResult.content`` would always be empty,
-which every other provider fills.
-"""
-
 EXA_CONTENTS_PATH = "/contents"
 
 EXA_EXTRACT_FORMATS: dict[ExtractFormat, dict[str, Any]] = {
@@ -3116,7 +3091,6 @@ PERPLEXITY_BASE_URL = "https://api.perplexity.ai"
 PERPLEXITY_SEARCH_PATH = "/search"
 PERPLEXITY_API_KEY_HEADER = "Authorization"
 PERPLEXITY_API_KEY_PREFIX = "Bearer "
-PERPLEXITY_PARAM_NAMES = {"max_results": "max_results"}
 
 # --- Linkup -----------------------------------------------------------------
 # Search, extract and research share a host, a bearer key and a `/v1` prefix.
@@ -3160,9 +3134,8 @@ on 2026-09-30, flash, fast, standard and deep all returned snippets of the same
 size (about 2.5K characters a result) and differed in latency -- roughly 0.4s,
 1s, 1.3s and 6-16s -- and in which pages ranked, and Linkup's docs bill deep at
 $0.05 a search against $0.005 for the others. Mapping ``deep`` onto it would
-charge a caller ten times more for no more text, so ``search_depth`` raises, as
-Tavily's latency tiers are left unmapped for the same reason. Linkup's depths
-stay reachable through ``provider_options={"depth": ...}``.
+charge a caller ten times more for no more text, so ``search_depth`` raises.
+``effort`` picks the depth instead (see ``LINKUP_DEPTH_BY_EFFORT``).
 """
 
 LINKUP_EXTRACT_FORMATS: dict[ExtractFormat, dict[str, Any]] = {

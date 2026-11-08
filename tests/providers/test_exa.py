@@ -12,7 +12,7 @@ import os
 import pytest
 
 from web_router.constants import SNIPPET_LIMIT
-from web_router.exceptions import UnsupportedFormatError, UnsupportedParameterError
+from web_router.exceptions import UnsupportedFormatError
 from web_router.providers.exa import ExaExtractProvider, ExaProvider
 from web_router.types import ExtractRequest, SearchRequest
 
@@ -34,11 +34,6 @@ def test_text_contents_are_always_requested(provider: ExaProvider) -> None:
 def test_max_results_maps_onto_num_results(provider: ExaProvider) -> None:
     body = provider._build_payload(SearchRequest(query="hi", max_results=5))
     assert body["numResults"] == 5
-
-
-def test_depth_is_rejected_until_someone_maps_it(provider: ExaProvider) -> None:
-    with pytest.raises(UnsupportedParameterError, match="search_depth"):
-        provider.validate(SearchRequest(query="hi", search_depth="deep"))
 
 
 def test_summary_is_preferred_over_the_text_head_for_the_description(provider: ExaProvider) -> None:

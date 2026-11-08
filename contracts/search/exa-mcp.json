@@ -5,7 +5,7 @@
   "transport": {
     "kind": "mcp",
     "url": "https://mcp.exa.ai",
-    "tool": "web_search_exa"
+    "tool": "web_search_advanced_exa"
   },
   "credentials": [],
   "keyless": "always",
@@ -13,69 +13,169 @@
     "body.id": 1,
     "body.jsonrpc": "2.0",
     "body.method": "tools/call",
-    "body.params.arguments.objective": "probe query",
+    "body.params.arguments.enableHighlights": true,
     "body.params.arguments.query": "probe query",
-    "body.params.name": "web_search_exa"
+    "body.params.name": "web_search_advanced_exa",
+    "query.tools": "web_search_advanced_exa"
   },
   "options": {
     "max_results": {
       "sample": {
         "body.params.arguments.numResults": 3
       }
+    },
+    "search_depth": {
+      "lite": {
+        "body.params.arguments.highlightsMaxCharacters": 500
+      },
+      "fast": {
+        "body.params.arguments.enableHighlights": "<removed>",
+        "body.params.arguments.textMaxCharacters": 3000
+      },
+      "deep": {
+        "body.params.arguments.enableHighlights": "<removed>"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.params.arguments.includeDomains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.params.arguments.excludeDomains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.params.arguments.userLocation": "US"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.params.arguments.startPublishedDate": "2026-01-14"
+      },
+      "week": {
+        "body.params.arguments.startPublishedDate": "2026-01-08"
+      },
+      "month": {
+        "body.params.arguments.startPublishedDate": "2025-12-16"
+      },
+      "year": {
+        "body.params.arguments.startPublishedDate": "2025-01-15"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.params.arguments.type": "lite"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "unchanged": "no wire change"
+      },
+      "max": {
+        "unchanged": "no wire change"
+      }
     }
   },
   "not_mapped": [
-    "country",
-    "effort",
-    "exclude_domains",
-    "include_domains",
-    "locale",
-    "recency",
-    "search_depth"
+    "locale"
   ],
   "source": [
     "https://exa.ai/docs/reference/exa-mcp",
-    "web_search_exa tool, from tools/list on https://mcp.exa.ai/mcp"
+    "web_search_advanced_exa tool, from tools/list on https://mcp.exa.ai/mcp?tools=web_search_advanced_exa (2026-11-09)"
   ],
   "verified": {
-    "max_results": "live: tests/providers/test_exa_mcp.py::test_live_keyless_search_returns_results"
+    "max_results": "live: tests/providers/test_exa_mcp.py::test_live_keyless_search_returns_results",
+    "search_depth": "docs: tools/list of web_search_advanced_exa; sizes measured keyless 2026-11-09 (highlights ~1,000-4,000 characters uncapped, textMaxCharacters=3000 exactly 3,000, unset text 10,000-14,000); live: tests/providers/test_exa_mcp.py::test_live_each_depth_comes_back_at_its_size",
+    "include_domains": "docs: tools/list of web_search_advanced_exa; one keyless call on 2026-11-09 with wikipedia.org returned only wikipedia.org; live: tests/providers/test_exa_mcp.py::test_live_filters_are_honoured_at_low_effort",
+    "exclude_domains": "docs: tools/list of web_search_advanced_exa",
+    "country": "docs: tools/list of web_search_advanced_exa (accepted keyless 2026-11-09; effect not measured)",
+    "recency": "docs: tools/list of web_search_advanced_exa (accepted keyless 2026-11-09; effect not measured)",
+    "effort": "docs: tools/list of web_search_advanced_exa (type=lite accepted with every filter keyless 2026-11-09)"
   },
   "vendor_options": {
-    "type": {
-      "status": "not_supported",
-      "note": "auto | lite | fast | instant. Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
-    },
-    "includeDomains": {
-      "status": "not_supported",
-      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
-    },
-    "excludeDomains": {
-      "status": "not_supported",
-      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
-    },
-    "userLocation": {
-      "status": "not_supported",
-      "note": "ISO country code. Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
-    },
-    "startPublishedDate": {
-      "status": "not_supported",
-      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    "category": {
+      "status": "passthrough",
+      "note": "company | publication | news | pdf | github | personal site | people | financial report."
     },
     "endPublishedDate": {
-      "status": "not_supported",
-      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+      "status": "passthrough",
+      "note": "YYYY-MM-DD; recency sets only the start."
     },
-    "textMaxCharacters": {
-      "status": "not_supported",
-      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    "startCrawlDate": {
+      "status": "passthrough",
+      "note": "YYYY-MM-DD."
     },
-    "enableHighlights": {
-      "status": "not_supported",
-      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    "endCrawlDate": {
+      "status": "passthrough",
+      "note": "YYYY-MM-DD."
     },
-    "category": {
+    "includeText": {
+      "status": "passthrough",
+      "note": "Strings every result must contain."
+    },
+    "excludeText": {
+      "status": "passthrough",
+      "note": "Strings no result may contain."
+    },
+    "moderation": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "additionalQueries": {
+      "status": "passthrough",
+      "note": "Extra query variations."
+    },
+    "contextMaxCharacters": {
+      "status": "passthrough",
+      "note": "A combined context string; it stays in raw."
+    },
+    "enableSummary": {
+      "status": "passthrough",
+      "note": "Boolean; with summaryQuery. A summary becomes the description."
+    },
+    "summaryQuery": {
+      "status": "passthrough",
+      "note": "Focus for enableSummary."
+    },
+    "highlightsQuery": {
+      "status": "passthrough",
+      "note": "Query the highlights are picked for."
+    },
+    "highlightsNumSentences": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of highlightsMaxCharacters."
+    },
+    "highlightsPerUrl": {
+      "status": "passthrough",
+      "note": "Deprecated and ignored."
+    },
+    "maxAgeHours": {
+      "status": "passthrough",
+      "note": "Maximum age of cached content; 0 always fetches fresh."
+    },
+    "livecrawlTimeout": {
+      "status": "passthrough",
+      "note": "Milliseconds, with maxAgeHours."
+    },
+    "subpages": {
+      "status": "passthrough",
+      "note": "1-10 subpages per result."
+    },
+    "subpageTarget": {
+      "status": "passthrough",
+      "note": "Keywords for picking subpages."
+    },
+    "objective": {
       "status": "not_supported",
-      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+      "note": "Only on web_search_exa; web_search_advanced_exa refuses arguments its schema does not declare."
     }
   }
 }

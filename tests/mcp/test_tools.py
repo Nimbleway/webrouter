@@ -158,20 +158,20 @@ def test_a_key_appears_in_the_enum_for_every_method_it_serves(
 
 
 def test_an_option_no_configured_route_maps_is_not_advertised(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    # Search `auto` declares every filter Nimble maps, but routes each request
-    # to a member that maps it, so it is read as the chain it would try: with
-    # no key the domain, country and locale filters would each come back as an
-    # UnsupportedParameterError from the default route.
+    # Search `auto` declares every shared option, but routes each request to a
+    # member that maps it, so it is read as the chain it would try: with no key
+    # that is the keyless members, and no keyless member maps locale, which
+    # would come back as an UnsupportedParameterError from the default route.
     tools = WebRouterTools(AsyncWebRouter(), research_wait=0.0, browse_wait=0.0)
     search = set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
     research = set(_tool(tools, MCP_TOOL_RESEARCH).input_schema["properties"])
 
-    assert search == {"query", "max_results", "search_depth", "provider"}
+    assert "locale" not in search and {"query", "max_results", "include_domains", "recency", "provider"} <= search
     assert {"include_domains", "exclude_domains", "records"}.isdisjoint(research)
 
-    # A backend that maps them brings them back, for the model to name through `provider`.
+    # A backend that maps it brings it back, for the model to name through `provider`.
     monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
-    assert {"include_domains", "country"} <= set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
+    assert {"include_domains", "locale"} <= set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
     assert "include_domains" in _tool(tools, MCP_TOOL_RESEARCH).input_schema["properties"]
 
 
