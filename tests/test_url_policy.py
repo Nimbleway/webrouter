@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import ipaddress
+
 import pytest
 
 from web_router._urls import urls_in
-from web_router.constants_urls import MSG_URL_LOOPBACK, MSG_URL_METADATA
+from web_router.constants_urls import MSG_URL_LOOPBACK, MSG_URL_METADATA, MSG_URL_PRIVATE
 from web_router.exceptions import ConfigurationError
 from web_router.routing.url_policy import any_web_url, public_only, screened, url_check
 
@@ -172,6 +174,32 @@ def test_public_only_refuses_a_numeric_spelling_resolvers_read_differently(url: 
 )
 def test_an_ipv4_address_carried_in_ipv6_is_judged_as_that_ipv4(url: str, why: str) -> None:
     assert public_only(url) == why
+
+
+@pytest.mark.parametrize(
+    ("host", "ipv4", "why"),
+    [
+        ("2002:7f00:1::1", "127.0.0.1", MSG_URL_LOOPBACK),
+        ("2002:a00:1::1", "10.0.0.1", MSG_URL_PRIVATE),
+        ("2002:c0a8:101::1", "192.168.1.1", MSG_URL_PRIVATE),
+        ("2002:a9fe:a9fe::1", "169.254.169.254", MSG_URL_METADATA),
+    ],
+)
+def test_a_6to4_host_is_judged_by_the_non_public_ipv4_it_carries(host: str, ipv4: str, why: str) -> None:
+    from web_router._hosts import host_address
+
+    # Through the embedded IPv4, not is_global: older Pythons call every 6to4 address global.
+    assert str(host_address(host)) == ipv4
+    assert public_only(f"http://[{host}]/") == why
+
+
+def test_a_6to4_host_carrying_a_public_ipv4_is_judged_as_the_ipv6_it_is() -> None:
+    from web_router._hosts import host_address
+
+    assert str(host_address("2002:808:808::1")) == "2002:808:808::1"
+    # As before: refused as reserved where this Python's is_global calls 6to4 non-global, admitted where not.
+    expected = None if ipaddress.ip_address("2002:808:808::1").is_global else MSG_URL_PRIVATE
+    assert public_only("http://[2002:808:808::1]/") == expected
 
 
 def test_the_ipv6_forms_of_a_public_ipv4_and_ipv6_loopback_are_read_right() -> None:

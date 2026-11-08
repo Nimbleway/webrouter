@@ -41,9 +41,16 @@ def host_address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | N
 
 def _embedded_ipv4(address: ipaddress.IPv6Address) -> ipaddress.IPv4Address | None:
     """The IPv4 address an IPv6 one carries and reaches: IPv4-mapped, NAT64 (``64:ff9b::/96``) or the deprecated
-    IPv4-compatible form (``::a.b.c.d``, but not ``::`` or ``::1``, which are IPv6's own)."""
+    IPv4-compatible form (``::a.b.c.d``, but not ``::`` or ``::1``, which are IPv6's own).
+
+    A 6to4 address (``2002::/16``) gives its IPv4 only when that is no public host's: older Pythons call every
+    6to4 address global, newer ones none, so the IPv4 decides a non-public one and the rest stay as before.
+    """
     if address.ipv4_mapped is not None:
         return address.ipv4_mapped
+    sixtofour = address.sixtofour
+    if sixtofour is not None and (not sixtofour.is_global or sixtofour.is_multicast):
+        return sixtofour
     low = ipaddress.IPv4Address(int(address) & 0xFFFFFFFF)
     if address in NAT64_PREFIX:
         return low
