@@ -73,6 +73,7 @@ def probabilities(answer: Any, choices: dict[str, str]) -> dict[str, float]:
     return numbers
 
 
+# printable, decision and main's print loop repeat router_llm.py's on purpose: each example copies alone.
 def printable(text: str | None) -> str:
     """A server's words with control characters taken out, safe to print to a terminal."""
     return "".join(ch for ch in text or "" if ch.isprintable())
