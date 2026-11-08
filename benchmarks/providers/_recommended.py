@@ -13,7 +13,16 @@ from typing import Any
 from _common import APART, DEPTH_MARK, MODE_MARK, _p, _wilson
 from _questions import QUESTION_SETS
 from frozen import frozen_row
-from route_eval_rank import RANKING_RULE, backend_stats, noise_floor, ranked_with_best
+from route_eval_rank import (
+    MIN_QUESTIONS,
+    RANKING_RULE,
+    TOO_FEW,
+    TOO_FEW_RULE,
+    backend_stats,
+    noise_floor,
+    ranked_with_best,
+    too_few,
+)
 from route_eval_sets import Question
 
 from web_router.constants import AUTO_CHAIN_SEARCH, PROVIDER_AUTO
@@ -50,17 +59,20 @@ def recommended_order(summary: dict[str, Any], spread: float | None = None) -> l
     (:data:`~route_eval_rank.RANKING_RULE`), over the summary's ``ranking``
     (:func:`ranking_stats`), at each row's stated cost, else its list price from
     ``web_router.prices`` (search rows state none, so in practice the list price). A
-    backend that served nothing is left out; one that served searches and got
+    backend that served nothing is left out, and so is one counted on fewer than
+    :data:`~route_eval_rank.MIN_QUESTIONS` (:func:`route_eval_rank.too_few`), as
+    route-eval's ``recommended`` leaves it out; one that served searches and got
     every answer wrong is ranked, last. ``None`` marks every backend within the
     noise floor of the most accurate one -- the best, as far as the floor tells
     -- wherever the cost tie-break placed it; of the rest, a backend is behind
     only when its 95% interval stops short of the most accurate one's.
     """
     ranking = summary["ranking"]
+    left_out = set(too_few(ranking))
     stats = {
         p: {"accuracy": s["accuracy_all"], "cost_usd": s["cost_usd"], "latency_p50": s["latency_p50"]}
         for p, s in ranking.items()
-        if s["served"]
+        if s["served"] and p not in left_out
     }
     if not stats:
         return []
@@ -78,11 +90,12 @@ def recommendation(summary: dict[str, Any]) -> list[str]:
     """The report's recommended-order section: the order, how each stands against the best, and a chain to paste."""
     spread = noise_floor()[0]
     order = recommended_order(summary, spread)
+    ranking = summary["ranking"]
+    few = too_few(ranking)
     lines = ["## Recommended auto order\n"]
-    if not order:
+    if not order and not few:
         lines.append("No backend in this scan served a search, so there is no order to suggest.\n")
         return lines
-    ranking = summary["ranking"]
     short = QUESTION_SETS[summary["setup"].get("questions", "simpleqa")]["short"]
     lines.append(
         f"A suggestion from one judge (`{summary['setup']['judge']}`) on {short}, not the library's default: the "
@@ -93,7 +106,7 @@ def recommendation(summary: dict[str, Any]) -> list[str]:
         "estimate (search backends state none). "
         "A search that failed on a rate-limit or quota error is counted under *Rate limit or quota*, as route-eval "
         "counts it, and nowhere else. "
-        f"{RANKING_RULE} "
+        f"{RANKING_RULE} {TOO_FEW_RULE} "
         "Every backend within the noise floor of the most accurate one is *best, within the noise floor*, wherever "
         "the cost tie-break put it. Of the rest, a backend is *behind* only when its 95% interval stops short of "
         "the most accurate one's; the others are "
@@ -103,13 +116,20 @@ def recommendation(summary: dict[str, Any]) -> list[str]:
         "| Order | Backend | Correct of all questions | 95% CI | Failed | Rate limit or quota | Against the best |"
     )
     lines.append("|---|---|---|---|---|---|---|")
-    for rank, (p, behind) in enumerate(order, 1):
+    places = [(str(rank), p, ORDER_LABEL[behind]) for rank, (p, behind) in enumerate(order, 1)]
+    for place, p, against in places + [(TOO_FEW, p, TOO_FEW) for p in few]:
         s = ranking[p]
         ci = _answered_ci(s)
         lines.append(
-            f"| {rank} | `{p}` | {_p(s['accuracy_all'])} ({s['correct']}/{s['questions']}) | {_p(ci[0])}-{_p(ci[1])} "
-            f"| {s['failed']} | {s['excluded']} | {ORDER_LABEL[behind]} |"
+            f"| {place} | `{p}` | {_p(s['accuracy_all'])} ({s['correct']}/{s['questions']}) | {_p(ci[0])}-{_p(ci[1])} "
+            f"| {s['failed']} | {s['excluded']} | {against} |"
         )
+    if not order:
+        lines.append(
+            f"\nNo backend in this scan was counted on at least {MIN_QUESTIONS} questions, "
+            "so there is no order to suggest.\n"
+        )
+        return lines
     chain = json.dumps({"auto": {"chain": {"search": [p for p, _ in order]}}})
     lines.append(
         "\nIt is opt-in: to try it, give your own router the order. The chain replaces the default one, keyless "

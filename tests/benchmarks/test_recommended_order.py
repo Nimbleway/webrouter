@@ -63,21 +63,23 @@ def test_a_backend_that_fails_most_searches_ranks_by_what_it_got_right_not_by_th
 
 def test_the_recommended_order_never_names_auto_itself(scan: ModuleType) -> None:
     """As a member, `auto` would be a second auto on the default order, reaching unranked backends first."""
-    rows = [_row(p, f"q{i}", "correct") for p in ("auto", "nimble") for i in range(12)]
+    rows = [_row(p, f"q{i}", "correct") for p in ("auto", "nimble") for i in range(20)]
     summary = scan.summarize(rows, {**SETUP, "providers": ["auto", "nimble"]})
 
     assert [p for p, _ in scan.recommended_order(summary)] == ["nimble"]
 
 
 def test_a_backend_that_answered_every_question_wrong_is_ranked_last_not_dropped(scan: ModuleType) -> None:
-    rows = [_row("right", f"q{i}", "correct") for i in range(12)] + [
-        _row("wrong", f"q{i}", "incorrect") for i in range(12)
+    rows = [_row("right", f"q{i}", "correct") for i in range(20)] + [
+        _row("wrong", f"q{i}", "incorrect") for i in range(20)
     ]
     summary = scan.summarize(rows, {**SETUP, "providers": ["right", "wrong"]})
 
     assert [p for p, _ in scan.recommended_order(summary)] == ["right", "wrong"]
 
-    only_wrong = scan.summarize([_row("wrong", "q0", "incorrect")], {**SETUP, "providers": ["wrong"]})
+    only_wrong = scan.summarize(
+        [_row("wrong", f"q{i}", "incorrect") for i in range(20)], {**SETUP, "providers": ["wrong"]}
+    )
     assert [p for p, _ in scan.recommended_order(only_wrong)] == ["wrong"]
     assert "no order to suggest" not in scan.markdown(only_wrong)
 
@@ -153,3 +155,36 @@ def test_the_latency_tie_break_counts_every_served_row_as_route_eval_does(scan: 
 
     assert summary["ranking"]["zeta"]["latency_p50"] == 0.55
     assert [p for p, _ in scan.recommended_order(summary, 0.0)] == ["zeta", "alpha"]
+
+
+def test_a_backend_counted_on_too_few_questions_is_listed_apart_not_ranked_as_route_eval_does(
+    scan: ModuleType, route_eval_rank: ModuleType
+) -> None:
+    """`lucky` answers all 19 it was asked, `steady` 15 of 20: ranked, `lucky` would come first.
+
+    Below route-eval's minimum, it is left out of the order and the chain, and listed after them, as
+    route-eval and ``chains.json`` list it.
+    """
+    minimum = route_eval_rank.MIN_QUESTIONS
+    rows = [_row("steady", f"q{i}", "correct" if i < 15 else "incorrect") for i in range(minimum)]
+    rows += [_row("lucky", f"q{i}", "correct") for i in range(minimum - 1)]
+    summary = scan.summarize(rows, {**SETUP, "providers": ["lucky", "steady"]})
+
+    assert route_eval_rank.too_few(summary["ranking"]) == ["lucky"]
+    assert [p for p, _ in scan.recommended_order(summary, 0.0)] == ["steady"]
+    section = scan.markdown(summary).split("## Recommended auto order")[1].split("\n## ")[0]
+    assert "| 1 | `steady` |" in section
+    assert "| too few questions | `lucky` | 100% (19/19) |" in section
+    assert section.index("`steady`") < section.index("| too few questions | `lucky`")
+    assert 'WebRouter(provider_config={"auto": {"chain": {"search": ["steady"]}}})' in section
+
+
+def test_a_scan_where_every_backend_was_counted_on_too_few_questions_lists_them_and_suggests_no_order(
+    scan: ModuleType,
+) -> None:
+    summary = scan.summarize([_row("lucky", "q0", "correct")], {**SETUP, "providers": ["lucky"]})
+
+    assert scan.recommended_order(summary) == []
+    section = scan.markdown(summary).split("## Recommended auto order")[1].split("\n## ")[0]
+    assert "| too few questions | `lucky` | 100% (1/1) |" in section
+    assert "no order to suggest" in section and "WebRouter(" not in section

@@ -53,6 +53,12 @@ is asked on a few questions only (``extract:nimble``, 10) is held back, while
 one that lost a third (``answer:brave``, 38) is still ranked. The shipped
 orders rank on 254 and 300 questions, far above it.
 """
+TOO_FEW = "too few questions"
+"""The order column of a backend counted on fewer than :data:`MIN_QUESTIONS`: listed, not ranked."""
+TOO_FEW_RULE = (
+    f"A backend counted on fewer than {MIN_QUESTIONS} questions is not ranked: it is listed after the ranked ones "
+    f"as *{TOO_FEW}*."
+)
 
 
 def cost_of(row: Mapping[str, Any]) -> float | None:
