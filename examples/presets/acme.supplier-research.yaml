@@ -1,5 +1,5 @@
 # An example preset: Search returns up to five results, Extract returns
-# Markdown, and a caller may change either one per call.
+# Markdown and a caller may change either one per call.
 spec_version: 1
 id: acme.supplier-research
 version: 1.0.0
