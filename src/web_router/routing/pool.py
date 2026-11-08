@@ -178,14 +178,6 @@ def unbind(token: Token[tuple[BudgetPool, ...]]) -> None:
     _POOLS.reset(token)
 
 
-def current_pool(owner: object = None) -> BudgetPool | None:
-    """The innermost pool ``owner``'s calls spend from in this context -- any router's with no owner -- or ``None``."""
-    for pool in reversed(_POOLS.get()):
-        if owner is None or pool.owner is owner:
-            return pool
-    return None
-
-
 def chain_in_force(owner: object) -> PoolChain | None:
     """Every pool of ``owner``'s in force in this context, innermost first, once each; ``None`` when there is none."""
     pools = tuple(dict.fromkeys(pool for pool in reversed(_POOLS.get()) if pool.owner is owner))

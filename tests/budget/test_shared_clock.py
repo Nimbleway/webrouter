@@ -10,9 +10,9 @@ import time
 
 import pytest
 
-from tests.budget.conftest import ARGS, Chain, Table
+from tests.budget.conftest import ARGS, Chain, Table, pool_in_force
 from web_router import Budget, BudgetExceededError, BudgetScope, ResearchTimeoutError, WebRouter
-from web_router.routing.pool import chain_in_force, current_pool
+from web_router.routing.pool import chain_in_force
 
 SHARED = Budget(max_cost_usd=0.10)
 
@@ -120,7 +120,7 @@ def test_calls_on_the_router_inside_the_block_spend_from_it_and_after_it_do_not(
     after = router.search("q", provider=chain.auto())
     assert (inside.decision.estimated_cost_usd, after.decision) == (0.04, None)
     assert shared.status().spent_usd == 0.04
-    assert current_pool() is None
+    assert pool_in_force(router) is None
 
 
 @pytest.mark.parametrize("tool", ["search"], indirect=True)

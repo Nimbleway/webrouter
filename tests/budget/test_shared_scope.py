@@ -9,13 +9,13 @@ from typing import Any
 
 import pytest
 
-from tests.budget.conftest import Chain, Table
+from tests.budget.conftest import Chain, Table, pool_in_force
 from web_router import AsyncWebRouter, Budget, BudgetExceededError, DeadlineExceededError, WebRouter
 from web_router.constants_budget import SKIP_NO_TIME
 from web_router.exceptions import ConfigurationError, WebRouterError
 from web_router.providers._deadline import call_deadline, current_deadline
 from web_router.routing import ledger
-from web_router.routing.pool import PoolChain, current_pool
+from web_router.routing.pool import PoolChain
 from web_router.types import SearchResponse
 
 WAIT_S = 5.0
@@ -30,7 +30,7 @@ async def test_two_tasks_that_enter_one_scope_can_leave_it_out_of_order() -> Non
         async with scope:
             first_in.set()
             await second_in.wait()
-        seen.append(("first after", current_pool()))
+        seen.append(("first after", pool_in_force(scope.pool.owner)))
         first_out.set()
 
     async def second() -> None:
@@ -38,8 +38,8 @@ async def test_two_tasks_that_enter_one_scope_can_leave_it_out_of_order() -> Non
         async with scope:
             second_in.set()
             await first_out.wait()
-            seen.append(("second inside", current_pool()))
-        seen.append(("second after", current_pool()))
+            seen.append(("second inside", pool_in_force(scope.pool.owner)))
+        seen.append(("second after", pool_in_force(scope.pool.owner)))
 
     await asyncio.wait_for(asyncio.gather(first(), second()), WAIT_S)
     assert seen == [("first after", None), ("second inside", scope.pool), ("second after", None)]
@@ -55,7 +55,7 @@ def test_two_threads_that_enter_one_scope_can_leave_it_out_of_order() -> None:
         with scope:
             first_in.set()
             second_in.wait(WAIT_S)
-        seen.append(("first after", current_pool()))
+        seen.append(("first after", pool_in_force(scope.pool.owner)))
         first_out.set()
 
     def second() -> None:
@@ -63,8 +63,8 @@ def test_two_threads_that_enter_one_scope_can_leave_it_out_of_order() -> None:
         with scope:
             second_in.set()
             first_out.wait(WAIT_S)
-            seen.append(("second inside", current_pool()))
-        seen.append(("second after", current_pool()))
+            seen.append(("second inside", pool_in_force(scope.pool.owner)))
+        seen.append(("second after", pool_in_force(scope.pool.owner)))
 
     def guarded(target: Any) -> Any:
         def run() -> None:
@@ -89,8 +89,8 @@ def test_a_scope_entered_twice_in_one_context_leaves_the_outer_entry_in_force() 
     with scope:
         with scope:
             pass
-        assert current_pool() is scope.pool
-    assert current_pool() is None
+        assert pool_in_force(scope.pool.owner) is scope.pool
+    assert pool_in_force(scope.pool.owner) is None
 
 
 def test_the_scope_calls_a_router_subclass_override(priced: Table, fake_provider: Any) -> None:

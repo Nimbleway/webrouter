@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.budget.conftest import ARGS, Chain, Table
+from tests.budget.conftest import ARGS, Chain, Table, pool_in_force
 from web_router import (
     AsyncWebRouter,
     Budget,
@@ -22,7 +22,7 @@ from web_router import (
 from web_router.constants_budget import SKIP_OVER_COST, SKIP_ROUTE_REFUSED
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, call_route
-from web_router.routing.pool import BudgetPool, PoolChain, current_pool
+from web_router.routing.pool import BudgetPool, PoolChain
 
 SHARED = Budget(max_cost_usd=0.10)
 
@@ -156,7 +156,7 @@ async def test_an_async_scope_spends_as_a_sync_one_does(chain: Chain, priced: Ta
     error = SKIP_OVER_COST.format(cost="$0.07", left="$0.03")
     assert response.decision.hops == [DecisionHop(id="answer:first", error=error)]
     assert shared.status().spent_usd == 0.09
-    assert current_pool() is None
+    assert pool_in_force(shared.pool.owner) is None
 
 
 def test_a_pool_with_nothing_set_caps_nothing_and_reports_no_remainder() -> None:
