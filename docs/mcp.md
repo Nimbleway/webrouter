@@ -3,8 +3,9 @@
 A self-hosted stdio MCP server that gives an agent — Claude Code, Claude
 Desktop, Cursor, anything that speaks MCP — the methods this package
 routes: `search`, `extract`, `answer`, `research` and a vendor's templates (`templates`,
-`template`, `run_template`) — plus `browse` for a hosted browser agent, and the
-`browser_*` tools for driving a browser yourself.
+`template`, `run_template`) — plus `browse` for a hosted browser agent, the
+`browser_*` tools for driving a browser yourself, and `web_run`, which picks the
+method for a request in words.
 
 It runs as a subprocess of your own client, on your own machine, and reads your
 own credentials out of your own environment. There is no hosted service in the
@@ -245,16 +246,16 @@ options and the backend order -- and the server runs it. The result is the
 method's own tool output (`search`'s, `extract`'s, ...) with `tool`, the
 method that ran, a `handle` for `fetch_raw`, and the `decision` record.
 `dry_run=true` returns the plan alone and calls nothing. `max_cost_usd` and
-`time_limit_s` cap that one call, within the budget below. When the router
-picks `research` or `browse`, `web_run` waits as those tools do, 25 seconds
-or less if its own `time_limit_s` or the budget has less left, and then
-hands back a handle for `research_status` or `browse_status` instead of
-dropping a started run. The other tools are unchanged: `search`, `extract`
-and the rest never ask the router.
+`time_limit_s` cap that one call, planning included, within the budget
+below; each must be a positive, finite number. When the router picks
+`research` or `browse`, `web_run` waits as those tools do, 25 seconds or less
+if its own `time_limit_s` or the budget has less left, and then hands back a
+handle for `research_status` or `browse_status`. The other tools are
+unchanged: `search`, `extract` and the rest never ask the router.
 
 The router is set by the operator, once, when the server starts:
 
-- unset, the built-in rules router (`web_router.routing.rules`): a prompt
+- unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
   with an `http(s)` URL is read with `extract`, anything else searched;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
   installed -- any form `router=` takes on the library;
@@ -263,16 +264,18 @@ The router is set by the operator, once, when the server starts:
 
 `WEB_ROUTER_MCP_ROUTER` imports and runs your code when the server starts, so
 set it in the server's own process environment, never in a project's config
-or a `.env` file.
+or a `.env` file. Set empty, it stops the server from starting.
 
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
-loopback, private or cloud-metadata host is never sent to a backend. It holds
-for `web_run`'s plans only. The direct `extract` and `browse` tools send the
-URLs the agent passes as they are, and the browser tools have their own guard
-([Where the browser may go](#where-the-browser-may-go)), which checks DNS
-answers and redirects but refuses only cloud metadata hosts and the browser's
-debugging port: other loopback and private hosts are admitted there. The
-prompt itself goes to the backend that serves it, as its query or task, as it
+loopback, private or cloud-metadata host is not sent to a backend as a URL.
+It is a check of the host as written: it resolves no DNS and follows no
+redirect. It holds for `web_run`'s plans only. The direct `extract`
+and `browse` tools send the URLs the agent passes as they are, and the browser
+tools have their own guard ([Where the browser may go](#where-the-browser-may-go)),
+which checks DNS answers and redirects but refuses only cloud metadata hosts
+and the browser's debugging port: other loopback and private hosts are
+admitted there. A refused URL stays in the prompt text, though, and the prompt
+itself goes to the backend that serves it, as its search query or browse task, as it
 would through `search`. The built-in router runs in the server's process and
 sends nothing out; an operator's router runs there too, but it is your code,
 and may send the prompt on, to a model's server for instance.
@@ -298,15 +301,29 @@ wait no longer than it has left.
   is one task under it, its clock running from the connection's start. The
   agent cannot reset or raise it.
 - **`budget_start(max_cost_usd, time_limit_s)`** opens a new task inside the
-  ceiling, with both limits stated each time and a clock from now. Each
+  ceiling, with both limits stated each time -- positive, finite numbers, or
+  the call is refused -- and a clock from now. Each
   reservation must fit the task and the ceiling, so the limits are cut to what
   the ceiling has left. A call still running when a new task starts stays
   charged to the connection.
-- **`budget_status()`** returns the task's `max_cost_usd` and `time_limit_s`
-  as they are in force (cut to what the ceiling has left), its `spent_usd`, `reserved_usd`,
-  `remaining_usd` (counted against the ceiling too), `elapsed_s` and
-  `time_left_s`; `connection`, what every task on the connection has spent
-  and reserved; and the ceiling.
+- **`budget_status()`** returns the task in force, the connection's totals
+  and the ceiling:
+
+  ```json
+  {
+    "budget": {"max_cost_usd": 1.0, "time_limit_s": 300, "spent_usd": 0.016,
+               "reserved_usd": 0.0, "remaining_usd": 0.984,
+               "elapsed_s": 12.5, "time_left_s": 287.5,
+               "connection": {"spent_usd": 0.032, "reserved_usd": 0.0}},
+    "ceiling": {"max_cost_usd": 5.0, "time_limit_s": null}
+  }
+  ```
+
+  `budget` is `null` with no ceiling and no `budget_start`. Its
+  `max_cost_usd` and `time_limit_s` are those in force, cut to the ceiling,
+  and `remaining_usd` counts against the ceiling too; `connection` is what
+  every task on the connection has spent and reserved. `ceiling` is always
+  there, each limit `null` when the operator set none.
 
 With no ceiling and no `budget_start`, nothing is held, and every tool runs as
 it would with no budget.
@@ -440,7 +457,8 @@ The policy is enforced at these points:
 
 - `browser_goto` refuses a URL before the page is touched. Decimal, hex, octal
   and short IPv4 spellings (`2130706433`, `0x7f000001`, `127.1`) are read as
-  the address they spell.
+  the address they spell, and a NAT64 or IPv4-compatible IPv6 address as the
+  IPv4 it carries.
 - A Playwright route on the browser context sees each request's *first* hop and
   aborts one to a refused address — a link, a form, a script's `fetch`, a
   WebSocket. It does not see redirect hops: Playwright routes only the first
