@@ -24,12 +24,16 @@ exactly as it would without one. With a budget:
 Inside a shared budget (:mod:`.pool`), a call runs here even with no
 ``budget=`` of its own: its budget is the tighter of the two, each attempt it
 admits is reserved in the pool, and what it reserved is settled when it ends.
+A call a backend makes on the same router inside another budgeted call passes
+the outer call's check too, which reserves it in the pools they share, so
+each attempt is reserved there once.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from typing import Generic, TypeVar
 
@@ -43,11 +47,14 @@ from web_router.providers._deadline import Deadline, call_deadline, current_dead
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
-from web_router.routing.pool import chain_in_force
+from web_router.routing.pool import PoolChain, chain_in_force
 from web_router.types import DecisionRecord, NormalizedRequest
 
 _BackendT = TypeVar("_BackendT")
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
+
+_LEDGER: ContextVar[Ledger | None] = ContextVar("web_router_budget_ledger", default=None)
+"""The ledger of the budgeted call in flight, whose check runs before every attempt made inside it."""
 
 
 @dataclass(frozen=True)
@@ -86,13 +93,23 @@ def budget_scope(
     if budget is None:
         yield BudgetedCall(backend)
         return
-    ledger = Ledger(budget, pool)
+    ledger = Ledger(budget, _unheld(pool, _LEDGER.get()))
+    token = _LEDGER.set(ledger)
     try:
         with _held(ledger, tool, backend, request) as call:
             yield call
     finally:
-        if pool is not None:
-            pool.settle(ledger.spent)
+        _LEDGER.reset(token)
+        if ledger.pool is not None:
+            ledger.pool.settle(ledger.spent)
+
+
+def _unheld(chain: PoolChain | None, outer: Ledger | None) -> PoolChain | None:
+    """``chain`` less the pools ``outer``, an enclosing call's ledger, reserves in: it reserves this call's too."""
+    if chain is None or outer is None or outer.pool is None:
+        return chain
+    pools = tuple(pool for pool in chain.pools if pool not in outer.pool.pools)
+    return PoolChain(pools) if pools else None
 
 
 @contextmanager
