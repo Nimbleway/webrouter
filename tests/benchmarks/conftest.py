@@ -162,8 +162,8 @@ ROUTE_EVAL_SIBLINGS = (
     "route_eval_cli",
 )
 """What route-eval imports from its folder, under plain names, so they are forgotten once it is."""
-CHAINS_SIBLINGS = (*ROUTE_EVAL_SIBLINGS, "_emit", "route_eval")
-"""What ``chains.py`` imports from its folder, under plain names: route-eval's, ``_emit`` and route-eval itself."""
+CHAINS_SIBLINGS = (*ROUTE_EVAL_SIBLINGS, "_emit")
+"""What ``chains.py`` imports from its folder, under plain names: route-eval's and ``_emit``."""
 EFFORTS_SIBLINGS = (*ROUTE_EVAL_SIBLINGS, "_emit")
 """What ``efforts.py`` imports from its folder, under plain names: route-eval's and ``_emit``."""
 
