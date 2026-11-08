@@ -20,6 +20,7 @@ from route_eval_rank import (
     TOO_FEW_RULE,
     backend_stats,
     noise_floor,
+    rankable,
     ranked_with_best,
     too_few,
 )
@@ -68,12 +69,7 @@ def recommended_order(summary: dict[str, Any], spread: float | None = None) -> l
     only when its 95% interval stops short of the most accurate one's.
     """
     ranking = summary["ranking"]
-    left_out = set(too_few(ranking))
-    stats = {
-        p: {"accuracy": s["accuracy_all"], "cost_usd": s["cost_usd"], "latency_p50": s["latency_p50"]}
-        for p, s in ranking.items()
-        if s["served"] and p not in left_out
-    }
+    stats = rankable(ranking)
     if not stats:
         return []
     ranked, best = ranked_with_best(stats, noise_floor()[0] if spread is None else spread)

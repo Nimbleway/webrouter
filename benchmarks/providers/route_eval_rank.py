@@ -161,19 +161,21 @@ def too_few(stats: Mapping[str, Mapping[str, Any]], min_questions: int = MIN_QUE
     return [p for p, s in stats.items() if s["served"] and s["questions"] < min_questions]
 
 
+def rankable(stats: Mapping[str, Mapping[str, Any]], min_questions: int = MIN_QUESTIONS) -> dict[str, dict[str, Any]]:
+    """The backends that served anything, on at least ``min_questions``, as :func:`rank_backends` reads them."""
+    left_out = set(too_few(stats, min_questions))
+    return {
+        p: {"accuracy": s["accuracy_all"], "cost_usd": s["cost_usd"], "latency_p50": s["latency_p50"]}
+        for p, s in stats.items()
+        if s["served"] and p not in left_out
+    }
+
+
 def recommended(
     stats: Mapping[str, Mapping[str, Any]], noise_floor: float, min_questions: int = MIN_QUESTIONS
 ) -> list[str]:
     """The one recommended order: :func:`rank_backends` over the backends that served anything, on enough questions."""
-    left_out = set(too_few(stats, min_questions))
-    return ranked_with_best(
-        {
-            p: {"accuracy": s["accuracy_all"], "cost_usd": s["cost_usd"], "latency_p50": s["latency_p50"]}
-            for p, s in stats.items()
-            if s["served"] and p not in left_out
-        },
-        noise_floor,
-    )[0]
+    return ranked_with_best(rankable(stats, min_questions), noise_floor)[0]
 
 
 @lru_cache(maxsize=4)
