@@ -21,7 +21,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Collection, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
-from typing import Any, Protocol, TypeVar, get_args
+from typing import Any, TypeVar, get_args
 
 from pydantic import BaseModel
 
@@ -29,7 +29,6 @@ from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS
 from web_router.constants_invoke import MSG_ROUTE_TOOLS
 from web_router.exceptions import ConfigurationError
-from web_router.providers.base import Job
 from web_router.routing.attempts import CallRoute, call_route, current_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
@@ -41,11 +40,7 @@ from web_router.routing.params import shared_effort
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
 from web_router.routing.url_policy import UrlPolicy, url_check
-from web_router.types import (
-    NormalizedRequest,
-    ResearchRequest,
-    provider_name,
-)
+from web_router.types import NormalizedRequest, ResearchRequest, provider_name
 from web_router.types_decision import DecisionRecord
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
@@ -135,7 +130,7 @@ class RouterSetup:
     ) -> tuple[CallRoute | None, _RequestT, DecisionRecord | None]:
         """The order in force, the request and the record: the router's merged, or with none the budget's effort."""
         if routed is None or outcome is None:
-            request, mapped = _unrouted(chain, request, budget)
+            request, mapped = unrouted(chain, request, budget)
             return None, request, mapped
         return self._merged(routed, outcome, request)
 
@@ -152,7 +147,7 @@ class RouterSetup:
         return CallRoute(order={out.tool: out.providers}), request, out.record
 
 
-def _unrouted(chain: Any, request: _RequestT, budget: Budget | None) -> tuple[_RequestT, DecisionRecord | None]:
+def unrouted(chain: Any, request: _RequestT, budget: Budget | None) -> tuple[_RequestT, DecisionRecord | None]:
     """A call no router orders: with a budget, research still runs at the effort the budget maps.
 
     The effort is :func:`~web_router.routing.params.shared_effort`'s, over the backends of the chain the call
@@ -172,10 +167,10 @@ def _unrouted(chain: Any, request: _RequestT, budget: Budget | None) -> tuple[_R
 
 
 def _named(chain: Any, request: _RequestT, budget: Budget | None) -> tuple[_RequestT, DecisionRecord | None]:
-    """A call to a backend the caller named: its research effort, as :func:`_unrouted` maps it; else unchanged."""
+    """A call to a backend the caller named: its research effort, as :func:`unrouted` maps it; else unchanged."""
     if getattr(chain, "name", PROVIDER_AUTO) == PROVIDER_AUTO:
         return request, None
-    return _unrouted(chain, request, budget)
+    return unrouted(chain, request, budget)
 
 
 def _decided(response: _ResponseT, record: DecisionRecord | None) -> _ResponseT:
@@ -235,38 +230,3 @@ class AsyncRouted(RouterSetup):
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged:
                 return logged.settle(_decided(await call(request), record or named))
-
-
-_JobT = TypeVar("_JobT", bound="Job[Any, Any, Any]", covariant=True)
-
-
-class _Submits(Protocol[_JobT]):
-    def submit(self, request: Any) -> _JobT: ...
-
-
-class _ASubmits(Protocol[_JobT]):
-    async def asubmit(self, request: Any) -> _JobT: ...
-
-
-def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedRequest, router: object) -> _JobT:
-    """``backend``'s job for ``request``, its start held to ``router``'s shared budget in force, if any (:mod:`.pool`).
-
-    A job's start is what bills, so inside ``wr.budget(...)`` each attempt to
-    start one is reserved like any other, and research with no effort set runs
-    at the one the budget maps, as ``research()`` does; with no shared budget
-    it starts as it would without one.
-    """
-    request, record = _unrouted(backend, request, limited(None, router))  # before the scope, which admits a named one
-    with budget_scope(None, tool, backend, request, router):
-        job = backend.submit(request)
-    job.decision = record
-    return job
-
-
-async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: NormalizedRequest, router: object) -> _JobT:
-    """As :func:`submitted`, awaited."""
-    request, record = _unrouted(backend, request, limited(None, router))
-    with budget_scope(None, tool, backend, request, router):
-        job = await backend.asubmit(request)
-    job.decision = record
-    return job

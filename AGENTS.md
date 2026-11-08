@@ -157,6 +157,8 @@ src/web_router/
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
+│   ├── submitted.py    submitted(): a job's start (submit_research, submit_browse)
+│   │                   held to the shared budget in force, at the effort it maps
 │   ├── decide.py       decided(): candidates and a router's outcome merged into the
 │   │                   method, order, options and record a call runs with, pure
 │   ├── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
