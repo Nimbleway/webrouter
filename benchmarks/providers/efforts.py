@@ -31,8 +31,9 @@ from typing import Any
 from _common import _pct, _round
 from _tools_effort_plan import RESEARCH
 from frozen import FROZEN_DIR
+from route_eval_floor import Floor, floor_for
 from route_eval_paths import path_id, research_by_effort
-from route_eval_rank import MIN_QUESTIONS, Floor, backend_stats, floor_for, is_served, too_few
+from route_eval_rank import MIN_QUESTIONS, backend_stats, is_served, too_few
 from route_eval_sets import Question, load_set
 
 from web_router.constants_params import EFFORT_RULE
