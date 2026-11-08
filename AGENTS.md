@@ -134,7 +134,9 @@ src/web_router/
 │   │                   a hook before each attempt, held in a context variable
 │   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,
 │   │                   the check before each attempt, BudgetExceededError, the record
-│   ├── ledger.py       one budgeted call's ledger: the cost and p90 rules, the spend
+│   ├── ledger.py       one budgeted call's ledger: what each attempt is charged, the spend
+│   ├── pricing.py      the one cost and p90 rule: price list, floor, provider_options and
+│   │                   results past a row's price unknown, research's p90 from the effort table
 │   ├── invoke.py       router=: the two forms a router takes, called sync or async on
 │   │                   its own thread or loop within its timeout, and the failure policy
 │   ├── _runner.py      the worker thread and private loop a router runs on, the wait

@@ -33,6 +33,7 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping, Sequence
 from typing import Any, cast
 
+from web_router.constants_candidates import ONE_PAGE_URL
 from web_router.constants_merge import (
     EXTRACT_TOOL,
     LAST_RESORT_TOOL,
@@ -47,11 +48,14 @@ from web_router.constants_merge import (
     NOTE_EXTRACT_URLS,
     ROUTER_INVALID,
 )
+from web_router.constants_params import PRICED_QUERY
+from web_router.routing.candidates import REQUEST_OF, base_params
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
-from web_router.routing.merge_params import checked_params, router_url_refusal, router_urls
+from web_router.routing.merge_params import checked_params, router_url_refusal
 from web_router.routing.merge_shape import TOOLS, decides_nothing, well_formed
 from web_router.routing.merge_types import FallbackReason, Merged, MergeNotes
 from web_router.routing.merge_urls import UrlCheck, hide_urls
+from web_router.types import NormalizedRequest
 
 __all__ = ["FallbackReason", "MergeNotes", "Merged", "UrlCheck", "merge"]
 
@@ -122,11 +126,11 @@ def _method(
     ignored: dict[str, str],
 ) -> str:
     """Rule 7: ``tool``, unless it is extract with no URL to read, which searches instead and says so."""
-    no_url = request.pinned_tool is None and not request.urls and not router_urls(decision, url_check, caller_set)
-    if tool != EXTRACT_TOOL or not no_url:
+    refused = router_url_refusal(decision, url_check, caller_set)
+    gave_urls = (decision.params or {}).get(EXTRACT_TOOL, {}).get("urls") is not None
+    if tool != EXTRACT_TOOL or request.pinned_tool is not None or request.urls or (gave_urls and not refused):
         return tool
     ignored[NOTE_EXTRACT] = MSG_EXTRACT_NO_URL
-    refused = router_url_refusal(decision, url_check, caller_set)
     if refused is not None:
         ignored[NOTE_EXTRACT_URLS] = refused
     return LAST_RESORT_TOOL
@@ -150,6 +154,12 @@ def _never_empty(
     return _order(tool, request, ranked, (), static), kept
 
 
+def _prompt_request(tool: ToolName, request: RouteRequest) -> NormalizedRequest:
+    """The request ``tool`` runs ``request``'s prompt with, extract on one page when the prompt names no URL."""
+    prompt = request.prompt or PRICED_QUERY  # priced by backend and options, never by the prompt
+    return REQUEST_OF[tool](**base_params(tool, prompt, request.urls or (ONE_PAGE_URL,)))
+
+
 def merge(
     request: RouteRequest,
     decision: object,
@@ -158,6 +168,7 @@ def merge(
     failure: FallbackReason | None = None,
     caller_set: Collection[str] = (),
     url_check: UrlCheck | None = None,
+    requests: Mapping[ToolName, NormalizedRequest] | None = None,
 ) -> Merged:
     """``decision`` for ``request``, merged with ``static_order`` by the rules above.
 
@@ -165,7 +176,10 @@ def merge(
     ``failure`` says the router timed out or raised; ``decision`` is then not
     read. ``caller_set`` names the options the caller set, which a router never
     changes. ``url_check`` is the URL policy: it returns why a URL is refused,
-    ``None`` when it is allowed. With none, a router sets no URL.
+    ``None`` when it is allowed. With none, a router sets no URL. ``requests``
+    are what each method runs with no router option -- the ones the candidates
+    were priced at -- and the router's options are priced on them; with none,
+    the prompt's own requests.
     """
     if failure is None and not well_formed(decision):
         failure = ROUTER_INVALID
@@ -181,7 +195,8 @@ def merge(
     tool = _method(tool, request, decision, caller_set, url_check, ignored)
     ranked = _ranked(tool, decision, known, ignored)
     providers, excluded = _never_empty(tool, request, ranked, excluded, static_order, ignored)
-    params = checked_params(tool, decision, providers, request.budget, caller_set, url_check, ignored)
+    base = (requests or {}).get(cast(ToolName, tool)) or _prompt_request(cast(ToolName, tool), request)
+    params = checked_params(tool, decision, providers, base, request.budget, caller_set, url_check, ignored)
     notes = MergeNotes(
         ranked=tuple(candidate_id(tool, p) for p in ranked),
         merged=tuple(candidate_id(tool, p) for p in providers),

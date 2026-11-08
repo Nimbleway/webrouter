@@ -6,19 +6,21 @@ its ``_eligible`` keeps, read by :mod:`web_router.routing.eligible`: only those
 that map every option the request sets, so a candidate is never one the call
 would be silently degraded on -- and that
 ``auto`` can build, so a member with no credential is never offered. Each carries
-its estimated cost from :mod:`web_router.prices` and its measured p90 latency
-from the same rows; neither is ever guessed, so an unknown stays ``None``.
+its estimated cost and its measured p90 latency by :mod:`.pricing`'s rule, the
+one the budget's ledger charges by; neither is ever guessed, so an unknown
+stays ``None``.
 
 A budget, the part of it still left, then prefilters them. Under a cost cap a
 candidate whose price is unknown, or whose estimate is over what is left, is
 dropped. Research is priced at the ``effort`` the caller set, else at the
-backend's default; choosing a cheaper effort is the budget mapping's job, not
-this one's. A search asking for more results than its row's price assumes
-(``results_assumed``) is charged per result past it, so its price is unknown.
-A request carrying ``provider_options`` may be billed at another
-mode than its row, so under a cost cap its price counts as unknown, and under
-a time cap its p90. Under a time cap a known p90 over the time left
-drops a candidate, and an unknown p90 drops it only on a strict budget. Every
+one :func:`~web_router.routing.params.map_effort` picks for that backend under
+the budget -- the backend's default when there is no cap -- so it is offered at
+the effort it would run with. A request carrying ``provider_options`` may be
+billed at another mode than its row, and a floor row bills more on top, so
+their price is unknown, and under a cost cap dropped; so is a search asking
+for more results than its row's price assumes (``results_assumed``), charged
+per result past it. ``provider_options`` make the p90 unknown too. Under a
+time cap a known p90 over the time left drops a candidate, and an unknown p90 drops it only on a strict budget. Every
 drop is recorded with its reason, for the decision record.
 
 It is on the hot path of every routed call: it reads classes and the cached
@@ -34,6 +36,7 @@ from typing import Any
 
 from web_router._chains import chains
 from web_router.constants import PROVIDER_AUTO
+from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
 from web_router.constants_candidates import (
     MSG_DROPPED_OVER_COST,
     MSG_DROPPED_OVER_TIME,
@@ -41,10 +44,11 @@ from web_router.constants_candidates import (
     MSG_DROPPED_UNKNOWN_LATENCY,
     RANKED_METHODS,
 )
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
-from web_router.prices import estimate, estimate_latency, price
-from web_router.routing.contract import Budget, Candidate, ToolName
+from web_router.routing.attempts import Attempt
+from web_router.routing.contract import Budget, Candidate, ToolName, candidate_id
 from web_router.routing.eligible import eligible_members
+from web_router.routing.params import EffortChoice, shared_effort
+from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -70,20 +74,41 @@ class CandidateSet:
     unmeasured: tuple[str, ...] = ()
     """The ids of the candidates whose price or p90 is unknown or uncertain, or whose place route-eval did not rank."""
 
+    effort: EffortChoice | None = None
+    """The research effort the budget chose for the call, which every research candidate is priced at."""
+
+    requests: Mapping[ToolName, NormalizedRequest] = field(default_factory=dict)
+    """Per method, the request its candidates were priced at: the router's options are priced on it."""
+
+
+REQUEST_OF: dict[ToolName, type[NormalizedRequest]] = {
+    "search": SearchRequest,
+    "extract": ExtractRequest,
+    "answer": AnswerRequest,
+    "research": ResearchRequest,
+    "browse": BrowseRequest,
+}
+"""Each routable method's request: the one table the routing modules read, both ways."""
+
+
+def base_params(tool: ToolName, prompt: str, urls: Sequence[str]) -> dict[str, Any]:
+    """What ``tool`` is called with for ``prompt``: extract its URLs, browse the task and its first URL, else the
+    prompt as the query. Before any option a router or the budget sets."""
+    if tool == "extract":
+        return {"urls": list(urls)}
+    if tool == "browse":
+        return {"task": prompt, "start_url": urls[0] if urls else None}
+    return {"query": prompt}
+
 
 def default_requests(prompt: str, urls: Sequence[str] = ()) -> dict[ToolName, NormalizedRequest]:
     """One request per routable method for ``prompt``, as the call that sets no option would send it.
 
     Extract is left out when there are no ``urls``: it has nothing to fetch.
-    Browse starts on the first URL when there is one.
     """
-    requests: dict[ToolName, NormalizedRequest] = {"search": SearchRequest(query=prompt)}
-    if urls:
-        requests["extract"] = ExtractRequest(urls=list(urls))
-    requests["answer"] = AnswerRequest(query=prompt)
-    requests["research"] = ResearchRequest(query=prompt)
-    requests["browse"] = BrowseRequest(task=prompt, start_url=urls[0] if urls else None)
-    return requests
+    return {
+        tool: cls(**base_params(tool, prompt, urls)) for tool, cls in REQUEST_OF.items() if tool != "extract" or urls
+    }
 
 
 def build_candidates(
@@ -113,10 +138,17 @@ def build_candidates(
     dropped: dict[str, str] = {}
     unmeasured: list[str] = []
     seen: set[str] = set()
+    effort: EffortChoice | None = None
+    priced: dict[ToolName, NormalizedRequest] = {}
     for tool, request in requests.items():
         eligible, unbuilt = eligible_members(router, tool, request)
+        if isinstance(request, ResearchRequest) and request.effort is None:
+            effort = shared_effort([name for name, _ in eligible], budget)
+            request = request if effort is None else request.model_copy(update={"effort": effort.effort})
+        priced[tool] = request
         for name, keyless in eligible:
-            cost, p90 = _estimates(tool, name, request, budget)
+            attempt = Attempt(tool=tool, provider=name, request=request)
+            cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
             candidate = Candidate(tool=tool, provider=name, est_cost_usd=cost, est_latency_s=p90)
             if candidate.id in seen:
                 continue  # a member listed twice is one candidate, at its first place
@@ -128,61 +160,28 @@ def build_candidates(
             if cost is None or p90 is None or keyless or request.provider_options or name not in _ranked(tool):
                 unmeasured.append(candidate.id)
         for name, why in unbuilt.items():
-            if (unbuilt_id := f"{tool}{CANDIDATE_ID_SEPARATOR}{name}") not in seen:  # built at another place
+            if (unbuilt_id := candidate_id(tool, name)) not in seen:  # built at another place
                 dropped[unbuilt_id] = why
-    return CandidateSet(candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured))
+    return CandidateSet(
+        candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured), effort=effort, requests=priced
+    )
 
 
-def _estimates(
-    tool: ToolName, name: str, request: NormalizedRequest, budget: Budget | None
-) -> tuple[float | None, float | None]:
-    """The candidate's estimated cost in US dollars and its p90 seconds, at the mode it would run."""
-    mode = _pinned_mode(request)
-    units = len(request.urls) if isinstance(request, ExtractRequest) else 1  # extract bills per page
-    each = None if _more_results_than_priced(request, name, tool, mode) else estimate(name, tool, mode)
-    cost = None if each is None else each * units
-    latency = estimate_latency(name, tool, mode)
-    p90 = None if latency is None else latency[1]
-    if request.provider_options and budget is not None:
-        # A vendor option can change the billed mode, so the row's figures are no estimate under a cap.
-        cost = None if budget.max_cost_usd is not None else cost
-        p90 = None if budget.time_limit_s is not None else p90
-    return cost, p90
-
-
-def _more_results_than_priced(request: NormalizedRequest, name: str, tool: ToolName, mode: str | None) -> bool:
-    """A search asking for more results than its row's price assumes, where each result is charged: unpriced."""
-    if not isinstance(request, SearchRequest) or request.max_results is None:
-        return False
-    row = price(name, tool, mode)
-    assumed = None if row is None else row.results_assumed
-    return assumed is not None and request.max_results > assumed
-
-
-def _pinned_mode(request: NormalizedRequest) -> str | None:
-    """The price list's mode the caller set: search's ``search_depth`` or research's ``effort``."""
-    if isinstance(request, SearchRequest):
-        return request.search_depth
-    if isinstance(request, ResearchRequest):
-        return request.effort
-    return None
+_DROPPED = {
+    UNKNOWN_PRICE: MSG_DROPPED_UNKNOWN_COST,
+    OVER_COST: MSG_DROPPED_OVER_COST,
+    UNKNOWN_P90: MSG_DROPPED_UNKNOWN_LATENCY,
+    OVER_TIME: MSG_DROPPED_OVER_TIME,
+}
 
 
 def _over_budget(cost: float | None, p90: float | None, budget: Budget | None) -> str | None:
     """Why ``budget`` leaves the candidate out, or ``None`` when it fits."""
     if budget is None:
         return None
-    cap = budget.max_cost_usd
-    if cap is not None and cost is None:
-        return MSG_DROPPED_UNKNOWN_COST.format(cap=cap)
-    if cap is not None and cost is not None and cost > cap:
-        return MSG_DROPPED_OVER_COST.format(cost=cost, cap=cap)
-    limit = budget.time_limit_s
-    if limit is not None and p90 is None and budget.strict:
-        return MSG_DROPPED_UNKNOWN_LATENCY
-    if limit is not None and p90 is not None and p90 > limit:
-        return MSG_DROPPED_OVER_TIME.format(p90=p90, limit=limit)
-    return None
+    cap, limit = budget.max_cost_usd, budget.time_limit_s
+    code = misfit(cost, p90, cap, limit, budget.strict)
+    return None if code is None else _DROPPED[code].format(cost=cost, cap=cap, p90=p90, limit=limit)
 
 
 @cache
