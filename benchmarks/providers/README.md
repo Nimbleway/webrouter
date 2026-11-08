@@ -105,6 +105,8 @@ row is classed as the frozen sets class it, a search that failed on a rate-limit
 or quota error is left out (not a miss, nor in the backend's total) and counted
 in the table's *Rate limit or quota* column, and the latency tie-break is the
 median over every served row, one the judge did not grade included.
+A backend counted on fewer than 20 questions is not ranked: as in route-eval,
+it is listed after the order as *too few questions* and left out of the chain.
 Depth and mode setups (`nimble@deep`, `tavily:ultra-fast`) are left out, since
 a chain member is a backend that `auto` sends whatever depth the request asks
 for, not a mode. It ends with a snippet to paste into your own router:
@@ -448,8 +450,8 @@ noise floor of the best not yet placed, the cheaper backend at known cost
 first, then the faster, then the name. An unknown or $0 cost never moves a backend up, and the keyless tier
 stays last. A backend counted on fewer than 20 questions (`MIN_QUESTIONS` in
 `route_eval_rank.py`, which says why 20) is not ranked: it is listed after the
-ranked ones as *too few questions*. `run.py`'s recommended order calls the same
-ranking without the minimum, since one scan is often smaller than 20 questions. AIQ and the
+ranked ones as *too few questions*. `run.py`'s recommended order applies the
+same minimum, so a scan of fewer than 20 questions suggests no order. AIQ and the
 cost and latency curves wait for the first real router. `--json PATH` writes
 the numbers as well.
 

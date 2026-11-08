@@ -8,7 +8,7 @@ from types import ModuleType
 
 import pytest
 
-from tests.benchmarks.conftest import ROUTE_EVAL_SIBLINGS, load_script, route_row
+from tests.benchmarks.conftest import CHAINS_SIBLINGS, load_script, route_row
 from tests.benchmarks.conftest import write_frozen_set as _write_set
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "chains.py"
@@ -16,7 +16,7 @@ SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "cha
 
 @pytest.fixture(scope="module")
 def chains() -> Iterator[ModuleType]:
-    with load_script(SCRIPT, "chains_under_test", (*ROUTE_EVAL_SIBLINGS, "route_eval")) as module:
+    with load_script(SCRIPT, "chains_under_test", CHAINS_SIBLINGS) as module:
         yield module
 
 

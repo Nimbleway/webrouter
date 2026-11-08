@@ -11,15 +11,8 @@ from typing import Any
 from _common import _p, _s
 from route_eval_floor import Floor
 from route_eval_paths import EFFORT_INTRO, MIXED, MIXED_INTRO
-from route_eval_rank import MIN_QUESTIONS, RANKING_RULE
+from route_eval_rank import RANKING_RULE, TOO_FEW, TOO_FEW_RULE
 from route_eval_sets import TWIN_SETS
-
-TOO_FEW = "too few questions"
-"""The order column of a backend counted on fewer than :data:`~route_eval_rank.MIN_QUESTIONS`: listed, not ranked."""
-TOO_FEW_RULE = (
-    f"A backend counted on fewer than {MIN_QUESTIONS} questions is not ranked: it is listed after the ranked ones "
-    f"as *{TOO_FEW}*."
-)
 
 
 def _usd(value: float | None, unknown: int = 0) -> str:

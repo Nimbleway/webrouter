@@ -8,7 +8,7 @@ from types import ModuleType
 
 import pytest
 
-from tests.benchmarks.conftest import ROUTE_EVAL_SIBLINGS, load_script, route_row
+from tests.benchmarks.conftest import EFFORTS_SIBLINGS, load_script, route_row
 from tests.benchmarks.conftest import write_frozen_set as _write_set
 from web_router.constants_params import EFFORT_RULE
 
@@ -17,7 +17,7 @@ SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "eff
 
 @pytest.fixture(scope="module")
 def efforts() -> Iterator[ModuleType]:
-    with load_script(SCRIPT, "efforts_under_test", ROUTE_EVAL_SIBLINGS) as module:
+    with load_script(SCRIPT, "efforts_under_test", EFFORTS_SIBLINGS) as module:
         yield module
 
 
