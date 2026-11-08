@@ -465,7 +465,7 @@ def test_a_depth_request_skips_the_members_without_depth_for_the_keyless_tier(
     assert set(passed_over._members) == {2}, "perplexity and brave were never built"
 
 
-def test_a_depth_request_only_depthless_members_could_take_names_each(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_depth_request_no_member_serves_names_each_ones_reason(monkeypatch: pytest.MonkeyPatch) -> None:
     for env_var in _EVERY_SEARCH_KEY:
         monkeypatch.delenv(env_var, raising=False)
 
@@ -474,7 +474,7 @@ def test_a_depth_request_only_depthless_members_could_take_names_each(monkeypatc
         router.search("hi", search_depth="deep")
 
     message = str(caught.value)
-    assert "perplexity (does not map 'search_depth')" in message
+    assert "perplexity (will not serve search_depth='deep')" in message
     assert "brave (does not map 'search_depth')" in message
     assert "nothing was searched" in message
 

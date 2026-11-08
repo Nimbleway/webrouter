@@ -3091,7 +3091,6 @@ PERPLEXITY_BASE_URL = "https://api.perplexity.ai"
 PERPLEXITY_SEARCH_PATH = "/search"
 PERPLEXITY_API_KEY_HEADER = "Authorization"
 PERPLEXITY_API_KEY_PREFIX = "Bearer "
-PERPLEXITY_PARAM_NAMES = {"max_results": "max_results"}
 
 # --- Linkup -----------------------------------------------------------------
 # Search, extract and research share a host, a bearer key and a `/v1` prefix.

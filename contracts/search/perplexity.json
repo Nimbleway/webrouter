@@ -23,51 +23,91 @@
       "sample": {
         "body.max_results": 3
       }
+    },
+    "search_depth": {
+      "lite": {
+        "body.max_tokens_per_page": 128
+      },
+      "fast": {
+        "body.max_tokens_per_page": 1024
+      },
+      "deep": {
+        "refused": "UnsupportedParameterError"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.search_domain_filter": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.search_domain_filter": [
+          "-example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.country": "US"
+      }
+    },
+    "locale": {
+      "sample": {
+        "body.search_language_filter": [
+          "en"
+        ]
+      }
+    },
+    "recency": {
+      "day": {
+        "body.search_recency_filter": "day"
+      },
+      "week": {
+        "body.search_recency_filter": "week"
+      },
+      "month": {
+        "body.search_recency_filter": "month"
+      },
+      "year": {
+        "body.search_recency_filter": "year"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.search_type": "fast"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "unchanged": "no wire change"
+      },
+      "max": {
+        "unchanged": "no wire change"
+      }
     }
   },
-  "not_mapped": [
-    "country",
-    "effort",
-    "exclude_domains",
-    "include_domains",
-    "locale",
-    "recency",
-    "search_depth"
-  ],
+  "not_mapped": [],
   "source": [
     "https://docs.perplexity.ai/api-reference/search-post"
   ],
   "verified": {
-    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound"
+    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
+    "include_domains": "docs: https://docs.perplexity.ai/api-reference/search-post",
+    "exclude_domains": "docs: https://docs.perplexity.ai/api-reference/search-post",
+    "country": "docs: https://docs.perplexity.ai/api-reference/search-post",
+    "locale": "docs: https://docs.perplexity.ai/api-reference/search-post",
+    "recency": "docs: https://docs.perplexity.ai/api-reference/search-post",
+    "search_depth": "docs: https://docs.perplexity.ai/api-reference/search-post (lite and fast budgets not measured live; deep refused until a live call shows whole pages)",
+    "effort": "docs: https://docs.perplexity.ai/api-reference/search-post"
   },
   "vendor_options": {
-    "country": {
-      "status": "passthrough",
-      "note": "ISO 3166-1 alpha-2, the form the shared country option uses; not mapped yet."
-    },
-    "search_domain_filter": {
-      "status": "passthrough",
-      "note": "Up to 20 domains, included, or excluded with a '-' prefix; a candidate for the shared domain filters."
-    },
-    "search_language_filter": {
-      "status": "passthrough",
-      "note": "ISO 639-1 codes; a candidate for the shared locale option."
-    },
-    "search_type": {
-      "status": "passthrough",
-      "note": "web | fast | people."
-    },
     "max_tokens": {
       "status": "passthrough",
-      "note": "Content token budget across all results."
-    },
-    "max_tokens_per_page": {
-      "status": "passthrough",
-      "note": "Content token budget per result."
-    },
-    "search_recency_filter": {
-      "status": "passthrough",
-      "note": "hour | day | week | month | year."
+      "note": "Content token budget across all results; unset, it may cap the per-page budget search_depth sets."
     },
     "search_after_date_filter": {
       "status": "passthrough",
@@ -84,6 +124,14 @@
     "last_updated_before_filter": {
       "status": "passthrough",
       "note": "MM/DD/YYYY."
+    },
+    "search_type=people": {
+      "status": "passthrough",
+      "note": "A people vertical, not a tier; allows max_results above 20."
+    },
+    "search_recency_filter=hour": {
+      "status": "passthrough",
+      "note": "Narrower than any shared recency window."
     }
   }
 }

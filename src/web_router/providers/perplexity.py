@@ -7,13 +7,16 @@ endpoint, and :class:`PerplexityAnswerProvider` asks the same endpoint for one
 answer in one call. Install with the ``search``, ``research`` or ``answer`` extra. Reads ``PERPLEXITY_API_KEY`` unless a
 key is passed explicitly.
 
-Search is slim by design: only ``max_results`` is mapped. Everything else is
-reachable through ``provider_options``; mapping one properly is a welcome PR --
-see CONTRIBUTING.md.
+Search maps every shared option: the domain filters onto one
+``search_domain_filter``, ``country``, ``locale`` as ``search_language_filter``,
+``recency``, ``search_depth`` as a per-page token budget (``lite`` and ``fast``;
+``deep`` is refused) and ``effort`` as ``search_type``. Everything else is
+reachable through ``provider_options``.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any, ClassVar
 from urllib.parse import quote
 
@@ -26,7 +29,6 @@ from web_router.constants import (
     PERPLEXITY_OUTPUT_MESSAGE,
     PERPLEXITY_OUTPUT_SEARCH_RESULTS,
     PERPLEXITY_OUTPUT_TEXT,
-    PERPLEXITY_PARAM_NAMES,
     PERPLEXITY_RESEARCH_BACKGROUND,
     PERPLEXITY_RESEARCH_CANCEL_PATH,
     PERPLEXITY_RESEARCH_DEFAULT_PRESET,
@@ -40,6 +42,8 @@ from web_router.constants import (
 from web_router.constants_perplexity import (
     MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE,
     MSG_PERPLEXITY_ANSWER_STOPPED,
+    MSG_PERPLEXITY_LOCALE,
+    MSG_PERPLEXITY_TOO_MANY_DOMAINS,
     PERPLEXITY_ANSWER_COUNTRY_FIELD,
     PERPLEXITY_ANSWER_DOMAIN_FIELD,
     PERPLEXITY_ANSWER_EFFORT,
@@ -50,8 +54,16 @@ from web_router.constants_perplexity import (
     PERPLEXITY_ANSWER_RECENCY_FIELD,
     PERPLEXITY_ANSWER_STOPPED,
     PERPLEXITY_ANSWER_TOOL,
+    PERPLEXITY_LANGUAGE_FIELD,
+    PERPLEXITY_LANGUAGE_PATTERN,
+    PERPLEXITY_MAX_DOMAINS,
+    PERPLEXITY_SEARCH_NAMES,
+    PERPLEXITY_SEARCH_TYPE_BY_EFFORT,
+    PERPLEXITY_SEARCH_TYPE_FIELD,
+    PERPLEXITY_TOKENS_BY_DEPTH,
+    PERPLEXITY_TOKENS_FIELD,
 )
-from web_router.exceptions import ProviderError
+from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
 from web_router.providers._utils import build_payload, compact, error_detail
 from web_router.providers.answer import cited_marker, refuse_domain_pair
@@ -60,6 +72,7 @@ from web_router.types import (
     ResearchProgress,
     ResearchRequest,
     ResearchResponse,
+    SearchDepth,
     SearchRequest,
     SearchResponse,
     SearchResult,
@@ -68,13 +81,17 @@ from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "snippet", "date"})
 _MAPPED_SOURCE_FIELDS = frozenset({"url", "title", "snippet"})
+_LANGUAGE = re.compile(PERPLEXITY_LANGUAGE_PATTERN)
 
 
 class PerplexityProvider(HttpSearchProvider):
     """Routes searches to the Perplexity Search API."""
 
     name: ClassVar[str] = PROVIDER_PERPLEXITY
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(PERPLEXITY_PARAM_NAMES)
+    supported_parameters: ClassVar[frozenset[str]] = frozenset(
+        {*PERPLEXITY_SEARCH_NAMES, "include_domains", "exclude_domains", "locale", "recency", "search_depth", "effort"}
+    )
+    depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset(PERPLEXITY_TOKENS_BY_DEPTH)
 
     base_url: ClassVar[str] = PERPLEXITY_BASE_URL
     search_path: ClassVar[str] = PERPLEXITY_SEARCH_PATH
@@ -82,8 +99,62 @@ class PerplexityProvider(HttpSearchProvider):
     api_key_header: ClassVar[str] = PERPLEXITY_API_KEY_HEADER
     api_key_prefix: ClassVar[str] = PERPLEXITY_API_KEY_PREFIX
 
+    def validate(self, request: SearchRequest) -> None:
+        """As every search backend, and refuse a value Perplexity's filters cannot take, naming why."""
+        self._reject_unmapped(request)
+        if refused := self._refused_filters(request):
+            raise UnsupportedParameterError(self.name, refused, values=refused, detail=self._why(request, refused))
+        super().validate(request)
+
+    @classmethod
+    def refused_values(cls, request: SearchRequest) -> dict[str, Any]:
+        """A depth it lacks, and a filter value it cannot take; read by ``auto`` to pass it over."""
+        return {**super().refused_values(request), **cls._refused_filters(request)}
+
+    @staticmethod
+    def _refused_filters(request: SearchRequest) -> dict[str, Any]:
+        include, exclude = request.include_domains or [], request.exclude_domains or []
+        refused: dict[str, Any] = {}
+        if (include and exclude) or len(include) + len(exclude) > PERPLEXITY_MAX_DOMAINS:
+            refused |= {
+                name: value for name, value in (("include_domains", include), ("exclude_domains", exclude)) if value
+            }
+        if request.locale is not None and not _LANGUAGE.match(request.locale):
+            refused["locale"] = request.locale
+        return refused
+
+    @staticmethod
+    def _why(request: SearchRequest, refused: dict[str, Any]) -> str:
+        if "locale" in refused:
+            return MSG_PERPLEXITY_LOCALE.format(locale=request.locale)
+        if request.include_domains and request.exclude_domains:
+            return MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE
+        count = len(request.include_domains or []) + len(request.exclude_domains or [])
+        return MSG_PERPLEXITY_TOO_MANY_DOMAINS.format(limit=PERPLEXITY_MAX_DOMAINS, count=count)
+
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        return build_payload(request, PERPLEXITY_PARAM_NAMES, query=request.query)
+        domains = [
+            *(request.include_domains or []),
+            *(PERPLEXITY_ANSWER_EXCLUDE_PREFIX + domain for domain in request.exclude_domains or []),
+        ]
+        return build_payload(
+            request,
+            PERPLEXITY_SEARCH_NAMES,
+            query=request.query,
+            **{
+                PERPLEXITY_ANSWER_DOMAIN_FIELD: domains or None,
+                PERPLEXITY_LANGUAGE_FIELD: [request.locale.lower()] if request.locale else None,
+                PERPLEXITY_ANSWER_RECENCY_FIELD: PERPLEXITY_ANSWER_RECENCY[request.recency]
+                if request.recency
+                else None,
+                PERPLEXITY_TOKENS_FIELD: PERPLEXITY_TOKENS_BY_DEPTH[request.search_depth]
+                if request.search_depth
+                else None,
+                PERPLEXITY_SEARCH_TYPE_FIELD: PERPLEXITY_SEARCH_TYPE_BY_EFFORT[request.effort]
+                if request.effort
+                else None,
+            },
+        )
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         return SearchResponse(
