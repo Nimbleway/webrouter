@@ -110,6 +110,13 @@ def test_every_policy_refuses_what_is_no_http_url(url: str) -> None:
     assert public_only(url) is not None and any_web_url(url) is not None
 
 
+@pytest.mark.parametrize("url", ["http:/example.com/", "https://"])
+def test_an_http_url_with_no_host_is_refused_for_its_missing_host_not_its_scheme(url: str) -> None:
+    from web_router.constants_urls import MSG_URL_NO_HOST
+
+    assert public_only(url) == MSG_URL_NO_HOST and any_web_url(url) == MSG_URL_NO_HOST
+
+
 def test_a_refused_url_is_recorded_by_its_host_only() -> None:
     kept, refused = screened(["https://a.test/x", "http://10.0.0.1/secret?token=1"], public_only)
     assert kept == ["https://a.test/x"]
