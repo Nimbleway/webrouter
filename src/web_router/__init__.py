@@ -114,7 +114,7 @@ from web_router.registry_answer import (
     unregister_answer_provider,
 )
 from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, RouterLike, ToolName
-from web_router.routing.pool import BudgetStatus
+from web_router.routing.pool_status import BudgetStatus
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,

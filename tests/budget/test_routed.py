@@ -57,3 +57,17 @@ def test_a_routed_call_with_no_budget_never_skips_a_member_for_time(chain: Chain
     assert chain.called == ["third"]
     assert [attempt.id for attempt in response.decision.attempts] == _ids(chain, "third")
     assert response.decision.hops is None, "nothing skipped"
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+@pytest.mark.parametrize("own", [None, Budget(max_cost_usd=1.0)])
+def test_a_router_in_a_shared_budget_is_shown_the_budget_the_call_is_held_to(
+    chain: Chain, priced: Table, own: Budget | None
+) -> None:
+    priced.update(first=(0.01, None))
+    shown: list[Budget | None] = []
+    ranker = Ranker("first")
+    router = WebRouter(router=lambda req: shown.append(req.budget) or ranker.route(req))
+    with router.budget(Budget(max_cost_usd=0.10)) as shared:
+        shared.search("q", provider=chain.auto(), budget=own)
+    assert [budget.max_cost_usd if budget else None for budget in shown] == [0.10]

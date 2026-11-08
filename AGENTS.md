@@ -143,6 +143,7 @@ src/web_router/
 │   ├── trail.py        the hop trail: every candidate a call moved past, skipped,
 │   │                   failed or empty, by attempt
 │   ├── pool.py         a shared budget: reservations under one lock, its clock, status()
+│   ├── pool_status.py  BudgetStatus, where a shared budget stands
 │   ├── record.py       the record's own fields: decision_id, the prompt's hash, a failure's code
 │   ├── pricing.py      the one cost and p90 rule: price list, floor, provider_options and
 │   │                   results past a row's price unknown, research's p90 from the effort table

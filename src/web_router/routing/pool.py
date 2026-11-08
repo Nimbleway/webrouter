@@ -43,31 +43,8 @@ from dataclasses import dataclass
 
 from web_router.constants_budget import STATUS_DIGITS
 from web_router.routing.contract import Budget
+from web_router.routing.pool_status import BudgetStatus
 from web_router.routing.pricing import over_cost
-
-
-@dataclass(frozen=True, kw_only=True)
-class BudgetStatus:
-    """Where a shared budget stands. Experimental."""
-
-    spent_usd: float
-    """The estimates settled by calls that have ended, failed attempts included."""
-
-    reserved_usd: float
-    """The estimates reserved by calls still running."""
-
-    remaining_usd: float | None
-    """The least, over this pool and the ones in force outside it, of each cap less what is spent and reserved.
-
-    ``None`` with no cost cap.
-    """
-
-    elapsed_s: float
-    """Seconds since the budget was made."""
-
-    time_left_s: float | None
-    """Seconds left on the budget's clock, never below zero; ``None`` with no time limit."""
-
 
 _ORDER = itertools.count()
 """Every pool's place in the one order locks are taken in, so two chains never wait on each other."""
@@ -225,10 +202,15 @@ def chain_in_force(owner: object) -> PoolChain | None:
 
 
 def _around(pool: BudgetPool) -> PoolChain:
-    """``pool`` and the pools of its router in force outside its innermost binding here; ``pool`` alone if unbound."""
+    """``pool`` and the pools of its router in force outside its innermost binding here, as a call through it spends.
+
+    Unbound, that is ``pool`` on top of every pool of its router in force here.
+    """
     chain = chain_in_force(pool.owner)
-    if chain is None or pool not in chain.pools:
+    if chain is None:
         return PoolChain((pool,))
+    if pool not in chain.pools:
+        return PoolChain((pool, *chain.pools))
     return PoolChain(chain.pools[chain.pools.index(pool) :])
 
 

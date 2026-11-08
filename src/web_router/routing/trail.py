@@ -53,6 +53,16 @@ class HopTrail:
             self.passed.append(self.open)
             self.open = None
 
+    def undo(self, attempt: int) -> None:
+        """Forget attempt ``attempt``, which an enclosing call took back; the attempts after it move down one."""
+
+        def shifted(hop: Passed) -> Passed:
+            moved = hop.attempt is not None and hop.attempt > attempt
+            return Passed(hop.attempt - 1, hop.id, hop.why) if moved and hop.attempt is not None else hop
+
+        self.passed = [shifted(hop) for hop in self.passed if hop.attempt != attempt]
+        self.open = None if self.open is None or self.open.attempt == attempt else shifted(self.open)
+
     def answered_empty(self) -> list[int]:
         """The attempts moved past with an empty answer, in order."""
         return [hop.attempt for hop in self.passed if hop.why is None and hop.attempt is not None]

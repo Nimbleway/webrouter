@@ -22,6 +22,7 @@ failures it moved past.
 
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -63,38 +64,70 @@ class _Tried:
     provider: str
     est_cost_usd: float | None
     started: float
+    attempt: Attempt | None = None
 
 
 @dataclass
 class Ledger:
-    """What one call has tried, skipped and spent under its :class:`~web_router.Budget`."""
+    """What one call has tried, skipped and spent under its :class:`~web_router.Budget`.
+
+    Nested calls in other threads or tasks check their attempts against an
+    enclosing call's ledger too, so every change to it is made under its lock.
+    """
 
     budget: Budget
     pool: PoolChain | None = None
-    """The shared budget the call also spends from, if any; :attr:`spent` is what it reserved there."""
+    """The shared budget the call also spends from, if any."""
     spent: float = 0.0
+    """What counts toward the call's own cap: its attempts and those of calls nested in it."""
+    reserved: float = 0.0
+    """What the call reserved in :attr:`pool` for its own attempts, settled when it ends."""
     tried: list[_Tried] = field(default_factory=list)
     skipped: dict[str, str] = field(default_factory=dict)
     trail: HopTrail = field(default_factory=HopTrail)
     unmeasured: list[str] = field(default_factory=list)
     stamp: dict[str, Any] = field(default_factory=dict)
     """The ``decision_id`` and ``prompt_sha256`` of a record this ledger starts, with no router's to write into."""
+    closed: bool = False
+    """Set when the call ends: an attempt made later by work it left running is not this call's to check."""
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
-    def admit(self, attempt: Attempt) -> bool:
-        """Whether ``attempt`` fits what is left; if it does, charge it, and if not, record why."""
+    def admit(self, attempt: Attempt, *, reserve: bool = True) -> bool:
+        """Whether ``attempt`` fits what is left; if it does, charge it, and if not, record why.
+
+        ``reserve`` is true for the call's own attempts, which it also reserves
+        in the shared budget; a nested call's attempt counts only toward the cap.
+        """
         name = candidate_id(attempt.tool, attempt.provider)
         cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
-        if (cost is None or p90 is None) and name not in self.unmeasured:
-            self.unmeasured.append(name)
-        reason = self._misfit(cost, p90) or self._unreserved(cost)
-        if reason is not None:
-            self.skipped[name] = reason
-            self.trail.skip(name, reason)
-            return False
-        self.trail.start(len(self.tried), name)
-        self.spent += cost or 0.0
-        self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic()))
-        return True
+        with self._lock:
+            if self.closed:
+                return True
+            if (cost is None or p90 is None) and name not in self.unmeasured:
+                self.unmeasured.append(name)
+            reason = self._misfit(cost, p90) or (self._unreserved(cost) if reserve else None)
+            if reason is not None:
+                self.skipped[name] = reason
+                self.trail.skip(name, reason)
+                return False
+            self.trail.start(len(self.tried), name)
+            self.spent += cost or 0.0
+            self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic(), attempt))
+            return True
+
+    def undo(self, attempt: Attempt) -> None:
+        """Take back a nested call's ``attempt``, which that call then refused; nothing else is touched."""
+        with self._lock:
+            at = next((i for i in reversed(range(len(self.tried))) if self.tried[i].attempt is attempt), None)
+            if at is not None:
+                self.spent -= self.tried.pop(at).est_cost_usd or 0.0
+                self.trail.undo(at)
+
+    def close(self) -> float:
+        """End the call: later attempts are not its to check. Returns what it reserved, for the pool to settle."""
+        with self._lock:
+            self.closed = True
+            return self.reserved
 
     def _unreserved(self, cost: float | None) -> str | None:
         """Why the shared budget refused to reserve ``cost``, or ``None`` once reserved (or with no pool)."""
@@ -102,6 +135,7 @@ class Ledger:
             return None
         left = self.pool.reserve(cost)
         if left is None:
+            self.reserved += cost
             return None
         return SKIP_OVER_SHARED.format(cost=_usd(cost), left=_usd(max(left, 0.0)))
 
@@ -123,7 +157,8 @@ class Ledger:
 
     def failed(self, tool: str, provider: str, exc: BaseException) -> None:
         """Note that ``provider`` failed and the call moved on, by :func:`~.record.error_code`."""
-        self.trail.fail(candidate_id(tool, provider), error_code(exc))
+        with self._lock:
+            self.trail.fail(candidate_id(tool, provider), error_code(exc))
 
     def _answered(self, provider: str | None, empty: bool) -> int | None:
         """The attempt whose response the call returned, ``provider``'s.
@@ -155,20 +190,22 @@ class Ledger:
         """
         into = into or DecisionRecord()
         into = into if into.decision_id else into.model_copy(update=self.stamp)
-        ended = time.monotonic()
-        ends = [tried.started for tried in self.tried[1:]] + [ended]
-        known = [tried.est_cost_usd for tried in self.tried if tried.est_cost_usd is not None]
-        answering = self._answered(answered, empty)
-        ran = None if answering is None else self.tried[answering].id
+        with self._lock:
+            attempts, unmeasured = list(self.tried), list(self.unmeasured)
+            answering = self._answered(answered, empty)
+            hops = self.trail.hops(answering)
+        ends = [tried.started for tried in attempts[1:]] + [time.monotonic()]
+        known = [tried.est_cost_usd for tried in attempts if tried.est_cost_usd is not None]
+        ran = None if answering is None else attempts[answering].id
         update = {
             "estimated_cost_usd": sum(known) if known else None,
             "cost_is_estimate": True,
             "attempts": [
                 DecisionAttempt(id=tried.id, est_cost_usd=tried.est_cost_usd, seconds=end - tried.started)
-                for tried, end in zip(self.tried, ends, strict=True)
+                for tried, end in zip(attempts, ends, strict=True)
             ],
-            "hops": self.trail.hops(answering),
+            "hops": hops,
             "ran": into.merged.index(ran) if into.merged and ran in into.merged else into.ran,
-            "unmeasured": list(dict.fromkeys([*(into.unmeasured or ()), *self.unmeasured])) or None,
+            "unmeasured": list(dict.fromkeys([*(into.unmeasured or ()), *unmeasured])) or None,
         }
         return into.model_copy(update=update)
