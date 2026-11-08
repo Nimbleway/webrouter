@@ -552,10 +552,10 @@ estimated. The library still never puts a price in a response outside
 
 **A preset is the method's own arguments, saved; it is never a second way in.**
 `presets.py` resolves one call's settings before its request is built, and so
-before routing, a budget or `url_policy` sees it --
-argument, then per-call preset, then the router's preset, then the method's
-default -- and the request then takes the path it always took, so validation,
-`supported_parameters` and the provider's minimum apply to a preset's value
+before routing or a budget sees it -- argument, then per-call preset, then the
+router's preset, then the method's default -- and like the call's own URLs,
+`url_policy` leaves a preset's alone. The request then takes the path it always
+took, so validation, `supported_parameters` and the provider's minimum apply to a preset's value
 exactly as to the same argument. A router and a budget see a preset's value as
 the caller's own (`specified_parameters`), so a router cannot replace it. A section may hold only `PRESET_FIELDS`,
 derived from each request model less `PRESET_NATIVE_INPUTS`; a field added to a

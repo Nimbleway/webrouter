@@ -1,8 +1,8 @@
 """Presets' component table, field tables, reference format and messages.
 
 Kept apart so ``constants.py`` stops growing; import them from here by name. Imports
-``types``, ``types_answer`` and ``types_presets`` only: AGENTS.md lets a ``constants_*``
-module import the models, and ``types_presets`` imports only ``types``, as ``types_answer`` does.
+``types``, ``types_answer``, ``types_presets`` and ``types_meta`` only: AGENTS.md lets a
+``constants_*`` module import the models, and ``types_presets`` imports only ``types_meta``, a leaf.
 """
 
 from __future__ import annotations
@@ -137,11 +137,19 @@ a second edit. A research or browse call's ``timeout`` is how long the caller
 waits, not part of the request, and is not here.
 """
 
+_WAITS = frozenset({"research", "browse"})
+_BUDGETED = frozenset({"search", "extract", "answer", "research", "browse"})
+
 PRESET_CALL_ARGUMENTS: dict[PresetComponent, frozenset[str]] = {
-    component: frozenset({"timeout"}) if component in {"research", "browse"} else frozenset()
+    component: frozenset({"timeout"} if component in _WAITS else ())
+    | frozenset({"budget"} if component in _BUDGETED else ())
     for component in PRESET_REQUEST_MODELS
 }
-"""Arguments a method takes that are about the call, not the request -- how long to wait -- so no preset holds them."""
+"""Arguments a method takes that are about the call, not the request, so no preset holds them.
+
+A research or browse ``timeout`` is how long to wait, and a ``budget`` caps
+what the call may spend and how long it may take.
+"""
 
 PRESET_CASE_BLIND: dict[PresetComponent, frozenset[str]] = {
     component: frozenset({"proxy_country"}) if component == "browser" else frozenset()

@@ -1434,7 +1434,8 @@ never changes, so nothing upgrades on its own.
 What a section may hold is the method's own arguments less the inputs that
 change every call: no `query`, `urls`, `task`, `records` or template inputs,
 and no research or browse `timeout`, which is how long the caller waits rather
-than part of the request. `provider` is a setting, except on `run_template`,
+than part of the request. Nor does it hold `budget`, which caps the call rather
+than shaping its request. `provider` is a setting, except on `run_template`,
 where it and `template` stay the caller's. `provider_options` is one setting:
 an argument replaces the preset's whole dict and never merges into it. An
 argument left as `None` is unset, so a call can't clear a preset's setting; use
@@ -1476,10 +1477,16 @@ Presets are local in this release, with no registry service and no publishing.
 The router's own preset does not apply to the comparisons (`benchmark`,
 `benchmark_extract` and `evaluate`), which send every backend the same request
 whatever the router holds, and the MCP server doesn't take a preset.
-`execute()` runs a route on its own `auto` chain, so a router preset that sets
-any other `provider` conflicts with it. The agent-framework tools fix their
-extract and answer backends when they are built, taking the router preset's
-when you name none.
+`plan()`, `run()` and MCP `web_run` take no preset and don't apply the
+router's own. The agent-framework tools fix their extract and answer backends
+when they are built, taking the router preset's when you name none.
+
+A preset's values count as the call's own, so a router never replaces them,
+and a budget maps research's effort only when neither the call nor a preset
+sets one. A preset's `provider` pins the backend, so no router is asked. A
+preset's `provider_options` can leave a cost-capped call's price unknown, and
+then the budget refuses the call with `BudgetExceededError`, which names the
+presets and the settings they supplied.
 
 Reading YAML needs PyYAML; JSON needs nothing. A preset holds only what JSON
 can: an unquoted YAML date stays a string, and NaN or infinity is refused at

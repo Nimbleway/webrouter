@@ -30,6 +30,7 @@ from web_router.exceptions import (
     UnsupportedFormatError,
     UnsupportedParameterError,
 )
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_presets import PresetValidationError
 from web_router.presets_load import _adapter, _coerced
 from web_router.providers.answer import AnswerProvider
@@ -112,17 +113,21 @@ class PresetResolution:
 
     @contextmanager
     def explained(self) -> Iterator[None]:
-        """Name the presets when the backend refuses a setting one of them supplied and the call never passed.
+        """Name the presets when the backend or the budget refuses a call shaped by a setting one of them supplied.
 
         The error keeps its type and its fields, so a caller handling it as
         before still does; only its message gains the preset, since the advice
-        it carries is written for a caller who set the option themselves.
+        it carries is written for a caller who set the option themselves. A
+        budget prices the whole request, so its refusal names every setting the
+        presets supplied: ``provider_options`` alone leaves a price unknown.
         """
         try:
             yield
-        except (UnsupportedParameterError, UnsupportedFormatError) as exc:
+        except (UnsupportedParameterError, UnsupportedFormatError, BudgetExceededError) as exc:
             if isinstance(exc, UnsupportedParameterError):
                 named = sorted(set(exc.parameters) & set(self.effective))
+            elif isinstance(exc, BudgetExceededError):
+                named = sorted(self.effective)
             else:
                 named = ["format"] if "format" in self.effective else []
             if named:

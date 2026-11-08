@@ -37,3 +37,21 @@ def test_the_record_and_page_types_import_from_types_as_from_the_package() -> No
 
     for name in ("DecisionRecord", "DecisionHop", "DecisionAttempt", "PageState", "PageSnapshot", "Screenshot"):
         assert getattr(types, name) is getattr(web_router, name)
+
+
+def test_every_class_types_takes_from_a_leaf_is_re_exported() -> None:
+    """``from web_router.types import X`` must pass ``mypy --strict``, which only an ``X as X`` import allows."""
+    import ast
+    import importlib
+    import inspect
+
+    from web_router import types
+
+    plain = [
+        alias.name
+        for node in ast.walk(ast.parse(inspect.getsource(types)))
+        if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("web_router.types_")
+        for alias in node.names
+        if isinstance(getattr(importlib.import_module(node.module), alias.name), type) and alias.asname != alias.name
+    ]
+    assert plain == [], f"import these as `X as X` in types.py: {plain}"

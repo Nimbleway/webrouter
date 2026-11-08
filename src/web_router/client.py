@@ -132,12 +132,10 @@ class _BaseRouter(ProviderLookup, RouterSetup, Generic[_HandleT]):
                 ask it (all five by default) and whether its failure raises (experimental) -- see
                 :mod:`web_router.routing.invoke`. ``url_policy="public_only"`` refuses private hosts in a
                 plan's or a router's URLs (experimental) -- see :mod:`web_router.routing.url_policy`.
-            preset: The router's own preset, ``id@version`` or a
-                :class:`~web_router.Preset`: applied to every call it applies
-                to, beneath a call's own ``preset=`` and its arguments. A
-                reference is looked up on each call, so its definition can be
-                loaded into :attr:`presets` after the router is built. See
-                :mod:`web_router.presets`.
+            preset: The router's own preset, ``id@version`` or a :class:`~web_router.Preset`: applied to every
+                call it applies to (not ``plan()`` or ``run()``), beneath a call's own ``preset=`` and its
+                arguments. A reference is looked up on each call, so its definition can be loaded into
+                :attr:`presets` after the router is built. See :mod:`web_router.presets`.
         """
         self._attach_router(router, route_tools, fail_on_router_error, url_policy)
         name = provider_name(provider)

@@ -68,7 +68,7 @@ class PresetRegistry:
         """
         Args:
             client: The router's own preset, applied to every call it applies
-                to. A reference is checked for form now and looked up on each
+                to (not ``plan()`` or ``run()``). A reference is checked for form now and looked up on each
                 call, so it can be loaded after the router is built.
             default_provider: The backend a call with no ``provider`` goes to,
                 which :meth:`validate` checks settings against.

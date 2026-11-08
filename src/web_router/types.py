@@ -26,7 +26,8 @@ from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
 from web_router.types_decision import DecisionRecord as DecisionRecord
-from web_router.types_meta import META_DESCRIPTION, ResponseMeta
+from web_router.types_meta import META_DESCRIPTION
+from web_router.types_meta import ResponseMeta as ResponseMeta
 from web_router.types_page import PageFormat as PageFormat
 from web_router.types_page import PageLoadState as PageLoadState
 from web_router.types_page import PageSnapshot as PageSnapshot
@@ -40,8 +41,7 @@ SearchDepth = Literal["lite", "fast", "deep"]
 - ``fast``: a truncated page body, enough for most agent reasoning.
 - ``deep``: full page content; slowest and most expensive.
 
-Providers express this differently; each one maps these three levels onto its
-own vocabulary.
+Providers express this differently; each one maps these three levels onto its own vocabulary.
 """
 
 
