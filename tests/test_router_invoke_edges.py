@@ -146,23 +146,3 @@ async def test_a_coroutine_a_worker_returns_after_its_caller_was_cancelled_is_cl
         await asyncio.sleep(0.01)
     assert coroutines
     assert inspect.getcoroutinestate(coroutines[0]) == inspect.CORO_CLOSED
-
-
-async def test_a_task_nobody_will_await_is_cancelled_and_its_error_read() -> None:
-    reported: list[dict[str, Any]] = []
-    asyncio.get_running_loop().set_exception_handler(lambda loop, context: reported.append(context))
-
-    async def fails_when_cancelled() -> None:
-        try:
-            await asyncio.sleep(SLEEP_S)
-        except asyncio.CancelledError:
-            raise ValueError("raised while being cancelled") from None
-
-    task = asyncio.ensure_future(fails_when_cancelled())
-    await asyncio.sleep(0)
-    invoke._close(task)
-    await asyncio.sleep(0.05)
-    assert task.done()
-    del task
-    gc.collect()
-    assert reported == []

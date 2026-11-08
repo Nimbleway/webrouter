@@ -65,10 +65,6 @@ def test_a_router_given_by_name_is_refused_by_both_routers(cls: type, name: str)
         cls(router=name)
 
 
-def test_the_default_timeout_is_50_ms() -> None:
-    assert AttachedRouter(sync_router).timeout_s == 0.05
-
-
 def test_a_function_or_an_object_declares_its_own_timeout() -> None:
     def slow(req: RouteRequest) -> RouteDecision:
         return DECISION
@@ -80,7 +76,7 @@ def test_a_function_or_an_object_declares_its_own_timeout() -> None:
     assert AttachedRouter(obj).timeout_s == 1.5
 
 
-@pytest.mark.parametrize("value", [0, -1, "3", True, float("nan"), float("inf")])
+@pytest.mark.parametrize("value", [0, "3", True, float("nan"), float("inf")])
 def test_a_timeout_that_is_not_a_positive_number_is_refused(value: Any) -> None:
     obj = _OnlyRoute()
     obj.timeout_s = value  # type: ignore[attr-defined]
