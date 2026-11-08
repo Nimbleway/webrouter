@@ -1926,8 +1926,10 @@ search's `max_results` and `search_depth`, research's `effort`, and the URLs
 for extract and browse -- never an option you set yourself. Each option is
 priced on the request the call runs (an `effort`, a `search_depth`, more
 `max_results` than a price assumes, extract's URLs per page), and one that
-does not fit the budget is set aside in the record's `ignored`. A fallback
-never moves to another method.
+does not fit the budget is set aside in the record's `ignored`. An extract you
+did not pin that is left with no URL to read -- none in the prompt, and every
+URL the router gave set aside by `url_policy` or the budget -- searches
+instead. A fallback never moves to another method.
 
 Attached with `router=`, a router also orders the backends of a plain
 `search`, `extract`, `answer`, `research` or `browse` sent to `auto`, without
@@ -1947,7 +1949,9 @@ decision record. With no router it is a search, unless `tool` pins a method.
 response: a `SearchResponse`, `ExtractResponse`, `AnswerResponse`,
 `ResearchResponse` or `BrowseResponse`. `run(prompt)` does both. A saved
 `Plan` runs as planned: `run(plan)` does not ask the router again, so to
-re-route, call `plan()` again.
+re-route, call `plan()` again. A plan whose method was left no backend calls
+nothing: `run` raises `BudgetExceededError`, naming each, when the budget
+dropped them, and otherwise fails as `auto` does with no backend to try.
 
 ### Budgets
 
@@ -1964,18 +1968,22 @@ failed attempt still counts.
   runs: it is skipped, and the record says why. A price marked as a floor
   (Brave's answer, Browser Use's browse, Anchor's browser) counts as unknown,
   and so does a search asking for more results than its price assumes
-  (Nimble's and You.com's deep search, Exa's search). With no cost cap it
+  (Nimble's and You.com's deep search, Exa's search), and any request with
+  `provider_options`, which can change what is billed. With no cost cap it
   runs.
 - **Free tiers.** The keyless MCP search endpoints (`you-mcp`, `exa-mcp`,
-  `parallel-mcp`) are priced $0, so a cost cap never skips them; they stay
-  last in the order.
+  `parallel-mcp`) are priced $0, so a cost cap does not skip them. Keyless
+  Tavily is priced, $0.008 a search. Keyless Keenable has no price, so a
+  cost cap skips it.
 - **Unknown p90.** Under a time cap, a backend with no measured p90 runs
   within the time left; `strict=True` skips it instead. One whose p90 does not
-  fit the time left is skipped.
+  fit the time left is skipped. Research's p90 comes from the effort table
+  first, then the price list.
 - **Time cap.** Search, extract and answer stop at it and raise
   `DeadlineExceededError`. Research and browse are capped on the wait, not the
-  job: they wait at most `min(timeout, time left)`, then raise their own
-  timeout error with the job's handle.
+  job: they wait at most `min(timeout, time left)`, then raise
+  `ResearchTimeoutError` or `BrowseTimeoutError` with the job id, the job
+  still running.
 - **Research effort.** A budgeted research call runs at one `effort`, chosen
   once, before the router is asked, to fit every backend it may try; its
   candidates are priced at it. That holds on `auto` or a named backend,
@@ -1998,8 +2006,12 @@ dollars and seconds, and that is what a router is shown. A call spends from
 every scope of its router in force when it starts, wherever the scope was
 made, so a scope made before an outer block cannot escape that block's cap.
 Each attempt reserves its estimate before it starts, so parallel threads and
-tasks never overspend together. A thread started inside the block calls
-through `b`. On `AsyncWebRouter`, every method here is awaited and the scope is
+tasks cannot reserve past the cap together. The cap is on estimates, not on
+the bill. A call a backend makes on its own router inside a budgeted call is
+reserved once, by the call it is made in; it settles in the shared budget
+even when it runs in another thread or task, or after the call that started it
+has ended. A thread started inside the block calls through `b`. On
+`AsyncWebRouter`, every method here is awaited and the scope is
 `async with awr.budget(...)`.
 
 ### `url_policy`
@@ -2008,9 +2020,11 @@ through `b`. On `AsyncWebRouter`, every method here is awaited and the scope is
 private, shared and reserved hosts, and URLs a browser could read another host
 from, among the URLs a plan finds in a prompt and those a router supplies; the
 record lists each refusal under `dropped` or `ignored`, by scheme and host. A
-refused URL is never fetched or passed to a backend as a URL, but it stays in
-the prompt, which still goes out as the search query or the browse task. It is
-a hostname check before dispatch: it resolves no DNS and follows no redirect.
+refused URL is not sent to a backend as a URL, but it stays in the prompt,
+which still goes out as the search query or the browse task. It is a check of
+the host as written, before dispatch: it resolves no DNS and follows no
+redirect, so a public name that resolves to a private address is not caught.
+A URL with no host is refused even with no policy.
 It is off by default, and leaves the URLs you pass to `extract` yourself
 alone; on the MCP server it holds for `web_run`'s plans only.
 
@@ -2032,11 +2046,14 @@ web_router import DecisionRecord`) on every routed or budgeted call, and
   them;
 - `estimated_cost_usd`, `cost_is_estimate`, `unmeasured`, `prompt_sha256`.
 
-It never holds the prompt or a browse task -- only
-the prompt's SHA-256, which is not anonymisation: a short prompt can be
-guessed from it -- never a whole URL, only its scheme and host, and no key
-values. Candidate ids do show which backends you have configured, and
-`reason`, `excluded` and `ignored` hold the router's own words.
+It holds no prompt text and no key values. `prompt_sha256` is an unsalted
+SHA-256 of what the router reads: the query or task, for an extract its whole
+URLs (query string included), and for a plan its whole prompt. It is a
+pseudonymous id, not anonymisation: anyone who can guess a prompt or URL can
+confirm it from the hash, and equal prompts share one. Elsewhere a URL shows
+only its scheme and host, a non-ASCII host as its IDNA form. Candidate ids do
+show which backends you have configured, and `reason`, `excluded` and
+`ignored` hold the router's own words.
 
 To score a router offline before you attach it, route-eval
 (`benchmarks/providers/route_eval.py`) replays it over the committed benchmark
@@ -2044,7 +2061,9 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-Four example routers, tested offline: [rules](examples/router_rules.py), a
+The library ships one keyless router, `web_router.routing.rules.rules`: a
+prompt with a URL is extracted, anything else searched. Four example routers,
+tested offline: [rules](examples/router_rules.py), a
 [scikit-learn classifier](examples/router_classifier.py), an
 [OpenAI-compatible model](examples/router_llm.py) and
 [Jev](examples/router_jev.py). The last two are model routers: each sends

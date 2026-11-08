@@ -264,11 +264,12 @@ The router is set by the operator, once, when the server starts:
 
 `WEB_ROUTER_MCP_ROUTER` imports and runs your code when the server starts, so
 set it in the server's own process environment, never in a project's config
-or a `.env` file.
+or a `.env` file. Set empty, it stops the server from starting.
 
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
-loopback, private or cloud-metadata host is never fetched or passed to a
-backend as a URL. It holds for `web_run`'s plans only. The direct `extract`
+loopback, private or cloud-metadata host is not sent to a backend as a URL.
+It is a check of the host as written: it resolves no DNS and follows no
+redirect. It holds for `web_run`'s plans only. The direct `extract`
 and `browse` tools send the URLs the agent passes as they are, and the browser
 tools have their own guard ([Where the browser may go](#where-the-browser-may-go)),
 which checks DNS answers and redirects but refuses only cloud metadata hosts
@@ -456,7 +457,8 @@ The policy is enforced at these points:
 
 - `browser_goto` refuses a URL before the page is touched. Decimal, hex, octal
   and short IPv4 spellings (`2130706433`, `0x7f000001`, `127.1`) are read as
-  the address they spell.
+  the address they spell, and a NAT64 or IPv4-compatible IPv6 address as the
+  IPv4 it carries.
 - A Playwright route on the browser context sees each request's *first* hop and
   aborts one to a refused address — a link, a form, a script's `fetch`, a
   WebSocket. It does not see redirect hops: Playwright routes only the first
