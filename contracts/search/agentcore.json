@@ -37,13 +37,26 @@
           "example.org"
         ]
       }
+    },
+    "recency": {
+      "day": {
+        "body.params.arguments.filters.publishedDateFilter.from": "2026-01-14T00:00:00Z"
+      },
+      "week": {
+        "body.params.arguments.filters.publishedDateFilter.from": "2026-01-08T00:00:00Z"
+      },
+      "month": {
+        "body.params.arguments.filters.publishedDateFilter.from": "2025-12-16T00:00:00Z"
+      },
+      "year": {
+        "body.params.arguments.filters.publishedDateFilter.from": "2025-01-15T00:00:00Z"
+      }
     }
   },
   "not_mapped": [
     "country",
     "effort",
     "locale",
-    "recency",
     "search_depth"
   ],
   "source": [
@@ -52,12 +65,13 @@
   ],
   "verified": {
     "max_results": "live: tests/providers/test_agentcore.py::test_live_search_with_domains_and_dates",
-    "include_domains": "live: tests/providers/test_agentcore.py::test_live_search_with_domains_and_dates"
+    "include_domains": "live: tests/providers/test_agentcore.py::test_live_search_with_domains_and_dates",
+    "recency": "docs: https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html (the from date form checked live through provider_options on 2026-10-26; recency itself not run against a gateway)"
   },
   "vendor_options": {
     "filters.publishedDateFilter": {
       "status": "passthrough",
-      "note": "from and to, ISO-8601 UTC, inclusive; merged with the mapped domain filter. Connector 1.2.0 or later. Checked live 2026-10-26."
+      "note": "from and to, ISO-8601 UTC, inclusive. recency sets from; a to date through provider_options merges with it and with the domain filter, and a from set on both sides raises. Connector 1.2.0 or later. Checked live 2026-10-26."
     }
   }
 }
