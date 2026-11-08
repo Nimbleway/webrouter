@@ -12,7 +12,7 @@ action at a time, since two actions racing on one page would each see the other'
 half-finished work. The table releases a session on ``browser_close``, when its
 page is lost, when it goes :data:`~web_router.constants.MCP_BROWSER_IDLE_TIMEOUT`
 without a call, and, all at once, when the server shuts down. Each session is
-also held to a :class:`~web_router.mcp.navigation.UrlPolicy`, installed on its
+also held to a :class:`~web_router.mcp.navigation.NavigationPolicy`, installed on its
 page when the first action connects and checked again after every action.
 """
 
@@ -62,7 +62,7 @@ from web_router.constants import (
     MCP_REDACTED,
 )
 from web_router.exceptions import BrowserActionError, ConfigurationError, PageClosedError, WebRouterError
-from web_router.mcp.navigation import NavigationGuard, UrlPolicy
+from web_router.mcp.navigation import NavigationGuard, NavigationPolicy
 from web_router.mcp.shaping import redact, redaction_note
 from web_router.providers.base import AsyncBrowserHandle
 
@@ -188,7 +188,7 @@ class BrowserSessions:
         session_id = MCP_BROWSER_SESSION_ID_TEMPLATE.format(token=secrets.token_urlsafe(MCP_BROWSER_SESSION_ID_BYTES))
         try:
             self._remember_secrets(handle)
-            guard = NavigationGuard(UrlPolicy.for_session(handle.cdp_url))
+            guard = NavigationGuard(NavigationPolicy.for_session(handle.cdp_url))
             self._sessions[session_id] = _Session(session_id, handle, guard, self._clock())
             handle.on_connect(guard.install)
             await anyio.lowlevel.checkpoint()
