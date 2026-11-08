@@ -3,9 +3,10 @@
 Experimental. A pure selection with no model and no side effects: it reads the
 research effort table (:mod:`web_router.routing.effort_table`), and prices
 and times each effort by :mod:`.pricing`'s rule -- the table's own p90 first,
-then the price list's -- and
-answers which effort to run with and why. Nothing calls it yet; enforcing the
-budget is not its job.
+then the price list's -- and answers which effort to run with and why.
+:func:`~web_router.routing.effort_call.choose_effort` calls it once per call:
+the candidate builder prices research at that effort, and a call no router
+orders runs at it. Enforcing the budget is not its job.
 
 Only research's ``effort`` is mapped. Search keeps its own ``search_depth``
 and ``max_results``, and timeouts come from the time cap, not from here.
