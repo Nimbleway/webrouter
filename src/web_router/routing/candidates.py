@@ -12,7 +12,9 @@ A budget, the part of it still left, then prefilters them. Under a cost cap a
 candidate whose price is unknown, or whose estimate is over what is left, is
 dropped. Research is priced at the ``effort`` the caller set, else at the
 backend's default; choosing a cheaper effort is the budget mapping's job, not
-this one's. A request carrying ``provider_options`` may be billed at another
+this one's. A search asking for more results than its row's price assumes
+(``results_assumed``) is charged per result past it, so its price is unknown.
+A request carrying ``provider_options`` may be billed at another
 mode than its row, so under a cost cap its price counts as unknown, and under
 a time cap its p90. Under a time cap a known p90 over the time left
 drops a candidate, and an unknown p90 drops it only on a strict budget. Every
@@ -51,7 +53,7 @@ from web_router.exceptions import (
     UnsupportedFormatError,
     UnsupportedParameterError,
 )
-from web_router.prices import estimate, estimate_latency
+from web_router.prices import estimate, estimate_latency, price
 from web_router.routing.contract import Budget, Candidate, ToolName
 from web_router.types import (
     BrowseRequest,
@@ -205,8 +207,8 @@ def _estimates(
     """The candidate's estimated cost in US dollars and its p90 seconds, at the mode it would run."""
     mode = _pinned_mode(request)
     units = len(request.urls) if isinstance(request, ExtractRequest) else 1  # extract bills per page
-    price = estimate(name, tool, mode)
-    cost = None if price is None else price * units
+    each = None if _more_results_than_priced(request, name, tool, mode) else estimate(name, tool, mode)
+    cost = None if each is None else each * units
     latency = estimate_latency(name, tool, mode)
     p90 = None if latency is None else latency[1]
     if request.provider_options and budget is not None:
@@ -214,6 +216,15 @@ def _estimates(
         cost = None if budget.max_cost_usd is not None else cost
         p90 = None if budget.time_limit_s is not None else p90
     return cost, p90
+
+
+def _more_results_than_priced(request: NormalizedRequest, name: str, tool: ToolName, mode: str | None) -> bool:
+    """A search asking for more results than its row's price assumes, where each result is charged: unpriced."""
+    if not isinstance(request, SearchRequest) or request.max_results is None:
+        return False
+    row = price(name, tool, mode)
+    assumed = None if row is None else row.results_assumed
+    return assumed is not None and request.max_results > assumed
 
 
 def _pinned_mode(request: NormalizedRequest) -> str | None:

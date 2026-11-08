@@ -170,6 +170,28 @@ def test_search_is_priced_at_the_depth_the_caller_set(keys: pytest.MonkeyPatch) 
     assert _one(found, "search:nimble").est_cost_usd == estimate("nimble", "search", "deep")
 
 
+@pytest.mark.parametrize("asked", [None, 10])
+def test_a_deep_search_within_its_priced_results_keeps_its_estimate_under_a_cost_cap(
+    keys: pytest.MonkeyPatch, asked: int | None
+) -> None:
+    _set_keys(keys, "nimble", "you")
+    request = {"search": SearchRequest(query="q", search_depth="deep", max_results=asked)}
+    found = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=0.03))
+    assert _one(found, "search:nimble").est_cost_usd == _one(found, "search:you").est_cost_usd == 0.015
+
+
+def test_a_deep_search_asking_more_results_than_its_price_assumes_is_unpriced(keys: pytest.MonkeyPatch) -> None:
+    _set_keys(keys, "nimble", "you")
+    request = {"search": SearchRequest(query="q", search_depth="deep", max_results=50)}
+    found = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=0.03))
+    for candidate_id in ("search:nimble", "search:you"):
+        assert candidate_id not in _ids(found)  # each result past the tenth is charged: not $0.015
+        assert "no known price" in found.dropped[candidate_id]
+    uncapped = build_candidates(WebRouter(), request)
+    assert _one(uncapped, "search:nimble").est_cost_usd is None
+    assert "search:nimble" in uncapped.unmeasured
+
+
 def test_no_budget_drops_nothing(keys: pytest.MonkeyPatch) -> None:
     _set_keys(keys, "webiq", "exa")
     found = build_candidates(WebRouter(), {"search": SearchRequest(query="q")})
