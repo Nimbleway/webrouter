@@ -162,14 +162,17 @@ def test_a_null_default_is_refused_at_load() -> None:
         PresetRegistry().add(definition(components={"search": {"defaults": {"country": None}}}))
 
 
-def test_a_yaml_parse_error_never_quotes_the_file(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "text", ["provider_options: {api_key: sk-SECRET-123: oops}", "provider_options: {api_key: *sk-SECRET-123}"]
+)
+def test_a_yaml_parse_error_never_quotes_the_file(tmp_path: Path, text: str) -> None:
     path = tmp_path / "preset.yaml"
-    path.write_text("spec_version: 1\nprovider_options: {api_key: sk-SECRET-123: oops}\n")
+    path.write_text(f"spec_version: 1\n{text}\n")
 
     with pytest.raises(PresetError) as caught:
         PresetRegistry().load(path)
 
-    assert "sk-SECRET-123" not in str(caught.value)
+    assert "sk-SECRET-123" not in str(caught.value), "PyYAML's problem text repeats an alias's name"
     assert caught.value.__cause__ is None and "line 2" in str(caught.value)
 
 

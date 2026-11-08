@@ -64,6 +64,7 @@ __all__ = [
     "MSG_PRESET_UNSUPPORTED_FORMAT",
     "MSG_PRESET_UNSUPPORTED_PARAMETER",
     "MSG_PRESET_VERSIONS",
+    "MSG_PRESET_YAML_INVALID",
     "MSG_PRESET_YAML_MISSING",
     "MSG_PRESET_YAML_UNBUILT",
     "PRESET_ARGUMENT",
@@ -192,6 +193,8 @@ MSG_PRESET_DEFINED_TWICE = (
 MSG_PRESET_GIVEN_TWICE = "the preset is given both as an argument and in the request"
 MSG_PRESET_BAD_ARGUMENT = "the call's {field} is not valid: {error}"
 MSG_PRESET_YAML_UNBUILT = "a value PyYAML could not build ({kind})"
+MSG_PRESET_YAML_INVALID = "YAML that does not parse ({kind})"
+"""Names PyYAML's error class, never its text, which can repeat a value from the file."""
 MSG_PRESET_NOT_JSON = (
     "it holds a value JSON cannot represent, such as a set or bytes; a preset holds only what JSON can"
 )

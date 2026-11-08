@@ -127,19 +127,22 @@ def _native_inputs(
     return native, issues
 
 
-def _argument_issues(component: PresetComponent, explicit: Mapping[str, Any]) -> builtins.list[PresetIssue]:
-    """The caller's own values the request would refuse, named by field and never repeated."""
+def _argument_issues(
+    component: PresetComponent, explicit: Mapping[str, Any]
+) -> tuple[dict[str, Any], builtins.list[PresetIssue]]:
+    """The caller's own values as the request would hold them, and each it would refuse, named by field alone."""
+    coerced: dict[str, Any] = {}
     issues: builtins.list[PresetIssue] = []
     for name, value in explicit.items():
         if value is None or name == PRESET_PROVIDER_FIELD:
             continue
         candidate = value.model_json_schema() if isinstance(value, type) and issubclass(value, BaseModel) else value
         try:
-            _adapter(component, name).validate_python(candidate)
+            coerced[name] = _adapter(component, name).validate_python(candidate)
         except ValidationError as exc:
             error = "; ".join(item["msg"] for item in exc.errors())
             issues.append(PresetIssue(field=name, message=MSG_PRESET_BAD_ARGUMENT.format(field=name, error=error)))
-    return issues
+    return coerced, issues
 
 
 def preflight(
@@ -166,7 +169,7 @@ def preflight(
     if given_twice:
         issues.append(PresetIssue(field=PRESET_ARGUMENT, message=MSG_PRESET_GIVEN_TWICE))
     explicit = {name: arguments.get(name) for name in settable}
-    argument_issues = _argument_issues(component, explicit)
+    coerced, argument_issues = _argument_issues(component, explicit)
     issues.extend(argument_issues)
     try:
         resolution = registry.resolve(component, preset, **explicit)
@@ -178,11 +181,13 @@ def preflight(
     # A backend's own checks can read a native input (Nimble's read `records`), so the preflight request carries
     # them beside the settings, validated; and they read values, so they run only once every value is valid.
     native, native_issues = _native_inputs(component, arguments)
+    # The backend's checks read the values the call would send: "false" is sent as False, so read as False.
+    own = {key: value for key, value in coerced.items() if key not in resolution.effective}
     name, backend_issues = _backend_issues(
         registry,
         component,
         provider,
-        {**resolution.settings, **native},
+        {**resolution.settings, **own, **native},
         conditions=not (argument_issues or native_issues),
     )
     return PresetCheck(
@@ -233,7 +238,7 @@ def _backend_issues(
     requested = settings.get("format")
     formats = getattr(backend, "supported_formats", None)
     # Anything that is not a format is the caller's mistake, reported once by field and never repeated.
-    if requested in PRESET_FORMATS and formats is not None and requested not in formats:
+    if isinstance(requested, str) and requested in PRESET_FORMATS and formats is not None and requested not in formats:
         supported = ", ".join(sorted(formats))
         message = MSG_PRESET_UNSUPPORTED_FORMAT.format(provider=name, format=requested, supported=supported)
         issues.append(PresetIssue(field="format", message=message))

@@ -34,6 +34,7 @@ from web_router.constants_presets import (
     MSG_PRESET_SECTION_NOT_DECLARED,
     MSG_PRESET_UNKNOWN_FIELD,
     MSG_PRESET_UNKNOWN_PROVIDER,
+    MSG_PRESET_YAML_INVALID,
     MSG_PRESET_YAML_MISSING,
     MSG_PRESET_YAML_UNBUILT,
     PRESET_FIELDS,
@@ -261,9 +262,9 @@ def _json_loader(yaml: Any) -> Any:
 
 
 def _yaml_position(exc: Exception) -> str:
-    """What went wrong in a YAML file and where, without the snippet of the file PyYAML quotes beside it."""
+    """What kind of YAML error and where, never PyYAML's words, which can quote the file (an alias's name)."""
+    problem = MSG_PRESET_YAML_INVALID.format(kind=type(exc).__name__)
     mark = getattr(exc, "problem_mark", None)
-    problem = getattr(exc, "problem", None) or type(exc).__name__
     if mark is None:
-        return str(problem)
+        return problem
     return MSG_PRESET_PARSE_POSITION.format(problem=problem, line=mark.line + 1, column=mark.column + 1)

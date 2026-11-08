@@ -74,3 +74,15 @@ def test_validate_refuses_a_budget_where_the_method_takes_none() -> None:
 
     assert [issue.field for issue in check.issues] == ["budget"]
 
+
+def test_validate_reads_a_value_as_the_call_would_send_it() -> None:
+    """``"false"`` is sent as ``False``, and Steel refuses ``persist_profile`` without a profile whatever its value."""
+    check = WebRouter().presets.validate("browser", {"provider": "steel", "persist_profile": "false"})
+
+    assert [issue.field for issue in check.issues] == ["persist_profile"]
+
+
+def test_a_format_that_is_not_a_string_is_an_issue_not_a_crash() -> None:
+    check = WebRouter().presets.validate("extract", {"urls": "https://example.com", "format": []})
+
+    assert [issue.field for issue in check.issues] == ["format"]
