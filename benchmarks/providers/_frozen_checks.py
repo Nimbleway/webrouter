@@ -55,7 +55,7 @@ RUN_DEFAULTS = {"questions": "simpleqa"}
 """A ``run.json`` from before ``--questions`` existed asked SimpleQA."""
 
 RATE_LIMIT_ERROR, QUOTA_ERROR = "rate_limit", "quota"
-ACCOUNT_ERRORS = frozenset({RATE_LIMIT_ERROR, QUOTA_ERROR})
+RATE_LIMIT_OR_QUOTA_ERRORS = frozenset({RATE_LIMIT_ERROR, QUOTA_ERROR})
 """Error classes of a call that never reached the question: route-eval leaves them out of accuracy."""
 ERROR_CLASSES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("timeout", re.compile(r"timed? ?out|timeout|deadline", re.IGNORECASE)),
