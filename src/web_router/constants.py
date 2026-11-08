@@ -3215,7 +3215,7 @@ KEENABLE_TITLE_HEADER = "X-Keenable-Title"
 KEENABLE_TITLE = "web-router"
 """The app name a keyless call is attributed to; Keenable refuses a keyless call without one."""
 
-KEENABLE_PARAM_NAMES = {"max_results": "max_results"}
+# Keenable search's options and the values they become are in constants_keenable.py.
 
 # DeepSeek's endpoints, limits and query operators are in constants_deepseek.py.
 

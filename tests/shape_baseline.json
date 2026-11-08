@@ -18,7 +18,7 @@
   "tests/conftest.py": 557,
   "tests/mcp/test_browser_tools.py": 1226,
   "tests/mcp/test_navigation.py": 571,
-  "tests/mcp/test_tools.py": 927,
+  "tests/mcp/test_tools.py": 926,
   "tests/providers/test_anchor_browser.py": 433,
   "tests/providers/test_browser_use_browse.py": 444,
   "tests/providers/test_browserbase_browser.py": 525,
