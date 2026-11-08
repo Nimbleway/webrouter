@@ -247,9 +247,10 @@ method that ran, a `handle` for `fetch_raw`, and the `decision` record.
 `dry_run=true` returns the plan alone and calls nothing. `max_cost_usd` and
 `time_limit_s` cap that one call, within the budget below. When the router
 picks `research` or `browse`, `web_run` waits as those tools do, 25 seconds
-or less if its own `time_limit_s` or the budget has less left, and then hands back a handle for `research_status` or `browse_status` with the
-run still going, never losing a run that bills. The other tools
-are unchanged: `search`, `extract` and the rest never ask the router.
+or less if its own `time_limit_s` or the budget has less left, and then
+hands back a handle for `research_status` or `browse_status` instead of
+dropping a started run. The other tools are unchanged: `search`, `extract`
+and the rest never ask the router.
 
 The router is set by the operator, once, when the server starts:
 
