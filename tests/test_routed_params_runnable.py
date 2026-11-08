@@ -23,7 +23,7 @@ CAPPED = Budget(max_cost_usd=1.0)
 def _one_priced_one_not(monkeypatch: pytest.MonkeyPatch) -> None:
     """``priced`` fits the cap at every effort and picks ``medium``; ``unpriced`` fits at none, its default included."""
 
-    def mapped(provider: str, budget: Budget | None, effort: Any = None) -> EffortChoice:
+    def mapped(provider: str, budget: Budget | None, *, request: Any = None) -> EffortChoice:
         return PRICED if provider == "priced" else EffortChoice(effort=None, source=None, reason="", misfit="no price")
 
     monkeypatch.setattr(params, "map_effort", mapped)
