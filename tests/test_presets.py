@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from tests.conftest import FakeExtractProvider, FakeProvider, FakeResearchProvider
+from tests.conftest import FakeExtractProvider, FakeProvider, FakeResearchProvider, RecordingExtract
 from web_router import (
     AsyncWebRouter,
     Preset,
@@ -739,22 +739,6 @@ ALL_FAKES = (
     "fake_browse_provider",
     "fake_browser_provider",
 )
-
-
-class RecordingExtract(FakeExtractProvider):
-    """The extract fake, keeping each request as the other fakes do, so a test can read what reached it."""
-
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        self.requests: list[Any] = []
-
-    def _extract(self, request: Any, urls: list[str]) -> Any:
-        self.requests.append(request)
-        return super()._extract(request, urls)
-
-    async def _aextract(self, request: Any, urls: list[str]) -> Any:
-        self.requests.append(request)
-        return await super()._aextract(request, urls)
 
 
 @pytest.fixture

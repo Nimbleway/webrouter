@@ -10,15 +10,17 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import RecordingExtract
 from web_router import WebRouter, available_answer_providers, available_extract_providers, available_providers
+from web_router.constants_deepseek import DEEPSEEK_QUERY_LIMIT
 from web_router.constants_presets import PRESET_FILE_SUFFIXES
-from web_router.presets import PresetRegistry
-from web_router.registry import get_extract_provider_class
+from web_router.providers.deepseek import DeepSeekProvider
+from web_router.registry import get_extract_provider_class, register_extract_provider
+from web_router.types import SearchRequest
 
 STARTER = Path(__file__).resolve().parents[1] / "presets"
 FILES = sorted(file for file in STARTER.rglob("*") if file.is_file() and file.suffix in PRESET_FILE_SUFFIXES)
 FOLDERS = sorted({file.parent for file in FILES})
-COMPONENTS = [(file, component) for file in FILES for component in PresetRegistry().load(file)[0].applies_to]
 MINIMAL_CALL = {
     "search": {"query": "q"},
     "answer": {"query": "q"},
@@ -48,21 +50,20 @@ SERVED_BY = {
 }
 
 
-def _id(item: Any) -> str:
-    return item.stem if isinstance(item, Path) else str(item)
-
-
 def test_the_starter_library_is_not_empty() -> None:
     assert FILES
 
 
-@pytest.mark.parametrize("file", FILES, ids=_id)
+@pytest.mark.parametrize("file", FILES, ids=lambda file: file.stem)
 def test_each_starter_preset_loads_and_passes_its_own_checks(file: Path) -> None:
     with WebRouter() as router:
         (preset,) = router.presets.load(file)
         for component in preset.applies_to:
             check = router.presets.validate(component, MINIMAL_CALL[component], preset=preset.ref)
             assert check.ok, [issue.message for issue in check.issues]
+            # presets/README.md says a call can override every setting a starter preset fixes.
+            settings = preset.components[component]
+            assert set(settings.overridable) == set(settings.defaults), component
 
 
 @pytest.mark.parametrize("folder", FOLDERS, ids=lambda folder: folder.name)
@@ -74,35 +75,48 @@ def test_each_starter_folder_loads_as_a_whole(folder: Path) -> None:
     assert len({preset.ref for preset in loaded}) == len(files_in_folder)
 
 
-@pytest.mark.parametrize(("file", "component"), COMPONENTS, ids=_id)
-def test_each_starter_preset_works_on_the_backends_its_readme_names(file: Path, component: str) -> None:
+@pytest.mark.parametrize("file", FILES, ids=lambda file: file.stem)
+def test_each_starter_preset_works_on_the_backends_its_readme_names(file: Path) -> None:
     with WebRouter() as router:
         (preset,) = router.presets.load(file)
-        named = set(AVAILABLE[component]()) - ROUTERS - REFUSED_AT_CALL_TIME.get(component, set())
-        passing = {
-            name
-            for name in named
-            if router.presets.validate(component, {**MINIMAL_CALL[component], "provider": name}, preset=preset.ref).ok
-        }
+        passing = {}
+        for component in preset.applies_to:
+            named = set(AVAILABLE[component]()) - ROUTERS - REFUSED_AT_CALL_TIME.get(component, set())
+            call = MINIMAL_CALL[component]
+            passing[component] = {
+                name
+                for name in named
+                if router.presets.validate(component, {**call, "provider": name}, preset=preset.ref).ok
+            }
 
-    assert passing == SERVED_BY[(preset.id, component)]
+    assert passing == {component: SERVED_BY[(preset.id, component)] for component in preset.applies_to}
 
 
-@pytest.mark.parametrize(("file", "component"), COMPONENTS, ids=_id)
+@pytest.mark.parametrize("file", FILES, ids=lambda file: file.stem)
+def test_deepseek_cannot_take_a_starter_search_presets_domain_lists(file: Path) -> None:
+    with WebRouter() as router:
+        (preset,) = router.presets.load(file)
+    if "search" in preset.applies_to:
+        defaults = preset.components["search"].defaults
+        assert len(DeepSeekProvider._query(SearchRequest(query="q", **defaults))) > DEEPSEEK_QUERY_LIMIT
+
+
+@pytest.mark.parametrize("file", FILES, ids=lambda file: file.stem)
 def test_each_starter_preset_reaches_the_backend_as_written(
-    file: Path, component: str, fake_provider: Any, fake_answer_provider: Any, fake_extract_provider: Any
+    file: Path, fake_provider: Any, fake_answer_provider: Any, fake_extract_provider: Any
 ) -> None:
+    register_extract_provider("fake", RecordingExtract)  # the fixture's teardown unregisters it
     router = WebRouter("fake")
     (preset,) = router.presets.load(file)
-    defaults = preset.components[component].defaults
+    backends = {
+        "search": router.get_provider,
+        "answer": router.get_answer_provider,
+        "extract": router.get_extract_provider,
+    }
 
-    if component == "extract":
-        response = router.extract(MINIMAL_CALL["extract"]["urls"], preset=preset.ref)
-        # The fake extract backend keeps no request; the format it labels its documents with is the one it was asked.
-        sent = {"format": response.documents[0].format}
-    else:
-        getattr(router, component)("q", preset=preset.ref)
-        backend = router.get_provider("fake") if component == "search" else router.get_answer_provider("fake")
-        sent = backend.requests[0].model_dump()
-
-    assert {key: sent[key] for key in defaults} == defaults
+    for component in preset.applies_to:
+        call = MINIMAL_CALL[component]
+        getattr(router, component)(*call.values(), preset=preset.ref)
+        sent = backends[component]("fake").requests[-1].model_dump()  # type: ignore[attr-defined]
+        defaults = preset.components[component].defaults
+        assert {key: sent[key] for key in defaults} == defaults, component
