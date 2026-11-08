@@ -15,6 +15,10 @@ Runnable scripts, roughly in the order worth reading them.
 | [`browse.py`](browse.py) | `browse()`: a task handed to a hosted browser agent, waited on or submitted | any browse key |
 | [`main.py`](main.py) | Guided tour of search and extract in one file | no |
 | [`routing.py`](routing.py) | Defaults, per-call overrides, `provider_config`, `provider_options` | no |
+| [`router_rules.py`](router_rules.py) | Your own router in a few lines: a URL extracts, "compare", "report" or "analyze" researches, anything else has no opinion | no |
+| [`router_classifier.py`](router_classifier.py) | A scikit-learn pipeline, saved and loaded with joblib, ranking methods by `predict_proba`; `timeout_s = 0.05` | no, but scikit-learn |
+| [`router_llm.py`](router_llm.py) | An async router on any OpenAI-compatible server, its answer held to the candidate ids by a JSON schema; `timeout_s = 3.0` — sends the prompt to that server, bills | `OPENAI_API_KEY` + `LLM_ROUTER_MODEL` |
+| [`router_jev.py`](router_jev.py) | An async router on TypeSafe's Jev, ranking by its probability per candidate; `timeout_s = 1.0` — sends the prompt to TypeSafe, bills | `TYPESAFE_API_KEY` |
 | [`error_handling.py`](error_handling.py) | Every exception and what to do about each | no |
 | [`search_depth.py`](search_depth.py) | `lite` / `fast` / `deep` measured across backends | no |
 | [`custom_provider.py`](custom_provider.py) | Adding your own backend, against Wikipedia's open API | no |
@@ -35,6 +39,13 @@ the exceptions, and not by oversight: every agentic backend bills for the run,
 every cloud browser for the time it is open, and a template run fetches on the
 backend's account, so there is no anonymous tier for them to fall back on.
 With no key each names the variables that would fix it and exits.
+`router_llm.py` and `router_jev.py` are exceptions too: each plan sends the
+prompt to a model on another server, which bills for it unless it is your own. With no
+key each says what to set and exits. `router_classifier.py` needs no key but
+does need scikit-learn, which web-router does not depend on: run it with
+`uv run --with scikit-learn python examples/router_classifier.py`. The
+routers only `plan()`, which runs no search, so `router_rules.py` and
+`router_classifier.py` call nothing at all.
 `browser_session.py` needs no key but does need the `browser` extra and a
 Chrome or Chromium on the machine — `local` launches it for the session and
 stops it on the way out. `evaluate_accuracy.py` needs the `evals` extra and
