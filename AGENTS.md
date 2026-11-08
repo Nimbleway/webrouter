@@ -169,7 +169,7 @@ src/web_router/
 ├── _urls.py            urls_in(): the URLs written in a query's prose; host_of(): a
 │                       URL shown as its scheme and host only
 ├── _hosts.py           a URL host's kind -- loopback, cloud metadata, private -- in
-│                       every spelling a browser reads; shared by the MCP navigation
+│                       the spellings a browser reads; shared by the MCP navigation
 │                       guard and url_policy
 ├── constants_urls.py   the punctuation stripped from a URL found in prose, and the
 │                       metadata, loopback and legacy-IPv4 host lists
