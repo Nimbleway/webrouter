@@ -137,7 +137,9 @@ src/web_router/
 │   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,
 │   │                   the check before each attempt, BudgetExceededError, the record
 │   ├── ledger.py       one budgeted or routed call's ledger: what each attempt is charged,
-│   │                   the spend, the hops, the position that ran
+│   │                   the spend, the position that ran
+│   ├── trail.py        the hop trail: every candidate a call moved past, skipped,
+│   │                   failed or empty, by attempt
 │   ├── record.py       the record's own fields: decision_id, the prompt's hash, a failure's code
 │   ├── pricing.py      the one cost and p90 rule: price list, floor and provider_options
 │   │                   unknown, research's p90 from the effort table
