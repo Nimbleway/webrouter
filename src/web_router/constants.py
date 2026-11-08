@@ -516,23 +516,6 @@ YOU_MCP_SSE_DATA_PREFIX = MCP_SSE_DATA_PREFIX
 MSG_MCP_ERROR = "MCP call failed: {error}"
 MSG_MCP_NO_RESULT = "MCP response carried no result payload"
 
-# --- Exa MCP, a keyless route -----------------------------------------------
-# Exa's hosted MCP server, documented as free and rate-limited without a key
-# (exa.ai/docs/reference/exa-mcp). Verified live on 2026-10-01: a lone
-# tools/call needs no initialize handshake, honours numResults, and answers in
-# text blocks rather than JSON, parsed by ExaMcpProvider.
-
-EXA_MCP_BASE_URL = "https://mcp.exa.ai"
-EXA_MCP_SEARCH_PATH = "/mcp"
-EXA_MCP_SEARCH_TOOL = "web_search_exa"
-EXA_MCP_PARAM_NAMES = {"max_results": "numResults"}
-EXA_MCP_FIELDS: dict[str, str] = {"Title": "title", "URL": "url", "Published": "publishedDate", "Author": "author"}
-"""Each result block's ``Label: value`` lines, by the key Exa's REST payload uses for the same value."""
-EXA_MCP_HIGHLIGHTS_LABEL = "Highlights"
-EXA_MCP_RESULT_START = "Title: "
-EXA_MCP_UNSET = "N/A"
-"""What Exa writes for a value it does not have; read as no value, not as text."""
-
 # --- Parallel MCP, a keyless route ------------------------------------------
 # Parallel's hosted Search MCP, documented as free without a key, with higher
 # limits for one (docs.parallel.ai/integrations/mcp/quickstart). Verified live on

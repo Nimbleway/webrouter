@@ -1,4 +1,4 @@
-"""Exa search and answer: the search options' fields, the answer path and the fields of its response.
+"""Exa search, over REST and over its keyless MCP server, and answer: the options' fields and the answer path.
 
 Kept apart from :mod:`web_router.constants`, which every other provider's
 settings share, so that file stops growing. Exa's host and auth header stay
@@ -75,3 +75,63 @@ EXA_ANSWER_PATH = "/answer"
 
 EXA_ANSWER_CITATION_TEXT_FIELD = "text"
 """The cited page's text, present only when asked for; read as the snippet when it is there."""
+
+# --- Exa MCP, a keyless route -----------------------------------------------
+# Exa's hosted MCP server, documented as free and rate-limited without a key
+# (exa.ai/docs/reference/exa-mcp). A lone tools/call needs no initialize
+# handshake (verified live 2026-10-01). The server lists only web_search_exa,
+# which takes a query, numResults and an objective, unless `?tools=` on its URL
+# names others; web_search_advanced_exa, named there, takes the filters, the
+# content sizes and the search type. Checked keyless on 2026-11-09 with
+# tools/list and five searches: it answers in Exa's REST JSON (`results` of
+# `{url, title, text | highlights, publishedDate, author}` and `requestId`),
+# not the text blocks web_search_exa writes, and refuses any argument its
+# schema does not declare -- `objective` among them.
+
+EXA_MCP_BASE_URL = "https://mcp.exa.ai"
+EXA_MCP_SEARCH_PATH = "/mcp"
+EXA_MCP_SEARCH_TOOL = "web_search_advanced_exa"
+EXA_MCP_TOOLS_PARAM = "tools"
+"""The query parameter on the server URL that makes it serve :data:`EXA_MCP_SEARCH_TOOL`."""
+
+EXA_MCP_PARAM_NAMES = {
+    "max_results": "numResults",
+    "include_domains": "includeDomains",
+    "exclude_domains": "excludeDomains",
+    "country": "userLocation",
+}
+"""Normalized parameter -> the tool's argument, sent as the caller set it."""
+
+EXA_MCP_DATE_FORMAT = "%Y-%m-%d"
+"""The tool's ``startPublishedDate`` is a calendar date, YYYY-MM-DD, unlike REST's date-time."""
+
+EXA_MCP_CONTENTS: dict[str, Any] = {"enableHighlights": True}
+"""Sent when ``search_depth`` is unset: the query's passages, as web_search_exa returned.
+
+Unset, the advanced tool returns each page's whole text, which is ``deep``'s
+size and was slower live (1.9 s against 0.2-0.3 s for highlights or a capped
+text), so a call naming no depth keeps the output it had before the switch.
+"""
+
+EXA_MCP_CONTENTS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
+    "lite": {"enableHighlights": True, "highlightsMaxCharacters": 500},
+    "fast": {"textMaxCharacters": 3000},
+    "deep": {},
+}
+"""The tool's content arguments for each ``search_depth``.
+
+``deep`` sends none: "page text is the full page by default", and live it came
+back at 10,000-14,000 characters a result. Highlights without a cap ran to about
+4,000 characters, so ``lite`` caps them at a snippet's size.
+"""
+
+EXA_MCP_TYPE_BY_EFFORT: dict[ResearchEffort, str | None] = {
+    "low": "lite",
+    "medium": None,
+    "high": None,
+    "max": None,
+}
+"""``type`` for each ``effort``. The tool's top type is ``auto``, its default, so medium and up send nothing.
+
+It has no deep types; ``fast`` and ``instant`` are legacy names for ``lite``.
+"""
