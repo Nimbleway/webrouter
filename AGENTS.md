@@ -157,7 +157,8 @@ src/web_router/
 │   ├── candidates_priced.py one method's members priced, timed, and dropped when the
 │   │                   budget leaves them out
 │   ├── effort_call.py  choose_effort(): the one research effort a call sends, chosen
-│   │                   before its candidates are priced or a router is asked
+│   │                   before its candidates are priced or a router is asked; a call
+│   │                   no router orders runs at it too
 │   ├── eligible.py     eligible_members(): the members of a method's `auto` that
 │   │                   can serve a request, and the ones it cannot build, with why
 │   ├── merge.py        merge(): a router's decision and the static order made into

@@ -29,13 +29,13 @@ from web_router.constants_candidates import AUTO_GETTERS, ONE_PAGE_URL
 from web_router.constants_urls import MSG_PLAN_EXTRACT_NO_URL, MSG_PLAN_EXTRACT_REFUSED
 from web_router.exceptions import MissingParameterError
 from web_router.providers._deadline import call_deadline
-from web_router.routing.attempts import CallRoute, call_route
+from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import budget_scope
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, base_params, build_candidates, default_requests
 from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
 from web_router.routing.decide import decided
 from web_router.routing.invoke import RouterOutcome
-from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted, in_force_with
+from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
 from web_router.routing.url_policy import screened
 from web_router.types import (
     BrowseResponse,
@@ -109,7 +109,7 @@ class _Planner(RouterSetup):
 def _ordered(stack: ExitStack, tool: ToolName, providers: Sequence[str]) -> None:
     """Put ``providers`` in force as ``tool``'s order beside the budget's hook; none leaves ``auto``'s own."""
     if providers:
-        stack.enter_context(call_route(in_force_with(CallRoute(order={tool: providers}))))
+        stack.enter_context(in_route(CallRoute(order={tool: providers})))
 
 
 def _settled(response: Any, plan: Plan) -> Any:
