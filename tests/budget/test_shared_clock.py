@@ -135,3 +135,11 @@ def test_a_thread_started_inside_the_block_does_not_see_it_unless_it_calls_throu
         worker.start()
         worker.join()
     assert (seen, shared.status().spent_usd) == ([None], 0.0)
+
+
+def test_a_scope_made_before_an_outer_block_reports_what_the_outer_cap_has_left_even_unentered() -> None:
+    router = WebRouter()
+    inner = router.budget(Budget(max_cost_usd=5.0))
+    with router.budget(SHARED):
+        assert inner.status().remaining_usd == 0.1, "as a call through it would be held to"
+    assert inner.status().remaining_usd == 5.0

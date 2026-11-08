@@ -185,8 +185,13 @@ def chain_in_force(owner: object) -> PoolChain | None:
 
 
 def _around(pool: BudgetPool) -> PoolChain:
-    """``pool`` and the pools of its router in force outside its innermost binding here; ``pool`` alone if unbound."""
+    """``pool`` and the pools of its router in force outside its innermost binding here, as a call through it spends.
+
+    Unbound, that is ``pool`` on top of every pool of its router in force here.
+    """
     chain = chain_in_force(pool.owner)
-    if chain is None or pool not in chain.pools:
+    if chain is None:
         return PoolChain((pool,))
+    if pool not in chain.pools:
+        return PoolChain((pool, *chain.pools))
     return PoolChain(chain.pools[chain.pools.index(pool) :])
