@@ -30,8 +30,10 @@ Choosing a tool:
   second run while the first is going — poll research_status or browse_status
   with the handle you were given; polling is free.
 - web_run, where it is offered, takes the request in words and lets the
-  server's router pick search or extract and the backends. Call search or
-  extract yourself when you know which you want or need their options.
+  server's router pick the method and the backends. The built-in router
+  picks search or extract; an operator's router may pick answer, research or
+  browse too, which bill as those tools do. Call a tool yourself when you
+  know which you want or need its options.
 - browser_open starts a session you drive yourself. local is free; a cloud
   session bills per minute until browser_close. Close every session as soon
   as you are done with it, and before you finish your turn.

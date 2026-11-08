@@ -1908,9 +1908,14 @@ response = wr.run(plan, budget=Budget(max_cost_usd=0.05))
 
 A router takes a `RouteRequest` and returns a `RouteDecision`: a function,
 method, `functools.partial` or coroutine function, or an object with
-`route(req)` or `aroute(req)`; an object that is only callable is refused. `RouteRequest` holds the `prompt`, its `urls`, the `budget`
-and the `candidates`, each a `Candidate` named `tool:provider` (`search:exa`)
-with `est_cost_usd` and `est_latency_s` (p90), `None` when unknown. Every
+`route(req)` or `aroute(req)`; an object that is only callable is refused.
+A router is shown a `RouteRequest` and nothing else: the `prompt`, the `urls`
+found in it, the `budget`, the method you pinned (`pinned_tool`), its own
+time to answer (`deadline_s`) and the `candidates`, each a `Candidate` named
+`tool:provider` (`search:exa`) with `est_cost_usd` and `est_latency_s` (p90),
+`None` when unknown. It holds no key values. The router runs in your process;
+what it sends elsewhere is up to your code. With no router attached, nothing
+extra leaves the process. Every
 `RouteDecision` field is optional: `tools` and `providers`, best first,
 `exclude`, `params`, `confidence` and `reason`. A router gets 50 ms unless it
 sets a `timeout_s` attribute. One that raises, runs out of time or answers
@@ -1929,7 +1934,8 @@ priced on the request the call runs (an `effort`, a `search_depth`, more
 does not fit the budget is set aside in the record's `ignored`. An extract you
 did not pin that is left with no URL to read -- none in the prompt, and every
 URL the router gave set aside by `url_policy` or the budget -- searches
-instead. A fallback never moves to another method.
+instead when a search backend is offered; with none, it stays extract, the
+refused URLs noted in `ignored`. A fallback never moves to another method.
 
 Attached with `router=`, a router also orders the backends of a plain
 `search`, `extract`, `answer`, `research` or `browse` sent to `auto`, without
@@ -1987,8 +1993,9 @@ failed attempt still counts.
 - **Research effort.** A budgeted research call runs at one `effort`, chosen
   once, before the router is asked, to fit every backend it may try; its
   candidates are priced at it. That holds on `auto` or a named backend,
-  routed or not, for `plan()`/`run()` and for `submit_research`. An effort
-  you or the router set is kept.
+  routed or not, for `plan()`/`run()` and for `submit_research`. A backend
+  that refuses that effort for the request is left out, with why, in the
+  record's `dropped`. An effort you or the router set is kept.
 
 To spend several calls from one budget:
 
