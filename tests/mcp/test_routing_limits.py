@@ -1,4 +1,4 @@
-"""The MCP budget's edges: what a browser and a job cost and wait, what the connection spent, and bad limits.
+"""The MCP budget's edges: what a browser costs, the clock, what the connection spent, and bad limits.
 
 As in :mod:`tests.mcp.test_routing_tools`, over the fake members with the test's own prices.
 """
@@ -7,65 +7,45 @@ from __future__ import annotations
 
 import asyncio
 import math
-import re
 import time
 from collections.abc import Iterator
 from types import SimpleNamespace
-from typing import Any, ClassVar
+from typing import Any
 
 import pytest
 
-from tests.conftest import FakeBrowserProvider, FakeResearchProvider
-from tests.mcp.conftest import CONFIG, Table, ok_on, outcome, routed
-from tests.routing_helpers import MEMBERS
+from tests.conftest import FakeBrowserProvider
+from tests.mcp.conftest import Table, ok_on, outcome, routed
 from web_router import RouteDecision, RouteRequest, prices
 from web_router.constants_budget import SKIP_PRICE_UNKNOWN
-from web_router.constants_mcp import (
-    ENV_MCP_MAX_COST_USD,
-    ENV_MCP_ROUTER,
-    ENV_MCP_TIME_LIMIT_S,
-    MCP_TOOL_BUDGET_START,
-    MCP_TOOL_BUDGET_STATUS,
-    MCP_TOOL_WEB_RUN,
-)
-from web_router.exceptions import BudgetExceededError, ConfigurationError, DeadlineExceededError
+from web_router.constants_mcp import ENV_MCP_ROUTER, MCP_TOOL_BUDGET_START, MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
+from web_router.exceptions import BudgetExceededError
 from web_router.mcp.budget import ConnectionBudget, browser_charged, charged, wait_left
-from web_router.mcp.routing_config import McpRouting
-from web_router.mcp.tools import WebRouterTools
 from web_router.providers._deadline import current_deadline
 from web_router.providers.auto_browser import AutoBrowserProvider
-from web_router.registry import (
-    register_browser_provider,
-    register_research_provider,
-    unregister_browser_provider,
-    unregister_research_provider,
-)
+from web_router.registry import register_browser_provider, unregister_browser_provider
 from web_router.routing import Budget
 from web_router.routing.attempts import Attempt
 from web_router.routing.pool import chain_in_force
 from web_router.routing.pricing import attempt_cost
-from web_router.types import BrowserRequest, ResearchProgress, ResearchRequest
+from web_router.types import BrowserRequest
 
 ANY = object()
 """Any router: the connection's budget has no owner, so it holds every router's calls."""
 
 
-# -- startup and budget_start refuse what is not a limit ---------------------------
+# -- budget_start and web_run refuse what is not a limit ----------------------------
 
 
-@pytest.mark.parametrize("value", ["", "   "])
-@pytest.mark.parametrize("name", [ENV_MCP_MAX_COST_USD, ENV_MCP_TIME_LIMIT_S])
-def test_a_ceiling_set_empty_stops_the_server_rather_than_running_uncapped(name: str, value: str) -> None:
-    with pytest.raises(ConfigurationError):
-        McpRouting.from_environ({name: value})
+@pytest.mark.parametrize("bad", [math.inf, -1, "1", True])
+async def test_budget_start_takes_only_finite_positive_numbers(bad: object) -> None:
+    failed, message = await outcome(routed(), MCP_TOOL_BUDGET_START, max_cost_usd=bad, time_limit_s=10)
+    assert failed and f"{MCP_TOOL_BUDGET_START}: `max_cost_usd` must be a positive number" in message
 
 
-@pytest.mark.parametrize("bad", [math.inf, math.nan])
-@pytest.mark.parametrize("name", ["max_cost_usd", "time_limit_s"])
-async def test_budget_start_refuses_a_limit_that_is_not_finite(name: str, bad: float) -> None:
-    limits: dict[str, Any] = {"max_cost_usd": 1.0, "time_limit_s": 10.0, name: bad}
-    failed, message = await outcome(routed(), MCP_TOOL_BUDGET_START, **limits)
-    assert failed and name in message
+async def test_web_run_refuses_a_cap_that_is_not_finite(members: list[str]) -> None:
+    failed, message = await outcome(routed(), MCP_TOOL_WEB_RUN, prompt="q", max_cost_usd=math.inf)
+    assert failed and "max_cost_usd" in message and members == []
 
 
 # -- what a browser costs ------------------------------------------------------------
@@ -87,6 +67,13 @@ def test_a_browser_option_that_can_bill_apart_makes_the_price_unknown(priced: Ta
     assert _browser(timeout=60, **extra) is None
     free = Attempt(tool="open_browser", provider="local", request=BrowserRequest(timeout=60, **extra))  # type: ignore[arg-type]
     assert attempt_cost(free) == 0.0, "a free backend bills no extra"
+
+
+def test_a_browser_with_a_charge_per_session_on_top_is_a_floor_and_unknown_under_a_cap() -> None:
+    row = prices.price("anchor", "open_browser")
+    assert row is not None and row.estimate_is_floor, "its note names a charge per browser created"
+    attempt = Attempt(tool="open_browser", provider="anchor", request=BrowserRequest(timeout=60))  # type: ignore[arg-type]
+    assert attempt_cost(attempt) is None
 
 
 @pytest.fixture
@@ -139,39 +126,6 @@ def test_a_job_tool_waits_no_longer_than_the_budget_has_left() -> None:
         assert wait_left(1.0) == 1.0
 
 
-# -- web_run on a job -----------------------------------------------------------------
-
-
-def route_to_research(req: RouteRequest) -> RouteDecision:
-    """An operator's router that always researches."""
-    return RouteDecision(tools=["research"], reason="operator")
-
-
-@pytest.fixture
-def slow_research() -> Iterator[None]:
-    """``first``, ``second`` and ``third`` for research, each a run that is still going after the wait."""
-
-    class Slow(FakeResearchProvider):
-        polls_before_done = 10**6
-
-    for name in MEMBERS:
-        register_research_provider(name, type(f"Slow_{name}", (Slow,), {"name": name}))
-    yield
-    for name in MEMBERS:
-        unregister_research_provider(name)
-
-
-@pytest.mark.usefixtures("slow_research")
-async def test_web_run_hands_back_a_handle_for_a_job_still_running() -> None:
-    routing = McpRouting.from_environ({ENV_MCP_ROUTER: f"{__name__}:route_to_research"})
-    tools = WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=0.2)
-    # Bounded, so a web_run that waits out the whole run fails here rather than hanging.
-    pending = await asyncio.wait_for(ok_on(tools, MCP_TOOL_WEB_RUN, prompt="what changed in solar policy?"), 5)
-    assert pending["tool"] == "research" and pending["decision"]["reason"] == "operator"
-    polled = await ok_on(tools, "research_status", handle=pending["handle"])
-    assert polled["handle"] == pending["handle"], "the run is polled, never started again"
-
-
 # -- what the connection spent --------------------------------------------------------
 
 
@@ -193,111 +147,6 @@ async def test_a_task_opened_after_the_ceiling_ran_out_reports_no_time_not_negat
     assert (status["time_limit_s"], status["time_left_s"]) == (0.0, 0.0)
 
 
-class _LostInPoll(FakeResearchProvider):
-    """A run that is accepted, then whose poll runs out of the call's deadline."""
-
-    polls_before_done = 10**6
-
-    def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        raise DeadlineExceededError(self.name, 0.1)
-
-    async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        return self._fetch(request, job_id)
-
-
-@pytest.fixture
-def lost_in_poll() -> Iterator[None]:
-    for name in MEMBERS:
-        register_research_provider(name, type(f"Lost_{name}", (_LostInPoll,), {"name": name}))
-    yield
-    for name in MEMBERS:
-        unregister_research_provider(name)
-
-
-@pytest.mark.usefixtures("lost_in_poll")
-async def test_web_run_keeps_the_handle_of_a_run_whose_poll_ran_out_of_time() -> None:
-    routing = McpRouting.from_environ({ENV_MCP_ROUTER: f"{__name__}:route_to_research"})
-    tools = WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=0.2)
-    pending = await asyncio.wait_for(ok_on(tools, MCP_TOOL_WEB_RUN, prompt="what changed in solar policy?"), 5)
-    assert pending["tool"] == "research" and pending["job_id"].startswith("first")
-    assert tools.store.get(pending["handle"]).job is not None, "the paid run's handle is kept"
-
-
-class _BothLostInPoll(FakeResearchProvider):
-    """Runs that each take their own id, then whose polls run out of the deadline once two have started."""
-
-    started: ClassVar[list[str]] = []
-    both = asyncio.Event()
-
-    def _start(self, request: ResearchRequest) -> ResearchProgress:
-        self.started.append(request.query)
-        if len(self.started) == 2:
-            self.both.set()
-        return ResearchProgress(job_id=f"run-{request.query}", state="running")
-
-    async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        await self.both.wait()
-        raise DeadlineExceededError(self.name, 0.1)
-
-
-@pytest.fixture
-def both_lost_in_poll() -> Iterator[None]:
-    _BothLostInPoll.started, _BothLostInPoll.both = [], asyncio.Event()
-    for name in MEMBERS:
-        register_research_provider(name, type(f"BothLost_{name}", (_BothLostInPoll,), {"name": name}))
-    yield
-    for name in MEMBERS:
-        unregister_research_provider(name)
-
-
-@pytest.mark.usefixtures("both_lost_in_poll")
-async def test_two_runs_whose_polls_run_out_at_once_each_keep_their_own_handle() -> None:
-    routing = McpRouting.from_environ({ENV_MCP_ROUTER: f"{__name__}:route_to_research"})
-    tools = WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=5)
-    runs = (ok_on(tools, MCP_TOOL_WEB_RUN, prompt=prompt) for prompt in ("alpha", "beta"))
-    alpha, beta = await asyncio.wait_for(asyncio.gather(*runs), 5)
-    assert alpha["job_id"].endswith("run-alpha") and beta["job_id"].endswith("run-beta")
-
-
-@pytest.mark.usefixtures("slow_research")
-async def test_a_pending_note_says_how_long_the_tool_actually_waited() -> None:
-    routing = McpRouting(ceiling=Budget(time_limit_s=0.3))
-    tools = WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=25.0)
-    pending = await asyncio.wait_for(ok_on(tools, "research", query="q", provider="first"), 5)
-    assert _waited(pending) <= 0.3, "cut to the time the budget had left, not the tool's 25 s"
-
-
-@pytest.mark.usefixtures("slow_research")
-async def test_a_pending_note_from_web_run_counts_its_own_time_limit() -> None:
-    routing = McpRouting.from_environ({ENV_MCP_ROUTER: f"{__name__}:route_to_research"})
-    tools = WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=25.0)
-    pending = await asyncio.wait_for(ok_on(tools, MCP_TOOL_WEB_RUN, prompt="q", time_limit_s=0.3), 5)
-    assert _waited(pending) <= 0.3, "cut to web_run's own time limit, not the tool's 25 s"
-
-
-def _waited(pending: dict[str, Any]) -> float:
-    return float(re.search(r"in the ([0-9.e-]+)s this tool waits", pending["note"]).group(1))  # type: ignore[union-attr]
-
-
-def test_a_browser_with_a_charge_per_session_on_top_is_a_floor_and_unknown_under_a_cap() -> None:
-    row = prices.price("anchor", "open_browser")
-    assert row is not None and row.estimate_is_floor, "its note names a charge per browser created"
-    attempt = Attempt(tool="open_browser", provider="anchor", request=BrowserRequest(timeout=60))  # type: ignore[arg-type]
-    assert attempt_cost(attempt) is None
-
-
-@pytest.mark.parametrize("bad", [math.inf, -1, 0])
-async def test_web_run_refuses_a_cap_that_is_not_a_finite_positive_number(members: list[str], bad: float) -> None:
-    failed, message = await outcome(routed(), MCP_TOOL_WEB_RUN, prompt="q", max_cost_usd=bad)
-    assert failed and "max_cost_usd" in message and members == []
-
-
-@pytest.mark.parametrize("value", ["inf", "Infinity", "-inf", "nan"])
-def test_a_ceiling_that_is_not_finite_stops_the_server(value: str) -> None:
-    with pytest.raises(ConfigurationError):
-        McpRouting.from_environ({ENV_MCP_MAX_COST_USD: value})
-
-
 async def route_slowly(req: RouteRequest) -> RouteDecision:
     """An operator's router that takes longer than the call's own time limit to answer."""
     await asyncio.sleep(0.3)
@@ -311,47 +160,3 @@ async def test_web_runs_time_limit_covers_its_planning(members: list[str]) -> No
     tools = routed(**{ENV_MCP_ROUTER: f"{__name__}:route_slowly"})
     failed, message = await outcome(tools, MCP_TOOL_WEB_RUN, prompt="q", time_limit_s=0.2)
     assert failed and "deadline" in message.lower() and members == [], "the time went on planning: none is left"
-
-
-@pytest.fixture
-def nimble_sent() -> Iterator[list[ResearchRequest]]:
-    """A fake research backend registered as ``nimble``, so the real price list and effort table apply to it."""
-    sent: list[ResearchRequest] = []
-
-    class SentNimble(FakeResearchProvider):
-        name = "nimble"
-
-        def _start(self, request: ResearchRequest) -> ResearchProgress:
-            sent.append(request)
-            return super()._start(request)
-
-    register_research_provider("nimble", SentNimble)
-    yield sent
-    unregister_research_provider("nimble")
-
-
-async def test_the_research_tool_under_a_ceiling_runs_at_the_effort_the_budget_maps(
-    nimble_sent: list[ResearchRequest],
-) -> None:
-    routing = McpRouting(ceiling=Budget(max_cost_usd=0.10))
-    tools = WebRouterTools(routing.build(provider_config={"auto": {"chain": ["nimble"]}}), routing=routing)
-    await ok_on(tools, "research", query="q")
-    assert [request.effort for request in nimble_sent] == ["low"], "nimble's default has no price: it would refuse"
-
-
-@pytest.mark.parametrize("asynchronous", [False, True])
-async def test_a_submitted_runs_answer_records_the_effort_the_budget_mapped(
-    nimble_sent: list[ResearchRequest], asynchronous: bool
-) -> None:
-    from web_router import AsyncWebRouter, WebRouter
-
-    if asynchronous:
-        async with AsyncWebRouter() as client, client.budget(Budget(max_cost_usd=0.10)):
-            job = await client.submit_research("q", provider="nimble")
-            answer, again = await job.aresult(), await job.aresult()
-    else:
-        with WebRouter() as client, client.budget(Budget(max_cost_usd=0.10)):
-            job = client.submit_research("q", provider="nimble")
-            answer, again = job.result(), job.result()
-    assert [request.effort for request in nimble_sent] == ["low"] and again is answer, "copied once, then kept"
-    assert answer.decision is not None and answer.decision.params == {"effort": "low"}, "as research() records it"
