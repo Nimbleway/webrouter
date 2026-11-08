@@ -35,6 +35,7 @@ from web_router.routing.decide import decided
 from web_router.routing.effort_call import Only, named, unrouted, with_record
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
+from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import NormalizedRequest
@@ -160,11 +161,11 @@ class SyncRouted(RouterSetup):
 
         A routed call runs in the order the router chose, and its response records how.
         """
-        request, chosen = named(chain, request, budget)  # before the scope, which admits a named backend
-        with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
-            routed = self._route_request(chain, request, budget)
+        request, chosen = named(chain, request, limited(budget, self))  # before the scope, which admits a named one
+        with budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
+            routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else self._attached().call(routed[0])
-            route, request, record = self._prepared(chain, request, budget, routed, outcome)
+            route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged:
                 return logged.settle(with_record(call(request), record or chosen))
 
@@ -178,10 +179,10 @@ class AsyncRouted(RouterSetup):
         call: Callable[[_RequestT], Awaitable[_ResponseT]],
     ) -> _ResponseT:
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
-        request, chosen = named(chain, request, budget)  # before the scope, which admits a named backend
-        with budget_scope(budget, _TOOL_OF[type(request)], chain, request) as scope:
-            routed = self._route_request(chain, request, budget)
+        request, chosen = named(chain, request, limited(budget, self))  # before the scope, which admits a named one
+        with budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
+            routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else await self._attached().acall(routed[0])
-            route, request, record = self._prepared(chain, request, budget, routed, outcome)
+            route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged:
                 return logged.settle(with_record(await call(request), record or chosen))
