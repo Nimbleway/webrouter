@@ -1,7 +1,9 @@
 """What the decision record says of the call itself: its id, the prompt's hash, and a failure's code.
 
 Experimental. Every routed or budgeted call's record is stamped here with a
-fresh ``decision_id`` and the prompt's ``prompt_sha256``, never the prompt;
+fresh ``decision_id`` and the prompt's ``prompt_sha256``, never the prompt
+(an unsalted hash of the whole prompt, URLs and their query strings included,
+so a guessed prompt or URL can be confirmed from it);
 and a member that failed is recorded by :func:`error_code`, never by its
 message, which may quote the query or a URL.
 """
