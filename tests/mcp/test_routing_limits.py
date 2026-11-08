@@ -37,7 +37,7 @@ ANY = object()
 # -- budget_start and web_run refuse what is not a limit ----------------------------
 
 
-@pytest.mark.parametrize("bad", [math.inf, -1, "1", True])
+@pytest.mark.parametrize("bad", [math.inf, -1, 0, 0.0, "1", True])
 async def test_budget_start_takes_only_finite_positive_numbers(bad: object) -> None:
     failed, message = await outcome(routed(), MCP_TOOL_BUDGET_START, max_cost_usd=bad, time_limit_s=10)
     assert failed and f"{MCP_TOOL_BUDGET_START}: `max_cost_usd` must be a positive number" in message
