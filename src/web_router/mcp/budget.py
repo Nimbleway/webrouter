@@ -46,7 +46,8 @@ from web_router.providers.auto_browser import AutoBrowserProvider
 from web_router.routing.attempts import Attempt
 from web_router.routing.budget import budget_scope
 from web_router.routing.contract import Budget, ToolName
-from web_router.routing.pool import BudgetPool, PoolChain, bind, chain_in_force, current_pool, unbind
+from web_router.routing.pool import BudgetPool, PoolChain, chain_in_force
+from web_router.routing.pool_bind import bind, current_pool, unbind
 from web_router.routing.pricing import attempt_cost
 from web_router.types import BrowserRequest, NormalizedRequest, TemplateRequest
 

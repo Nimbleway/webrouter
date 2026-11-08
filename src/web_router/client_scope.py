@@ -16,7 +16,8 @@ from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.routing.contract import Budget
-from web_router.routing.pool import BudgetPool, bind, unbind
+from web_router.routing.pool import BudgetPool
+from web_router.routing.pool_bind import bind, unbind
 from web_router.routing.pool_status import BudgetStatus
 
 _P = ParamSpec("_P")
