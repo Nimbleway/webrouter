@@ -54,7 +54,6 @@ from web_router.constants import (
     MSG_UNSUPPORTED_VALUES,
 )
 from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
-from web_router.constants_budget import MSG_BUDGET_EXCEEDED, SKIPPED
 
 
 def describe(exc: BaseException) -> str:
@@ -285,22 +284,6 @@ class DeadlineExceededError(WebRouterError):
         self.seconds = seconds
         message = MSG_DEADLINE_EXCEEDED.format(provider=provider, seconds=seconds)
         super().__init__(message + (MSG_DEADLINE_TRIED.format(failures=tried) if tried else ""))
-
-
-class BudgetExceededError(WebRouterError):
-    """Nothing the call could run fits its :class:`~web_router.Budget`. Experimental.
-
-    Raised before anything starts, naming each candidate the budget skipped
-    and why, as :attr:`skipped` holds them. Not a :class:`ProviderError`, as
-    :class:`DeadlineExceededError` is not: ``auto`` never takes it as a reason
-    to try the next member. A time cap reached mid-call raises the method's
-    own timeout error instead.
-    """
-
-    def __init__(self, skipped: Mapping[str, str]) -> None:
-        self.skipped = dict(skipped)
-        detail = "; ".join(SKIPPED.format(id=name, reason=reason) for name, reason in self.skipped.items())
-        super().__init__(MSG_BUDGET_EXCEEDED.format(skipped=detail))
 
 
 class ProviderError(WebRouterError):

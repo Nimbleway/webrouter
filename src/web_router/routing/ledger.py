@@ -32,7 +32,7 @@ from web_router.constants_budget import (
     SKIP_PRICE_UNKNOWN,
 )
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
-from web_router.exceptions import BudgetExceededError
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
@@ -63,10 +63,12 @@ def attempt_cost(attempt: Attempt) -> float | None:
     Unknown when the price list has no price -- no row, ``unknown``, billed by
     tokens -- when the row is only a floor, with charges billed on top
     (``estimate_is_floor``), and when the request carries ``provider_options``,
-    which can change the mode the vendor bills (a deeper tier, a pro mode). An
-    extract is charged per URL, each a page or a request.
+    which can change the mode the vendor bills (a deeper tier, a pro mode), or
+    when a search asks for more results than its row's price assumes, where
+    each result is charged (``results_assumed``). An extract is charged per
+    URL, each a page or a request.
     """
-    if attempt.request.provider_options:
+    if attempt.request.provider_options or _more_results_than_priced(attempt):
         return None
     row = prices.price(attempt.provider, attempt.tool, attempt_mode(attempt))
     if row is None or row.estimate_is_floor or row.estimate_usd is None:
@@ -74,6 +76,16 @@ def attempt_cost(attempt: Attempt) -> float | None:
     if isinstance(attempt.request, ExtractRequest):
         return row.estimate_usd * len(attempt.request.urls)
     return row.estimate_usd
+
+
+def _more_results_than_priced(attempt: Attempt) -> bool:
+    """A search asking for more results than its row's price assumes, where each result is charged: unpriced."""
+    request = attempt.request
+    if not isinstance(request, SearchRequest) or request.max_results is None:
+        return False
+    row = prices.price(attempt.provider, attempt.tool, attempt_mode(attempt))
+    assumed = None if row is None else row.results_assumed
+    return assumed is not None and request.max_results > assumed
 
 
 def attempt_p90(attempt: Attempt) -> float | None:

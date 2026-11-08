@@ -37,11 +37,6 @@ def test_every_type_is_frozen_and_keyword_only(cls: type) -> None:
     assert all(f.kw_only for f in dataclasses.fields(cls))
 
 
-def test_a_budget_cannot_be_changed_once_made() -> None:
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        Budget(max_cost_usd=0.01).max_cost_usd = 1.0  # type: ignore[misc]
-
-
 def test_a_candidate_is_named_by_its_tool_and_provider() -> None:
     candidate = Candidate(tool="search", provider="exa", est_cost_usd=0.005, est_latency_s=1.2)
     assert candidate.id == "search:exa"
