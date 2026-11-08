@@ -14,7 +14,7 @@ KEY = "test-key"
 URL = "https://example.com/account/orders"
 
 FETCHED: dict[str, Any] = {
-    "id": "1601dd35-1820-4ef5-8a64-26c80161edae",
+    "id": "fetch_123",
     "statusCode": 200,
     "headers": {"Content-Type": "text/html; charset=utf-8", "Server": "cloudflare"},
     "contentType": "text/markdown",
