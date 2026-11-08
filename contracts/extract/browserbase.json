@@ -1,7 +1,7 @@
 {
   "provider": "browserbase",
   "method": "extract",
-  "class": "web_router.providers.browserbase.BrowserbaseExtractProvider",
+  "class": "web_router.providers.browserbase_extract.BrowserbaseExtractProvider",
   "transport": {
     "kind": "http",
     "base_url": "https://api.browserbase.com",

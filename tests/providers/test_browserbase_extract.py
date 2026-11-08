@@ -25,7 +25,7 @@ from tests.providers._browser_live import SAVE_DELAY
 from web_router import WebRouter
 from web_router.constants import BROWSERBASE_API_KEY_HEADER, BROWSERBASE_BASE_URL
 from web_router.exceptions import ProviderError, UnsupportedFormatError, UnsupportedParameterError
-from web_router.providers.browserbase import BrowserbaseExtractProvider
+from web_router.providers.browserbase_extract import BrowserbaseExtractProvider
 from web_router.providers.firecrawl import FirecrawlExtractProvider
 from web_router.types import ExtractRequest
 
