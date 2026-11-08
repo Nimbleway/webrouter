@@ -93,6 +93,8 @@ class BudgetScope(_Scope):
     answer = _spending(WebRouter.answer)
     research = _spending(WebRouter.research)
     browse = _spending(WebRouter.browse)
+    submit_research = _spending(WebRouter.submit_research)
+    submit_browse = _spending(WebRouter.submit_browse)
     plan = _spending(WebRouter.plan)
     run = _spending(WebRouter.run)
 
@@ -116,6 +118,8 @@ class AsyncBudgetScope(_Scope):
     answer = _aspending(AsyncWebRouter.answer)
     research = _aspending(AsyncWebRouter.research)
     browse = _aspending(AsyncWebRouter.browse)
+    submit_research = _aspending(AsyncWebRouter.submit_research)
+    submit_browse = _aspending(AsyncWebRouter.submit_browse)
     plan = _aspending(AsyncWebRouter.plan)
     run = _aspending(AsyncWebRouter.run)
 

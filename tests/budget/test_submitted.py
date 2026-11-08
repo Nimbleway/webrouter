@@ -99,3 +99,18 @@ async def test_a_budgeted_start_records_its_cost_beside_the_effort_the_budget_ma
     assert job.decision.params == {"effort": "low"}, "nimble's default has no price: the budget maps low"
     assert spent and job.decision.estimated_cost_usd == pytest.approx(spent)
     assert [attempt.id for attempt in job.decision.attempts] == ["research:nimble"]
+
+
+@JOBS
+@MODES
+async def test_a_job_started_through_the_scope_spends_from_it_with_no_block_in_force(
+    chain: Chain, priced: Table, asynchronous: bool
+) -> None:
+    # As from a thread started inside the block, which does not inherit the pool: the scope's own method binds it.
+    priced["first"] = (0.005, 10.0)
+    tool = chain.tool.name
+    scope: Any = AsyncWebRouter().budget(BUDGET) if asynchronous else WebRouter().budget(BUDGET)
+    started = getattr(scope, f"submit_{tool}")(ARGS[tool], provider="first")
+    job = await started if asynchronous else started
+    assert scope.status().spent_usd == pytest.approx(0.005)
+    assert _charged(job.decision)[2] == [(f"{tool}:first", 0.005)]
