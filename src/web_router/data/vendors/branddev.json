@@ -73,7 +73,7 @@
           "in": "body",
           "type": "string",
           "description": "Email address, with type by_email.",
-          "example": "jane@stripe.com"
+          "example": "jane@example.com"
         },
         "ticker": {
           "in": "body",

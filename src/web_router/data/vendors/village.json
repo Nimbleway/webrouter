@@ -252,7 +252,7 @@
           "type": "string",
           "required": true,
           "description": "Work or personal email.",
-          "example": "satya@microsoft.com"
+          "example": "jane.doe@example.com"
         },
         "mode": {
           "in": "body",

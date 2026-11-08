@@ -62,7 +62,7 @@
           "required": true,
           "description": "What you know about the person: any of name, title, company, location, linkedin, email.",
           "example": {
-            "name": "Saarth Shah",
+            "name": "Jane Doe",
             "company": "Sixtyfour"
           }
         },
@@ -127,7 +127,7 @@
           "required": true,
           "description": "What you know about the person: any of name, title, company, location, linkedin, email.",
           "example": {
-            "name": "Saarth Shah",
+            "name": "Jane Doe",
             "company": "Sixtyfour"
           }
         },
@@ -390,7 +390,7 @@
           "type": "string",
           "required": true,
           "description": "The profile URL.",
-          "example": "https://www.linkedin.com/in/saarthshah"
+          "example": "https://www.linkedin.com/in/jane-doe-example"
         },
         "struct": {
           "in": "body",
@@ -421,7 +421,7 @@
           "required": true,
           "description": "The person: a LinkedIn URL, or a name with company or domain.",
           "example": {
-            "name": "Saarth Shah",
+            "name": "Jane Doe",
             "company": "Sixtyfour"
           }
         },
@@ -491,7 +491,7 @@
           "required": true,
           "description": "The lead, with an email.",
           "example": {
-            "email": "saarth@sixtyfour.ai"
+            "email": "jane.doe@example.com"
           }
         }
       },

@@ -71,7 +71,7 @@
           "type": "string",
           "required": true,
           "description": "The full name as listed on LinkedIn or another directory; do not clean it up.",
-          "example": "erol Toker"
+          "example": "Jane Doe"
         },
         "domain": {
           "in": "body",
@@ -131,7 +131,7 @@
           "type": "string",
           "required": true,
           "description": "The email to verify.",
-          "example": "erol@trykitt.ai"
+          "example": "jane.doe@example.com"
         },
         "realtime": {
           "in": "body",

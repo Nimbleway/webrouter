@@ -208,6 +208,10 @@ class VendorEndpoint(_Strict):
     host: str | None = Field(
         default=None, description="One of the vendor's named `hosts`, when this call is not on base_url."
     )
+    credentials: list[str] | None = Field(
+        default=None,
+        description="The credentials this call needs, when not every one the vendor requires (an API-key check).",
+    )
     docs_url: str
     verified: VendorVerification
     example_response: Any = None
@@ -296,6 +300,9 @@ class Vendor(_Strict):
         for endpoint in self.endpoints:
             if not endpoint.id.startswith(prefix):
                 raise ValueError(MSG_VENDOR_CATALOG_ENDPOINT_PREFIX.format(endpoint=endpoint.id, prefix=prefix))
+            unknown = set(endpoint.credentials or ()) - set(self.auth.credentials)
+            if unknown:
+                raise ValueError(f"endpoint {endpoint.id!r}: credentials {sorted(unknown)} are not the vendor's")
             if endpoint.host is not None and endpoint.host not in self.hosts:
                 raise ValueError(f"endpoint {endpoint.id!r}: host {endpoint.host!r} is not one of the vendor's hosts")
             if endpoint.id in seen:

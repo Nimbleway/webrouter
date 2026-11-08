@@ -158,14 +158,13 @@ def shape_vendor_response(response: VendorResponse, handle: str, *, budget: int)
     note = redaction_note(count).strip()
     if len(render(payload)) > budget:
         room = max(budget - len(render({**payload, "data": ""})) - 200, 200)
-        text = data if isinstance(data, str) else _json(data)
+        if isinstance(data, str):
+            text = data
+        else:
+            text = json.dumps(data, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str)
         payload["data"] = truncate(text, room)
         payload["truncated"] = True
         note = f"{note} {MCP_MSG_VENDOR_TRUNCATED.format(handle=handle)}".strip()
     if note:
         payload["note"] = note
     return payload
-
-
-def _json(value: Any) -> str:
-    return json.dumps(value, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str)

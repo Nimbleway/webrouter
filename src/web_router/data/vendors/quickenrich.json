@@ -127,7 +127,7 @@
           "type": "string",
           "required": true,
           "description": "Email address to look up (exact match).",
-          "example": "john.doe@company.com"
+          "example": "john.doe@example.com"
         }
       },
       "notes": [

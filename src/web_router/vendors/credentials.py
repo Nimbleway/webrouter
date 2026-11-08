@@ -22,8 +22,11 @@ from urllib.parse import quote, quote_plus
 from web_router.constants_vendors import (
     MSG_VENDOR_TOKEN_ERROR,
     MSG_VENDOR_TOKEN_NO_ACCESS,
+    MSG_VENDOR_TOKEN_UNREACHABLE,
+    MSG_VENDOR_TOKEN_UNREADABLE,
     VENDOR_ERROR_BODY_LIMIT,
     VENDOR_MASK,
+    VENDOR_MASK_INSIDE_MIN,
     VENDOR_TOKEN_DEFAULT_LIFETIME,
     VENDOR_TOKEN_REFRESH_MARGIN,
 )
@@ -165,12 +168,15 @@ class TokenCache:
     """Access tokens, reused until shortly before they expire. One per router.
 
     Keyed on everything that mints the token, so two accounts on one vendor
-    never share one, and a rotated refresh token mints afresh.
+    never share one, and a rotated refresh token mints afresh. Each key has its
+    own lock: one slow token endpoint holds up only the calls waiting for that
+    same token, never another vendor's or another account's.
     """
 
     def __init__(self) -> None:
         self._tokens: dict[str, _Token] = {}
-        self._lock = threading.Lock()
+        self._locks: dict[str, threading.Lock] = {}
+        self._locks_guard = threading.Lock()
         self._alocks: dict[str, asyncio.Lock] = {}
 
     def _fresh(self, key: str) -> str | None:
@@ -179,48 +185,107 @@ class TokenCache:
             return token.value
         return None
 
+    def _lock(self, key: str) -> threading.Lock:
+        with self._locks_guard:
+            return self._locks.setdefault(key, threading.Lock())
+
     def get(self, request: TokenRequest, client: httpx.Client) -> str:
-        with self._lock:
+        import httpx
+
+        with self._lock(request.key):
             cached = self._fresh(request.key)
             if cached is not None:
                 return cached
-            response = client.post(request.url, data=request.form, **request.auth_kwargs())
+            try:
+                response = client.post(request.url, data=request.form, **request.auth_kwargs())
+            except httpx.HTTPError as exc:
+                raise self._unreachable(request, exc) from None
             return self._store(request, response)
 
     async def aget(self, request: TokenRequest, client: httpx.AsyncClient) -> str:
+        import httpx
+
         lock = self._alocks.setdefault(request.key, asyncio.Lock())
         async with lock:
             cached = self._fresh(request.key)
             if cached is not None:
                 return cached
-            response = await client.post(request.url, data=request.form, **request.auth_kwargs())
+            try:
+                response = await client.post(request.url, data=request.form, **request.auth_kwargs())
+            except httpx.HTTPError as exc:
+                raise self._unreachable(request, exc) from None
             return self._store(request, response)
 
+    @staticmethod
+    def _secrets(request: TokenRequest) -> list[str]:
+        return [str(value) for value in (*request.form.values(), *(request.auth or ())) if value]
+
+    def _unreachable(self, request: TokenRequest, exc: Exception) -> ProviderError:
+        error = mask(f"{type(exc).__name__}: {exc}", self._secrets(request))
+        return ProviderError(request.vendor, MSG_VENDOR_TOKEN_UNREACHABLE.format(url=request.url, error=error))
+
     def _store(self, request: TokenRequest, response: httpx.Response) -> str:
-        secrets = [str(value) for value in (*request.form.values(), *(request.auth or ())) if value]
+        secrets = self._secrets(request)
         if response.status_code >= 400:
             body = mask(response.text, secrets)[:VENDOR_ERROR_BODY_LIMIT]
             detail = MSG_VENDOR_TOKEN_ERROR.format(url=request.url, status=response.status_code, body=body)
             raise ProviderError(request.vendor, detail)
-        payload: dict[str, Any] = response.json()
+        try:
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise ValueError(f"a JSON {type(payload).__name__}, not an object")
+            lifetime = payload.get("expires_in")
+            seconds = float(lifetime) if lifetime not in (None, "") else None
+        except (ValueError, TypeError) as exc:
+            error = mask(f"{type(exc).__name__}: {exc}", secrets)
+            raise ProviderError(
+                request.vendor, MSG_VENDOR_TOKEN_UNREADABLE.format(url=request.url, error=error)
+            ) from None
         access = payload.get("access_token")
         if not isinstance(access, str) or not access:
             raise ProviderError(request.vendor, MSG_VENDOR_TOKEN_NO_ACCESS.format(url=request.url))
-        lifetime = payload.get("expires_in")
-        seconds = float(lifetime) if isinstance(lifetime, (int, float, str)) and str(lifetime).strip() else None
-        expires = time.monotonic() + (seconds if seconds else VENDOR_TOKEN_DEFAULT_LIFETIME)
+        expires = time.monotonic() + (seconds if seconds and seconds > 0 else VENDOR_TOKEN_DEFAULT_LIFETIME)
         self._tokens[request.key] = _Token(access, expires)
         return access
+
+
+def _spellings(secret: str) -> set[str]:
+    return {secret, quote(secret, safe=""), quote_plus(secret)}
 
 
 def mask(text: str, secrets: Sequence[str]) -> str:
     """Replace every secret in ``text`` with ``***``, as written and URL-encoded, longest first.
 
-    Longest first, so one secret inside another cannot leave a tail behind;
+    Every secret, however short: this is for text about a failure, where a
+    stray ``***`` costs nothing and a leaked short key costs the key. Longest
+    first, so one secret inside another cannot leave a tail behind;
     URL-encoded too, since an error body often echoes the request URL, query
     credential and all.
     """
-    spellings = {form for s in secrets if s and len(s) >= 4 for form in (s, quote(s, safe=""), quote_plus(s))}
+    spellings = {form for secret in secrets if secret for form in _spellings(secret)}
     for secret in sorted(spellings, key=len, reverse=True):
         text = text.replace(secret, VENDOR_MASK)
     return text
+
+
+def mask_answer(value: Any, secrets: Sequence[str]) -> Any:
+    """A copy of a successful answer with every secret the vendor echoed back masked.
+
+    A string equal to a secret is masked whatever its length; a secret of
+    ``VENDOR_MASK_INSIDE_MIN`` characters or more is masked inside longer
+    strings too, which a shorter one is not, so that a login like ``user``
+    does not turn every ``username`` into ``***name``. Keys are left alone.
+    """
+    exact = {form for secret in secrets if secret for form in _spellings(secret)}
+    inside = [secret for secret in secrets if secret and len(secret) >= VENDOR_MASK_INSIDE_MIN]
+
+    def walk(item: Any) -> Any:
+        if isinstance(item, str):
+            return VENDOR_MASK if item in exact else mask(item, inside)
+        if isinstance(item, dict):
+            return {key: walk(inner) for key, inner in item.items()}
+        if isinstance(item, list):
+            return [walk(inner) for inner in item]
+        return item
+
+    return walk(value)

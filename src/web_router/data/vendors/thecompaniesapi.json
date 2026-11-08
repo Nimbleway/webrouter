@@ -84,7 +84,7 @@
           "type": "string",
           "required": true,
           "description": "An email at the company.",
-          "example": "jane@microsoft.com"
+          "example": "jane@example.com"
         },
         "refresh": {
           "in": "query",

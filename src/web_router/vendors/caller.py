@@ -31,10 +31,13 @@ from web_router.constants_vendors import (
     MSG_VENDOR_MISSING_CREDENTIAL,
     MSG_VENDOR_SETTING_CHOICE,
     MSG_VENDOR_WRITE_REFUSED,
+    VENDOR_CONTENT_TYPE_HEADER,
+    VENDOR_DROPPED_RESPONSE_HEADERS,
     VENDOR_ERROR_BODY_LIMIT,
     VENDOR_HTTP_TIMEOUT,
     VENDOR_MASK,
     VENDOR_READ_METHODS,
+    VENDOR_REQUEST_HEADERS,
 )
 from web_router.exceptions import (
     ConfigurationError,
@@ -50,6 +53,7 @@ from web_router.vendors.credentials import (
     TokenRequest,
     credential_source,
     mask,
+    mask_answer,
     token_request,
 )
 from web_router.vendors.schema import ACCESS_TOKEN, Vendor, VendorEndpoint, VendorParam, placeholders
@@ -69,6 +73,8 @@ class _Plan:
     body_type: str = "json"
     headers: dict[str, str] = field(default_factory=dict)
     host: str | None = None
+    credentials: list[str] | None = None
+    """The credentials this call needs; ``None`` for every one the vendor requires."""
 
 
 @dataclass
@@ -111,6 +117,7 @@ def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str,
     plan = _Plan(vendor=vendor, endpoint=endpoint.id, method=endpoint.method, path=endpoint.path)
     plan.body_type = endpoint.body_type
     plan.host = endpoint.host
+    plan.credentials = endpoint.credentials
     path_values: dict[str, str] = {}
     body: dict[str, Any] = {}
     for name, value in params.items():
@@ -185,7 +192,16 @@ class VendorCaller:
 
     # -- building ----------------------------------------------------------
 
-    def _values(self, vendor: Vendor) -> dict[str, str]:
+    @staticmethod
+    def _needed(plan: _Plan) -> set[str]:
+        """The credentials a call cannot be sent without: the endpoint's own list, else the vendor's required ones."""
+        if plan.credentials is not None:
+            return set(plan.credentials)
+        return {name for name, spec in plan.vendor.auth.credentials.items() if spec.required}
+
+    def _values(self, plan: _Plan) -> dict[str, str]:
+        vendor = plan.vendor
+        needed = self._needed(plan)
         values: dict[str, str] = {}
         for name, setting in vendor.settings.items():
             found = self.credentials.get(vendor.vendor, name, setting.env)
@@ -204,7 +220,7 @@ class VendorCaller:
             value = self.credentials.get(vendor.vendor, name, cred.env)
             if value:
                 values[name] = value
-            elif cred.required:
+            elif name in needed:
                 raise self._missing_error(vendor, name)
         return values
 
@@ -243,15 +259,17 @@ class VendorCaller:
             raise ConfigurationError(
                 MSG_VENDOR_HOST_ESCAPE.format(vendor=vendor.vendor, host=actual.host, expected=expected.host)
             )
-        headers = {"Accept": "application/json"}
+        headers = dict(VENDOR_REQUEST_HEADERS)
         headers.update({name: self._render(vendor, value, values) for name, value in vendor.headers.items()})
         headers.update(plan.headers)
         query = list(plan.query)
         body = plan.body
         masked: set[str] = set()
+        needed = self._needed(plan)
         for injection in vendor.auth.inject:
-            names = placeholders(injection.value)
-            if injection.optional and any(name not in values for name in names):
+            absent = {name for name in placeholders(injection.value) if name not in values}
+            # An optional injection, or one carrying only credentials this call does not need, is left off.
+            if absent and (injection.optional or not (absent & needed or absent - set(vendor.auth.credentials))):
                 continue
             rendered = self._render(vendor, injection.value, values)
             if injection.location == "header":
@@ -322,15 +340,19 @@ class VendorCaller:
                 status=response.status_code, method=plan.method, path=plan.path, body=body or "(empty body)"
             )
             raise ProviderError(plan.vendor.vendor, detail)
-        content_type = response.headers.get("content-type")
+        content_type = response.headers.get(VENDOR_CONTENT_TYPE_HEADER)
         data: Any = None
         text: str | None = None
         if response.content:
             try:
-                data = response.json()
+                data = mask_answer(response.json(), prepared.secrets)
             except ValueError:
-                text = response.text
-        headers = {k: v for k, v in response.headers.items() if k.lower() != "set-cookie"}
+                text = mask_answer(response.text, prepared.secrets)
+        headers = {
+            key: mask_answer(value, prepared.secrets)
+            for key, value in response.headers.items()
+            if key.lower() not in VENDOR_DROPPED_RESPONSE_HEADERS
+        }
         return VendorResponse(
             vendor=plan.vendor.vendor,
             endpoint=plan.endpoint,
@@ -347,11 +369,15 @@ class VendorCaller:
         message = mask(f"{type(exc).__name__}: {exc}", prepared.secrets)
         return ProviderError(prepared.plan.vendor.vendor, message)
 
-    def send(self, plan: _Plan, *, allow_writes: bool = False) -> VendorResponse:
+    def _begin(self, plan: _Plan, *, allow_writes: bool) -> tuple[dict[str, str], TokenRequest | None]:
+        """Everything before the network, shared by both paths: the write check, the values, the token to mint."""
         # Checked before anything else: a refused write should cost nothing, not even a token.
         self._check_write(plan, allow_writes=allow_writes)
-        values = self._values(plan.vendor)
-        token = self._token_request(plan.vendor, values)
+        values = self._values(plan)
+        return values, self._token_request(plan.vendor, values)
+
+    def send(self, plan: _Plan, *, allow_writes: bool = False) -> VendorResponse:
+        values, token = self._begin(plan, allow_writes=allow_writes)
         if token is not None:
             values[ACCESS_TOKEN] = self._tokens.get(token, self._client())
         prepared = self._prepare(plan, values)
@@ -362,9 +388,7 @@ class VendorCaller:
         return self._response(prepared, response)
 
     async def asend(self, plan: _Plan, *, allow_writes: bool = False) -> VendorResponse:
-        self._check_write(plan, allow_writes=allow_writes)
-        values = self._values(plan.vendor)
-        token = self._token_request(plan.vendor, values)
+        values, token = self._begin(plan, allow_writes=allow_writes)
         if token is not None:
             values[ACCESS_TOKEN] = await self._tokens.aget(token, self._aclient())
         prepared = self._prepare(plan, values)

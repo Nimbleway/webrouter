@@ -47,7 +47,7 @@
           "type": "string",
           "required": true,
           "description": "Email address to verify.",
-          "example": "anna.lee@acme.com"
+          "example": "anna.lee@example.com"
         },
         "resolve_catchall": {
           "in": "body",
@@ -189,7 +189,7 @@
           "type": "string",
           "required": true,
           "description": "A work email.",
-          "example": "anna.lee@acme.com"
+          "example": "anna.lee@example.com"
         },
         "deep": {
           "in": "body",
@@ -230,8 +230,8 @@
           "required": true,
           "description": "Emails to verify, 1 to 100,000; duplicates are removed.",
           "example": [
-            "a@acme.com",
-            "b@acme.com"
+            "a@example.com",
+            "b@example.com"
           ]
         },
         "auto_resolve_catchall": {

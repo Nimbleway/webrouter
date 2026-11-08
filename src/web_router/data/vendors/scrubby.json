@@ -46,7 +46,7 @@
           "type": "string",
           "required": true,
           "description": "The email address to validate.",
-          "example": "john.doe@company.com"
+          "example": "john.doe@example.com"
         }
       },
       "notes": [
@@ -73,8 +73,8 @@
           "required": true,
           "description": "List of email addresses to validate.",
           "example": [
-            "john.doe@company.com",
-            "jane.smith@agency.com"
+            "john.doe@example.com",
+            "jane.smith@example.com"
           ]
         }
       },
@@ -125,8 +125,8 @@
           "required": true,
           "description": "List of email addresses to validate.",
           "example": [
-            "john.doe@company.com",
-            "jane.smith@agency.com"
+            "john.doe@example.com",
+            "jane.smith@example.com"
           ]
         }
       },

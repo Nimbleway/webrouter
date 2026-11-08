@@ -383,7 +383,7 @@
           "type": "string",
           "required": true,
           "description": "An email address or a mobile number in international format.",
-          "example": "bnorris@cnyric.org"
+          "example": "jane.doe@example.com"
         }
       },
       "notes": [

@@ -41,6 +41,23 @@ VENDOR_READ_METHODS: Final = frozenset({"GET", "HEAD", "OPTIONS"})
 
 VENDOR_MASK: Final = "***"
 
+VENDOR_MASK_INSIDE_MIN: Final = 8
+"""Shortest secret masked *inside* a longer string of a successful answer.
+
+An error body is masked for every secret, however short: it is text about
+the failure. A successful answer is the caller's data, so a short value there
+(a login, a client id) is masked only where a whole string equals it --
+replacing every "user" inside every string would corrupt the answer.
+"""
+
+VENDOR_REQUEST_HEADERS: Final = {"Accept": "application/json"}
+"""Sent on every vendor call, before the vendor's own headers, which may override them."""
+
+VENDOR_CONTENT_TYPE_HEADER: Final = "content-type"
+
+VENDOR_DROPPED_RESPONSE_HEADERS: Final = frozenset({"set-cookie"})
+"""Response headers never handed back: a vendor's session cookie is a credential the caller did not ask for."""
+
 VENDOR_ID_PATTERN: Final = r"^[a-z0-9][a-z0-9-]*$"
 """A vendor slug: lowercase, digits and dashes, the file's own name."""
 
@@ -97,6 +114,8 @@ MSG_VENDOR_SETTING_CHOICE: Final = "{vendor} setting {name} must be one of {choi
 MSG_VENDOR_HTTP_ERROR: Final = "HTTP {status} from {method} {path}: {body}"
 MSG_VENDOR_TOKEN_ERROR: Final = "could not refresh the OAuth access token at {url}: HTTP {status}: {body}"
 MSG_VENDOR_TOKEN_NO_ACCESS: Final = "the token endpoint at {url} answered without an access_token"
+MSG_VENDOR_TOKEN_UNREADABLE: Final = "the token endpoint at {url} answered something that is not a token: {error}"
+MSG_VENDOR_TOKEN_UNREACHABLE: Final = "could not reach the token endpoint at {url}: {error}"
 MSG_VENDOR_CATALOG_INVALID: Final = "Vendor catalog file {file} is invalid: {error}"
 MSG_VENDOR_CATALOG_ID_MISMATCH: Final = "declares vendor {declared!r} but is named {stem!r}.json"
 MSG_VENDOR_CATALOG_DUPLICATE_ENDPOINT: Final = "endpoint id {endpoint!r} appears more than once"

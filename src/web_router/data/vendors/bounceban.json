@@ -50,7 +50,7 @@
           "type": "string",
           "required": true,
           "description": "The email to verify.",
-          "example": "dev@bounceban.com"
+          "example": "dev@example.com"
         },
         "mode": {
           "in": "query",
@@ -167,8 +167,8 @@
           "required": true,
           "description": "Emails to verify; about 500,000 per task at most.",
           "example": [
-            "dev@bounceban.com",
-            "support@bounceban.com"
+            "dev@example.com",
+            "support@example.com"
           ]
         },
         "name": {
@@ -314,7 +314,7 @@
           "required": true,
           "description": "Up to 100 emails, all from this task.",
           "example": [
-            "dev@bounceban.com"
+            "dev@example.com"
           ]
         }
       },
