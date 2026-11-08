@@ -105,6 +105,7 @@ class _Tried:
     id: str
     est_cost_usd: float | None
     started: float
+    attempt: Attempt | None = None
 
 
 @dataclass
@@ -130,12 +131,15 @@ class Ledger:
             self.skipped[name] = reason
             return False
         self.spent += cost or 0.0
-        self.tried.append(_Tried(name, cost, time.monotonic()))
+        self.tried.append(_Tried(name, cost, time.monotonic(), attempt))
         return True
 
-    def undo(self) -> None:
-        """Take back the attempt admitted last, which a check after this one refused, so it never ran."""
-        tried = self.tried.pop()
+    def undo(self, attempt: Attempt) -> None:
+        """Take back ``attempt``, which a check after this one refused, so it never ran; another call's stays."""
+        tried = next((tried for tried in reversed(self.tried) if tried.attempt is attempt), None)
+        if tried is None:
+            return
+        self.tried.remove(tried)
         if tried.est_cost_usd is not None:
             self.spent -= tried.est_cost_usd
             if self.pool is not None:

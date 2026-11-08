@@ -177,7 +177,7 @@ def _hooked(ledger: Ledger, held: tuple[Ledger, ...]) -> CallRoute:
         if ledger.admit(attempt):
             return True
         for enclosing in held:
-            enclosing.undo()
+            enclosing.undo(attempt)
         return False
 
     return replace(route, before_attempt=admit)
