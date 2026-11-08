@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.budget.conftest import ARGS, Chain, Table, pool_in_force
+from tests.budget.conftest import ARGS, Chain, Table, pool_in_force, scoped
 from web_router import (
     AsyncWebRouter,
     Budget,
@@ -25,11 +25,6 @@ from web_router.routing.attempts import CallRoute, call_route
 from web_router.routing.pool import BudgetPool, PoolChain
 
 SHARED = Budget(max_cost_usd=0.10)
-
-
-def _scoped(chain: Chain, scope: BudgetScope, **options: object) -> object:
-    """``chain``'s tool through ``scope``, on the chain's ``auto``."""
-    return getattr(scope, chain.tool.name)(ARGS[chain.tool.name], provider=chain.auto(), **options)
 
 
 async def test_calls_through_an_async_scope_spend_from_it_on_every_tool(chain: Chain, priced: Table) -> None:
@@ -62,10 +57,10 @@ def test_another_routers_calls_inside_the_block_neither_spend_from_it_nor_are_re
 def test_calls_through_the_scope_spend_from_it_on_every_tool(chain: Chain, priced: Table) -> None:
     priced.update(first=(0.04, None))
     with WebRouter().budget(SHARED) as shared:
-        _scoped(chain, shared)
-        _scoped(chain, shared)
+        scoped(chain, shared)
+        scoped(chain, shared)
         with pytest.raises(BudgetExceededError, match=r"est\. \$0\.04 > \$0\.02 left;"):
-            _scoped(chain, shared)
+            scoped(chain, shared)
     assert chain.called == ["first", "first"]
     assert shared.status().spent_usd == 0.08
 
@@ -106,7 +101,7 @@ def test_an_unknown_price_research_call_in_a_ten_cent_scope_is_skipped_and_a_kno
 ) -> None:
     priced.update(second=(0.05, None))  # first's price is unknown
     with WebRouter().budget(SHARED) as shared:
-        response = _scoped(chain, shared)
+        response = scoped(chain, shared)
     assert chain.called == ["second"]
     assert response.decision.hops == [DecisionHop(id="research:first", error="price unknown under a cost cap")]
     assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.05, 0.0)
@@ -117,7 +112,7 @@ def test_every_attempt_a_call_makes_is_charged_to_the_scope_failed_ones_included
     chain.raises["first"] = ConfigurationError("first holds no key")
     priced.update(first=(0.02, None), second=(0.03, None))
     with WebRouter().budget(SHARED) as shared:
-        _scoped(chain, shared)
+        scoped(chain, shared)
     assert chain.called == ["first", "second"]
     assert shared.status().spent_usd == 0.05
 
@@ -126,7 +121,7 @@ def test_every_attempt_a_call_makes_is_charged_to_the_scope_failed_ones_included
 def test_a_call_whose_own_budget_is_tighter_keeps_it(chain: Chain, priced: Table) -> None:
     priced.update(first=(0.05, None), second=(0.005, None))
     with WebRouter().budget(SHARED) as shared:
-        response = _scoped(chain, shared, budget=Budget(max_cost_usd=0.01))
+        response = scoped(chain, shared, budget=Budget(max_cost_usd=0.01))
     assert chain.called == ["second"]
     assert response.decision.hops == [DecisionHop(id="search:first", error="est. $0.05 > $0.01 left")]
 
@@ -135,8 +130,8 @@ def test_a_call_whose_own_budget_is_tighter_keeps_it(chain: Chain, priced: Table
 def test_a_call_whose_own_budget_is_looser_is_held_to_what_is_left_in_the_scope(chain: Chain, priced: Table) -> None:
     priced.update(first=(0.08, None), second=(0.005, None))
     with WebRouter().budget(SHARED) as shared:
-        _scoped(chain, shared)
-        response = _scoped(chain, shared, budget=Budget(max_cost_usd=1.0))
+        scoped(chain, shared)
+        response = scoped(chain, shared, budget=Budget(max_cost_usd=1.0))
     assert chain.called == ["first", "second"]
     error = SKIP_OVER_COST.format(cost="$0.08", left="$0.02")
     assert response.decision.hops == [DecisionHop(id="search:first", error=error)]
