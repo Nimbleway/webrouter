@@ -56,7 +56,7 @@
     },
     "include_domains_mode": {
       "status": "passthrough",
-      "note": "restrict | prefer."
+      "note": "restrict | prefer. Setting it without include_domains returns a 400."
     },
     "country": {
       "status": "passthrough",
@@ -68,7 +68,7 @@
     },
     "filter_by_language": {
       "status": "passthrough",
-      "note": "Boolean."
+      "note": "Boolean. Requires language, or the request returns a 400; without it language only boosts ranking."
     },
     "topic": {
       "status": "passthrough",
@@ -128,7 +128,11 @@
     },
     "safe_search": {
       "status": "passthrough",
-      "note": "Boolean."
+      "note": "Boolean. Not supported with the fast or ultra-fast search depths."
+    },
+    "max_age_hours": {
+      "status": "passthrough",
+      "note": "-1 to 720: the oldest cached content Tavily may return."
     }
   }
 }

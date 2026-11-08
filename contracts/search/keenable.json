@@ -46,7 +46,7 @@
     },
     "site": {
       "status": "passthrough",
-      "note": "One site to restrict results to; a candidate for a single-domain include_domains."
+      "note": "One site to restrict results to; subdomains match, a leading www. is ignored, and a path narrows further (github.com/microsoft). A candidate for a single-domain include_domains."
     },
     "acquired_after": {
       "status": "passthrough",
@@ -66,11 +66,19 @@
     },
     "query_time": {
       "status": "passthrough",
-      "note": "Searches the index as it stood at that time."
+      "note": "A date or ISO 8601 timestamp: searches the index as it stood then. Not a recency filter."
     },
     "snippet_max_length": {
       "status": "passthrough",
       "note": "180-10000 characters."
+    },
+    "disable_cards": {
+      "status": "passthrough",
+      "note": "Boolean, default false."
+    },
+    "session_id": {
+      "status": "passthrough",
+      "note": "Up to 128 characters; also settable as the X-Keenable-Session-Id header."
     }
   }
 }

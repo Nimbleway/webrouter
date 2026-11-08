@@ -96,7 +96,7 @@
     },
     "livecrawl": {
       "status": "passthrough",
-      "note": "Deprecated in favour of extraction: web | news | all."
+      "note": "Deprecated in favour of extraction: web | all."
     },
     "livecrawl_formats": {
       "status": "passthrough",

@@ -38,5 +38,42 @@
   "verified": {
     "max_results": "live: tests/providers/test_exa_mcp.py::test_live_keyless_search_returns_results"
   },
-  "vendor_options": {}
+  "vendor_options": {
+    "type": {
+      "status": "not_supported",
+      "note": "auto | lite | fast | instant. Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    },
+    "includeDomains": {
+      "status": "not_supported",
+      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    },
+    "excludeDomains": {
+      "status": "not_supported",
+      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    },
+    "userLocation": {
+      "status": "not_supported",
+      "note": "ISO country code. Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    },
+    "startPublishedDate": {
+      "status": "not_supported",
+      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    },
+    "endPublishedDate": {
+      "status": "not_supported",
+      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    },
+    "textMaxCharacters": {
+      "status": "not_supported",
+      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    },
+    "enableHighlights": {
+      "status": "not_supported",
+      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    },
+    "category": {
+      "status": "not_supported",
+      "note": "Only on the opt-in web_search_advanced_exa tool (enabled with ?tools= on the server URL); this provider calls web_search_exa, which takes query, numResults and objective."
+    }
+  }
 }

@@ -54,7 +54,7 @@
     },
     "type": {
       "status": "passthrough",
-      "note": "auto | lite | deep-lite | deep; a candidate for search_depth."
+      "note": "auto (default) | lite | deep-lite | deep; instant and fast are legacy names for lite, deep-reasoning for deep. Sets how hard Exa searches, not how much text comes back: a candidate for an effort option, not search_depth. lite still takes the domain, location and date filters."
     },
     "additionalQueries": {
       "status": "passthrough",

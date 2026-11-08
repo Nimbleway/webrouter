@@ -79,7 +79,7 @@
     },
     "include_domains": {
       "status": "not_supported",
-      "note": "Host-only: set under params._meta or an X-Search-* header, which provider_options cannot reach."
+      "note": "Not an argument of you-search: set per host under params._meta or an X-Search-* header. The tool maps an inline site: operator in the query to it (its tools/list description: 'Inline site:, lang:, loc: filters are mapped automatically'), a candidate for the shared option."
     },
     "boost_domains": {
       "status": "not_supported",
@@ -87,11 +87,11 @@
     },
     "country": {
       "status": "not_supported",
-      "note": "Host-only: set under params._meta or an X-Search-* header, which provider_options cannot reach."
+      "note": "Not an argument of you-search: set per host under params._meta or an X-Search-* header. The tool maps an inline loc: operator in the query to it (its tools/list description: 'Inline site:, lang:, loc: filters are mapped automatically'), a candidate for the shared option."
     },
     "language": {
       "status": "not_supported",
-      "note": "Host-only: set under params._meta or an X-Search-* header, which provider_options cannot reach."
+      "note": "Not an argument of you-search: set per host under params._meta or an X-Search-* header. The tool maps an inline lang: operator in the query to it (its tools/list description: 'Inline site:, lang:, loc: filters are mapped automatically'), a candidate for the shared option."
     }
   }
 }

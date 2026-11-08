@@ -99,11 +99,11 @@
     },
     "deep_search": {
       "status": "passthrough",
-      "note": "Boolean, in the nimble-python signature, not the API reference."
+      "note": "Deprecated: use search_depth with full_content instead (deep_search=true means lite plus full_content). Typed in nimble-python, not in the API reference."
     },
     "max_subagents": {
       "status": "passthrough",
-      "note": "Integer, in the nimble-python signature, not the API reference."
+      "note": "Parallel subagents for the shopping, social and geo focus modes only; ignored for SERP focus. Typed in nimble-python, not in the API reference."
     }
   }
 }
