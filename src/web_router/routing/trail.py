@@ -53,6 +53,10 @@ class HopTrail:
             self.passed.append(self.open)
             self.open = None
 
+    def answered_empty(self) -> list[int]:
+        """The attempts moved past with an empty answer, in order."""
+        return [hop.attempt for hop in self.passed if hop.why is None and hop.attempt is not None]
+
     def hops(self, answered: int | None) -> list[DecisionHop] | None:
         """Every candidate moved past, in order: the open attempt too, when another's held answer was returned."""
         if self.open is not None and self.open.attempt != answered:

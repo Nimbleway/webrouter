@@ -110,30 +110,40 @@ class Ledger:
         """Note that ``provider`` failed and the call moved on, by :func:`~.record.error_code`."""
         self.trail.fail(candidate_id(tool, provider), error_code(exc))
 
-    def _answered(self, provider: str | None) -> int | None:
-        """The attempt that answered: the open one when ``provider`` names it, else the last by that name or tried."""
-        names = [tried.provider for tried in self.tried]
+    def _answered(self, provider: str | None, empty: bool) -> int | None:
+        """The attempt whose response the call returned, ``provider``'s.
+
+        A response with something in it is the open attempt's: ``auto`` returns it at once. An empty one is the
+        first empty answer by that name ``auto`` moved past, which it held while it tried the rest; else the last
+        attempt by that name, else the last tried.
+        """
         opened = self.trail.open
-        if opened is not None and opened.attempt is not None and names[opened.attempt] == provider:
+        named = [i for i, tried in enumerate(self.tried) if tried.provider == provider]
+        if not empty and opened is not None and opened.attempt in named:
             return opened.attempt
-        named = [i for i, name in enumerate(names) if name == provider]
+        held = [i for i in self.trail.answered_empty() if i in named]
+        if held:
+            return held[0]
         return named[-1] if named else (len(self.tried) - 1 if self.tried else None)
 
     def refusal(self) -> BudgetExceededError:
         """The error for a call that started nothing: every candidate skipped, each with its reason."""
         return BudgetExceededError(self.skipped)
 
-    def record(self, into: DecisionRecord | None = None, answered: str | None = None) -> DecisionRecord:
+    def record(
+        self, into: DecisionRecord | None = None, answered: str | None = None, empty: bool = False
+    ) -> DecisionRecord:
         """The call's attempts, hops and estimated spend, written into ``into`` (a router's record) or a new one.
 
-        ``answered`` is the provider the response names; ``ran`` is its position in ``into``'s ``merged``.
+        ``answered`` is the provider the response names, ``empty`` whether it is an empty answer; ``ran`` is its
+        position in ``into``'s ``merged``.
         """
         into = into or DecisionRecord()
         into = into if into.decision_id else into.model_copy(update=self.stamp)
         ended = time.monotonic()
         ends = [tried.started for tried in self.tried[1:]] + [ended]
         known = [tried.est_cost_usd for tried in self.tried if tried.est_cost_usd is not None]
-        answering = self._answered(answered)
+        answering = self._answered(answered, empty)
         ran = None if answering is None else self.tried[answering].id
         update = {
             "estimated_cost_usd": sum(known) if known else None,

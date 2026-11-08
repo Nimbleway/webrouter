@@ -38,6 +38,7 @@ from pydantic import BaseModel
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_budget import SKIP_ROUTE_REFUSED
 from web_router.exceptions import WebRouterError
+from web_router.providers._chain import _empty_response
 from web_router.providers._deadline import call_deadline
 from web_router.routing.attempts import CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName, candidate_id
@@ -62,7 +63,8 @@ class BudgetedCall(Generic[_BackendT]):
         if self.ledger is None:
             return response
         decision: DecisionRecord | None = getattr(response, "decision", None)
-        record = self.ledger.record(decision, answered=getattr(response, "provider", None))
+        answered = getattr(response, "provider", None)
+        record = self.ledger.record(decision, answered=answered, empty=_empty_response(response))
         return response.model_copy(update={"decision": record})
 
 

@@ -278,6 +278,15 @@ def _empty_answer(response: AnswerResponse) -> bool:
     return not (response.answer or "").strip()
 
 
+def _empty_response(response: object) -> bool:
+    """Whether ``response`` is an empty answer, the kind a one-call chain holds while it goes on; a job never is."""
+    if isinstance(response, SearchResponse):
+        return _empty_search(response)
+    if isinstance(response, ExtractResponse):
+        return _empty_extract(response)
+    return isinstance(response, AnswerResponse) and _empty_answer(response)
+
+
 _Answer = TypeVar("_Answer", SearchResponse, ExtractResponse, AnswerResponse)
 
 
