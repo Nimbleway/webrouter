@@ -12,9 +12,9 @@ from typing import Any
 import pytest
 
 from web_router import Budget, DecisionRecord, prices
-from web_router.constants_params import PARAMS_SOURCE_BUDGET, PARAMS_SOURCE_CALLER
+from web_router.constants_params import PARAMS_SOURCE_BUDGET
 from web_router.routing import effort_table, params
-from web_router.routing.params import EffortChoice, effort_misfit, map_effort
+from web_router.routing.params import effort_misfit, map_effort
 
 NIMBLE_PRICES = {"low": 0.025, "medium": 0.1, "high": 0.5}
 
@@ -38,11 +38,10 @@ def test_no_cap_changes_nothing(budget: Budget | None) -> None:
     # map_effort returns before it reads the provider when nothing is capped, so one provider covers them all.
     choice = map_effort("nimble", budget)
     assert (choice.effort, choice.source, choice.misfit) == (None, None, None)
-    assert choice.record("nimble") == {
+    assert choice.fields() == {
         "params": None,
         "params_source": None,
         "params_reason": choice.reason,
-        "unmeasured": None,
     }
 
 
@@ -102,17 +101,6 @@ def test_when_no_measured_effort_fits_the_default_stays_and_says_whether_it_fits
     )
 
 
-def test_the_callers_effort_always_stands_and_a_misfit_is_reported_not_downgraded() -> None:
-    choice = map_effort("nimble", Budget(max_cost_usd=0.2), effort="high")
-    assert (choice.effort, choice.source) == ("high", PARAMS_SOURCE_CALLER)
-    assert choice.misfit == "research:nimble at effort high is estimated at $0.5, over the $0.2 cost cap"
-    fits = map_effort("nimble", Budget(max_cost_usd=1.0), effort="high")
-    assert (fits.effort, fits.misfit) == ("high", None)
-    assert map_effort("nimble", None, effort="medium") == EffortChoice(
-        effort="medium", source=PARAMS_SOURCE_CALLER, reason=fits.reason.replace("high", "medium")
-    )
-
-
 def test_an_unknown_price_never_fits_a_cost_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     # Nimble max has no price. Measured as the best by far, it still loses under any cost cap...
     _table_with(monkeypatch, "nimble", "max", accuracy=1.0, latency_p90_s=10.0)
@@ -129,19 +117,17 @@ def test_an_unknown_p90_fits_a_time_cap_unless_the_budget_is_strict(monkeypatch:
 
 
 @pytest.mark.parametrize("provider", ["perplexity", "linkup", "you"])
-def test_an_unmeasured_backend_keeps_its_default_and_is_marked(provider: str) -> None:
+def test_an_unmeasured_backend_keeps_its_default_and_says_why(provider: str) -> None:
     # Perplexity's rows mostly failed; Linkup ran at one effort only; You.com was not in the set.
     choice = map_effort(provider, Budget(max_cost_usd=10.0, time_limit_s=600.0))
-    assert (choice.effort, choice.source, choice.unmeasured) == (None, None, True)
-    record = DecisionRecord(**choice.record(provider), reason=choice.reason)
-    assert record.unmeasured == [f"research:{provider}"]
+    assert (choice.effort, choice.source) == (None, None)
     assert "measured efforts" in choice.reason
 
 
 def test_a_choice_fills_the_decision_record() -> None:
     choice = map_effort("nimble", Budget(max_cost_usd=0.2))
-    record = DecisionRecord(**choice.record("nimble"))
-    assert (record.params, record.params_source, record.unmeasured) == ({"effort": "low"}, PARAMS_SOURCE_BUDGET, None)
+    record = DecisionRecord(**choice.fields())
+    assert (record.params, record.params_source) == ({"effort": "low"}, PARAMS_SOURCE_BUDGET)
 
 
 def test_the_fit_check_reads_the_price_list() -> None:

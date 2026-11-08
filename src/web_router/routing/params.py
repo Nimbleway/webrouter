@@ -14,9 +14,9 @@ and ``max_results``, and timeouts come from the time cap, not from here.
 :func:`map_effort` applies :data:`~web_router.constants_params.EFFORT_RULE`:
 under a cost or time cap, the cheapest measured effort whose accuracy is within
 the noise floor of the most accurate one that fits. An effort the caller set
-always stands: when it does not fit, the choice says so in ``misfit`` and
-nothing downgrades it. :func:`effort_misfit` is the fit check on its own, for
-an effort that came from elsewhere, such as a router's ``params``.
+always stands and is never mapped: :func:`~web_router.routing.effort_call.choose_effort`
+leaves it as it is. :func:`effort_misfit` is the fit check on its own, for an
+effort that came from elsewhere, such as a router's ``params``.
 """
 
 from __future__ import annotations
@@ -29,7 +29,6 @@ from web_router.constants_params import (
     DEFAULT_EFFORT_NAME,
     FLOOR_TOLERANCE,
     MIN_MEASURED_EFFORTS,
-    MSG_EFFORT_CALLER,
     MSG_EFFORT_CHOSEN,
     MSG_EFFORT_NO_BUDGET,
     MSG_EFFORT_NONE_FITS,
@@ -37,12 +36,11 @@ from web_router.constants_params import (
     MSG_EFFORT_PRICED,
     MSG_EFFORT_UNMEASURED,
     PARAMS_SOURCE_BUDGET,
-    PARAMS_SOURCE_CALLER,
     PRICED_QUERY,
 )
 from web_router.routing.attempts import Attempt
-from web_router.routing.contract import Budget, candidate_id
-from web_router.routing.effort_table import RESEARCH, effort_of, effort_table, measured_efforts, noise_floor
+from web_router.routing.contract import Budget
+from web_router.routing.effort_table import RESEARCH, effort_table, measured_efforts, noise_floor
 from web_router.routing.pricing import fit_reason, mode_cost, mode_p90
 from web_router.types import Provider, ResearchEffort, ResearchRequest, provider_name
 
@@ -57,8 +55,8 @@ class EffortChoice:
     effort: ResearchEffort | None
     """The effort to send; ``None`` sends none, so the backend's default applies, as with no budget."""
 
-    source: Literal["budget", "caller"] | None
-    """``budget`` when the mapping chose it, ``caller`` when the caller set it, ``None`` for the default."""
+    source: Literal["budget"] | None
+    """``budget`` when the mapping chose it, ``None`` for the default."""
 
     reason: str
     """Why, in words, for the decision record."""
@@ -66,18 +64,10 @@ class EffortChoice:
     misfit: str | None = None
     """Why this effort does not fit the budget; ``None`` when it fits, or with no budget to fit."""
 
-    unmeasured: bool = False
-    """The effort's accuracy is not measured: the table has no row for it."""
-
     def fields(self) -> dict[str, Any]:
         """The :class:`~web_router.DecisionRecord` fields this choice sets on a call: its params, their source, why."""
         params = None if self.effort is None else {"effort": self.effort}
         return {"params": params, "params_source": self.source, "params_reason": self.reason}
-
-    def record(self, provider: str | Provider) -> dict[str, Any]:
-        """:meth:`fields`, and ``unmeasured`` naming ``provider`` when the effort's accuracy is not measured."""
-        unmeasured = [candidate_id(RESEARCH, provider_name(provider))] if self.unmeasured else None
-        return {**self.fields(), "unmeasured": unmeasured}
 
 
 def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) -> str | None:
@@ -93,10 +83,6 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
     return fit_reason(attempt, budget, MSG_EFFORT_PRICED.format(provider=name, effort=effort or DEFAULT_EFFORT_NAME))
 
 
-def _is_measured(provider: str, effort: str | None) -> bool:
-    return effort_of(provider, effort) in measured_efforts(provider)
-
-
 def refused(provider: str, effort: str, request: ResearchRequest | None) -> bool:
     """Whether ``provider`` refuses research at ``effort`` for ``request``, as Nimble refuses ``low`` on records."""
     from web_router.registry import get_research_provider_class  # the registry reaches the providers, which use this
@@ -110,9 +96,7 @@ def refused(provider: str, effort: str, request: ResearchRequest | None) -> bool
 def _default(provider: str, budget: Budget, reason: str) -> EffortChoice:
     """The backend's default effort, unchanged, with whether it fits ``budget``."""
     misfit = effort_misfit(provider, None, budget)
-    return EffortChoice(
-        effort=None, source=None, reason=reason, misfit=misfit, unmeasured=not _is_measured(provider, None)
-    )
+    return EffortChoice(effort=None, source=None, reason=reason, misfit=misfit)
 
 
 def _cheapest_key(provider: str, effort: str) -> tuple[bool, float, float, int]:
@@ -139,29 +123,16 @@ def _chosen(provider: str, fitting: Mapping[str, float]) -> EffortChoice:
 
 
 def map_effort(
-    provider: str | Provider,
-    budget: Budget | None,
-    effort: ResearchEffort | None = None,
-    *,
-    request: ResearchRequest | None = None,
+    provider: str | Provider, budget: Budget | None, *, request: ResearchRequest | None = None
 ) -> EffortChoice:
     """The effort research on ``provider`` runs with under ``budget``, the cap on what the call has left.
 
     By :data:`~web_router.constants_params.EFFORT_RULE`, over the efforts the
-    backend takes for ``request``, when given: one it refuses is never mapped. ``effort``, when the
-    caller set one, is kept as it is; ``misfit`` says when it does not fit.
+    backend takes for ``request``, when given: one it refuses is never mapped.
     With no budget, or one that caps neither cost nor time, nothing changes:
     the effort is ``None`` and the backend's default applies, as today.
     """
     name = provider_name(provider)
-    if effort is not None:
-        return EffortChoice(
-            effort=effort,
-            source=PARAMS_SOURCE_CALLER,
-            reason=MSG_EFFORT_CALLER.format(effort=effort),
-            misfit=None if budget is None else effort_misfit(name, effort, budget),
-            unmeasured=not _is_measured(name, effort),
-        )
     if budget is None or (budget.max_cost_usd is None and budget.time_limit_s is None):
         return EffortChoice(effort=None, source=None, reason=MSG_EFFORT_NO_BUDGET.format(provider=name))
     efforts = measured_efforts(name).items()
