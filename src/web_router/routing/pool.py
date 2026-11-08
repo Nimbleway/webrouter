@@ -195,3 +195,9 @@ def _around(pool: BudgetPool) -> PoolChain:
     if pool not in chain.pools:
         return PoolChain((pool, *chain.pools))
     return PoolChain(chain.pools[chain.pools.index(pool) :])
+
+
+def limited(budget: Budget | None, owner: object = None) -> Budget | None:
+    """``budget`` held to ``owner``'s pools in force (:meth:`PoolChain.limit`); as given outside every budget scope."""
+    chain = chain_in_force(owner)
+    return budget if chain is None else chain.limit(budget)

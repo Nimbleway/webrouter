@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from tests.routing_helpers import MEMBERS, Tool, called_fixture, tool_fixture  # noqa: F401  (fixtures)
+from tests.routing_helpers import MEMBERS, Tool
 from web_router.exceptions import WebRouterError
 from web_router.routing.attempts import Attempt, CallRoute, call_route
 

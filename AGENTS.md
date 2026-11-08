@@ -92,6 +92,7 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
+├── client_plan.py      plan() and run(), prompt-level routing, mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
 ├── client_budget.py   budget(), mixed into both routers; client_scope.py the
@@ -128,7 +129,7 @@ src/web_router/
 ├── constants_budget.py a budget's skip reasons and BudgetExceededError's message
 ├── constants_candidates.py the candidate builder's getters and drop reasons,
 │                       kept apart so constants_routing.py stays small
-├── constants_invoke.py a router's default timeout, failure codes and messages
+├── constants_invoke.py a router's default timeout and messages
 ├── routing/            the router contract (experimental): what a router is shown
 │   │                   and what it may answer, one module per part
 │   ├── contract.py     ToolName, Budget, Candidate, RouteRequest, RouteDecision, Plan
@@ -143,13 +144,12 @@ src/web_router/
 │   │                   its own thread or loop within its timeout, and the failure policy
 │   ├── _runner.py      the worker thread and private loop a router runs on, the wait
 │   │                   within its deadline, and the cleanup of what it leaves behind
-│   ├── _forms.py       a router's sync and async sides, its declared timeout_s, and
-│   │                   whether its answer is a well-formed RouteDecision
+│   ├── _forms.py       a router's sync and async sides and its declared timeout_s
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
-│   │                   to ask the router (route_tools, auto only), what it is shown,
-│   │                   the budget scope it runs in, and the decision record
-│   ├── interim.py      stand-ins for the candidate builder and the merge rule, until
-│   │                   candidates.py and merge.py replace them
+│   │                   to ask the router (route_tools, auto only), its candidates, and
+│   │                   the budget's scope around it
+│   ├── decide.py       decided(): candidates and a router's outcome merged into the
+│   │                   method, order, options and record a call runs with, pure
 │   ├── params.py       map_effort(): the research effort a budget picks, from
 │   │                   the effort table and the price list
 │   ├── effort_table.py reads data/efforts.json (`make efforts`): measured
@@ -159,7 +159,8 @@ src/web_router/
 │   ├── candidates_priced.py one method's members priced, timed, and dropped when the
 │   │                   budget leaves them out
 │   ├── effort_call.py  choose_effort(): the one research effort a call sends, chosen
-│   │                   before its candidates are priced or a router is asked
+│   │                   before its candidates are priced or a router is asked; a call
+│   │                   no router orders runs at it too
 │   ├── eligible.py     eligible_members(): the members of a method's `auto` that
 │   │                   can serve a request, and the ones it cannot build, with why
 │   ├── pool.py         a shared budget: reservations under one lock, its clock, status()
@@ -270,6 +271,8 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         tests/mcp/ the server, tests/max_extract/ the race
                         (its conftest holds the fake members), tests/budget/
                         the per-call and shared budgets (its conftest the priced chain).
+                        routing_helpers.py holds the router tests' fake members,
+                        wr(), Ranker and the tool, called and priced fixtures.
                         test_contract.py, test_extract_contract.py, test_template_contract.py,
                         test_research_contract.py, test_answer_contract.py,
                         test_browse_contract.py and

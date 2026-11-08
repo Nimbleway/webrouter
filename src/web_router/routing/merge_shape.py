@@ -6,7 +6,7 @@ Experimental. Apart from :mod:`.merge` so each stays small.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import get_args
+from typing import TypeGuard, get_args
 
 from web_router.routing.contract import RouteDecision, ToolName
 
@@ -35,7 +35,7 @@ def _probability(value: object) -> bool:
     return isinstance(value, int | float) and not isinstance(value, bool) and 0 <= value <= 1
 
 
-def well_formed(decision: object) -> bool:
+def well_formed(decision: object) -> TypeGuard[RouteDecision]:
     """Whether ``decision`` is a :class:`RouteDecision` whose fields have the shapes the contract gives them.
 
     A mapping keyed by anything but one of the five method names is malformed, not an unknown id: the

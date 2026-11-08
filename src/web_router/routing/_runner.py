@@ -16,7 +16,8 @@ from concurrent.futures import wait as wait_futures
 from contextlib import suppress
 from typing import Any
 
-from web_router.constants_invoke import ROUTER_ERROR, ROUTER_THREAD_NAME, ROUTER_TIMEOUT
+from web_router.constants_invoke import ROUTER_THREAD_NAME
+from web_router.constants_merge import ROUTER_ERROR, ROUTER_TIMEOUT
 from web_router.providers._deadline import current_deadline
 from web_router.routing.contract import RouteRequest
 

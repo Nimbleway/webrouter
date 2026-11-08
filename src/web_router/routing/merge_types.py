@@ -61,10 +61,8 @@ class Merged:
     notes: MergeNotes
 
     def __repr__(self) -> str:
-        shown_params = shown(self.params)
-        return (
-            f"Merged(tool={self.tool!r}, providers={self.providers!r}, params={shown_params!r}, notes={self.notes!r})"
-        )
+        params = self.record()["params"] or {}
+        return f"Merged(tool={self.tool!r}, providers={self.providers!r}, params={params!r}, notes={self.notes!r})"
 
     def record(self) -> dict[str, Any]:
         """The :class:`~web_router.DecisionRecord` fields the merge fills."""

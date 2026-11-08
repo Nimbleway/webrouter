@@ -1,4 +1,4 @@
-"""Reading a router's form and its declared time limit, and checking what it answers.
+"""Reading a router's form and its declared time limit.
 
 Experimental. See :mod:`web_router.routing.invoke`.
 """
@@ -8,13 +8,10 @@ from __future__ import annotations
 import functools
 import inspect
 import math
-from collections.abc import Mapping, Sequence
-from typing import TypeGuard
 
 from web_router.constants_invoke import MSG_ROUTER_TIMEOUT_S, ROUTER_TIMEOUT_ATTR, ROUTER_TIMEOUT_S
 from web_router.exceptions import ConfigurationError
 from web_router.routing._runner import _Side
-from web_router.routing.contract import RouteDecision
 
 
 def _sides(router: object) -> tuple[_Side | None, _Side | None]:
@@ -37,15 +34,3 @@ def _declared_timeout(router: object) -> float:
     if isinstance(declared, bool) or not isinstance(declared, (int, float)) or not 0 < declared < math.inf:
         raise ConfigurationError(MSG_ROUTER_TIMEOUT_S.format(value=declared))
     return float(declared)
-
-
-def _valid(result: object) -> TypeGuard[RouteDecision]:
-    """Whether ``result`` is a :class:`RouteDecision` whose ``providers``, when set, map tools to lists of names."""
-    if not isinstance(result, RouteDecision):
-        return False
-    if result.providers is None:
-        return True
-    return isinstance(result.providers, Mapping) and all(
-        isinstance(ranked, Sequence) and not isinstance(ranked, str) and all(isinstance(p, str) for p in ranked)
-        for ranked in result.providers.values()
-    )

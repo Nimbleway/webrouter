@@ -28,6 +28,8 @@ MSG_DROPPED_UNKNOWN_LATENCY = "no measured p90 latency, and the budget is strict
 MSG_DROPPED_OVER_TIME = "p90 latency {p90:g}s, over the {limit:g}s left"
 MSG_DROPPED_NOT_CONFIGURED = "not configured: auto could not build it"
 MSG_DROPPED_NOT_INSTALLED = "its optional dependency is not installed"
+MSG_DROPPED_NOT_A_BACKEND = "not a backend for this method"
+MSG_DROPPED_BUILD_FAILED = "auto could not build it: it raised {error}"
 MSG_DROPPED_REFUSES_EFFORT = "refuses effort {effort} for this request, the one the budget maps for the call"
 
 ONE_PAGE_URL = "https://example.com/"

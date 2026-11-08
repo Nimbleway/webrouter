@@ -55,6 +55,9 @@ AUTHORITY_REFUSED = "\\@%"
 """Characters ``public_only`` refuses in a URL's authority: a browser ends the host at a backslash, ``@`` brings
 userinfo, and a browser decodes a ``%``-encoded host, so each can make it connect somewhere other than checked."""
 
+MSG_PLAN_EXTRACT_NO_URL = "plan() has extract to run but found no http(s) URL in the prompt: write the URL into it."
+MSG_PLAN_EXTRACT_REFUSED = "plan() has extract to run but found only URLs url_policy refuses ({refused})."
+
 NAT64_PREFIX = ipaddress.IPv6Network("64:ff9b::/96")
 """The well-known NAT64 prefix (RFC 6052): an address in it reaches the IPv4 address in its low 32 bits."""
 

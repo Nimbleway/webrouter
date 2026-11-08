@@ -46,6 +46,7 @@ from web_router._benchmark import Stragglers
 from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
 from web_router.client_budget import AsyncBudget, SyncBudget
+from web_router.client_plan import AsyncPlan, SyncPlan
 from web_router.client_requests import JsonSchema as JsonSchema
 from web_router.client_requests import (
     async_client_holders,
@@ -81,12 +82,6 @@ from web_router.providers.base import (
     _BaseProvider,
 )
 from web_router.registry import (
-    available_browse_providers,
-    available_browser_providers,
-    available_extract_providers,
-    available_providers,
-    available_research_providers,
-    available_template_providers,
     create_browse_provider,
     create_browser_provider,
     create_extract_provider,
@@ -94,9 +89,10 @@ from web_router.registry import (
     create_research_provider,
     create_template_provider,
 )
-from web_router.registry_answer import available_answer_providers
+from web_router.registry_answer import every_provider_name
 from web_router.routing import Budget, RouterLike, ToolName
-from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
+from web_router.routing.routed import RouterSetup
+from web_router.routing.url_policy import UrlPolicy
 from web_router.types import (
     BrowseResponse,
     ExtractFormat,
@@ -133,6 +129,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         router: RouterLike | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
+        url_policy: UrlPolicy | None = None,
     ) -> None:
         """
         Args:
@@ -144,22 +141,15 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
                 else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
                 ask it (all five by default) and whether its failure raises (experimental) -- see
-                :mod:`web_router.routing.invoke`.
+                :mod:`web_router.routing.invoke`. ``url_policy="public_only"`` refuses private hosts in a
+                plan's or a router's URLs (experimental) -- see :mod:`web_router.routing.url_policy`.
         """
-        self._attach_router(router, route_tools, fail_on_router_error)
+        self._attach_router(router, route_tools, fail_on_router_error, url_policy)
         name = provider_name(provider)
         # Either registry is enough to name a default: a router defaulted to a
         # search-only backend still extracts through `provider=`, and the
         # method that cannot serve the default says so when it is called.
-        known = (
-            available_providers()
-            + available_extract_providers()
-            + available_template_providers()
-            + available_research_providers()
-            + available_answer_providers()
-            + available_browser_providers()
-            + available_browse_providers()
-        )
+        known = every_provider_name()
         if name not in known:
             raise ProviderNotFoundError(name, known)
 
@@ -350,7 +340,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRouted, SyncBudget):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan, SyncBudget):
     """Synchronous router.
 
     Example:
@@ -370,6 +360,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
         router: RouterLike | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
+        url_policy: UrlPolicy | None = None,
     ) -> None:
         """
         Raises:
@@ -383,6 +374,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
             router=router,
             route_tools=route_tools,
             fail_on_router_error=fail_on_router_error,
+            url_policy=url_policy,
         )
         async_only = sorted(async_client_holders(self._config))
         if async_only:
@@ -414,7 +406,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
             provider_options=provider_options,
         )
         chain = self.get_provider(provider)
-        return self._routed(chain, request, budget, lambda: chain.search(request))
+        return self._routed(chain, request, budget, chain.search)
 
     def extract(
         self,
@@ -434,7 +426,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
-        return self._routed(chain, request, budget, lambda: chain.extract(request))
+        return self._routed(chain, request, budget, chain.extract)
 
     def templates(
         self,
@@ -532,7 +524,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
             provider_options=provider_options,
         )
         chain = self.get_research_provider(provider)
-        return self._routed(chain, request, budget, lambda: chain.research(request, timeout=timeout))
+        return self._routed(chain, request, budget, lambda r: chain.research(r, timeout=timeout))
 
     def submit_research(
         self,
@@ -604,7 +596,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
             provider_options=provider_options,
         )
         chain = self.get_browse_provider(provider)
-        return self._routed(chain, request, budget, lambda: chain.browse(request, timeout=timeout))
+        return self._routed(chain, request, budget, lambda r: chain.browse(r, timeout=timeout))
 
     def submit_browse(
         self,
@@ -723,7 +715,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
         self.close()
 
 
-class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncRouted, AsyncBudget):
+class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncPlan, AsyncBudget):
     """Asynchronous router.
 
     Example:
@@ -757,7 +749,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             provider_options=provider_options,
         )
         chain = self.get_provider(provider)
-        return await self._arouted(chain, request, budget, lambda: chain.asearch(request))
+        return await self._arouted(chain, request, budget, chain.asearch)
 
     async def extract(
         self,
@@ -776,7 +768,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
-        return await self._arouted(chain, request, budget, lambda: chain.aextract(request))
+        return await self._arouted(chain, request, budget, chain.aextract)
 
     async def templates(
         self,
@@ -846,7 +838,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             provider_options=provider_options,
         )
         chain = self.get_research_provider(provider)
-        return await self._arouted(chain, request, budget, lambda: chain.aresearch(request, timeout=timeout))
+        return await self._arouted(chain, request, budget, lambda r: chain.aresearch(r, timeout=timeout))
 
     async def submit_research(
         self,
@@ -901,7 +893,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             provider_options=provider_options,
         )
         chain = self.get_browse_provider(provider)
-        return await self._arouted(chain, request, budget, lambda: chain.abrowse(request, timeout=timeout))
+        return await self._arouted(chain, request, budget, lambda r: chain.abrowse(r, timeout=timeout))
 
     async def submit_browse(
         self,
