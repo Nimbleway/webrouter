@@ -264,8 +264,19 @@ async def test_a_pending_note_says_how_long_the_tool_actually_waited() -> None:
     routing = McpRouting(ceiling=Budget(time_limit_s=0.3))
     tools = WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=25.0)
     pending = await asyncio.wait_for(ok_on(tools, "research", query="q", provider="first"), 5)
-    waited = float(re.search(r"in the ([0-9.e-]+)s this tool waits", pending["note"]).group(1))  # type: ignore[union-attr]
-    assert waited <= 0.3, "cut to the time the budget had left, not the tool's 25 s"
+    assert _waited(pending) <= 0.3, "cut to the time the budget had left, not the tool's 25 s"
+
+
+@pytest.mark.usefixtures("slow_research")
+async def test_a_pending_note_from_web_run_counts_its_own_time_limit() -> None:
+    routing = McpRouting.from_environ({ENV_MCP_ROUTER: f"{__name__}:route_to_research"})
+    tools = WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=25.0)
+    pending = await asyncio.wait_for(ok_on(tools, MCP_TOOL_WEB_RUN, prompt="q", time_limit_s=0.3), 5)
+    assert _waited(pending) <= 0.3, "cut to web_run's own time limit, not the tool's 25 s"
+
+
+def _waited(pending: dict[str, Any]) -> float:
+    return float(re.search(r"in the ([0-9.e-]+)s this tool waits", pending["note"]).group(1))  # type: ignore[union-attr]
 
 
 def test_a_browser_with_a_charge_per_session_on_top_is_a_floor_and_unknown_under_a_cap() -> None:
@@ -336,9 +347,11 @@ async def test_a_submitted_runs_answer_records_the_effort_the_budget_mapped(
 
     if asynchronous:
         async with AsyncWebRouter() as client, client.budget(Budget(max_cost_usd=0.10)):
-            answer = await (await client.submit_research("q", provider="nimble")).aresult()
+            job = await client.submit_research("q", provider="nimble")
+            answer, again = await job.aresult(), await job.aresult()
     else:
         with WebRouter() as client, client.budget(Budget(max_cost_usd=0.10)):
-            answer = client.submit_research("q", provider="nimble").result()
-    assert [request.effort for request in nimble_sent] == ["low"]
+            job = client.submit_research("q", provider="nimble")
+            answer, again = job.result(), job.result()
+    assert [request.effort for request in nimble_sent] == ["low"] and again is answer, "copied once, then kept"
     assert answer.decision is not None and answer.decision.params == {"effort": "low"}, "as research() records it"

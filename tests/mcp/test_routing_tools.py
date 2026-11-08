@@ -194,7 +194,7 @@ async def test_budget_start_is_capped_by_what_the_ceiling_has_left(members: list
     tools = routed(Budget(max_cost_usd=0.1))
     await ok_on(tools, "search", query="q", provider="first")
     started = (await ok_on(tools, MCP_TOOL_BUDGET_START, max_cost_usd=1.0, time_limit_s=60))["budget"]
-    assert started["max_cost_usd"] == 0.1 and started["remaining_usd"] == pytest.approx(0.06)
+    assert (started["max_cost_usd"], started["remaining_usd"]) == (0.06, 0.06), "the most this task can spend"
     await ok_on(tools, "search", query="q", provider="first")
     failed, message = await outcome(tools, "search", query="q", provider="first")
     assert failed and "$0.02 left" in message, "the task allows it; the ceiling does not"

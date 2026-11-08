@@ -246,8 +246,8 @@ method's own tool output (`search`'s, `extract`'s, ...) with `tool`, the
 method that ran, a `handle` for `fetch_raw`, and the `decision` record.
 `dry_run=true` returns the plan alone and calls nothing. `max_cost_usd` and
 `time_limit_s` cap that one call, within the budget below. When the router
-picks `research` or `browse`, `web_run` waits as those tools do, 25 seconds,
-and then hands back a handle for `research_status` or `browse_status` with the
+picks `research` or `browse`, `web_run` waits as those tools do, 25 seconds
+or less if its own `time_limit_s` or the budget has less left, and then hands back a handle for `research_status` or `browse_status` with the
 run still going, never losing a run that bills. The other tools
 are unchanged: `search`, `extract` and the rest never ask the router.
 
@@ -298,7 +298,7 @@ wait no longer than it has left.
   the ceiling has left. A call still running when a new task starts stays
   charged to the connection.
 - **`budget_status()`** returns the task's `max_cost_usd` and `time_limit_s`
-  as they are in force (cut to the ceiling), its `spent_usd`, `reserved_usd`,
+  as they are in force (cut to what the ceiling has left), its `spent_usd`, `reserved_usd`,
   `remaining_usd` (counted against the ceiling too), `elapsed_s` and
   `time_left_s`; `connection`, what every task on the connection has spent
   and reserved; and the ceiling.
