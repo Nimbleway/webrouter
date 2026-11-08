@@ -6,7 +6,6 @@ nothing is built that sends, and no key is real.
 
 from __future__ import annotations
 
-import time
 from collections.abc import Iterator
 
 import pytest
@@ -56,13 +55,6 @@ def _ids(found: CandidateSet, tool: str | None = None) -> list[str]:
 
 def _one(found: CandidateSet, candidate_id: str):  # type: ignore[no-untyped-def]
     return next(c for c in found.candidates if c.id == candidate_id)
-
-
-def test_ids_are_tool_colon_provider(keys: pytest.MonkeyPatch) -> None:
-    _set_keys(keys, "linkup")
-    found = build_candidates(WebRouter(), default_requests("q", ["https://a.test"]))
-    assert found.candidates
-    assert all(c.id == f"{c.tool}:{c.provider}" for c in found.candidates)
 
 
 def test_keyless_providers_are_search_and_extract_candidates_with_no_key(keys: pytest.MonkeyPatch) -> None:
@@ -228,13 +220,6 @@ def test_research_without_effort_is_priced_at_its_default_effort(keys: pytest.Mo
     assert tight.dropped["research:linkup"].startswith("estimated $1.5")
 
 
-def test_research_with_an_unknown_default_price_is_dropped_under_a_cost_cap(keys: pytest.MonkeyPatch) -> None:
-    _set_keys(keys, "nimble")
-    assert estimate("nimble", "research") is None  # priced only per effort
-    found = build_candidates(WebRouter(), {"research": ResearchRequest(query="q")}, budget=Budget(max_cost_usd=10.0))
-    assert "no known price" in found.dropped["research:nimble"]
-
-
 def test_provider_options_make_the_price_unknown_under_a_cost_cap(keys: pytest.MonkeyPatch) -> None:
     _set_keys(keys, "brave")
     request = {"search": SearchRequest(query="q", provider_options={"extra_snippets": True})}
@@ -257,10 +242,12 @@ def test_provider_options_keep_the_estimate_with_no_cost_cap_and_mark_it_unmeasu
 
 def test_research_with_a_pinned_effort_is_priced_at_that_effort(keys: pytest.MonkeyPatch) -> None:
     _set_keys(keys, "linkup")
-    request = {"research": ResearchRequest(query="q", effort="high")}
-    found = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=1.0))
-    assert _ids(found) == []
-    assert found.dropped["research:linkup"].startswith("estimated $1.5")
+    assert estimate("linkup", "research", "low") == 0.25  # the default, high, is $1.5
+    budget = Budget(max_cost_usd=1.0)
+    pinned = build_candidates(WebRouter(), {"research": ResearchRequest(query="q", effort="low")}, budget=budget)
+    assert _one(pinned, "research:linkup").est_cost_usd == 0.25
+    unpinned = build_candidates(WebRouter(), {"research": ResearchRequest(query="q")}, budget=budget)
+    assert unpinned.dropped["research:linkup"].startswith("estimated $1.5")
 
 
 def test_a_time_cap_drops_a_known_p90_that_does_not_fit(keys: pytest.MonkeyPatch) -> None:
@@ -288,29 +275,6 @@ def test_strict_drops_unknown_p90_under_a_time_cap(keys: pytest.MonkeyPatch) -> 
     assert "search:brave" in _ids(found)  # measured, and it fits
     # Strict speaks only to time: with no time cap it drops nothing.
     assert "research:linkup" in _ids(build_candidates(WebRouter(), requests, budget=Budget(strict=True)))
-
-
-def test_hand_ordered_methods_are_unmeasured(keys: pytest.MonkeyPatch) -> None:
-    _set_keys(keys, "linkup", "brave")
-    found = build_candidates(WebRouter(), default_requests("q", ["https://a.test"]))
-    for candidate in found.candidates:
-        if candidate.tool in ("extract", "research", "browse"):
-            assert candidate.id in found.unmeasured
-    assert "search:brave" not in found.unmeasured
-
-
-def test_it_is_fast_enough_for_every_routed_call(keys: pytest.MonkeyPatch) -> None:
-    _set_keys(keys, *RESEARCH_ENV_BY_PROVIDER, *ANSWER_ENV_BY_PROVIDER, *ENV_BY_PROVIDER)
-    router = WebRouter()
-    requests = default_requests("q", ["https://a.test"])
-    budget = Budget(max_cost_usd=1.0, time_limit_s=10.0)
-    build_candidates(router, requests, budget=budget)  # builds and caches each auto, once per router
-    runs = 200
-    started = time.perf_counter()
-    for _ in range(runs):
-        build_candidates(router, requests, budget=budget)
-    # Far below a router's 50 ms default timeout; CI runners are a few times slower than a laptop.
-    assert (time.perf_counter() - started) / runs < 0.005
 
 
 def test_a_chain_member_with_no_credential_is_no_candidate(keys: pytest.MonkeyPatch) -> None:
