@@ -20,12 +20,14 @@ import asyncio
 import json
 import os
 import time
+from datetime import date
 from typing import Any
 
 import httpx
 import pytest
 
 from web_router.exceptions import ProviderError, UnsupportedFormatError, UnsupportedParameterError
+from web_router.providers._clock import pinned_today
 from web_router.providers.deepseek import DeepSeekExtractProvider, DeepSeekProvider
 from web_router.types import ExtractRequest, ExtractResponse, SearchRequest
 
@@ -106,15 +108,41 @@ def test_a_fitting_query_goes_out_with_the_key_and_a_longer_one_is_refused(monke
     assert len(sent) == 1, "only the query that fit went out"
 
 
-def test_an_unmapped_option_is_refused_rather_than_dropped(provider: DeepSeekProvider) -> None:
-    with pytest.raises(UnsupportedParameterError, match="country"):
-        provider.validate(SearchRequest(query="hi", country="US"))
+@pytest.mark.parametrize("option", [{"country": "US"}, {"effort": "low"}])
+def test_an_unmapped_option_is_refused_rather_than_dropped(provider: DeepSeekProvider, option: dict) -> None:
+    with pytest.raises(UnsupportedParameterError, match=next(iter(option))):
+        provider.validate(SearchRequest(query="hi", **option))
 
 
-def test_the_page_body_is_reachable_through_provider_options(provider: DeepSeekProvider) -> None:
-    payload = provider._build_payload(SearchRequest(query="hi", provider_options={"need_content": True}))
+@pytest.mark.parametrize(
+    ("recency", "day"), [("day", "2026-11-08"), ("week", "2026-11-02"), ("month", "2026-10-10"), ("year", "2025-11-09")]
+)
+def test_recency_becomes_an_after_operator_from_the_day_its_window_starts(
+    provider: DeepSeekProvider, recency: str, day: str
+) -> None:
+    with pinned_today(date(2026, 11, 9)):
+        payload = provider._build_payload(SearchRequest(query="hi", recency=recency))
+    assert payload == {"query": f"hi after:{day}"}
 
-    assert payload == {"query": "hi", "need_content": True}
+
+def test_recency_counts_toward_the_query_limit(provider: DeepSeekProvider) -> None:
+    """after:YYYY-MM-DD adds 17 characters, so a 112-character query no longer fits."""
+    with pytest.raises(ProviderError, match="would be 129"):
+        provider._build_payload(SearchRequest(query="q" * 112, recency="week"))
+
+
+def test_lite_is_the_default_and_deep_asks_for_the_page_body(
+    provider: DeepSeekProvider, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Snippet and summary always come back; need_content adds the body. Nothing sits between, so fast is refused."""
+    assert provider._build_payload(SearchRequest(query="hi", search_depth="lite")) == {"query": "hi"}
+    assert provider._build_payload(SearchRequest(query="hi", search_depth="deep")) == {
+        "query": "hi",
+        "need_content": True,
+    }
+    monkeypatch.setattr(provider, "_search", lambda request: pytest.fail("sent"))
+    with pytest.raises(UnsupportedParameterError, match=r"search_depth='fast'.*'lite', 'deep'"):
+        provider.search(SearchRequest(query="hi", search_depth="fast"))
 
 
 def test_results_map_and_nothing_is_invented(provider: DeepSeekProvider) -> None:
@@ -194,6 +222,19 @@ def test_live_lang_operator_changes_the_language_of_the_results() -> None:
 
 
 PAGE = "https://en.wikipedia.org/wiki/Python_(programming_language)"
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("DEEPSEEK_API_KEY"), reason="DEEPSEEK_API_KEY not set")
+def test_live_deep_returns_page_bodies_longer_than_lite() -> None:
+    """Look at the lengths: deep must carry whole pages, well past lite's summary."""
+    from web_router import WebRouter
+
+    with WebRouter("deepseek") as router:
+        lite = router.search("what is retrieval augmented generation", max_results=3, search_depth="lite")
+        deep = router.search("what is retrieval augmented generation", max_results=3, search_depth="deep")
+    assert lite.results and deep.results
+    assert max(len(r.content) for r in deep.results) > max(len(r.content) for r in lite.results)
 
 
 @pytest.fixture

@@ -24,6 +24,17 @@
         "body.count": 3
       }
     },
+    "search_depth": {
+      "lite": {
+        "unchanged": "no wire change"
+      },
+      "fast": {
+        "refused": "UnsupportedParameterError"
+      },
+      "deep": {
+        "body.need_content": true
+      }
+    },
     "include_domains": {
       "sample": {
         "body.query": "probe query site:example.com"
@@ -38,13 +49,25 @@
       "sample": {
         "body.query": "probe query lang:en"
       }
+    },
+    "recency": {
+      "day": {
+        "body.query": "probe query after:2026-01-14"
+      },
+      "week": {
+        "body.query": "probe query after:2026-01-08"
+      },
+      "month": {
+        "body.query": "probe query after:2025-12-16"
+      },
+      "year": {
+        "body.query": "probe query after:2025-01-15"
+      }
     }
   },
   "not_mapped": [
     "country",
-    "effort",
-    "recency",
-    "search_depth"
+    "effort"
   ],
   "source": [
     "https://api-docs.deepseek.com/api/search",
@@ -54,13 +77,11 @@
     "max_results": "live: tests/providers/test_deepseek.py::test_live_search_returns_results",
     "include_domains": "live: tests/providers/test_deepseek.py::test_live_site_operators_joined_by_or_keep_every_result_on_those_sites",
     "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back",
-    "locale": "live: tests/providers/test_deepseek.py::test_live_lang_operator_changes_the_language_of_the_results"
+    "locale": "live: tests/providers/test_deepseek.py::test_live_lang_operator_changes_the_language_of_the_results",
+    "search_depth": "docs: https://api-docs.deepseek.com/guides/search (snippet and summary always; need_content adds the page body, so lite and deep, fast refused)",
+    "recency": "docs: https://api-docs.deepseek.com/guides/search (after: limits to pages published after a date; the day the window starts, inside the 128-character query)"
   },
   "vendor_options": {
-    "need_content": {
-      "status": "passthrough",
-      "note": "Boolean; without it each result's content is empty."
-    },
     "ori_question": {
       "status": "passthrough",
       "note": "The user's original question, up to 128 characters."
