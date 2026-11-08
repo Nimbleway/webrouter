@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import ModuleType
 
 from tests.benchmarks.conftest import SCAN_SETUP as SETUP
+from tests.benchmarks.conftest import route_question, route_row
 from tests.benchmarks.conftest import scan_row as _row
 
 
@@ -104,3 +105,51 @@ def test_the_recommended_order_is_route_evals_ranking_cost_breaking_ties_inside_
     assert labels["you-mcp"] is None, "as accurate as the best, kept last as keyless, is still marked best"
     section = scan.markdown(summary).split("## Recommended auto order")[1].split("\n## ")[0]
     assert "noise floor" in section and "list price" in section
+
+
+def test_a_scan_leaves_out_rate_limit_or_quota_failures_and_suggests_route_evals_order_on_the_same_rows(
+    scan: ModuleType, route_eval_rank: ModuleType
+) -> None:
+    """`limited` answers all 20 it reached; its other 20 failed on a rate limit or quota, which is no miss.
+
+    Counted as misses, `limited` would score 50% and fall behind `steady`'s 85%.
+    """
+    errors = {"rate_limit": "HTTP 429: too many requests", "quota": "HTTP 402"}
+    scan_rows, questions = [], []
+    for i in range(40):
+        error = None if i < 20 else ("rate_limit" if i % 2 else "quota")
+        steady = "correct" if i < 34 else "incorrect"
+        scan_rows += [
+            _row("limited", f"q{i}", "correct" if error is None else None, error=errors.get(error or "")),
+            _row("steady", f"q{i}", steady),
+        ]
+        questions.append(
+            route_question(
+                route_eval_rank,
+                route_row("limited", None if error else "correct", qid=f"q{i}", error=error),
+                route_row("steady", steady, qid=f"q{i}"),
+            )
+        )
+    summary = scan.summarize(scan_rows, {**SETUP, "providers": ["limited", "steady"]})
+
+    expected = route_eval_rank.recommended(route_eval_rank.backend_stats(questions), 0.0)
+    assert [p for p, _ in scan.recommended_order(summary, 0.0)] == expected == ["limited", "steady"]
+    assert summary["ranking"]["limited"]["excluded"] == 20
+    section = scan.markdown(summary).split("## Recommended auto order")[1].split("\n## ")[0]
+    assert "| Rate limit or quota |" in section
+    assert "| 1 | `limited` | 100% (20/20) |" in section and "| 0 | 20 |" in section, "failed 0, left out 20"
+
+
+def test_the_latency_tie_break_counts_every_served_row_as_route_eval_does(scan: ModuleType) -> None:
+    """A search the judge failed to grade was served: its latency counts, as in route-eval's median.
+
+    Both answer 10 of 20 at no listed price. `zeta`'s graded rows took 1.0s and its ungraded ones 0.1s,
+    a 0.55s median over served rows; `alpha` took 0.8s. On graded rows alone `zeta` would be 1.0s, second.
+    """
+    rows = [_row("zeta", f"q{i}", "correct", latency=1.0) for i in range(10)]
+    rows += [_row("zeta", f"q{i}", None, latency=0.1, error="timed out", failed_at="judge") for i in range(10, 20)]
+    rows += [_row("alpha", f"q{i}", "correct" if i < 10 else "incorrect", latency=0.8) for i in range(20)]
+    summary = scan.summarize(rows, {**SETUP, "providers": ["alpha", "zeta"]})
+
+    assert summary["ranking"]["zeta"]["latency_p50"] == 0.55
+    assert [p for p, _ in scan.recommended_order(summary, 0.0)] == ["zeta", "alpha"]

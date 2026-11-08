@@ -58,6 +58,11 @@ def host_of(url: str) -> str:
             return f"{prefix}[{ipaddress.IPv6Address(host.partition('%')[0])}]"
         except ValueError:
             return URL_HIDDEN
+    if not host.isascii():  # shown as the ASCII a browser maps it to, so it is never cut at its first letter
+        try:
+            host = host.encode("idna").decode("ascii")
+        except UnicodeError:
+            return URL_HIDDEN
     kept = re.match(HOST_CHARS, host)
     return f"{prefix}{kept.group(0)}" if kept else URL_HIDDEN
 

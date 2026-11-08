@@ -132,3 +132,8 @@ def priced(monkeypatch: pytest.MonkeyPatch) -> Table:
     monkeypatch.setattr(prices, "price", price)
     monkeypatch.setattr(prices, "estimate_latency", estimate_latency)
     return table
+
+
+def order(called: list[str]) -> list[str]:
+    """The members called, each once: extract calls a member once per URL."""
+    return list(dict.fromkeys(called))

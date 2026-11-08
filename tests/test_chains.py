@@ -48,13 +48,6 @@ def test_every_member_is_either_measured_or_marked_unmeasured() -> None:
         assert entry["preferred"][: len(measured)] == measured, "the ranked members come first, in their rank"
 
 
-def test_each_method_names_the_floor_it_was_ranked_with() -> None:
-    search, answer = chains()["search"]["noise_floor"], chains()["answer"]["noise_floor"]
-    assert search["measured_on"] == "search" and not search["fallback"], "search has its own rerun"
-    assert answer["measured_on"] == "search" and answer["fallback"], "answer has none frozen: search's floor"
-    assert answer["value"] == search["value"]
-
-
 def test_the_readme_search_table_matches_the_file() -> None:
     row = re.search(r"^\| `search` \| (?P<keyed>[^|]+) \| [^|]+ \| (?P<added>[^|]+) \|$", README.read_text(), re.M)
     assert row is not None

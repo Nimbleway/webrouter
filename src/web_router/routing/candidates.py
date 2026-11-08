@@ -2,8 +2,9 @@
 
 Experimental. :func:`build_candidates` reads each method's ``auto`` -- the
 chain it would try, a configured ``chain`` included -- and keeps the members
-its ``_eligible`` keeps: only those that map every option the request sets, so
-a candidate is never one the call would be silently degraded on -- and that
+its ``_eligible`` keeps, read by :mod:`web_router.routing.eligible`: only those
+that map every option the request sets, so a candidate is never one the call
+would be silently degraded on -- and that
 ``auto`` can build, so a member with no credential is never offered. Each carries
 its estimated cost and its measured p90 latency by :mod:`.pricing`'s rule, the
 one the budget's ledger charges by; neither is ever guessed, so an unknown
@@ -16,9 +17,10 @@ one :func:`~web_router.routing.params.map_effort` picks for that backend under
 the budget -- the backend's default when there is no cap -- so it is offered at
 the effort it would run with. A request carrying ``provider_options`` may be
 billed at another mode than its row, and a floor row bills more on top, so
-their price is unknown, and under a cost cap dropped; ``provider_options``
-make the p90 unknown too. Under a time cap a known p90 over the time left
-drops a candidate, and an unknown p90 drops it only on a strict budget. Every
+their price is unknown, and under a cost cap dropped; so is a search asking
+for more results than its row's price assumes (``results_assumed``), charged
+per result past it. ``provider_options`` make the p90 unknown too. Under a
+time cap a known p90 over the time left drops a candidate, and an unknown p90 drops it only on a strict budget. Every
 drop is recorded with its reason, for the decision record.
 
 It is on the hot path of every routed call: it reads classes and the cached
@@ -29,38 +31,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from functools import cache
 from typing import Any
 
-from web_router._chains import chains
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
-from web_router.constants_candidates import (
-    AUTO_GETTERS,
-    KEYLESS_OPTION,
-    MSG_DROPPED_BUILD_FAILED,
-    MSG_DROPPED_NOT_A_BACKEND,
-    MSG_DROPPED_NOT_CONFIGURED,
-    MSG_DROPPED_NOT_INSTALLED,
-    MSG_DROPPED_OVER_COST,
-    MSG_DROPPED_OVER_TIME,
-    MSG_DROPPED_UNKNOWN_COST,
-    MSG_DROPPED_UNKNOWN_LATENCY,
-    RANKED_METHODS,
-)
-from web_router.exceptions import (
-    ConfigurationError,
-    MissingParameterError,
-    NoAnswerProviderError,
-    ProviderNotFoundError,
-    ProviderNotInstalledError,
-    UnsupportedFormatError,
-    UnsupportedParameterError,
-)
-from web_router.routing.attempts import Attempt
+from web_router.routing.candidates_priced import Found, price_members
 from web_router.routing.contract import Budget, Candidate, ToolName, candidate_id
-from web_router.routing.params import EffortChoice, shared_effort
-from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
+from web_router.routing.effort_call import choose_effort
+from web_router.routing.eligible import eligible_members
+from web_router.routing.params import EffortChoice
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -71,9 +49,6 @@ from web_router.types import (
     provider_name,
 )
 from web_router.types_answer import AnswerRequest
-
-_NO_MEMBER_LEFT = (UnsupportedParameterError, UnsupportedFormatError, MissingParameterError, NoAnswerProviderError)
-"""What an ``auto``'s ``_eligible`` raises when no member can serve the request: no candidates, not a failure."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -92,7 +67,7 @@ class CandidateSet:
     effort: EffortChoice | None = None
     """The research effort the budget chose for the call, which every research candidate is priced at."""
 
-    requests: Mapping[ToolName, NormalizedRequest] = field(default_factory=dict)
+    requests: Mapping[ToolName, NormalizedRequest] = field(default_factory=dict, repr=False)
     """Per method, the request its candidates were priced at: the router's options are priced on it."""
 
 
@@ -149,120 +124,21 @@ def build_candidates(
     """
     if provider is not None and provider_name(provider) != PROVIDER_AUTO:
         return CandidateSet()
-    kept: list[Candidate] = []
-    dropped: dict[str, str] = {}
-    unmeasured: list[str] = []
-    seen: set[str] = set()
+    found = Found()
     effort: EffortChoice | None = None
-    priced: dict[ToolName, NormalizedRequest] = {}
     for tool, request in requests.items():
-        eligible, unbuilt = _eligible(router, tool, request)
-        if isinstance(request, ResearchRequest) and request.effort is None:
-            effort = shared_effort([name for name, _ in eligible], budget)
-            request = request if effort is None else request.model_copy(update={"effort": effort.effort})
-        priced[tool] = request
-        for name, keyless in eligible:
-            attempt = Attempt(tool=tool, provider=name, request=request)
-            cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
-            candidate = Candidate(tool=tool, provider=name, est_cost_usd=cost, est_latency_s=p90)
-            if candidate.id in seen:
-                continue  # a member listed twice is one candidate, at its first place
-            seen.add(candidate.id)
-            if (why := _over_budget(cost, p90, budget)) is not None:
-                dropped[candidate.id] = why
-                continue
-            kept.append(candidate)
-            if cost is None or p90 is None or keyless or request.provider_options or name not in _ranked(tool):
-                unmeasured.append(candidate.id)
+        eligible, unbuilt = eligible_members(router, tool, request)
+        request, chosen = choose_effort([name for name, _ in eligible], request, budget)
+        effort = chosen or effort
+        found.priced[tool] = request
+        price_members(tool, request, eligible, budget, found)
         for name, why in unbuilt.items():
-            if (unbuilt_id := candidate_id(tool, name)) not in seen:  # built at another place
-                dropped[unbuilt_id] = why
+            if (unbuilt_id := candidate_id(tool, name)) not in found.seen:  # built at another place
+                found.dropped[unbuilt_id] = why
     return CandidateSet(
-        candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured), effort=effort, requests=priced
+        candidates=tuple(found.kept),
+        dropped=found.dropped,
+        unmeasured=tuple(found.unmeasured),
+        effort=effort,
+        requests=found.priced,
     )
-
-
-def _eligible(router: Any, tool: ToolName, request: NormalizedRequest) -> tuple[list[tuple[str, bool]], dict[str, str]]:
-    """The members of ``tool``'s ``auto`` that can serve ``request``, and the ones it cannot build.
-
-    The first list is in chain order, each member with whether it is keyless;
-    the mapping names each member that cannot be built, with why. ``auto``
-    passes over a member that does not map an option the request sets, and
-    raises when none is left; here that is a method with no candidates. Any
-    other error is the caller's setup, and raises as it would from ``auto``.
-    """
-    auto = getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO)
-    built, unbuilt = _built(auto)
-    # A member that cannot be built may not be readable either, which research's and
-    # browse's eligibility would raise on: they read an auto of the built members alone.
-    view = auto
-    if unbuilt:
-        view = type(auto)(chain={tool: [auto._chain[at] for at in built]}, members_config=auto._members_config)
-    try:
-        if isinstance(request, ExtractRequest):
-            members = view._eligible(view.format_of(request))
-        else:
-            members = view._eligible(request)
-    except _NO_MEMBER_LEFT:
-        return [], unbuilt
-    chain = auto._chain  # the keyless tier is hand-ordered, whatever route-eval ranked the keyed member
-    return [
-        (name, bool(chain[built[at]][1].get(KEYLESS_OPTION)))
-        for at, name in members
-        if request.specified_parameters() <= auto._member(built[at]).supported_parameters
-    ], unbuilt
-
-
-def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
-    """The positions of the members ``auto`` can build, and why each other member cannot be built.
-
-    Built as ``auto`` builds them, and cached there for the call that tries one:
-    a member that is not configured -- no credential and no keyless tier, a
-    setting missing -- or whose extra is not installed, refuses to be built and
-    is no candidate; so is one that is no backend of this method, and one that
-    raises anything else, dropped with the class of what it raised. Extract's
-    ``_eligible`` reads only the format, so its other options are checked
-    against the built member.
-    """
-    built: list[int] = []
-    unbuilt: dict[str, str] = {}
-    for position, (name, _) in enumerate(auto._chain):
-        try:
-            auto._member(position)
-        except ConfigurationError:
-            unbuilt.setdefault(name, MSG_DROPPED_NOT_CONFIGURED)
-        except ProviderNotInstalledError:
-            unbuilt.setdefault(name, MSG_DROPPED_NOT_INSTALLED)
-        except ProviderNotFoundError:  # a plain-list chain names backends of other methods too
-            unbuilt.setdefault(name, MSG_DROPPED_NOT_A_BACKEND)
-        except Exception as exc:  # a broken backend: dropped, named with what it raised, never silently
-            unbuilt.setdefault(name, MSG_DROPPED_BUILD_FAILED.format(error=type(exc).__name__))
-        else:
-            built.append(position)
-    return built, unbuilt
-
-
-_DROPPED = {
-    UNKNOWN_PRICE: MSG_DROPPED_UNKNOWN_COST,
-    OVER_COST: MSG_DROPPED_OVER_COST,
-    UNKNOWN_P90: MSG_DROPPED_UNKNOWN_LATENCY,
-    OVER_TIME: MSG_DROPPED_OVER_TIME,
-}
-
-
-def _over_budget(cost: float | None, p90: float | None, budget: Budget | None) -> str | None:
-    """Why ``budget`` leaves the candidate out, or ``None`` when it fits."""
-    if budget is None:
-        return None
-    cap, limit = budget.max_cost_usd, budget.time_limit_s
-    code = misfit(cost, p90, cap, limit, budget.strict)
-    return None if code is None else _DROPPED[code].format(cost=cost, cap=cap, p90=p90, limit=limit)
-
-
-@cache
-def _ranked(tool: ToolName) -> frozenset[str]:
-    """The members route-eval ranked in ``tool``'s default order; none for a hand-ordered method."""
-    if tool not in RANKED_METHODS:
-        return frozenset()
-    order = chains()[tool]
-    return frozenset(order["preferred"]) - frozenset(order.get("unmeasured", ()))

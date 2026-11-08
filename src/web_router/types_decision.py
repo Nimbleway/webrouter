@@ -4,13 +4,16 @@ Apart from :mod:`web_router.types` so that file stops growing; it re-exports
 these, and imports nothing of ours. Every routable response and
 :class:`~web_router.Plan` carries one in ``decision``.
 
-**Privacy.** The record holds no key values and no prompt text: the prompt is
-there only as ``prompt_sha256``, which is not anonymisation, since a short
-prompt can be guessed from its hash. A URL shows only its scheme and host, never
-its path, query string or credentials. Candidate ids (``tool:provider``) do show
-which backends are configured. ``reason``, ``excluded`` and ``ignored`` hold a
-router's own words, URLs cut the same way: a router that writes the prompt there
-puts it in the record.
+**Privacy.** The record holds no key values and no prompt text. The prompt is
+there only as ``prompt_sha256``: an unsalted SHA-256 of what the router reads --
+the query or task, or for extract the whole URLs, one per line, query string
+included; a plan's is its whole prompt, any URL in it included. It is a
+pseudonymous id, not anonymisation: anyone holding a prompt or URL they can
+guess can confirm it from the hash, and equal prompts share one. Elsewhere in
+the record a URL shows only its scheme and host. Candidate ids
+(``tool:provider``) do show which backends are configured. ``reason``,
+``excluded`` and ``ignored`` hold a router's own words, URLs cut the same way:
+a router that writes the prompt there puts it in the record.
 """
 
 from __future__ import annotations
@@ -56,7 +59,8 @@ class DecisionRecord(BaseModel):
 
     Every field is optional, and ``None`` means not recorded. Candidates are named
     ``tool:provider``, which shows the backends configured; no key values, and no
-    prompt text, only its hash (which is not anonymisation: a short one can be guessed).
+    prompt text, only ``prompt_sha256``, an unsalted hash of it that confirms a guessed
+    prompt or URL (see the module docstring).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -83,7 +87,14 @@ class DecisionRecord(BaseModel):
     estimated_cost_usd: float | None = Field(default=None, description="The call's estimated spend in US dollars.")
     cost_is_estimate: bool | None = Field(default=None, description="Whether that spend is a list-price estimate.")
     unmeasured: list[str] | None = Field(default=None, description="Candidates with no known price or latency.")
-    prompt_sha256: str | None = Field(default=None, description="The prompt's SHA-256; a short one can be guessed.")
+    prompt_sha256: str | None = Field(
+        default=None,
+        description=(
+            "Unsalted SHA-256 of what the router reads: the query or task, or for extract the whole URLs, "
+            "one per line; for a plan, its whole prompt. A pseudonymous id, not anonymisation: "
+            "a guessed prompt or URL can be confirmed from it, and equal prompts share a hash."
+        ),
+    )
 
 
 DECISION_DESCRIPTION = "How a routed or budgeted call chose its backend; None on any other call."

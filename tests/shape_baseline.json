@@ -8,7 +8,7 @@
   "src/web_router/mcp/tools.py": 888,
   "src/web_router/providers/_http.py": 604,
   "src/web_router/providers/_page.py": 801,
-  "src/web_router/providers/auto.py": 866,
+  "src/web_router/providers/auto.py": 865,
   "src/web_router/providers/base.py": 1889,
   "src/web_router/providers/local.py": 600,
   "src/web_router/providers/nimble.py": 531,
