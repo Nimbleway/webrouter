@@ -12,6 +12,7 @@ import pytest
 
 from tests.merge_helpers import merge_with
 from web_router import Budget, Candidate, RouteDecision, RouteRequest
+from web_router.constants_merge import MSG_PARAM_NOT_ALLOWED
 from web_router.routing.merge import merge
 
 
@@ -48,7 +49,8 @@ def test_rule_5_a_routers_options_are_checked_and_each_one_dropped_is_noted(
 @pytest.mark.parametrize("tool", ["search", "research", "extract", "browse", "answer"])
 def test_rule_5_a_denied_key_is_dropped(tool: str, key: str) -> None:
     merged = merge_with(RouteDecision(params={tool: {key: "x"}}), pinned=tool)
-    assert merged.params == {} and f"params.{tool}.{key}" in merged.notes.ignored
+    assert merged.params == {}
+    assert merged.notes.ignored[f"params.{tool}.{key}"] == MSG_PARAM_NOT_ALLOWED.format(tool=tool, key=key)
 
 
 def test_rule_5_an_effort_must_fit_on_every_backend_in_the_order() -> None:
