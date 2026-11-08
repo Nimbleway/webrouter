@@ -174,23 +174,25 @@ def test_unset_options_are_never_sent(name: str, monkeypatch: pytest.MonkeyPatch
 
 @pytest.mark.parametrize("name", [n for n in TRANSLATING if _maps_depth(n)])
 def test_every_depth_level_is_a_distinct_request(name: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A provider that maps search_depth must build a different request per level.
+    """A provider that maps search_depth must build a different request per level it serves.
 
     Two levels that build the same payload are a mapping bug, not a design
     choice: the caller pays for `deep` and gets `lite`, and nothing fails.
-    Nimble was sent our own vocabulary verbatim until it was.
+    Nimble was sent our own vocabulary verbatim until it was. A level outside
+    `depth_levels` is refused before any payload is built.
     """
     for env_var in ENV_VARS:
         monkeypatch.setenv(env_var, "test-key")
 
     provider = get_provider_class(name)(api_key="test-key")
+    served = [depth for depth in DEPTHS if depth in provider.depth_levels]
     try:
-        payloads = {depth: provider._build_payload(SearchRequest(query="hi", search_depth=depth)) for depth in DEPTHS}
+        payloads = {depth: provider._build_payload(SearchRequest(query="hi", search_depth=depth)) for depth in served}
     finally:
         provider.close()
 
     distinct = {depth: repr(sorted(payload.items())) for depth, payload in payloads.items()}
-    assert len(set(distinct.values())) == len(DEPTHS), f"{name} builds the same request for two depths: {payloads}"
+    assert len(set(distinct.values())) == len(served), f"{name} builds the same request for two depths: {payloads}"
 
 
 @pytest.mark.parametrize("name", sorted(SDK_BACKED))

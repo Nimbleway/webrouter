@@ -3010,7 +3010,6 @@ MSG_EVALS_ROW_OUTCOME = "an EvaluationRow carries exactly one of grade and error
 BRAVE_BASE_URL = "https://api.search.brave.com"
 BRAVE_SEARCH_PATH = "/res/v1/web/search"
 BRAVE_API_KEY_HEADER = "X-Subscription-Token"
-BRAVE_PARAM_NAMES = {"max_results": "count"}
 BRAVE_HIGHLIGHT_TAGS = ("<strong>", "</strong>")
 """Brave wraps query terms in these; they are its markup, not page content."""
 
