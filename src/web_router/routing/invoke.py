@@ -125,10 +125,9 @@ class AttachedRouter:
         except Exception as exc:  # the router failed before it could be waited on
             return self._failed(ROUTER_ERROR, started, exc)
         code, value = _settled(future, _left(req, started))
-        pending = self._pending(code, value, req, started)
-        if isinstance(pending, RouterOutcome):
-            return pending
-        if pending:
+        if self._answered_awaitable(code, value):
+            if (early := self._expired(value, req, started)) is not None:
+                return early
             scheduled = _on_private_loop(value)
             code, value = _settled(scheduled, _left(req, started))  # measured after scheduling
         return self._outcome(code, value, started)
@@ -156,23 +155,22 @@ class AttachedRouter:
             raise
         if code == ROUTER_TIMEOUT and on_thread is not None:
             _close_late(on_thread)
-        pending = self._pending(code, value, req, started)
-        if isinstance(pending, RouterOutcome):
-            return pending
-        if pending:
+        if self._answered_awaitable(code, value):
+            if (early := self._expired(value, req, started)) is not None:
+                return early
             scheduled_task = _on_caller_loop(value)
             code, value = await _asettled(scheduled_task, _left(req, started))  # measured after scheduling
         return self._outcome(code, value, started)
 
-    def _pending(self, code: str | None, value: Any, req: RouteRequest, started: float) -> RouterOutcome | bool:
-        """Whether a sync-looking router answered with a coroutine to await, with time left to await it.
+    @staticmethod
+    def _answered_awaitable(code: str | None, value: Any) -> bool:
+        """Whether a sync-looking router answered with a coroutine to await."""
+        return code is None and inspect.isawaitable(value)
 
-        The timeout's outcome, the coroutine closed unrun, when no time is left.
-        """
-        if code is not None or not inspect.isawaitable(value):
-            return False
+    def _expired(self, value: Any, req: RouteRequest, started: float) -> RouterOutcome | None:
+        """The timeout's outcome, the coroutine closed unrun, when no time is left to await it; else ``None``."""
         if _left(req, started) > 0:
-            return True
+            return None
         _close(value)
         return self._failed(ROUTER_TIMEOUT, started)
 
