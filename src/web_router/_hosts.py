@@ -21,6 +21,7 @@ from web_router.constants_urls import (
 )
 
 _LEGACY_IPV4 = re.compile(LEGACY_IPV4_PATTERN)
+_BARE_HEX = re.compile(r"(?:^|(?<=\.))0x(?=\.|$)")
 
 
 def host_address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
@@ -60,7 +61,8 @@ def legacy_ipv4(host: str) -> ipaddress.IPv4Address | None:
     if not _LEGACY_IPV4.fullmatch(host):
         return None
     try:
-        return ipaddress.IPv4Address(socket.inet_aton(host))
+        # A browser reads a bare ``0x`` part as 0; inet_aton may refuse it or not, by platform.
+        return ipaddress.IPv4Address(socket.inet_aton(_BARE_HEX.sub("0x0", host)))
     except (OSError, ValueError):
         return None
 

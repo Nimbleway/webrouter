@@ -32,6 +32,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - The decider spike: `WebRouter(decider=, decider_config=)`, `WebRouter.classify()`, `WebRouter.execute()`, `Route` and the `web_router.decisions` package (`DecisionProvider`, `register_decider()` and the `keywords`, `jev` and `llm` deciders). It was a proof of concept for routing; `router=`, `plan()` and `run()` replace it. To keep using it, pin `web-router==0.9.0`, the last version that has it.
 
+### Fixed
+
+- `url_policy="public_only"` and the MCP browser tools' navigation guard read a bare `0x` part of an IPv4 host as 0, as a browser does, so `http://127.0x.0x.1/` is refused as loopback.
+
 ## [0.9.0] - 2026-11-04
 
 ### Added
