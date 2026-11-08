@@ -49,6 +49,8 @@ def operators(req: RouteRequest) -> RouteDecision:
         {ENV_MCP_MAX_COST_USD: "inf"},
         {ENV_MCP_MAX_COST_USD: "lots"},
         {ENV_MCP_TIME_LIMIT_S: "-5"},
+        {ENV_MCP_MAX_COST_USD: "0"},
+        {ENV_MCP_TIME_LIMIT_S: "0.0"},
         {ENV_MCP_ROUTER: ""},
         {ENV_MCP_ROUTER: "   "},
         {ENV_MCP_ROUTER: "no_colon"},

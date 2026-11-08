@@ -74,6 +74,7 @@ AMBIGUOUS = [
     "http://%31%32%37.0.0.1/",  # a browser decodes a percent-encoded host
     "http://public.ex\tample/",  # a browser strips a tab
     "http://public.example\x00/",
+    "http://public.exa\x7fmple/",  # DEL, the one control character above 0x1F
 ]
 
 
