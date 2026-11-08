@@ -5,9 +5,10 @@ web-router uses a handful of fields of these APIs, which an SDK dependency would
 not simplify. Install with the ``search``, ``research`` or ``answer`` extra. Reads ``PARALLEL_API_KEY`` unless a key
 is passed explicitly.
 
-Search is slim by design: only ``max_results`` is mapped. Everything else is
-reachable through ``provider_options``; mapping one properly is a welcome PR --
-see CONTRIBUTING.md.
+Search calls ``/v1/search`` with ``mode="fast"``, and maps only ``max_results``,
+under ``advanced_settings``. Everything else is reachable through
+``provider_options``, merged into ``advanced_settings`` rather than replacing it;
+mapping one properly is a welcome PR -- see CONTRIBUTING.md.
 """
 
 from __future__ import annotations
@@ -18,19 +19,19 @@ from web_router.constants import (
     ENV_PARALLEL_API_KEY,
     PARALLEL_API_KEY_HEADER,
     PARALLEL_BASE_URL,
-    PARALLEL_PARAM_NAMES,
     PARALLEL_RESEARCH_DEFAULT_EFFORT,
     PARALLEL_RESEARCH_JSON_OUTPUT,
     PARALLEL_RESEARCH_PROCESSORS,
     PARALLEL_RESEARCH_STATES,
     PARALLEL_RESEARCH_TEXT_OUTPUT,
-    PARALLEL_SEARCH_PATH,
     PARALLEL_TASK_RESULT_PATH,
     PARALLEL_TASK_RUN_PATH,
     PARALLEL_TASK_STATUS_PATH,
     PROVIDER_PARALLEL,
 )
 from web_router.constants_parallel import (
+    PARALLEL_ADVANCED_NAMES,
+    PARALLEL_ADVANCED_SETTINGS,
     PARALLEL_ANSWER_API_KEY_HEADER,
     PARALLEL_ANSWER_API_KEY_PREFIX,
     PARALLEL_ANSWER_BASIS_EXTRA,
@@ -39,9 +40,12 @@ from web_router.constants_parallel import (
     PARALLEL_ANSWER_ROLE,
     PARALLEL_ANSWER_TRUNCATED,
     PARALLEL_ANSWER_WHOLE_FIELD,
+    PARALLEL_SEARCH_MODE,
+    PARALLEL_SEARCH_PARAMETERS,
+    PARALLEL_SEARCH_PATH,
 )
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, build_payload
+from web_router.providers._utils import as_snippet, build_payload, compact
 from web_router.types import (
     Citation,
     ResearchProgress,
@@ -93,11 +97,20 @@ def _citations_from_basis(
 _MAPPED_CITATION_FIELDS = frozenset({"url", "title", "excerpts"})
 
 
+def _merged(ours: dict[str, Any], theirs: dict[str, Any]) -> dict[str, Any]:
+    """``theirs`` laid over ``ours`` at every depth: a nested object is merged, any other value replaced."""
+    merged = dict(ours)
+    for key, value in theirs.items():
+        nested = merged.get(key)
+        merged[key] = _merged(nested, value) if isinstance(nested, dict) and isinstance(value, dict) else value
+    return merged
+
+
 class ParallelProvider(HttpSearchProvider):
     """Routes searches to the Parallel Search API."""
 
     name: ClassVar[str] = PROVIDER_PARALLEL
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(PARALLEL_PARAM_NAMES)
+    supported_parameters: ClassVar[frozenset[str]] = PARALLEL_SEARCH_PARAMETERS
 
     base_url: ClassVar[str] = PARALLEL_BASE_URL
     search_path: ClassVar[str] = PARALLEL_SEARCH_PATH
@@ -107,12 +120,26 @@ class ParallelProvider(HttpSearchProvider):
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         # Parallel is built around an objective plus the queries to run for it.
         # With a single normalized query, both are that query.
-        return build_payload(
+        settings = self._advanced_settings(request)
+        payload = build_payload(
             request,
-            PARALLEL_PARAM_NAMES,
             objective=request.query,
             search_queries=[request.query],
+            mode=PARALLEL_SEARCH_MODE,
+            advanced_settings=settings or None,
         )
+        # build_payload lets provider_options replace a field whole; here that
+        # would drop the mapped settings beside the one a caller added, so the
+        # caller's object is merged in instead, its fields still winning.
+        theirs = request.provider_options.get(PARALLEL_ADVANCED_SETTINGS)
+        if isinstance(theirs, dict):
+            payload[PARALLEL_ADVANCED_SETTINGS] = _merged(settings, theirs)
+        return payload
+
+    @staticmethod
+    def _advanced_settings(request: SearchRequest) -> dict[str, Any]:
+        """The options /v1/search takes under ``advanced_settings``, unset ones left out."""
+        return compact({theirs: getattr(request, ours) for ours, theirs in PARALLEL_ADVANCED_NAMES.items()})
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         return SearchResponse(

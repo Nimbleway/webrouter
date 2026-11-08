@@ -5,6 +5,7 @@ import os
 import pytest
 
 from web_router.constants import SNIPPET_LIMIT
+from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.parallel import ParallelProvider
 from web_router.types import SearchRequest
 
@@ -16,16 +17,50 @@ def provider(monkeypatch: pytest.MonkeyPatch) -> ParallelProvider:
 
 
 def test_the_query_becomes_both_objective_and_search_query(provider: ParallelProvider) -> None:
-    """Parallel is built around an objective plus the queries to run for it."""
+    """Parallel is built around an objective plus the queries to run for it; unset options send nothing more."""
     assert provider._build_payload(SearchRequest(query="hi")) == {
         "objective": "hi",
         "search_queries": ["hi"],
+        "mode": "fast",
     }
 
 
-def test_max_results_is_passed_through(provider: ParallelProvider) -> None:
+def test_the_v1_endpoint_is_called_with_the_fast_mode_pinned(provider: ParallelProvider) -> None:
+    """Unset, /v1 runs `advanced`, the beta's agentic tier: slower and dearer than the beta default it replaces."""
+    assert provider.search_path == "/v1/search"
+    assert provider._build_payload(SearchRequest(query="hi"))["mode"] == "fast"
+
+
+def test_max_results_goes_under_advanced_settings(provider: ParallelProvider) -> None:
+    """/v1 rejects a top-level max_results; it takes the count under advanced_settings."""
     body = provider._build_payload(SearchRequest(query="hi", max_results=3))
-    assert body["max_results"] == 3
+    assert body["advanced_settings"] == {"max_results": 3}
+    assert "max_results" not in body
+
+
+def test_advanced_settings_from_provider_options_merge_with_the_mapped_ones(provider: ParallelProvider) -> None:
+    """A caller adding a vendor setting keeps the mapped count, and wins on any field both set."""
+    options = {"advanced_settings": {"location": "us", "source_policy": {"after_date": "2026-01-01"}}}
+    body = provider._build_payload(SearchRequest(query="hi", max_results=3, provider_options=options))
+    assert body["advanced_settings"] == {
+        "max_results": 3,
+        "location": "us",
+        "source_policy": {"after_date": "2026-01-01"},
+    }
+
+    overridden = {"advanced_settings": {"max_results": 7}}
+    body = provider._build_payload(SearchRequest(query="hi", max_results=3, provider_options=overridden))
+    assert body["advanced_settings"] == {"max_results": 7}
+
+
+def test_provider_options_may_choose_another_mode(provider: ParallelProvider) -> None:
+    body = provider._build_payload(SearchRequest(query="hi", provider_options={"mode": "advanced"}))
+    assert body["mode"] == "advanced"
+
+
+def test_options_parallel_does_not_map_are_refused_unsent(provider: ParallelProvider) -> None:
+    with pytest.raises(UnsupportedParameterError):
+        provider.search(SearchRequest(query="hi", recency="week"))
 
 
 def test_excerpts_become_the_body_and_a_snippet_sized_description(provider: ParallelProvider) -> None:

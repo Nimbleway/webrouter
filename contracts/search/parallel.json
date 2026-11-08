@@ -6,7 +6,7 @@
     "kind": "http",
     "base_url": "https://api.parallel.ai",
     "paths": {
-      "search_path": "/v1beta/search"
+      "search_path": "/v1/search"
     },
     "method": "POST",
     "auth_header": "x-api-key"
@@ -16,6 +16,7 @@
   ],
   "keyless": null,
   "always_sent": {
+    "body.mode": "fast",
     "body.objective": "probe query",
     "body.search_queries": [
       "probe query"
@@ -24,7 +25,7 @@
   "options": {
     "max_results": {
       "sample": {
-        "body.max_results": 3
+        "body.advanced_settings.max_results": 3
       }
     }
   },
@@ -38,32 +39,32 @@
     "search_depth"
   ],
   "source": [
-    "https://docs.parallel.ai/search/search-migration-guide",
-    "parallel-web (before 1.0) Parallel.beta.search"
+    "https://docs.parallel.ai/api-reference/search-api/search",
+    "https://docs.parallel.ai/search/search-migration-guide"
   ],
   "verified": {
-    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound"
+    "max_results": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.max_results); live on /v1beta through tests/test_integration_surface.py::test_max_results_is_an_upper_bound, not yet re-run on /v1"
   },
   "vendor_options": {
-    "mode": {
+    "excerpt_settings": {
       "status": "passthrough",
-      "note": "fast | one-shot | agentic."
+      "note": "Under advanced_settings: max_chars_per_result, an upper bound per URL; a candidate for search_depth."
     },
-    "excerpts": {
+    "max_chars_total": {
       "status": "passthrough",
-      "note": "Object with max_chars_per_result and max_chars_total."
+      "note": "Top level: an upper bound on excerpt characters across all results."
     },
     "source_policy": {
       "status": "passthrough",
-      "note": "include_domains, exclude_domains and after_date; a candidate for the shared domain filters."
+      "note": "Under advanced_settings: include_domains (when set, exclude_domains is ignored), exclude_domains and after_date (YYYY-MM-DD); candidates for the shared domain filters and recency."
     },
     "fetch_policy": {
       "status": "passthrough",
-      "note": "Controls live fetching versus indexed content."
+      "note": "Under advanced_settings: max_age_seconds (600 or more), timeout_seconds, disable_cache_fallback. Cached content unless set."
     },
     "location": {
       "status": "passthrough",
-      "note": "ISO 3166-1 alpha-2 code; a candidate for the shared country option."
+      "note": "Under advanced_settings: an ISO 3166-1 alpha-2 code such as us or gb; a candidate for the shared country option."
     },
     "client_model": {
       "status": "passthrough",
@@ -71,15 +72,19 @@
     },
     "session_id": {
       "status": "passthrough",
-      "note": "Groups related search and extract calls."
+      "note": "Groups related search and extract calls, up to 1,000 characters; the response echoes it, or one the server made."
+    },
+    "excerpts": {
+      "status": "not_supported",
+      "note": "Beta only; /v1/search rejects undeclared fields. Its successors are max_chars_total and advanced_settings.excerpt_settings."
     },
     "max_chars_per_result": {
-      "status": "passthrough",
-      "note": "Deprecated in favour of excerpts.max_chars_per_result."
+      "status": "not_supported",
+      "note": "Beta only, deprecated there; on /v1 it sits under advanced_settings.excerpt_settings."
     },
     "processor": {
-      "status": "passthrough",
-      "note": "Deprecated in favour of mode."
+      "status": "not_supported",
+      "note": "Beta only, deprecated there in favour of mode."
     }
   }
 }

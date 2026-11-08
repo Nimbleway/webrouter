@@ -3054,11 +3054,7 @@ EXA_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "text"
 # --- Parallel ---------------------------------------------------------------
 
 PARALLEL_BASE_URL = "https://api.parallel.ai"
-PARALLEL_SEARCH_PATH = "/v1beta/search"
-"""The beta endpoint, because only it honors max_results -- verified live; /v1 rejects it."""
-
 PARALLEL_API_KEY_HEADER = "x-api-key"
-PARALLEL_PARAM_NAMES = {"max_results": "max_results"}
 
 # --- Perplexity -------------------------------------------------------------
 
