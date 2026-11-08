@@ -278,7 +278,8 @@ to set.
 
 > Nimble, Tavily, Jina, Linkup, Firecrawl, Oxylabs, Bright Data and Browserbase
 > were verified live — Oxylabs and Bright Data on 2026-11-03, Browserbase (both
-> formats, and `profile` through the whole flow) on 2026-10-29. **Exa's extract
+> formats, and `profile` through the whole flow) by hand on 2026-10-29 and by
+> the automated live tests on 2026-11-08. **Exa's extract
 > mapping is taken from documentation** and has not been confirmed against a
 > real response; its integration tests skip themselves until a working key is
 > available.

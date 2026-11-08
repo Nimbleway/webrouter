@@ -9,7 +9,9 @@ Sessions and Fetch share one saved identity; browse tasks do not map
 ends with, and the session provider maps ``profile`` onto
 its id and ``persist_profile`` onto whether the session writes back to it. The
 extract provider sends the same id as the Fetch API's ``contextId``, so a login
-made in a session serves the fetches that follow. Verified live on 2026-10-29:
+made in a session serves the fetches that follow. Verified live by hand on
+2026-10-29, and by the live tests in ``tests/providers/test_browserbase_extract.py``
+on 2026-11-08:
 a session opened with ``persist_profile=True`` set a cookie, a fetch naming the
 same Context sent it back, and one naming no Context did not --
 ``open_browser(profile=X, persist_profile=True)``, log in, release, then
