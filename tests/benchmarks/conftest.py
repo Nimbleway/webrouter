@@ -268,3 +268,35 @@ SCAN_SETUP = {
     "started": "2026-09-30T00:00:00+00:00",
 }
 """A search scan's ``run.json``, minus the backends, which each test names."""
+
+
+def path_row(qid: str, path: str, grade: str | None, **extra: Any) -> dict[str, Any]:
+    method, provider, *mode = path.split(":")
+    return route_row(provider, grade, qid=qid, method=method, mode=mode[0] if mode else "default", **extra)
+
+
+def _perplexity_low(qid: str, i: int) -> dict[str, Any]:
+    """A `rate_limit` error on the first 15 questions, timed out on two, right on the last three."""
+    if i < 15:
+        return path_row(qid, "research:perplexity:low", None, latency=None, error="rate_limit")
+    if i < 17:
+        return path_row(qid, "research:perplexity:low", None, latency=None, error="timeout")
+    return path_row(qid, "research:perplexity:low", "correct", cost=0.002)
+
+
+def write_mixed_set(folder: Path) -> None:
+    """20 questions; ``research:parallel:high`` right on all, ``extract:nimble`` asked on the first four only."""
+    rows = []
+    for i in range(20):
+        qid = f"q{i:02d}"
+        rows += [
+            path_row(qid, "search+extract:nimble:top3", "correct" if i < 8 else "incorrect", cost=0.008),
+            path_row(qid, "search+extract:perplexity:top3", "incorrect", cost=0.007),
+            path_row(qid, "answer:perplexity", "correct" if i < 12 else "incorrect", cost=0.002),
+            path_row(qid, "research:parallel:low", "correct" if i < 16 else "incorrect", cost=0.005),
+            path_row(qid, "research:parallel:high", "correct", cost=0.1, latency=30.0),
+            _perplexity_low(qid, i),
+        ]
+        if i < 4:
+            rows.append(path_row(qid, "extract:nimble", "correct", cost=0.001))
+    write_frozen_set(folder, "mixed-tiny", rows)
