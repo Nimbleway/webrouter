@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 import httpx
@@ -14,15 +15,18 @@ from web_router import WebRouter
 jev = load_example("router_jev")
 
 
-def _replying(prefer: str, seen: list[httpx.Request], *, drop: str | None = None) -> Any:
-    """A Jev that gives ``prefer`` 0.7 and the other choices it was asked the rest, leaving out ``drop``."""
+def _replying(prefer: str, seen: list[httpx.Request], *, drop: str | None = None, choice: str | None = None) -> Any:
+    """A Jev that gives ``prefer`` 0.7 and the other choices it was asked the rest, leaving out ``drop``.
+
+    Its ``choice`` is ``prefer`` unless ``choice`` names another.
+    """
 
     def handler(req: httpx.Request) -> httpx.Response:
         seen.append(req)
         asked = list(json.loads(req.content)["questions"]["route"]["criteria"])
         rest = 0.3 / max(len(asked) - 1, 1)
         probabilities = {cid: 0.7 if cid == prefer else rest for cid in asked if cid != drop}
-        answer = {"choice": prefer, "confidence": 0.6, "probabilities": probabilities}
+        answer = {"choice": choice or prefer, "confidence": 0.6, "probabilities": probabilities}
         return httpx.Response(200, json={"answers": {"route": answer}})
 
     return handler
@@ -51,7 +55,14 @@ class TestJev:
         assert decision.tools == ["answer", "search", "research"]
         assert decision.providers["search"] == ["tavily", "exa"]
         assert decision.confidence == 0.6
-        assert decision.reason == "jev: answer:perplexity"
+        assert decision.reason == "jev: answer:perplexity, p=0.70"
+
+    async def test_the_reason_names_the_ranking_first_not_jevs_own_choice(self) -> None:
+        transport = httpx.MockTransport(_replying("answer:perplexity", [], choice="search:tavily"))
+        router = jev.JevRouter(client=httpx.AsyncClient(base_url=jev.BASE_URL, transport=transport))
+        decision = await router.aroute(request())
+        assert decision.tools is not None and decision.tools[0] == "answer"
+        assert decision.reason == "jev: answer:perplexity, p=0.70", "the reason disagrees with the plan"
 
     async def test_offers_extract_only_when_the_prompt_names_a_url(self) -> None:
         seen: list[httpx.Request] = []
@@ -130,17 +141,22 @@ class TestJev:
         jev.main()
         assert "Set TYPESAFE_API_KEY" in capsys.readouterr().out
 
-    def test_prints_the_server_reason_without_control_characters(
+    def test_prints_a_reason_that_names_what_the_plan_runs(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        # probabilities already rejects a choice that is not a candidate id; this checks the print alone.
-        monkeypatch.setattr(jev, "probabilities", lambda _, choices: dict.fromkeys(choices, 0.5))
-        reply = {"choice": "ok\x1b[2J\x07 done", "confidence": 0.6, "probabilities": {}}
-        transport = httpx.MockTransport(lambda _: httpx.Response(200, json={"answers": {"route": reply}}))
+        def handler(req: httpx.Request) -> httpx.Response:
+            asked = list(json.loads(req.content)["questions"]["route"]["criteria"])
+            return _replying(asked[-1], [], choice=asked[0])(req)  # Jev's choice is not its most probable
+
         real = httpx.AsyncClient
+        transport = httpx.MockTransport(handler)
         monkeypatch.setattr(jev.httpx, "AsyncClient", lambda **kw: real(transport=transport, **kw))
         monkeypatch.setenv("TYPESAFE_API_KEY", "test-token")
         jev.main()
-        out = capsys.readouterr().out
-        assert "(jev: ok[2J done)" in out
-        assert "\x1b" not in out and "\x07" not in out
+        printed = re.findall(r"-> (\S+) on ([^,\n]+).*\n  \((.*)\)", capsys.readouterr().out)
+        assert len(printed) == len(jev.PROMPTS)
+        for tool, first, reason in printed:
+            assert reason == f"jev: {tool}:{first}, p=0.70", "the printed reason disagrees with the plan"
+
+    def test_printable_takes_out_control_characters(self) -> None:
+        assert jev.printable("ok\x1b[2J\x07 done") == "ok[2J done"
