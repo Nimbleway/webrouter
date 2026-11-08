@@ -11,7 +11,8 @@ from tests.candidates_helpers import clear_keys, one, set_keys
 from tests.merge_helpers import merge_with
 from web_router import Budget, RouteDecision, WebRouter, prices
 from web_router.routing.attempts import Attempt
-from web_router.routing.candidates import _over_budget, build_candidates
+from web_router.routing.candidates import build_candidates
+from web_router.routing.candidates_priced import over_budget
 from web_router.routing.ledger import Ledger
 from web_router.routing.params import effort_misfit
 from web_router.routing.pricing import attempt_p90
@@ -48,7 +49,7 @@ def test_the_candidate_builder_and_the_ledger_draw_the_cap_at_one_line(cost: flo
         patch.setattr(prices, "price", lambda *_: row)
         patch.setattr(prices, "estimate_latency", lambda *_: None)
         admitted = Ledger(CAP).admit(Attempt(tool="search", provider="brave", request=SearchRequest(query="q")))
-    assert (_over_budget(cost, None, CAP) is None) is fits
+    assert (over_budget(cost, None, CAP) is None) is fits
     assert admitted is fits
 
 

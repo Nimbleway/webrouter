@@ -154,6 +154,10 @@ src/web_router/
 │   │                   efforts, the noise floor, an effort's p90
 │   ├── candidates.py   build_candidates(): every (tool, provider) a call's `auto`
 │   │                   chains can serve, priced, timed and prefiltered by the budget
+│   ├── candidates_priced.py one method's members priced, timed, and dropped when the
+│   │                   budget leaves them out
+│   ├── effort_call.py  choose_effort(): the one research effort a call sends, chosen
+│   │                   before its candidates are priced or a router is asked
 │   ├── eligible.py     eligible_members(): the members of a method's `auto` that
 │   │                   can serve a request, and the ones it cannot build, with why
 │   ├── merge.py        merge(): a router's decision and the static order made into
@@ -163,6 +167,7 @@ src/web_router/
 │   │                   decides something
 │   ├── merge_params.py the merge's check on a router's options: allowlist, values,
 │   │                   the caller's own, the budget, the URL policy
+│   ├── merge_extract.py rule 7: extract with no URL left to read searches instead
 │   ├── merge_urls.py   a router's words with every URL cut to its scheme and host
 │   └── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
 │                       check before dispatch (no DNS, no redirects)

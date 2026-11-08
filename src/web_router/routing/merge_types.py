@@ -5,14 +5,15 @@ Experimental. Apart from :mod:`.merge` so each stays small.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from web_router._urls import shown
 from web_router.constants_merge import ROUTER_EMPTY, ROUTER_TIMEOUT
 from web_router.constants_params import PARAMS_SOURCE_ROUTER
-from web_router.routing.contract import ToolName
+from web_router.routing.contract import ToolName, candidate_id
+from web_router.routing.merge_urls import hide_urls
 
 FallbackReason = Literal["router_timeout", "router_error", "router_invalid"]
 """Why the static order was used instead of a decision."""
@@ -75,3 +76,23 @@ class Merged:
             "params": shown(self.params) or None,
             "params_source": PARAMS_SOURCE_ROUTER if self.params else None,
         }
+
+
+def settled(
+    tool: ToolName,
+    ranked: Sequence[str],
+    providers: tuple[str, ...],
+    excluded: Mapping[str, str],
+    params: Mapping[str, Any],
+    ignored: Mapping[str, str],
+    reason: str | None,
+) -> Merged:
+    """The merged decision, its notes in candidate ids, and every URL in what the router wrote cut to its host."""
+    notes = MergeNotes(
+        ranked=tuple(candidate_id(tool, p) for p in ranked),
+        merged=tuple(candidate_id(tool, p) for p in providers),
+        excluded=excluded,
+        ignored={hide_urls(key): hide_urls(why) for key, why in ignored.items()},
+        reason=hide_urls(reason),
+    )
+    return Merged(tool=tool, providers=providers, params=params, notes=notes)

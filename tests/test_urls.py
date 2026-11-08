@@ -43,3 +43,8 @@ def test_a_shown_ipv6_host_keeps_its_brackets_and_drops_its_scope_id() -> None:
     assert host_of("http://[fe80::1%25eth0]/x?token=1") == "http://[fe80::1]"
     assert host_of("http://[fe80::1%eth0]/") == "http://[fe80::1]"
     assert host_of("https://[2001:db8::1]:8443/p") == "https://[2001:db8::1]"
+
+
+def test_a_non_ascii_host_is_shown_whole_as_the_ascii_a_browser_maps_it_to() -> None:
+    assert host_of("https://münchen.de/x?token=1") == "https://xn--mnchen-3ya.de"
+    assert host_of("https://köln.de/") != host_of("https://münchen.de/"), "two refused hosts keep two keys"
