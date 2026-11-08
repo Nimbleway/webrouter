@@ -29,11 +29,17 @@ Choosing a tool:
   when the question truly needs it, say so before you do, and never start a
   second run while the first is going — poll research_status or browse_status
   with the handle you were given; polling is free.
+- web_run, where it is offered, takes the request in words and lets the
+  server's router pick search or extract and the backends. Call search or
+  extract yourself when you know which you want or need their options.
 - browser_open starts a session you drive yourself. local is free; a cloud
   session bills per minute until browser_close. Close every session as soon
   as you are done with it, and before you finish your turn.
 
 Cost discipline:
+- With budget_start and budget_status offered, start a budget before a task
+  that may bill, and check it before a billed run. A call refused with
+  BudgetExceededError did not run; do not retry it unchanged.
 - Every result carries a handle, and fetch_raw returns its full payload for
   free. Use it before repeating a call for more detail.
 - A truncated result is not a failed result; the note names the handle that
@@ -60,8 +66,9 @@ Boundaries:
 
 **Budget caps belong in code, not the prompt.** The prompt asks the model to
 be deliberate; the enforcement is `research(timeout=...)`, `browse(timeout=...)`,
-the MCP server's session lifetime and idle timeout, and the keys you do or do
-not configure. An agent that should never spend money simply gets an install
+the MCP server's ceiling (`WEB_ROUTER_MCP_MAX_COST_USD`,
+`WEB_ROUTER_MCP_TIME_LIMIT_S`), its session lifetime and idle timeout, and the
+keys you do or do not configure. An agent that should never spend money simply gets an install
 with no research or browse keys — the tools then say so themselves.
 
 **Tell the model what this install holds.** The tool enums already list only

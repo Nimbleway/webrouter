@@ -178,9 +178,25 @@ def unbind(token: Token[tuple[BudgetPool, ...]]) -> None:
     _POOLS.reset(token)
 
 
+def current_pool(owner: object = None) -> BudgetPool | None:
+    """The innermost pool ``owner``'s calls spend from in this context -- any router's with no owner -- or ``None``.
+
+    A pool with no owner of its own (the MCP server's, which outlives the routers
+    ``load_env`` replaces) applies to every router's calls.
+    """
+    for pool in reversed(_POOLS.get()):
+        if owner is None or pool.owner is None or pool.owner is owner:
+            return pool
+    return None
+
+
 def chain_in_force(owner: object) -> PoolChain | None:
-    """Every pool of ``owner``'s in force in this context, innermost first, once each; ``None`` when there is none."""
-    pools = tuple(dict.fromkeys(pool for pool in reversed(_POOLS.get()) if pool.owner is owner))
+    """Every pool ``owner``'s calls spend from in this context, innermost first, once each; ``None`` with none.
+
+    That is ``owner``'s own pools and every pool with no owner -- the MCP
+    server's, which outlives the routers ``load_env`` replaces.
+    """
+    pools = tuple(dict.fromkeys(pool for pool in reversed(_POOLS.get()) if pool.owner in (owner, None)))
     return PoolChain(pools) if pools else None
 
 

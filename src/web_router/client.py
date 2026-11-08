@@ -23,9 +23,8 @@ for the answer -- or hands back a :class:`~web_router.ResearchJob` through
 :meth:`WebRouter.browse` and :meth:`WebRouter.submit_browse` are the same shape
 with a hosted browser agent in place of a search index.
 
-:meth:`WebRouter.open_browser` is different again: it returns no answer at all,
-but a handle on a cloud browser the caller drives over CDP. The router keeps
-every handle it opened and releases the ones still open when it is closed.
+:meth:`WebRouter.open_browser` returns no answer but a handle on a cloud browser the caller
+drives over CDP; the router releases every handle still open when it is closed.
 
 :meth:`WebRouter.benchmark` is not a method of its own kind but a consumer of
 :meth:`WebRouter.search`: the same query fanned out across several backends,
@@ -92,6 +91,7 @@ from web_router.registry import (
 from web_router.registry_answer import every_provider_name
 from web_router.routing import Budget, RouterLike, ToolName
 from web_router.routing.routed import RouterSetup
+from web_router.routing.submitted import asubmitted, submitted
 from web_router.routing.url_policy import UrlPolicy
 from web_router.types import (
     BrowseResponse,
@@ -540,11 +540,9 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
     ) -> ResearchJob:
         """Start a research run and hand back the job, without waiting for it.
 
-        The same call as :meth:`research` up to the point the backend accepts
-        the run. What comes back polls with
-        :meth:`~web_router.ResearchJob.status` and blocks with
-        :meth:`~web_router.ResearchJob.result`, so a caller with something else
-        to do can go and do it.
+        The same call as :meth:`research` up to the point the backend accepts the run. What comes back
+        polls with :meth:`~web_router.ResearchJob.status` and blocks with :meth:`~web_router.ResearchJob.result`,
+        so a caller with something else to do can go and do it.
         """
         request = build_research_request(
             query,
@@ -555,7 +553,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        return self.get_research_provider(provider).submit(request)
+        return submitted("research", self.get_research_provider(provider), request, self)
 
     def browse(
         self,
@@ -623,7 +621,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        return self.get_browse_provider(provider).submit(request)
+        return submitted("browse", self.get_browse_provider(provider), request, self)
 
     def open_browser(
         self,
@@ -865,7 +863,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        return await self.get_research_provider(provider).asubmit(request)
+        return await asubmitted("research", self.get_research_provider(provider), request, self)
 
     async def browse(
         self,
@@ -918,7 +916,7 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        return await self.get_browse_provider(provider).asubmit(request)
+        return await asubmitted("browse", self.get_browse_provider(provider), request, self)
 
     async def open_browser(
         self,

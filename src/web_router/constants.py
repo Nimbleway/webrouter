@@ -14,6 +14,16 @@ from pydantic import BaseModel
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_mcp import (
+    MCP_BUDGET_START_PROPERTIES,
+    MCP_DESC_BUDGET_START,
+    MCP_DESC_BUDGET_STATUS,
+    MCP_DESC_WEB_RUN,
+    MCP_TOOL_BUDGET_START,
+    MCP_TOOL_BUDGET_STATUS,
+    MCP_TOOL_WEB_RUN,
+    MCP_WEB_RUN_PROPERTIES,
+)
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -3359,33 +3369,6 @@ JINA_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
 
 MCP_SERVER_NAME = "web-router"
 
-MCP_SERVER_INSTRUCTIONS = (
-    "Search, read and research the web through whichever backends this machine holds keys for. "
-    "`search` and `extract` answer in about a second, and so does `run_template`, which runs a "
-    "backend's Extract Template -- a saved, site-specific extraction that turns one page into a "
-    "record; `templates` lists them and `template` describes one, inputs and all. `answer` returns a "
-    "backend's own written answer to one question, with its sources, in a few seconds. `research` runs an "
-    "agentic job that takes "
-    "minutes and bills for the run, and `browse` hands a task to a hosted browser agent on the same "
-    "terms. The `browser_*` tools let you drive a browser yourself: `browser_open` hands back a "
-    "session_id, the other tools act through it, and `browser_close` ends it. "
-    "When a lookup ends at a page that needs interaction -- a login, a form, a multi-step portal, a "
-    "result gated on the user's own details -- do not stop at describing the steps: tell the user a "
-    "browser could finish the task and ask before opening one. For a page that needs the user's own "
-    "credentials, offer `browser_open` with provider='local' and headless=false, a visible window on "
-    "their machine where they type their details themselves; never ask for a password, an ID number or "
-    "a date of birth in the conversation. "
-    "Results are shortened to fit a context window -- every one "
-    "carries a handle, and `fetch_raw` returns the backend's untouched payload for it. "
-    "Read the web-router://capabilities resource to see which backends are configured here, and "
-    "`load_env` to load API keys from a .env file the user names. "
-    "Every backend key the user adds unlocks more: more backends, more fallbacks and, for research, "
-    "browse and cloud browsers, methods that need a key at all -- with a key for every backend, every "
-    "capability is available. The resource's `unlock` lists, per method, each backend still missing a "
-    "key and the variable that would add it; when a method has nothing to run on, or the user wants "
-    "more, point them there and to .env.example, and have them put keys in their .env themselves."
-)
-
 MCP_MSG_INSTRUCTIONS_NO_KEYS = (
     " No API keys were found when this server started, so only the keyless backends are configured. If "
     "the user has a .env file with keys, ask them for its path and call `load_env` -- never ask them to "
@@ -4179,6 +4162,9 @@ MCP_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_BROWSER_SCREENSHOT: MCP_BROWSER_SCREENSHOT_PROPERTIES,
     MCP_TOOL_BROWSER_READ: MCP_BROWSER_READ_PROPERTIES,
     MCP_TOOL_BROWSER_CLOSE: MCP_BROWSER_CLOSE_PROPERTIES,
+    MCP_TOOL_WEB_RUN: MCP_WEB_RUN_PROPERTIES,
+    MCP_TOOL_BUDGET_START: MCP_BUDGET_START_PROPERTIES,
+    MCP_TOOL_BUDGET_STATUS: {},
 }
 """Each tool's input schema, minus the ``provider`` argument.
 
@@ -4212,6 +4198,9 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_BROWSER_SCREENSHOT: (MCP_ARG_SESSION_ID,),
     MCP_TOOL_BROWSER_READ: (MCP_ARG_SESSION_ID,),
     MCP_TOOL_BROWSER_CLOSE: (MCP_ARG_SESSION_ID,),
+    MCP_TOOL_WEB_RUN: ("prompt",),
+    MCP_TOOL_BUDGET_START: ("max_cost_usd", "time_limit_s"),
+    MCP_TOOL_BUDGET_STATUS: (),
 }
 
 MCP_PROVIDER_DESCRIPTION = (
@@ -4220,7 +4209,7 @@ MCP_PROVIDER_DESCRIPTION = (
 )
 
 # A tool description is the routing decision: the model choosing between these
-# twenty-one is the actual router, and latency and cost are what it has to choose on.
+# twenty-four is the actual router (`web_run` hands it to ours), and latency and cost are what it chooses on.
 
 MCP_DESC_SEARCH = (
     "Search the web: ranked links with their titles, descriptions and page text. Returns in about "
@@ -4409,6 +4398,9 @@ MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
     MCP_TOOL_BROWSER_SCREENSHOT: MCP_DESC_BROWSER_SCREENSHOT,
     MCP_TOOL_BROWSER_READ: MCP_DESC_BROWSER_READ,
     MCP_TOOL_BROWSER_CLOSE: MCP_DESC_BROWSER_CLOSE,
+    MCP_TOOL_WEB_RUN: MCP_DESC_WEB_RUN,
+    MCP_TOOL_BUDGET_START: MCP_DESC_BUDGET_START,
+    MCP_TOOL_BUDGET_STATUS: MCP_DESC_BUDGET_STATUS,
 }
 
 MCP_MSG_NO_BACKEND = " NOTHING IS CONFIGURED FOR THIS METHOD on this machine, so every call will fail."

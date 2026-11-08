@@ -1578,6 +1578,7 @@
       "mode": null,
       "price_usd": 0.00083333,
       "unit": "per_browser_minute",
+      "estimate_is_floor": true,
       "note": "plus $0.01 per browser created; proxy $8 per GB (Anchor's proxy), $0.20 per GB own or none; plans Free ($5 credit) to Growth ($2,000/mo); stealth and captcha are plan features. The pricing page's worked example shows $0.09 an hour and no creation fee: recheck before quoting",
       "source_url": "https://docs.anchorbrowser.io/pricing",
       "checked": "2026-10-07",

@@ -196,6 +196,9 @@ the client's `env` block or a file the server already read takes a restart.
 | `browse_status` | Poll a handle from `browse`: its state, or the answer and the agent's steps once it has one. | about a second, and free |
 | `fetch_raw` | The backend's full, unshaped payload for a handle from any of the above. | instant — nothing is called again |
 | `load_env` | Load provider keys from a `.env` file the user names, by path; see [above](#loading-keys-mid-conversation-load_env). | instant |
+| `web_run` | Hand a request in words to web-router's router, which picks the method and backends and runs it; `dry_run` returns the plan only. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). | as the method it picks |
+| `budget_start` | Open a task budget, in dollars and seconds, that every billed tool then spends from. | instant |
+| `budget_status` | What the budget has spent, reserved and left. | instant, and free |
 | `browser_open` | Open a browser session and get a `session_id` for the tools below. | a few seconds; **a cloud backend bills per minute until it is closed**, `local` is free |
 | `browser_goto` | Load a URL in the session. | as long as the page takes |
 | `browser_snapshot` | The page's accessibility tree, each element tagged `[ref=eN]` to act on. | about a second |
@@ -206,7 +209,7 @@ the client's `env` block or a file the server already read takes a restart.
 | `browser_read` | The page as it is now, as text or HTML, shaped like `extract`. | about a second |
 | `browser_close` | End the session and stop paying for it. | about a second |
 
-The descriptions the model reads say the same thing, because with twenty-one tools in
+The descriptions the model reads say the same thing, because with twenty-four tools in
 front of it the model *is* the router: what it needs to choose on is what each
 tool is for, what it costs and how long it takes.
 
@@ -231,6 +234,93 @@ hands back a handle with the run still going. Poll `research_status` with that
 handle — calling `research` again would start, and pay for, a second run.
 `browse` and `browse_status` work the same way, and each status tool refuses a
 handle from the other.
+
+### Routing and budgets: `web_run`, `budget_start`, `budget_status`
+
+Experimental, as routing is in the library.
+
+**`web_run(prompt, max_cost_usd?, time_limit_s?, dry_run=false)`** is
+`AsyncWebRouter.run` over MCP: the router plans the prompt -- the method, its
+options and the backend order -- and the server runs it. The result is the
+method's own tool output (`search`'s, `extract`'s, ...) with `tool`, the
+method that ran, a `handle` for `fetch_raw`, and the `decision` record.
+`dry_run=true` returns the plan alone and calls nothing. `max_cost_usd` and
+`time_limit_s` cap that one call, within the budget below. When the router
+picks `research` or `browse`, `web_run` waits as those tools do, 25 seconds
+or less if its own `time_limit_s` or the budget has less left, and then
+hands back a handle for `research_status` or `browse_status` instead of
+dropping a started run. The other tools are unchanged: `search`, `extract`
+and the rest never ask the router.
+
+The router is set by the operator, once, when the server starts:
+
+- unset, the built-in rules router (`web_router.routing.rules`): a prompt
+  with an `http(s)` URL is read with `extract`, anything else searched;
+- `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
+  installed -- any form `router=` takes on the library;
+- `WEB_ROUTER_MCP_ROUTER=off` attaches none: `web_run` then plans the static
+  order, which is `search`.
+
+`WEB_ROUTER_MCP_ROUTER` imports and runs your code when the server starts, so
+set it in the server's own process environment, never in a project's config
+or a `.env` file.
+
+Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
+loopback, private or cloud-metadata host is never sent to a backend. It holds
+for `web_run`'s plans only. The direct `extract` and `browse` tools send the
+URLs the agent passes as they are, and the browser tools have their own guard
+([Where the browser may go](#where-the-browser-may-go)), which checks DNS
+answers and redirects but refuses only cloud metadata hosts and the browser's
+debugging port: other loopback and private hosts are admitted there. The
+prompt itself goes to the backend that serves it, as its query or task, as it
+would through `search`. The built-in router runs in the server's process and
+sends nothing out; an operator's router runs there too, but it is your code,
+and may send the prompt on, to a model's server for instance.
+
+**The budget.** Every billed tool -- `search`, `extract`, `answer`, `research`,
+`browse`, `run_template`, `browser_open` and `web_run` -- spends from one budget
+per connection, a shared budget as `wr.budget(...)` is in the library. Each
+attempt reserves its estimated list price before it starts, and a call that
+does not fit is refused with `BudgetExceededError` before anything bills. A
+template run is charged its list price; a cloud browser per minute of its
+lifetime (`timeout`), rounded up to whole minutes, on the dearest backend that
+can serve the options asked for. A browser option that can turn on an extra
+billed apart -- a proxy country, stealth, CAPTCHA solving, a profile -- makes a
+paid backend's price unknown. Under a cost cap a backend whose price is
+unknown never runs, and the refusal names the unknown price. So `extract` with
+`provider="max"`, which races every member at once and has no price before the
+race, is refused under a cost cap; name a backend or use `auto`. The calls the
+server charges itself run on the budget's clock, and `research` and `browse`
+wait no longer than it has left.
+
+- **The operator's ceiling**: `WEB_ROUTER_MCP_MAX_COST_USD` and
+  `WEB_ROUTER_MCP_TIME_LIMIT_S`. With no `budget_start`, the whole connection
+  is one task under it, its clock running from the connection's start. The
+  agent cannot reset or raise it.
+- **`budget_start(max_cost_usd, time_limit_s)`** opens a new task inside the
+  ceiling, with both limits stated each time and a clock from now. Each
+  reservation must fit the task and the ceiling, so the limits are cut to what
+  the ceiling has left. A call still running when a new task starts stays
+  charged to the connection.
+- **`budget_status()`** returns the task's `max_cost_usd` and `time_limit_s`
+  as they are in force (cut to what the ceiling has left), its `spent_usd`, `reserved_usd`,
+  `remaining_usd` (counted against the ceiling too), `elapsed_s` and
+  `time_left_s`; `connection`, what every task on the connection has spent
+  and reserved; and the ceiling.
+
+With no ceiling and no `budget_start`, nothing is held, and every tool runs as
+it would with no budget.
+
+The three variables are read from the server's own process environment, once,
+at startup. No `.env` file and no `load_env` call can set or change them, and a
+value the server cannot read -- an empty one included -- stops it from
+starting rather than leaving the connection without the ceiling you meant. The capabilities resource reports
+all of it under `routing`: the router (`rules`, `operator` for yours -- never
+its `<module>:<attribute>` -- or `off`), where it runs (`router_runs`: `in_process` for the built-in router or
+none, `operator` with a `router_note` for yours), a `prompt_note` saying the
+prompt goes to the backend, the `url_policy` with a `url_policy_note` saying it
+holds for `web_run` alone, the ceiling, and the budget in
+force (`null` with none).
 
 ### A browse result never carries its session
 
@@ -514,6 +604,9 @@ variable, or pass provider_config={'tavily': {'api_key': ...}} ...
 | `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
+| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, or `off`. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
+| `WEB_ROUTER_MCP_MAX_COST_USD` | unset | The ceiling on what one connection may spend, in US dollars at estimated list prices. |
+| `WEB_ROUTER_MCP_TIME_LIMIT_S` | unset | The ceiling on how long one connection may run billed calls, in seconds from its start. |
 
 Everything else it reads is a provider credential, and belongs to the provider.
 

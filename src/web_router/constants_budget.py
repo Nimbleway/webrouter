@@ -40,3 +40,9 @@ COST_TOLERANCE_USD = 1e-9
 
 STATUS_DIGITS = 9
 """Decimal places a shared budget's status rounds dollars to, so sums of estimates read as they were set."""
+
+SECONDS_PER_MINUTE = 60.0
+"""A browser session's price is per minute; its lifetime is in seconds."""
+
+BROWSER_UNBILLED_OPTIONS = frozenset({"timeout", "idle_timeout", "viewport", "headless"})
+"""The browser options no vendor bills apart; any other -- a proxy, stealth, CAPTCHA solving -- may turn on an extra."""

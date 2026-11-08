@@ -93,6 +93,8 @@ class BudgetScope(_Scope):
     answer = _spending(WebRouter.answer)
     research = _spending(WebRouter.research)
     browse = _spending(WebRouter.browse)
+    plan = _spending(WebRouter.plan)
+    run = _spending(WebRouter.run)
 
     def __enter__(self) -> BudgetScope:
         self._enter()
@@ -114,6 +116,8 @@ class AsyncBudgetScope(_Scope):
     answer = _aspending(AsyncWebRouter.answer)
     research = _aspending(AsyncWebRouter.research)
     browse = _aspending(AsyncWebRouter.browse)
+    plan = _aspending(AsyncWebRouter.plan)
+    run = _aspending(AsyncWebRouter.run)
 
     async def __aenter__(self) -> AsyncBudgetScope:
         self._enter()

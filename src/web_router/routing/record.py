@@ -23,7 +23,7 @@ def prompt_of(tool: ToolName, request: Any) -> tuple[str, tuple[str, ...]]:
         return "\n".join(request.urls), tuple(request.urls)
     if tool == "browse":
         return request.task, (request.start_url,) if request.start_url else ()
-    return request.query, ()
+    return getattr(request, "query", ""), ()  # a template run or a browser open has no prompt
 
 
 def stamp(prompt: str) -> dict[str, Any]:

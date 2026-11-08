@@ -11,7 +11,11 @@ way when offered and another when run.
   (``estimate_is_floor``), when the request carries ``provider_options``,
   which can change the mode the vendor bills, and when a search asks for more
   results than the row's price assumes (``results_assumed``), where each
-  result is charged. An extract is charged per URL.
+  result is charged. An extract is charged per URL, and a browser session
+  per minute of its lifetime (``timeout``), rounded up to whole minutes as
+  vendors bill: unknown without one, and unknown with any option that can
+  turn on an extra billed apart -- a proxy, stealth, CAPTCHA solving, a
+  profile -- unless the backend is free.
 - **p90** is the price list's measured latency; for research, the effort
   table's measured p90 for the effort first (the backend's default when none
   is set), then the price list's. Unknown otherwise, and with
@@ -20,19 +24,23 @@ way when offered and another when run.
 
 from __future__ import annotations
 
+import math
+
 from web_router import prices
 from web_router.constants_budget import (
+    BROWSER_UNBILLED_OPTIONS,
     COST_TOLERANCE_USD,
     FIT_REASONS,
     OVER_COST,
     OVER_TIME,
+    SECONDS_PER_MINUTE,
     UNKNOWN_P90,
     UNKNOWN_PRICE,
 )
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
 from web_router.routing.effort_table import RESEARCH, effort_p90
-from web_router.types import ExtractRequest, ResearchRequest, SearchRequest
+from web_router.types import BrowserRequest, ExtractRequest, ResearchRequest, SearchRequest
 
 
 def mode_cost(provider: str, tool: str, mode: str | None) -> float | None:
@@ -109,6 +117,11 @@ def attempt_cost(attempt: Attempt) -> float | None:
     cost = mode_cost(attempt.provider, attempt.tool, attempt_mode(attempt))
     if cost is not None and isinstance(attempt.request, ExtractRequest):
         return cost * len(attempt.request.urls)
+    if cost and isinstance(attempt.request, BrowserRequest):
+        lifetime = attempt.request.timeout
+        if lifetime is None or attempt.request.specified_parameters() - BROWSER_UNBILLED_OPTIONS:
+            return None
+        return cost * math.ceil(lifetime / SECONDS_PER_MINUTE)
     return cost
 
 

@@ -142,6 +142,8 @@ src/web_router/
 │   │                   the spend, the position that ran
 │   ├── trail.py        the hop trail: every candidate a call moved past, skipped,
 │   │                   failed or empty, by attempt
+│   ├── pool.py         a shared budget: reservations under one lock, its clock, status()
+│   ├── pool_status.py  BudgetStatus, where a shared budget stands
 │   ├── record.py       the record's own fields: decision_id, the prompt's hash, a failure's code
 │   ├── pricing.py      the one cost and p90 rule: price list, floor, provider_options and
 │   │                   results past a row's price unknown, research's p90 from the effort table
@@ -153,6 +155,8 @@ src/web_router/
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
+│   ├── submitted.py    submitted(): a job's start (submit_research, submit_browse)
+│   │                   held to the shared budget in force, at the effort it maps
 │   ├── decide.py       decided(): candidates and a router's outcome merged into the
 │   │                   method, order, options and record a call runs with, pure
 │   ├── params.py       map_effort(): the research effort a budget picks, from
@@ -168,8 +172,6 @@ src/web_router/
 │   │                   no router orders runs at it too
 │   ├── eligible.py     eligible_members(): the members of a method's `auto` that
 │   │                   can serve a request, and the ones it cannot build, with why
-│   ├── pool.py         a shared budget: reservations under one lock, its clock, status()
-│   ├── pool_status.py  BudgetStatus, where a shared budget stands
 │   ├── merge.py        merge(): a router's decision and the static order made into
 │   │                   one method, one order and checked options, pure
 │   ├── merge_types.py  Merged, MergeNotes and FallbackReason: what the merge answers
@@ -179,10 +181,13 @@ src/web_router/
 │   │                   the caller's own, the budget, the URL policy
 │   ├── merge_extract.py rule 7: extract with no URL left to read searches instead
 │   ├── merge_urls.py   a router's words with every URL cut to its scheme and host
-│   └── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
-│                       check before dispatch (no DNS, no redirects)
+│   ├── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
+│   │                   check before dispatch (no DNS, no redirects)
+│   └── rules.py        rules(): the built-in keyless router, URL to extract, else search
 ├── constants_params.py the effort mapping's data path, rule and reasons
 ├── constants_merge.py  the options a router may set, and the merge's reasons and notes
+├── constants_mcp.py    the MCP server's instructions, and its routing tools' names, schemas,
+│                       descriptions, environment variables and messages
 ├── _urls.py            urls_in(): the URLs written in a query's prose; host_of(): a
 │                       URL shown as its scheme and host only
 ├── _hosts.py           a URL host's kind -- loopback, cloud metadata, private -- in
@@ -199,6 +204,11 @@ src/web_router/
 ├── exceptions.py       WebRouterError and subclasses
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
+│   ├── routing_config.py the operator's router and ceiling, read once at startup
+│   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
+│   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
+│   │                   the charge for run_template and browser_open
+│   └── chains.py       the members a delegating provider would try, per tool
 ├── integrations/       agent-framework adapters, one module each
 │   ├── _render.py      what a model reads back, one layout for every framework
 │   ├── _options.py     which backend each tool calls, fixed when it is built

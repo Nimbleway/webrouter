@@ -36,7 +36,7 @@ import time
 import warnings
 from collections.abc import Awaitable, Callable, Iterator, Mapping
 from types import MappingProxyType, TracebackType
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar, cast
 
 from pydantic import SecretStr
 
@@ -812,6 +812,9 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     poll_max_interval: ClassVar[float] = JOB_POLL_MAX_INTERVAL
     """The ceiling that gap backs off to and stays at."""
 
+    decision: Any = None
+    """The answer's ``decision``: the effort a budget mapped at the start. Its cost is in the budget's ledger."""
+
     def __init__(
         self,
         provider: JobProvider[_RequestT, _ProgressT, _ResponseT],
@@ -848,11 +851,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         return self._provider.resumable
 
     def status(self) -> _ProgressT:
-        """Ask the backend where the run is now.
-
-        A run that has already finished is not asked about again: its last
-        progress is returned as it stands.
-        """
+        """Ask the backend where the run is now; a finished run is not asked again, and its last progress stands."""
         if not self._progress.is_terminal:
             self._progress = self._provider.poll(self._request, self.job_id)
         return self._progress
@@ -871,9 +870,8 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
                 ``None`` to wait as long as the run takes.
 
         Raises:
-            WebRouterError: whatever the method's :meth:`JobProvider._timed_out`
-                says, if ``timeout`` elapses first. The run is left alone; call
-                this again to keep waiting.
+            WebRouterError: whatever the method's :meth:`JobProvider._timed_out` says, if ``timeout``
+                elapses first. The run is left alone; call this again to keep waiting.
             ProviderError: if the run failed or was cancelled.
         """
         wait = self._timeout(timeout)
@@ -901,18 +899,16 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         already spent: it has been paid for, and throwing the answer away to
         report a timeout would be the one outcome nobody wants.
 
-        A poll whose request timed out once the deadline has passed raises the
-        method's timeout, with the failure as its cause; any other failure, an
-        auth error or an unrecognized status, is raised as it is. Every call
-        inside the run is clamped to what the caller has left, so a status
-        request that stalls fails exactly as the deadline arrives; raised as the
-        backend's read timeout, it would lose the job id the caller needs to
-        come back to a run that is still going, and billing.
+        A poll that timed out past the deadline, or that the deadline cut off, raises the method's timeout,
+        with the failure as its cause and the job id the caller needs to come back to a run still going,
+        and billing; any other failure, an auth error or an unrecognized status, is raised as it is. Every
+        call inside the run is clamped to what the caller has left, so a status request that stalls fails
+        exactly as the deadline arrives.
         """
         for delay in self._poll_delays():
             try:
                 progress = self.status()
-            except ProviderError as exc:
+            except (ProviderError, DeadlineExceededError) as exc:
                 self._expire(exc, deadline, timeout)
             if progress.is_terminal:
                 return self._answer(progress)
@@ -924,16 +920,16 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         for delay in self._poll_delays():
             try:
                 progress = await self.astatus()
-            except ProviderError as exc:
+            except (ProviderError, DeadlineExceededError) as exc:
                 self._expire(exc, deadline, timeout)
             if progress.is_terminal:
                 return self._answer(progress)
             await asyncio.sleep(self._wait(delay, deadline, timeout))
         raise AssertionError  # pragma: no cover -- _poll_delays never ends
 
-    def _expire(self, exc: ProviderError, deadline: float | None, timeout: float | None) -> NoReturn:
-        """Raise the method's timeout for a poll that timed out past the deadline, else ``exc`` as it is."""
-        if _passed(deadline) and _is_timeout(exc):
+    def _expire(self, exc: WebRouterError, deadline: float | None, timeout: float | None) -> NoReturn:
+        """Raise the method's timeout, with this run's id, for a poll the deadline cut off; else ``exc`` as it is."""
+        if not isinstance(exc, ProviderError) or (_passed(deadline) and _is_timeout(exc)):  # the deadline cut it off
             raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
         raise exc
 
@@ -971,8 +967,10 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         if progress.state == "cancelled":
             raise ProviderError(self.provider, MSG_JOB_CANCELLED)
         if progress.state == "failed" or response is None:
-            detail = progress.detail or MSG_JOB_NO_DETAIL
-            raise ProviderError(self.provider, MSG_JOB_RUN_FAILED.format(detail=detail))
+            raise ProviderError(self.provider, MSG_JOB_RUN_FAILED.format(detail=progress.detail or MSG_JOB_NO_DETAIL))
+        if self.decision is not None and cast(Any, response).decision is not self.decision:  # copied once, then kept
+            response = cast(Any, response).model_copy(update={"decision": self.decision})
+            self._progress = cast(Any, progress).model_copy(update={"response": response})
         return response
 
     def __repr__(self) -> str:
