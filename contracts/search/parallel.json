@@ -27,48 +27,96 @@
       "sample": {
         "body.advanced_settings.max_results": 3
       }
+    },
+    "search_depth": {
+      "lite": {
+        "body.advanced_settings.excerpt_settings.max_chars_per_result": 500
+      },
+      "fast": {
+        "body.advanced_settings.excerpt_settings.max_chars_per_result": 3000
+      },
+      "deep": {
+        "refused": "UnsupportedParameterError"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.advanced_settings.source_policy.include_domains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.advanced_settings.source_policy.exclude_domains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.advanced_settings.location": "us"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.advanced_settings.source_policy.after_date": "2026-01-14"
+      },
+      "week": {
+        "body.advanced_settings.source_policy.after_date": "2026-01-08"
+      },
+      "month": {
+        "body.advanced_settings.source_policy.after_date": "2025-12-16"
+      },
+      "year": {
+        "body.advanced_settings.source_policy.after_date": "2025-01-15"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.mode": "turbo"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "body.mode": "advanced"
+      },
+      "max": {
+        "body.mode": "advanced"
+      }
     }
   },
   "not_mapped": [
-    "country",
-    "effort",
-    "exclude_domains",
-    "include_domains",
-    "locale",
-    "recency",
-    "search_depth"
+    "locale"
   ],
   "source": [
     "https://docs.parallel.ai/api-reference/search-api/search",
-    "https://docs.parallel.ai/search/search-migration-guide"
+    "https://docs.parallel.ai/search/search-migration-guide",
+    "https://docs.parallel.ai/search/modes",
+    "https://docs.parallel.ai/search/advanced-search-settings"
   ],
   "verified": {
-    "max_results": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.max_results); live on /v1beta through tests/test_integration_surface.py::test_max_results_is_an_upper_bound, not yet re-run on /v1"
+    "max_results": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.max_results); live on /v1beta through tests/test_integration_surface.py::test_max_results_is_an_upper_bound, not yet re-run on /v1",
+    "search_depth": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.excerpt_settings.max_chars_per_result, an upper bound per URL); not yet run live",
+    "include_domains": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.source_policy.include_domains); not yet run live",
+    "exclude_domains": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.source_policy.exclude_domains, ignored when include_domains is set); not yet run live",
+    "country": "docs: https://docs.parallel.ai/search/advanced-search-settings (advanced_settings.location, one of 37 listed codes; any other is ignored, so web-router refuses it); not yet run live",
+    "recency": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.source_policy.after_date, YYYY-MM-DD); not yet run live",
+    "effort": "docs: https://docs.parallel.ai/search/modes (turbo, fast, basic, advanced); not yet run live"
   },
   "vendor_options": {
-    "excerpt_settings": {
-      "status": "passthrough",
-      "note": "Under advanced_settings: max_chars_per_result, an upper bound per URL; a candidate for search_depth."
-    },
     "max_chars_total": {
       "status": "passthrough",
       "note": "Top level: an upper bound on excerpt characters across all results."
-    },
-    "source_policy": {
-      "status": "passthrough",
-      "note": "Under advanced_settings: include_domains (when set, exclude_domains is ignored), exclude_domains and after_date (YYYY-MM-DD); candidates for the shared domain filters and recency."
     },
     "fetch_policy": {
       "status": "passthrough",
       "note": "Under advanced_settings: max_age_seconds (600 or more), timeout_seconds, disable_cache_fallback. Cached content unless set."
     },
-    "location": {
-      "status": "passthrough",
-      "note": "Under advanced_settings: an ISO 3166-1 alpha-2 code such as us or gb; a candidate for the shared country option."
-    },
     "client_model": {
       "status": "passthrough",
-      "note": "The model consuming the results."
+      "note": "The model consuming the results; Parallel tailors default settings to it."
     },
     "session_id": {
       "status": "passthrough",

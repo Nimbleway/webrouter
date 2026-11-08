@@ -5,10 +5,11 @@ SDK needs Python 3.11, and this package supports 3.10. Install with
 the ``search`` extra or ``extract``. Reads
 ``WEBIQ_API_KEY`` unless a key is passed explicitly.
 
-Slim by design: search maps only ``max_results`` and extract only ``format``.
-Everything else -- ``region``, ``language``, ``safeSearch``, Browse's
-``liveCrawl`` and link lists -- is reachable through ``provider_options``;
-mapping one properly is a welcome PR -- see CONTRIBUTING.md.
+Search maps ``max_results``, ``search_depth`` (as ``maxLength``, and whole-page
+text for ``deep``), the domain filters (as ``site:`` operators in the query),
+``country`` (as ``region``) and ``locale`` (as ``language``); extract maps only
+``format``. Everything else -- ``safeSearch``, ``location``, Browse's
+``liveCrawl`` and link lists -- is reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -29,8 +30,20 @@ from web_router.constants import (
     WEBIQ_PARAM_NAMES,
     WEBIQ_SEARCH_PATH,
 )
+from web_router.constants_webiq import (
+    MSG_WEBIQ_CODE,
+    MSG_WEBIQ_QUERY_TOO_LONG,
+    WEBIQ_EXCLUDE_DOMAIN,
+    WEBIQ_INCLUDE_DOMAIN,
+    WEBIQ_INCLUDE_JOINER,
+    WEBIQ_PARAMS_BY_DEPTH,
+    WEBIQ_QUERY_LIMIT,
+    WEBIQ_SEARCH_PARAMETERS,
+)
+from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._utils import as_snippet, build_payload
+from web_router.providers._value_refusals import RefusesValues
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,
@@ -47,16 +60,18 @@ _MAPPED_FIELDS = frozenset({"url", "title", "content"})
 _MAPPED_DOCUMENT_FIELDS = _MAPPED_FIELDS | {"traceId"}
 
 
-class WebIQProvider(HttpSearchProvider):
+class WebIQProvider(RefusesValues, HttpSearchProvider):
     """Routes searches to WebIQ, Microsoft AI's Web Search API.
 
     Each result carries the passages of its page that answer the query, in
     ``content``; WebIQ returns no snippet and no relevance score, so
     ``description`` is the head of those passages and ``score`` stays unset.
+    ``deep`` asks for each page's whole text instead.
     """
 
     name: ClassVar[str] = PROVIDER_WEBIQ
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(WEBIQ_PARAM_NAMES)
+    supported_parameters: ClassVar[frozenset[str]] = WEBIQ_SEARCH_PARAMETERS
+    refusal_reasons: ClassVar[dict[str, str]] = {"country": MSG_WEBIQ_CODE, "locale": MSG_WEBIQ_CODE}
 
     base_url: ClassVar[str] = WEBIQ_BASE_URL
     search_path: ClassVar[str] = WEBIQ_SEARCH_PATH
@@ -64,7 +79,37 @@ class WebIQProvider(HttpSearchProvider):
     api_key_header: ClassVar[str] = WEBIQ_API_KEY_HEADER
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        return build_payload(request, WEBIQ_PARAM_NAMES, query=request.query, **WEBIQ_CONTENT_FORMAT)
+        query = self._query(request)
+        if len(query) > WEBIQ_QUERY_LIMIT:
+            raise ProviderError(self.name, MSG_WEBIQ_QUERY_TOO_LONG.format(limit=WEBIQ_QUERY_LIMIT, length=len(query)))
+        depth = WEBIQ_PARAMS_BY_DEPTH[request.search_depth] if request.search_depth else {}
+        return build_payload(
+            request,
+            WEBIQ_PARAM_NAMES,
+            query=query,
+            region=request.country.upper() if request.country else None,
+            language=_language(request.locale) if request.locale else None,
+            **{**WEBIQ_CONTENT_FORMAT, **depth},
+        )
+
+    @staticmethod
+    def _query(request: SearchRequest) -> str:
+        operators = []
+        if request.include_domains:
+            operators.append(
+                WEBIQ_INCLUDE_JOINER.join(WEBIQ_INCLUDE_DOMAIN.format(domain=d) for d in request.include_domains)
+            )
+        operators.extend(WEBIQ_EXCLUDE_DOMAIN.format(domain=d) for d in request.exclude_domains or ())
+        return " ".join([request.query, *operators])
+
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        refused: dict[str, Any] = {}
+        if request.country is not None and not _two_letters(request.country):
+            refused["country"] = request.country
+        if request.locale is not None and not _two_letters(_language(request.locale)):
+            refused["locale"] = request.locale
+        return refused
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         return SearchResponse(
@@ -87,6 +132,15 @@ class WebIQProvider(HttpSearchProvider):
             content=content,
             extra={k: v for k, v in hit.items() if k not in _MAPPED_FIELDS},
         )
+
+
+def _language(locale: str) -> str:
+    """The language of a locale, lowercase: ``en-GB`` and ``en_gb`` both give ``en``."""
+    return locale.replace("_", "-").split("-")[0].lower()
+
+
+def _two_letters(code: str) -> bool:
+    return len(code) == 2 and code.isascii() and code.isalpha()
 
 
 class WebIQExtractProvider(HttpExtractProvider):

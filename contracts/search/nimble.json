@@ -111,11 +111,15 @@
     },
     "deep_search": {
       "status": "passthrough",
-      "note": "Deprecated: use search_depth with full_content instead (deep_search=true means lite plus full_content). Typed in nimble-python, not in the API reference."
+      "note": "Deprecated alias for a depth with full page content, typed in nimble-python but absent from the API reference; web-router sends search_depth and full_content instead (search_depth='deep'). A content setting, not an effort tier."
     },
     "max_subagents": {
       "status": "passthrough",
-      "note": "Parallel subagents for the shopping, social and geo focus modes only; ignored for SERP focus. Typed in nimble-python, not in the API reference."
+      "note": "Caps the parallel subagents of the shopping, social and geo focus modes, and is ignored for general (SERP) focus; typed in nimble-python, not in the API reference. A fan-out limit, not an effort tier."
+    },
+    "safe_search": {
+      "status": "passthrough",
+      "note": "off | moderate | strict, in the API reference; the response echoes the level applied. nimble-python does not type it, so it goes as provider_options={'extra_body': {'safe_search': ...}}."
     }
   }
 }

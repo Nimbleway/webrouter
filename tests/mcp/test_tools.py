@@ -160,8 +160,7 @@ def test_a_key_appears_in_the_enum_for_every_method_it_serves(
 
 
 def test_an_option_no_configured_route_maps_is_not_advertised(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    # Search `auto` declares every shared option but is read as the chain it would try: keyless, its members'
-    # options and no other, each of which would be an UnsupportedParameterError from the default route.
+    # Search `auto` is read as the chain it would try: keyless, its members' options and no other.
     tools = WebRouterTools(AsyncWebRouter(), research_wait=0.0, browse_wait=0.0)
     search = set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
     research = set(_tool(tools, MCP_TOOL_RESEARCH).input_schema["properties"])

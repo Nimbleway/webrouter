@@ -24,40 +24,60 @@
       "sample": {
         "body.maxResults": 3
       }
+    },
+    "search_depth": {
+      "lite": {
+        "body.maxLength": 500
+      },
+      "fast": {
+        "body.maxLength": 3000
+      },
+      "deep": {
+        "body.contentFormat": "text",
+        "body.maxLength": 500000
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.query": "probe query site:example.com"
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.query": "probe query -site:example.org"
+      }
+    },
+    "country": {
+      "sample": {
+        "body.region": "US"
+      }
+    },
+    "locale": {
+      "sample": {
+        "body.language": "en"
+      }
     }
   },
   "not_mapped": [
-    "country",
     "effort",
-    "exclude_domains",
-    "include_domains",
-    "locale",
-    "recency",
-    "search_depth"
+    "recency"
   ],
   "source": [
     "https://webiq.microsoft.ai/documentation/",
     "https://webiq.microsoft.ai/documentation/openapi.json"
   ],
   "verified": {
-    "max_results": "live: tests/providers/test_webiq.py::test_live_search_returns_passages"
+    "max_results": "live: tests/providers/test_webiq.py::test_live_search_returns_passages",
+    "search_depth": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.maxLength and contentFormat); not yet run live, and deep's text format needs a key with full-document access",
+    "include_domains": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.query documents 'site:'); not yet run live, nor the OR between several sites",
+    "exclude_domains": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.query documents '-site:'); not yet run live",
+    "country": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.region, any two-letter code); not yet run live",
+    "locale": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.language, ISO 639-1); not yet run live"
   },
   "vendor_options": {
-    "region": {
-      "status": "passthrough",
-      "note": "Two-letter country code; a candidate for the shared country option."
-    },
-    "language": {
-      "status": "passthrough",
-      "note": "ISO 639-1 code; a candidate for the shared locale option."
-    },
     "location": {
       "status": "passthrough",
       "note": "lat:<float>;long:<float>."
-    },
-    "maxLength": {
-      "status": "passthrough",
-      "note": "Characters per content or passage field, up to 500000."
     },
     "safeSearch": {
       "status": "passthrough",

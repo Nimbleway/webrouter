@@ -24,41 +24,73 @@
       "sample": {
         "body.max_results": 3
       }
+    },
+    "search_depth": {
+      "lite": {
+        "body.snippet_max_length": 500
+      },
+      "fast": {
+        "body.snippet_max_length": 3000
+      },
+      "deep": {
+        "refused": "UnsupportedParameterError"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.site": "example.com"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.published_after": "1d"
+      },
+      "week": {
+        "body.published_after": "7d"
+      },
+      "month": {
+        "body.published_after": "1mo"
+      },
+      "year": {
+        "body.published_after": "1y"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.mode": "realtime"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "body.mode": "pro"
+      },
+      "max": {
+        "body.mode": "pro"
+      }
     }
   },
   "not_mapped": [
     "country",
-    "effort",
     "exclude_domains",
-    "include_domains",
-    "locale",
-    "recency",
-    "search_depth"
+    "locale"
   ],
   "source": [
     "https://docs.keenable.ai/api-reference/search"
   ],
   "verified": {
-    "max_results": "live: tests/providers/test_keenable.py::test_live_search_returns_results"
+    "max_results": "live: tests/providers/test_keenable.py::test_live_search_returns_results",
+    "search_depth": "live: tests/providers/test_keenable.py::test_live_keyless_options_shape_the_results",
+    "include_domains": "live: tests/providers/test_keenable.py::test_live_keyless_options_shape_the_results",
+    "recency": "live: tests/providers/test_keenable.py::test_live_keyless_effort_and_recency_reach_keenable",
+    "effort": "live: tests/providers/test_keenable.py::test_live_keyless_effort_and_recency_reach_keenable"
   },
   "vendor_options": {
-    "mode": {
-      "status": "passthrough",
-      "note": "pro | realtime."
-    },
-    "site": {
-      "status": "passthrough",
-      "note": "One site to restrict results to; subdomains match, a leading www. is ignored, and a path narrows further (github.com/microsoft). A candidate for a single-domain include_domains."
-    },
     "acquired_after": {
       "status": "passthrough",
-      "note": "Date, ISO 8601 timestamp or relative delta such as 7d."
+      "note": "When Keenable indexed a page, not when it was published, so not recency. Date, ISO 8601 timestamp or relative delta such as 7d."
     },
     "acquired_before": {
-      "status": "passthrough",
-      "note": "Date, ISO 8601 timestamp or relative delta such as 7d."
-    },
-    "published_after": {
       "status": "passthrough",
       "note": "Date, ISO 8601 timestamp or relative delta such as 7d."
     },
@@ -69,10 +101,6 @@
     "query_time": {
       "status": "passthrough",
       "note": "A date or ISO 8601 timestamp: searches the index as it stood then. Not a recency filter."
-    },
-    "snippet_max_length": {
-      "status": "passthrough",
-      "note": "180-10000 characters."
     },
     "disable_cards": {
       "status": "passthrough",

@@ -5,10 +5,10 @@ web-router uses a handful of fields of these APIs, which an SDK dependency would
 not simplify. Install with the ``search``, ``research`` or ``answer`` extra. Reads ``PARALLEL_API_KEY`` unless a key
 is passed explicitly.
 
-Search calls ``/v1/search`` with ``mode="fast"``, and maps only ``max_results``,
-under ``advanced_settings``. Everything else is reachable through
-``provider_options``, merged into ``advanced_settings`` rather than replacing it;
-mapping one properly is a welcome PR -- see CONTRIBUTING.md.
+Search calls ``/v1/search`` with ``mode="fast"`` unless ``effort`` picks another
+mode, and maps ``max_results``, ``search_depth``, the domain filters, ``country``
+and ``recency`` under ``advanced_settings``. Everything else is reachable through
+``provider_options``, merged into ``advanced_settings`` rather than replacing it.
 """
 
 from __future__ import annotations
@@ -30,6 +30,9 @@ from web_router.constants import (
     PROVIDER_PARALLEL,
 )
 from web_router.constants_parallel import (
+    MSG_PARALLEL_COUNTRY,
+    MSG_PARALLEL_DOMAINS,
+    MSG_PARALLEL_TURBO_PATHS,
     PARALLEL_ADVANCED_NAMES,
     PARALLEL_ADVANCED_SETTINGS,
     PARALLEL_ANSWER_API_KEY_HEADER,
@@ -40,12 +43,18 @@ from web_router.constants_parallel import (
     PARALLEL_ANSWER_ROLE,
     PARALLEL_ANSWER_TRUNCATED,
     PARALLEL_ANSWER_WHOLE_FIELD,
+    PARALLEL_DOMAIN_LIMIT,
+    PARALLEL_EXCERPT_CHARS,
+    PARALLEL_LOCATIONS,
+    PARALLEL_MODE_BY_EFFORT,
     PARALLEL_SEARCH_MODE,
     PARALLEL_SEARCH_PARAMETERS,
     PARALLEL_SEARCH_PATH,
 )
+from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
 from web_router.providers._utils import as_snippet, build_payload, compact
+from web_router.providers._value_refusals import RefusesValues
 from web_router.types import (
     Citation,
     ResearchProgress,
@@ -106,11 +115,25 @@ def _merged(ours: dict[str, Any], theirs: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
-class ParallelProvider(HttpSearchProvider):
-    """Routes searches to the Parallel Search API."""
+class ParallelProvider(RefusesValues, HttpSearchProvider):
+    """Routes searches to the Parallel Search API.
+
+    ``search_depth`` caps the excerpts each result carries, and ``deep`` is
+    refused: they are an upper bound chosen for the query, never the whole
+    page. ``effort`` picks the mode. Parallel would ignore ``exclude_domains``
+    beside ``include_domains`` and a country outside its list, so both are
+    refused.
+    """
 
     name: ClassVar[str] = PROVIDER_PARALLEL
     supported_parameters: ClassVar[frozenset[str]] = PARALLEL_SEARCH_PARAMETERS
+    depth_levels = frozenset(PARALLEL_EXCERPT_CHARS)
+    refusal_reasons: ClassVar[dict[str, str]] = {
+        "include_domains": MSG_PARALLEL_DOMAINS,
+        "exclude_domains": MSG_PARALLEL_DOMAINS,
+        "country": MSG_PARALLEL_COUNTRY,
+        "effort": MSG_PARALLEL_TURBO_PATHS,
+    }
 
     base_url: ClassVar[str] = PARALLEL_BASE_URL
     search_path: ClassVar[str] = PARALLEL_SEARCH_PATH
@@ -125,7 +148,7 @@ class ParallelProvider(HttpSearchProvider):
             request,
             objective=request.query,
             search_queries=[request.query],
-            mode=PARALLEL_SEARCH_MODE,
+            mode=PARALLEL_MODE_BY_EFFORT[request.effort] if request.effort else PARALLEL_SEARCH_MODE,
             advanced_settings=settings or None,
         )
         # build_payload lets provider_options replace a field whole; here that
@@ -139,7 +162,37 @@ class ParallelProvider(HttpSearchProvider):
     @staticmethod
     def _advanced_settings(request: SearchRequest) -> dict[str, Any]:
         """The options /v1/search takes under ``advanced_settings``, unset ones left out."""
-        return compact({theirs: getattr(request, ours) for ours, theirs in PARALLEL_ADVANCED_NAMES.items()})
+        since = recency_start(request.recency)
+        source_policy = compact(
+            {
+                "include_domains": request.include_domains,
+                "exclude_domains": request.exclude_domains,
+                "after_date": since.isoformat() if since else None,
+            }
+        )
+        excerpts = PARALLEL_EXCERPT_CHARS.get(request.search_depth) if request.search_depth else None
+        return compact(
+            {
+                **{theirs: getattr(request, ours) for ours, theirs in PARALLEL_ADVANCED_NAMES.items()},
+                "source_policy": source_policy or None,
+                "excerpt_settings": {"max_chars_per_result": excerpts} if excerpts else None,
+                "location": request.country.lower() if request.country else None,
+            }
+        )
+
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        refused: dict[str, Any] = {}
+        include, exclude = request.include_domains or [], request.exclude_domains or []
+        if len(include) > PARALLEL_DOMAIN_LIMIT:
+            refused["include_domains"] = include
+        if exclude and (include or len(exclude) > PARALLEL_DOMAIN_LIMIT):
+            refused["exclude_domains"] = exclude
+        if request.country is not None and request.country.lower() not in PARALLEL_LOCATIONS:
+            refused["country"] = request.country
+        if request.effort == "low" and any("/" in domain for domain in [*include, *exclude]):
+            refused["effort"] = request.effort
+        return refused
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         return SearchResponse(
