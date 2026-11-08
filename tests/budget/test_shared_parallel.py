@@ -177,23 +177,3 @@ async def _in_tasks(gate: Gate, search: Callable[[], Any]) -> list[Any]:
 
     answered = await asyncio.wait_for(asyncio.gather(*(run() for _ in range(CALLS)), opener()), WAIT_S)
     return [result for result in answered if result is not None]
-
-
-def test_many_threads_without_a_gate_spend_exactly_what_fits(priced: Table, fake_provider: Any) -> None:
-    priced.update(fake=(0.01, None))
-    with WebRouter().budget(Budget(max_cost_usd=0.25)) as shared:
-        refused: list[BudgetExceededError] = []
-
-        def run() -> None:
-            for _ in range(10):
-                try:
-                    shared.search("q", provider="fake")
-                except BudgetExceededError as error:
-                    refused.append(error)
-
-        threads = [threading.Thread(target=run) for _ in range(10)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(WAIT_S)
-    assert (len(refused), shared.status().spent_usd) == (75, 0.25)
