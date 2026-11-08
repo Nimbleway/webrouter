@@ -10,15 +10,26 @@ from __future__ import annotations
 from typing import Literal
 
 SearchDepth = Literal["lite", "fast", "deep"]
-"""How much page content to retrieve per result.
+"""How much page text comes back per result, by size.
 
-- ``lite``: title, URL and description only — cheapest, best at high volume.
-- ``fast``: a truncated page body, enough for most agent reasoning.
-- ``deep``: full page content; slowest and most expensive.
+- ``lite``: a snippet of up to about 500 characters -- cheapest, best at high volume.
+- ``fast``: a truncated page body of a few thousand characters, enough for most agent reasoning.
+- ``deep``: the whole page; slowest and most expensive.
 
-Providers express this differently; each one maps these three levels onto its
-own vocabulary.
+The sizes are the contract: each backend maps a level onto its own vocabulary
+only where what comes back fits it. A backend whose longest body is shorter
+than a page refuses ``deep`` rather than quietly returning less, and one with
+no snippet-sized setting refuses ``lite``. How hard the backend searches is
+``effort``, a separate option.
 """
+
+SEARCH_DEPTH_DESCRIPTION = (
+    "How much page text comes back per result: 'lite' a snippet of up to about 500 characters, 'fast' a truncated "
+    "body of a few thousand, 'deep' the whole page, and the slowest. A backend that cannot return a level's size "
+    "refuses that level rather than returning less."
+)
+"""What ``search_depth`` means, in the request model and the MCP schema alike."""
+
 
 ResearchEffort = Literal["low", "medium", "high", "max"]
 """How much work a research run, or a search, should do before answering.

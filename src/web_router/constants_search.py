@@ -31,10 +31,7 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "search_depth": {
         "type": "string",
         "enum": list(get_args(SearchDepth)),
-        "description": (
-            "How much page text to retrieve per result: 'lite' is links and descriptions only, "
-            "'fast' a truncated body, 'deep' the full page and the slowest."
-        ),
+        "description": described(SearchRequest, "search_depth"),
     },
     "include_domains": {
         "type": "array",

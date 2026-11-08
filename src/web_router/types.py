@@ -23,7 +23,7 @@ from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
 from web_router.types_decision import DecisionRecord as DecisionRecord
-from web_router.types_options import RECENCY_DESCRIPTION, SEARCH_EFFORT_DESCRIPTION
+from web_router.types_options import RECENCY_DESCRIPTION, SEARCH_DEPTH_DESCRIPTION, SEARCH_EFFORT_DESCRIPTION
 from web_router.types_options import Recency as Recency
 from web_router.types_options import ResearchEffort as ResearchEffort
 from web_router.types_options import SearchDepth as SearchDepth
@@ -160,7 +160,7 @@ class SearchRequest(NormalizedRequest):
 
     query: Annotated[str, Field(min_length=1, description="The search query.")]
     max_results: Annotated[int | None, Field(default=None, ge=1, description=MAX_RESULTS_DESCRIPTION)] = None
-    search_depth: SearchDepth | None = Field(default=None, description="How much page content to retrieve.")
+    search_depth: SearchDepth | None = Field(default=None, description=SEARCH_DEPTH_DESCRIPTION)
     include_domains: list[str] | None = Field(default=None, description="Restrict results to these domains.")
     exclude_domains: list[str] | None = Field(default=None, description="Drop results from these domains.")
     country: str | None = Field(default=None, description="Country code for geo-targeting, e.g. 'US'.")
