@@ -65,3 +65,5 @@ told safely, and what follows it may be its query. The URL finder, ``web_router.
 pattern on purpose: it finds URLs to fetch, this one URLs to hide."""
 HOST_CHARS = r"[A-Za-z0-9.-]+"
 """What a shown host keeps: a host parsed out of free text stops at the first character a hostname cannot hold."""
+MSG_PARAM_PRICED = "{id} with {key}={value}"
+"""How a refused router option names what was priced; :data:`~web_router.constants_budget.FIT_REASONS` words why."""

@@ -77,7 +77,7 @@ def test_rule_5_an_option_is_kept_only_when_every_backend_in_the_order_takes_it(
 def test_rule_5_an_unknown_price_never_fits_a_cost_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     from web_router import prices
 
-    monkeypatch.setattr(prices, "estimate", lambda *_: None)
+    monkeypatch.setattr(prices, "price", lambda *_: None)
     budget = Budget(max_cost_usd=100.0)
     decision = RouteDecision(params={"search": {"search_depth": "lite"}}, exclude=NO_UNDECLARED)
     merged = merge_with(decision, pinned="search", budget=budget)

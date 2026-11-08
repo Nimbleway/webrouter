@@ -83,17 +83,15 @@ def test_a_cost_cap_drops_unknown_prices(keys: pytest.MonkeyPatch) -> None:
     assert "search:brave" in ids(found)
 
 
-def test_research_without_effort_is_priced_at_its_default_effort(keys: pytest.MonkeyPatch) -> None:
+def test_research_without_effort_is_priced_at_its_default_effort_while_it_fits(keys: pytest.MonkeyPatch) -> None:
     set_keys(keys, "linkup")
     request = {"research": ResearchRequest(query="q")}
     assert estimate("linkup", "research") == 1.5  # its default, high
     roomy = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=2.0))
     assert one(roomy, "research:linkup").est_cost_usd == 1.5
-    # A cheaper effort would fit $1, but choosing one is the budget mapping's job: here it is dropped.
-    assert estimate("linkup", "research", "low") == 0.25
+    # Under $1 the default does not fit, but measured low ($0.25) does: Linkup stays a candidate, at low.
     tight = build_candidates(WebRouter(), request, budget=Budget(max_cost_usd=1.0))
-    assert ids(tight) == []
-    assert tight.dropped["research:linkup"].startswith("estimated $1.5")
+    assert one(tight, "research:linkup").est_cost_usd == estimate("linkup", "research", "low") == 0.25
 
 
 def test_provider_options_make_the_price_unknown_under_a_cost_cap(keys: pytest.MonkeyPatch) -> None:
@@ -104,15 +102,15 @@ def test_provider_options_make_the_price_unknown_under_a_cost_cap(keys: pytest.M
     assert "no known price" in found.dropped["search:brave"]
 
 
-def test_provider_options_keep_the_estimate_with_no_cost_cap_and_mark_it_unmeasured(keys: pytest.MonkeyPatch) -> None:
+def test_provider_options_make_the_price_unknown_with_no_cost_cap_too_and_mark_it_unmeasured(
+    keys: pytest.MonkeyPatch,
+) -> None:
     set_keys(keys, "brave")
     plain = build_candidates(WebRouter(), {"search": SearchRequest(query="q")})
     assert "search:brave" not in plain.unmeasured
     request = {"search": SearchRequest(query="q", provider_options={"extra_snippets": True})}
-    found = build_candidates(WebRouter(), request)
-    brave = one(found, "search:brave")
-    assert brave.est_cost_usd == estimate("brave", "search")
-    assert brave.est_latency_s is not None  # no cap: the row's figures stay, marked unmeasured
+    brave = one(found := build_candidates(WebRouter(), request), "search:brave")
+    assert (brave.est_cost_usd, brave.est_latency_s) == (None, None), "priced and timed as the ledger reads it"
     assert "search:brave" in found.unmeasured
 
 
@@ -122,8 +120,8 @@ def test_research_with_a_pinned_effort_is_priced_at_that_effort(keys: pytest.Mon
     budget = Budget(max_cost_usd=1.0)
     pinned = build_candidates(WebRouter(), {"research": ResearchRequest(query="q", effort="low")}, budget=budget)
     assert one(pinned, "research:linkup").est_cost_usd == 0.25
-    unpinned = build_candidates(WebRouter(), {"research": ResearchRequest(query="q")}, budget=budget)
-    assert unpinned.dropped["research:linkup"].startswith("estimated $1.5")
+    high = build_candidates(WebRouter(), {"research": ResearchRequest(query="q", effort="high")}, budget=budget)
+    assert high.dropped["research:linkup"].startswith("estimated $1.5")
 
 
 def test_a_time_cap_drops_a_known_p90_that_does_not_fit(keys: pytest.MonkeyPatch) -> None:

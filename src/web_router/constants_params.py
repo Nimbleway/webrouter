@@ -49,9 +49,7 @@ MSG_EFFORT_CHOSEN = (
     "{floor:.1f}-point noise floor of the most accurate one that fits the budget, {best} ({best_accuracy:.1%})"
 )
 
-MODE_NAMES = {"research": "effort", "search": "depth"}
-"""What a budget-checked mode is called, per method, in the misfit messages."""
-MSG_MISFIT_UNKNOWN_PRICE = "{tool}:{provider} at {mode_name} {mode} has no known price, so it never fits a cost cap"
-MSG_MISFIT_COST = "{tool}:{provider} at {mode_name} {mode} is estimated at ${cost:g}, over the ${cap:g} cost cap"
-MSG_MISFIT_TIME = "{tool}:{provider} at {mode_name} {mode} has a p90 of {p90:g}s, over the {cap:g}s time limit"
-MSG_MISFIT_STRICT = "{tool}:{provider} at {mode_name} {mode} has no measured p90, and the budget is strict"
+MSG_EFFORT_PRICED = "research:{provider} at effort {effort}"
+"""How a misfit names the effort it priced (:data:`~web_router.constants_budget.FIT_REASONS` words the rest)."""
+PRICED_QUERY = "-"
+"""The query of the request an effort is priced on: research is priced by backend and effort, never by its query."""

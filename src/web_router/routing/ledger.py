@@ -4,8 +4,8 @@ Experimental. :func:`~web_router.routing.budget.budget_scope` keeps one per
 call and asks :meth:`Ledger.admit` before every attempt, ``auto``'s members
 and a named backend alike.
 
-Money is always an estimate: each attempt is charged its list price from
-:mod:`web_router.prices` when it starts, whether it then answers or fails,
+Money is always an estimate: each attempt is charged its list price by
+:mod:`.pricing`'s rule when it starts, whether it then answers or fails,
 since a failed call may still bill. Under a cost cap a candidate whose price
 is unknown -- no row, ``unknown``, or billed by tokens -- never runs; with no
 cost cap it runs and the record names it unmeasured. Time is the call's
@@ -23,22 +23,26 @@ import time
 from dataclasses import dataclass, field
 
 from web_router.constants_budget import (
-    COST_TOLERANCE_USD,
+    OVER_COST,
+    OVER_TIME,
     SKIP_LATENCY_UNKNOWN,
     SKIP_NO_TIME,
     SKIP_OVER_COST,
     SKIP_OVER_SHARED,
     SKIP_OVER_TIME,
     SKIP_PRICE_UNKNOWN,
+    UNKNOWN_P90,
+    UNKNOWN_PRICE,
 )
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
-from web_router.routing.contract import Budget
-from web_router.routing.estimates import attempt_cost, attempt_p90
+from web_router.routing.contract import Budget, candidate_id
 from web_router.routing.pool import PoolChain
+from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
 from web_router.types import DecisionAttempt, DecisionHop, DecisionRecord
+
+_SKIPS = {UNKNOWN_PRICE: SKIP_PRICE_UNKNOWN, UNKNOWN_P90: SKIP_LATENCY_UNKNOWN}
 
 
 def _usd(value: float) -> str:
@@ -83,14 +87,14 @@ class Ledger:
         ``reserve`` is true for the call's own attempts, which it also reserves
         in the shared budget; a nested call's attempt counts only toward the cap.
         """
-        name = f"{attempt.tool}{CANDIDATE_ID_SEPARATOR}{attempt.provider}"
+        name = candidate_id(attempt.tool, attempt.provider)
         cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
         with self._lock:
             if self.closed:
                 return True
             if (cost is None or p90 is None) and name not in self.unmeasured:
                 self.unmeasured.append(name)
-            reason = self._over_cost(cost) or self._over_time(p90) or (self._unreserved(cost) if reserve else None)
+            reason = self._misfit(cost, p90) or (self._unreserved(cost) if reserve else None)
             if reason is not None:
                 self.skipped[name] = reason
                 return False
@@ -112,17 +116,6 @@ class Ledger:
             self.closed = True
             return self.reserved
 
-    def _over_cost(self, cost: float | None) -> str | None:
-        cap = self.budget.max_cost_usd
-        if cap is None:
-            return None
-        if cost is None:
-            return SKIP_PRICE_UNKNOWN
-        left = cap - self.spent
-        if cost > left + COST_TOLERANCE_USD:
-            return SKIP_OVER_COST.format(cost=_usd(cost), left=_usd(max(left, 0.0)))
-        return None
-
     def _unreserved(self, cost: float | None) -> str | None:
         """Why the shared budget refused to reserve ``cost``, or ``None`` once reserved (or with no pool)."""
         if self.pool is None or cost is None:
@@ -133,18 +126,21 @@ class Ledger:
             return None
         return SKIP_OVER_SHARED.format(cost=_usd(cost), left=_usd(max(left, 0.0)))
 
-    def _over_time(self, p90: float | None) -> str | None:
-        if self.budget.time_limit_s is None:
-            return None
-        deadline = current_deadline()
-        left = self.budget.time_limit_s if deadline is None else deadline.left()
-        if left <= 0:
+    def _misfit(self, cost: float | None, p90: float | None) -> str | None:
+        """Why the attempt does not fit what is left of the money and the time, worded for the record."""
+        cap, time_left = self.budget.max_cost_usd, self.budget.time_limit_s
+        cost_left = None if cap is None else cap - self.spent
+        if time_left is not None and (deadline := current_deadline()) is not None:
+            time_left = deadline.left()
+        code = misfit(cost, p90, cost_left, None, False)  # cost first, as it is the one that is spent
+        if code is None and time_left is not None and time_left <= 0:
             return SKIP_NO_TIME
-        if p90 is None:
-            return SKIP_LATENCY_UNKNOWN if self.budget.strict else None
-        if p90 > left:
-            return SKIP_OVER_TIME.format(p90=p90, left=left)
-        return None
+        code = code or misfit(None, p90, None, time_left, self.budget.strict)
+        if code == OVER_COST:
+            return SKIP_OVER_COST.format(cost=_usd(cost or 0.0), left=_usd(max(cost_left or 0.0, 0.0)))
+        if code == OVER_TIME:
+            return SKIP_OVER_TIME.format(p90=p90, left=time_left)
+        return None if code is None else _SKIPS[code]
 
     def refusal(self) -> BudgetExceededError:
         """The error for a call that started nothing: every candidate skipped, each with its reason."""

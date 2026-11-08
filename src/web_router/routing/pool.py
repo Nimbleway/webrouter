@@ -41,9 +41,10 @@ from contextlib import ExitStack
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
 
-from web_router.constants_budget import COST_TOLERANCE_USD, STATUS_DIGITS
+from web_router.constants_budget import STATUS_DIGITS
 from web_router.routing.contract import Budget
 from web_router.routing.pool_status import BudgetStatus
+from web_router.routing.pricing import over_cost
 
 _ORDER = itertools.count()
 """Every pool's place in the one order locks are taken in, so two chains never wait on each other."""
@@ -146,7 +147,7 @@ class PoolChain:
                 held.enter_context(pool._lock)
             for pool in self.pools:
                 left = pool._left()
-                if left is not None and cost > left + COST_TOLERANCE_USD:
+                if left is not None and over_cost(cost, left):
                     return left
             for pool in self.pools:
                 pool._reserved += cost
