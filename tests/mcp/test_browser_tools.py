@@ -521,7 +521,7 @@ async def test_an_open_whose_session_cannot_be_read_releases_it(
     def unparseable(cdp_url: str) -> Any:
         raise ValueError("Invalid IPv6 URL")
 
-    monkeypatch.setattr(browsers_module.UrlPolicy, "for_session", unparseable)
+    monkeypatch.setattr(browsers_module.NavigationPolicy, "for_session", unparseable)
 
     with pytest.raises(ValueError, match="IPv6"):
         await session.browsers.open(lambda: _provider(session).aopen(BrowserRequest()))
