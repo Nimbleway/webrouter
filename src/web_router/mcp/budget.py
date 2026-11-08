@@ -41,6 +41,7 @@ from web_router.constants_mcp import (
     MCP_PRICE_RUN_TEMPLATE,
     MCP_TOOL_BUDGET_START,
 )
+from web_router.providers._deadline import current_deadline
 from web_router.providers.auto_browser import AutoBrowserProvider
 from web_router.routing.attempts import Attempt
 from web_router.routing.budget import budget_scope
@@ -102,13 +103,14 @@ class ConnectionBudget:
             return None
         now, total = self.task.status(), self.connection.status()
         ends, left = chain.expires_at(), chain.time_left()
-        caps = [pool.budget.max_cost_usd for pool in chain.pools if pool.budget.max_cost_usd is not None]
+        usd = chain.left()
         return {
-            "max_cost_usd": min(caps) if caps else None,
+            # The task's cap cut to what the ceiling has left: what it has spent and holds, and what is left.
+            "max_cost_usd": None if usd is None else round(now.spent_usd + now.reserved_usd + usd, STATUS_DIGITS),
             "time_limit_s": None if ends is None else round(max(0.0, ends - self.task.started), 3),
             "spent_usd": now.spent_usd,
             "reserved_usd": now.reserved_usd,
-            "remaining_usd": None if (usd := chain.left()) is None else round(usd, STATUS_DIGITS),
+            "remaining_usd": None if usd is None else round(usd, STATUS_DIGITS),
             "elapsed_s": round(now.elapsed_s, 3),
             "time_left_s": None if left is None else round(left, 3),
             "connection": {"spent_usd": total.spent_usd, "reserved_usd": total.reserved_usd},
@@ -137,10 +139,10 @@ def charged(method: str, providers: Sequence[str], request: NormalizedRequest, r
 
 
 def wait_left(wait: float) -> float:
-    """``wait``, cut to the time the budget in force has left, so a job tool never waits past the deadline."""
-    chain = chain_in_force(None)
-    left = None if chain is None else chain.time_left()
-    return wait if left is None else min(wait, left)
+    """``wait``, cut to the time the budget and the call's deadline in force have left, so it never outlasts either."""
+    chain, deadline = chain_in_force(None), current_deadline()
+    lefts = [chain.time_left() if chain else None, max(0.0, deadline.left()) if deadline else None]
+    return min([wait, *(left for left in lefts if left is not None)])
 
 
 def positive_limit(arguments: Mapping[str, Any], name: str, tool: str = MCP_TOOL_BUDGET_START) -> float:

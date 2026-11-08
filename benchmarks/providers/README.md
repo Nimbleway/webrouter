@@ -95,12 +95,16 @@ estimate, to break ties.
 After the overall table the report suggests an order for `auto`'s search
 chain: the plain backends ranked by [route-eval](#route-eval-replaying-a-router)'s
 rule -- correct answers out of every question; within the noise floor, the
-cheaper backend at list price first, then the faster; the keyless tier last --
+cheaper backend first (the cost a row states, else its list price), then the faster; the keyless tier last --
 each within the noise floor of the most accurate one marked *best, within the
 noise floor* wherever the tie-break put it, and of the rest each marked
 *behind* when its 95% interval stops short of the most accurate one's and *not
 shown apart* otherwise. It is the same ranking route-eval
-prints, so the repository never suggests two orders.
+prints, over the same rows, so the repository never suggests two orders: each
+row is classed as the frozen sets class it, a search that failed on a rate-limit
+or quota error is left out (not a miss, nor in the backend's total) and counted
+in the table's *Rate limit or quota* column, and the latency tie-break is the
+median over every served row, one the judge did not grade included.
 Depth and mode setups (`nimble@deep`, `tavily:ultra-fast`) are left out, since
 a chain member is a backend that `auto` sends whatever depth the request asks
 for, not a mode. It ends with a snippet to paste into your own router:

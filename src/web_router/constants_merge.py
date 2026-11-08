@@ -40,6 +40,7 @@ NOTE_EXTRACT_URLS = "params.extract.urls"
 """The note for the router's extract URLs when they were refused and the call searches instead."""
 
 MSG_UNKNOWN_ID = "{id} is not a candidate for this call"
+MSG_EXCLUDE_NO_REASON = "{id} was excluded with no reason, so the exclusion was ignored"
 MSG_UNKNOWN_TOOL = "{tool} is not a method a router can choose"
 MSG_TOOL_NO_CANDIDATE = (
     "{tool} was set aside: no candidate is left for it, since none was offered for this call (the budget or the "
@@ -56,9 +57,9 @@ MSG_PARAM_UNDECLARED = "{tool}:{provider} does not take {key}"
 MSG_PARAM_UNCHECKED = "{tool}:{provider} could not be checked for {key}: {error}"
 URL_HIDDEN = "<url>"
 """How a URL with no scheme or host shows in a record: the URL itself never does."""
-URL_IN_TEXT = r"(?:[A-Za-z][A-Za-z0-9+.-]*:)?//[^\s\"`]+"
+URL_IN_TEXT = r"(?:[A-Za-z][A-Za-z0-9+.-]*:)?//\S+"
 """A URL inside free text, such as a router's reason: from its scheme, or from any ``//`` as a scheme-relative
-URL, wherever it stands, up to whitespace, a double quote or a backtick. All of it is replaced by its
+URL, wherever it stands, up to whitespace, quotes included. All of it is replaced by its
 scheme and host, so nothing after the host survives, brackets and punctuation included: a URL's end cannot be
 told safely, and what follows it may be its query. The URL finder, ``web_router._urls``, has its own
 pattern on purpose: it finds URLs to fetch, this one URLs to hide."""

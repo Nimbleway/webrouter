@@ -83,9 +83,9 @@ def test_with_no_effort_from_the_router_the_budget_maps_one(sent: list[Any], mon
 @pytest.mark.usefixtures("called")
 def test_the_budget_maps_no_option_on_any_other_method(tool: _Tool, monkeypatch: pytest.MonkeyPatch) -> None:
     from tests.routing_helpers import wr
-    from web_router.routing import candidates
+    from web_router.routing import candidates, effort_call
 
-    monkeypatch.setattr(candidates, "shared_effort", lambda *_: pytest.fail("only research has an effort"))
+    monkeypatch.setattr(effort_call, "shared_effort", lambda *_: pytest.fail("only research has an effort"))
     found = candidates.build_candidates(wr(), {tool.name: tool.request}, budget=Budget(time_limit_s=60.0))  # type: ignore[dict-item]
     assert found.effort is None
 

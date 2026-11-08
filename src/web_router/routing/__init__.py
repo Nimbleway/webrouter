@@ -21,9 +21,10 @@ Each part of routing has its own module: :mod:`.contract` the types,
 :mod:`.candidates` the candidates a call offers, :mod:`.invoke` attaching and
 calling a router, :mod:`.merge` turning its decision into an order,
 :mod:`.budget` holding a call to its budget, :mod:`.params` the options a
-budget sets, :mod:`.pricing` what an attempt costs and takes, :mod:`.decide`
-the merged decision a call runs with, :mod:`.url_policy` the URLs a call may
-send, and :mod:`.attempts` the seam in ``auto``'s fallback loops.
+budget sets, :mod:`.effort_table` the research effort table they read,
+:mod:`.pricing` what an attempt costs and takes, :mod:`.decide` the merged
+decision a call runs with, :mod:`.url_policy` the URLs a call may send, and
+:mod:`.attempts` the seam in ``auto``'s fallback loops.
 """
 
 from web_router.routing.contract import Budget, Candidate, Plan, RouteDecision, RouteRequest, ToolName

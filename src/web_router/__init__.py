@@ -49,7 +49,6 @@ from web_router.exceptions import (
     BrowserActionError,
     BrowserActionTimeoutError,
     BrowseTimeoutError,
-    BudgetExceededError,
     ConfigurationError,
     DeadlineExceededError,
     ElementNotFoundError,
@@ -68,6 +67,7 @@ from web_router.exceptions import (
     UnsupportedParameterError,
     WebRouterError,
 )
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -114,7 +114,7 @@ from web_router.registry_answer import (
     unregister_answer_provider,
 )
 from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, RouterLike, ToolName
-from web_router.routing.pool import BudgetStatus
+from web_router.routing.pool_status import BudgetStatus
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,

@@ -90,7 +90,8 @@ from web_router.registry import (
 )
 from web_router.registry_answer import every_provider_name
 from web_router.routing import Budget, RouterLike, ToolName
-from web_router.routing.routed import RouterSetup, asubmitted, submitted
+from web_router.routing.routed import RouterSetup
+from web_router.routing.submitted import asubmitted, submitted
 from web_router.routing.url_policy import UrlPolicy
 from web_router.types import (
     BrowseResponse,
@@ -539,11 +540,9 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
     ) -> ResearchJob:
         """Start a research run and hand back the job, without waiting for it.
 
-        The same call as :meth:`research` up to the point the backend accepts
-        the run. What comes back polls with
-        :meth:`~web_router.ResearchJob.status` and blocks with
-        :meth:`~web_router.ResearchJob.result`, so a caller with something else
-        to do can go and do it.
+        The same call as :meth:`research` up to the point the backend accepts the run. What comes back
+        polls with :meth:`~web_router.ResearchJob.status` and blocks with :meth:`~web_router.ResearchJob.result`,
+        so a caller with something else to do can go and do it.
         """
         request = build_research_request(
             query,

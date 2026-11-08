@@ -110,11 +110,9 @@ from web_router.providers._chain import (
     _ChainSpec,
     _empty_extract,
     _empty_search,
-    _held_or_late,
     _held_or_raise,
     _keyed_chain,
     _keyless_after,
-    _late_answer,
     _member_options,
     _members_and_chain,
     _no_backend,
@@ -122,6 +120,7 @@ from web_router.providers._chain import (
     _quoted,
     _valued,
 )
+from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers.auto_browser import AutoBrowserProvider as AutoBrowserProvider
 from web_router.providers.base import (
     BrowseJob,

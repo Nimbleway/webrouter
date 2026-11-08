@@ -247,12 +247,11 @@ method's own tool output (`search`'s, `extract`'s, ...) with `tool`, the
 method that ran, a `handle` for `fetch_raw`, and the `decision` record.
 `dry_run=true` returns the plan alone and calls nothing. `max_cost_usd` and
 `time_limit_s` cap that one call, planning included, within the budget
-below; each must be a positive, finite number. A job still running when that cap's time runs out
-comes back as a handle too. When the router
-picks `research` or `browse`, `web_run` waits as those tools do, 25 seconds,
-and then hands back a handle for `research_status` or `browse_status` with the
-run still going, never losing a run that bills. The other tools
-are unchanged: `search`, `extract` and the rest never ask the router.
+below; each must be a positive, finite number. When the router picks
+`research` or `browse`, `web_run` waits as those tools do, 25 seconds or less
+if its own `time_limit_s` or the budget has less left, and then hands back a
+handle for `research_status` or `browse_status`. The other tools are
+unchanged: `search`, `extract` and the rest never ask the router.
 
 The router is set by the operator, once, when the server starts:
 
@@ -262,6 +261,10 @@ The router is set by the operator, once, when the server starts:
   installed -- any form `router=` takes on the library;
 - `WEB_ROUTER_MCP_ROUTER=off` attaches none: `web_run` then plans the static
   order, which is `search`.
+
+`WEB_ROUTER_MCP_ROUTER` imports and runs your code when the server starts, so
+set it in the server's own process environment, never in a project's config
+or a `.env` file.
 
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
 loopback, private or cloud-metadata host is never fetched or passed to a
@@ -328,8 +331,8 @@ The three variables are read from the server's own process environment, once,
 at startup. No `.env` file and no `load_env` call can set or change them, and a
 value the server cannot read -- an empty one included -- stops it from
 starting rather than leaving the connection without the ceiling you meant. The capabilities resource reports
-all of it under `routing`: the router (`rules`, your `<module>:<attribute>`, or
-`off`), where it runs (`router_runs`: `in_process` for the built-in router or
+all of it under `routing`: the router (`rules`, `operator` for yours -- never
+its `<module>:<attribute>` -- or `off`), where it runs (`router_runs`: `in_process` for the built-in router or
 none, `operator` with a `router_note` for yours), a `prompt_note` saying the
 prompt goes to the backend, the `url_policy` with a `url_policy_note` saying it
 holds for `web_run` alone, the ceiling, and the budget in

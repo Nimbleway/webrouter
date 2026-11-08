@@ -20,7 +20,6 @@ router picks it without URLs.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from contextlib import ExitStack
 from typing import Any
 
@@ -29,16 +28,18 @@ from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS, ONE_PAGE_URL
 from web_router.constants_urls import MSG_PLAN_EXTRACT_NO_URL, MSG_PLAN_EXTRACT_REFUSED
 from web_router.exceptions import MissingParameterError
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers._deadline import call_deadline
-from web_router.routing.attempts import CallRoute, call_route
+from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, base_params, build_candidates, default_requests
-from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
+from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName, candidate_id
 from web_router.routing.decide import decided
+from web_router.routing.eligible import dropped_for_setup
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.pool import limited
 from web_router.routing.record import stamp
-from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted, in_force_with
+from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
 from web_router.routing.url_policy import screened
 from web_router.types import (
     BrowseResponse,
@@ -108,14 +109,37 @@ class _Planner(RouterSetup):
         scope = stack.enter_context(
             recorded(stack.enter_context(budget_scope(budget, plan.tool, chain, request, self)))
         )
-        _ordered(stack, plan.tool, list(plan.providers.get(plan.tool, ())))
+        _ordered(stack, plan)
         return chain, request, scope
 
 
-def _ordered(stack: ExitStack, tool: ToolName, providers: Sequence[str]) -> None:
-    """Put ``providers`` in force as ``tool``'s order beside the budget's hook; none leaves ``auto``'s own."""
-    if providers:
-        stack.enter_context(call_route(in_force_with(CallRoute(order={tool: providers}))))
+def _ordered(stack: ExitStack, plan: Plan) -> None:
+    """Put the plan's order for its method in force beside the budget's hook.
+
+    A plan that names no order for its method, as one made by hand may, leaves ``auto``'s own. An empty order
+    runs nothing: planning left the method no backend. When the budget left them out, that is
+    :class:`~web_router.BudgetExceededError`, naming each, as a budgeted call raises when nothing fits;
+    otherwise ``auto``, offered no member, raises as it does with none to try.
+
+    Raises:
+        BudgetExceededError: for an empty order whose record says the budget dropped the method's backends.
+    """
+    providers = plan.providers.get(plan.tool)
+    if providers is None:
+        return
+    if not providers and (skipped := _budget_dropped(plan)):
+        raise BudgetExceededError(skipped)
+    stack.enter_context(in_route(CallRoute(order={plan.tool: list(providers)})))
+
+
+def _budget_dropped(plan: Plan) -> dict[str, str]:
+    """The candidates of the plan's method its record says the budget left out, each with why."""
+    prefix = candidate_id(plan.tool, "")
+    return {
+        cid: why
+        for cid, why in (plan.decision.dropped or {}).items()
+        if cid.startswith(prefix) and not dropped_for_setup(why)
+    }
 
 
 def _settled(response: Any, plan: Plan) -> Any:

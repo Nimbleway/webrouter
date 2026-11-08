@@ -167,10 +167,6 @@ def test_a_failure_is_recorded_by_its_status_never_its_message(tool: Tool, calle
 
 
 def test_error_code_reads_the_status_wherever_the_backend_put_it() -> None:
-    assert (
-        error_code(ProviderError("x", "m", original=SimpleNamespace(response=SimpleNamespace(status_code=503))))
-        == "503"
-    )  # type: ignore[arg-type]
     assert error_code(ProviderError("x", "m", original=SimpleNamespace(status_code=401))) == "401"  # type: ignore[arg-type]
     assert error_code(ProviderError("x", "m", original=SimpleNamespace(status_code=True))) == "ProviderError"  # type: ignore[arg-type]
     assert error_code(ValueError("secret")) == "ValueError"

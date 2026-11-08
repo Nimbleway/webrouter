@@ -16,9 +16,9 @@ threaded through every provider between the router and the chain.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 from contextvars import ContextVar
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from web_router.routing.contract import ToolName
@@ -77,6 +77,17 @@ def call_route(route: CallRoute) -> Iterator[None]:
 def current_route() -> CallRoute | None:
     """The route in force for the call in flight, or ``None`` when it has none."""
     return _ROUTE.get()
+
+
+def in_force_with(route: CallRoute) -> CallRoute:
+    """``route``'s order, kept with the hook already in force -- the budget's -- so both hold."""
+    in_force = current_route()
+    return route if in_force is None else replace(in_force, order={**in_force.order, **route.order})
+
+
+def in_route(route: CallRoute | None) -> AbstractContextManager[None]:
+    """``route`` in force beside the hook already in force; nothing for a call no router ordered."""
+    return nullcontext() if route is None else call_route(in_force_with(route))
 
 
 def in_call_order(tool: ToolName, eligible: list[tuple[int, str]]) -> list[tuple[int, str]]:
