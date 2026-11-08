@@ -37,7 +37,8 @@ from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.record import prompt_of
 from web_router.routing.url_policy import UrlPolicy, url_check
-from web_router.types import DecisionRecord, NormalizedRequest
+from web_router.types import NormalizedRequest
+from web_router.types_decision import DecisionRecord
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 _RequestT = TypeVar("_RequestT", bound=NormalizedRequest)
