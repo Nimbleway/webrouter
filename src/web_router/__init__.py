@@ -59,6 +59,7 @@ from web_router.exceptions import (
     ProviderNotFoundError,
     ProviderNotInstalledError,
     ResearchTimeoutError,
+    RouterError,
     StaleElementError,
     TemplateNotFoundError,
     UnsupportedFormatError,
@@ -110,7 +111,7 @@ from web_router.registry_answer import (
     register_answer_provider,
     unregister_answer_provider,
 )
-from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, ToolName
+from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, RouterLike, ToolName
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -235,6 +236,8 @@ __all__ = [
     "ResearchTimeoutError",
     "RouteDecision",
     "RouteRequest",
+    "RouterError",
+    "RouterLike",
     "Screenshot",
     "SearchDepth",
     "SearchProvider",
