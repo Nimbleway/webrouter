@@ -29,7 +29,11 @@ class Decided:
     tool: ToolName
     providers: tuple[str, ...]
     params: Mapping[str, Any] = field(default_factory=dict)
+    """Kept whole, to be called with; the ``repr`` shows each URL as its scheme and host only."""
     record: DecisionRecord = field(default_factory=DecisionRecord)
+
+    def __repr__(self) -> str:
+        return f"Decided(tool={self.tool!r}, providers={self.providers!r}, params={shown(self.params)!r})"
 
 
 def static_order(found: CandidateSet) -> dict[ToolName, list[str]]:
