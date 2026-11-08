@@ -1333,19 +1333,18 @@ from web_router import WebRouter
 
 router = WebRouter()
 
-router.vendors(configured=True)                      # the vendors whose keys are set here
+router.vendors(configured=True)  # the vendors whose keys are set here
 router.find_vendor_endpoints("google ads spend by campaign")
-router.vendor_endpoint("google-ads.query")           # inputs, notes, credentials
+router.vendor_endpoint("google-ads.query")  # inputs, notes, credentials
 
 response = router.call_vendor(
     "google-ads.query",
     {
         "customer_id": "1234567890",
-        "query": "SELECT campaign.name, metrics.cost_micros FROM campaign "
-        "WHERE segments.date DURING LAST_30_DAYS",
+        "query": "SELECT campaign.name, metrics.cost_micros FROM campaign WHERE segments.date DURING LAST_30_DAYS",
     },
 )
-response.data                                         # Google's JSON, untouched
+response.data  # Google's JSON, untouched
 
 # A path the catalog does not name, still with the vendor's credentials:
 router.vendor_request("datadog", "GET", "/api/v2/users", query={"page[size]": 10})
