@@ -29,7 +29,7 @@ from web_router.constants_budget import (
     SKIP_PRICE_UNKNOWN,
 )
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
-from web_router.exceptions import BudgetExceededError
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
