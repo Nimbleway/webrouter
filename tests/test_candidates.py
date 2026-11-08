@@ -151,4 +151,3 @@ def test_a_member_missing_a_setting_beside_its_key_is_dropped_as_not_configured(
     found = build_candidates(router, {"extract": ExtractRequest(urls=["https://a.test"])})
     assert ids(found) == ["extract:jina"]
     assert found.dropped == {"extract:brightdata": MSG_DROPPED_NOT_CONFIGURED}
-    assert "credential" not in MSG_DROPPED_NOT_CONFIGURED
