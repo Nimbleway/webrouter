@@ -19,7 +19,7 @@ from web_router import Budget, WebRouter
 from web_router.providers.nimble import NimbleResearchProvider
 from web_router.routing import params
 from web_router.routing.candidates import build_candidates
-from web_router.routing.params import EffortChoice, map_effort
+from web_router.routing.params import map_effort
 from web_router.types import ResearchProgress, ResearchRequest, ResearchResponse
 
 RECORDS = [{"name": "a"}]
@@ -70,10 +70,8 @@ def test_a_plan_offers_the_backend_at_the_effort_it_takes(monkeypatch: pytest.Mo
     assert [c.id for c in found.candidates] == ["research:nimble"]
 
 
-def test_the_shared_effort_is_one_every_backend_in_the_order_takes(monkeypatch: pytest.MonkeyPatch) -> None:
-    picks = {"first": "low", "second": "medium"}
-    monkeypatch.setattr(params, "map_effort", lambda p, *_, **__: EffortChoice(effort=picks[p], source=None, reason=""))
-    monkeypatch.setattr(params, "effort_misfit", lambda *_: None)
-    monkeypatch.setattr(params, "refused", lambda p, e, _request: (p, e) == ("second", "low"))
-    choice = params.shared_effort(list(picks), CAP, ENRICH)
+def test_the_shared_effort_is_one_every_backend_in_the_order_takes(research_backends: Any) -> None:
+    research_backends("first")
+    research_backends("second", refuses=("low",))
+    choice = params.shared_effort(["first", "second"], CAP, ENRICH)
     assert choice is not None and choice.effort == "medium", "second refuses first's low: second's own pick runs"

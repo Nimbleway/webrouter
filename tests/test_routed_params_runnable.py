@@ -12,24 +12,16 @@ from typing import Any
 import pytest
 
 from web_router import Budget
-from web_router.routing import params
-from web_router.routing.params import EffortChoice, shared_effort
+from web_router.routing.params import shared_effort
 
-PRICED = EffortChoice(effort="medium", source="budget", reason="priced")
 CAPPED = Budget(max_cost_usd=1.0)
 
 
-@pytest.fixture(autouse=True)
-def _one_priced_one_not(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``priced`` fits the cap at every effort and picks ``medium``; ``unpriced`` fits at none, its default included."""
-
-    def mapped(provider: str, budget: Budget | None, *, request: Any = None) -> EffortChoice:
-        return PRICED if provider == "priced" else EffortChoice(effort=None, source=None, reason="", misfit="no price")
-
-    monkeypatch.setattr(params, "map_effort", mapped)
-    monkeypatch.setattr(params, "effort_misfit", lambda p, e, b: None if p == "priced" else "no known price")
-
-
 @pytest.mark.parametrize("order", [["unpriced", "priced"], ["priced", "unpriced"]])
-def test_a_backend_that_cannot_run_at_any_effort_does_not_cancel_the_effort(order: list[str]) -> None:
-    assert shared_effort(order, CAPPED) == PRICED
+def test_a_backend_that_cannot_run_at_any_effort_does_not_cancel_the_effort(
+    research_backends: Any, order: list[str]
+) -> None:
+    research_backends("priced")
+    research_backends("unpriced", unpriced=True)
+    choice = shared_effort(order, CAPPED)
+    assert choice is not None and (choice.effort, choice.source) == ("low", "budget"), "priced's own pick runs"
