@@ -359,7 +359,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRoute
         >>> router.extract(response.urls[:3], format="markdown")
 
     ``search``, ``extract``, ``answer``, ``research`` and ``browse`` take ``budget=``, a
-    :class:`~web_router.Budget` (experimental). It is not enforced yet: a call with one runs as one without.
+    :class:`~web_router.Budget` (experimental): see :mod:`web_router.routing.budget` for how it holds the call.
     """
 
     def __init__(

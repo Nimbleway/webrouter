@@ -66,6 +66,7 @@ from web_router.exceptions import (
     UnsupportedParameterError,
     WebRouterError,
 )
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -195,6 +196,7 @@ __all__ = [
     "BrowserSession",
     "BrowserState",
     "Budget",
+    "BudgetExceededError",
     "Candidate",
     "Citation",
     "ConfigurationError",

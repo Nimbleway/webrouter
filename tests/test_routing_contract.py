@@ -11,6 +11,7 @@ import web_router
 from web_router import Budget, Candidate, DecisionRecord, Plan, RouteDecision, RouteRequest, ToolName
 from web_router.routing import attempts
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, in_call_order
+from web_router.routing.budget import budget_scope
 from web_router.types import SearchRequest
 
 
@@ -123,6 +124,16 @@ def test_the_hook_sees_each_attempt_and_its_answer_admits_or_passes_over() -> No
         ("search", "exa", request),
     ]
     assert attempts._ROUTE.get() is None
+
+
+def test_with_no_budget_the_scope_sets_nothing_and_hands_back_what_it_was_given() -> None:
+    from web_router.providers._deadline import current_deadline
+
+    backend, response = object(), SearchRequest(query="q")
+    with budget_scope(None, "search", backend, response) as call:
+        assert (attempts.current_route(), current_deadline()) == (None, None)
+        assert call.backend is backend
+        assert call.settle(response) is response, "with no budget the response is not even copied"
 
 
 def test_a_provider_named_twice_in_the_order_keeps_its_first_place() -> None:

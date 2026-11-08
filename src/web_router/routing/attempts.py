@@ -66,6 +66,11 @@ def call_route(route: CallRoute) -> Iterator[None]:
         _ROUTE.reset(token)
 
 
+def current_route() -> CallRoute | None:
+    """The route in force for the call in flight, or ``None`` when it has none."""
+    return _ROUTE.get()
+
+
 def in_call_order(tool: ToolName, eligible: list[tuple[int, str]]) -> list[tuple[int, str]]:
     """``eligible`` -- ``(position, name)`` pairs in chain order -- in the call's order for ``tool``.
 
