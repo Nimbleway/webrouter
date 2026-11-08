@@ -222,6 +222,8 @@ src/web_router/
     │                   handed back in the order they finished
     ├── _chain.py       what every auto chain is made of: resolving the members,
     │                   the caller's `chain`, what a member's failure means
+    ├── _chain_deadline.py a one-call chain out of time: the first empty
+    │                   answer it holds, else the deadline naming each reason
     ├── auto.py         the default for search, extract, research, browser and
     │                   browse: keyed backends, then keyless (research and browse
     │                   have no keyless tier, so their chains end there; a browser
