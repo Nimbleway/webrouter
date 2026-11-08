@@ -261,6 +261,10 @@ The router is set by the operator, once, when the server starts:
 - `WEB_ROUTER_MCP_ROUTER=off` attaches none: `web_run` then plans the static
   order, which is `search`.
 
+`WEB_ROUTER_MCP_ROUTER` imports and runs your code when the server starts, so
+set it in the server's own process environment, never in a project's config
+or a `.env` file.
+
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
 loopback, private or cloud-metadata host is never sent to a backend. It holds
 for `web_run`'s plans only. The direct `extract` and `browse` tools send the
@@ -311,8 +315,8 @@ The three variables are read from the server's own process environment, once,
 at startup. No `.env` file and no `load_env` call can set or change them, and a
 value the server cannot read -- an empty one included -- stops it from
 starting rather than leaving the connection without the ceiling you meant. The capabilities resource reports
-all of it under `routing`: the router (`rules`, your `<module>:<attribute>`, or
-`off`), where it runs (`router_runs`: `in_process` for the built-in router or
+all of it under `routing`: the router (`rules`, `operator` for yours -- never
+its `<module>:<attribute>` -- or `off`), where it runs (`router_runs`: `in_process` for the built-in router or
 none, `operator` with a `router_note` for yours), a `prompt_note` saying the
 prompt goes to the backend, the `url_policy` with a `url_policy_note` saying it
 holds for `web_run` alone, the ceiling, and the budget in

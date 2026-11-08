@@ -19,6 +19,7 @@ from web_router.constants_budget import SKIP_NO_TIME, SKIP_PRICE_UNKNOWN
 from web_router.constants_mcp import (
     ENV_MCP_ROUTER,
     MCP_ROUTER_OFF,
+    MCP_ROUTER_OPERATOR,
     MCP_TOOL_BUDGET_START,
     MCP_TOOL_BUDGET_STATUS,
     MCP_TOOL_WEB_RUN,
@@ -76,7 +77,7 @@ async def test_the_operator_attaches_a_router_by_module_and_attribute(members: l
     tools = routed(**{ENV_MCP_ROUTER: spec})
     plan = await ok_on(tools, MCP_TOOL_WEB_RUN, prompt=f"read {URL}", dry_run=True)
     assert plan["decision"]["reason"] == "operator"
-    assert tools.capabilities()["routing"]["router"] == spec
+    assert tools.capabilities()["routing"]["router"] == MCP_ROUTER_OPERATOR, "the client never sees the path"
 
 
 # -- no router and no budget ---------------------------------------------------
@@ -97,7 +98,6 @@ async def _record(seen: list[object]) -> dict[str, Any]:
 
 
 ASKED: list[RouteRequest] = []
-SPYING = f"{__name__}:spying"
 
 
 def spying(req: RouteRequest) -> RouteDecision:

@@ -55,6 +55,7 @@ class McpRouting:
 
     router: RouterLike | None = rules
     router_name: str = RULES_ROUTER_NAME
+    """What the capabilities resource names it: ``rules``, ``off``, or ``operator``, never the import path."""
     ceiling: Budget = field(default_factory=Budget)
 
     @classmethod
@@ -73,7 +74,7 @@ class McpRouting:
             return cls(ceiling=ceiling)
         if spec == MCP_ROUTER_OFF:
             return cls(router=None, router_name=MCP_ROUTER_OFF, ceiling=ceiling)
-        return cls(router=_imported(spec), router_name=spec, ceiling=ceiling)
+        return cls(router=_imported(spec), router_name=MCP_ROUTER_OPERATOR, ceiling=ceiling)
 
     def build(self, *args: Any, **kwargs: Any) -> AsyncWebRouter:
         """An :class:`~web_router.AsyncWebRouter` with this router attached for ``plan`` and ``run`` alone."""
