@@ -287,9 +287,9 @@ attempt reserves its estimated list price before it starts, and a call that
 does not fit is refused with `BudgetExceededError` before anything bills. A
 template run is charged its list price; a cloud browser per minute of its
 lifetime (`timeout`), rounded up to whole minutes, on the dearest backend that
-can serve the options asked for. A browser option that can turn on an extra
-billed apart -- a proxy country, stealth, CAPTCHA solving, a profile -- makes a
-paid backend's price unknown. Under a cost cap a backend whose price is
+can serve the options asked for. A browser option that can bill an extra
+charge (a proxy country, stealth, CAPTCHA solving, a profile) makes a paid
+backend's price unknown. Under a cost cap a backend whose price is
 unknown never runs, and the refusal names the unknown price. So `extract` with
 `provider="max"`, which races every member at once and has no price before the
 race, is refused under a cost cap; name a backend or use `auto`. The calls the

@@ -2,8 +2,8 @@
 
 A router is any function that takes a `RouteRequest` and returns a
 `RouteDecision`. This one reads the prompt: a URL in it means extract, and
-"compare", "report" or "analyze" means research, then search when no research
-backend is configured. Anything else gets no opinion -- `tools=None` -- and
+"compare", "report" or "analyze" means research, or search when no research
+backend is configured, and the reason says which. Anything else gets no opinion -- `tools=None` -- and
 the call runs as it would with no router: a search, in `auto`'s order.
 
 It is here to copy and change: add a rule, or rank backends as well as methods.
@@ -39,7 +39,9 @@ def route(req: RouteRequest) -> RouteDecision:
     if req.urls:
         return RouteDecision(tools=["extract"], reason="the prompt names a URL")
     if RESEARCH_WORDS.search(req.prompt):
-        return RouteDecision(tools=["research", "search"], reason="the prompt asks for a comparison or report")
+        if any(candidate.tool == "research" for candidate in req.candidates):
+            return RouteDecision(tools=["research", "search"], reason="the prompt asks for a comparison or report")
+        return RouteDecision(tools=["search"], reason="the prompt asks for a comparison or report; no research backend")
     return RouteDecision(tools=None)  # no opinion: the record says router_empty, and the static order runs
 
 

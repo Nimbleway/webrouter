@@ -1984,17 +1984,20 @@ failed attempt still counts.
   Tavily is priced, $0.008 a search. Keyless Keenable has no price, so a
   cost cap skips it.
 - **Unknown p90.** Under a time cap, a backend with no measured p90 runs
-  within the time left; `strict=True` skips it instead. One whose p90 does not
-  fit the time left is skipped. Research's p90 comes from the effort table
-  first, then the price list.
+  within the time left; `strict=True` skips it instead. Research's p90 comes
+  from the effort table first, then the price list.
+- **A p90 that does not fit.** Under a time cap, a backend whose measured p90 is
+  more than the time left is skipped.
 - **Time cap.** Search, extract and answer stop at it and raise
   `DeadlineExceededError`. Research and browse are capped on the wait, not the
   job: they wait at most `min(timeout, time left)`, then raise
   `ResearchTimeoutError` or `BrowseTimeoutError` with the job id, the job
   still running.
-- **Research effort.** A budgeted research call runs at one `effort`, chosen
-  once, before the router is asked, to fit every backend it may try and to be
-  one each of them takes for the request (Nimble refuses `low` on an
+- **Research effort.** Under a cost or time cap, a research call with no
+  `effort` set runs at the cheapest measured effort whose accuracy is within
+  the noise floor of the best measured effort that fits the budget left. It is
+  chosen once, before the router is asked, to fit every backend it may try and
+  to be one each of them takes for the request (Nimble refuses `low` on an
   enrichment, so a $0.10 cap runs it at `medium`); its candidates are priced
   at it. That holds on `auto` or a named backend, routed or not, for
   `plan()`/`run()` and for `submit_research`. With no effort that fits and
@@ -2010,8 +2013,8 @@ with wr.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
     b.status()  # spent, reserved, remaining, elapsed, time left
 ```
 
-Every `search`, `extract`, `answer`, `research`, `browse`, `plan` and `run`
-inside the block spends from it; `run_template` and `open_browser` do not,
+Every `search`, `extract`, `answer`, `research`, `browse`, `plan`, `run`,
+`submit_research` and `submit_browse` inside the block spends from it; `run_template` and `open_browser` do not,
 nor do the calls of another router. Each call is capped at what is left, in
 dollars and seconds, and that is what a router is shown. A call spends from
 every scope of its router in force when it starts, wherever the scope was
@@ -2077,8 +2080,9 @@ prompt with a URL is extracted, anything else searched. Four example routers,
 tested offline: [rules](examples/router_rules.py), a
 [scikit-learn classifier](examples/router_classifier.py), an
 [OpenAI-compatible model](examples/router_llm.py) and
-[Jev](examples/router_jev.py). The last two are model routers: each sends
-the prompt to that model's server, which bills for it. The MCP server brings the same to an agent with
+[Jev](examples/router_jev.py), TypeSafe's model. The last two are model
+routers: each sends the prompt to that model's server, which bills for it. The
+MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
 
