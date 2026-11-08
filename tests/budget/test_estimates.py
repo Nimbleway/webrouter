@@ -8,7 +8,8 @@ from tests.budget.conftest import Table
 from web_router import Budget, prices
 from web_router.constants_budget import SKIP_PRICE_UNKNOWN
 from web_router.routing.attempts import Attempt
-from web_router.routing.ledger import Ledger, attempt_cost, attempt_p90
+from web_router.routing.estimates import attempt_cost, attempt_p90
+from web_router.routing.ledger import Ledger
 from web_router.types import BrowseRequest, ExtractRequest, ResearchRequest, SearchRequest
 from web_router.types_answer import AnswerRequest
 

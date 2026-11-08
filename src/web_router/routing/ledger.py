@@ -18,10 +18,10 @@ and skipped when the pool refuses it.
 
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 
-from web_router import prices
 from web_router.constants_budget import (
     COST_TOLERANCE_USD,
     SKIP_LATENCY_UNKNOWN,
@@ -36,62 +36,9 @@ from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
+from web_router.routing.estimates import attempt_cost, attempt_p90
 from web_router.routing.pool import PoolChain
-from web_router.types import (
-    DecisionAttempt,
-    DecisionHop,
-    DecisionRecord,
-    ExtractRequest,
-    ResearchRequest,
-    SearchRequest,
-)
-
-
-def attempt_mode(attempt: Attempt) -> str | None:
-    """The price list's mode for ``attempt``: a search's depth, a research run's effort, else ``None``."""
-    request = attempt.request
-    if isinstance(request, SearchRequest):
-        return request.search_depth
-    if isinstance(request, ResearchRequest):
-        return request.effort
-    return None
-
-
-def attempt_cost(attempt: Attempt) -> float | None:
-    """The estimated list price of ``attempt`` in US dollars, or ``None`` when it cannot be known before the call.
-
-    Unknown when the price list has no price -- no row, ``unknown``, billed by
-    tokens -- when the row is only a floor, with charges billed on top
-    (``estimate_is_floor``), and when the request carries ``provider_options``,
-    which can change the mode the vendor bills (a deeper tier, a pro mode), or
-    when a search asks for more results than its row's price assumes, where
-    each result is charged (``results_assumed``). An extract is charged per
-    URL, each a page or a request.
-    """
-    if attempt.request.provider_options or _more_results_than_priced(attempt):
-        return None
-    row = prices.price(attempt.provider, attempt.tool, attempt_mode(attempt))
-    if row is None or row.estimate_is_floor or row.estimate_usd is None:
-        return None
-    if isinstance(attempt.request, ExtractRequest):
-        return row.estimate_usd * len(attempt.request.urls)
-    return row.estimate_usd
-
-
-def _more_results_than_priced(attempt: Attempt) -> bool:
-    """A search asking for more results than its row's price assumes, where each result is charged: unpriced."""
-    request = attempt.request
-    if not isinstance(request, SearchRequest) or request.max_results is None:
-        return False
-    row = prices.price(attempt.provider, attempt.tool, attempt_mode(attempt))
-    assumed = None if row is None else row.results_assumed
-    return assumed is not None and request.max_results > assumed
-
-
-def attempt_p90(attempt: Attempt) -> float | None:
-    """The measured p90 seconds of ``attempt``, or ``None`` when unmeasured."""
-    measured = prices.estimate_latency(attempt.provider, attempt.tool, attempt_mode(attempt))
-    return None if measured is None else measured[1]
+from web_router.types import DecisionAttempt, DecisionHop, DecisionRecord
 
 
 def _usd(value: float) -> str:
@@ -110,44 +57,60 @@ class _Tried:
 
 @dataclass
 class Ledger:
-    """What one call has tried, skipped and spent under its :class:`~web_router.Budget`."""
+    """What one call has tried, skipped and spent under its :class:`~web_router.Budget`.
+
+    Nested calls in other threads or tasks check their attempts against an
+    enclosing call's ledger too, so every change to it is made under its lock.
+    """
 
     budget: Budget
     pool: PoolChain | None = None
-    """The shared budget the call also spends from, if any; :attr:`spent` is what it reserved there."""
+    """The shared budget the call also spends from, if any."""
     spent: float = 0.0
+    """What counts toward the call's own cap: its attempts and those of calls nested in it."""
+    reserved: float = 0.0
+    """What the call reserved in :attr:`pool` for its own attempts, settled when it ends."""
     tried: list[_Tried] = field(default_factory=list)
     skipped: dict[str, str] = field(default_factory=dict)
     unmeasured: list[str] = field(default_factory=list)
     closed: bool = False
-    """Set when the call ends: an attempt made later by work it left running is not this call's to check or charge."""
+    """Set when the call ends: an attempt made later by work it left running is not this call's to check."""
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
-    def admit(self, attempt: Attempt) -> bool:
-        """Whether ``attempt`` fits what is left; if it does, charge it, and if not, record why."""
-        if self.closed:
-            return True
+    def admit(self, attempt: Attempt, *, reserve: bool = True) -> bool:
+        """Whether ``attempt`` fits what is left; if it does, charge it, and if not, record why.
+
+        ``reserve`` is true for the call's own attempts, which it also reserves
+        in the shared budget; a nested call's attempt counts only toward the cap.
+        """
         name = f"{attempt.tool}{CANDIDATE_ID_SEPARATOR}{attempt.provider}"
         cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
-        if (cost is None or p90 is None) and name not in self.unmeasured:
-            self.unmeasured.append(name)
-        reason = self._over_cost(cost) or self._over_time(p90) or self._unreserved(cost)
-        if reason is not None:
-            self.skipped[name] = reason
-            return False
-        self.spent += cost or 0.0
-        self.tried.append(_Tried(name, cost, time.monotonic(), attempt))
-        return True
+        with self._lock:
+            if self.closed:
+                return True
+            if (cost is None or p90 is None) and name not in self.unmeasured:
+                self.unmeasured.append(name)
+            reason = self._over_cost(cost) or self._over_time(p90) or (self._unreserved(cost) if reserve else None)
+            if reason is not None:
+                self.skipped[name] = reason
+                return False
+            self.spent += cost or 0.0
+            self.tried.append(_Tried(name, cost, time.monotonic(), attempt))
+            return True
 
     def undo(self, attempt: Attempt) -> None:
-        """Take back ``attempt``, which a check after this one refused, so it never ran; another call's stays."""
-        tried = next((tried for tried in reversed(self.tried) if tried.attempt is attempt), None)
-        if tried is None:
-            return
-        self.tried.remove(tried)
-        if tried.est_cost_usd is not None:
-            self.spent -= tried.est_cost_usd
-            if self.pool is not None:
-                self.pool.settle(tried.est_cost_usd, spent=False)
+        """Take back a nested call's ``attempt``, which that call then refused; nothing else is touched."""
+        with self._lock:
+            tried = next((tried for tried in reversed(self.tried) if tried.attempt is attempt), None)
+            if tried is not None:
+                self.tried.remove(tried)
+                self.spent -= tried.est_cost_usd or 0.0
+
+    def close(self) -> float:
+        """End the call: later attempts are not its to check. Returns what it reserved, for the pool to settle."""
+        with self._lock:
+            self.closed = True
+            return self.reserved
 
     def _over_cost(self, cost: float | None) -> str | None:
         cap = self.budget.max_cost_usd
@@ -162,7 +125,11 @@ class Ledger:
 
     def _unreserved(self, cost: float | None) -> str | None:
         """Why the shared budget refused to reserve ``cost``, or ``None`` once reserved (or with no pool)."""
-        if self.pool is None or cost is None or (left := self.pool.reserve(cost)) is None:
+        if self.pool is None or cost is None:
+            return None
+        left = self.pool.reserve(cost)
+        if left is None:
+            self.reserved += cost
             return None
         return SKIP_OVER_SHARED.format(cost=_usd(cost), left=_usd(max(left, 0.0)))
 
@@ -185,16 +152,18 @@ class Ledger:
 
     def record(self, into: DecisionRecord | None = None) -> DecisionRecord:
         """The call's estimated spend and attempts, written into ``into`` (a router's record) or a new one."""
-        ends = [tried.started for tried in self.tried[1:]] + [time.monotonic()]
-        known = [tried.est_cost_usd for tried in self.tried if tried.est_cost_usd is not None]
+        with self._lock:
+            attempts, skipped, unmeasured = list(self.tried), dict(self.skipped), list(self.unmeasured)
+        ends = [tried.started for tried in attempts[1:]] + [time.monotonic()]
+        known = [tried.est_cost_usd for tried in attempts if tried.est_cost_usd is not None]
         update = {
             "estimated_cost_usd": sum(known) if known else None,
             "cost_is_estimate": True,
             "attempts": [
                 DecisionAttempt(id=tried.id, est_cost_usd=tried.est_cost_usd, seconds=end - tried.started)
-                for tried, end in zip(self.tried, ends, strict=True)
+                for tried, end in zip(attempts, ends, strict=True)
             ],
-            "hops": [DecisionHop(id=name, error=reason) for name, reason in self.skipped.items()] or None,
-            "unmeasured": list(self.unmeasured) or None,
+            "hops": [DecisionHop(id=name, error=reason) for name, reason in skipped.items()] or None,
+            "unmeasured": unmeasured or None,
         }
         return (into or DecisionRecord()).model_copy(update=update)

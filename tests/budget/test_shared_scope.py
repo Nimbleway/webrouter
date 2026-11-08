@@ -128,10 +128,10 @@ def test_a_call_that_starts_late_gets_only_the_time_the_clock_has_left(
         time.sleep(late)  # the time left was read; the call's deadline is not set yet
         return limited
 
-    def spy(self: ledger.Ledger, attempt: ledger.Attempt) -> bool:
+    def spy(self: ledger.Ledger, attempt: ledger.Attempt, **options: bool) -> bool:
         deadline = current_deadline()
         left.append(-1.0 if deadline is None else deadline.left())
-        return real_admit(self, attempt)
+        return real_admit(self, attempt, **options)
 
     monkeypatch.setattr(PoolChain, "limit", delayed)
     monkeypatch.setattr(ledger.Ledger, "admit", spy)

@@ -11,10 +11,10 @@ from typing import Any
 
 import pytest
 
-from tests.budget.conftest import Table
+from tests.budget.conftest import Chain, Table
 from tests.conftest import FakeProvider
-from web_router import AsyncWebRouter, Budget, WebRouter, prices
-from web_router.exceptions import WebRouterError
+from web_router import AsyncWebRouter, Budget, BudgetExceededError, WebRouter, prices
+from web_router.exceptions import ConfigurationError, WebRouterError
 from web_router.registry import register_provider, unregister_provider
 from web_router.types import SearchRequest, SearchResponse
 
@@ -100,3 +100,39 @@ async def test_a_call_a_backend_leaves_running_after_it_returns_settles_its_own_
         ended.set()
         await asyncio.wait_for(left[0], WAIT_S)
     assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.03, 0.0)
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+@pytest.mark.parametrize("joined", [False, True], ids=["left-running", "joined"])
+def test_a_nested_call_left_running_never_takes_the_shared_budget_past_its_cap(
+    chain: Chain, registered: Any, priced: Table, joined: bool
+) -> None:
+    chain.sleeps["first"], chain.raises["first"] = 0.3, ConfigurationError("first holds no key")
+    priced.update(wrapper=(0.02, None), first=(0.01, None), second=(0.04, None), fake=(0.05, None))
+    router, started = WebRouter(), []
+
+    def inner() -> None:
+        with suppress(WebRouterError):
+            router.search("inner", provider=chain.auto())
+
+    def wrapper(self: Any, search: SearchRequest) -> SearchResponse:
+        started.append(threading.Thread(target=copy_context().run, args=(inner,)))
+        started[0].start()
+        if joined:
+            started[0].join(WAIT_S)
+        return FakeProvider._respond(self, search)
+
+    registered("wrapper", _search=wrapper)
+    ran = ["wrapper"]
+    with router.budget(Budget(max_cost_usd=0.10)) as shared:
+        router.search("q", provider="wrapper")
+        with suppress(BudgetExceededError):
+            router.search("q", provider="fake")
+            ran.append("fake")
+        started[0].join(WAIT_S)
+    ran += chain.called
+    cost = sum(priced[name][0] or 0.0 for name in ran)
+    assert cost <= 0.10 + 1e-9, f"{ran} ran"
+    assert (shared.status().spent_usd, shared.status().reserved_usd) == (pytest.approx(cost), 0.0)
+    if joined:
+        assert ran == ["wrapper", "first", "second"]

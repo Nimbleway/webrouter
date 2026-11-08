@@ -24,9 +24,11 @@ exactly as it would without one. With a budget:
 Inside a shared budget (:mod:`.pool`), a call runs here even with no
 ``budget=`` of its own: its budget is the tighter of the two, each attempt it
 admits is reserved in the pool, and what it reserved is settled when it ends.
-A call a backend makes on the same router inside another budgeted call passes
-the outer call's check too, which reserves it in the pools they share, so
-each attempt is reserved there once.
+A call a backend makes inside another budgeted call passes the enclosing
+call's check too, which counts it toward that call's own cap. Only the ledger
+of the call an attempt is made in reserves it in the shared budget and settles
+it, so each attempt is reserved there once, and a nested call that runs on
+after the call that started it still reserves and settles its own.
 """
 
 from __future__ import annotations
@@ -47,7 +49,7 @@ from web_router.providers._deadline import Deadline, call_deadline, current_dead
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.ledger import Ledger
-from web_router.routing.pool import PoolChain, chain_in_force
+from web_router.routing.pool import chain_in_force
 from web_router.types import DecisionRecord, NormalizedRequest
 
 _BackendT = TypeVar("_BackendT")
@@ -99,23 +101,16 @@ def budget_scope(
         yield BudgetedCall(backend)
         return
     held = _LEDGERS.get()
-    ledger = Ledger(budget, _unheld(pool, held))
+    ledger = Ledger(budget, pool)
     token = _LEDGERS.set((*held, ledger))
     try:
         with _held(ledger, held, tool, backend, request) as call:
             yield call
     finally:
         _LEDGERS.reset(token)
-        ledger.closed = True
-        if ledger.pool is not None:
-            ledger.pool.settle(ledger.spent)
-
-
-def _unheld(chain: PoolChain | None, held: tuple[Ledger, ...]) -> PoolChain | None:
-    """``chain`` less every pool a still running enclosing call in ``held`` reserves in: it reserves this call's."""
-    taken = {pool for ledger in held if ledger.pool is not None and not ledger.closed for pool in ledger.pool.pools}
-    pools = () if chain is None else tuple(pool for pool in chain.pools if pool not in taken)
-    return PoolChain(pools) if pools else None
+        reserved = ledger.close()
+        if pool is not None:
+            pool.settle(reserved)
 
 
 @contextmanager
@@ -164,18 +159,24 @@ def _hooked(ledger: Ledger, held: tuple[Ledger, ...]) -> CallRoute:
     """The route in force, if any, with ``ledger``'s check after its own hook: a member either refuses is never charged.
 
     The hook in force runs the check of every enclosing call's ledger in
-    ``held``, and each has charged an attempt it admits; when ``ledger`` then
-    refuses it, each takes its charge back.
+    ``held``, each counting the attempt toward its own cap; when ``ledger``
+    then refuses it, each takes it back. Only the innermost ledger in force
+    where the attempt runs -- its own call's -- reserves it in the shared budget.
     """
     route = current_route() or CallRoute()
     outer = route.before_attempt
+
+    def check(attempt: Attempt) -> bool:
+        in_force = _LEDGERS.get()
+        return ledger.admit(attempt, reserve=not in_force or in_force[-1] is ledger)
+
     if outer is None:
-        return replace(route, before_attempt=ledger.admit)
+        return replace(route, before_attempt=check)
 
     def admit(attempt: Attempt) -> bool:
         if not outer(attempt):
             return False
-        if ledger.admit(attempt):
+        if check(attempt):
             return True
         for enclosing in held:
             enclosing.undo(attempt)
