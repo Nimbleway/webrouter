@@ -29,6 +29,7 @@ from web_router.exceptions import ConfigurationError
 from web_router.providers._http import HttpExtractProvider
 from web_router.providers._utils import build_payload
 from web_router.types import (
+    EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
     ExtractFailure,
     ExtractFormat,
@@ -43,7 +44,7 @@ class FirecrawlExtractProvider(HttpExtractProvider):
     """Fetches page contents through the Firecrawl Scrape API."""
 
     name: ClassVar[str] = PROVIDER_FIRECRAWL
-    supported_parameters: ClassVar[frozenset[str]] = frozenset({"format"})
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(FIRECRAWL_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = FIRECRAWL_EXTRACT_DEFAULT_FORMAT
 

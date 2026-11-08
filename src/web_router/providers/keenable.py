@@ -34,6 +34,7 @@ from web_router.exceptions import ConfigurationError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider, _HttpProvider
 from web_router.providers._utils import as_snippet, best_text, build_payload
 from web_router.types import (
+    EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
     ExtractFailure,
     ExtractFormat,
@@ -147,7 +148,7 @@ class KeenableExtractProvider(_KeenableKeyless, HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_KEENABLE
-    supported_parameters: ClassVar[frozenset[str]] = frozenset({"format"})
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset({"markdown"})
     # Fetch has no format field: it returns markdown alone.
     default_format: ClassVar[ExtractFormat] = "markdown"

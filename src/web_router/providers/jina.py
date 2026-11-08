@@ -32,6 +32,7 @@ from web_router.exceptions import ConfigurationError
 from web_router.providers._http import HttpExtractProvider
 from web_router.providers._utils import build_payload
 from web_router.types import (
+    EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
     ExtractFormat,
     ExtractRequest,
@@ -45,7 +46,7 @@ class JinaExtractProvider(HttpExtractProvider):
     """Fetches page contents through Jina Reader."""
 
     name: ClassVar[str] = PROVIDER_JINA
-    supported_parameters: ClassVar[frozenset[str]] = frozenset({"format"})
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(JINA_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = JINA_EXTRACT_DEFAULT_FORMAT
 

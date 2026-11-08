@@ -32,6 +32,7 @@ from web_router.constants import (
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._utils import as_snippet, build_payload
 from web_router.types import (
+    EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
     ExtractFailure,
     ExtractFormat,
@@ -96,7 +97,7 @@ class WebIQExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_WEBIQ
-    supported_parameters: ClassVar[frozenset[str]] = frozenset({"format"})
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(WEBIQ_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = WEBIQ_EXTRACT_DEFAULT_FORMAT
 

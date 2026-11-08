@@ -205,6 +205,9 @@ EXTRACT_ALWAYS_SENT = ExtractRequest.always_sent
 EXTRACT_PARAMETERS: frozenset[str] = ExtractRequest.normalized_parameters()
 """Every optional parameter an extract provider may declare support for."""
 
+EXTRACT_FORMAT_ONLY: frozenset[str] = frozenset({"format"})
+"""The ``supported_parameters`` of an extract provider that maps ``format`` and no other option."""
+
 
 class SearchResult(BaseModel):
     """A single result, normalized across providers."""
