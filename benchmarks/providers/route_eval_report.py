@@ -9,9 +9,17 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from _common import _p, _s
+from route_eval_floor import Floor
 from route_eval_paths import EFFORT_INTRO, MIXED, MIXED_INTRO
-from route_eval_rank import RANKING_RULE
+from route_eval_rank import MIN_QUESTIONS, RANKING_RULE
 from route_eval_sets import TWIN_SETS
+
+TOO_FEW = "too few questions"
+"""The order column of a backend counted on fewer than :data:`~route_eval_rank.MIN_QUESTIONS`: listed, not ranked."""
+TOO_FEW_RULE = (
+    f"A backend counted on fewer than {MIN_QUESTIONS} questions is not ranked: it is listed after the ranked ones "
+    f"as *{TOO_FEW}*."
+)
 
 
 def _usd(value: float | None, unknown: int = 0) -> str:
@@ -37,8 +45,9 @@ def _intro(floor: float, pairs: Mapping[str, tuple[float, float]]) -> list[str]:
     return [
         "# route-eval: routers replayed over the frozen results\n",
         f"**Noise floor: {floor * 100:.1f} points**, the largest accuracy gap one backend shows between "
-        f"`{TWIN_SETS[0]}` and `{TWIN_SETS[1]}`, the same questions run twice ({spread}). It is measured on SealQA "
-        "and used for every set, the only twin run there is. It is rerun noise, not a significance test on the "
+        f"`{TWIN_SETS[0]}` and `{TWIN_SETS[1]}`, the same search questions run twice ({spread}). Each set is "
+        "ranked and judged with its method's own rerun spread where one is frozen, else with this one, and names "
+        "the floor it used. It is rerun noise, not a significance test on the "
         "held-out split, so a verdict needs both: *gain* when the held-out margin over the static order is wider "
         "than the floor and the static order's accuracy is below the router's 95% interval, *loss* when the margin "
         "is under minus the floor and the static order is above it, *no gain* otherwise.\n",
@@ -75,15 +84,16 @@ def _router_table(s: Mapping[str, Any]) -> list[str]:
 
 def _order_table(s: Mapping[str, Any]) -> list[str]:
     out = [
-        f"### Recommended order, from every question\n\n{RANKING_RULE}\n",
+        f"### Recommended order, from every question\n\n{RANKING_RULE} {TOO_FEW_RULE}\n",
         f"| Order | {'Path' if s['method'] == MIXED else 'Backend'} | Correct of the questions counted "
         "| Cost per call | p50 latency | Failed | Left out (rate limit or quota) |",
         "|---|---|---|---|---|---|---|",
     ]
-    for rank, p in enumerate(s["recommended_order"], 1):
+    places = [(str(rank), p) for rank, p in enumerate(s["recommended_order"], 1)]
+    for place, p in places + [(TOO_FEW, p) for p in s["too_few_questions"]]:
         b = s["backends"][p]
         out.append(
-            f"| {rank} | `{p}` | {_p(b['accuracy_all'])} ({b['correct']}/{b['questions']}) "
+            f"| {place} | `{p}` | {_p(b['accuracy_all'])} ({b['correct']}/{b['questions']}) "
             f"| {_usd(b['cost_usd'])} | {_s(b['latency_p50'])} | {b['failed']} | {b['excluded']} |"
         )
     return [*out, ""]
@@ -115,6 +125,7 @@ def _set_section(s: Mapping[str, Any]) -> list[str]:
             "Prompt: unavailable -- routers were given `None` for the question text. Run `frozen.py join` and "
             "pass `--joined` for routers that read it; the baselines below need none.\n"
         )
+    out.append(f"Noise floor here: {Floor.from_json(s['method'], s['noise_floor']).describe()}.\n")
     out.append("Static order: " + ", ".join(f"`{p}`" for p in s["static_order"]) + "\n")
     efforts = _effort_table(s) if s.get("efforts") else []
     return out + _router_table(s) + _order_table(s) + efforts

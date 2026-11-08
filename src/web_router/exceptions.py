@@ -15,7 +15,7 @@ handle failures uniformly regardless of which backend served the request:
     ├── BrowseTimeoutError          a browse task outlasted the time allowed for it
     ├── BenchmarkTimeoutError       one benchmark row outlasted the comparison's timeout
     ├── DeadlineExceededError       a call outlasted its per-call deadline
-    ├── BudgetExceededError         nothing a call could run fits its budget
+    ├── RouterError                 an attached router failed, under fail_on_router_error=True
     ├── ProviderError               the backend itself failed
     └── BrowserActionError          a page action on an open browser session failed
         ├── StaleElementError           a snapshot ref no longer names an element
@@ -54,6 +54,7 @@ from web_router.constants import (
     MSG_UNSUPPORTED_VALUES,
 )
 from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
+from web_router.constants_invoke import MSG_ROUTER_FAILED
 
 
 def describe(exc: BaseException) -> str:
@@ -284,6 +285,21 @@ class DeadlineExceededError(WebRouterError):
         self.seconds = seconds
         message = MSG_DEADLINE_EXCEEDED.format(provider=provider, seconds=seconds)
         super().__init__(message + (MSG_DEADLINE_TRIED.format(failures=tried) if tried else ""))
+
+
+class RouterError(WebRouterError):
+    """An attached router raised, ran out of time or answered something other than a ``RouteDecision``.
+
+    Experimental. Raised only with ``fail_on_router_error=True``; otherwise the
+    call runs on the static order. ``code`` is ``router_error``,
+    ``router_timeout`` or ``router_invalid``; what the router raised is on
+    ``__cause__``.
+    """
+
+    def __init__(self, router: str, code: str) -> None:
+        self.router = router
+        self.code = code
+        super().__init__(MSG_ROUTER_FAILED.format(router=router, code=code))
 
 
 class ProviderError(WebRouterError):

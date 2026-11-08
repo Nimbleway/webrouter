@@ -15,7 +15,8 @@ from typing import Any
 
 import pytest
 
-from tests.test_auto_seam import MEMBERS, TOOLS, _Tool
+from tests.routing_helpers import MEMBERS, TOOLS
+from tests.routing_helpers import Tool as _Tool
 from web_router import AsyncWebRouter, Budget, WebRouter, prices
 from web_router.routing.pool import BudgetPool, chain_in_force
 

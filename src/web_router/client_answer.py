@@ -12,7 +12,7 @@ from typing import Any
 from web_router.providers.answer import AnswerProvider
 from web_router.registry_answer import create_answer_provider, default_answer_provider
 from web_router.routing import Budget
-from web_router.routing.budget import budget_scope
+from web_router.routing.routed import AsyncRouted, SyncRouted
 from web_router.types import Provider, provider_name
 from web_router.types_answer import AnswerRequest, AnswerResponse, Recency
 
@@ -52,7 +52,7 @@ class _AnswerLookup:
         return AnswerRequest(query=query, provider_options=provider_options or {}, **options)
 
 
-class SyncAnswer(_AnswerLookup):
+class SyncAnswer(_AnswerLookup, SyncRouted):
     def answer(
         self,
         query: str,
@@ -89,11 +89,11 @@ class SyncAnswer(_AnswerLookup):
             locale=locale,
             recency=recency,
         )
-        with budget_scope(budget, "answer", self.get_answer_provider(provider), request, self) as call:
-            return call.settle(call.backend.answer(request))
+        chain = self.get_answer_provider(provider)
+        return self._routed(chain, request, budget, lambda: chain.answer(request))
 
 
-class AsyncAnswer(_AnswerLookup):
+class AsyncAnswer(_AnswerLookup, AsyncRouted):
     async def answer(
         self,
         query: str,
@@ -117,5 +117,5 @@ class AsyncAnswer(_AnswerLookup):
             locale=locale,
             recency=recency,
         )
-        with budget_scope(budget, "answer", self.get_answer_provider(provider), request, self) as call:
-            return call.settle(await call.backend.aanswer(request))
+        chain = self.get_answer_provider(provider)
+        return await self._arouted(chain, request, budget, lambda: chain.aanswer(request))

@@ -37,7 +37,7 @@ caller gets. :meth:`WebRouter.benchmark_extract` is the same consumer of
 from __future__ import annotations
 
 import threading
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from contextlib import AsyncExitStack, ExitStack, suppress
 from types import TracebackType
 from typing import Any, Generic, TypeVar
@@ -48,6 +48,7 @@ from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
 from web_router.client_budget import AsyncBudget, SyncBudget
 from web_router.client_requests import JsonSchema as JsonSchema
 from web_router.client_requests import (
+    async_client_holders,
     build_browse_request,
     build_browser_request,
     build_extract_request,
@@ -55,7 +56,6 @@ from web_router.client_requests import (
     build_search_request,
 )
 from web_router.constants import (
-    AUTO_CLIENT_OPTION,
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
     DELEGATING_PROVIDERS,
@@ -95,8 +95,8 @@ from web_router.registry import (
     create_template_provider,
 )
 from web_router.registry_answer import available_answer_providers
-from web_router.routing import Budget
-from web_router.routing.budget import budget_scope
+from web_router.routing import Budget, RouterLike, ToolName
+from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
 from web_router.types import (
     BrowseResponse,
     ExtractFormat,
@@ -118,7 +118,7 @@ from web_router.types import (
 _HandleT = TypeVar("_HandleT", BrowserHandle, AsyncBrowserHandle)
 
 
-class _BaseRouter(Generic[_HandleT]):
+class _BaseRouter(RouterSetup, Generic[_HandleT]):
     """Provider resolution and caching shared by the sync and async routers.
 
     Generic only in the browser handle each one hands out, which is the one
@@ -130,6 +130,9 @@ class _BaseRouter(Generic[_HandleT]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
+        router: RouterLike | None = None,
+        route_tools: Collection[ToolName] | None = None,
+        fail_on_router_error: bool = False,
     ) -> None:
         """
         Args:
@@ -139,7 +142,11 @@ class _BaseRouter(Generic[_HandleT]):
                 name -- ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is
                 the only place credentials are passed explicitly; everything
                 else comes from the environment.
+            router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
+                ask it (all five by default) and whether its failure raises (experimental) -- see
+                :mod:`web_router.routing.invoke`.
         """
+        self._attach_router(router, route_tools, fail_on_router_error)
         name = provider_name(provider)
         # Either registry is enough to name a default: a router defaulted to a
         # search-only backend still extracts through `provider=`, and the
@@ -343,29 +350,7 @@ class _BaseRouter(Generic[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
-def _async_client_holders(config: dict[str, dict[str, Any]]) -> set[str]:
-    """Every backend ``config`` hands an ``async_client``: by name, in ``auto``'s ``members_config``, or in its chain.
-
-    A chain is a list of entries or a mapping from method to one, and an entry
-    a bare name or ``(name, kwargs)`` -- only the latter can carry a client.
-    """
-    entries: list[tuple[str, Any]] = list(config.items())
-    for delegating in DELEGATING_PROVIDERS:
-        own = config.get(delegating, {})
-        entries.extend((own.get("members_config") or {}).items())
-        chain = own.get("chain") or ()
-        for listed in chain.values() if isinstance(chain, Mapping) else (chain,):
-            entries.extend(
-                (item[0], item[1]) for item in listed or () if isinstance(item, (tuple, list)) and len(item) == 2
-            )
-    return {
-        provider_name(name)
-        for name, options in entries
-        if isinstance(options, Mapping) and options.get(AUTO_CLIENT_OPTION)
-    }
-
-
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudget):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncRouted, SyncBudget):
     """Synchronous router.
 
     Example:
@@ -382,6 +367,9 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
+        router: RouterLike | None = None,
+        route_tools: Collection[ToolName] | None = None,
+        fail_on_router_error: bool = False,
     ) -> None:
         """
         Raises:
@@ -389,8 +377,14 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
                 this router, calling synchronously, could never use: through
                 ``auto`` the call would quietly go to another backend instead.
         """
-        super().__init__(provider, provider_config=provider_config)
-        async_only = sorted(_async_client_holders(self._config))
+        super().__init__(
+            provider,
+            provider_config=provider_config,
+            router=router,
+            route_tools=route_tools,
+            fail_on_router_error=fail_on_router_error,
+        )
+        async_only = sorted(async_client_holders(self._config))
         if async_only:
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
 
@@ -419,8 +413,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
             locale=locale,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "search", self.get_provider(provider), request, self) as call:
-            return call.settle(call.backend.search(request))
+        chain = self.get_provider(provider)
+        return self._routed(chain, request, budget, lambda: chain.search(request))
 
     def extract(
         self,
@@ -439,8 +433,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
         nothing came back raises instead.
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
-        with budget_scope(budget, "extract", self.get_extract_provider(provider), request, self) as call:
-            return call.settle(call.backend.extract(request))
+        chain = self.get_extract_provider(provider)
+        return self._routed(chain, request, budget, lambda: chain.extract(request))
 
     def templates(
         self,
@@ -537,8 +531,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "research", self.get_research_provider(provider), request, self) as call:
-            return call.settle(call.backend.research(request, timeout=timeout))
+        chain = self.get_research_provider(provider)
+        return self._routed(chain, request, budget, lambda: chain.research(request, timeout=timeout))
 
     def submit_research(
         self,
@@ -609,8 +603,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "browse", self.get_browse_provider(provider), request, self) as call:
-            return call.settle(call.backend.browse(request, timeout=timeout))
+        chain = self.get_browse_provider(provider)
+        return self._routed(chain, request, budget, lambda: chain.browse(request, timeout=timeout))
 
     def submit_browse(
         self,
@@ -729,7 +723,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncBudge
         self.close()
 
 
-class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncBudget):
+class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncRouted, AsyncBudget):
     """Asynchronous router.
 
     Example:
@@ -762,8 +756,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             locale=locale,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "search", self.get_provider(provider), request, self) as call:
-            return call.settle(await call.backend.asearch(request))
+        chain = self.get_provider(provider)
+        return await self._arouted(chain, request, budget, lambda: chain.asearch(request))
 
     async def extract(
         self,
@@ -781,8 +775,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
         where nothing came back raises.
         """
         request = build_extract_request(urls, format=format, provider_options=provider_options)
-        with budget_scope(budget, "extract", self.get_extract_provider(provider), request, self) as call:
-            return call.settle(await call.backend.aextract(request))
+        chain = self.get_extract_provider(provider)
+        return await self._arouted(chain, request, budget, lambda: chain.aextract(request))
 
     async def templates(
         self,
@@ -851,8 +845,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             exclude_domains=exclude_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "research", self.get_research_provider(provider), request, self) as call:
-            return call.settle(await call.backend.aresearch(request, timeout=timeout))
+        chain = self.get_research_provider(provider)
+        return await self._arouted(chain, request, budget, lambda: chain.aresearch(request, timeout=timeout))
 
     async def submit_research(
         self,
@@ -906,8 +900,8 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
             allowed_domains=allowed_domains,
             provider_options=provider_options,
         )
-        with budget_scope(budget, "browse", self.get_browse_provider(provider), request, self) as call:
-            return call.settle(await call.backend.abrowse(request, timeout=timeout))
+        chain = self.get_browse_provider(provider)
+        return await self._arouted(chain, request, budget, lambda: chain.abrowse(request, timeout=timeout))
 
     async def submit_browse(
         self,
