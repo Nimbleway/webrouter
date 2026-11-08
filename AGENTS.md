@@ -94,6 +94,8 @@ src/web_router/
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
+├── client_budget.py   budget(), mixed into both routers; client_scope.py the
+│                       BudgetScope / AsyncBudgetScope it returns
 ├── client_requests.py  the routers' request builders: a method's arguments in, its
 │                       normalized request out; JsonSchema; the sync router's
 │                       async_client check
@@ -135,6 +137,7 @@ src/web_router/
 │   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,
 │   │                   the check before each attempt, BudgetExceededError, the record
 │   ├── ledger.py       one budgeted call's ledger: the cost and p90 rules, the spend
+│   ├── estimates.py    attempt_cost() and attempt_p90(): an attempt's estimate, before it starts
 │   ├── invoke.py       router=: the two forms a router takes, called sync or async on
 │   │                   its own thread or loop within its timeout, and the failure policy
 │   ├── _runner.py      the worker thread and private loop a router runs on, the wait
@@ -154,6 +157,8 @@ src/web_router/
 │   │                   chains can serve, priced, timed and prefiltered by the budget
 │   ├── eligible.py     eligible_members(): the members of a method's `auto` that
 │   │                   can serve a request, and the ones it cannot build, with why
+│   ├── pool.py         a shared budget: reservations under one lock, its clock, status()
+│   ├── pool_status.py  BudgetStatus, where a shared budget stands
 │   ├── merge.py        merge(): a router's decision and the static order made into
 │   │                   one method, one order and checked options, pure
 │   ├── merge_types.py  Merged, MergeNotes and FallbackReason: what the merge answers
@@ -251,7 +256,7 @@ src/web_router/
 tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         tests/mcp/ the server, tests/max_extract/ the race
                         (its conftest holds the fake members), tests/budget/
-                        the per-call budget (its conftest the priced chain).
+                        the per-call and shared budgets (its conftest the priced chain).
                         test_contract.py, test_extract_contract.py, test_template_contract.py,
                         test_research_contract.py, test_answer_contract.py,
                         test_browse_contract.py and

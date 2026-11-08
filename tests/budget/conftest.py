@@ -17,7 +17,8 @@ import pytest
 
 from tests.routing_helpers import MEMBERS, TOOLS
 from tests.routing_helpers import Tool as _Tool
-from web_router import AsyncWebRouter, Budget, WebRouter, prices
+from web_router import AsyncWebRouter, Budget, BudgetScope, WebRouter, prices
+from web_router.routing.pool import BudgetPool, chain_in_force
 
 ARGS = {"search": "q", "extract": "https://a.test", "answer": "q", "research": "q", "browse": "t"}
 """What each tool is called with: its query, URL or task."""
@@ -103,3 +104,14 @@ async def acall(chain: Chain, budget: Budget | None, provider: Any = None, **opt
     """As :func:`call`, through the async router."""
     method = getattr(AsyncWebRouter(), chain.tool.name)
     return await method(ARGS[chain.tool.name], provider=provider or chain.auto(), budget=budget, **options)
+
+
+def scoped(chain: Chain, scope: BudgetScope, **options: object) -> object:
+    """``chain``'s tool through ``scope``, on the chain's ``auto``."""
+    return getattr(scope, chain.tool.name)(ARGS[chain.tool.name], provider=chain.auto(), **options)
+
+
+def pool_in_force(router: object) -> BudgetPool | None:
+    """The innermost pool ``router``'s calls spend from in this context, or ``None``."""
+    chain = chain_in_force(router)
+    return None if chain is None else chain.pools[0]
