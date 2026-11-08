@@ -235,7 +235,11 @@ class TokenCache:
             if not isinstance(payload, dict):
                 raise ValueError(f"a JSON {type(payload).__name__}, not an object")
             lifetime = payload.get("expires_in")
-            seconds = float(lifetime) if lifetime not in (None, "") else None
+            seconds: float | None = None
+            if isinstance(lifetime, (int, float, str)) and lifetime != "":
+                seconds = float(lifetime)
+            elif lifetime not in (None, ""):
+                raise TypeError(f"expires_in is a {type(lifetime).__name__}")
         except (ValueError, TypeError) as exc:
             error = mask(f"{type(exc).__name__}: {exc}", secrets)
             raise ProviderError(
