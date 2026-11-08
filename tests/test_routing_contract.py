@@ -11,6 +11,7 @@ import web_router
 from web_router import Budget, Candidate, DecisionRecord, Plan, RouteDecision, RouteRequest, ToolName
 from web_router.routing import attempts
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, in_call_order
+from web_router.routing.budget import budget_scope
 from web_router.types import SearchRequest
 
 
