@@ -284,7 +284,8 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         scored against the static order, its ranking in
                         route_eval_rank.py, tool and effort paths in
                         route_eval_paths.py, a decision merged by the
-                        library's merge rule in route_eval_merge.py, its
+                        library's merge rule in route_eval_merge.py, one
+                        question walked in route_eval_replay.py, its
                         command line in route_eval_cli.py; chains.py (`make chains`): the
                         default auto orders ranked from them into
                         data/chains.json; efforts.py (`make efforts`): each
