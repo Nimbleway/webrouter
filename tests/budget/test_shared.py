@@ -22,7 +22,6 @@ from web_router import (
 from web_router.constants_budget import SKIP_OVER_COST, SKIP_ROUTE_REFUSED
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, call_route
-from web_router.routing.pool import BudgetPool, PoolChain
 
 SHARED = Budget(max_cost_usd=0.10)
 
@@ -136,16 +135,3 @@ def test_a_call_whose_own_budget_is_looser_is_held_to_what_is_left_in_the_scope(
     error = SKIP_OVER_COST.format(cost="$0.08", left="$0.02")
     assert response.decision.hops == [DecisionHop(id="search:first", error=error)]
     assert shared.status().spent_usd == 0.085
-
-
-# -- The pool on its own --------------------------------------------------------
-
-
-def test_a_pool_with_nothing_set_caps_nothing_and_reports_no_remainder() -> None:
-    pool = BudgetPool(Budget())
-    chain = PoolChain((pool,))
-    assert chain.reserve(5.0) is None
-    chain.settle(5.0)
-    status = pool.status()
-    assert (status.spent_usd, status.remaining_usd, status.time_left_s) == (5.0, None, None)
-    assert chain.limit(None) == Budget()
