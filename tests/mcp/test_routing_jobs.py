@@ -64,6 +64,7 @@ async def test_web_run_hands_back_a_handle_for_a_job_still_running() -> None:
     # Bounded, so a web_run that waits out the whole run fails here rather than hanging.
     pending = await asyncio.wait_for(ok_on(tools, MCP_TOOL_WEB_RUN, prompt="what changed in solar policy?"), 5)
     assert pending["tool"] == "research" and pending["decision"]["reason"] == "operator"
+    assert pending["decision"]["router"] == "operator", "named as capabilities name it, not route_to_research"
     polled = await ok_on(tools, "research_status", handle=pending["handle"])
     assert polled["handle"] == pending["handle"], "the run is polled, never started again"
 

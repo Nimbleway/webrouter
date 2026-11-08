@@ -36,6 +36,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - `url_policy="public_only"` and the MCP browser tools' navigation guard read a bare `0x` part of an IPv4 host as 0, as a browser does, so `http://127.0x.0x.1/` is refused as loopback.
 - A budget's research effort is one the backend takes for the request: a named Nimble enrichment under a $0.10 cap runs at `medium` instead of raising for `low`, and a plan keeps Nimble at `medium`.
+- The MCP server's `web_run` names an operator's router `operator` in `decision.router`, as the capabilities resource does, never by its class or function name.
 
 ## [0.9.0] - 2026-11-04
 
