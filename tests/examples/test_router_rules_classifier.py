@@ -22,6 +22,11 @@ class TestRules:
     def test_a_comparison_or_report_researches_then_searches(self, prompt: str) -> None:
         assert rules.route(request(prompt)).tools == ["research", "search"]
 
+    def test_a_comparison_searches_and_says_so_without_a_research_backend(self) -> None:
+        decision = rules.route(request("Compare A and B", candidates=CANDIDATES[:2]))
+        assert decision.tools == ["search"]
+        assert "no research backend" in (decision.reason or "")
+
     def test_anything_else_has_no_opinion(self) -> None:
         assert rules.route(request("python asyncio tutorial")) == RouteDecision(tools=None)
 

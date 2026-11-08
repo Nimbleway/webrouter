@@ -21,6 +21,7 @@ from web_router.constants_urls import (
 )
 
 _LEGACY_IPV4 = re.compile(LEGACY_IPV4_PATTERN)
+_BARE_HEX = re.compile(r"(?:^|(?<=\.))0x(?=\.|$)")
 
 
 def host_address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
@@ -51,16 +52,25 @@ def _embedded_ipv4(address: ipaddress.IPv6Address) -> ipaddress.IPv4Address | No
     return None
 
 
+def numeric_host(host: str) -> bool:
+    """Whether ``host`` has an IPv4 address's shape: up to four dot-separated parts, each digits or ``0x`` hex.
+
+    Whether or not ``inet_aton`` reads it: ``127.0.0.09`` is no octal, but macOS's getaddrinfo reads it as decimal.
+    """
+    return _LEGACY_IPV4.fullmatch(host) is not None
+
+
 def legacy_ipv4(host: str) -> ipaddress.IPv4Address | None:
     """``host`` read as a browser reads an IPv4 address: ``2130706433``, ``0x7f000001``, ``127.1`` or ``0177.0.0.1``.
 
     ``ipaddress`` accepts only dotted quads, but a browser canonicalizes all of
     these to one before it connects, so each is checked as the address it is.
     """
-    if not _LEGACY_IPV4.fullmatch(host):
+    if not numeric_host(host):
         return None
     try:
-        return ipaddress.IPv4Address(socket.inet_aton(host))
+        # A browser reads a bare ``0x`` part as 0; inet_aton may refuse it or not, by platform.
+        return ipaddress.IPv4Address(socket.inet_aton(_BARE_HEX.sub("0x0", host)))
     except (OSError, ValueError):
         return None
 

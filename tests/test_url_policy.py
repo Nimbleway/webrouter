@@ -48,6 +48,10 @@ REFUSED = [
     "http://[fc00::1]/",  # ULA
     "http://2130706433/",  # decimal 127.0.0.1
     "http://LOCALHOST./",
+    "http://127.0x.0x.1/",  # a bare 0x octet is 0: 127.0.0.1
+    "http://0x/",  # 0.0.0.0
+    "http://10.0x.0x.1/",
+    "http://192.168.0x.1/",
 ]
 
 
@@ -70,6 +74,7 @@ AMBIGUOUS = [
     "http://%31%32%37.0.0.1/",  # a browser decodes a percent-encoded host
     "http://public.ex\tample/",  # a browser strips a tab
     "http://public.example\x00/",
+    "http://public.exa\x7fmple/",  # DEL, the one control character above 0x1F
 ]
 
 
@@ -137,7 +142,18 @@ def test_a_metadata_address_in_any_spelling_is_named_as_one(url: str) -> None:
     assert public_only(url) == MSG_URL_METADATA
 
 
-@pytest.mark.parametrize("url", ["http://010.8.8.8/"])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://010.8.8.8/",
+        # Not octal, as an 8 or 9 follows the 0, so inet_aton refuses them; macOS's getaddrinfo reads them as decimal.
+        "http://127.0.0.09/",
+        "http://127.09/",
+        "http://10.0.0.09/",
+        "http://0192.168.0.1/",
+        "http://0169.254.169.254/",
+    ],
+)
 def test_public_only_refuses_a_numeric_spelling_resolvers_read_differently(url: str) -> None:
     # A browser reads 010 as octal (8), macOS's getaddrinfo as decimal (10): no public URL needs the spelling.
     from web_router.constants_urls import MSG_URL_AMBIGUOUS
@@ -164,3 +180,11 @@ def test_the_ipv6_forms_of_a_public_ipv4_and_ipv6_loopback_are_read_right() -> N
     assert public_only("http://[64:ff9b::808:808]/") is None
     assert str(host_address("64:ff9b::808:808")) == "8.8.8.8"
     assert is_loopback("::1") and str(host_address("::1")) == "::1", "::1 is IPv6's own loopback, not 0.0.0.1"
+
+
+def test_the_browser_navigation_guard_reads_a_bare_0x_octet_as_zero_too() -> None:
+    from web_router.mcp.navigation import NavigationPolicy
+
+    policy = NavigationPolicy.for_session("ws://127.0.0.1:9333/devtools/browser/abc", allow_files=False)
+    reason = policy.refusal("http://127.0x.0x.1:9333/json")
+    assert reason is not None and "debugging endpoint" in reason

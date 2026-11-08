@@ -813,7 +813,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     """The ceiling that gap backs off to and stays at."""
 
     decision: Any = None
-    """The answer's ``decision``: the effort a budget mapped at the start. Its cost is in the budget's ledger."""
+    """The answer's ``decision``: under a budget, the effort it mapped and what it charged the start."""
 
     def __init__(
         self,

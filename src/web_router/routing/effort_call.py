@@ -36,7 +36,7 @@ def choose_effort(
     """
     if not isinstance(request, ResearchRequest) or request.effort is not None:
         return request, None
-    effort = shared_effort(names, budget)
+    effort = shared_effort(names, budget, request)
     if effort is None:
         return request, None
     return request.model_copy(update={"effort": effort.effort}), effort

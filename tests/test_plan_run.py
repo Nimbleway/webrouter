@@ -53,7 +53,7 @@ def test_a_budget_maps_research_effort_into_the_plan(monkeypatch: pytest.MonkeyP
     from web_router.routing import params
     from web_router.routing.params import EffortChoice
 
-    monkeypatch.setattr(params, "map_effort", lambda *_: EffortChoice(effort="low", source="budget", reason="r"))
+    monkeypatch.setattr(params, "map_effort", lambda *_, **__: EffortChoice(effort="low", source="budget", reason="r"))
     plan = _wr(router=chooser("research")).plan(PROMPT, budget=Budget(time_limit_s=600.0))
     assert dict(plan.params) == {"query": PROMPT, "effort": "low"}
     assert plan.decision.params_source == "budget"

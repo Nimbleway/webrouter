@@ -65,8 +65,7 @@ def test_a_nested_call_on_the_same_router_is_charged_once_to_the_shared_budget(r
     assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.06, 0.0)
 
 
-@pytest.mark.parametrize("router", [AUTO], indirect=True)
-def test_a_nested_auto_call_counts_toward_the_outer_calls_own_cap(router: WebRouter) -> None:
+def test_a_nested_call_counts_toward_the_outer_calls_own_cap(router: WebRouter) -> None:
     response = router.search("q", provider="wrapper", budget=Budget(max_cost_usd=1.0))
     assert response.decision.estimated_cost_usd == pytest.approx(0.03)
     with pytest.raises(WebRouterError):  # the outer cap refuses fake; an inner auto call raises its own error

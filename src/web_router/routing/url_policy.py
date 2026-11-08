@@ -33,7 +33,7 @@ from collections.abc import Sequence
 from typing import Literal, get_args
 from urllib.parse import urlsplit
 
-from web_router._hosts import is_loopback, is_metadata, is_private, legacy_ipv4
+from web_router._hosts import is_loopback, is_metadata, is_private, numeric_host
 from web_router._urls import host_of
 from web_router.constants_urls import (
     AUTHORITY_REFUSED,
@@ -122,8 +122,9 @@ def public_only(url: str) -> str | None:
         return MSG_URL_LOOPBACK
     if is_private(host):
         return MSG_URL_PRIVATE
-    if legacy_ipv4(host) is not None and not _canonical_address(host):
-        # 010.0.0.1: a browser reads octal, macOS's getaddrinfo decimal; no public URL needs the spelling.
+    if numeric_host(host) and not _canonical_address(host):
+        # 010.0.0.1: a browser reads octal, macOS's getaddrinfo decimal; 127.0.0.09, no octal, decimal there too.
+        # No public URL needs such a spelling, whether or not inet_aton reads it.
         return MSG_URL_AMBIGUOUS
     return None
 

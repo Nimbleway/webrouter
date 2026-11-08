@@ -26,6 +26,7 @@ from web_router import RouteDecision, RouteRequest, WebRouter, prices, registry,
 from web_router.exceptions import ConfigurationError
 from web_router.providers.auto import AutoBrowseProvider, AutoExtractProvider, AutoProvider, AutoResearchProvider
 from web_router.providers.auto_answer import AutoAnswerProvider
+from web_router.routing.effort_table import effort_table
 from web_router.types import BrowseRequest, ExtractRequest, ResearchRequest, SearchRequest
 from web_router.types_answer import AnswerRequest
 
@@ -137,3 +138,31 @@ def priced(monkeypatch: pytest.MonkeyPatch) -> Table:
 def order(called: list[str]) -> list[str]:
     """The members called, each once: extract calls a member once per URL."""
     return list(dict.fromkeys(called))
+
+
+MEASURED_EFFORTS = {effort: {"accuracy": 0.9} for effort in ("low", "medium", "high")}
+"""A fake research backend's measured efforts: equally accurate, so the budget maps the cheapest it takes."""
+
+
+@pytest.fixture
+def research_backends(monkeypatch: pytest.MonkeyPatch, priced: Table) -> Iterator[Callable[..., None]]:
+    """Registers fake research backends by name, in the effort table at :data:`MEASURED_EFFORTS` and at $0.01.
+
+    ``unpriced`` leaves one out of the price list; ``refuses`` names the efforts it will not run on records.
+    """
+    names: list[str] = []
+
+    def add(name: str, *, unpriced: bool = False, refuses: tuple[str, ...] = ()) -> None:
+        def refused_values(cls: type, request: ResearchRequest) -> dict[str, Any]:
+            return {"effort": request.effort} if request.records and request.effort in refuses else {}
+
+        attrs = {"name": name, "refused_values": classmethod(refused_values)}
+        registry.register_research_provider(name, type(f"Measured_{name}", (FakeResearchProvider,), attrs))
+        names.append(name)
+        monkeypatch.setitem(effort_table()["research"], name, {"measured": MEASURED_EFFORTS})
+        if not unpriced:
+            priced[name] = (0.01, None)
+
+    yield add
+    for name in names:
+        registry.unregister_research_provider(name)

@@ -86,7 +86,15 @@ class DecisionRecord(BaseModel):
     params_reason: str | None = Field(default=None, description="Why the budget's mapping chose `params`, in words.")
     estimated_cost_usd: float | None = Field(default=None, description="The call's estimated spend in US dollars.")
     cost_is_estimate: bool | None = Field(default=None, description="Whether that spend is a list-price estimate.")
-    unmeasured: list[str] | None = Field(default=None, description="Candidates with no known price or latency.")
+    unmeasured: list[str] | None = Field(
+        default=None,
+        description=(
+            "Candidates whose estimate is not measured: a candidate offered with no known price or p90 latency, "
+            "that is keyless, whose request carries `provider_options`, or that route-eval did not rank in the "
+            "method's default order (every extract, research and browse candidate); and an attempt a budget "
+            "charged with no known price or p90."
+        ),
+    )
     prompt_sha256: str | None = Field(
         default=None,
         description=(

@@ -30,8 +30,6 @@ EFFORT_RULE = (
 
 PARAMS_SOURCE_BUDGET: Final = "budget"
 """``params_source`` when the budget's mapping chose the params."""
-PARAMS_SOURCE_CALLER: Final = "caller"
-"""``params_source`` when the caller set them; the budget never changes them."""
 PARAMS_SOURCE_ROUTER: Final = "router"
 """``params_source`` when a router set them and they passed the merge rule's checks."""
 
@@ -39,7 +37,6 @@ DEFAULT_EFFORT_NAME = "default"
 """How a reason names the effort a call gets when it sets none."""
 
 MSG_EFFORT_NO_BUDGET = "no cost or time cap: research:{provider} runs at its default effort"
-MSG_EFFORT_CALLER = "effort {effort} was set by the caller, and the budget never changes it"
 MSG_EFFORT_UNMEASURED = (
     "research:{provider} has fewer than {min} measured efforts in {set}: it runs at its default effort"
 )

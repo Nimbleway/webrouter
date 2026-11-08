@@ -27,7 +27,7 @@ reservation must fit every pool in the chain, checked and taken under all
 their locks at once, and the clock is the earliest of theirs.
 
 The pools in force are held in a context variable, as the per-call deadline
-is, so a call made on the router inside ``with wr.budget(...)`` spends from
+is (:mod:`.pool_bind`), so a call made on the router inside ``with wr.budget(...)`` spends from
 it too. An asyncio task inherits them; a thread does not, so a thread calls
 through the scope (``b.search``), which binds the pool for the call.
 """
@@ -38,11 +38,11 @@ import itertools
 import threading
 import time
 from contextlib import ExitStack
-from contextvars import ContextVar, Token
 from dataclasses import dataclass
 
 from web_router.constants_budget import STATUS_DIGITS
 from web_router.routing.contract import Budget
+from web_router.routing.pool_bind import bound
 from web_router.routing.pool_status import BudgetStatus
 from web_router.routing.pricing import over_cost
 
@@ -164,39 +164,13 @@ def _least(values: list[float | None]) -> float | None:
     return min(known) if known else None
 
 
-_POOLS: ContextVar[tuple[BudgetPool, ...]] = ContextVar("web_router_budget_pools", default=())
-"""The pools in force in this context, innermost last."""
-
-
-def bind(pool: BudgetPool) -> Token[tuple[BudgetPool, ...]]:
-    """Put ``pool`` in force for its router's calls in this context, until :func:`unbind` with the token."""
-    return _POOLS.set((*_POOLS.get(), pool))
-
-
-def unbind(token: Token[tuple[BudgetPool, ...]]) -> None:
-    """Put back the pools that were in force before :func:`bind` returned ``token``."""
-    _POOLS.reset(token)
-
-
-def current_pool(owner: object = None) -> BudgetPool | None:
-    """The innermost pool ``owner``'s calls spend from in this context -- any router's with no owner -- or ``None``.
-
-    A pool with no owner of its own (the MCP server's, which outlives the routers
-    ``load_env`` replaces) applies to every router's calls.
-    """
-    for pool in reversed(_POOLS.get()):
-        if owner is None or pool.owner is None or pool.owner is owner:
-            return pool
-    return None
-
-
 def chain_in_force(owner: object) -> PoolChain | None:
     """Every pool ``owner``'s calls spend from in this context, innermost first, once each; ``None`` with none.
 
     That is ``owner``'s own pools and every pool with no owner -- the MCP
     server's, which outlives the routers ``load_env`` replaces.
     """
-    pools = tuple(dict.fromkeys(pool for pool in reversed(_POOLS.get()) if pool.owner in (owner, None)))
+    pools = tuple(dict.fromkeys(pool for pool in reversed(bound()) if pool.owner in (owner, None)))
     return PoolChain(pools) if pools else None
 
 

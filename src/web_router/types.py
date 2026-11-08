@@ -23,6 +23,11 @@ from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
 from web_router.types_decision import DecisionRecord as DecisionRecord
+from web_router.types_page import PageFormat as PageFormat
+from web_router.types_page import PageLoadState as PageLoadState
+from web_router.types_page import PageSnapshot as PageSnapshot
+from web_router.types_page import PageState as PageState
+from web_router.types_page import Screenshot as Screenshot
 
 SearchDepth = Literal["lite", "fast", "deep"]
 """How much page content to retrieve per result.
@@ -701,10 +706,7 @@ class Citation(BaseModel):
 
     url: str
     title: str = Field(default="", description="The cited page's title, when the provider returned one.")
-    snippet: str = Field(
-        default="",
-        description="The passage the backend quoted from the page, when it quoted one.",
-    )
+    snippet: str = Field(default="", description="The passage the backend quoted from the page, when it quoted one.")
     field: str | None = Field(
         default=None,
         description=(
@@ -943,12 +945,10 @@ class BrowserSession(BaseModel):
 BrowseOutcome = Literal["complete", "partial"]
 """Whether a finished browse task did all it was asked, or said it stopped early.
 
-``partial`` only when the backend itself said so, as for research. None of the
-built-in task backends reports an early stop that can be told apart from a
-finished run -- Skyvern's ``timed_out`` cannot distinguish its step limit from
-its clock, and Browser Use's ``isSuccess`` is its agent's opinion of its own
-answer -- so each of them answers ``complete``. Reading either signal as
-``partial`` would be the router inventing a verdict the backend did not give.
+``partial`` only when the backend itself said so, as for research. None of the built-in task backends reports an
+early stop that can be told apart from a finished run -- Skyvern's ``timed_out`` cannot distinguish its step limit
+from its clock, and Browser Use's ``isSuccess`` is its agent's opinion of its own answer -- so each of them answers
+``complete``. Reading either signal as ``partial`` would be the router inventing a verdict the backend did not give.
 """
 
 

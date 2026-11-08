@@ -33,9 +33,9 @@ from web_router.providers._deadline import call_deadline
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, base_params, build_candidates, default_requests
-from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName, candidate_id
+from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
 from web_router.routing.decide import decided
-from web_router.routing.eligible import dropped_for_setup
+from web_router.routing.eligible import budget_dropped
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.pool import limited
 from web_router.routing.record import stamp
@@ -127,19 +127,9 @@ def _ordered(stack: ExitStack, plan: Plan) -> None:
     providers = plan.providers.get(plan.tool)
     if providers is None:
         return
-    if not providers and (skipped := _budget_dropped(plan)):
+    if not providers and (skipped := budget_dropped(plan)):
         raise BudgetExceededError(skipped)
     stack.enter_context(in_route(CallRoute(order={plan.tool: list(providers)})))
-
-
-def _budget_dropped(plan: Plan) -> dict[str, str]:
-    """The candidates of the plan's method its record says the budget left out, each with why."""
-    prefix = candidate_id(plan.tool, "")
-    return {
-        cid: why
-        for cid, why in (plan.decision.dropped or {}).items()
-        if cid.startswith(prefix) and not dropped_for_setup(why)
-    }
 
 
 def _settled(response: Any, plan: Plan) -> Any:

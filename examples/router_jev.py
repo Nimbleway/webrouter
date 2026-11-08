@@ -4,8 +4,9 @@ The router posts the prompt to Jev's System One API with one `choice` question
 whose criteria are the candidates, each `tool:provider` described by its
 method, estimated cost and p90 latency. Jev answers with a probability for
 every candidate; the router ranks them by it, and the ranking becomes the
-decision's `tools` and `providers`. It is async, and declares
-`timeout_s = 1.0`: past that, the call runs on the static order.
+decision's `tools` and `providers`, its reason naming the first and its
+probability. It is async, and declares `timeout_s = 1.0`: past that, the call
+runs on the static order.
 
 **This router sends each prompt to TypeSafe.**
 
@@ -117,7 +118,9 @@ class JevRouter:
             answer = response.json()["answers"]["route"]
         numbers = probabilities(answer, choices)
         ranked = sorted(choices, key=numbers.__getitem__, reverse=True)
-        return decision(req, ranked, f"jev: {answer['choice']}", float(answer["confidence"]))
+        # The reason names the ranking's first, which the plan runs; Jev's own `choice` can name another.
+        reason = f"jev: {ranked[0]}, p={numbers[ranked[0]]:.2f}"
+        return decision(req, ranked, reason, float(answer["confidence"]))
 
 
 def main() -> None:

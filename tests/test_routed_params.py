@@ -66,7 +66,7 @@ def test_an_option_the_router_may_not_set_is_dropped(sent: list[Any]) -> None:
 def test_with_no_effort_from_the_router_the_budget_maps_one(sent: list[Any], monkeypatch: pytest.MonkeyPatch) -> None:
     asked: list[tuple[str, Budget | None]] = []
 
-    def mapped(provider: str, budget: Budget | None, effort: Any = None) -> EffortChoice:
+    def mapped(provider: str, budget: Budget | None, request: Any = None) -> EffortChoice:
         asked.append((provider, budget))
         return EffortChoice(effort="medium", source="budget", reason="mapped")
 
@@ -93,7 +93,9 @@ def test_the_budget_maps_no_option_on_any_other_method(tool: _Tool, monkeypatch:
 def _two_backends(monkeypatch: pytest.MonkeyPatch, picks: dict[str, str], fits: dict[str, set[str]]) -> None:
     """``third`` then ``first``: each backend's own pick, and the efforts that fit the budget on each."""
     monkeypatch.setattr(
-        params, "map_effort", lambda p, b, e=None: EffortChoice(effort=picks.get(p), source=None, reason="")
+        params,
+        "map_effort",
+        lambda p, b, request=None: EffortChoice(effort=picks.get(p), source=None, reason=""),
     )  # type: ignore[arg-type]
     monkeypatch.setattr(params, "effort_misfit", lambda p, e, b: None if e in fits.get(p, set()) else "no fit")
 

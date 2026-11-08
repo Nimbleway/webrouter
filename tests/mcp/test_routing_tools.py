@@ -26,7 +26,7 @@ from web_router.constants_mcp import (
 )
 from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.routing import Budget
-from web_router.routing.pool import current_pool
+from web_router.routing.pool_bind import current_pool
 
 ANY = object()
 """Any router: the connection's budget has no owner, so it holds every router's calls."""

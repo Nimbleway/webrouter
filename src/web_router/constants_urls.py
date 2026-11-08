@@ -26,8 +26,8 @@ METADATA_HOSTS: frozenset[str] = frozenset(
 LOOPBACK_NAMES: frozenset[str] = frozenset({"localhost", "0.0.0.0"})
 """Hostnames treated as the loopback interface, beside every 127/8 and ``::1`` address."""
 
-LEGACY_IPV4_PATTERN = r"(?:0x[0-9a-f]+|[0-9]+)(?:\.(?:0x[0-9a-f]+|[0-9]+)){0,3}"
-"""The decimal, hex, octal and short IPv4 spellings a browser accepts, as a lowercased host.
+LEGACY_IPV4_PATTERN = r"(?:0x[0-9a-f]*|[0-9]+)(?:\.(?:0x[0-9a-f]*|[0-9]+)){0,3}"
+"""The decimal, hex, octal and short IPv4 spellings a browser accepts, as a lowercased host (a bare ``0x`` is 0).
 
 Only a host of this shape is handed to ``inet_aton``, which would otherwise be
 asked to read names it has no business reading.

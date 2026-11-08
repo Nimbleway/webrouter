@@ -23,7 +23,12 @@ from web_router.constants import (
     PROVIDER_AUTO,
 )
 from web_router.constants_candidates import AUTO_GETTERS
-from web_router.constants_mcp import MCP_TOOL_BUDGET_START, MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
+from web_router.constants_mcp import (
+    MCP_ROUTER_OPERATOR,
+    MCP_TOOL_BUDGET_START,
+    MCP_TOOL_BUDGET_STATUS,
+    MCP_TOOL_WEB_RUN,
+)
 from web_router.exceptions import BrowseTimeoutError, ResearchTimeoutError
 from web_router.mcp.budget import budget_start, budget_status, positive_limit, wait_left
 from web_router.mcp.shaping import (
@@ -51,6 +56,7 @@ from web_router.types import (
     SearchResponse,
 )
 from web_router.types_answer import AnswerResponse
+from web_router.types_decision import DecisionRecord
 
 if TYPE_CHECKING:
     from web_router.mcp.tools import WebRouterTools
@@ -74,12 +80,22 @@ _JOBS: dict[str, tuple[type[ResearchJob] | type[BrowseJob], type[NormalizedReque
 """The methods that run as jobs: ``web_run`` waits for them as their own tools do, then hands back a handle."""
 
 
-def _plan_payload(plan: Plan) -> dict[str, Any]:
+def _shown(tools: WebRouterTools, record: DecisionRecord | None) -> dict[str, Any] | None:
+    """``record`` as the client gets it: an operator's router named ``operator``, as capabilities name it."""
+    if record is None:
+        return None
+    shown = record.model_dump(exclude_none=True)
+    if tools.routing.router_name == MCP_ROUTER_OPERATOR and "router" in shown:
+        shown["router"] = MCP_ROUTER_OPERATOR  # its class or function name is the operator's code, not the client's
+    return shown
+
+
+def _plan_payload(tools: WebRouterTools, plan: Plan) -> dict[str, Any]:
     return {
         "tool": plan.tool,
         "params": dict(plan.params),
         "providers": {tool: list(order) for tool, order in plan.providers.items()},
-        "decision": plan.decision.model_dump(exclude_none=True),
+        "decision": _shown(tools, plan.decision),
     }
 
 
@@ -92,7 +108,7 @@ async def web_run(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[s
     with call_deadline(caps.get("time_limit_s")):  # the call's own time limit covers its planning too
         plan = await tools.router.plan(prompt, budget=budget)
         if kwargs.get("dry_run"):
-            return {"dry_run": True, **_plan_payload(plan)}
+            return {"dry_run": True, **_plan_payload(tools, plan)}
         return await _ran(tools, plan, budget)
 
 
@@ -110,8 +126,11 @@ async def _ran(tools: WebRouterTools, plan: Plan, budget: Budget | None) -> dict
     # A browse payload can carry the session the agent ran in, so fetch_raw hands back its redacted copy.
     raw = redact(response.raw)[0] if tool == MCP_TOOL_BROWSE else response.raw
     handle = tools.store.add(MCP_TOOL_WEB_RUN, raw=raw).handle
-    decision = response.decision.model_dump(exclude_none=True) if response.decision else None
-    return {"tool": tool, **shape(response, handle, budget=max_response_chars()), "decision": decision}
+    return {
+        "tool": tool,
+        **shape(response, handle, budget=max_response_chars()),
+        "decision": _shown(tools, response.decision),
+    }
 
 
 def _pending(tools: WebRouterTools, plan: Plan, job_id: str, wait: float) -> dict[str, Any]:
@@ -122,7 +141,7 @@ def _pending(tools: WebRouterTools, plan: Plan, job_id: str, wait: float) -> dic
     job = job_cls(chain, request, progress_cls(job_id=job_id, state="running"))  # type: ignore[arg-type]
     handle = tools.store.add(plan.tool, job=job).handle
     pending = shape_pending(job, handle, wait=wait, note=note)
-    return {"tool": plan.tool, **pending, "decision": plan.decision.model_dump(exclude_none=True)}
+    return {"tool": plan.tool, **pending, "decision": _shown(tools, plan.decision)}
 
 
 ROUTING_TOOLS: dict[str, Callable[[WebRouterTools, Mapping[str, Any]], Awaitable[dict[str, Any]]]] = {

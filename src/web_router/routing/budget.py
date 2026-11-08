@@ -28,8 +28,10 @@ attempts, from a ledger that caps nothing.
 Inside a shared budget (:mod:`.pool`), a call runs here even with no
 ``budget=`` of its own: its budget is the tighter of the two, each attempt it
 admits is reserved in the pool, and what it reserved is settled when it ends.
-A call a backend makes inside another budgeted call passes the enclosing
-call's check too, which counts it toward that call's own cap. Only the ledger
+A call a backend makes inside another budgeted call runs here too, on any
+router and with no ``budget=`` of its own, on a budget that caps nothing: it
+passes the enclosing call's check, which counts it toward that call's own cap,
+and reserves its attempts in every shared budget the enclosing calls spend from. Only the ledger
 of the call an attempt is made in reserves it in the shared budget and settles
 it, so each attempt is reserved there once, and a nested call that runs on
 after the call that started it still reserves and settles its own.
@@ -105,10 +107,12 @@ def budget_scope(
     pool = None if router is None else chain_in_force(router)
     if pool is not None:
         budget = pool.limit(budget)
+    held = _LEDGERS.get()
+    if budget is None and held:
+        budget = Budget()  # a nested call: it caps nothing of its own, but the calls it is made in check it
     if budget is None:
         yield BudgetedCall(backend)
         return
-    held = _LEDGERS.get()
     ledger = Ledger(budget, _with_enclosing(pool, held), stamp=stamp(prompt_of(tool, request)[0]))
     token = _LEDGERS.set((*held, ledger))
     try:

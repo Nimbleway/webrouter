@@ -554,4 +554,4 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 from tests.image_helpers import jpeg as jpeg  # noqa: E402  imported from here by the screenshot tests
-from tests.routing_helpers import called, priced, tool  # noqa: E402, F401  the router tests' fixtures, for every test
+from tests.routing_helpers import called, priced, research_backends, tool  # noqa: E402, F401  the router fixtures

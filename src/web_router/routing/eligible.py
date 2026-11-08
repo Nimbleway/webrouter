@@ -27,7 +27,7 @@ from web_router.exceptions import (
     UnsupportedFormatError,
     UnsupportedParameterError,
 )
-from web_router.routing.contract import ToolName
+from web_router.routing.contract import Plan, ToolName, candidate_id
 from web_router.types import ExtractRequest, NormalizedRequest
 
 _NO_MEMBER_LEFT = (UnsupportedParameterError, UnsupportedFormatError, MissingParameterError, NoAnswerProviderError)
@@ -100,3 +100,13 @@ def dropped_for_setup(why: str) -> bool:
     """Whether a drop reason is the member's setup -- unbuilt, not a backend -- rather than the budget."""
     setup = (MSG_DROPPED_NOT_CONFIGURED, MSG_DROPPED_NOT_INSTALLED, MSG_DROPPED_NOT_A_BACKEND)
     return why in setup or why.startswith(MSG_DROPPED_BUILD_FAILED.partition("{")[0])
+
+
+def budget_dropped(plan: Plan) -> dict[str, str]:
+    """The candidates of the plan's method its record says the budget left out, each with why."""
+    prefix = candidate_id(plan.tool, "")
+    return {
+        cid: why
+        for cid, why in (plan.decision.dropped or {}).items()
+        if cid.startswith(prefix) and not dropped_for_setup(why)
+    }

@@ -846,20 +846,3 @@ class AutoBrowseProvider(BrowseProvider):
     async def aclose(self) -> None:
         for member in self._members.values():
             await member.aclose()
-
-
-def resolve_default_chains(config: Mapping[str, Any]) -> dict[str, tuple[tuple[str, dict[str, Any]], ...]]:
-    """Each method's chain as an ``auto`` built with ``config`` would resolve it, a configured ``chain`` included.
-
-    ``config`` is what the router hands ``auto``: its ``chain`` and ``members_config``.
-    """
-    defaults = {
-        AUTO_CHAIN_SEARCH: AutoProvider.default_chain,
-        AUTO_CHAIN_EXTRACT: AutoExtractProvider.default_chain,
-        AUTO_CHAIN_RESEARCH: AutoResearchProvider.default_chain,
-        AUTO_CHAIN_BROWSE: AutoBrowseProvider.default_chain,
-    }
-    return {
-        method: _members_and_chain(config.get("chain"), config.get("members_config"), method, default)[1]
-        for method, default in defaults.items()
-    }

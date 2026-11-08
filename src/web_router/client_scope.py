@@ -16,7 +16,8 @@ from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.routing.contract import Budget
-from web_router.routing.pool import BudgetPool, bind, unbind
+from web_router.routing.pool import BudgetPool
+from web_router.routing.pool_bind import bind, unbind
 from web_router.routing.pool_status import BudgetStatus
 
 _P = ParamSpec("_P")
@@ -93,6 +94,8 @@ class BudgetScope(_Scope):
     answer = _spending(WebRouter.answer)
     research = _spending(WebRouter.research)
     browse = _spending(WebRouter.browse)
+    submit_research = _spending(WebRouter.submit_research)
+    submit_browse = _spending(WebRouter.submit_browse)
     plan = _spending(WebRouter.plan)
     run = _spending(WebRouter.run)
 
@@ -116,6 +119,8 @@ class AsyncBudgetScope(_Scope):
     answer = _aspending(AsyncWebRouter.answer)
     research = _aspending(AsyncWebRouter.research)
     browse = _aspending(AsyncWebRouter.browse)
+    submit_research = _aspending(AsyncWebRouter.submit_research)
+    submit_browse = _aspending(AsyncWebRouter.submit_browse)
     plan = _aspending(AsyncWebRouter.plan)
     run = _aspending(AsyncWebRouter.run)
 

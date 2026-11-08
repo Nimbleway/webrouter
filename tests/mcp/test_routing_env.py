@@ -9,10 +9,17 @@ from pathlib import Path
 
 import pytest
 
-from tests.mcp.conftest import Table, outcome, routed
+from tests.mcp.conftest import Table, ok_on, outcome, routed
 from web_router import RouteDecision, RouteRequest
 from web_router.constants_budget import SKIP_PRICE_UNKNOWN
-from web_router.constants_mcp import ENV_MCP_MAX_COST_USD, ENV_MCP_ROUTER, ENV_MCP_TIME_LIMIT_S, MCP_ROUTER_OFF
+from web_router.constants_mcp import (
+    ENV_MCP_MAX_COST_USD,
+    ENV_MCP_ROUTER,
+    ENV_MCP_TIME_LIMIT_S,
+    MCP_ROUTER_OFF,
+    MCP_ROUTER_OPERATOR,
+    MCP_TOOL_WEB_RUN,
+)
 from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_budget import BudgetExceededError
@@ -42,6 +49,8 @@ def operators(req: RouteRequest) -> RouteDecision:
         {ENV_MCP_MAX_COST_USD: "inf"},
         {ENV_MCP_MAX_COST_USD: "lots"},
         {ENV_MCP_TIME_LIMIT_S: "-5"},
+        {ENV_MCP_MAX_COST_USD: "0"},
+        {ENV_MCP_TIME_LIMIT_S: "0.0"},
         {ENV_MCP_ROUTER: ""},
         {ENV_MCP_ROUTER: "   "},
         {ENV_MCP_ROUTER: "no_colon"},
@@ -104,6 +113,15 @@ def test_the_router_is_reported_in_process_only_for_the_built_in_router_or_none(
     routing = routed(**environ).capabilities()["routing"]
     assert routing["router_runs"] == runs and "backend" in routing["prompt_note"], "a backend always gets the prompt"
     assert ("router_note" in routing) == (runs == "operator"), "an operator's router may send the prompt elsewhere"
+
+
+async def test_an_operators_router_is_named_operator_in_every_record_the_client_gets(members: list[str]) -> None:
+    tools = routed(**{ENV_MCP_ROUTER: f"{__name__}:operators"})
+    plan = await tools.router.plan("latest on solar")
+    assert plan.decision.router == "operators", "the library's own record keeps the router's name"
+    for dry_run in (True, False):
+        payload = await ok_on(tools, MCP_TOOL_WEB_RUN, prompt="latest on solar", dry_run=dry_run)
+        assert payload["decision"]["router"] == MCP_ROUTER_OPERATOR
 
 
 # -- what a browser is charged -------------------------------------------------------

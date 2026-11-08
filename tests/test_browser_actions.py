@@ -38,7 +38,7 @@ from typing import Any
 import pytest
 
 from tests.conftest import FakeBrowserProvider, jpeg
-from web_router import AsyncWebRouter, Screenshot, WebRouter
+from web_router import AsyncWebRouter, WebRouter
 from web_router.constants import (
     BROWSER_ACTION_TIMEOUT,
     BROWSER_CONNECT_TIMEOUT,
@@ -59,7 +59,7 @@ from web_router.exceptions import (
 from web_router.providers import _page
 from web_router.providers._page import compact_snapshot
 from web_router.providers._png import png_size
-from web_router.types import BrowserRequest
+from web_router.types import BrowserRequest, Screenshot
 
 HAS_PLAYWRIGHT = importlib.util.find_spec("playwright") is not None
 needs_playwright = pytest.mark.skipif(not HAS_PLAYWRIGHT, reason="the browser extra (playwright) is not installed")
