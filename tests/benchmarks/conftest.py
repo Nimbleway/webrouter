@@ -174,6 +174,12 @@ def route_eval_rank(route_eval: ModuleType) -> ModuleType:
 
 
 @pytest.fixture(scope="module")
+def route_eval_floor(route_eval: ModuleType) -> ModuleType:
+    """The noise floors, as route-eval imported them."""
+    return sys.modules["route_eval_floor"]
+
+
+@pytest.fixture(scope="module")
 def route_eval_report(route_eval: ModuleType) -> ModuleType:
     """The report, as route-eval imported it."""
     return sys.modules["route_eval_report"]

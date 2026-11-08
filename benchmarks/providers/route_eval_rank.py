@@ -2,7 +2,7 @@
 
 Each method is ranked with its own floor, the spread of its own rerun, where
 one is frozen (:data:`~route_eval_sets.RERUNS`), else with search's
-(:func:`floor_for`); a backend counted on too few questions is not ranked
+(:func:`route_eval_floor.floor_for`); a backend counted on too few questions is not ranked
 (:data:`MIN_QUESTIONS`).
 
 ``route_eval.py`` prints this order for each set and ``run.py``'s report
@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import statistics
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -22,7 +21,7 @@ from typing import Any
 from _frozen_checks import ACCOUNT_ERRORS, JUDGE_ERROR, LEAKED_ERROR
 from _report_tables import correct_of_all, grade_stats
 from frozen import FROZEN_DIR, price_mode
-from route_eval_sets import FALLBACK_FLOOR, RERUNS, TWIN_SETS, Question, load_set
+from route_eval_sets import TWIN_SETS, Question, load_set
 
 from web_router import prices
 from web_router.constants import AUTO_KEYLESS
@@ -179,44 +178,3 @@ def noise_floor(
     accuracies = [{p: s["accuracy_all"] for p, s in backend_stats(load_set(name, folder)[1]).items()} for name in twins]
     pairs = {p: (accuracies[0][p], accuracies[1][p]) for p in sorted(set(accuracies[0]) & set(accuracies[1]))}
     return max((abs(a - b) for a, b in pairs.values()), default=0.0), pairs
-
-
-@dataclass(frozen=True)
-class Floor:
-    """The noise floor one method is ranked with, and the rerun that measured it."""
-
-    method: str
-    value: float
-    measured_on: str | None
-    """The method whose rerun gave ``value``; ``None`` when the caller set it."""
-    rerun: tuple[str, ...] = ()
-
-    @property
-    def fallback(self) -> bool:
-        """Measured on another method's rerun: this one has none frozen."""
-        return self.measured_on is not None and self.measured_on != self.method
-
-    @classmethod
-    def from_json(cls, method: str, data: Mapping[str, Any]) -> Floor:
-        """The floor :meth:`as_json` wrote, as a set's summary holds it."""
-        return cls(method, data["value"], data["measured_on"], tuple(data["rerun"]))
-
-    def as_json(self, ndigits: int | None = None) -> dict[str, Any]:
-        value = self.value if ndigits is None else round(self.value, ndigits)
-        return {"value": value, "measured_on": self.measured_on, "rerun": list(self.rerun), "fallback": self.fallback}
-
-    def describe(self) -> str:
-        """The floor in words, for a report: its value and where it came from."""
-        if self.measured_on is None:
-            return f"{self.value * 100:.1f} points, as given"
-        twins = " vs ".join(f"`{name}`" for name in self.rerun)
-        if self.fallback:
-            return f"{self.value * 100:.1f} points, {self.measured_on}'s ({twins}): no rerun of {self.method} is frozen"
-        return f"{self.value * 100:.1f} points, {self.method}'s own rerun ({twins})"
-
-
-def floor_for(method: str, folder: Path = FROZEN_DIR) -> Floor:
-    """The floor ``method`` is ranked with: its own rerun's spread when one is frozen, else search's."""
-    measured_on = method if method in RERUNS else FALLBACK_FLOOR
-    twins = RERUNS[measured_on]
-    return Floor(method, noise_floor(folder, twins)[0], measured_on, twins)
