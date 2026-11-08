@@ -139,3 +139,18 @@ class TestJev:
         monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
         jev.main()
         assert "Set TYPESAFE_API_KEY" in capsys.readouterr().out
+
+    def test_prints_the_server_reason_without_control_characters(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # probabilities already rejects a choice that is not a candidate id; this checks the print alone.
+        monkeypatch.setattr(jev, "probabilities", lambda _, choices: dict.fromkeys(choices, 0.5))
+        reply = {"choice": "ok\x1b[2J\x07 done", "confidence": 0.6, "probabilities": {}}
+        transport = httpx.MockTransport(lambda _: httpx.Response(200, json={"answers": {"route": reply}}))
+        real = httpx.AsyncClient
+        monkeypatch.setattr(jev.httpx, "AsyncClient", lambda **kw: real(transport=transport, **kw))
+        monkeypatch.setenv("TYPESAFE_API_KEY", "test-token")
+        jev.main()
+        out = capsys.readouterr().out
+        assert "(jev: ok[2J done)" in out
+        assert "\x1b" not in out and "\x07" not in out
