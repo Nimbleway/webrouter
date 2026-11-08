@@ -13,9 +13,10 @@ from typing import Any
 
 import pytest
 
+from tests.budget.conftest import Chain
 from tests.conftest import FakeProvider
 from tests.routing_helpers import Table
-from web_router import Budget, WebRouter
+from web_router import Budget, BudgetExceededError, WebRouter
 from web_router.exceptions import WebRouterError
 from web_router.registry import register_provider, unregister_provider
 from web_router.types import SearchRequest, SearchResponse
@@ -63,3 +64,41 @@ def test_a_nested_call_its_own_budget_refuses_leaves_room_for_the_next(calls: An
     response = router.search("q", provider="wrapper", budget=OUTER_CAP)
     assert ran == ["b"], "a was refused and taken back, so b still fits"
     assert response.decision.estimated_cost_usd == pytest.approx(0.03)
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+@pytest.mark.parametrize("named", [True, False], ids=["named", "auto"])
+@pytest.mark.parametrize("deep", [False, True], ids=["a-b", "a-b-c"])
+def test_a_nested_call_with_no_budget_on_another_router_is_reserved_in_the_shared_budget(
+    chain: Chain, fake_provider: object, priced: Table, named: bool, deep: bool
+) -> None:
+    """``wrapper`` on router A calls B; deep, B's ``middle`` ($0.01) calls C. The innermost call costs $0.05."""
+    a, b, c = WebRouter(), WebRouter(), WebRouter()
+
+    def innermost(router: WebRouter) -> None:
+        router.search("inner", provider="first" if named else chain.auto())
+
+    def wrapper(self: Any, search: SearchRequest) -> SearchResponse:
+        if deep:
+            b.search("middle", provider="middle")
+        else:
+            innermost(b)
+        return FakeProvider._respond(self, search)
+
+    def middle(self: Any, search: SearchRequest) -> SearchResponse:
+        innermost(c)
+        return FakeProvider._respond(self, search)
+
+    for name, search in {"wrapper": wrapper, "middle": middle}.items():
+        register_provider(name, type(name.title(), (FakeProvider,), {"name": name, "_search": search}))
+    priced.update(wrapper=(0.02, None), middle=(0.01, None), first=(0.05, None), fake=(0.05, None))
+    try:
+        with a.budget(Budget(max_cost_usd=0.10)) as shared:
+            a.search("q", provider="wrapper")
+            with pytest.raises(BudgetExceededError):
+                a.search("q", provider="fake")
+    finally:
+        unregister_provider("wrapper")
+        unregister_provider("middle")
+    assert chain.called == ["first"]
+    assert shared.status().spent_usd == pytest.approx(0.08 if deep else 0.07)

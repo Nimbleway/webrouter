@@ -2024,9 +2024,8 @@ tasks cannot reserve past the cap together. The cap is on estimates, not on
 the bill. A call a backend makes inside a budgeted call, on its own router or
 another, is reserved once, by the call it is made in; it settles in the shared budget
 even when it runs in another thread or task, or after the call that started it
-has ended. Outside a shared budget, an outer call's own `budget=` counts a
-nested `auto` call's attempts, but not a nested call to a named backend that
-has no `budget=` of its own. A thread started inside the block calls through `b`. On
+has ended. An outer call's own `budget=` counts every nested call's attempts
+too, `auto` or a named backend, with or without a `budget=` of its own. A thread started inside the block calls through `b`. On
 `AsyncWebRouter`, every method here is awaited and the scope is
 `async with awr.budget(...)`.
 
