@@ -129,7 +129,9 @@ src/web_router/
 │   │                   a hook before each attempt, held in a context variable
 │   ├── budget.py       budget_scope(), which every budget= call runs in
 │   ├── params.py       map_effort(): the research effort a budget picks, from
-│   │                   data/efforts.json (`make efforts`) and the price list
+│   │                   the effort table and the price list
+│   ├── effort_table.py reads data/efforts.json (`make efforts`): measured
+│   │                   efforts, the noise floor, an effort's p90
 │   └── candidates.py, invoke.py, merge.py   empty until their parts land
 ├── constants_params.py the effort mapping's data path, rule and reasons
 ├── _urls.py            urls_in(): the URLs written in a query's prose
