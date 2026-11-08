@@ -35,7 +35,7 @@ from web_router.constants_budget import (
     UNKNOWN_P90,
     UNKNOWN_PRICE,
 )
-from web_router.exceptions import BudgetExceededError
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers._deadline import current_deadline
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, candidate_id

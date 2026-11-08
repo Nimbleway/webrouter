@@ -10,14 +10,13 @@ must take the option -- the request always sends it, or the backend's
 ``supported_parameters`` declares it -- since a backend that does not would
 refuse the call. A URL needs a URL
 policy that allows it, and is never written into a note or a record whole:
-:func:`shown` keeps its scheme and host.
+:func:`web_router._urls.host_of` keeps its scheme and host.
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable, Collection, Mapping, Sequence
-from typing import Any, cast, get_args, overload
+from typing import Any, cast, get_args
 
 from web_router import registry
 from web_router._urls import host_of
@@ -31,12 +30,12 @@ from web_router.constants_merge import (
     MSG_PARAM_UNDECLARED,
     MSG_PARAM_URL_REFUSED,
     ROUTER_PARAMS,
-    URL_IN_TEXT,
 )
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.routing.attempts import Attempt
 from web_router.routing.candidates import REQUEST_OF
 from web_router.routing.contract import Budget, RouteDecision, ToolName, candidate_id
+from web_router.routing.merge_urls import URL_KEYS, UrlCheck
 from web_router.routing.params import EFFORTS
 from web_router.routing.pricing import fit_reason
 from web_router.types import (
@@ -44,11 +43,7 @@ from web_router.types import (
     SearchDepth,
 )
 
-UrlCheck = Callable[[str], str | None]
-"""A URL policy: why a URL is refused, or ``None`` when it is allowed."""
-
 DEPTHS: tuple[str, ...] = get_args(SearchDepth)
-URL_KEYS = frozenset({"urls", "start_url"})
 
 _CLASS_OF: dict[ToolName, Callable[[str], type[Any]]] = {
     "search": registry.get_provider_class,
@@ -60,20 +55,6 @@ DECLARED: dict[str, tuple[type[NormalizedRequest], Callable[[str], type[Any]]]] 
     tool: (REQUEST_OF[tool], class_of) for tool, class_of in _CLASS_OF.items()
 }
 """Per method, its request (whose ``always_sent`` every backend takes) and its registry's class lookup."""
-
-
-def _hide(match: re.Match[str]) -> str:
-    """The whole matched URL, and whatever ran on after it, as its scheme and host only."""
-    return host_of(match.group(0))
-
-
-@overload
-def hide_urls(text: str) -> str: ...
-@overload
-def hide_urls(text: None) -> None: ...
-def hide_urls(text: str | None) -> str | None:
-    """``text`` with every URL in it cut to its scheme and host: for anything a router wrote, ids included."""
-    return None if text is None else re.sub(URL_IN_TEXT, _hide, text)
 
 
 def _valid(key: str, value: Any) -> bool:

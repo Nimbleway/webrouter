@@ -1,9 +1,9 @@
 """The options a budget sets on a call: research's effort, mapped from what the budget has left.
 
 Experimental. A pure selection with no model and no side effects: it reads the
-research effort table (``data/efforts.json``, written by ``make efforts`` from
-the frozen ``tools-effort-60`` results), and prices and times each effort by
-:mod:`.pricing`'s rule -- the price list, then the table's own p90 -- and
+research effort table (:mod:`web_router.routing.effort_table`), and prices
+and times each effort by :mod:`.pricing`'s rule -- the table's own p90 first,
+then the price list's -- and
 answers which effort to run with and why. Nothing calls it yet; enforcing the
 budget is not its job.
 
@@ -39,17 +39,10 @@ from web_router.constants_params import (
     PARAMS_SOURCE_CALLER,
     PRICED_QUERY,
 )
-from web_router.routing import pricing
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget, candidate_id
-from web_router.routing.pricing import (
-    RESEARCH,
-    fit_reason,
-    measured_efforts,
-    mode_cost,
-    mode_p90,
-    research_mode,
-)
+from web_router.routing.effort_table import RESEARCH, effort_of, effort_table, measured_efforts, noise_floor
+from web_router.routing.pricing import fit_reason, mode_cost, mode_p90
 from web_router.types import Provider, ResearchEffort, ResearchRequest, provider_name
 
 EFFORTS: tuple[str, ...] = get_args(ResearchEffort)
@@ -86,11 +79,6 @@ class EffortChoice:
         return {**self.fields(), "unmeasured": unmeasured}
 
 
-def noise_floor() -> float:
-    """The accuracy gap, as a fraction, two efforts must exceed to be told apart: route-eval's floor for the set."""
-    return float(pricing.effort_table()["noise_floor"]["value"])
-
-
 def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) -> str | None:
     """Why research on ``provider`` at ``effort`` does not fit ``budget``, or ``None`` when it fits.
 
@@ -105,7 +93,7 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
 
 
 def _is_measured(provider: str, effort: str | None) -> bool:
-    return research_mode(provider, effort) in measured_efforts(provider)
+    return effort_of(provider, effort) in measured_efforts(provider)
 
 
 def _default(provider: str, budget: Budget, reason: str) -> EffortChoice:
@@ -162,9 +150,7 @@ def map_effort(provider: str | Provider, budget: Budget | None, effort: Research
     fitting = {e: accuracy for e, accuracy in measured.items() if effort_misfit(name, e, budget) is None}
     if len(measured) < MIN_MEASURED_EFFORTS:
         # Too few to rank: the default stands while it fits; when it does not, a measured effort that fits runs.
-        unmeasured = MSG_EFFORT_UNMEASURED.format(
-            provider=name, min=MIN_MEASURED_EFFORTS, set=pricing.effort_table()["set"]
-        )
+        unmeasured = MSG_EFFORT_UNMEASURED.format(provider=name, min=MIN_MEASURED_EFFORTS, set=effort_table()["set"])
         default = _default(name, budget, unmeasured)
         return default if default.misfit is None or not fitting else _chosen(name, fitting)
     if not fitting:

@@ -49,7 +49,7 @@ from web_router.constants_urls import (
     URL_SCHEMES,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.routing.merge import UrlCheck
+from web_router.routing.merge_urls import UrlCheck
 
 UrlPolicy = Literal["public_only"]
 """The URL policies a router takes; ``None`` is none."""
