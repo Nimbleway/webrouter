@@ -141,7 +141,12 @@ src/web_router/
 │   │                   and the decision record
 │   ├── interim.py      stand-ins for the candidate builder and the merge rule, until
 │   │                   candidates.py and merge.py replace them
-│   └── candidates.py, merge.py, params.py   empty until their parts land
+│   ├── params.py       map_effort(): the research effort a budget picks, from
+│   │                   the effort table and the price list
+│   ├── effort_table.py reads data/efforts.json (`make efforts`): measured
+│   │                   efforts, the noise floor, an effort's p90
+│   └── candidates.py, merge.py   empty until their parts land
+├── constants_params.py the effort mapping's data path, rule and reasons
 ├── _urls.py            urls_in(): the URLs written in a query's prose
 ├── constants_urls.py   the punctuation stripped from the end of a URL found in prose
 ├── constants_prices.py the price list's data path, unit divisors, messages and
@@ -263,7 +268,10 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         route_eval_paths.py, its command line in
                         route_eval_cli.py; chains.py (`make chains`): the
                         default auto orders ranked from them into
-                        data/chains.json — scripts; each
+                        data/chains.json; efforts.py (`make efforts`): each
+                        research effort's accuracy and p90 into
+                        data/efforts.json, both written or checked by
+                        _emit.py — scripts; each
                         run's report stays under results/
 ```
 
