@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import RecordingExtract
+from tests.conftest import FakeProvider, RecordingExtract
 from web_router import WebRouter, available_answer_providers, available_extract_providers, available_providers
 from web_router.constants_deepseek import DEEPSEEK_QUERY_LIMIT
 from web_router.constants_presets import PRESET_FILE_SUFFIXES
@@ -96,9 +96,24 @@ def test_each_starter_preset_works_on_the_backends_its_readme_names(file: Path) 
 def test_deepseek_cannot_take_a_starter_search_presets_domain_lists(file: Path) -> None:
     with WebRouter() as router:
         (preset,) = router.presets.load(file)
-    if "search" in preset.applies_to:
-        defaults = preset.components["search"].defaults
-        assert len(DeepSeekProvider._query(SearchRequest(query="q", **defaults))) > DEEPSEEK_QUERY_LIMIT
+    if "search" not in preset.applies_to:
+        pytest.skip("no search component")
+    defaults = preset.components["search"].defaults
+    assert len(DeepSeekProvider._query(SearchRequest(query="q", **defaults))) > DEEPSEEK_QUERY_LIMIT
+
+
+def test_a_calls_empty_domain_list_replaces_the_presets_and_none_keeps_it(fake_provider: Any) -> None:
+    router = WebRouter("fake")
+    (preset,) = router.presets.load(STARTER / "ecommerce" / "coupons.json")
+
+    router.search("q", preset=preset.ref, include_domains=[])
+    router.search("q", preset=preset.ref, include_domains=None)
+
+    provider = router.get_provider("fake")
+    assert isinstance(provider, FakeProvider)
+    emptied, kept = provider.requests
+    assert emptied.include_domains == []
+    assert kept.include_domains == preset.components["search"].defaults["include_domains"]
 
 
 @pytest.mark.parametrize("file", FILES, ids=lambda file: file.stem)

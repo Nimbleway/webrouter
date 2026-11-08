@@ -17,10 +17,10 @@ Every setting a starter preset fixes can be overridden on the call, so treat eac
 A preset's settings reach the backend like the same arguments would, so each preset needs a backend that maps them. Any other backend refuses the call before it bills: `UnsupportedParameterError` for a setting it doesn't map, `UnsupportedFormatError` for a format it can't return.
 
 - The three `search` presets set `include_domains` or `exclude_domains`. Nimble, Linkup and AWS AgentCore Web Search map them, so they need a key or credential for one of those. AgentCore maps them only on a gateway target with connector 1.2.0 or later. DeepSeek maps the lists too but writes them into the query as `site:` operators, and each list here is longer than its 128-character query limit. `auto` with no such key has no backend to send them to.
-- The two `answer` presets set `exclude_domains` or `recency`. Linkup, Perplexity and You.com map them.
+- The two `answer` presets set `exclude_domains` or `recency`. Linkup, Perplexity and You.com map them. Perplexity and You.com take one domain list, so on them `ecommerce.product-similarity` can't be combined with `include_domains`.
 - The `extract` part of `ecommerce.shipping-info` sets only `format`, so any extract backend that returns Markdown serves it.
 
-A call can replace a preset's domain list. Passing `[]` sends the backend an empty list, which removes the filter, but a backend that doesn't map the setting still refuses it, since the value counts as set. Passing `None` leaves the preset's list in place. On a backend that doesn't map these settings, call without the preset.
+A call can replace a preset's domain list with its own. Passing `[]` replaces it with an empty one, which still counts as set, so a backend that doesn't map the setting refuses it. Passing `None` leaves the preset's list in place. To search without the preset's domains, or on a backend that doesn't map them, call without the preset.
 
 ## E-commerce
 
