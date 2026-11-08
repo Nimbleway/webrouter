@@ -38,9 +38,11 @@
   },
   "not_mapped": [
     "country",
+    "effort",
     "exclude_domains",
     "include_domains",
-    "locale"
+    "locale",
+    "recency"
   ],
   "source": [
     "https://you.com/docs/api-reference/search/v1-search"

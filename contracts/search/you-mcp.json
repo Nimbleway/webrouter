@@ -36,9 +36,11 @@
   },
   "not_mapped": [
     "country",
+    "effort",
     "exclude_domains",
     "include_domains",
-    "locale"
+    "locale",
+    "recency"
   ],
   "source": [
     "https://you.com/docs/agents/mcp-server",

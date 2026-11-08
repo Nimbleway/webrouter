@@ -21,7 +21,6 @@ from web_router.types import (
     ExtractRequest,
     ResearchEffort,
     ResearchRequest,
-    SearchDepth,
     SearchRequest,
     StealthLevel,
     Viewport,
@@ -32,27 +31,9 @@ JsonSchema = dict[str, Any] | type[BaseModel]
 """A schema for a structured answer: JSON Schema, or the pydantic model to take one from."""
 
 
-def build_search_request(
-    query: str,
-    *,
-    max_results: int | None,
-    search_depth: SearchDepth | None,
-    include_domains: list[str] | None,
-    exclude_domains: list[str] | None,
-    country: str | None,
-    locale: str | None,
-    provider_options: dict[str, Any] | None,
-) -> SearchRequest:
-    return SearchRequest(
-        query=query,
-        max_results=max_results,
-        search_depth=search_depth,
-        include_domains=include_domains,
-        exclude_domains=exclude_domains,
-        country=country,
-        locale=locale,
-        provider_options=provider_options or {},
-    )
+def build_search_request(query: str, *, provider_options: dict[str, Any] | None, **options: Any) -> SearchRequest:
+    """Every search option goes through by name, so a new one is added to the request model and the signatures only."""
+    return SearchRequest(query=query, provider_options=provider_options or {}, **options)
 
 
 def build_extract_request(

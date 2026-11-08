@@ -10,8 +10,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Literal, get_args
 
-from pydantic import BaseModel
-
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
 from web_router.constants_mcp import (
@@ -24,6 +22,8 @@ from web_router.constants_mcp import (
     MCP_TOOL_WEB_RUN,
     MCP_WEB_RUN_PROPERTIES,
 )
+from web_router.constants_search import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
+from web_router.constants_search import described as _described
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -42,7 +42,6 @@ from web_router.types import (
     ResearchRequest,
     ResearchState,
     SearchDepth,
-    SearchRequest,
     StealthLevel,
 )
 from web_router.types_page import PageFormat, PageLoadState
@@ -614,17 +613,16 @@ was being served moves. Their order between them is not yet backed by a scan.
 Keenable's ``/public`` endpoint joined after them (2026-10-13) on the same terms.
 """
 
-AUTO_SUPPORTED_PARAMETERS = frozenset(
-    {"max_results", "search_depth", "include_domains", "exclude_domains", "country", "locale"}
-)
-"""What some member of the chain maps: the union, not the intersection.
+AUTO_SUPPORTED_PARAMETERS = NORMALIZED_PARAMETERS
+"""Every shared search option: what ``auto`` accepts before choosing a member.
 
 Each request goes only to the members that map every option it sets, checked
 on their classes before any is tried, so accepting an option here never means
 routing it somewhere that would drop it -- and narrowing the surface to the
-weakest member would cost Nimble and Linkup their filters. Listed rather than
-computed so importing ``auto`` does not drag in each member's SDK.
-``tests/test_auto.py`` asserts it really is the union.
+weakest member would cost Nimble and Linkup their filters. An option no member
+maps raises there, naming what each member lacked. ``auto`` sets none of them
+itself: ``effort`` in particular reaches a member only as the caller set it.
+``tests/test_auto.py`` asserts the members' union never exceeds it.
 """
 
 AUTO_EXTRA = EXTRA_ALL
@@ -3833,43 +3831,6 @@ The three template tools share one registry, and the browser tools' method is
 ``provider_config`` speak the same name.
 """
 
-# Argument names are the library's own keyword names, so the MCP layer passes
-# what it is given straight through rather than translating anything.
-
-
-def _described(model: type[BaseModel], field: str) -> str:
-    """The request model's own description of ``field``, so the MCP schema says what the library's does."""
-    description = model.model_fields[field].description
-    if description is None:
-        raise ValueError(f"{model.__name__}.{field} has no description for the MCP schema")
-    return description
-
-
-MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
-    "query": {"type": "string", "description": "What to search for."},
-    "max_results": {"type": "integer", "minimum": 1, "description": _described(SearchRequest, "max_results")},
-    "search_depth": {
-        "type": "string",
-        "enum": list(get_args(SearchDepth)),
-        "description": (
-            "How much page text to retrieve per result: 'lite' is links and descriptions only, "
-            "'fast' a truncated body, 'deep' the full page and the slowest."
-        ),
-    },
-    "include_domains": {
-        "type": "array",
-        "items": {"type": "string"},
-        "description": _described(SearchRequest, "include_domains"),
-    },
-    "exclude_domains": {
-        "type": "array",
-        "items": {"type": "string"},
-        "description": _described(SearchRequest, "exclude_domains"),
-    },
-    "country": {"type": "string", "description": _described(SearchRequest, "country")},
-    "locale": {"type": "string", "description": _described(SearchRequest, "locale")},
-}
-
 MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
     "urls": {
         "type": "array",
@@ -4210,15 +4171,6 @@ MCP_PROVIDER_DESCRIPTION = (
 
 # A tool description is the routing decision: the model choosing between these
 # twenty-four is the actual router (`web_run` hands it to ours), and latency and cost are what it chooses on.
-
-MCP_DESC_SEARCH = (
-    "Search the web: ranked links with their titles, descriptions and page text. Returns in about "
-    "a second, so call it freely and call it again with a better query. Use it to find pages you "
-    "do not have URLs for; use `extract` when you already have the URL, and `research` only when "
-    "the question needs an investigation rather than a list of results. When the page that answers "
-    "needs a login, a form or other interaction, suggest a browser (`browser_open`) to the user "
-    "rather than only listing the steps."
-)
 
 MCP_DESC_EXTRACT = (
     "Read pages you already have URLs for, as markdown, HTML or plain text. Returns in about a "

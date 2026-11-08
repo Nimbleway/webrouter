@@ -43,7 +43,9 @@
   },
   "not_mapped": [
     "country",
+    "effort",
     "locale",
+    "recency",
     "search_depth"
   ],
   "source": [

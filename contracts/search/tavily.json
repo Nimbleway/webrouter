@@ -33,9 +33,11 @@
   },
   "not_mapped": [
     "country",
+    "effort",
     "exclude_domains",
     "include_domains",
-    "locale"
+    "locale",
+    "recency"
   ],
   "source": [
     "https://docs.tavily.com/documentation/api-reference/endpoint/search",

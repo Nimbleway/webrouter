@@ -27,9 +27,11 @@
   },
   "not_mapped": [
     "country",
+    "effort",
     "exclude_domains",
     "include_domains",
     "locale",
+    "recency",
     "search_depth"
   ],
   "source": [

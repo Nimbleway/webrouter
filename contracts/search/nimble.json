@@ -53,6 +53,34 @@
       "sample": {
         "body.locale": "en"
       }
+    },
+    "recency": {
+      "day": {
+        "body.recency": "day"
+      },
+      "week": {
+        "body.recency": "week"
+      },
+      "month": {
+        "body.recency": "month"
+      },
+      "year": {
+        "body.recency": "year"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.effort": "low"
+      },
+      "medium": {
+        "body.effort": "medium"
+      },
+      "high": {
+        "body.effort": "high"
+      },
+      "max": {
+        "body.effort": "max"
+      }
     }
   },
   "not_mapped": [],
