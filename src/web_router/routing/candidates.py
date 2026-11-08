@@ -31,24 +31,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from functools import cache
 from typing import Any
 
-from web_router._chains import chains
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_budget import OVER_COST, OVER_TIME, UNKNOWN_P90, UNKNOWN_PRICE
-from web_router.constants_candidates import (
-    MSG_DROPPED_OVER_COST,
-    MSG_DROPPED_OVER_TIME,
-    MSG_DROPPED_UNKNOWN_COST,
-    MSG_DROPPED_UNKNOWN_LATENCY,
-    RANKED_METHODS,
-)
-from web_router.routing.attempts import Attempt
+from web_router.routing.candidates_priced import Found, price_members
 from web_router.routing.contract import Budget, Candidate, ToolName, candidate_id
+from web_router.routing.effort_call import choose_effort
 from web_router.routing.eligible import eligible_members
-from web_router.routing.params import EffortChoice, shared_effort
-from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
+from web_router.routing.params import EffortChoice
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -134,60 +124,21 @@ def build_candidates(
     """
     if provider is not None and provider_name(provider) != PROVIDER_AUTO:
         return CandidateSet()
-    kept: list[Candidate] = []
-    dropped: dict[str, str] = {}
-    unmeasured: list[str] = []
-    seen: set[str] = set()
+    found = Found()
     effort: EffortChoice | None = None
-    priced: dict[ToolName, NormalizedRequest] = {}
     for tool, request in requests.items():
         eligible, unbuilt = eligible_members(router, tool, request)
-        if isinstance(request, ResearchRequest) and request.effort is None:
-            effort = shared_effort([name for name, _ in eligible], budget)
-            request = request if effort is None else request.model_copy(update={"effort": effort.effort})
-        priced[tool] = request
-        for name, keyless in eligible:
-            attempt = Attempt(tool=tool, provider=name, request=request)
-            cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
-            candidate = Candidate(tool=tool, provider=name, est_cost_usd=cost, est_latency_s=p90)
-            if candidate.id in seen:
-                continue  # a member listed twice is one candidate, at its first place
-            seen.add(candidate.id)
-            if (why := _over_budget(cost, p90, budget)) is not None:
-                dropped[candidate.id] = why
-                continue
-            kept.append(candidate)
-            if cost is None or p90 is None or keyless or request.provider_options or name not in _ranked(tool):
-                unmeasured.append(candidate.id)
+        request, chosen = choose_effort([name for name, _ in eligible], request, budget)
+        effort = chosen or effort
+        found.priced[tool] = request
+        price_members(tool, request, eligible, budget, found)
         for name, why in unbuilt.items():
-            if (unbuilt_id := candidate_id(tool, name)) not in seen:  # built at another place
-                dropped[unbuilt_id] = why
+            if (unbuilt_id := candidate_id(tool, name)) not in found.seen:  # built at another place
+                found.dropped[unbuilt_id] = why
     return CandidateSet(
-        candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured), effort=effort, requests=priced
+        candidates=tuple(found.kept),
+        dropped=found.dropped,
+        unmeasured=tuple(found.unmeasured),
+        effort=effort,
+        requests=found.priced,
     )
-
-
-_DROPPED = {
-    UNKNOWN_PRICE: MSG_DROPPED_UNKNOWN_COST,
-    OVER_COST: MSG_DROPPED_OVER_COST,
-    UNKNOWN_P90: MSG_DROPPED_UNKNOWN_LATENCY,
-    OVER_TIME: MSG_DROPPED_OVER_TIME,
-}
-
-
-def _over_budget(cost: float | None, p90: float | None, budget: Budget | None) -> str | None:
-    """Why ``budget`` leaves the candidate out, or ``None`` when it fits."""
-    if budget is None:
-        return None
-    cap, limit = budget.max_cost_usd, budget.time_limit_s
-    code = misfit(cost, p90, cap, limit, budget.strict)
-    return None if code is None else _DROPPED[code].format(cost=cost, cap=cap, p90=p90, limit=limit)
-
-
-@cache
-def _ranked(tool: ToolName) -> frozenset[str]:
-    """The members route-eval ranked in ``tool``'s default order; none for a hand-ordered method."""
-    if tool not in RANKED_METHODS:
-        return frozenset()
-    order = chains()[tool]
-    return frozenset(order["preferred"]) - frozenset(order.get("unmeasured", ()))

@@ -154,6 +154,10 @@ src/web_router/
 │   │                   efforts, the noise floor, an effort's p90
 │   ├── candidates.py   build_candidates(): every (tool, provider) a call's `auto`
 │   │                   chains can serve, priced, timed and prefiltered by the budget
+│   ├── candidates_priced.py one method's members priced, timed, and dropped when the
+│   │                   budget leaves them out
+│   ├── effort_call.py  choose_effort(): the one research effort a call sends, chosen
+│   │                   before its candidates are priced or a router is asked
 │   ├── eligible.py     eligible_members(): the members of a method's `auto` that
 │   │                   can serve a request, and the ones it cannot build, with why
 │   ├── merge.py        merge(): a router's decision and the static order made into
