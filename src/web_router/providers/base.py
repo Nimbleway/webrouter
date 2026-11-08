@@ -1,29 +1,24 @@
 """The contract every provider implements.
 
-A provider does one job: translate between web-router's normalized types and
-whatever its API speaks. The invariants that make the router trustworthy --
-rejecting unmapped options, wrapping backend failures -- are enforced in the
-public :meth:`SearchProvider.search` and :meth:`ExtractProvider.extract`, so a
-new provider gets them by construction and cannot forget them.
+A provider does one job: translate between web-router's normalized types and whatever its API speaks. The invariants
+that make the router trustworthy -- rejecting unmapped options, wrapping backend failures -- are enforced in the
+public :meth:`SearchProvider.search` and :meth:`ExtractProvider.extract`, so a new provider gets them by
+construction and cannot forget them.
 
-There is one base class per method. A vendor that serves both writes two
-classes, which is what lets a backend appear under ``extract`` and not under
-``search``, or the other way round.
+There is one base class per method. A vendor that serves both writes two classes, which is what lets a backend
+appear under ``extract`` and not under ``search``, or the other way round.
 
-:class:`ResearchProvider` is the odd one: a research run is a job rather than a
-call. Starting one, waiting for it and reporting it belong to
-:class:`JobProvider` and the :class:`Job` it hands callers to hold while it
-runs, which know nothing about research; :class:`ResearchProvider` and
-:class:`ResearchJob` are that core with research's types and names on it, and
-:class:`BrowseProvider` and :class:`BrowseJob` are the same core again with a
-hosted browser agent's.
+:class:`ResearchProvider` is the odd one: a research run is a job rather than a call. Starting one, waiting for it
+and reporting it belong to :class:`JobProvider` and the :class:`Job` it hands callers to hold while it runs, which
+know nothing about research; :class:`ResearchProvider` and :class:`ResearchJob` are that core with research's types
+and names on it, and :class:`BrowseProvider` and :class:`BrowseJob` are the same core again with a hosted browser
+agent's.
 
-:class:`BrowserProvider` is the other: a browser session is a resource rather
-than an answer, so the class owns opening and releasing one and hands callers
-a :class:`BrowserHandle` -- or an :class:`AsyncBrowserHandle` -- that releases
-it on every way out of the block that holds it. The handle also drives the
-session's page -- ``goto``, ``snapshot``, ``click`` and the rest -- once, over
-CDP, for every backend alike; see :mod:`web_router.providers._page`.
+:class:`BrowserProvider` is the other: a browser session is a resource rather than an answer, so the class owns
+opening and releasing one and hands callers a :class:`BrowserHandle` -- or an :class:`AsyncBrowserHandle` -- that
+releases it on every way out of the block that holds it. The handle also drives the session's page -- ``goto``,
+``snapshot``, ``click`` and the rest -- once, over CDP, for every backend alike; see
+:mod:`web_router.providers._page`.
 """
 
 from __future__ import annotations
@@ -36,7 +31,7 @@ import time
 import warnings
 from collections.abc import Awaitable, Callable, Iterator, Mapping
 from types import MappingProxyType, TracebackType
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar, cast, get_args
 
 from pydantic import SecretStr
 
@@ -77,6 +72,7 @@ from web_router.constants import (
     MSG_UNSUPPORTED_STEALTH,
     RESEARCH_TIMEOUT,
 )
+from web_router.constants_search import MSG_UNSUPPORTED_DEPTH
 from web_router.exceptions import (
     BrowseTimeoutError,
     DeadlineExceededError,
@@ -107,6 +103,7 @@ from web_router.types import (
     ResearchProgress,
     ResearchRequest,
     ResearchResponse,
+    SearchDepth,
     SearchRequest,
     SearchResponse,
     StealthLevel,
@@ -143,10 +140,8 @@ class _BaseProvider(_DeadlineMixin, abc.ABC):
     supported_parameters: ClassVar[frozenset[str]] = frozenset()
     """Normalized options this backend maps.
 
-    Anything outside this set is rejected rather than dropped, so a call never
-    silently runs without something the caller asked for. See
-    :meth:`~web_router.types.NormalizedRequest.normalized_parameters` for
-    everything on offer.
+    Anything outside this set is rejected rather than dropped, so a call never silently runs without something the
+    caller asked for. See :meth:`~web_router.types.NormalizedRequest.normalized_parameters` for everything on offer.
     """
 
     def __init__(self, *, api_key: str | None = None, **kwargs: Any) -> None:
@@ -190,10 +185,14 @@ class _BaseProvider(_DeadlineMixin, abc.ABC):
 class SearchProvider(_BaseProvider):
     """Base class for a search backend.
 
-    To add one, set :attr:`name` and :attr:`supported_parameters`, then
-    implement :meth:`_search` and :meth:`_asearch`. Override ``close``/``aclose``
-    if the provider holds a client. See CONTRIBUTING.md for the full checklist.
+    To add one, set :attr:`name` and :attr:`supported_parameters`, then implement :meth:`_search` and
+    :meth:`_asearch`. Override ``close``/``aclose`` if it holds a client. CONTRIBUTING.md has the full checklist.
     """
+
+    depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset(get_args(SearchDepth))
+    """The ``search_depth`` levels this backend serves, read only when it maps ``search_depth``: every level unless
+    it narrows this. Another level raises :class:`UnsupportedParameterError` naming it, before anything is sent, and
+    ``auto`` passes the backend over -- one whose longest body is short of a page lists no ``deep``."""
 
     # -- What subclasses implement -------------------------------------------
 
@@ -218,8 +217,19 @@ class SearchProvider(_BaseProvider):
         return await self._abounded(lambda: self._asearch(request), MSG_SEARCH_FAILED)
 
     def validate(self, request: SearchRequest) -> None:
-        """Raise :class:`UnsupportedParameterError` for any option this backend does not map."""
+        """Raise :class:`UnsupportedParameterError` for an option this backend does not map, or a depth it lacks."""
         self._reject_unmapped(request)
+        if refused := self.refused_values(request):
+            levels = ", ".join(repr(level) for level in get_args(SearchDepth) if level in self.depth_levels)
+            detail = MSG_UNSUPPORTED_DEPTH.format(levels=levels)
+            raise UnsupportedParameterError(self.name, refused, values=refused, detail=detail)
+
+    @classmethod
+    def refused_values(cls, request: SearchRequest) -> dict[str, Any]:
+        """A ``search_depth`` outside :attr:`depth_levels`, by name; on the class, so ``auto`` reads it keyless."""
+        depth = request.search_depth
+        mapped = depth is not None and "search_depth" in cls.supported_parameters
+        return {"search_depth": depth} if mapped and depth not in cls.depth_levels else {}
 
 
 class ExtractProvider(_BaseProvider):
@@ -377,9 +387,8 @@ class _Collected:
     def __init__(self, provider: str, requested: list[str]) -> None:
         self.provider = provider
         self.requested = requested
-        # Whoever actually answered, which is not always `provider`: `auto`
-        # delegates, and the response must name the backend that served the
-        # call rather than the one that chose it.
+        # Whoever actually answered, which is not always `provider`: `auto` delegates, and the response must name the
+        # backend that served the call rather than the one that chose it.
         self.served_by: str | None = None
         self.documents: list[ExtractedDocument] = []
         self.failures: list[ExtractFailure] = []
@@ -422,9 +431,8 @@ class _Collected:
         self.failures.extend(ExtractFailure(url=url, error=str(error)) for url in urls)
 
     def resolved(self) -> ExtractResponse:
-        # Not `if self.failures`: a backend can also answer successfully with
-        # nothing in it, and an empty response is the one outcome a caller
-        # cannot distinguish from a page that had no text.
+        # Not `if self.failures`: a backend can also answer successfully with nothing in it, and an empty response is
+        # the one outcome a caller cannot distinguish from a page that had no text.
         if not self.documents:
             raise self._exhausted()
         return ExtractResponse(
@@ -467,9 +475,8 @@ class _Collected:
         detail = "; ".join(f"{failure.url}: {failure.error}" for failure in failures)
         late = [error for _, error in self.errors if isinstance(error, DeadlineExceededError)]
         if late and len(late) == len(self.errors) and not self.reported:
-            # Every URL that failed ran out of time. One that failed for a
-            # reason of its own -- a call that raised, or a URL a backend
-            # reported in its answer -- keeps the summary below, which names each.
+            # Every URL that failed ran out of time. One that failed for a reason of its own -- a call that raised, or a
+            # URL a backend reported in its answer -- keeps the summary below, which names each.
             return DeadlineExceededError(self.provider, late[0].seconds)
         original = next((error.original for _, error in self.errors if isinstance(error, ProviderError)), None)
         return ProviderError(self.provider, MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail), original=original)
@@ -769,9 +776,8 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
     def _run(self, request: _RequestT, timeout: float | None) -> _ResponseT:
         """Submit the run and wait up to ``timeout`` for its answer."""
         with self._submit_window(_deadline_for(timeout), timeout) as (deadline, timeout):
-            # The budget starts here, not inside result(): a backend that does
-            # the whole run inside the call that starts it would otherwise spend
-            # its own HTTP timeout before the caller's had begun.
+            # The budget starts here, not inside result(): a backend that does the whole run inside the call that starts
+            # it would otherwise spend its own HTTP timeout before the caller's had begun.
             return self.submit(request)._wait_until(deadline, timeout)
 
     async def _arun(self, request: _RequestT, timeout: float | None) -> _ResponseT:
@@ -885,9 +891,8 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
             return await self._await_until(deadline, wait)
 
     def _timeout(self, timeout: float | _Default | None) -> float | None:
-        # A sentinel rather than a default of `default_timeout` itself, which
-        # would be read once when this class was defined and never again, so a
-        # method's own setting would not reach it.
+        # A sentinel rather than a default of `default_timeout` itself, which would be read once when this class was
+        # defined and never again, so a method's own setting would not reach it.
         return self.default_timeout if timeout is _Default.TIMEOUT else timeout
 
     def _wait_until(self, deadline: float | None, timeout: float | None) -> _ResponseT:
@@ -1055,9 +1060,8 @@ class ResearchJob(Job[ResearchRequest, ResearchProgress, ResearchResponse]):
 
     default_timeout = RESEARCH_TIMEOUT
 
-    # Restated rather than inherited so the public signature still shows
-    # RESEARCH_TIMEOUT as the default, as it did before the core existed. The
-    # annotation keeps Job's sentinel only because an override may not narrow it.
+    # Restated rather than inherited so the public signature still shows RESEARCH_TIMEOUT as the default, as it did
+    # before the core existed. The annotation keeps Job's sentinel only because an override may not narrow it.
     def result(self, *, timeout: float | _Default | None = RESEARCH_TIMEOUT) -> ResearchResponse:
         """Wait for the run to finish and return its answer.
 
@@ -1161,8 +1165,8 @@ class BrowseJob(Job[BrowseRequest, BrowseProgress, BrowseResponse]):
 
     default_timeout = BROWSE_TIMEOUT
 
-    # Restated rather than inherited so the public signature shows
-    # BROWSE_TIMEOUT as the default instead of Job's sentinel, as ResearchJob does.
+    # Restated rather than inherited so the public signature shows BROWSE_TIMEOUT as the default instead of Job's
+    # sentinel, as ResearchJob does.
     def result(self, *, timeout: float | _Default | None = BROWSE_TIMEOUT) -> BrowseResponse:
         """Wait for the task to finish and return its answer.
 
@@ -1541,8 +1545,7 @@ class _Handle:
         return known.get_secret_value() if isinstance(known, SecretStr) else None
 
     def _must_ask_control_url(self) -> bool:
-        # Asked once, answer or no answer; and never for a session already released,
-        # which has no page left to drive.
+        # Asked once, answer or no answer; and never for a session already released, which has no page left to drive.
         return self._session.control_url is None and self._asked_control_url is _UNASKED and not self._released
 
     @property
@@ -1551,15 +1554,13 @@ class _Handle:
         return self._released
 
     def __del__(self) -> None:
-        # Warn rather than release: a network call from a finalizer runs at
-        # whatever moment the collector picks, on whatever thread, possibly with
-        # the event loop already gone. Saying so is the most that is safe here.
+        # Warn rather than release: a network call from a finalizer runs at whatever moment the collector picks, on
+        # whatever thread, possibly with the event loop already gone. Saying so is the most that is safe here.
         if not getattr(self, "_released", True):
             warnings.warn(
                 MSG_BROWSER_LEAKED.format(provider=self.provider, session_id=self.session_id),
                 ResourceWarning,
-                # There is no caller to point at: a finalizer runs wherever
-                # the collector happened to be.
+                # There is no caller to point at: a finalizer runs wherever the collector happened to be.
                 stacklevel=1,
             )
 
@@ -1571,8 +1572,7 @@ class _Handle:
         )
 
     def __repr__(self) -> str:
-        # Provider and id only: the CDP URL is a credential, and a repr is what
-        # ends up in logs and tracebacks.
+        # Provider and id only: the CDP URL is a credential, and a repr is what ends up in logs and tracebacks.
         return f"<{type(self).__name__} provider={self.provider!r} session_id={self.session_id!r}>"
 
 
@@ -1745,9 +1745,8 @@ class BrowserHandle(_Handle):
         try:
             self.release()
         except WebRouterError as error:
-            # The block's own exception is the one the caller needs to see;
-            # the session stays unreleased, so it is also warned about again
-            # if the handle is collected.
+            # The block's own exception is the one the caller needs to see; the session stays unreleased, so it is also
+            # warned about again if the handle is collected.
             self._warn_masked(error)
 
 

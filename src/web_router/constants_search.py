@@ -1,4 +1,4 @@
-"""Search's shared option surface over MCP: the search tool's schema and description.
+"""Search's shared option surface: the MCP search tool's schema and description, and its refusal messages.
 
 Kept apart from :mod:`web_router.constants`, so that file stops growing; it
 imports the search tool's tables, and :func:`described`, from here.
@@ -63,3 +63,12 @@ MCP_DESC_SEARCH = (
     "needs a login, a form or other interaction, suggest a browser (`browser_open`) to the user "
     "rather than only listing the steps."
 )
+
+MSG_UNSUPPORTED_DEPTH = (
+    "It serves search_depth at {levels}. Ask for one of those, leave it unset for the backend's own default, or "
+    "name a provider that serves the level -- see the search table in README.md."
+)
+"""Follows :data:`~web_router.constants.MSG_UNSUPPORTED_VALUES`: a shorter body is never served in a level's place."""
+
+MSG_AUTO_REFUSES = "will not serve {values}"
+"""Why ``auto`` passed over a member that maps the option but not the value it was set to."""

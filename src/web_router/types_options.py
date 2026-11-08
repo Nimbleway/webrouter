@@ -19,7 +19,8 @@ SearchDepth = Literal["lite", "fast", "deep"]
 The sizes are the contract: each backend maps a level onto its own vocabulary
 only where what comes back fits it. A backend whose longest body is shorter
 than a page refuses ``deep`` rather than quietly returning less, and one with
-no snippet-sized setting refuses ``lite``. How hard the backend searches is
+no snippet-sized setting refuses ``lite``: each declares the levels it serves in
+:attr:`~web_router.SearchProvider.depth_levels`. How hard the backend searches is
 ``effort``, a separate option.
 """
 
