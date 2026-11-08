@@ -94,7 +94,7 @@ def budget_scope(
         yield BudgetedCall(backend)
         return
     held = _LEDGERS.get()
-    ledger = Ledger(budget, _unheld(pool, held[-1] if held else None))
+    ledger = Ledger(budget, _unheld(pool, held))
     token = _LEDGERS.set((*held, ledger))
     try:
         with _held(ledger, held, tool, backend, request) as call:
@@ -105,11 +105,10 @@ def budget_scope(
             ledger.pool.settle(ledger.spent)
 
 
-def _unheld(chain: PoolChain | None, outer: Ledger | None) -> PoolChain | None:
-    """``chain`` less the pools ``outer``, an enclosing call's ledger, reserves in: it reserves this call's too."""
-    if chain is None or outer is None or outer.pool is None:
-        return chain
-    pools = tuple(pool for pool in chain.pools if pool not in outer.pool.pools)
+def _unheld(chain: PoolChain | None, held: tuple[Ledger, ...]) -> PoolChain | None:
+    """``chain`` less every pool an enclosing call's ledger in ``held`` reserves in: those reserve this call's too."""
+    taken = {pool for ledger in held if ledger.pool is not None for pool in ledger.pool.pools}
+    pools = () if chain is None else tuple(pool for pool in chain.pools if pool not in taken)
     return PoolChain(pools) if pools else None
 
 

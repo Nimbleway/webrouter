@@ -82,3 +82,31 @@ def test_an_inner_call_its_own_budget_refuses_is_charged_to_no_one(router: WebRo
         scoped = router.search("q", provider="wrapper")
     assert (alone.decision.estimated_cost_usd, scoped.decision.estimated_cost_usd) == (0.02, 0.02)
     assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.02, 0.0)
+
+
+def test_three_calls_deep_under_two_shared_budgets_each_attempt_is_reserved_once_in_each(
+    fake_provider: object, priced: Table
+) -> None:
+    router = WebRouter()
+    scopes = []
+
+    def outer(self: Any, search: SearchRequest) -> SearchResponse:
+        with router.budget(Budget(max_cost_usd=1.0)) as second:
+            scopes.append(second)
+            router.search("middle", provider="middle")
+        return FakeProvider._respond(self, search)
+
+    def middle(self: Any, search: SearchRequest) -> SearchResponse:
+        router.search("inner", provider="fake")
+        return FakeProvider._respond(self, search)
+
+    _register("outer", outer)
+    _register("middle", middle)
+    priced.update(outer=(0.02, None), middle=(0.04, None), fake=(0.01, None))
+    try:
+        with router.budget(Budget(max_cost_usd=1.0)) as first:
+            router.search("q", provider="outer")
+    finally:
+        unregister_provider("outer")
+        unregister_provider("middle")
+    assert (first.status().spent_usd, scopes[0].status().spent_usd) == (0.07, 0.05)
