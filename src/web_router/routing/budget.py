@@ -31,7 +31,7 @@ each attempt is reserved there once.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, replace
@@ -53,8 +53,8 @@ from web_router.types import DecisionRecord, NormalizedRequest
 _BackendT = TypeVar("_BackendT")
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 
-_LEDGER: ContextVar[Ledger | None] = ContextVar("web_router_budget_ledger", default=None)
-"""The ledger of the budgeted call in flight, whose check runs before every attempt made inside it."""
+_LEDGERS: ContextVar[tuple[Ledger, ...]] = ContextVar("web_router_budget_ledgers", default=())
+"""The ledgers of the budgeted calls in flight here, outermost first: each one checks every attempt made inside it."""
 
 
 @dataclass(frozen=True)
@@ -93,13 +93,14 @@ def budget_scope(
     if budget is None:
         yield BudgetedCall(backend)
         return
-    ledger = Ledger(budget, _unheld(pool, _LEDGER.get()))
-    token = _LEDGER.set(ledger)
+    held = _LEDGERS.get()
+    ledger = Ledger(budget, _unheld(pool, held[-1] if held else None))
+    token = _LEDGERS.set((*held, ledger))
     try:
-        with _held(ledger, tool, backend, request) as call:
+        with _held(ledger, held, tool, backend, request) as call:
             yield call
     finally:
-        _LEDGER.reset(token)
+        _LEDGERS.reset(token)
         if ledger.pool is not None:
             ledger.pool.settle(ledger.spent)
 
@@ -114,12 +115,12 @@ def _unheld(chain: PoolChain | None, outer: Ledger | None) -> PoolChain | None:
 
 @contextmanager
 def _held(
-    ledger: Ledger, tool: ToolName, backend: _BackendT, request: NormalizedRequest
+    ledger: Ledger, held: tuple[Ledger, ...], tool: ToolName, backend: _BackendT, request: NormalizedRequest
 ) -> Iterator[BudgetedCall[_BackendT]]:
-    """The block under ``ledger``: its deadline, its check before each attempt, and its refusal."""
+    """The block under ``ledger``, inside the calls ``held`` holds: its deadline, its check and its refusal."""
     expires = None if ledger.pool is None else ledger.pool.expires_at()
     outside = current_deadline()
-    with call_deadline(ledger.budget.time_limit_s), job_deadline(expires), call_route(_hooked(ledger.admit)):
+    with call_deadline(ledger.budget.time_limit_s), job_deadline(expires), call_route(_hooked(ledger, held)):
         name = getattr(backend, "name", PROVIDER_AUTO)
         _refuse_late(ledger, f"{tool}{CANDIDATE_ID_SEPARATOR}{name}", name, outside)
         if name != PROVIDER_AUTO and not admitted(tool, name, request):
@@ -154,10 +155,25 @@ def _refuse_late(ledger: Ledger, call_id: str, name: str, outside: Deadline | No
     raise ledger.refusal()
 
 
-def _hooked(admit: Callable[[Attempt], bool]) -> CallRoute:
-    """The route in force, if any, with ``admit`` after its own hook: a member it refuses is never charged."""
+def _hooked(ledger: Ledger, held: tuple[Ledger, ...]) -> CallRoute:
+    """The route in force, if any, with ``ledger``'s check after its own hook: a member either refuses is never charged.
+
+    The hook in force runs the check of every enclosing call's ledger in
+    ``held``, and each has charged an attempt it admits; when ``ledger`` then
+    refuses it, each takes its charge back.
+    """
     route = current_route() or CallRoute()
     outer = route.before_attempt
     if outer is None:
-        return replace(route, before_attempt=admit)
-    return replace(route, before_attempt=lambda attempt: outer(attempt) and admit(attempt))
+        return replace(route, before_attempt=ledger.admit)
+
+    def admit(attempt: Attempt) -> bool:
+        if not outer(attempt):
+            return False
+        if ledger.admit(attempt):
+            return True
+        for enclosing in held:
+            enclosing.undo()
+        return False
+
+    return replace(route, before_attempt=admit)

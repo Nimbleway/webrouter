@@ -153,10 +153,10 @@ class PoolChain:
                 pool._reserved += cost
         return None
 
-    def settle(self, cost: float) -> None:
-        """Move ``cost``, what a call that has ended reserved, from reserved to spent in every pool of the chain."""
+    def settle(self, cost: float, *, spent: bool = True) -> None:
+        """Take ``cost``, what a call reserved, out of reserved in every pool of the chain: into spent, if ``spent``."""
         for pool in self.pools:
-            pool._move(cost, spent=True)
+            pool._move(cost, spent=spent)
 
 
 def _least(values: list[float | None]) -> float | None:

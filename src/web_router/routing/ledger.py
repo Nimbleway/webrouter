@@ -133,6 +133,14 @@ class Ledger:
         self.tried.append(_Tried(name, cost, time.monotonic()))
         return True
 
+    def undo(self) -> None:
+        """Take back the attempt admitted last, which a check after this one refused, so it never ran."""
+        tried = self.tried.pop()
+        if tried.est_cost_usd is not None:
+            self.spent -= tried.est_cost_usd
+            if self.pool is not None:
+                self.pool.settle(tried.est_cost_usd, spent=False)
+
     def _over_cost(self, cost: float | None) -> str | None:
         cap = self.budget.max_cost_usd
         if cap is None:

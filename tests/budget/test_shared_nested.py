@@ -19,19 +19,36 @@ NAMED, AUTO = "named", "auto"
 """How ``wrapper`` calls ``fake``: by name, or as the one member of an ``auto`` chain."""
 
 
+@pytest.fixture
+def inner() -> dict[str, Any]:
+    """How ``wrapper`` makes its inner call: ``budget``, its own ``budget=``; ``catch``, whether it swallows errors."""
+    return {"budget": None, "catch": False}
+
+
 @pytest.fixture(params=[NAMED, AUTO])
-def router(request: pytest.FixtureRequest, fake_provider: object, priced: Table) -> Iterator[WebRouter]:
+def router(
+    request: pytest.FixtureRequest, inner: dict[str, Any], fake_provider: object, priced: Table
+) -> Iterator[WebRouter]:
     """A router with ``wrapper`` ($0.02), whose search calls ``fake`` ($0.01) on the same router."""
     made = WebRouter()
 
     def _search(self: Any, search: SearchRequest) -> SearchResponse:
-        made.search("inner", provider="fake" if request.param == NAMED else AutoProvider(chain=[("fake", {})]))
+        provider = "fake" if request.param == NAMED else AutoProvider(chain=[("fake", {})])
+        try:
+            made.search("inner", provider=provider, budget=inner["budget"])
+        except WebRouterError:
+            if not inner["catch"]:
+                raise
         return FakeProvider._respond(self, search)
 
-    register_provider("wrapper", type("Wrapper", (FakeProvider,), {"name": "wrapper", "_search": _search}))
+    _register("wrapper", _search)
     priced.update(wrapper=(0.02, None), fake=(0.01, None))
     yield made
     unregister_provider("wrapper")
+
+
+def _register(name: str, search: Any) -> None:
+    register_provider(name, type(name.title(), (FakeProvider,), {"name": name, "_search": search}))
 
 
 def test_a_nested_call_on_the_same_router_is_charged_once_to_the_shared_budget(router: WebRouter) -> None:
@@ -56,3 +73,12 @@ def test_inside_a_shared_budget_a_nested_call_still_counts_toward_the_outer_call
         response = router.search("q", provider="wrapper", budget=Budget(max_cost_usd=1.0))
     assert response.decision.estimated_cost_usd == pytest.approx(0.03)
     assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.05, 0.0)
+
+
+def test_an_inner_call_its_own_budget_refuses_is_charged_to_no_one(router: WebRouter, inner: dict[str, Any]) -> None:
+    inner.update(budget=Budget(max_cost_usd=0.005), catch=True)
+    alone = router.search("q", provider="wrapper", budget=Budget(max_cost_usd=1.0))
+    with router.budget(Budget(max_cost_usd=1.0)) as shared:
+        scoped = router.search("q", provider="wrapper")
+    assert (alone.decision.estimated_cost_usd, scoped.decision.estimated_cost_usd) == (0.02, 0.02)
+    assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.02, 0.0)
