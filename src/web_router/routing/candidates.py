@@ -2,8 +2,9 @@
 
 Experimental. :func:`build_candidates` reads each method's ``auto`` -- the
 chain it would try, a configured ``chain`` included -- and keeps the members
-its ``_eligible`` keeps: only those that map every option the request sets, so
-a candidate is never one the call would be silently degraded on -- and that
+its ``_eligible`` keeps, read by :mod:`web_router.routing.eligible`: only those
+that map every option the request sets, so a candidate is never one the call
+would be silently degraded on -- and that
 ``auto`` can build, so a member with no credential is never offered. Each carries
 its estimated cost from :mod:`web_router.prices` and its measured p90 latency
 from the same rows; neither is ever guessed, so an unknown stays ``None``.
@@ -34,10 +35,6 @@ from typing import Any
 from web_router._chains import chains
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import (
-    AUTO_GETTERS,
-    KEYLESS_OPTION,
-    MSG_DROPPED_NOT_CONFIGURED,
-    MSG_DROPPED_NOT_INSTALLED,
     MSG_DROPPED_OVER_COST,
     MSG_DROPPED_OVER_TIME,
     MSG_DROPPED_UNKNOWN_COST,
@@ -45,16 +42,9 @@ from web_router.constants_candidates import (
     RANKED_METHODS,
 )
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
-from web_router.exceptions import (
-    ConfigurationError,
-    MissingParameterError,
-    NoAnswerProviderError,
-    ProviderNotInstalledError,
-    UnsupportedFormatError,
-    UnsupportedParameterError,
-)
 from web_router.prices import estimate, estimate_latency, price
 from web_router.routing.contract import Budget, Candidate, ToolName
+from web_router.routing.eligible import eligible_members
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -65,9 +55,6 @@ from web_router.types import (
     provider_name,
 )
 from web_router.types_answer import AnswerRequest
-
-_NO_MEMBER_LEFT = (UnsupportedParameterError, UnsupportedFormatError, MissingParameterError, NoAnswerProviderError)
-"""What an ``auto``'s ``_eligible`` raises when no member can serve the request: no candidates, not a failure."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -127,7 +114,7 @@ def build_candidates(
     unmeasured: list[str] = []
     seen: set[str] = set()
     for tool, request in requests.items():
-        eligible, unbuilt = _eligible(router, tool, request)
+        eligible, unbuilt = eligible_members(router, tool, request)
         for name, keyless in eligible:
             cost, p90 = _estimates(tool, name, request, budget)
             candidate = Candidate(tool=tool, provider=name, est_cost_usd=cost, est_latency_s=p90)
@@ -144,61 +131,6 @@ def build_candidates(
             if (unbuilt_id := f"{tool}{CANDIDATE_ID_SEPARATOR}{name}") not in seen:  # built at another place
                 dropped[unbuilt_id] = why
     return CandidateSet(candidates=tuple(kept), dropped=dropped, unmeasured=tuple(unmeasured))
-
-
-def _eligible(router: Any, tool: ToolName, request: NormalizedRequest) -> tuple[list[tuple[str, bool]], dict[str, str]]:
-    """The members of ``tool``'s ``auto`` that can serve ``request``, and the ones it cannot build.
-
-    The first list is in chain order, each member with whether it is keyless;
-    the mapping names each member that cannot be built, with why. ``auto``
-    passes over a member that does not map an option the request sets, and
-    raises when none is left; here that is a method with no candidates. Any
-    other error is the caller's setup, and raises as it would from ``auto``.
-    """
-    auto = getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO)
-    built, unbuilt = _built(auto)
-    # A member that cannot be built may not be readable either, which research's and
-    # browse's eligibility would raise on: they read an auto of the built members alone.
-    view = auto
-    if unbuilt:
-        view = type(auto)(chain={tool: [auto._chain[at] for at in built]}, members_config=auto._members_config)
-    try:
-        if isinstance(request, ExtractRequest):
-            members = view._eligible(view.format_of(request))
-        else:
-            members = view._eligible(request)
-    except _NO_MEMBER_LEFT:
-        return [], unbuilt
-    chain = auto._chain  # the keyless tier is hand-ordered, whatever route-eval ranked the keyed member
-    return [
-        (name, bool(chain[built[at]][1].get(KEYLESS_OPTION)))
-        for at, name in members
-        if request.specified_parameters() <= auto._member(built[at]).supported_parameters
-    ], unbuilt
-
-
-def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
-    """The positions of the members ``auto`` can build, and why each other member cannot be built.
-
-    Built as ``auto`` builds them, and cached there for the call that tries one:
-    a member that is not configured -- no credential and no keyless tier, a
-    setting missing -- or whose extra is not installed, refuses to be built and
-    is no candidate. Extract's
-    ``_eligible`` reads only the format, so its other options are checked
-    against the built member.
-    """
-    built: list[int] = []
-    unbuilt: dict[str, str] = {}
-    for position, (name, _) in enumerate(auto._chain):
-        try:
-            auto._member(position)
-        except ConfigurationError:
-            unbuilt.setdefault(name, MSG_DROPPED_NOT_CONFIGURED)
-        except ProviderNotInstalledError:
-            unbuilt.setdefault(name, MSG_DROPPED_NOT_INSTALLED)
-        else:
-            built.append(position)
-    return built, unbuilt
 
 
 def _estimates(

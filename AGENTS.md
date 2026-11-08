@@ -132,6 +132,8 @@ src/web_router/
 │   ├── budget.py       budget_scope(), which every budget= call runs in
 │   ├── candidates.py   build_candidates(): every (tool, provider) a call's `auto`
 │   │                   chains can serve, priced, timed and prefiltered by the budget
+│   ├── eligible.py     eligible_members(): the members of a method's `auto` that
+│   │                   can serve a request, and the ones it cannot build, with why
 │   └── invoke.py, merge.py, params.py   empty until their parts land
 ├── _urls.py            urls_in(): the URLs written in a query's prose
 ├── constants_urls.py   the punctuation stripped from the end of a URL found in prose
