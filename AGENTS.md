@@ -132,6 +132,10 @@ src/web_router/
 │   ├── budget.py       budget_scope(), which every budget= call runs in
 │   ├── invoke.py       router=: the two forms a router takes, called sync or async on
 │   │                   its own thread or loop within its timeout, and the failure policy
+│   ├── _runner.py      the worker thread and private loop a router runs on, the wait
+│   │                   within its deadline, and the cleanup of what it leaves behind
+│   ├── _forms.py       a router's sync and async sides, its declared timeout_s, and
+│   │                   whether its answer is a well-formed RouteDecision
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), what it is shown,
 │   │                   and the decision record
