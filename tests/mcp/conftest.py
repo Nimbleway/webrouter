@@ -28,7 +28,7 @@ from web_router.constants import (
     RESEARCH_ENV_BY_PROVIDER,
     TEMPLATE_ENV_BY_PROVIDER,
 )
-from web_router.mcp.routing import McpRouting
+from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
 from web_router.routing import Budget

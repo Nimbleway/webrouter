@@ -116,7 +116,8 @@ from web_router.mcp.browsers import BrowserSessions, check_target, playwright_in
 from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
 from web_router.mcp.chains import CHAIN_OF
 from web_router.mcp.env import EnvSources, user_config_dir
-from web_router.mcp.routing import ROUTING_TOOLS, McpRouting
+from web_router.mcp.routing import ROUTING_TOOLS
+from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.shaping import (
     HandleStore,
     Record,
@@ -249,9 +250,8 @@ class WebRouterTools:
     ) -> None:
         """
         Args:
-            router: The router to serve calls with. Built by ``router_factory``
-                when omitted, which is what reads the user's own environment
-                for their own keys.
+            router: The router to serve calls with. Built by ``router_factory`` when omitted, which
+                is what reads the user's own environment for their own keys.
             store: Where handles are kept. Bounded; a fresh one per session.
             research_wait: Seconds ``research`` waits before handing back a
                 handle instead of an answer.
@@ -264,8 +264,8 @@ class WebRouterTools:
             router_factory: Builds the router that takes over once
                 ``load_env`` has configured a backend. The package defaults, with
                 ``routing``'s router attached, unless given.
-            routing: The operator's router and ceiling (:mod:`web_router.mcp.routing`); read from the
-                process environment when omitted. The ceiling bounds :attr:`budget`.
+            routing: The operator's router and ceiling (:mod:`web_router.mcp.routing_config`), read
+                from the process environment when omitted. The ceiling bounds :attr:`budget`.
         """
         self.routing = routing if routing is not None else McpRouting.from_environ()
         self.budget = ConnectionBudget(self.routing.ceiling)

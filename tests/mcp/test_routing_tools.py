@@ -29,7 +29,7 @@ from web_router.constants_mcp import (
 from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import BudgetExceededError, ConfigurationError
 from web_router.mcp.budget import ConnectionBudget, charged
-from web_router.mcp.routing import McpRouting
+from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.tools import WebRouterTools
 from web_router.routing import Budget
 from web_router.routing.pool import current_pool

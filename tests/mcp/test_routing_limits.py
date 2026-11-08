@@ -30,7 +30,7 @@ from web_router.constants_mcp import (
 )
 from web_router.exceptions import BudgetExceededError, ConfigurationError, DeadlineExceededError
 from web_router.mcp.budget import ConnectionBudget, browser_charged, charged, wait_left
-from web_router.mcp.routing import McpRouting
+from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.tools import WebRouterTools
 from web_router.providers._deadline import current_deadline
 from web_router.providers.auto_browser import AutoBrowserProvider

@@ -181,7 +181,8 @@ src/web_router/
 ├── exceptions.py       WebRouterError and subclasses
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
-│   ├── routing.py      the operator's router and ceiling, read once at startup, and web_run
+│   ├── routing_config.py the operator's router and ceiling, read once at startup
+│   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
 │   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
 │   │                   the charge for run_template and browser_open
 │   └── chains.py       the members a delegating provider would try, per tool
