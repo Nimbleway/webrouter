@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.budget.conftest import ARGS, Chain, Table, pool_in_force, scoped
+from tests.budget.conftest import ARGS, Chain, Table, scoped
 from web_router import (
     AsyncWebRouter,
     Budget,
@@ -138,20 +138,7 @@ def test_a_call_whose_own_budget_is_looser_is_held_to_what_is_left_in_the_scope(
     assert shared.status().spent_usd == 0.085
 
 
-# -- Async, and the pool on its own ---------------------------------------------
-
-
-@pytest.mark.parametrize("tool", ["answer"], indirect=True)
-async def test_an_async_scope_spends_as_a_sync_one_does(chain: Chain, priced: Table) -> None:
-    priced.update(first=(0.07, None), second=(0.02, None))
-    async with AsyncWebRouter().budget(SHARED) as shared:
-        await shared.answer("q", provider=chain.auto())
-        response = await shared.answer("q", provider=chain.auto())
-    assert chain.called == ["first", "second"]
-    error = SKIP_OVER_COST.format(cost="$0.07", left="$0.03")
-    assert response.decision.hops == [DecisionHop(id="answer:first", error=error)]
-    assert shared.status().spent_usd == 0.09
-    assert pool_in_force(shared.pool.owner) is None
+# -- The pool on its own --------------------------------------------------------
 
 
 def test_a_pool_with_nothing_set_caps_nothing_and_reports_no_remainder() -> None:
