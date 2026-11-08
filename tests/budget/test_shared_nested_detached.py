@@ -1,7 +1,8 @@
-"""Nested calls on one router that run beside each other."""
+"""Nested calls on one router that run beside each other, or after the call that started them has ended."""
 
 from __future__ import annotations
 
+import asyncio
 import threading
 from collections import Counter
 from contextlib import suppress
@@ -12,7 +13,7 @@ import pytest
 
 from tests.budget.conftest import Table
 from tests.conftest import FakeProvider
-from web_router import Budget, WebRouter, prices
+from web_router import AsyncWebRouter, Budget, WebRouter, prices
 from web_router.exceptions import WebRouterError
 from web_router.registry import register_provider, unregister_provider
 from web_router.types import SearchRequest, SearchResponse
@@ -76,3 +77,26 @@ def _interleave(monkeypatch: pytest.MonkeyPatch) -> None:
         return latency(provider, method, mode)
 
     monkeypatch.setattr(prices, "estimate_latency", held)
+
+
+async def test_a_call_a_backend_leaves_running_after_it_returns_settles_its_own_spend(
+    registered: Any, priced: Table
+) -> None:
+    router, ended = AsyncWebRouter(), asyncio.Event()
+    left: list[asyncio.Task[Any]] = []
+
+    async def later() -> Any:
+        await ended.wait()
+        return await router.search("inner", provider="fake")
+
+    async def wrapper(self: Any, search: SearchRequest) -> SearchResponse:
+        left.append(asyncio.create_task(later()))
+        return FakeProvider._respond(self, search)
+
+    registered("wrapper", _asearch=wrapper)
+    priced.update(wrapper=(0.02, None), fake=(0.01, None))
+    async with router.budget(Budget(max_cost_usd=1.0)) as shared:
+        await router.search("q", provider="wrapper")
+        ended.set()
+        await asyncio.wait_for(left[0], WAIT_S)
+    assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.03, 0.0)

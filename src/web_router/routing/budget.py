@@ -106,13 +106,14 @@ def budget_scope(
             yield call
     finally:
         _LEDGERS.reset(token)
+        ledger.closed = True
         if ledger.pool is not None:
             ledger.pool.settle(ledger.spent)
 
 
 def _unheld(chain: PoolChain | None, held: tuple[Ledger, ...]) -> PoolChain | None:
-    """``chain`` less every pool an enclosing call's ledger in ``held`` reserves in: those reserve this call's too."""
-    taken = {pool for ledger in held if ledger.pool is not None for pool in ledger.pool.pools}
+    """``chain`` less every pool a still running enclosing call in ``held`` reserves in: it reserves this call's."""
+    taken = {pool for ledger in held if ledger.pool is not None and not ledger.closed for pool in ledger.pool.pools}
     pools = () if chain is None else tuple(pool for pool in chain.pools if pool not in taken)
     return PoolChain(pools) if pools else None
 

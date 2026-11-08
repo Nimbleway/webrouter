@@ -119,9 +119,13 @@ class Ledger:
     tried: list[_Tried] = field(default_factory=list)
     skipped: dict[str, str] = field(default_factory=dict)
     unmeasured: list[str] = field(default_factory=list)
+    closed: bool = False
+    """Set when the call ends: an attempt made later by work it left running is not this call's to check or charge."""
 
     def admit(self, attempt: Attempt) -> bool:
         """Whether ``attempt`` fits what is left; if it does, charge it, and if not, record why."""
+        if self.closed:
+            return True
         name = f"{attempt.tool}{CANDIDATE_ID_SEPARATOR}{attempt.provider}"
         cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
         if (cost is None or p90 is None) and name not in self.unmeasured:
@@ -158,10 +162,7 @@ class Ledger:
 
     def _unreserved(self, cost: float | None) -> str | None:
         """Why the shared budget refused to reserve ``cost``, or ``None`` once reserved (or with no pool)."""
-        if self.pool is None or cost is None:
-            return None
-        left = self.pool.reserve(cost)
-        if left is None:
+        if self.pool is None or cost is None or (left := self.pool.reserve(cost)) is None:
             return None
         return SKIP_OVER_SHARED.format(cost=_usd(cost), left=_usd(max(left, 0.0)))
 
@@ -184,8 +185,7 @@ class Ledger:
 
     def record(self, into: DecisionRecord | None = None) -> DecisionRecord:
         """The call's estimated spend and attempts, written into ``into`` (a router's record) or a new one."""
-        ended = time.monotonic()
-        ends = [tried.started for tried in self.tried[1:]] + [ended]
+        ends = [tried.started for tried in self.tried[1:]] + [time.monotonic()]
         known = [tried.est_cost_usd for tried in self.tried if tried.est_cost_usd is not None]
         update = {
             "estimated_cost_usd": sum(known) if known else None,
