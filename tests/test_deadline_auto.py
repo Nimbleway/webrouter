@@ -7,13 +7,13 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import FakeProvider
+from tests.conftest import FakeProvider, FakeResearchProvider
 from tests.deadline_helpers import DEADLINE, TINY, _Clock
-from web_router.exceptions import DeadlineExceededError, ProviderError
+from web_router.exceptions import DeadlineExceededError, ProviderError, ResearchTimeoutError
 from web_router.providers._deadline import call_deadline, job_budget
 from web_router.providers.auto import AutoProvider
 from web_router.registry import register_provider, unregister_provider
-from web_router.types import SearchRequest, SearchResponse
+from web_router.types import ResearchProgress, ResearchRequest, SearchRequest, SearchResponse
 
 # -- auto spends what is left ------------------------------------------------------
 
@@ -184,3 +184,16 @@ def test_a_members_own_shorter_timeout_is_its_failure_and_auto_moves_on(clock: _
     assert response.provider == "answers"
     assert [name for name, _, _ in calls.started] == ["quick", "answers"]
     assert calls.started[0][2] == pytest.approx(0.1), "the member's own timeout, not the time left, set the limit"
+
+
+class _CutOffInPoll(FakeResearchProvider):
+    polls_before_done = 10**6
+
+    def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
+        raise DeadlineExceededError(self.name, DEADLINE)
+
+
+def test_a_poll_the_deadline_cuts_off_raises_researchs_timeout_with_the_runs_id() -> None:
+    with call_deadline(600), pytest.raises(ResearchTimeoutError) as caught:
+        _CutOffInPoll().research(ResearchRequest(query="q"), timeout=600)
+    assert caught.value.job_id == "job-1", "the run started and bills: its id picks it back up"

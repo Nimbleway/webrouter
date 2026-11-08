@@ -900,7 +900,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         already spent: it has been paid for, and throwing the answer away to
         report a timeout would be the one outcome nobody wants.
 
-        A poll whose request timed out once the deadline has passed raises the
+        A poll that timed out past the deadline, or that the deadline cut off, raises the
         method's timeout, with the failure as its cause; any other failure, an
         auth error or an unrecognized status, is raised as it is. Every call
         inside the run is clamped to what the caller has left, so a status
@@ -911,7 +911,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         for delay in self._poll_delays():
             try:
                 progress = self.status()
-            except ProviderError as exc:
+            except (ProviderError, DeadlineExceededError) as exc:
                 self._expire(exc, deadline, timeout)
             if progress.is_terminal:
                 return self._answer(progress)
@@ -923,16 +923,16 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         for delay in self._poll_delays():
             try:
                 progress = await self.astatus()
-            except ProviderError as exc:
+            except (ProviderError, DeadlineExceededError) as exc:
                 self._expire(exc, deadline, timeout)
             if progress.is_terminal:
                 return self._answer(progress)
             await asyncio.sleep(self._wait(delay, deadline, timeout))
         raise AssertionError  # pragma: no cover -- _poll_delays never ends
 
-    def _expire(self, exc: ProviderError, deadline: float | None, timeout: float | None) -> NoReturn:
-        """Raise the method's timeout for a poll that timed out past the deadline, else ``exc`` as it is."""
-        if _passed(deadline) and _is_timeout(exc):
+    def _expire(self, exc: WebRouterError, deadline: float | None, timeout: float | None) -> NoReturn:
+        """Raise the method's timeout, with this run's id, for a poll the deadline cut off; else ``exc`` as it is."""
+        if not isinstance(exc, ProviderError) or (_passed(deadline) and _is_timeout(exc)):  # the deadline cut it off
             raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
         raise exc
 

@@ -11,7 +11,7 @@ import re
 import time
 from collections.abc import Iterator
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
@@ -221,6 +221,42 @@ async def test_web_run_keeps_the_handle_of_a_run_whose_poll_ran_out_of_time() ->
     pending = await asyncio.wait_for(ok_on(tools, MCP_TOOL_WEB_RUN, prompt="what changed in solar policy?"), 5)
     assert pending["tool"] == "research" and pending["job_id"].startswith("first")
     assert tools.store.get(pending["handle"]).job is not None, "the paid run's handle is kept"
+
+
+class _BothLostInPoll(FakeResearchProvider):
+    """Runs that each take their own id, then whose polls run out of the deadline once two have started."""
+
+    started: ClassVar[list[str]] = []
+    both = asyncio.Event()
+
+    def _start(self, request: ResearchRequest) -> ResearchProgress:
+        self.started.append(request.query)
+        if len(self.started) == 2:
+            self.both.set()
+        return ResearchProgress(job_id=f"run-{request.query}", state="running")
+
+    async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
+        await self.both.wait()
+        raise DeadlineExceededError(self.name, 0.1)
+
+
+@pytest.fixture
+def both_lost_in_poll() -> Iterator[None]:
+    _BothLostInPoll.started, _BothLostInPoll.both = [], asyncio.Event()
+    for name in MEMBERS:
+        register_research_provider(name, type(f"BothLost_{name}", (_BothLostInPoll,), {"name": name}))
+    yield
+    for name in MEMBERS:
+        unregister_research_provider(name)
+
+
+@pytest.mark.usefixtures("both_lost_in_poll")
+async def test_two_runs_whose_polls_run_out_at_once_each_keep_their_own_handle() -> None:
+    routing = McpRouting.from_environ({ENV_MCP_ROUTER: f"{__name__}:route_to_research"})
+    tools = WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=5)
+    runs = (ok_on(tools, MCP_TOOL_WEB_RUN, prompt=prompt) for prompt in ("alpha", "beta"))
+    alpha, beta = await asyncio.wait_for(asyncio.gather(*runs), 5)
+    assert alpha["job_id"].endswith("run-alpha") and beta["job_id"].endswith("run-beta")
 
 
 @pytest.mark.usefixtures("slow_research")

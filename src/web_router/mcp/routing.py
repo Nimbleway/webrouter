@@ -59,7 +59,7 @@ from web_router.constants_mcp import (
     MCP_URL_POLICY_NOTE,
 )
 from web_router.constants_routing import RULES_ROUTER_NAME
-from web_router.exceptions import BrowseTimeoutError, ConfigurationError, DeadlineExceededError, ResearchTimeoutError
+from web_router.exceptions import BrowseTimeoutError, ConfigurationError, ResearchTimeoutError
 from web_router.mcp.budget import budget_start, budget_status, positive_limit, wait_left
 from web_router.mcp.shaping import (
     max_response_chars,
@@ -215,38 +215,18 @@ async def _ran(tools: WebRouterTools, plan: Plan, budget: Budget | None) -> dict
     """``plan`` run, shaped as its method's own tool shapes it; a job still going after its wait, as a handle."""
     wait = {MCP_TOOL_RESEARCH: tools.research_wait, MCP_TOOL_BROWSE: tools.browse_wait}.get(plan.tool)
     waited = None if wait is None else wait_left(wait)
-    started = _started(tools, plan.tool)
     try:
-        # A job is waited for as its own tool waits, then handed back as a handle: a paid run is never lost.
+        # A job is waited for as its own tool waits, then handed back by the id its own timeout carries.
         with call_deadline(waited):
             response = await tools.router.run(plan, budget=budget)
     except (ResearchTimeoutError, BrowseTimeoutError) as exc:
         return _pending(tools, plan, exc.job_id, waited or 0.0)
-    except DeadlineExceededError:
-        # The deadline ran out in a poll, after the run was accepted: the error names no job, the chain does.
-        job_id = started()
-        if job_id is None:
-            raise
-        return _pending(tools, plan, job_id, waited or 0.0)
     tool, shape = _SHAPERS[type(response)]
     # A browse payload can carry the session the agent ran in, so fetch_raw hands back its redacted copy.
     raw = redact(response.raw)[0] if tool == MCP_TOOL_BROWSE else response.raw
     handle = tools.store.add(MCP_TOOL_WEB_RUN, raw=raw).handle
     decision = response.decision.model_dump(exclude_none=True) if response.decision else None
     return {"tool": tool, **shape(response, handle, budget=max_response_chars()), "decision": decision}
-
-
-def _started(tools: WebRouterTools, tool: str) -> Callable[[], str | None]:
-    """For a job method, what tells the run ``web_run`` started on its ``auto``: the handle it took, if any.
-
-    ``auto`` keeps each run it starts by handle; the one added since this was
-    called is this call's. Nothing for a method that is no job.
-    """
-    if tool not in _JOBS:
-        return lambda: None
-    jobs: dict[str, Any] = getattr(tools.router, AUTO_GETTERS[tool])(PROVIDER_AUTO)._jobs
-    before = set(jobs)
-    return lambda: next((handle for handle in reversed(jobs) if handle not in before), None)
 
 
 def _pending(tools: WebRouterTools, plan: Plan, job_id: str, wait: float) -> dict[str, Any]:
