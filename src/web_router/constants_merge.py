@@ -63,7 +63,3 @@ scheme and host, so nothing after the host survives, brackets and punctuation in
 told safely, and what follows it may be its query."""
 HOST_CHARS = r"[A-Za-z0-9.-]+"
 """What a shown host keeps: a host parsed out of free text stops at the first character a hostname cannot hold."""
-MSG_PARAM_DEPTH_UNKNOWN_PRICE = "search:{provider} at depth {depth} has no known price, so it never fits a cost cap"
-MSG_PARAM_DEPTH_COST = "search:{provider} at depth {depth} is estimated at ${cost:g}, over the ${cap:g} cost cap"
-MSG_PARAM_DEPTH_TIME = "search:{provider} at depth {depth} has a p90 of {p90:g}s, over the {cap:g}s time limit"
-MSG_PARAM_DEPTH_STRICT = "search:{provider} at depth {depth} has no measured p90, and the budget is strict"

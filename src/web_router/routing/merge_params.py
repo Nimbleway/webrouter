@@ -3,11 +3,11 @@
 Experimental. Apart from :mod:`.merge` so each stays small. A router may set
 only the keys :data:`~web_router.constants_merge.ROUTER_PARAMS` lists for the
 method. A key the caller set stands. A research ``effort`` must fit the budget
-on every backend in the order, by :func:`~web_router.routing.params.effort_misfit`,
-since any of them may run it; a ``search_depth`` must have a known price within
-the cost cap on every one. Every backend in the order must take the option --
-the request always sends it, or the backend's ``supported_parameters`` declares
-it -- since a backend that does not would refuse the call. A URL needs a URL
+on every backend in the order, and so must a ``search_depth``, by
+:func:`~web_router.routing.params.budget_misfit`, since any of them may run it.
+Every backend in the order must take the option -- the request always sends
+it, or the backend's ``supported_parameters`` declares it -- since a backend
+that does not would refuse the call. A URL needs a URL
 policy that allows it, and is never written into a note or a record whole:
 :mod:`.merge_urls` keeps its scheme and host.
 """
@@ -17,13 +17,9 @@ from __future__ import annotations
 from collections.abc import Callable, Collection, Mapping, Sequence
 from typing import Any, get_args
 
-from web_router import prices, registry
+from web_router import registry
 from web_router.constants_merge import (
     MSG_PARAM_CALLER,
-    MSG_PARAM_DEPTH_COST,
-    MSG_PARAM_DEPTH_STRICT,
-    MSG_PARAM_DEPTH_TIME,
-    MSG_PARAM_DEPTH_UNKNOWN_PRICE,
     MSG_PARAM_INVALID,
     MSG_PARAM_NO_URL_POLICY,
     MSG_PARAM_NOT_ALLOWED,
@@ -35,7 +31,7 @@ from web_router.constants_merge import (
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.routing.contract import Budget, RouteDecision
 from web_router.routing.merge_urls import URL_KEYS, UrlCheck, hide_urls, host_of
-from web_router.routing.params import EFFORTS, effort_misfit
+from web_router.routing.params import EFFORTS, budget_misfit
 from web_router.types import (
     BrowseRequest,
     ExtractRequest,
@@ -79,29 +75,12 @@ def _url_refusal(key: str, value: Any, url_check: UrlCheck | None) -> str | None
     return None
 
 
-def _depth_misfit(provider: str, depth: str, budget: Budget) -> str | None:
-    """Why ``depth`` does not fit ``budget`` on ``provider``, by the rule ``effort_misfit`` applies to research."""
-    if budget.max_cost_usd is not None:
-        cost = prices.estimate(provider, "search", depth)
-        if cost is None:
-            return MSG_PARAM_DEPTH_UNKNOWN_PRICE.format(provider=provider, depth=depth)
-        if cost > budget.max_cost_usd:
-            return MSG_PARAM_DEPTH_COST.format(provider=provider, depth=depth, cost=cost, cap=budget.max_cost_usd)
-    if budget.time_limit_s is not None:
-        latency = prices.estimate_latency(provider, "search", depth)
-        if latency is None and budget.strict:
-            return MSG_PARAM_DEPTH_STRICT.format(provider=provider, depth=depth)
-        if latency is not None and latency[1] > budget.time_limit_s:
-            return MSG_PARAM_DEPTH_TIME.format(provider=provider, depth=depth, p90=latency[1], cap=budget.time_limit_s)
-    return None
-
-
 def _misfit(key: str, value: str, providers: Sequence[str], budget: Budget | None) -> str | None:
     """Why ``value`` for ``key`` would not fit ``budget`` on one of ``providers``; ``None`` when it fits on all."""
     if budget is None or key not in ("effort", "search_depth"):
         return None
     for provider in providers:
-        why = effort_misfit(provider, value, budget) if key == "effort" else _depth_misfit(provider, value, budget)
+        why = budget_misfit(provider, "research" if key == "effort" else "search", value, budget)
         if why is not None:
             return why
     return None

@@ -13,8 +13,8 @@ and ``max_results``, and timeouts come from the time cap, not from here.
 under a cost or time cap, the cheapest measured effort whose accuracy is within
 the noise floor of the most accurate one that fits. An effort the caller set
 always stands: when it does not fit, the choice says so in ``misfit`` and
-nothing downgrades it. :func:`effort_misfit` is the fit check on its own, for
-an effort that came from elsewhere, such as a router's ``params``.
+nothing downgrades it. :func:`budget_misfit` is the fit check on its own, for
+an effort or a search depth that came from elsewhere, such as a router's ``params``.
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ from web_router.constants_params import (
     DEFAULT_EFFORT_NAME,
     FLOOR_TOLERANCE,
     MIN_MEASURED_EFFORTS,
+    MODE_NAMES,
     MSG_EFFORT_CALLER,
     MSG_EFFORT_CHOSEN,
     MSG_EFFORT_NO_BUDGET,
@@ -40,7 +41,7 @@ from web_router.constants_params import (
     PARAMS_SOURCE_BUDGET,
     PARAMS_SOURCE_CALLER,
 )
-from web_router.routing.contract import Budget, candidate_id
+from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.effort_table import (
     RESEARCH,
     effort_of,
@@ -83,28 +84,42 @@ class EffortChoice:
         }
 
 
-def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) -> str | None:
-    """Why research on ``provider`` at ``effort`` does not fit ``budget``, or ``None`` when it fits.
+def budget_misfit(provider: str | Provider, tool: ToolName, mode: str | None, budget: Budget) -> str | None:
+    """Why ``tool`` on ``provider`` at ``mode`` does not fit ``budget``, or ``None`` when it fits.
 
-    ``effort=None`` is the call that sets none. Under a cost cap the effort's
-    list price must be known and within it; under a time cap its p90 must be
-    within it, and an unknown p90 fits unless the budget is ``strict``.
+    ``mode`` is search's ``search_depth`` or research's ``effort``; ``None`` is
+    the call that sets none. Under a cost cap the mode's list price must be
+    known and within it; under a time cap its p90 must be within it, and an
+    unknown p90 fits unless the budget is ``strict``. Research's p90 is the
+    effort table's, else the price list's; search's is the price list's.
     """
     name = provider_name(provider)
-    shown = effort or DEFAULT_EFFORT_NAME
+    fields = {"tool": tool, "provider": name, "mode_name": MODE_NAMES[tool], "mode": mode or DEFAULT_EFFORT_NAME}
     if budget.max_cost_usd is not None:
-        cost = prices.estimate(name, RESEARCH, effort)
+        cost = prices.estimate(name, tool, mode)
         if cost is None:
-            return MSG_MISFIT_UNKNOWN_PRICE.format(provider=name, effort=shown)
+            return MSG_MISFIT_UNKNOWN_PRICE.format(**fields)
         if cost > budget.max_cost_usd:
-            return MSG_MISFIT_COST.format(provider=name, effort=shown, cost=cost, cap=budget.max_cost_usd)
+            return MSG_MISFIT_COST.format(**fields, cost=cost, cap=budget.max_cost_usd)
     if budget.time_limit_s is not None:
-        p90 = effort_p90(name, effort)
+        p90 = _p90(name, tool, mode)
         if p90 is None and budget.strict:
-            return MSG_MISFIT_STRICT.format(provider=name, effort=shown)
+            return MSG_MISFIT_STRICT.format(**fields)
         if p90 is not None and p90 > budget.time_limit_s:
-            return MSG_MISFIT_TIME.format(provider=name, effort=shown, p90=p90, cap=budget.time_limit_s)
+            return MSG_MISFIT_TIME.format(**fields, p90=p90, cap=budget.time_limit_s)
     return None
+
+
+def _p90(provider: str, tool: ToolName, mode: str | None) -> float | None:
+    if tool == RESEARCH:
+        return effort_p90(provider, mode)
+    latency = prices.estimate_latency(provider, tool, mode)
+    return None if latency is None else latency[1]
+
+
+def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) -> str | None:
+    """Why research on ``provider`` at ``effort`` does not fit ``budget``, or ``None`` when it fits."""
+    return budget_misfit(provider, RESEARCH, effort, budget)
 
 
 def _is_measured(provider: str, effort: str | None) -> bool:
