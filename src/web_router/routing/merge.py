@@ -25,7 +25,9 @@ exactly as a routed call would run it. The rules:
    anything but a well-formed :class:`~web_router.routing.RouteDecision` gets
    the static order, with the reason. So does a decision that decides
    nothing, recorded as ``router_empty`` and not as a failure.
-7. **Extract with no URL** searches instead, and says so.
+7. **Extract with no URL** searches instead, and says so -- also when every
+   URL the router gave is dropped by a check -- unless the caller pinned it:
+   :mod:`.merge_extract`.
 """
 
 from __future__ import annotations
@@ -33,27 +35,21 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping, Sequence
 from typing import Any, cast
 
-from web_router.constants_candidates import ONE_PAGE_URL
 from web_router.constants_merge import (
-    EXTRACT_TOOL,
     LAST_RESORT_TOOL,
     MSG_EXCLUDE_NO_REASON,
     MSG_EXCLUSIONS_EMPTY,
-    MSG_EXTRACT_NO_URL,
     MSG_TOOL_NO_CANDIDATE,
     MSG_UNKNOWN_ID,
     MSG_UNKNOWN_TOOL,
     NOTE_EXCLUDE,
-    NOTE_EXTRACT,
-    NOTE_EXTRACT_URLS,
     ROUTER_INVALID,
 )
-from web_router.constants_params import PRICED_QUERY
-from web_router.routing.candidates import REQUEST_OF, base_params
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
-from web_router.routing.merge_params import checked_params, router_url_refusal
+from web_router.routing.merge_extract import extract_or_search, lost_its_urls, prompt_request
+from web_router.routing.merge_params import checked_params
 from web_router.routing.merge_shape import TOOLS, decides_nothing, well_formed
-from web_router.routing.merge_types import FallbackReason, Merged, MergeNotes
+from web_router.routing.merge_types import FallbackReason, Merged, MergeNotes, settled
 from web_router.routing.merge_urls import UrlCheck, hide_urls
 from web_router.types import NormalizedRequest
 
@@ -117,25 +113,6 @@ def _ranked(tool: str, decision: RouteDecision, known: Collection[str], ignored:
     return tuple(ranked)
 
 
-def _method(
-    tool: str,
-    request: RouteRequest,
-    decision: RouteDecision,
-    caller_set: Collection[str],
-    url_check: UrlCheck | None,
-    ignored: dict[str, str],
-) -> str:
-    """Rule 7: ``tool``, unless it is extract with no URL to read, which searches instead and says so."""
-    refused = router_url_refusal(decision, url_check, caller_set)
-    gave_urls = (decision.params or {}).get(EXTRACT_TOOL, {}).get("urls") is not None
-    if tool != EXTRACT_TOOL or request.pinned_tool is not None or request.urls or (gave_urls and not refused):
-        return tool
-    ignored[NOTE_EXTRACT] = MSG_EXTRACT_NO_URL
-    if refused is not None:
-        ignored[NOTE_EXTRACT_URLS] = refused
-    return LAST_RESORT_TOOL
-
-
 def _never_empty(
     tool: str,
     request: RouteRequest,
@@ -152,12 +129,6 @@ def _never_empty(
     ignored[NOTE_EXCLUDE] = MSG_EXCLUSIONS_EMPTY.format(ids=", ".join(mine), tool=tool)
     kept = {cid: why for cid, why in excluded.items() if cid not in mine}
     return _order(tool, request, ranked, (), static), kept
-
-
-def _prompt_request(tool: ToolName, request: RouteRequest) -> NormalizedRequest:
-    """The request ``tool`` runs ``request``'s prompt with, extract on one page when the prompt names no URL."""
-    prompt = request.prompt or PRICED_QUERY  # priced by backend and options, never by the prompt
-    return REQUEST_OF[tool](**base_params(tool, prompt, request.urls or (ONE_PAGE_URL,)))
 
 
 def merge(
@@ -191,17 +162,13 @@ def merge(
     known = {c.id for c in request.candidates}
     ignored: dict[str, str] = {}
     excluded = _exclusions(decision, known, ignored)
-    tool = _tool(request, decision, excluded, ignored)
-    tool = _method(tool, request, decision, caller_set, url_check, ignored)
-    ranked = _ranked(tool, decision, known, ignored)
-    providers, excluded = _never_empty(tool, request, ranked, excluded, static_order, ignored)
-    base = (requests or {}).get(cast(ToolName, tool)) or _prompt_request(cast(ToolName, tool), request)
-    params = checked_params(tool, decision, providers, base, request.budget, caller_set, url_check, ignored)
-    notes = MergeNotes(
-        ranked=tuple(candidate_id(tool, p) for p in ranked),
-        merged=tuple(candidate_id(tool, p) for p in providers),
-        excluded=excluded,
-        ignored={hide_urls(key): hide_urls(why) for key, why in ignored.items()},
-        reason=hide_urls(decision.reason),
-    )
-    return Merged(tool=cast(ToolName, tool), providers=providers, params=params, notes=notes)
+    asked = _tool(request, decision, excluded, ignored)
+    tool = cast(ToolName, extract_or_search(asked, request, decision, caller_set, url_check, ignored))
+    while True:  # at most twice: an extract that lost its URLs to the checks runs once more as search
+        ranked = _ranked(tool, decision, known, ignored)
+        providers, kept = _never_empty(tool, request, ranked, excluded, static_order, ignored)
+        base = (requests or {}).get(tool) or prompt_request(tool, request)
+        params = checked_params(tool, decision, providers, base, request.budget, caller_set, url_check, ignored)
+        if not lost_its_urls(tool, request, params, ignored):
+            return settled(tool, ranked, providers, kept, params, ignored, decision.reason)
+        tool = LAST_RESORT_TOOL

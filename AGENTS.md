@@ -163,6 +163,7 @@ src/web_router/
 │   │                   decides something
 │   ├── merge_params.py the merge's check on a router's options: allowlist, values,
 │   │                   the caller's own, the budget, the URL policy
+│   ├── merge_extract.py rule 7: extract with no URL left to read searches instead
 │   ├── merge_urls.py   a router's words with every URL cut to its scheme and host
 │   └── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
 │                       check before dispatch (no DNS, no redirects)
