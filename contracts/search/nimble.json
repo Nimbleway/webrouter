@@ -56,34 +56,22 @@
     },
     "recency": {
       "day": {
-        "body.recency": "day"
+        "body.time_range": "day"
       },
       "week": {
-        "body.recency": "week"
+        "body.time_range": "week"
       },
       "month": {
-        "body.recency": "month"
+        "body.time_range": "month"
       },
       "year": {
-        "body.recency": "year"
-      }
-    },
-    "effort": {
-      "low": {
-        "body.effort": "low"
-      },
-      "medium": {
-        "body.effort": "medium"
-      },
-      "high": {
-        "body.effort": "high"
-      },
-      "max": {
-        "body.effort": "max"
+        "body.time_range": "year"
       }
     }
   },
-  "not_mapped": [],
+  "not_mapped": [
+    "effort"
+  ],
   "source": [
     "https://docs.nimbleway.com/api-reference/search/search",
     "nimble-python Nimble.search"
@@ -108,10 +96,6 @@
     "output_format": {
       "status": "passthrough",
       "note": "plain_text | markdown | simplified_html."
-    },
-    "time_range": {
-      "status": "passthrough",
-      "note": "hour | day | week | month | year; not with start_date or end_date."
     },
     "start_date": {
       "status": "passthrough",

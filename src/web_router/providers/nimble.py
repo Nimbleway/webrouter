@@ -50,7 +50,6 @@ from web_router.providers._utils import best_text, build_payload, compact, model
 from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider, _BaseProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,
-    NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
     Citation,
     ExtractedDocument,
@@ -174,7 +173,7 @@ class NimbleProvider(_NimbleClients, SearchProvider):
     """Routes searches to the Nimble Search API."""
 
     name: ClassVar[str] = PROVIDER_NIMBLE
-    supported_parameters: ClassVar[frozenset[str]] = NORMALIZED_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = frozenset(NIMBLE_PARAM_NAMES) | {"search_depth"}
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         raw = self._within_deadline(self._sync_client).search(**self._build_payload(request))

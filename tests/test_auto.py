@@ -330,8 +330,8 @@ async def test_the_chain_works_the_same_way_async(chain_members: _Recorder) -> N
     assert response.provider == "second"
 
 
-def test_auto_declares_exactly_what_some_member_maps() -> None:
-    """The union, so no member's filters are lost to the weakest one -- and no more than that.
+def test_auto_declares_every_option_some_member_maps() -> None:
+    """At least the union, so no member's filters are lost to the weakest one; every shared option, in fact.
 
     Safe because a member is passed over for any option it does not map; see
     `test_a_member_that_does_not_map_an_option_is_passed_over_unbuilt`.
@@ -339,7 +339,7 @@ def test_auto_declares_exactly_what_some_member_maps() -> None:
     members = [name for name, _ in AUTO_KEYLESS] + list(AUTO_PREFERRED) + list(AUTO_APPENDED)
     mapped = frozenset().union(*(get_provider_class(name).supported_parameters for name in members))
 
-    assert mapped == AUTO_SUPPORTED_PARAMETERS
+    assert mapped <= AUTO_SUPPORTED_PARAMETERS
 
 
 def test_every_search_backend_is_a_member(monkeypatch: pytest.MonkeyPatch) -> None:

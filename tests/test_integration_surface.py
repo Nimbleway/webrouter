@@ -17,6 +17,7 @@ import pytest
 from tests.conftest import billing_aware
 from web_router import WebRouter
 from web_router.constants import ENV_BY_PROVIDER, EXTRACT_ENV_BY_PROVIDER
+from web_router.exceptions import UnsupportedParameterError
 from web_router.registry import (
     available_extract_providers,
     available_providers,
@@ -67,8 +68,12 @@ def test_max_results_is_an_upper_bound(provider: str) -> None:
 @pytest.mark.parametrize("provider", _providers("search_depth"))
 @pytest.mark.parametrize("depth", ["lite", "fast", "deep"])
 def test_every_depth_returns_content(provider: str, depth: str) -> None:
-    """`content` must never be empty when results came back -- see best_text()."""
+    """`content` must never be empty when results came back -- see best_text(). A level it refuses is refused unsent."""
     with WebRouter(provider) as router, billing_aware(provider):
+        if depth not in get_provider_class(provider).depth_levels:
+            with pytest.raises(UnsupportedParameterError):
+                router.search(QUERY, max_results=3, search_depth=depth)
+            return
         response = router.search(QUERY, max_results=3, search_depth=depth)
 
     assert response.results
@@ -120,6 +125,23 @@ def test_locale_is_accepted_as_a_language_code(provider: str) -> None:
     """The shared surface is a language code; a provider wanting another form must translate."""
     with WebRouter(provider) as router, billing_aware(provider):
         response = router.search("coffee", max_results=3, locale="en")
+    assert response.results
+
+
+@pytest.mark.parametrize("provider", _providers("recency"))
+@pytest.mark.parametrize("recency", ["day", "year"])
+def test_recency_is_accepted_at_its_narrowest_and_widest(provider: str, recency: str) -> None:
+    with WebRouter(provider) as router, billing_aware(provider):
+        response = router.search("technology news", max_results=3, recency=recency)
+    assert response.results
+
+
+@pytest.mark.parametrize("provider", _providers("effort"))
+@pytest.mark.parametrize("effort", ["low", "medium", "high", "max"])
+def test_every_effort_level_is_served(provider: str, effort: str) -> None:
+    """A backend with fewer tiers serves several levels with one setting; none is refused."""
+    with WebRouter(provider) as router, billing_aware(provider):
+        response = router.search(QUERY, max_results=3, effort=effort)
     assert response.results
 
 

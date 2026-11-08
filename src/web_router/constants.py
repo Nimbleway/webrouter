@@ -328,20 +328,17 @@ field every other provider fills with a sentence or two.
 
 # --- Nimble -----------------------------------------------------------------
 
-NIMBLE_PARAM_NAMES = {name: name for name in NORMALIZED_PARAMETERS - {"search_depth"}}
-"""Normalized parameter -> Nimble field. ``search_depth`` maps to two fields, below.
-
-Every other Nimble name already matches the normalized one, so this is an
-identity map. It exists so every provider is read the same way: one table per
-backend.
-"""
+NIMBLE_PARAM_NAMES = {name: name for name in NORMALIZED_PARAMETERS - {"search_depth", "recency", "effort"}} | {
+    "recency": "time_range"
+}
+"""Normalized parameter -> Nimble field; ``search_depth`` maps to two fields, below. Names match but ``recency``'s,
+whose four values are four of ``time_range``'s. ``effort`` is left out: Nimble has no search tier (``deep_search``
+is a deprecated alias of a depth, ``max_subagents`` a fan-out cap for some focus modes)."""
 
 NIMBLE_PARAMS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
-    # Nimble's declared vocabulary is lite/standard -- a bogus depth returns
-    # "Input should be 'lite' or 'standard'". `standard` is a ~2K excerpt; the
-    # separate `full_content` flag is what turns it into the whole page.
-    # (`deep_search` looks like the match but is deprecated in favour of
-    # exactly this pair.)
+    # Nimble's declared vocabulary is lite/standard -- a bogus depth returns "Input should be 'lite' or 'standard'".
+    # `standard` is a ~2K excerpt; the separate `full_content` flag is what turns it into the whole page.
+    # (`deep_search` looks like the match but is deprecated in favour of exactly this pair.)
     #
     # Verified live: Nimble also *tolerates* "fast" and "deep", which this table
     # used to send, as undocumented aliases -- "fast" returns byte-identical

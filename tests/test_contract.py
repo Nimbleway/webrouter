@@ -53,6 +53,8 @@ SAMPLE_VALUES: dict[str, object] = {
     "exclude_domains": ["b.com"],
     "country": "US",
     "locale": "en",
+    "recency": "week",
+    "effort": "low",
 }
 
 ENV_VARS = (
