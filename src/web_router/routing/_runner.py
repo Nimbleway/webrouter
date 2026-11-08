@@ -16,7 +16,7 @@ from concurrent.futures import wait as wait_futures
 from contextlib import suppress
 from typing import Any
 
-from web_router.constants_invoke import ROUTER_THREAD_NAME
+from web_router.constants_invoke import MSG_ROUTER_OTHER_LOOP, ROUTER_THREAD_NAME
 from web_router.constants_merge import ROUTER_ERROR, ROUTER_TIMEOUT
 from web_router.providers._deadline import current_deadline
 from web_router.routing.contract import RouteRequest
@@ -74,7 +74,12 @@ def _on_private_loop(awaitable: Awaitable[Any]) -> Future[Any]:
 
 
 def _on_caller_loop(awaitable: Awaitable[Any]) -> asyncio.Future[Any]:
-    """Schedule ``awaitable`` on the running loop, the async caller's own."""
+    """Schedule ``awaitable`` on the running loop, the async caller's own; a future of another loop is a ``ValueError``.
+
+    Such a future can never be awaited here, and Python versions differ on when they say so.
+    """
+    if isinstance(awaitable, asyncio.Future) and awaitable.get_loop() is not asyncio.get_running_loop():
+        raise ValueError(MSG_ROUTER_OTHER_LOOP)
     return asyncio.ensure_future(awaitable)
 
 

@@ -160,7 +160,11 @@ class AttachedRouter:
         if self._answered_awaitable(code, value):
             if (early := self._expired(value, req, started)) is not None:
                 return early
-            scheduled_task = _on_caller_loop(value)
+            try:
+                scheduled_task = _on_caller_loop(value)
+            except Exception as exc:  # e.g. a future bound to another loop (3.10 checks this eagerly)
+                _close(value)
+                return self._failed(ROUTER_ERROR, started, exc)
             code, value = await _asettled(scheduled_task, _left(req, started))  # measured after scheduling
         return self._outcome(code, value, started)
 

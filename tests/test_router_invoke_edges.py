@@ -146,3 +146,14 @@ async def test_a_coroutine_a_worker_returns_after_its_caller_was_cancelled_is_cl
         await asyncio.sleep(0.01)
     assert coroutines
     assert inspect.getcoroutinestate(coroutines[0]) == inspect.CORO_CLOSED
+
+
+@pytest.mark.parametrize("other_loop", [True, False], ids=["future-of-another-loop", "coroutine"])
+async def test_a_sync_router_answering_with_another_loops_future_falls_back(other_loop: bool) -> None:
+    loop = asyncio.new_event_loop()
+    try:
+        answer = loop.create_future() if other_loop else async_router
+        outcome = await AttachedRouter(lambda req: answer if other_loop else answer(req)).acall(make_req())
+    finally:
+        loop.close()
+    assert (outcome.decision, outcome.failure) == ((None, "router_error") if other_loop else (DECISION, None))

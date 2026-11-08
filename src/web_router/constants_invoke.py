@@ -29,3 +29,4 @@ MSG_ROUTE_TOOLS = "route_tools takes a collection of tool names from {known}; go
 MSG_ROUTER_FAILED = (
     "Router {router!r} failed ({code}); fail_on_router_error=True raises rather than use the static order."
 )
+MSG_ROUTER_OTHER_LOOP = "The router answered with a future bound to another event loop, which this call cannot await."
