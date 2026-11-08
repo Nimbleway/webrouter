@@ -28,8 +28,10 @@ from pathlib import Path
 from typing import Any
 
 from _common import _round
+from _emit import write_or_check
 from frozen import FROZEN_DIR
-from route_eval_rank import MIN_QUESTIONS, RANKING_RULE, Floor, backend_stats, floor_for, recommended, too_few
+from route_eval_floor import Floor, floor_for
+from route_eval_rank import MIN_QUESTIONS, RANKING_RULE, backend_stats, recommended, too_few
 from route_eval_sets import load_set
 
 CHAINS_FILE = Path(__file__).resolve().parents[2] / "src" / "web_router" / "data" / "chains.json"
@@ -41,13 +43,11 @@ scores 81-95% and today's order already came from it, while SealQA hard is
 where they differ; the noise floor is measured on SealQA's own rerun; and a
 pooled figure would need every member on both sets, which Keenable and DeepSeek
 are not. Answer has one set, and no rerun: it is ranked with search's floor,
-and its entry says so (:func:`route_eval_rank.floor_for`).
+and its entry says so (:func:`route_eval_floor.floor_for`).
 """
 CHAIN_PARTS = {"search": ("preferred", "appended"), "answer": ("preferred",)}
 """The lists each method's entry holds, in chain order: the members a set ranks lead the first."""
 CHAINS_COMMAND = "make chains"
-MSG_CHAINS_STALE = "{path} is stale: run `{command}` and commit the result"
-MSG_CHAINS_WRITTEN = "wrote {path}"
 
 
 def _place(parts: Mapping[str, Sequence[str]], ranked: Sequence[str]) -> dict[str, list[str]]:
@@ -83,7 +83,7 @@ def chain_file(
     Not the held-out half routers are scored on: twice the data, and a
     baseline slightly harder for a router to beat there, on purpose.
     Membership never changes here: a backend joins by hand. Each method is
-    ranked with ``floors[method]``, by default :func:`route_eval_rank.floor_for`'s,
+    ranked with ``floors[method]``, by default :func:`route_eval_floor.floor_for`'s,
     and its entry names that floor. A member counted on fewer than
     :data:`~route_eval_rank.MIN_QUESTIONS` keeps its place after the ranked
     ones, listed as ``too_few_questions``.
@@ -118,14 +118,7 @@ def emit_chains(check: bool, path: Path = CHAINS_FILE) -> int:
     """Rewrite ``chains.json`` from the frozen results, or with ``check`` only say whether it is stale."""
     current = json.loads(path.read_text(encoding="utf-8"))
     wanted = json.dumps(chain_file(current), indent=2) + "\n"
-    if check:
-        if path.read_text(encoding="utf-8") != wanted:
-            print(MSG_CHAINS_STALE.format(path=path, command=CHAINS_COMMAND), file=sys.stderr)
-            return 1
-        return 0
-    path.write_text(wanted, encoding="utf-8")
-    print(MSG_CHAINS_WRITTEN.format(path=path))
-    return 0
+    return write_or_check(wanted, path, check, CHAINS_COMMAND)
 
 
 def main(argv: list[str] | None = None) -> None:

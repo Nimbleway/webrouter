@@ -38,10 +38,11 @@ from _common import _pct, _wilson
 from frozen import FROZEN_DIR
 from route_eval_cli import DEFAULT_ROUTERS, DEFAULT_SEED, DEFAULT_TEST_FRACTION, run, skip_absent_specs
 from route_eval_cli import DEFAULT_SETS as DEFAULT_SETS
+from route_eval_floor import Floor, floor_for
 from route_eval_merge import walk
 from route_eval_paths import DEFAULT_PATH_ROUTERS, MIXED, research_by_effort
 from route_eval_rank import KEYLESS as KEYLESS
-from route_eval_rank import Floor, backend_stats, cost_of, floor_for, is_served, recommended, too_few
+from route_eval_rank import backend_stats, cost_of, is_served, recommended, too_few
 from route_eval_rank import noise_floor as noise_floor
 from route_eval_rank import rank_backends as rank_backends
 from route_eval_report import markdown as markdown
@@ -263,7 +264,7 @@ def evaluate_set(
     ``specs`` of ``None`` scores the set's example routers: :data:`DEFAULT_ROUTERS`, or on a mixed set
     :data:`~route_eval_paths.DEFAULT_PATH_ROUTERS`. With ``skip_absent``, an ``always:`` router whose
     choice is not a candidate here is skipped, with a note, instead of refused: a backend is no path.
-    ``floor`` of ``None`` ranks and judges with the method's own floor (:func:`~route_eval_rank.floor_for`).
+    ``floor`` of ``None`` ranks and judges with the method's own floor (:func:`~route_eval_floor.floor_for`).
     """
     method, questions = load_set(name, folder, joined)
     ranked_with = floor_for(method) if floor is None else Floor(method, floor, None)

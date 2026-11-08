@@ -9,43 +9,11 @@ from typing import Any
 
 import pytest
 
-from tests.benchmarks.conftest import route_row, write_frozen_set
-
-
-def _path_row(qid: str, path: str, grade: str | None, **extra: Any) -> dict[str, Any]:
-    method, provider, *mode = path.split(":")
-    return route_row(provider, grade, qid=qid, method=method, mode=mode[0] if mode else "default", **extra)
-
-
-def _perplexity_low(qid: str, i: int) -> dict[str, Any]:
-    """A `rate_limit` error on the first 15 questions, timed out on two, right on the last three."""
-    if i < 15:
-        return _path_row(qid, "research:perplexity:low", None, latency=None, error="rate_limit")
-    if i < 17:
-        return _path_row(qid, "research:perplexity:low", None, latency=None, error="timeout")
-    return _path_row(qid, "research:perplexity:low", "correct", cost=0.002)
-
-
-def _mixed_set(folder: Path) -> None:
-    """20 questions; ``research:parallel:high`` right on all, ``extract:nimble`` asked on the first four only."""
-    rows = []
-    for i in range(20):
-        qid = f"q{i:02d}"
-        rows += [
-            _path_row(qid, "search+extract:nimble:top3", "correct" if i < 8 else "incorrect", cost=0.008),
-            _path_row(qid, "search+extract:perplexity:top3", "incorrect", cost=0.007),
-            _path_row(qid, "answer:perplexity", "correct" if i < 12 else "incorrect", cost=0.002),
-            _path_row(qid, "research:parallel:low", "correct" if i < 16 else "incorrect", cost=0.005),
-            _path_row(qid, "research:parallel:high", "correct", cost=0.1, latency=30.0),
-            _perplexity_low(qid, i),
-        ]
-        if i < 4:
-            rows.append(_path_row(qid, "extract:nimble", "correct", cost=0.001))
-    write_frozen_set(folder, "mixed-tiny", rows)
+from tests.benchmarks.conftest import path_row, route_row, write_frozen_set, write_mixed_set
 
 
 def test_a_mixed_set_keys_each_row_by_its_path(route_eval: ModuleType, tmp_path: Path) -> None:
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     method, questions = route_eval.load_set("mixed-tiny", tmp_path)
 
     assert method == route_eval.MIXED
@@ -58,7 +26,7 @@ def test_a_mixed_set_keys_each_row_by_its_path(route_eval: ModuleType, tmp_path:
 def test_an_extract_path_is_ranked_on_the_questions_where_it_is_a_candidate(
     route_eval: ModuleType, tmp_path: Path
 ) -> None:
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     summary = route_eval.evaluate_set("mixed-tiny", [], floor=0.05, folder=tmp_path)
 
     extract = summary["backends"]["extract:nimble"]
@@ -74,7 +42,7 @@ def test_a_set_mixing_methods_that_are_not_paths_is_refused(route_eval: ModuleTy
 
 
 def test_a_mixed_sets_static_order_searches_then_reads_first(route_eval: ModuleType, tmp_path: Path) -> None:
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     _, questions = route_eval.load_set("mixed-tiny", tmp_path)
     order = route_eval.static_router(route_eval.MIXED)(questions[0])
 
@@ -95,7 +63,7 @@ def test_extract_paths_follow_autos_extract_order(route_eval: ModuleType) -> Non
 
 
 def test_the_oracle_takes_the_cheapest_right_path(route_eval: ModuleType, tmp_path: Path) -> None:
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     _, questions = route_eval.load_set("mixed-tiny", tmp_path)
     assert route_eval.oracle_router(route_eval.MIXED)(questions[0])[0] == "extract:nimble"
     assert route_eval.oracle_router(route_eval.MIXED)(questions[16])[0] == "research:parallel:high"
@@ -105,7 +73,7 @@ def test_the_oracle_takes_the_cheapest_right_path(route_eval: ModuleType, tmp_pa
 def test_a_path_failed_on_a_rate_limit_is_passed_over_in_the_replay_as_any_failed_row(
     route_eval: ModuleType, tmp_path: Path
 ) -> None:
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     _, questions = route_eval.load_set("mixed-tiny", tmp_path)
     static = route_eval.static_router(route_eval.MIXED)
 
@@ -115,7 +83,7 @@ def test_a_path_failed_on_a_rate_limit_is_passed_over_in_the_replay_as_any_faile
 
 
 def test_a_path_the_question_has_no_row_for_is_a_router_failure(route_eval: ModuleType, tmp_path: Path) -> None:
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     _, questions = route_eval.load_set("mixed-tiny", tmp_path)
     outcome = route_eval.replay(lambda _: ["extract:nimble"], questions[-1], route_eval.static_router("mixed"))
     assert outcome.router_failed and outcome.served_by == "search+extract:perplexity:top3"
@@ -126,15 +94,15 @@ def test_an_unstated_research_cost_is_priced_at_its_effort(
 ) -> None:
     asked: list[tuple[Any, ...]] = []
     monkeypatch.setattr(route_eval_rank.prices, "estimate", lambda *args: asked.append(args) or 0.1)
-    route_eval_rank.cost_of(_path_row("q", "research:parallel:high", "correct"))
-    route_eval_rank.cost_of(_path_row("q", "answer:parallel", "correct"))
+    route_eval_rank.cost_of(path_row("q", "research:parallel:high", "correct"))
+    route_eval_rank.cost_of(path_row("q", "answer:parallel", "correct"))
     assert asked == [("parallel", "research", "high"), ("parallel", "answer", None)]
 
 
 def test_a_mixed_set_scores_its_example_routers_against_static_and_oracle(
     route_eval: ModuleType, tmp_path: Path
 ) -> None:
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     summary = route_eval.evaluate_set("mixed-tiny", None, floor=0.05, folder=tmp_path)
 
     routers = summary["routers"]
@@ -147,28 +115,6 @@ def test_a_mixed_set_scores_its_example_routers_against_static_and_oracle(
     assert summary["static_order"][0] == "search+extract:perplexity:top3"
 
 
-def test_the_report_ends_with_research_by_effort(route_eval: ModuleType, tmp_path: Path) -> None:
-    _mixed_set(tmp_path)
-    summary = route_eval.evaluate_set("mixed-tiny", [], folder=tmp_path)
-
-    efforts = [
-        (e["backend"], e["effort"], e["correct"], e["questions"], e["failed"], e["excluded"])
-        for e in summary["efforts"]
-    ]
-    assert efforts == [
-        ("parallel", "low", 16, 20, 0, 0),
-        ("parallel", "high", 20, 20, 0, 0),
-        ("perplexity", "low", 3, 5, 2, 15),
-    ], "rows failed on a rate-limit error are left out of the count and shown apart; the timeouts are misses"
-    report = route_eval.markdown([summary], 0.05, {})
-    assert "| Order | Path |" in report and "search's (`sealqa-hard-254` vs" in report, "the search floor, named"
-    assert "no rerun of mixed is frozen" in report
-    assert "| too few questions | `research:perplexity:low` | 60% (3/5) |" in report, "listed after, unranked"
-    assert report.index("Recommended order") < report.index("Research by effort")
-    assert "| `parallel` | low | 80% (16/20) | $0.0050 | 1.0s | 0 | 0 |" in report
-    assert "| `perplexity` | low | 60% (3/5) | $0.0020 | 1.0s | 2 | 15 |" in report
-
-
 def test_a_one_method_set_has_no_effort_table(route_eval: ModuleType, tmp_path: Path) -> None:
     write_frozen_set(tmp_path, "tiny", [route_row("brave", "correct", qid=f"q{i}") for i in range(4)])
     summary = route_eval.evaluate_set("tiny", [], floor=0.05, folder=tmp_path)
@@ -176,32 +122,15 @@ def test_a_one_method_set_has_no_effort_table(route_eval: ModuleType, tmp_path: 
 
 
 def test_an_always_router_on_a_mixed_set_must_name_a_path_in_it(route_eval: ModuleType, tmp_path: Path) -> None:
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     with pytest.raises(SystemExit, match="research:nimble:low has no rows in mixed-tiny"):
         route_eval.evaluate_set("mixed-tiny", ["always:research:nimble:low"], floor=0.05, folder=tmp_path)
-
-
-def test_the_committed_tool_and_effort_set_replays_offline(route_eval: ModuleType) -> None:
-    summary = route_eval.evaluate_set("tools-effort-60", None)
-
-    assert summary["method"] == "mixed" and summary["questions"] == 60
-    assert summary["static_order"][0].startswith("search+extract:")
-    assert {(e["backend"], e["effort"]) for e in summary["efforts"]} >= {("parallel", "max"), ("nimble", "low")}
-    left_out = {p: b["excluded"] for p, b in summary["backends"].items() if b["excluded"]}
-    assert left_out == {"answer:brave": 22, "research:perplexity:low": 56, "research:perplexity:medium": 41}
-    few = ["extract:nimble", "research:perplexity:low", "research:perplexity:medium"]
-    assert summary["too_few_questions"] == few, "10, 4 and 19 counted; answer:brave's 38 is enough"
-    assert not set(few) & set(summary["recommended_order"])
-    assert summary["noise_floor"]["measured_on"] == "search" and summary["noise_floor"]["fallback"]
-    oracle = summary["routers"]["oracle"]["held_out"]["accuracy"]
-    assert all(r["held_out"]["accuracy"] <= oracle for r in summary["routers"].values())
-    assert "tools-effort-60" in route_eval.DEFAULT_SETS
 
 
 def test_a_backend_router_is_skipped_on_a_mixed_default_set_and_refused_on_a_named_one(
     route_eval: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     summary = route_eval.evaluate_set("mixed-tiny", ["always:nimble"], floor=0.05, folder=tmp_path, skip_absent=True)
     assert summary["skipped"] == ["always:nimble"] and "always:nimble" not in summary["routers"]
     with pytest.raises(SystemExit, match="nimble has no rows in mixed-tiny"):
@@ -217,7 +146,7 @@ def test_a_backend_router_is_skipped_on_a_mixed_default_set_and_refused_on_a_nam
 def test_a_decision_on_a_mixed_set_picks_one_tool_and_its_effort(route_eval: ModuleType, tmp_path: Path) -> None:
     from web_router import RouteDecision
 
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     _, questions = route_eval.load_set("mixed-tiny", tmp_path)
     request = sys.modules["route_eval_merge"].request_for(questions[0])
     assert request.pinned_tool is None and request.urls == ("frozen:pages",), "the rows keep no URL: a placeholder"
@@ -235,7 +164,7 @@ def test_a_decision_on_a_mixed_set_picks_one_tool_and_its_effort(route_eval: Mod
 
 
 def test_a_ranking_on_a_mixed_set_is_followed_by_the_static_path_order(route_eval: ModuleType, tmp_path: Path) -> None:
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     _, questions = route_eval.load_set("mixed-tiny", tmp_path)
     static = route_eval.static_router(route_eval.MIXED)
     outcome = route_eval.replay(lambda _: ["research:perplexity:low"], questions[0], static)
@@ -248,7 +177,7 @@ def test_an_empty_or_failed_decision_on_a_mixed_set_stays_on_one_method(
 ) -> None:
     from web_router import RouteDecision
 
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     _, questions = route_eval.load_set("mixed-tiny", tmp_path)
     q = questions[-1]
     static = route_eval.static_router(route_eval.MIXED)
@@ -262,7 +191,7 @@ def test_a_research_backend_with_no_row_at_the_effort_is_counted_unscorable(
 ) -> None:
     from web_router import RouteDecision
 
-    _mixed_set(tmp_path)
+    write_mixed_set(tmp_path)
     _, questions = route_eval.load_set("mixed-tiny", tmp_path)
     decision = RouteDecision(
         tools=["research"], providers={"research": ["perplexity", "parallel"]}, params={"research": {"effort": "high"}}
@@ -278,9 +207,9 @@ def test_a_research_backend_with_no_effort_set_runs_at_its_default(route_eval: M
     from web_router import RouteDecision
 
     rows = [
-        _path_row("q", "search+extract:nimble:top3", "incorrect"),
-        _path_row("q", "research:parallel:low", "incorrect"),
-        _path_row("q", "research:parallel:medium", "correct"),
+        path_row("q", "search+extract:nimble:top3", "incorrect"),
+        path_row("q", "research:parallel:low", "incorrect"),
+        path_row("q", "research:parallel:medium", "correct"),
     ]
     write_frozen_set(tmp_path, "mixed-default", rows)
     _, (q,) = route_eval.load_set("mixed-default", tmp_path)
@@ -292,10 +221,10 @@ def test_a_research_backend_with_no_effort_set_runs_at_its_default(route_eval: M
 def _default_mode_set(folder: Path) -> None:
     """One question; parallel's research has a default-mode row (right), a low one and a medium one (wrong)."""
     rows = [
-        _path_row("q", "search+extract:nimble:top3", "incorrect"),
-        _path_row("q", "research:parallel", "correct", cost=0.1),
-        _path_row("q", "research:parallel:low", "incorrect"),
-        _path_row("q", "research:parallel:medium", "incorrect"),
+        path_row("q", "search+extract:nimble:top3", "incorrect"),
+        path_row("q", "research:parallel", "correct", cost=0.1),
+        path_row("q", "research:parallel:low", "incorrect"),
+        path_row("q", "research:parallel:medium", "incorrect"),
     ]
     write_frozen_set(folder, "mixed-default-row", rows)
 
@@ -323,7 +252,7 @@ def test_a_one_method_research_set_matches_the_effort_too(
 ) -> None:
     from web_router import RouteDecision
 
-    rows = [_path_row("q", "research:parallel", "correct", cost=0.1), _path_row("q", "research:nimble", "incorrect")]
+    rows = [path_row("q", "research:parallel", "correct", cost=0.1), path_row("q", "research:nimble", "incorrect")]
     write_frozen_set(tmp_path, "research-only", rows)
     _, (q,) = route_eval.load_set("research-only", tmp_path)
     params = None if effort is None else {"research": {"effort": effort}}

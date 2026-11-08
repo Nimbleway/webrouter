@@ -1,10 +1,8 @@
 """The options a budget sets on a call: research's effort, mapped from what the budget has left.
 
 Experimental. A pure selection with no model and no side effects: it reads the
-research effort table (``data/efforts.json``, written by ``make efforts`` from
-the frozen ``tools-effort-60`` results), the price list
-(:func:`web_router.prices.estimate`) and its latency priors
-(:func:`web_router.prices.estimate_latency`, else the table's own p90), and
+research effort table (:mod:`web_router.routing.effort_table`, its measured
+p90s first) and the price list (:func:`web_router.prices.estimate`), and
 answers which effort to run with and why. Nothing calls it yet; enforcing the
 budget is not its job.
 
@@ -21,18 +19,13 @@ an effort that came from elsewhere, such as a router's ``params``.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from functools import lru_cache
-from importlib import resources
 from typing import Any, Literal, cast, get_args
 
 from web_router import prices
 from web_router.constants_params import (
     DEFAULT_EFFORT_NAME,
-    EFFORTS_DATA_DIR,
-    EFFORTS_DATA_FILE,
     FLOOR_TOLERANCE,
     MIN_MEASURED_EFFORTS,
     MSG_EFFORT_CALLER,
@@ -47,10 +40,17 @@ from web_router.constants_params import (
     PARAMS_SOURCE_BUDGET,
     PARAMS_SOURCE_CALLER,
 )
-from web_router.routing.contract import Budget, ToolName, candidate_id
+from web_router.routing.contract import Budget, candidate_id
+from web_router.routing.effort_table import (
+    RESEARCH,
+    effort_of,
+    effort_p90,
+    effort_table,
+    measured_efforts,
+    noise_floor,
+)
 from web_router.types import Provider, ResearchEffort, provider_name
 
-RESEARCH: ToolName = "research"
 EFFORTS: tuple[str, ...] = get_args(ResearchEffort)
 """Research efforts, lowest first: the last tie-break prefers the lower."""
 
@@ -83,43 +83,6 @@ class EffortChoice:
         }
 
 
-@lru_cache(maxsize=1)
-def effort_table() -> dict[str, Any]:
-    """The whole generated research effort table."""
-    text = (resources.files("web_router") / EFFORTS_DATA_DIR / EFFORTS_DATA_FILE).read_text(encoding="utf-8")
-    data: dict[str, Any] = json.loads(text)
-    return data
-
-
-def noise_floor() -> float:
-    """The accuracy gap, as a fraction, two efforts must exceed to be told apart: route-eval's floor for the set."""
-    return float(effort_table()["noise_floor"]["value"])
-
-
-def measured_efforts(provider: str | Provider) -> Mapping[str, Mapping[str, Any]]:
-    """``provider``'s measured research efforts, by name, each with its ``accuracy`` and latency; empty if none."""
-    entry = effort_table()["research"].get(provider_name(provider), {})
-    measured: Mapping[str, Mapping[str, Any]] = entry.get("measured", {})
-    return measured
-
-
-def _effort_of(provider: str, effort: str | None) -> str | None:
-    """``effort``, or for ``None`` the effort the price list marks as the backend's default, when it marks one."""
-    if effort is not None:
-        return effort
-    row = prices.price(provider, RESEARCH, None)
-    return None if row is None else row.mode
-
-
-def _p90(provider: str, effort: str | None) -> float | None:
-    """The p90 seconds: the price list's latency prior, else the effort table's measured figure, else ``None``."""
-    prior = prices.estimate_latency(provider, RESEARCH, effort)
-    if prior is not None:
-        return prior[1]
-    p90 = measured_efforts(provider).get(_effort_of(provider, effort) or "", {}).get("latency_p90_s")
-    return None if p90 is None else float(p90)
-
-
 def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) -> str | None:
     """Why research on ``provider`` at ``effort`` does not fit ``budget``, or ``None`` when it fits.
 
@@ -136,7 +99,7 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
         if cost > budget.max_cost_usd:
             return MSG_MISFIT_COST.format(provider=name, effort=shown, cost=cost, cap=budget.max_cost_usd)
     if budget.time_limit_s is not None:
-        p90 = _p90(name, effort)
+        p90 = effort_p90(name, effort)
         if p90 is None and budget.strict:
             return MSG_MISFIT_STRICT.format(provider=name, effort=shown)
         if p90 is not None and p90 > budget.time_limit_s:
@@ -145,7 +108,7 @@ def effort_misfit(provider: str | Provider, effort: str | None, budget: Budget) 
 
 
 def _is_measured(provider: str, effort: str | None) -> bool:
-    return _effort_of(provider, effort) in measured_efforts(provider)
+    return effort_of(provider, effort) in measured_efforts(provider)
 
 
 def _default(provider: str, budget: Budget, reason: str) -> EffortChoice:
@@ -158,7 +121,7 @@ def _default(provider: str, budget: Budget, reason: str) -> EffortChoice:
 
 def _cheapest_key(provider: str, effort: str) -> tuple[bool, float, float, int]:
     """Cost first, an unknown one last; then p90, an unknown one last; then the lower effort."""
-    cost, p90 = prices.estimate(provider, RESEARCH, effort), _p90(provider, effort)
+    cost, p90 = prices.estimate(provider, RESEARCH, effort), effort_p90(provider, effort)
     return (cost is None, cost or 0.0, float("inf") if p90 is None else p90, EFFORTS.index(effort))
 
 

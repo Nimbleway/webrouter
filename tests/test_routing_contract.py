@@ -37,11 +37,6 @@ def test_every_type_is_frozen_and_keyword_only(cls: type) -> None:
     assert all(f.kw_only for f in dataclasses.fields(cls))
 
 
-def test_a_budget_cannot_be_changed_once_made() -> None:
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        Budget(max_cost_usd=0.01).max_cost_usd = 1.0  # type: ignore[misc]
-
-
 def test_a_candidate_is_named_by_its_tool_and_provider() -> None:
     candidate = Candidate(tool="search", provider="exa", est_cost_usd=0.005, est_latency_s=1.2)
     assert candidate.id == "search:exa"
@@ -131,11 +126,14 @@ def test_the_hook_sees_each_attempt_and_its_answer_admits_or_passes_over() -> No
     assert attempts._ROUTE.get() is None
 
 
-def test_a_budget_scope_runs_the_block_unchanged() -> None:
-    ran: list[str] = []
-    with budget_scope(Budget(max_cost_usd=0.0)):
-        ran.append("inside")
-    assert ran == ["inside"], "the scope runs its block, as it is, until a budget is enforced"
+def test_with_no_budget_the_scope_sets_nothing_and_hands_back_what_it_was_given() -> None:
+    from web_router.providers._deadline import current_deadline
+
+    backend, response = object(), SearchRequest(query="q")
+    with budget_scope(None, "search", backend, response) as call:
+        assert (attempts.current_route(), current_deadline()) == (None, None)
+        assert call.backend is backend
+        assert call.settle(response) is response, "with no budget the response is not even copied"
 
 
 def test_a_provider_named_twice_in_the_order_keeps_its_first_place() -> None:
