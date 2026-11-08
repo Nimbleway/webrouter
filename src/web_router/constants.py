@@ -27,8 +27,6 @@ from web_router.types import (
     ExtractRequest,
     FieldPath,
     JobState,
-    PageFormat,
-    PageLoadState,
     Provider,
     ResearchEffort,
     ResearchRequest,
@@ -37,6 +35,7 @@ from web_router.types import (
     SearchRequest,
     StealthLevel,
 )
+from web_router.types_page import PageFormat, PageLoadState
 
 # --- Router -----------------------------------------------------------------
 

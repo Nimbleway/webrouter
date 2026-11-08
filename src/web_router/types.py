@@ -200,6 +200,59 @@ EXTRACT_PARAMETERS: frozenset[str] = ExtractRequest.normalized_parameters()
 """Every optional parameter an extract provider may declare support for."""
 
 
+class DecisionHop(BaseModel):
+    """A candidate a routed call moved past, and why."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="The candidate, as ``tool:provider``.")
+    error: str | None = Field(default=None, description="The failure that moved the call on, when there was one.")
+
+
+class DecisionAttempt(BaseModel):
+    """A candidate a routed call tried: what it was estimated to cost, and how long it took."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="The candidate, as ``tool:provider``.")
+    est_cost_usd: float | None = Field(default=None, description="Its estimated cost; None when unknown.")
+    seconds: float | None = Field(default=None, description="Wall-clock seconds the attempt took.")
+
+
+class DecisionRecord(BaseModel):
+    """How a routed or budgeted call chose its backend. Experimental: it may change before 1.0.
+
+    Every field is optional, and ``None`` means not recorded. Candidates are named
+    ``tool:provider``, which shows the backends configured; no key values, and no
+    prompt text, only its hash (which is not anonymisation: a short one can be guessed).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    decision_id: str | None = Field(default=None, description="A unique id for this decision.")
+    router: str | None = Field(default=None, description="The router that ranked the candidates.")
+    offered: list[str] | None = Field(default=None, description="Every candidate the router saw, in that order.")
+    ranked: list[str] | None = Field(default=None, description="The router's own ranking.")
+    merged: list[str] | None = Field(default=None, description="The order tried, after the merge rule.")
+    ran: int | None = Field(default=None, description="The position in `merged` that answered, from 0.")
+    hops: list[DecisionHop] | None = Field(default=None, description="The candidates the call moved past.")
+    attempts: list[DecisionAttempt] | None = Field(default=None, description="Every candidate tried, in order.")
+    reason: str | None = Field(default=None, description="The router's own reason, when it gave one.")
+    router_timeout: bool | None = Field(default=None, description="Whether the router ran out of time.")
+    router_ms: float | None = Field(default=None, description="Milliseconds the router took.")
+    dropped: dict[str, str] | None = Field(default=None, description="Candidates left out before routing -> why.")
+    excluded: dict[str, str] | None = Field(default=None, description="Candidates the router excluded -> why.")
+    params: dict[str, Any] | None = Field(default=None, description="The options the call ran with, prompt left out.")
+    params_source: Literal["budget", "router", "caller"] | None = Field(default=None, description="Who set `params`.")
+    estimated_cost_usd: float | None = Field(default=None, description="The call's estimated spend in US dollars.")
+    cost_is_estimate: bool | None = Field(default=None, description="Whether that spend is a list-price estimate.")
+    unmeasured: list[str] | None = Field(default=None, description="Candidates with no known price or latency.")
+    prompt_sha256: str | None = Field(default=None, description="The prompt's SHA-256; a short one can be guessed.")
+
+
+DECISION_DESCRIPTION = "How a routed or budgeted call chose its backend; None on any other call."
+
+
 class SearchResult(BaseModel):
     """A single result, normalized across providers."""
 
@@ -242,6 +295,7 @@ class SearchResponse(BaseModel):
     answer: str | None = Field(default=None, description="Synthesized answer, when the provider returned one.")
     request_id: str | None = None
     raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
     def __len__(self) -> int:
         return len(self.results)
@@ -315,6 +369,7 @@ class ExtractResponse(BaseModel):
             "backend that takes every URL at once, one per URL for a backend that does not."
         ),
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
     def __len__(self) -> int:
         return len(self.documents)
@@ -744,6 +799,7 @@ class ResearchResponse(BaseModel):
         default=None,
         description="The provider's untouched payloads, one per call the run took.",
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
     @property
     def urls(self) -> list[str]:
@@ -1049,6 +1105,7 @@ class BrowseResponse(BaseModel):
             "it is never serialized."
         ),
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
 
 class BrowseProgress(BaseModel):
@@ -1071,61 +1128,3 @@ class BrowseProgress(BaseModel):
     def is_terminal(self) -> bool:
         """Whether this task has stopped, one way or another."""
         return self.state not in ("queued", "running")
-
-
-PageLoadState = Literal["commit", "domcontentloaded", "load", "networkidle"]
-"""How far a page must get before ``goto`` returns. Left unset, Playwright waits for ``load``."""
-
-PageFormat = Literal["text", "html"]
-"""What :meth:`BrowserHandle.read <web_router.BrowserHandle.read>` returns: the rendered text, or the DOM as HTML."""
-
-
-class PageState(BaseModel):
-    """Where the page is after an action."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    title: str = ""
-    status_code: int | None = Field(
-        default=None,
-        description=(
-            "The HTTP status of the response a navigation produced. Set by ``goto`` only, and ``None`` when "
-            "the navigation produced no response -- a same-document jump, or a page with no HTTP behind it."
-        ),
-    )
-
-
-class PageSnapshot(BaseModel):
-    """The page as an agent reads it: its accessibility tree, each element tagged with a ref.
-
-    :attr:`tree` is Playwright's ``aria_snapshot(mode="ai")`` YAML, with unnamed
-    wrapper containers and link-URL lines dropped to keep it short. Pass a ref
-    back unchanged -- ``click(ref="e14")`` -- and treat it as opaque: its shape
-    is not stable. A ref is good until the next snapshot or navigation, and one
-    used after that raises :class:`~web_router.exceptions.StaleElementError`.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    title: str = ""
-    tree: str = Field(description='One element per line, e.g. ``- button "Submit" [ref=e11]``.')
-    truncated: bool = Field(
-        default=False,
-        description=(
-            "Whether :attr:`tree` was cut at a line boundary to fit ``max_chars``. Refs past the cut "
-            "were never offered, and using one raises StaleElementError."
-        ),
-    )
-
-
-class Screenshot(BaseModel):
-    """A PNG capture of the page. In JSON, :attr:`png` is base64, both ways."""
-
-    model_config = ConfigDict(extra="forbid", ser_json_bytes="base64", val_json_bytes="base64")
-
-    png: bytes = Field(repr=False, description="The image, as PNG bytes.")
-    width: int = Field(description="Width of the image in pixels.")
-    height: int = Field(description="Height of the image in pixels.")
-    url: str = Field(description="The page it was taken of.")
