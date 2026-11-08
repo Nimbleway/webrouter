@@ -13,8 +13,8 @@ from typing import Any, Protocol, TypeVar
 from web_router.providers.base import Job
 from web_router.routing.budget import budget_scope
 from web_router.routing.contract import ToolName
+from web_router.routing.effort_call import unrouted
 from web_router.routing.pool import limited
-from web_router.routing.routed import unrouted
 from web_router.types import NormalizedRequest
 
 _JobT = TypeVar("_JobT", bound="Job[Any, Any, Any]", covariant=True)

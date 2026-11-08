@@ -19,7 +19,7 @@ from tests.mcp.conftest import Table, ok_on, outcome, routed
 from web_router import RouteDecision, RouteRequest, prices
 from web_router.constants_budget import SKIP_PRICE_UNKNOWN
 from web_router.constants_mcp import ENV_MCP_ROUTER, MCP_TOOL_BUDGET_START, MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
-from web_router.exceptions import BudgetExceededError
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.mcp.budget import ConnectionBudget, browser_charged, charged, wait_left
 from web_router.providers._deadline import current_deadline
 from web_router.providers.auto_browser import AutoBrowserProvider

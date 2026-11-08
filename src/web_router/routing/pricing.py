@@ -8,26 +8,23 @@ way when offered and another when run.
 - **Cost** is the price list's estimate for (provider, method, mode). It is
   unknown -- ``None`` -- when the list has no price (no row, ``unknown``, or
   billed by tokens), when the row is only a floor with charges billed on top
-  (``estimate_is_floor``), and when the request carries ``provider_options``,
-  which can change the mode the vendor bills. An extract is charged per URL,
-  and a browser session per minute of its lifetime (``timeout``), rounded up
-  to whole minutes as vendors bill: unknown without one, and unknown with any
-  option that can turn on an extra billed apart -- a proxy, stealth, CAPTCHA
-  solving, a profile -- unless the backend is free.
-- **p90** is the price list's measured latency; for research with none there,
-  the effort table's measured p90 for the effort, the backend's default when
-  none is set. Unknown otherwise, and with ``provider_options``, which can
-  change the mode that runs.
+  (``estimate_is_floor``), when the request carries ``provider_options``,
+  which can change the mode the vendor bills, and when a search asks for more
+  results than the row's price assumes (``results_assumed``), where each
+  result is charged. An extract is charged per URL, and a browser session
+  per minute of its lifetime (``timeout``), rounded up to whole minutes as
+  vendors bill: unknown without one, and unknown with any option that can
+  turn on an extra billed apart -- a proxy, stealth, CAPTCHA solving, a
+  profile -- unless the backend is free.
+- **p90** is the price list's measured latency; for research, the effort
+  table's measured p90 for the effort first (the backend's default when none
+  is set), then the price list's. Unknown otherwise, and with
+  ``provider_options``, which can change the mode that runs.
 """
 
 from __future__ import annotations
 
-import json
 import math
-from collections.abc import Mapping
-from functools import lru_cache
-from importlib import resources
-from typing import Any
 
 from web_router import prices
 from web_router.constants_budget import (
@@ -40,35 +37,10 @@ from web_router.constants_budget import (
     UNKNOWN_P90,
     UNKNOWN_PRICE,
 )
-from web_router.constants_params import EFFORTS_DATA_DIR, EFFORTS_DATA_FILE
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
-from web_router.types import BrowserRequest, ExtractRequest, Provider, ResearchRequest, SearchRequest, provider_name
-
-RESEARCH = "research"
-
-
-@lru_cache(maxsize=1)
-def effort_table() -> dict[str, Any]:
-    """The whole generated research effort table."""
-    text = (resources.files("web_router") / EFFORTS_DATA_DIR / EFFORTS_DATA_FILE).read_text(encoding="utf-8")
-    data: dict[str, Any] = json.loads(text)
-    return data
-
-
-def measured_efforts(provider: str | Provider) -> Mapping[str, Mapping[str, Any]]:
-    """``provider``'s measured research efforts, by name, each with its ``accuracy`` and latency; empty if none."""
-    entry = effort_table()["research"].get(provider_name(provider), {})
-    measured: Mapping[str, Mapping[str, Any]] = entry.get("measured", {})
-    return measured
-
-
-def research_mode(provider: str, effort: str | None) -> str | None:
-    """``effort``, or for ``None`` the effort the price list marks as the backend's default, when it marks one."""
-    if effort is not None:
-        return effort
-    row = prices.price(provider, RESEARCH, None)
-    return None if row is None else row.mode
+from web_router.routing.effort_table import RESEARCH, effort_p90
+from web_router.types import BrowserRequest, ExtractRequest, ResearchRequest, SearchRequest
 
 
 def mode_cost(provider: str, tool: str, mode: str | None) -> float | None:
@@ -122,13 +94,10 @@ def fit_reason(attempt: Attempt, budget: Budget, what: str) -> str | None:
 
 def mode_p90(provider: str, tool: str, mode: str | None) -> float | None:
     """The measured p90 seconds of ``tool`` on ``provider`` at ``mode``, or ``None`` when unmeasured."""
+    if tool == RESEARCH:
+        return effort_p90(provider, mode)
     prior = prices.estimate_latency(provider, tool, mode)
-    if prior is not None:
-        return prior[1]
-    if tool != RESEARCH:
-        return None
-    p90 = measured_efforts(provider).get(research_mode(provider, mode) or "", {}).get("latency_p90_s")
-    return None if p90 is None else float(p90)
+    return None if prior is None else prior[1]
 
 
 def attempt_mode(attempt: Attempt) -> str | None:

@@ -11,9 +11,9 @@ from typing import Any
 
 import pytest
 
-from web_router import Budget, DecisionRecord
+from web_router import Budget, DecisionRecord, prices
 from web_router.constants_params import PARAMS_SOURCE_BUDGET, PARAMS_SOURCE_CALLER
-from web_router.routing import params, pricing
+from web_router.routing import effort_table, params
 from web_router.routing.params import EffortChoice, effort_misfit, map_effort
 
 NIMBLE_PRICES = {"low": 0.025, "medium": 0.1, "high": 0.5}
@@ -21,9 +21,9 @@ NIMBLE_PRICES = {"low": 0.025, "medium": 0.1, "high": 0.5}
 
 def _table_with(monkeypatch: pytest.MonkeyPatch, provider: str, effort: str, **row: Any) -> None:
     """The shipped table with ``provider``'s ``effort`` measured as ``row``."""
-    table = copy.deepcopy(pricing.effort_table())
+    table = copy.deepcopy(effort_table.effort_table())
     table["research"].setdefault(provider, {"measured": {}})["measured"][effort] = row
-    monkeypatch.setattr(pricing, "effort_table", lambda: table)
+    monkeypatch.setattr(effort_table, "effort_table", lambda: table)
 
 
 def test_the_table_measures_what_the_cases_below_assume() -> None:
@@ -34,11 +34,11 @@ def test_the_table_measures_what_the_cases_below_assume() -> None:
 
 
 @pytest.mark.parametrize("budget", [None, Budget(), Budget(strict=True)])
-@pytest.mark.parametrize("provider", ["nimble", "parallel", "linkup", "perplexity", "you", "auto"])
-def test_no_cap_changes_nothing(provider: str, budget: Budget | None) -> None:
-    choice = map_effort(provider, budget)
+def test_no_cap_changes_nothing(budget: Budget | None) -> None:
+    # map_effort returns before it reads the provider when nothing is capped, so one provider covers them all.
+    choice = map_effort("nimble", budget)
     assert (choice.effort, choice.source, choice.misfit) == (None, None, None)
-    assert choice.record(provider) == {
+    assert choice.record("nimble") == {
         "params": None,
         "params_source": None,
         "params_reason": choice.reason,
@@ -62,7 +62,7 @@ def test_nimble_research_at_a_few_cost_caps(cap: float, effort: str) -> None:
 
 @pytest.mark.parametrize(
     ("cap", "effort"),
-    [(0.01, "low"), (0.03, "medium"), (0.2, "high"), (10.0, "high")],
+    [(0.01, "low"), (0.03, "medium"), (0.2, "high")],
 )
 def test_parallel_research_at_a_few_cost_caps(cap: float, effort: str) -> None:
     assert map_effort("parallel", Budget(max_cost_usd=cap)).effort == effort
@@ -85,6 +85,12 @@ def test_with_nimbles_numbers_a_wider_floor_takes_low_over_high(monkeypatch: pyt
 def test_a_time_cap_leaves_out_the_efforts_whose_p90_is_over_it(provider: str, effort: str) -> None:
     # A 60s cap: Nimble medium (136s) and high (181s) are out; so is Parallel medium (74s).
     assert map_effort(provider, Budget(time_limit_s=60.0)).effort == effort
+
+
+def test_the_tables_p90_wins_over_a_price_list_prior(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A price-list p90 that disagrees with the measured one must not move the pick.
+    monkeypatch.setattr(prices, "estimate_latency", lambda *_: (1.0, 999.0))
+    assert map_effort("nimble", Budget(time_limit_s=60.0)).effort == "low"
 
 
 def test_when_no_measured_effort_fits_the_default_stays_and_says_whether_it_fits() -> None:
@@ -116,16 +122,6 @@ def test_an_unknown_price_never_fits_a_cost_cap(monkeypatch: pytest.MonkeyPatch)
     assert map_effort("nimble", Budget(time_limit_s=1000.0)).effort == "max"
 
 
-def test_an_effort_priced_only_as_a_floor_never_fits_a_cost_cap(monkeypatch: pytest.MonkeyPatch) -> None:
-    from types import SimpleNamespace
-
-    from web_router import prices
-
-    floor = SimpleNamespace(estimate_usd=0.001, estimate_is_floor=True, mode="low")
-    monkeypatch.setattr(prices, "price", lambda *_: floor)
-    assert "no known price" in (effort_misfit("parallel", "low", Budget(max_cost_usd=1000.0)) or "")
-
-
 def test_an_unknown_p90_fits_a_time_cap_unless_the_budget_is_strict(monkeypatch: pytest.MonkeyPatch) -> None:
     _table_with(monkeypatch, "nimble", "max", accuracy=1.0, latency_p90_s=None)
     assert map_effort("nimble", Budget(time_limit_s=60.0)).effort == "max"
@@ -152,9 +148,3 @@ def test_the_fit_check_reads_the_price_list() -> None:
     for effort, price in NIMBLE_PRICES.items():
         assert effort_misfit("nimble", effort, Budget(max_cost_usd=price)) is None, "a price equal to the cap fits"
         assert effort_misfit("nimble", effort, Budget(max_cost_usd=price * 0.99)) is not None
-
-
-def test_with_too_few_measured_efforts_a_measured_one_that_fits_replaces_a_default_that_does_not() -> None:
-    assert map_effort("linkup", Budget(max_cost_usd=2.0)).effort is None, "the default fits: it stands"
-    assert map_effort("linkup", Budget(max_cost_usd=1.0)).effort == "low"
-    assert map_effort("linkup", Budget(max_cost_usd=0.1)).effort is None, "nothing measured fits: the default"

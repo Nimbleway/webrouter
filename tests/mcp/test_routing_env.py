@@ -14,7 +14,8 @@ from web_router import RouteDecision, RouteRequest
 from web_router.constants_budget import SKIP_PRICE_UNKNOWN
 from web_router.constants_mcp import ENV_MCP_MAX_COST_USD, ENV_MCP_ROUTER, ENV_MCP_TIME_LIMIT_S, MCP_ROUTER_OFF
 from web_router.constants_routing import RULES_ROUTER_NAME
-from web_router.exceptions import BudgetExceededError, ConfigurationError
+from web_router.exceptions import ConfigurationError
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.mcp.budget import ConnectionBudget, charged
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.tools import WebRouterTools

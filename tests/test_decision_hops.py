@@ -29,7 +29,9 @@ from web_router import (
     registry,
     registry_answer,
 )
-from web_router.types import SearchRequest, SearchResponse
+from web_router.providers._chain import _empty_response
+from web_router.types import ExtractedDocument, ExtractResponse, SearchRequest, SearchResponse
+from web_router.types_answer import AnswerResponse
 
 NAMES = ("first", "second", "third")
 
@@ -122,6 +124,51 @@ def test_a_backend_a_chain_names_twice_keeps_both_hops(search_members: Callable[
         "search:first",
         "search:third",
     ]
+
+
+_NO_KEY = ConfigurationError("no key")
+_FIRST, _FAILED = DecisionHop(id="search:first"), DecisionHop(id="search:first", error="ConfigurationError")
+_SECOND = DecisionHop(id="search:second", error="ConfigurationError")
+
+
+@pytest.mark.parametrize(
+    ("chain", "outcomes", "hops"),
+    [
+        (["first", "first"], [None, _NO_KEY], [_FAILED]),
+        (["first", "first"], [_NO_KEY, None], [_FAILED]),
+        (["first", "second", "first"], [None, None], [_SECOND, _FIRST]),
+        (["first", "second", "first"], [None, "full"], [_FIRST, _SECOND]),
+        (["first", "second", "first", "first"], [None, None, _NO_KEY], [_SECOND, _FIRST, _FAILED]),
+    ],
+    ids=["empty then failed", "failed then empty", "empty twice", "empty then full", "the first empty is held"],
+)
+def test_a_backend_named_twice_is_recorded_by_the_attempt_whose_answer_was_returned(
+    search_members: Callable[..., None], chain: list[str], outcomes: list[Any], hops: list[DecisionHop]
+) -> None:
+    """``auto`` returns a full answer at once and holds the first empty one; the other attempt is the hop."""
+    script = iter(outcomes)
+
+    def scripted(self: Any, request: SearchRequest) -> SearchResponse:
+        if isinstance(outcome := next(script), Exception):
+            raise outcome
+        return FakeProvider._respond(self, request) if outcome else _empty(self, request)
+
+    search_members(first=scripted, second=_raising(_NO_KEY))
+    record = WebRouter(provider_config={"auto": {"chain": chain}}).search("q", budget=Budget()).decision
+    assert record.hops == hops
+
+
+@pytest.mark.parametrize(
+    ("response", "empty"),
+    [
+        (ExtractResponse(provider="p", documents=[ExtractedDocument(url="https://e.com", content=" ")]), True),
+        (ExtractResponse(provider="p", documents=[ExtractedDocument(url="https://e.com", content="text")]), False),
+        (AnswerResponse(provider="p", query="q", answer=" "), True),
+        (AnswerResponse(provider="p", query="q", answer="42"), False),
+    ],
+)
+def test_an_extract_or_answer_is_held_as_auto_holds_it(response: Any, empty: bool) -> None:
+    assert _empty_response(response) is empty
 
 
 def test_a_last_empty_answer_is_a_hop_when_an_earlier_one_is_returned(search_members: Callable[..., None]) -> None:
