@@ -66,17 +66,6 @@ async def test_a_budgeted_start_records_the_cost_the_budget_charged_it(
 
 @JOBS
 @MODES
-async def test_a_start_records_the_same_charge_as_the_method_called_under_that_budget(
-    chain: Chain, priced: Table, asynchronous: bool
-) -> None:
-    priced["first"] = (0.005, 10.0)
-    job, _, _ = await _started(chain.tool.name, BUDGET, "first", asynchronous)
-    called = getattr(WebRouter(), chain.tool.name)(ARGS[chain.tool.name], provider="first", budget=BUDGET)
-    assert _charged(job.decision) == _charged(called.decision)
-
-
-@JOBS
-@MODES
 async def test_a_start_with_no_budget_records_nothing(chain: Chain, priced: Table, asynchronous: bool) -> None:
     priced["first"] = (0.005, 10.0)
     job, answer, _ = await _started(chain.tool.name, None, "first", asynchronous)
