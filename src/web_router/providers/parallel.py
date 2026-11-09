@@ -59,7 +59,7 @@ from web_router.constants_parallel import (
 )
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, build_payload, compact, lite_body
+from web_router.providers._utils import as_snippet, build_payload, compact, lite_body, mapped, refused_domains
 from web_router.types import (
     Citation,
     ResearchProgress,
@@ -175,7 +175,7 @@ class ParallelProvider(HttpSearchProvider):
                 PARALLEL_AFTER_DATE: since.isoformat() if since else None,
             }
         )
-        excerpts = PARALLEL_EXCERPT_CHARS.get(request.search_depth) if request.search_depth else None
+        excerpts = mapped(PARALLEL_EXCERPT_CHARS, request.search_depth)
         return compact(
             {
                 **{theirs: getattr(request, ours) for ours, theirs in PARALLEL_ADVANCED_NAMES.items()},
@@ -187,15 +187,12 @@ class ParallelProvider(HttpSearchProvider):
 
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
-        refused: dict[str, Any] = {}
-        include, exclude = request.include_domains or [], request.exclude_domains or []
-        if len(include) > PARALLEL_DOMAIN_LIMIT:
-            refused["include_domains"] = include
-        if exclude and (include or len(exclude) > PARALLEL_DOMAIN_LIMIT):
-            refused["exclude_domains"] = exclude
+        # Parallel ignores the excluded list beside an included one, so that is the one named.
+        refused: dict[str, Any] = refused_domains(request, limit=PARALLEL_DOMAIN_LIMIT, both=("exclude_domains",))
         if request.country is not None and request.country.lower() not in PARALLEL_LOCATIONS:
             refused["country"] = request.country
-        if request.effort == "low" and any("/" in domain for domain in [*include, *exclude]):
+        domains = [*(request.include_domains or []), *(request.exclude_domains or [])]
+        if request.effort == "low" and any("/" in domain for domain in domains):
             refused["effort"] = request.effort
         return refused
 

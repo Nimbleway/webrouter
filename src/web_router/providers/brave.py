@@ -55,7 +55,7 @@ from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider, HttpSearchProvider
 from web_router.providers._language import language_tag, off_the_lists
-from web_router.providers._utils import as_snippet, build_payload, lite_body, site_operators, unsited_domains
+from web_router.providers._utils import as_snippet, build_payload, lite_body, mapped, site_operators, unsited_domains
 from web_router.types import Citation, SearchDepth, SearchRequest, SearchResponse, SearchResult
 from web_router.types_answer import AnswerRequest, AnswerResponse
 
@@ -114,7 +114,7 @@ class BraveProvider(HttpSearchProvider):
             q=query,
             country=request.country.upper() if request.country else None,
             search_lang=language.lower() if language else None,
-            freshness=BRAVE_FRESHNESS[request.recency] if request.recency else None,
+            freshness=mapped(BRAVE_FRESHNESS, request.recency),
         )
 
     @staticmethod

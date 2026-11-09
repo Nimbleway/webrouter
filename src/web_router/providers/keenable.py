@@ -40,7 +40,7 @@ from web_router.constants_keenable import (
 )
 from web_router.exceptions import ConfigurationError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider, _HttpProvider
-from web_router.providers._utils import as_snippet, best_text, build_payload
+from web_router.providers._utils import as_snippet, best_text, build_payload, mapped
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,
@@ -124,10 +124,10 @@ class KeenableProvider(_KeenableKeyless, HttpSearchProvider):
             request,
             KEENABLE_PARAM_NAMES,
             query=request.query,
-            snippet_max_length=KEENABLE_SNIPPET_CHARS.get(request.search_depth) if request.search_depth else None,
+            snippet_max_length=mapped(KEENABLE_SNIPPET_CHARS, request.search_depth),
             site=request.include_domains[0] if request.include_domains else None,
-            published_after=KEENABLE_PUBLISHED_AFTER[request.recency] if request.recency else None,
-            mode=KEENABLE_MODE_BY_EFFORT[request.effort] if request.effort else None,
+            published_after=mapped(KEENABLE_PUBLISHED_AFTER, request.recency),
+            mode=mapped(KEENABLE_MODE_BY_EFFORT, request.effort),
         )
 
     @classmethod

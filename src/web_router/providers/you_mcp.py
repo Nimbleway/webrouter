@@ -37,7 +37,7 @@ from web_router.constants_you import (
 )
 from web_router.providers._language import language_tag
 from web_router.providers._mcp import McpSearchMixin
-from web_router.providers._utils import build_payload, site_operators, unsited_domains
+from web_router.providers._utils import build_payload, mapped, site_operators, unsited_domains
 from web_router.providers.you import YouProvider
 from web_router.types import SearchRequest
 
@@ -70,13 +70,13 @@ class YouMcpProvider(McpSearchMixin, YouProvider):
         return {**super().refused_options(request), **unsited_domains(request, ("include_domains",))}
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        extraction = YOU_MCP_EXTRACTION_BY_DEPTH.get(request.search_depth) if request.search_depth else None
+        extraction = mapped(YOU_MCP_EXTRACTION_BY_DEPTH, request.search_depth)
         return build_payload(
             request,
             YOU_MCP_PARAM_NAMES,
             query=self._query(request),
             extraction=extraction,
-            **{YOU_FRESHNESS_FIELD: YOU_RECENCY[request.recency] if request.recency else None},
+            **{YOU_FRESHNESS_FIELD: mapped(YOU_RECENCY, request.recency)},
         )
 
     @staticmethod

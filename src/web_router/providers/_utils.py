@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
@@ -32,6 +32,11 @@ from web_router.types import (
     SearchDepth,
     SearchRequest,
 )
+
+DOMAIN_LISTS = ("include_domains", "exclude_domains")
+"""The two domain filters a search request carries."""
+_K = TypeVar("_K")
+_V = TypeVar("_V")
 
 
 def resolve_api_key(api_key: str | None, *, env_var: str, provider: str) -> str:
@@ -239,6 +244,11 @@ def error_detail(error: Any) -> str | None:
     return str(error)
 
 
+def mapped(table: Mapping[_K, _V], key: _K | None) -> _V | None:
+    """``table``'s entry for ``key``; ``None`` when ``key`` is unset or the table leaves it out."""
+    return None if key is None else table.get(key)
+
+
 def compact(mapping: dict[str, Any]) -> dict[str, Any]:
     """Drop ``None`` values so unset parameters never reach the provider."""
     return {key: value for key, value in mapping.items() if value is not None}
@@ -304,9 +314,21 @@ def _is_site_domain(domain: str) -> bool:
     return re.fullmatch(SITE_DOMAIN_PATTERN, domain) is not None
 
 
-def unsited_domains(
-    request: SearchRequest, names: Sequence[str] = ("include_domains", "exclude_domains")
+def refused_domains(
+    request: SearchRequest, *, limit: int | None = None, both: Sequence[str] = DOMAIN_LISTS
 ) -> dict[str, list[str]]:
+    """The domain lists a backend that takes one list at a time, of at most ``limit`` domains, refuses, by name.
+
+    With both lists set, those in ``both`` are refused (the one the backend would ignore, or both); a list
+    longer than ``limit`` is refused on its own.
+    """
+    lists = {name: getattr(request, name) or [] for name in DOMAIN_LISTS}
+    refused = {name: lists[name] for name in both} if all(lists.values()) else {}
+    over = {name: domains for name, domains in lists.items() if limit is not None and len(domains) > limit}
+    return refused | over
+
+
+def unsited_domains(request: SearchRequest, names: Sequence[str] = DOMAIN_LISTS) -> dict[str, list[str]]:
     """Each of ``names`` holding a value :func:`site_operators` would refuse, for a ``refused_options`` to report."""
     lists = {name: getattr(request, name) or [] for name in names}
     return {name: domains for name, domains in lists.items() if not all(map(_is_site_domain, domains))}

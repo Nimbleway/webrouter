@@ -59,7 +59,7 @@ from web_router.providers._http import (
     HttpResearchProvider,
     HttpSearchProvider,
 )
-from web_router.providers._utils import as_snippet, build_payload, error_detail
+from web_router.providers._utils import as_snippet, build_payload, error_detail, mapped
 from web_router.providers.answer import cited_marker
 from web_router.types import (
     EXTRACT_PARAMETERS,
@@ -234,7 +234,7 @@ class LinkupResearchProvider(HttpResearchProvider):
         return self.status_path.format(research_id=quote(job_id, safe=""))
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
-        depth = LINKUP_RESEARCH_DEPTHS[request.effort] if request.effort else None
+        depth = mapped(LINKUP_RESEARCH_DEPTHS, request.effort)
         schema = request.output_schema
         return build_payload(
             request,

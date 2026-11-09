@@ -41,7 +41,7 @@ from web_router.constants_exa import (
 )
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, best_text, build_payload, lite_body
+from web_router.providers._utils import as_snippet, best_text, build_payload, lite_body, mapped
 from web_router.providers.answer import cited_marker
 from web_router.types import (
     EXTRACT_PARAMETERS,
@@ -83,7 +83,7 @@ class ExaProvider(HttpSearchProvider):
             contents=EXA_CONTENTS_BY_DEPTH[request.search_depth] if request.search_depth else EXA_CONTENTS,
             **{
                 EXA_RECENCY_FIELD: since.strftime(EXA_DATE_FORMAT) if since else None,
-                EXA_TYPE_FIELD: EXA_TYPE_BY_EFFORT[request.effort] if request.effort else None,
+                EXA_TYPE_FIELD: mapped(EXA_TYPE_BY_EFFORT, request.effort),
             },
         )
 

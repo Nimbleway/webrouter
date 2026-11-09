@@ -43,7 +43,7 @@ from web_router.constants_tavily import (
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._deadline import call_budget, current_deadline
 from web_router.providers._language import language_code
-from web_router.providers._utils import best_text, build_payload, compact, lite_body, resolve_api_key
+from web_router.providers._utils import best_text, build_payload, compact, lite_body, mapped, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,
@@ -154,7 +154,7 @@ class TavilyProvider(SearchProvider):
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``search()`` keyword arguments."""
-        depth = TAVILY_PARAMS_BY_DEPTH.get(request.search_depth) if request.search_depth else None
+        depth = mapped(TAVILY_PARAMS_BY_DEPTH, request.search_depth)
         payload = build_payload(
             request,
             TAVILY_PARAM_NAMES,
@@ -163,7 +163,7 @@ class TavilyProvider(SearchProvider):
             country=TAVILY_COUNTRIES[request.country.upper()] if request.country else None,
             # The language alone, as the ISO 639-1 code Tavily documents.
             language=language_code(request.locale) if request.locale else None,
-            time_range=TAVILY_TIME_RANGE[request.recency] if request.recency else None,
+            time_range=mapped(TAVILY_TIME_RANGE, request.recency),
             **(depth or {}),
             **(TAVILY_LANGUAGE_FILTER if request.locale else {}),
             **(TAVILY_RECENCY_FILTER if request.recency else {}),

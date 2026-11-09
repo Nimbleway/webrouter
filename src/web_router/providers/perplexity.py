@@ -65,7 +65,7 @@ from web_router.constants_perplexity import (
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
-from web_router.providers._utils import build_payload, compact, error_detail, lite_body
+from web_router.providers._utils import build_payload, compact, error_detail, lite_body, mapped, refused_domains
 from web_router.providers.answer import cited_marker, refuse_domain_pair
 from web_router.types import (
     Citation,
@@ -82,6 +82,12 @@ from web_router.types_answer import AnswerRequest, AnswerResponse
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "snippet", "date"})
 _MAPPED_SOURCE_FIELDS = frozenset({"url", "title", "snippet"})
 _LANGUAGE = re.compile(PERPLEXITY_LANGUAGE_PATTERN)
+
+
+def _domain_filter(request: SearchRequest | AnswerRequest) -> list[str] | None:
+    """Both domain lists as Perplexity's one filter, an excluded domain prefixed; ``None`` when neither is set."""
+    excluded = (PERPLEXITY_ANSWER_EXCLUDE_PREFIX + domain for domain in request.exclude_domains or [])
+    return [*(request.include_domains or []), *excluded] or None
 
 
 class PerplexityProvider(HttpSearchProvider):
@@ -106,37 +112,22 @@ class PerplexityProvider(HttpSearchProvider):
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
         """Both domain lists, more than its cap of domains, or a ``locale`` that is not a bare language code."""
-        include, exclude = request.include_domains or [], request.exclude_domains or []
-        refused: dict[str, Any] = {}
-        if (include and exclude) or len(include) + len(exclude) > PERPLEXITY_MAX_DOMAINS:
-            refused |= {
-                name: value for name, value in (("include_domains", include), ("exclude_domains", exclude)) if value
-            }
+        refused: dict[str, Any] = refused_domains(request, limit=PERPLEXITY_MAX_DOMAINS)
         if request.locale is not None and not _LANGUAGE.match(request.locale):
             refused["locale"] = request.locale
         return refused
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        domains = [
-            *(request.include_domains or []),
-            *(PERPLEXITY_ANSWER_EXCLUDE_PREFIX + domain for domain in request.exclude_domains or []),
-        ]
         return build_payload(
             request,
             PERPLEXITY_SEARCH_NAMES,
             query=request.query,
             **{
-                PERPLEXITY_ANSWER_DOMAIN_FIELD: domains or None,
+                PERPLEXITY_ANSWER_DOMAIN_FIELD: _domain_filter(request),
                 PERPLEXITY_LANGUAGE_FIELD: [request.locale.lower()] if request.locale else None,
-                PERPLEXITY_ANSWER_RECENCY_FIELD: PERPLEXITY_ANSWER_RECENCY[request.recency]
-                if request.recency
-                else None,
-                PERPLEXITY_PAGE_BUDGET_FIELD: PERPLEXITY_PAGE_BUDGET_BY_DEPTH[request.search_depth]
-                if request.search_depth
-                else None,
-                PERPLEXITY_SEARCH_TYPE_FIELD: PERPLEXITY_SEARCH_TYPE_BY_EFFORT[request.effort]
-                if request.effort
-                else None,
+                PERPLEXITY_ANSWER_RECENCY_FIELD: mapped(PERPLEXITY_ANSWER_RECENCY, request.recency),
+                PERPLEXITY_PAGE_BUDGET_FIELD: mapped(PERPLEXITY_PAGE_BUDGET_BY_DEPTH, request.search_depth),
+                PERPLEXITY_SEARCH_TYPE_FIELD: mapped(PERPLEXITY_SEARCH_TYPE_BY_EFFORT, request.effort),
             },
         )
 
@@ -283,16 +274,10 @@ class PerplexityAnswerProvider(HttpAnswerProvider):
     @staticmethod
     def _web_search(request: AnswerRequest) -> dict[str, Any] | None:
         """The ``web_search`` tool carrying the request's filters, or ``None`` when it sets none."""
-        domains = [
-            *(request.include_domains or []),
-            *(PERPLEXITY_ANSWER_EXCLUDE_PREFIX + domain for domain in request.exclude_domains or []),
-        ]
         filters = compact(
             {
-                PERPLEXITY_ANSWER_DOMAIN_FIELD: domains or None,
-                PERPLEXITY_ANSWER_RECENCY_FIELD: PERPLEXITY_ANSWER_RECENCY[request.recency]
-                if request.recency
-                else None,
+                PERPLEXITY_ANSWER_DOMAIN_FIELD: _domain_filter(request),
+                PERPLEXITY_ANSWER_RECENCY_FIELD: mapped(PERPLEXITY_ANSWER_RECENCY, request.recency),
             }
         )
         location = {PERPLEXITY_ANSWER_COUNTRY_FIELD: request.country} if request.country else None

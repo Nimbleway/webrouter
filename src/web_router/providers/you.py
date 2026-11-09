@@ -48,7 +48,7 @@ from web_router.constants_you import (
 )
 from web_router.providers._http import HttpAnswerProvider, HttpPolledResearchProvider, HttpSearchProvider
 from web_router.providers._language import language_tag, off_the_lists
-from web_router.providers._utils import best_text, build_payload, lite_body
+from web_router.providers._utils import best_text, build_payload, lite_body, mapped, refused_domains
 from web_router.providers.answer import refuse_domain_pair
 from web_router.types import (
     Citation,
@@ -86,14 +86,12 @@ class YouProvider(HttpSearchProvider):
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
         """Both domain lists at once, or a ``country`` or ``locale`` off its lists; the MCP tool is held to them too."""
-        both = request.include_domains and request.exclude_domains
-        domains = {"include_domains": request.include_domains, "exclude_domains": request.exclude_domains}
-        return {**(domains if both else {}), **off_the_lists(request, YOU_COUNTRIES)}
+        return {**refused_domains(request), **off_the_lists(request, YOU_COUNTRIES)}
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         # A depth of None, or "lite" which needs no extraction, both map to None
         # here and are dropped rather than sent.
-        extraction = YOU_EXTRACTION_BY_DEPTH.get(request.search_depth) if request.search_depth else None
+        extraction = mapped(YOU_EXTRACTION_BY_DEPTH, request.search_depth)
         return build_payload(
             request,
             YOU_SEARCH_PARAM_NAMES,
@@ -101,7 +99,7 @@ class YouProvider(HttpSearchProvider):
             extraction=extraction,
             country=request.country.upper() if request.country else None,
             language=language_tag(request.locale) if request.locale else None,
-            **{YOU_FRESHNESS_FIELD: YOU_RECENCY[request.recency] if request.recency else None},
+            **{YOU_FRESHNESS_FIELD: mapped(YOU_RECENCY, request.recency)},
         )
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
@@ -179,7 +177,7 @@ class YouResearchProvider(HttpPolledResearchProvider):
     job_id_fields: ClassVar[tuple[str, ...]] = ("task_id", "id")
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
-        effort = YOU_RESEARCH_EFFORTS[request.effort] if request.effort else None
+        effort = mapped(YOU_RESEARCH_EFFORTS, request.effort)
         return build_payload(request, input=request.query, research_effort=effort, background=YOU_RESEARCH_BACKGROUND)
 
     def _to_response(self, request: ResearchRequest, payload: dict[str, Any]) -> ResearchResponse:
@@ -236,7 +234,7 @@ class YouAnswerProvider(HttpAnswerProvider):
             request,
             YOU_ANSWER_PARAM_NAMES,
             query=request.query,
-            **{YOU_FRESHNESS_FIELD: YOU_RECENCY[request.recency] if request.recency else None},
+            **{YOU_FRESHNESS_FIELD: mapped(YOU_RECENCY, request.recency)},
         )
 
     def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:

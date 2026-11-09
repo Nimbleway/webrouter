@@ -36,7 +36,7 @@ from web_router.constants_exa import (
 from web_router.exceptions import ProviderError
 from web_router.providers._clock import recency_start
 from web_router.providers._mcp import McpSearchMixin
-from web_router.providers._utils import build_payload
+from web_router.providers._utils import build_payload, mapped
 from web_router.providers.exa import ExaProvider
 from web_router.types import SearchRequest
 
@@ -67,7 +67,7 @@ class ExaMcpProvider(McpSearchMixin, ExaProvider):
             **contents,
             **{
                 EXA_RECENCY_FIELD: since.strftime(EXA_MCP_DATE_FORMAT) if since else None,
-                EXA_TYPE_FIELD: EXA_MCP_TYPE_BY_EFFORT[request.effort] if request.effort else None,
+                EXA_TYPE_FIELD: mapped(EXA_MCP_TYPE_BY_EFFORT, request.effort),
             },
         )
 
