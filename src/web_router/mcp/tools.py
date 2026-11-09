@@ -103,7 +103,7 @@ from web_router.mcp.browsers import BrowserSessions, check_target, playwright_in
 from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.methods import METHODS
-from web_router.mcp.presets import PRESET_TOOLS, echoed, expanded
+from web_router.mcp.presets import PRESET_TOOLS, echoed, expanded, fresh_preset
 from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.shaping import (
@@ -276,7 +276,7 @@ class WebRouterTools:
         if unknown := sorted(set(arguments) - set(allowed := schema.argument_names(name))):
             names, allowed_text = ", ".join(unknown), ", ".join(allowed) or MCP_NO_ARGUMENTS
             raise ValueError(MCP_MSG_UNKNOWN_ARGUMENTS.format(tool=name, names=names, allowed=allowed_text))
-        with self.budget.bound():
+        with self.budget.bound(), fresh_preset():
             return echoed(await handler(arguments))
 
     async def aclose(self) -> None:

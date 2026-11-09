@@ -10,7 +10,8 @@ The store is the router's, picked by ``WEB_ROUTER_PRESETS`` at startup.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Collection, Mapping
+from collections.abc import Awaitable, Callable, Collection, Iterator, Mapping
+from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
@@ -29,9 +30,11 @@ from web_router.constants_mcp_presets import (
     MCP_TOOL_LIST_PRESETS,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.exceptions_presets import PresetNotFoundError, PresetOfAnotherToolError
+from web_router.exceptions_presets import PresetNotFoundError
+from web_router.mcp.schema import argument_names
 from web_router.presets import FilePresetStore, InMemoryPresetStore, Preset, PresetStore, tool_params
 from web_router.presets.params import shown
+from web_router.presets.store import preset_for
 from web_router.presets_sql import SqlPresetStore
 from web_router.types_preset import PresetApplied
 
@@ -42,6 +45,17 @@ _R = TypeVar("_R")
 _RAN: ContextVar[tuple[str, str, dict[str, Any]] | None] = ContextVar("web_router_mcp_preset_ran", default=None)
 """The preset the current call ran with: its name, its method and the arguments sent, set by :func:`expanded`."""
 _JOB_TOOLS = frozenset({"research", "browse"})
+_MCP_TOOL_OF = {method: tool for tool, method in MCP_PRESET_METHOD_OF.items()}
+
+
+@contextmanager
+def fresh_preset() -> Iterator[None]:
+    """One tool call's scope for the preset it ran with: nothing a failed call recorded reaches the next one."""
+    token = _RAN.set(None)
+    try:
+        yield
+    finally:
+        _RAN.reset(token)
 
 
 def store_from(value: str | None) -> PresetStore:
@@ -60,12 +74,19 @@ def store_from(value: str | None) -> PresetStore:
 
 
 def _preset(store: PresetStore, tool: str, name: str) -> Preset:
-    preset = store.get(name)
-    if preset is None:
-        raise PresetNotFoundError(name)
-    if preset.tool != MCP_PRESET_METHOD_OF[tool]:
-        raise PresetOfAnotherToolError(name, preset.tool)
-    return preset
+    return preset_for(store, name, MCP_PRESET_METHOD_OF[tool])
+
+
+def _off_mcp(name: str, tool: str, params: Mapping[str, Any], takes: Collection[str]) -> None:
+    """Refuse a preset setting a param ``tool`` does not take over MCP -- ``provider_options``, ``profile``."""
+    waits = MCP_PRESET_SERVER_WAITS if tool in _JOB_TOOLS else frozenset()
+    refused = sorted(key for key in params if key not in takes and key not in waits)
+    if refused:
+        raise ValueError(
+            MCP_MSG_PRESET_NOT_OVER_MCP.format(
+                name=name, keys=", ".join(refused), tool=tool, them="them" if len(refused) > 1 else "it"
+            )
+        )
 
 
 def expanded(store: PresetStore, tool: str, arguments: Mapping[str, Any], takes: Collection[str]) -> dict[str, Any]:
@@ -82,15 +103,9 @@ def expanded(store: PresetStore, tool: str, arguments: Mapping[str, Any], takes:
     if name is None or tool not in MCP_PRESET_METHOD_OF:
         return kwargs
     preset = _preset(store, tool, str(name))
+    _off_mcp(str(name), tool, preset.params, takes)
     waits = MCP_PRESET_SERVER_WAITS if tool in _JOB_TOOLS else frozenset()
     params = {key: value for key, value in preset.params.items() if key not in waits}
-    refused = sorted(key for key in params if key not in takes)
-    if refused:
-        raise ValueError(
-            MCP_MSG_PRESET_NOT_OVER_MCP.format(
-                name=name, keys=", ".join(refused), tool=tool, them="them" if len(refused) > 1 else "it"
-            )
-        )
     merged = {**params, **kwargs}
     # The very dict the tool sends: a limit the tool lowers in it afterwards is what the echo shows.
     _RAN.set((str(name), MCP_PRESET_METHOD_OF[tool], merged))
@@ -127,6 +142,9 @@ async def get_preset(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dic
 
 async def create_preset(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
     preset = Preset.model_validate(tools.arguments(MCP_TOOL_CREATE_PRESET, arguments))
+    # Refused now rather than on every run: a preset made over MCP is one MCP can run.
+    method_tool = _MCP_TOOL_OF[preset.tool]
+    _off_mcp(preset.name, method_tool, preset.params, argument_names(method_tool))
     tools.router.presets.create(preset)
     return _safe(preset)
 

@@ -19,8 +19,8 @@ from typing import Any, ParamSpec, TypeVar, cast
 from pydantic import BaseModel
 from pydantic_core import to_jsonable_python
 
-from web_router.exceptions_presets import PresetNotFoundError, PresetOfAnotherToolError
 from web_router.presets.params import shown, tool_params
+from web_router.presets.store import preset_for
 from web_router.types_preset import PresetApplied
 
 P = ParamSpec("P")
@@ -38,11 +38,7 @@ def _merged(
     name = given.pop(PRESET_ARGUMENT, None)
     if name is None:
         return None
-    preset = self.presets.get(name)
-    if preset is None:
-        raise PresetNotFoundError(name)
-    if preset.tool != tool:
-        raise PresetOfAnotherToolError(name, preset.tool)
+    preset = preset_for(self.presets, name, tool)
     # `submit_research` and `submit_browse` take no `timeout`: a research preset's wait is for the methods that wait.
     arguments = {key: value for key, value in preset.params.items() if key in signature.parameters}
     arguments.update(given)

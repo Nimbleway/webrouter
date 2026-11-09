@@ -200,3 +200,17 @@ async def test_listing_and_reading_a_preset_never_show_provider_options_values(t
     read = await _call(tools, MCP_TOOL_GET_PRESET, {"name": "keyed"})
 
     assert listed["presets"][0]["params"] == read["params"] == {"provider_options": {"api_key": "[redacted]"}}
+
+
+async def test_a_preset_mcp_could_never_run_is_refused_when_it_is_made(tools: WebRouterTools) -> None:
+    keyed = {"name": "keyed", "tool": "search", "params": {"provider_options": {"x": 1}}}
+
+    assert "sets provider_options" in await _refused(tools, MCP_TOOL_CREATE_PRESET, keyed)
+    assert tools.router.presets.get("keyed") is None
+
+
+async def test_a_failed_preset_call_leaves_nothing_for_the_next_tool(tools: WebRouterTools) -> None:
+    await _call(tools, MCP_TOOL_CREATE_PRESET, {**EU_SEMICONDUCTOR_NEWS, "params": {"max_results": 20}})
+    await _refused(tools, MCP_TOOL_SEARCH, {"query": "q", "preset": "eu_semiconductor_news", "provider": "nope"})
+
+    assert "preset" not in await _call(tools, MCP_TOOL_LIST_PRESETS, {})

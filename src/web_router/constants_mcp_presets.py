@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from web_router.constants_presets import PRESET_NAME_PATTERN
+from web_router.constants_presets import PRESET_DESCRIPTION_MAX_LENGTH, PRESET_NAME_MAX_LENGTH, PRESET_NAME_PATTERN
 
 ENV_MCP_PRESETS = "WEB_ROUTER_PRESETS"
 """Where the server keeps presets: a directory (FilePresetStore) or a database URL (SqlPresetStore).
@@ -56,7 +56,7 @@ MCP_MSG_PRESET_NOT_OVER_MCP = (
 _PRESET_EXAMPLES = (
     "Examples: `eu_semiconductor_news` (search: country DE, locale en, max_results 20, search_depth fast, "
     "include_domains reuters.com, eetimes.eu, semiengineering.com, exclude_domains reddit.com), `page_text` "
-    "(extract: format text, provider nimble), `supplier_profile` (research: effort high, an output_schema "
+    "(extract: format text), `supplier_profile` (research: effort high, an output_schema "
     "with company, headquarters_country, employees and main_products, include_domains sec.gov, "
     "companieshouse.gov.uk, opencorporates.com, exclude_domains wikipedia.org), `page_heading` (browse: "
     "max_steps 3, allowed_domains example.com, iana.org, an output_schema with heading)."
@@ -72,7 +72,8 @@ MCP_DESC_CREATE_PRESET = (
     "library method: search, extract, answer, research, browse, run_template or open_browser (the "
     "`browser_open` tool). `params` are that method's own optional arguments, as it takes them, without its "
     "input -- the query, the URLs, the task, the template or research's records: a preset never stores the "
-    "input. Names use letters, digits and `_` only, are case-sensitive and fixed once created; a taken name is "
+    "input, and none a tool here does not take: no `provider_options`, no `profile`. Names use letters, "
+    "digits and `_` only, are case-sensitive and fixed once created; a taken name is "
     "refused, and nothing is ever overwritten. " + _PRESET_EXAMPLES
 )
 
@@ -83,7 +84,7 @@ MCP_PRESET_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
         "name": {
             "type": "string",
             "pattern": PRESET_NAME_PATTERN,
-            "maxLength": 100,
+            "maxLength": PRESET_NAME_MAX_LENGTH,
             "description": "Letters, digits and `_`, like `eu_semiconductor_news`.",
         },
         "tool": {
@@ -96,7 +97,11 @@ MCP_PRESET_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
             "description": "The method's optional arguments to save, e.g. "
             '{"search_depth": "fast", "max_results": 20, "include_domains": ["reuters.com"]}.',
         },
-        "description": {"type": "string", "maxLength": 2000, "description": "What the preset is for."},
+        "description": {
+            "type": "string",
+            "maxLength": PRESET_DESCRIPTION_MAX_LENGTH,
+            "description": "What the preset is for.",
+        },
     },
 }
 MCP_PRESET_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {

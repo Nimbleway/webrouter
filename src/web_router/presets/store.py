@@ -8,7 +8,12 @@ from collections.abc import Callable, Iterable
 from typing import Protocol, TypeVar, runtime_checkable
 
 from web_router.constants_presets import LOG_PRESET_SKIPPED
-from web_router.exceptions_presets import PresetNameTakenError, PresetUnreadableError
+from web_router.exceptions_presets import (
+    PresetNameTakenError,
+    PresetNotFoundError,
+    PresetOfAnotherToolError,
+    PresetUnreadableError,
+)
 from web_router.presets.model import Preset
 
 _T = TypeVar("_T")
@@ -26,6 +31,21 @@ def readable(read: Callable[[_T], Preset], stored: Iterable[_T]) -> list[Preset]
         except PresetUnreadableError as exc:
             logger.warning(LOG_PRESET_SKIPPED, exc)
     return presets
+
+
+def preset_for(store: PresetStore, name: str, tool: str) -> Preset:
+    """The preset ``name`` names in ``store``, for a call of ``tool``: the one check the library and MCP share.
+
+    Raises:
+        PresetNotFoundError: the store holds no preset by that name.
+        PresetOfAnotherToolError: the preset runs another method.
+    """
+    preset = store.get(name)
+    if preset is None:
+        raise PresetNotFoundError(name)
+    if preset.tool != tool:
+        raise PresetOfAnotherToolError(name, preset.tool)
+    return preset
 
 
 @runtime_checkable
