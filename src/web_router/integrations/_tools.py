@@ -111,7 +111,8 @@ class WebRouterTools(Generic[ResultT]):
         Raises:
             ConfigurationError: The extract tool is exposed, the router's
                 preset names no extract backend and neither ``provider`` nor
-                the router's default extracts.
+                the router's default extracts; or only one of a sync and async
+                pair's presets names an extract backend where that matters.
             NoAnswerProviderError: The answer tool is exposed, neither it nor
                 the router's preset names a backend and the router has no
                 single answer backend to use.

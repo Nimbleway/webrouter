@@ -1490,11 +1490,13 @@ sets one. A preset's `provider`, unless it is `auto`, pins the backend, so no
 router is asked. A
 preset's `provider_options` can leave a cost-capped call's price unknown, and
 then the budget refuses the call with `BudgetExceededError`, which names the
-presets and the settings they supplied.
+presets and those of their settings it prices a call by: `provider`,
+`provider_options`, `search_depth`, `max_results` and `effort`.
 
 Reading YAML needs PyYAML; JSON needs nothing. A preset holds only what JSON
-can: an unquoted YAML date stays a string, and NaN or infinity is refused at
-load. [`examples/presets.py`](examples/presets.py) runs both files in
+can: an unquoted YAML date stays a string, as do `yes`, `no`, `on` and `off`
+(only `true` and `false` are booleans), and NaN, infinity and a key that is
+not a string are refused at load. [`examples/presets.py`](examples/presets.py) runs both files in
 [`examples/presets/`](examples/presets/) with no key.
 
 ## The MCP server

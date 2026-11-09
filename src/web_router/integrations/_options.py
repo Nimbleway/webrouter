@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.constants import MSG_INTEGRATION_NO_EXTRACT_PROVIDER, PROVIDER_AUTO
+from web_router.constants_presets import MSG_PRESET_TOOLS_EXTRACT_SPLIT
 from web_router.exceptions import ConfigurationError
 from web_router.providers.auto_answer import AutoAnswerProvider
 from web_router.registry import available_extract_providers
@@ -39,23 +40,29 @@ def extract_provider_for(
     whose default cannot extract, and whose preset names no extract backend,
     raises here rather than on the agent's first page read, since no retry by
     the model fixes it -- and the tool never picks another backend the caller
-    did not name.
+    did not name. So does a sync and async pair where only one router's preset
+    names an extract backend and the other would need one: no single answer
+    fits both. A preset is read only when the answer turns on it, so one loaded
+    after the router is built still serves.
     """
     if extract_provider is not None:
         return provider_name(extract_provider)
     name = tool_provider(provider)
     extractors = available_extract_providers()
-    preset_named = any(_preset_provider(router, "extract") is not None for router in routers)
-    if name in extractors and not preset_named:
-        return name
-    for router in routers:
+    held = [router for router in routers if router is not None]
+    if name in extractors:
+        named = [_preset_provider(router, "extract") is not None for router in held]
+        if not any(named):
+            return name
+        if not all(named):
+            # The search backend would be right for one router and override the other's preset.
+            raise ConfigurationError(MSG_PRESET_TOOLS_EXTRACT_SPLIT)
+    for router in held:
         # None leaves each router its own preset's backend, resolved on every call: a sync and an async router
         # can hold different ones, and one name sent to both would override, or conflict with, the other's.
-        if (
-            router is not None
-            and router.default_provider not in extractors
-            and _preset_provider(router, "extract") is None
-        ):
+        if router.default_provider not in extractors and _preset_provider(router, "extract") is None:
+            if any(_preset_provider(other, "extract") is not None for other in held if other is not router):
+                raise ConfigurationError(MSG_PRESET_TOOLS_EXTRACT_SPLIT)
             raise ConfigurationError(
                 MSG_INTEGRATION_NO_EXTRACT_PROVIDER.format(default=router.default_provider, available=extractors)
             )

@@ -15,6 +15,7 @@ from tests.conftest import FakeExtractProvider
 from tests.presets_helpers import REF, NarrowProvider, SlowResearch, definition
 from web_router import (
     AsyncWebRouter,
+    ConfigurationError,
     Preset,
     UnsupportedParameterError,
     WebRouter,
@@ -201,6 +202,32 @@ def test_a_locked_router_preset_backend_wins_over_the_search_provider(
     extracted = router.extract("https://example.com", provider=tools.extract_provider)
     answered = router.answer("q", provider=tools.answer_provider)
     assert extracted.provider == "fake" and answered.provider == "fake"
+
+
+def test_the_tools_build_before_the_routers_preset_is_loaded(fake_extract_provider: Any) -> None:
+    """A router's preset reference may be loaded after the router is built; building its tools must not need it."""
+    from web_router.integrations._tools import WebRouterTools
+
+    router = WebRouter(preset="acme.research@1.0.0")
+    tools: WebRouterTools[Any] = WebRouterTools(router)
+    router.presets.add(definition(components={"extract": {"defaults": {"provider": "fake"}}}))
+
+    assert router.extract("https://example.com", provider=tools.extract_provider).provider == "fake"
+
+
+@pytest.mark.parametrize("provider", [None, "tavily"], ids=["no-provider", "extracting-provider"])
+def test_routers_whose_presets_split_on_extract_ask_for_extract_provider(
+    fake_extract_provider: Any, provider: str | None
+) -> None:
+    from web_router.integrations._options import extract_provider_for
+
+    sections = {"extract": {"defaults": {"provider": "fake"}}}
+    router = WebRouter("brave", preset=Preset.model_validate(definition(components=sections)))
+    async_router = AsyncWebRouter("brave" if provider is None else "auto")
+
+    with pytest.raises(ConfigurationError, match="routers disagree"):
+        extract_provider_for(provider, None, router, async_router)
+    assert extract_provider_for(provider, "fake", router, async_router) == "fake"
 
 
 async def test_the_extract_tool_leaves_each_router_its_own_preset(fake_extract_provider: Any) -> None:

@@ -7,7 +7,6 @@ the registry there is what a caller uses.
 from __future__ import annotations
 
 import builtins
-import copy
 import importlib
 import json
 import math
@@ -16,7 +15,7 @@ from functools import cache
 from pathlib import Path
 from typing import Annotated, Any
 
-from pydantic import TypeAdapter, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from web_router.constants_presets import (
     MSG_PRESET_BAD_FILE,
@@ -26,6 +25,7 @@ from web_router.constants_presets import (
     MSG_PRESET_DEFINITION,
     MSG_PRESET_DEFINITION_IN,
     MSG_PRESET_INVALID,
+    MSG_PRESET_KEY_NOT_STRING,
     MSG_PRESET_NOT_FINITE,
     MSG_PRESET_NOT_JSON,
     MSG_PRESET_NULL_DEFAULT,
@@ -42,6 +42,8 @@ from web_router.constants_presets import (
     PRESET_REF_PATTERN,
     PRESET_REQUEST_MODELS,
     PRESET_YAML_SUFFIXES,
+    YAML_BOOL_PATTERN,
+    YAML_BOOL_TAG,
     YAML_TIMESTAMP_TAG,
 )
 from web_router.exceptions_presets import PresetError, PresetValidationError
@@ -132,7 +134,7 @@ def _not_json(value: Any, path: str) -> Iterator[tuple[str, str]]:
     elif isinstance(value, Mapping):
         for key, item in value.items():
             if not isinstance(key, str):
-                yield path, MSG_PRESET_NOT_JSON
+                yield path, MSG_PRESET_KEY_NOT_STRING
                 continue
             yield from _not_json(item, f"{path}.{key}" if path else key)
     elif isinstance(value, (builtins.list, tuple)):
@@ -142,13 +144,47 @@ def _not_json(value: Any, path: str) -> Iterator[tuple[str, str]]:
         yield path, MSG_PRESET_NOT_JSON
 
 
+def _identical(one: Any, other: Any) -> bool:
+    """Whether two values hold the same JSON: ``==``, except that ``True`` is never ``1`` nor ``False`` ``0``.
+
+    Python counts a bool as an int, so ``[true, false]`` would equal ``[1, 0]``:
+    a lock would let the other through, and a changed definition would pass as
+    the same one. A number still equals the same number written as a float.
+    """
+    if isinstance(one, bool) or isinstance(other, bool):
+        return type(one) is type(other) and one == other
+    if isinstance(one, Mapping) or isinstance(other, Mapping):
+        return (
+            isinstance(one, Mapping)
+            and isinstance(other, Mapping)
+            and one.keys() == other.keys()
+            and all(_identical(one[key], other[key]) for key in one)
+        )
+    if isinstance(one, (builtins.list, tuple)) or isinstance(other, (builtins.list, tuple)):
+        return (
+            isinstance(one, (builtins.list, tuple))
+            and isinstance(other, (builtins.list, tuple))
+            and len(one) == len(other)
+            and all(_identical(a, b) for a, b in zip(one, other, strict=True))
+        )
+    if isinstance(one, BaseModel) and isinstance(other, BaseModel):
+        return type(one) is type(other) and _identical(one.model_dump(), other.model_dump())
+    return bool(one == other)
+
+
 def _plain(value: Any) -> Any:
-    """A deep copy of ``value`` with every mapping a dict, so a read-only one, which cannot be deep-copied, can too."""
+    """``value`` with each container copied (a mapping or a model as a dict) and every other value as it is.
+
+    What a preset may hold there is immutable, and :func:`_not_json` refuses the
+    rest, a generator or a lock included, so nothing is deep-copied first.
+    """
+    if isinstance(value, BaseModel):
+        return _plain(value.model_dump())
     if isinstance(value, Mapping):
         return {key: _plain(item) for key, item in value.items()}
     if isinstance(value, (builtins.list, tuple)):
         return [_plain(item) for item in value]
-    return copy.deepcopy(value)
+    return value
 
 
 def _section_issues(
@@ -259,15 +295,16 @@ def _read(file: Path) -> builtins.list[Any]:
 
 
 def _json_loader(yaml: Any) -> Any:
-    """PyYAML's safe loader, less its timestamp resolver, so an unquoted date stays the string JSON would hold."""
+    """PyYAML's safe loader, reading plain scalars as JSON would: a date, ``yes`` and ``no`` all stay strings."""
 
     class Loader(yaml.SafeLoader):  # type: ignore[misc]
         pass
 
     Loader.yaml_implicit_resolvers = {
-        first: [(tag, pattern) for tag, pattern in resolvers if tag != YAML_TIMESTAMP_TAG]
+        first: [(tag, pattern) for tag, pattern in resolvers if tag not in {YAML_TIMESTAMP_TAG, YAML_BOOL_TAG}]
         for first, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
     }
+    Loader.add_implicit_resolver(YAML_BOOL_TAG, YAML_BOOL_PATTERN, list("tTfF"))
     return Loader
 
 
