@@ -97,7 +97,8 @@ in this order:
 
 An earlier place wins, per variable; a later file only fills what is still
 unset, and a credential of two variables (Oxylabs' username and password,
-Bright Data's token and zone) only as a whole. So a project's own `.env` and a
+Bright Data's token and zone) only as a whole: a file holding half of one sets
+none of it, so it never blocks a later file holding both. So a project's own `.env` and a
 remembered file can add keys but never replace or complete yours: a repo that
 commits a `.env` with its owner's key does not take over your traffic. The capabilities resource says which file each variable came
 from. The server never creates the user config directory except to record a

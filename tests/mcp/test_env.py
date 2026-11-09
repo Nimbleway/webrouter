@@ -115,16 +115,36 @@ def test_a_project_env_only_adds_and_never_hides_the_users_keys(isolated_home: P
     ]
 
 
-def test_a_later_file_never_completes_a_credential_the_user_half_holds(isolated_home: Path) -> None:
+def test_a_file_never_completes_a_credential_the_user_half_holds(
+    isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A project's zone beside the user's own Bright Data token would route the user's account its way."""
-    _write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRIGHTDATA_API_KEY}={KEY}\n")
-    _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRIGHTDATA_ZONE}=project-zone\n{ENV_NIMBLE_API_KEY}={OTHER_KEY}\n")
+    monkeypatch.setenv(ENV_BRIGHTDATA_API_KEY, KEY)
+    _write(
+        Path.cwd() / MCP_ENV_FILE,
+        f"{ENV_BRIGHTDATA_API_KEY}={OTHER_KEY}\n{ENV_BRIGHTDATA_ZONE}=project-zone\n{ENV_NIMBLE_API_KEY}={OTHER_KEY}\n",
+    )
 
     sources = EnvSources.at_startup()
 
-    assert not _is_set(ENV_BRIGHTDATA_ZONE)
+    assert not _is_set(ENV_BRIGHTDATA_ZONE) and _holds(ENV_BRIGHTDATA_API_KEY, KEY)
     assert _holds(ENV_NIMBLE_API_KEY, OTHER_KEY), "an unrelated key still adds"
-    assert list(sources.report()["loaded"]) == [ENV_BRIGHTDATA_API_KEY, ENV_NIMBLE_API_KEY]
+    assert list(sources.report()["loaded"]) == [ENV_NIMBLE_API_KEY]
+
+
+def test_half_a_credential_in_one_file_never_shuts_out_the_whole_one_in_the_next(isolated_home: Path) -> None:
+    """A lone token applies nothing, so a later file's token and zone arrive as the pair they are."""
+    _write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRIGHTDATA_API_KEY}={KEY}\n")
+    project = _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRIGHTDATA_API_KEY}={OTHER_KEY}\n{ENV_BRIGHTDATA_ZONE}=zone\n")
+
+    sources = EnvSources.at_startup()
+
+    assert _holds(ENV_BRIGHTDATA_API_KEY, OTHER_KEY) and _holds(ENV_BRIGHTDATA_ZONE, "zone")
+    assert sources.report()["loaded"] == {ENV_BRIGHTDATA_API_KEY: str(project), ENV_BRIGHTDATA_ZONE: str(project)}
+    assert _statuses(sources) == [
+        (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_NOTHING_NEW),
+        (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_USED),
+    ]
 
 
 def test_the_user_config_dir_is_read_from_any_working_directory(isolated_home: Path) -> None:

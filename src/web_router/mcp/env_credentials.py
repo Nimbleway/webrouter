@@ -69,14 +69,18 @@ class EnvLoad:
 def apply_credentials(path: Path, values: dict[str, str], *, remembered: Path | None = None) -> EnvLoad:
     """Set each of ``values`` still unset; a credential of several variables only as a whole.
 
-    Set-and-empty counts as unset, as the registry reads it. A variable whose
-    partner is already set is kept out too: a project's ``BRIGHTDATA_ZONE``
-    beside the user's own token would send the user's account through a zone
-    the project chose.
+    Set-and-empty counts as unset, as the registry reads it. A file that holds
+    only part of a credential applies none of it: a lone Bright Data token
+    would otherwise shut out a later file's complete token and zone. It is
+    neither loaded nor already set, so the report leaves it out. A variable
+    whose partner is already set is kept out too: a project's
+    ``BRIGHTDATA_ZONE`` beside the user's own token would send the user's
+    account through a zone the project chose.
     """
+    partial = {name for group in _GROUPS if not group <= values.keys() for name in group & values.keys()}
     taken = {name for name in values if os.environ.get(name)}
     taken |= {name for group in _GROUPS for name in group if name in values and any(os.environ.get(n) for n in group)}
-    for name in values.keys() - taken:
+    loaded = tuple(name for name in values if name not in taken | partial)
+    for name in loaded:
         os.environ[name] = values[name]
-    loaded = tuple(name for name in values if name not in taken)
-    return EnvLoad(path, loaded, tuple(name for name in values if name in taken), remembered)
+    return EnvLoad(path, loaded, tuple(name for name in values if name in taken - partial), remembered)
