@@ -64,7 +64,8 @@ def members() -> Iterator[None]:
 
 def test_a_backend_serves_every_level_unless_it_says_otherwise() -> None:
     """The default is every level, so a backend that never declares the set is unchanged by it."""
-    assert SearchProvider.depth_levels == ALL_LEVELS
+    assert SearchProvider.depth_levels == {"lite", "fast", "deep"}
+    assert FakeProvider.refused_values(SearchRequest(query="q", search_depth="deep")) == {}
 
 
 def test_every_built_in_backend_that_maps_depth_serves_some_level() -> None:
