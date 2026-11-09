@@ -21,9 +21,10 @@ from web_router.constants import (
     MSG_LOCAL_NO_BROWSER,
     PROVIDER_TAVILY,
 )
-from web_router.constants_mcp import MCP_NO_ARGUMENTS, MCP_TOOL_BUDGET_STATUS
+from web_router.constants_mcp import MCP_NO_ARGUMENTS, MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.mcp.messages import error_text
+from web_router.mcp.routing import _SHAPERS
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
 
@@ -55,6 +56,16 @@ def test_every_listed_tool_carries_a_title_and_behaviour_hints(tools: WebRouterT
     # A client auto-approves a free lookup and asks before a billed run.
     assert listed[MCP_TOOL_SEARCH].annotations.read_only_hint is True  # type: ignore[union-attr]
     assert listed[MCP_TOOL_RESEARCH].annotations.idempotent_hint is False  # type: ignore[union-attr]
+
+
+def test_web_run_is_as_cautious_as_every_tool_it_can_run() -> None:
+    """A client that would ask before a browse task must ask before the ``web_run`` that starts one."""
+    _, read_only, destructive, idempotent, open_world = MCP_TOOL_HINTS[MCP_TOOL_WEB_RUN]
+
+    for tool, _ in _SHAPERS.values():
+        _, its_read_only, its_destructive, its_idempotent, its_open_world = MCP_TOOL_HINTS[tool]
+        assert read_only <= its_read_only and idempotent <= its_idempotent, tool
+        assert destructive >= its_destructive and open_world >= its_open_world, tool
 
 
 async def test_a_no_key_error_points_to_load_env_not_to_code(tools: WebRouterTools, no_keys: None) -> None:
