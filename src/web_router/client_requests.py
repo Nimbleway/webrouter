@@ -23,9 +23,11 @@ from web_router.types import (
     ResearchRequest,
     SearchRequest,
     StealthLevel,
+    TemplateRequest,
     Viewport,
     provider_name,
 )
+from web_router.types_answer import AnswerRequest, Recency
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
@@ -124,6 +126,39 @@ def build_browse_request(
         output_schema=as_json_schema(output_schema),
         max_steps=max_steps,
         allowed_domains=allowed_domains,
+        provider_options=provider_options or {},
+    )
+
+
+def build_template_request(
+    template: str,
+    inputs: Mapping[str, Any] | None = None,
+    *,
+    format: ExtractFormat | None,
+    provider_options: dict[str, Any] | None,
+) -> TemplateRequest:
+    return TemplateRequest(
+        template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
+    )
+
+
+def build_answer_request(
+    query: str,
+    *,
+    include_domains: list[str] | None,
+    exclude_domains: list[str] | None,
+    country: str | None,
+    locale: str | None,
+    recency: Recency | None,
+    provider_options: dict[str, Any] | None,
+) -> AnswerRequest:
+    return AnswerRequest(
+        query=query,
+        include_domains=include_domains,
+        exclude_domains=exclude_domains,
+        country=country,
+        locale=locale,
+        recency=recency,
         provider_options=provider_options or {},
     )
 

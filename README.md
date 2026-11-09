@@ -2092,6 +2092,85 @@ MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
 
+## Presets
+
+A preset is one method's optional arguments saved under a name. Pass
+`preset=` to that method and the call runs with them; any argument the call
+sets itself wins. Every method takes it -- `search`, `extract`, `answer`,
+`research` and `submit_research`, `browse` and `submit_browse`, `run_template`
+and `open_browser` -- and the response says what ran in `response.preset`, a
+`PresetApplied` with the preset's name and the merged arguments:
+
+```python
+from web_router import Preset, WebRouter
+
+router = WebRouter()
+router.presets.create(
+    Preset(
+        name="eu_semiconductor_news",
+        tool="search",
+        description="EU chip-industry news, English, trade press only",
+        params={
+            "max_results": 20,
+            "search_depth": "fast",
+            "country": "DE",
+            "locale": "en",
+            "include_domains": ["reuters.com", "eetimes.eu", "semiengineering.com"],
+            "exclude_domains": ["reddit.com"],
+        },
+    )
+)
+
+response = router.search("ASML export licences", preset="eu_semiconductor_news", max_results=5)
+response.preset  # PresetApplied(name='eu_semiconductor_news', params={'max_results': 5, 'search_depth': 'fast', ...})
+```
+
+A preset's params are held to the method's own types and limits, so a preset
+is exactly as strict as calling the method directly; a key the method does not
+take is refused by name, with the list of what it does take. Where a param is
+one Nimble's managed presets also have, a preset holds it to the same limits:
+no NUL in any text, `max_results` at most 100, domain lists of at most 50
+names (research's and browse's not empty), an `output_schema` that is not
+empty, at most 32 levels deep and 64 KB as JSON, `max_steps` at most 10,000,
+and an absolute http(s) `start_url`. A param set to `None` is unset. The call's own
+input -- the query, the URLs, the task, the template, research's `records` -- is never a param, and
+neither is `budget`. A preset of another method raises
+`PresetOfAnotherToolError` ("Preset 'eu_semiconductor_news' runs search") and an unknown
+name `PresetNotFoundError`, both before anything is sent. `submit_research`
+and `submit_browse` use `research` and `browse` presets, less their `timeout`,
+which is the waiting methods' own. A job and an `open_browser` handle carry no
+`preset` field. Names are ASCII letters, digits and `_`, case-sensitive, and
+fixed: a preset is never versioned, edited or deleted through a store.
+
+**Stores.** `WebRouter(presets=...)` takes any `PresetStore` -- three
+methods, `get(name)`, `list()` and `create(preset)`, the last refusing a name
+already taken with `PresetNameTakenError`. The store is synchronous, the async
+router included, and has no tenant: wrap one per tenant. Built in:
+
+| Store | Keeps presets | Needs |
+| --- | --- | --- |
+| `InMemoryPresetStore()` | in this process; the default | nothing |
+| `FilePresetStore(directory)` | `*.json` files, one preset or a list each, and `*.yaml`/`*.yml`; `create` writes `<name>.json` | `yaml` extra for YAML |
+| `SqlPresetStore(url)` | SQLite or Postgres, one SQLAlchemy URL: a `web_router_presets` row per preset, pointing at a row of its tool's params table (`web_router_<tool>_params`), a typed column per param, NULL where unset | `sql` extra |
+
+`SqlPresetStore` ships its schema as Alembic migrations inside the package
+and never changes a database itself: run them once, and again after an
+upgrade that ships a new one. A store on a database behind this version's
+schema refuses to start with `PresetStoreOutdatedError`. `FilePresetStore` and
+`SqlPresetStore` leave a preset this version cannot read out of `list()`,
+logging a warning, and `get()` of its name raises `PresetUnreadableError`.
+
+```bash
+python -m web_router.presets_sql upgrade sqlite:///presets.db   # or web_router.presets_sql.upgrade(url)
+```
+
+[`examples/presets.py`](examples/presets.py) runs all three, with the
+managed web gateway's example presets: `eu_semiconductor_news`, `page_text`,
+`supplier_profile` and `page_heading`. The MCP server serves the same presets
+through `list_presets`, `get_preset`, `create_preset` and `preset` on its
+method tools, from the store `WEB_ROUTER_PRESETS` names; see
+[docs/mcp.md](docs/mcp.md#presets-list_presets-get_preset-create_preset).
+
 ## Routing and extending
 
 ### Routing between providers

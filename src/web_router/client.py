@@ -39,7 +39,9 @@ from web_router._benchmark import Stragglers
 from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
 from web_router.client_budget import AsyncBudget, SyncBudget
+from web_router.client_lookup import ProviderLookup
 from web_router.client_plan import AsyncPlan, SyncPlan
+from web_router.client_presets import with_preset
 from web_router.client_requests import JsonSchema as JsonSchema
 from web_router.client_requests import (
     async_client_holders,
@@ -61,6 +63,7 @@ from web_router.constants import (
     RESEARCH_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
+from web_router.presets.store import InMemoryPresetStore, PresetStore
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -76,12 +79,8 @@ from web_router.providers.base import (
     _BaseProvider,
 )
 from web_router.registry import (
-    create_browse_provider,
-    create_browser_provider,
     create_extract_provider,
     create_provider,
-    create_research_provider,
-    create_template_provider,
 )
 from web_router.registry_answer import every_provider_name
 from web_router.routing import Budget, RouterLike, ToolName
@@ -106,7 +105,7 @@ from web_router.types import (
 _HandleT = TypeVar("_HandleT", BrowserHandle, AsyncBrowserHandle)
 
 
-class _BaseRouter(RouterSetup, Generic[_HandleT]):
+class _BaseRouter(RouterSetup, ProviderLookup, Generic[_HandleT]):
     """Provider resolution and caching shared by the sync and async routers.
 
     Generic only in the browser handle each one hands out, which is the one
@@ -122,6 +121,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
+        presets: PresetStore | None = None,
     ) -> None:
         """
         Args:
@@ -135,6 +135,9 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
                 ask it (all five by default) and whether its failure raises (experimental) -- see
                 :mod:`web_router.routing.invoke`. ``url_policy="public_only"`` refuses private hosts in a
                 plan's or a router's URLs (experimental) -- see :mod:`web_router.routing.url_policy`.
+            presets: Where ``preset=`` on every method finds presets by name; a fresh
+                :class:`~web_router.InMemoryPresetStore` when unset. The store is the caller's: the router
+                never closes it. The async router reads it synchronously too: a preset is one small record.
         """
         self._attach_router(router, route_tools, fail_on_router_error, url_policy)
         name = provider_name(provider)
@@ -146,6 +149,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
             raise ProviderNotFoundError(name, known)
 
         self.default_provider = name
+        self.presets: PresetStore = InMemoryPresetStore() if presets is None else presets
         # Normalized on the way in so a config key matches get_provider's lookup, whatever form it was given in.
         self._config: dict[str, dict[str, Any]] = {
             provider_name(key): dict(config) for key, config in (provider_config or {}).items()
@@ -231,67 +235,6 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
                 self._extract_instances[key] = create_extract_provider(key, **self._config_for(key))
             return self._extract_instances[key]
 
-    def get_template_provider(self, name: str | Provider | TemplateProvider) -> TemplateProvider:
-        """Return the named template provider, constructing and caching it on first use.
-
-        The template counterpart of :meth:`get_provider`, with the same
-        ownership rule -- but no default: a template's name belongs to one
-        vendor, so the caller always says which.
-        """
-        if isinstance(name, TemplateProvider):
-            return name
-
-        key = provider_name(name)
-        with self._providers_lock:
-            if key not in self._template_instances:
-                self._template_instances[key] = create_template_provider(key, **self._config_for(key))
-            return self._template_instances[key]
-
-    def get_research_provider(self, name: str | Provider | ResearchProvider | None = None) -> ResearchProvider:
-        """Return the named research provider, constructing and caching it on first use.
-
-        The research counterpart of :meth:`get_provider`, with the same
-        ownership rule.
-        """
-        if isinstance(name, ResearchProvider):
-            return name
-
-        key = provider_name(name) if name is not None else self.default_provider
-        with self._providers_lock:
-            if key not in self._research_instances:
-                self._research_instances[key] = create_research_provider(key, **self._config_for(key))
-            return self._research_instances[key]
-
-    def get_browser_provider(self, name: str | Provider | BrowserProvider | None = None) -> BrowserProvider:
-        """Return the named browser provider, constructing and caching it on first use.
-
-        The browser counterpart of :meth:`get_provider`, with the same
-        ownership rule.
-        """
-        if isinstance(name, BrowserProvider):
-            return name
-
-        key = provider_name(name) if name is not None else self.default_provider
-        with self._providers_lock:
-            if key not in self._browser_instances:
-                self._browser_instances[key] = create_browser_provider(key, **self._config_for(key))
-            return self._browser_instances[key]
-
-    def get_browse_provider(self, name: str | Provider | BrowseProvider | None = None) -> BrowseProvider:
-        """Return the named browse provider, constructing and caching it on first use.
-
-        The browse counterpart of :meth:`get_provider`, with the same
-        ownership rule.
-        """
-        if isinstance(name, BrowseProvider):
-            return name
-
-        key = provider_name(name) if name is not None else self.default_provider
-        with self._providers_lock:
-            if key not in self._browse_instances:
-                self._browse_instances[key] = create_browse_provider(key, **self._config_for(key))
-            return self._browse_instances[key]
-
     def _track(self, handle: _HandleT) -> _HandleT:
         # Pruned on every open, so a long-lived router that opens thousands of
         # sessions holds only the ones still open. In place and under the lock:
@@ -349,6 +292,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
+        presets: PresetStore | None = None,
     ) -> None:
         """
         Raises:
@@ -363,11 +307,13 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
             route_tools=route_tools,
             fail_on_router_error=fail_on_router_error,
             url_policy=url_policy,
+            presets=presets,
         )
         async_only = sorted(async_client_holders(self._config))
         if async_only:
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
 
+    @with_preset("search")
     def search(
         self,
         query: str,
@@ -382,6 +328,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         recency: Recency | None = None,
         effort: ResearchEffort | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
         budget: Budget | None = None,
     ) -> SearchResponse:
         """Search the web through ``provider`` (or the router's default)."""
@@ -400,6 +347,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         chain = self.get_provider(provider)
         return self._routed(chain, request, budget, chain.search)
 
+    @with_preset("extract")
     def extract(
         self,
         urls: str | list[str],
@@ -408,6 +356,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         format: ExtractFormat | None = None,
         profile: str | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
         budget: Budget | None = None,
     ) -> ExtractResponse:
         """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
@@ -423,6 +372,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         chain = self.get_extract_provider(provider)
         return self._routed(chain, request, budget, chain.extract)
 
+    @with_preset("research")
     def research(
         self,
         query: str,
@@ -435,6 +385,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         exclude_domains: list[str] | None = None,
         timeout: float | None = RESEARCH_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
         budget: Budget | None = None,
     ) -> ResearchResponse:
         """Research a question through ``provider`` (or the router's default), and wait.
@@ -466,6 +417,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         chain = self.get_research_provider(provider)
         return self._routed(chain, request, budget, lambda r: chain.research(r, timeout=timeout))
 
+    @with_preset("research")
     def submit_research(
         self,
         query: str,
@@ -477,6 +429,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         include_domains: list[str] | None = None,
         exclude_domains: list[str] | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
     ) -> ResearchJob:
         """Start a research run and hand back the job, without waiting for it.
 
@@ -495,6 +448,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         )
         return submitted("research", self.get_research_provider(provider), request, self)
 
+    @with_preset("browse")
     def browse(
         self,
         task: str,
@@ -506,6 +460,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         allowed_domains: list[str] | None = None,
         timeout: float | None = BROWSE_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
         budget: Budget | None = None,
     ) -> BrowseResponse:
         """Hand a task to a hosted browser agent through ``provider`` (or the router's default), and wait.
@@ -536,6 +491,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         chain = self.get_browse_provider(provider)
         return self._routed(chain, request, budget, lambda r: chain.browse(r, timeout=timeout))
 
+    @with_preset("browse")
     def submit_browse(
         self,
         task: str,
@@ -546,6 +502,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         max_steps: int | None = None,
         allowed_domains: list[str] | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
     ) -> BrowseJob:
         """Start a browse task and hand back the job, without waiting for it.
 
@@ -563,6 +520,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         )
         return submitted("browse", self.get_browse_provider(provider), request, self)
 
+    @with_preset("open_browser")
     def open_browser(
         self,
         provider: str | Provider | BrowserProvider | None = None,
@@ -577,6 +535,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         viewport: Viewport | None = None,
         headless: bool | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
     ) -> BrowserHandle:
         """Open a browser session through ``provider`` (or the router's default).
 
@@ -663,6 +622,7 @@ class AsyncWebRouter(
         ...     response = await router.search("latest nvidia earnings")
     """
 
+    @with_preset("search")
     async def search(
         self,
         query: str,
@@ -677,6 +637,7 @@ class AsyncWebRouter(
         recency: Recency | None = None,
         effort: ResearchEffort | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
         budget: Budget | None = None,
     ) -> SearchResponse:
         """Search the web through ``provider`` (or the router's default)."""
@@ -695,6 +656,7 @@ class AsyncWebRouter(
         chain = self.get_provider(provider)
         return await self._arouted(chain, request, budget, chain.asearch)
 
+    @with_preset("extract")
     async def extract(
         self,
         urls: str | list[str],
@@ -703,6 +665,7 @@ class AsyncWebRouter(
         format: ExtractFormat | None = None,
         profile: str | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
         budget: Budget | None = None,
     ) -> ExtractResponse:
         """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
@@ -716,6 +679,7 @@ class AsyncWebRouter(
         chain = self.get_extract_provider(provider)
         return await self._arouted(chain, request, budget, chain.aextract)
 
+    @with_preset("research")
     async def research(
         self,
         query: str,
@@ -728,6 +692,7 @@ class AsyncWebRouter(
         exclude_domains: list[str] | None = None,
         timeout: float | None = RESEARCH_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
         budget: Budget | None = None,
     ) -> ResearchResponse:
         """Research a question through ``provider`` (or the router's default), and await it.
@@ -748,6 +713,7 @@ class AsyncWebRouter(
         chain = self.get_research_provider(provider)
         return await self._arouted(chain, request, budget, lambda r: chain.aresearch(r, timeout=timeout))
 
+    @with_preset("research")
     async def submit_research(
         self,
         query: str,
@@ -759,6 +725,7 @@ class AsyncWebRouter(
         include_domains: list[str] | None = None,
         exclude_domains: list[str] | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
     ) -> ResearchJob:
         """Start a research run and hand back the job, without awaiting it.
 
@@ -775,6 +742,7 @@ class AsyncWebRouter(
         )
         return await asubmitted("research", self.get_research_provider(provider), request, self)
 
+    @with_preset("browse")
     async def browse(
         self,
         task: str,
@@ -786,6 +754,7 @@ class AsyncWebRouter(
         allowed_domains: list[str] | None = None,
         timeout: float | None = BROWSE_TIMEOUT,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
         budget: Budget | None = None,
     ) -> BrowseResponse:
         """Hand a task to a hosted browser agent through ``provider`` (or the router's default), and await it.
@@ -803,6 +772,7 @@ class AsyncWebRouter(
         chain = self.get_browse_provider(provider)
         return await self._arouted(chain, request, budget, lambda r: chain.abrowse(r, timeout=timeout))
 
+    @with_preset("browse")
     async def submit_browse(
         self,
         task: str,
@@ -813,6 +783,7 @@ class AsyncWebRouter(
         max_steps: int | None = None,
         allowed_domains: list[str] | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
     ) -> BrowseJob:
         """Start a browse task and hand back the job, without awaiting it.
 
@@ -828,6 +799,7 @@ class AsyncWebRouter(
         )
         return await asubmitted("browse", self.get_browse_provider(provider), request, self)
 
+    @with_preset("open_browser")
     async def open_browser(
         self,
         provider: str | Provider | BrowserProvider | None = None,
@@ -842,6 +814,7 @@ class AsyncWebRouter(
         viewport: Viewport | None = None,
         headless: bool | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
     ) -> AsyncBrowserHandle:
         """Open a browser session through ``provider`` (or the router's default).
 

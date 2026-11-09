@@ -56,6 +56,7 @@ from web_router.constants import (
     PROVIDER_TAVILY,
     PROVIDER_YOU_MCP,
 )
+from web_router.constants_mcp_presets import MCP_PRESET_TOOLS
 from web_router.mcp.env import user_config_dir
 from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.server import call_tool, list_resources, list_tools, read_resource
@@ -95,6 +96,7 @@ def test_serves_every_tool_in_order(tools: WebRouterTools) -> None:
         MCP_TOOL_FETCH_RAW,
         MCP_TOOL_LOAD_ENV,
         *ROUTING_TOOLS,
+        *MCP_PRESET_TOOLS,
         *MCP_BROWSER_TOOLS,
     ]
 
@@ -165,7 +167,7 @@ def test_an_option_no_configured_route_maps_is_not_advertised(no_keys: None, mon
     search = set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
     research = set(_tool(tools, MCP_TOOL_RESEARCH).input_schema["properties"])
     keyless = set().union(*(get_provider_class(name).supported_parameters for name, _ in AUTO_KEYLESS))
-    assert search == {"query", "provider", *keyless}
+    assert search == {"query", "provider", "preset", *keyless}
     assert {"include_domains", "exclude_domains", "records"}.isdisjoint(research)
 
     # A backend that maps it brings it back, for the model to name through `provider`.
@@ -602,23 +604,6 @@ class LeakyBrowseProvider(FakeBrowseProvider):
             }
         )
         return progress.model_copy(update={"response": response})
-
-
-def test_browse_takes_exactly_the_routers_arguments(tools: WebRouterTools, no_keys: None) -> None:
-    schema = _tool(tools, MCP_TOOL_BROWSE).input_schema
-
-    # `provider` is there with no key at all because `auto` is, as for research.
-    assert set(schema["properties"]) == {
-        "task",
-        "start_url",
-        "output_schema",
-        "max_steps",
-        "allowed_domains",
-        "provider",
-    }
-    assert schema["properties"]["provider"]["enum"] == [PROVIDER_AUTO]
-    assert schema["required"] == ["task"]
-    assert "waits 0s" in _tool(tools, MCP_TOOL_BROWSE).description
 
 
 def test_browse_says_so_when_nothing_can_serve_it(

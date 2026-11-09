@@ -140,6 +140,18 @@ aws = [
     "web-router[search]",
     "botocore>=1.35",
 ]
+# Not methods: where saved presets live. `yaml` lets FilePresetStore read
+# `.yaml`/`.yml` files beside `.json`; `sql` is SqlPresetStore, one URL for
+# SQLite or Postgres, with its schema migrations shipped in the package and
+# run by Alembic (`python -m web_router.presets_sql upgrade <url>`). Neither is
+# imported until a store that needs it is built.
+yaml = [
+    "pyyaml>=6",
+]
+sql = [
+    "sqlalchemy>=2.0,<3",
+    "alembic>=1.13,<2",
+]
 all = ["web-router[search,extract,research,answer,browser,aws]"]
 
 [project.scripts]

@@ -68,6 +68,16 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.exceptions_budget import BudgetExceededError
+from web_router.exceptions_presets import (
+    PresetError,
+    PresetNameTakenError,
+    PresetNotFoundError,
+    PresetOfAnotherToolError,
+    PresetStoreOutdatedError,
+    PresetUnreadableError,
+)
+from web_router.presets import FilePresetStore, InMemoryPresetStore, Preset, PresetStore, PresetTool
+from web_router.presets_sql import SqlPresetStore
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -159,6 +169,7 @@ from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResp
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
+from web_router.types_preset import PresetApplied
 
 __all__ = [
     "ANSWER_PARAMETERS",
@@ -213,6 +224,8 @@ __all__ = [
     "ExtractRequest",
     "ExtractResponse",
     "ExtractedDocument",
+    "FilePresetStore",
+    "InMemoryPresetStore",
     "MissingParameterError",
     "NavigationError",
     "NoAnswerProviderError",
@@ -222,6 +235,16 @@ __all__ = [
     "PageSnapshot",
     "PageState",
     "Plan",
+    "Preset",
+    "PresetApplied",
+    "PresetError",
+    "PresetNameTakenError",
+    "PresetNotFoundError",
+    "PresetOfAnotherToolError",
+    "PresetStore",
+    "PresetStoreOutdatedError",
+    "PresetTool",
+    "PresetUnreadableError",
     "Provider",
     "ProviderError",
     "ProviderNotFoundError",
@@ -246,6 +269,7 @@ __all__ = [
     "SearchRequest",
     "SearchResponse",
     "SearchResult",
+    "SqlPresetStore",
     "StaleElementError",
     "StealthLevel",
     "Template",

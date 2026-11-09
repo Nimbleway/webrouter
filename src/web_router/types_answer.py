@@ -14,6 +14,7 @@ from web_router.types import Citation, NormalizedRequest, ResearchOutcome
 from web_router.types_decision import DECISION_DESCRIPTION, DecisionRecord
 from web_router.types_options import RECENCY_DESCRIPTION
 from web_router.types_options import Recency as Recency
+from web_router.types_preset import PRESET_APPLIED_DESCRIPTION, PresetApplied
 
 __all__ = ["ANSWER_ALWAYS_SENT", "ANSWER_PARAMETERS", "AnswerRequest", "AnswerResponse", "Recency"]
 
@@ -70,3 +71,4 @@ class AnswerResponse(BaseModel):
         description="The provider's untouched payloads, one per call the answer took.",
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    preset: PresetApplied | None = Field(default=None, description=PRESET_APPLIED_DESCRIPTION)

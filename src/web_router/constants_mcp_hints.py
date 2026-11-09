@@ -30,6 +30,10 @@ MCP_TOOL_HINTS: dict[str, tuple[str, bool, bool, bool, bool]] = {
     "browser_screenshot": ("Screenshot the page", True, False, True, True),
     "browser_read": ("Read the page's text", True, False, True, True),
     "browser_close": ("Close a browser session", False, False, True, True),
+    # As the managed web gateway's preset routes: reading is idempotent; creating changes the store, once.
+    "list_presets": ("List your presets", True, False, True, False),
+    "get_preset": ("Read a preset", True, False, True, False),
+    "create_preset": ("Create a preset", False, False, False, False),
 }
 """Each tool's title and behaviour hints, so a client can tell a free lookup from a billed run or a page action.
 

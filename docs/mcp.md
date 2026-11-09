@@ -215,6 +215,9 @@ the client's `env` block or a file the server already read takes a restart.
 | `web_run` | Hand a request in words to web-router's router, which picks the method and backends and runs it; `dry_run` returns the plan only. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). | as the method it picks |
 | `budget_start` | Open a task budget, in dollars and seconds, that every billed tool then spends from. | instant |
 | `budget_status` | What the budget has spent, reserved and left. | instant, and free |
+| `list_presets` | The saved presets, of every tool: each names its tool, its params and what it is for. See [Presets](#presets-list_presets-get_preset-create_preset). | instant, and free |
+| `get_preset` | One preset by name. | instant, and free |
+| `create_preset` | Save a tool's params under a name; a taken name is refused, nothing is overwritten. | instant, and free |
 | `browser_open` | Open a browser session and get a `session_id` for the tools below. | a few seconds; **a cloud backend bills per minute until it is closed**, `local` is free |
 | `browser_goto` | Load a URL in the session. | as long as the page takes |
 | `browser_snapshot` | The page's accessibility tree, each element tagged `[ref=eN]` to act on. | about a second |
@@ -248,6 +251,41 @@ takes longer, so it leaves `effort` unset unless needed.
 Over MCP the model chooses `max_results`, not you. Its description steers it
 away from a single result, but the choice stays the model's. A host that wants
 the number fixed should [wrap `search` itself](../README.md#wrapping-search-for-your-own-agent).
+
+### Presets: `list_presets`, `get_preset`, `create_preset`
+
+A preset is one tool's optional params saved under a name. `search`,
+`extract`, `answer`, `research`, `browse`, `run_template` and `browser_open`
+each take `preset`: the preset's params join the call's arguments, the call's
+own winning, and the result carries `preset` -- its name and the params that
+ran. The server resolves the preset itself, before its own rules apply, so a
+preset can do nothing a call spelling the same params out could not: a
+`browser_open` timeout past the server's limit is lowered as it would be, the
+budget charges what actually runs, and a preset setting a param the tool does
+not take over MCP -- `provider_options` -- is refused. A `research` or
+`browse` preset's `timeout` gives way to the server's own wait. A preset of
+another tool, or a name the store does not hold, is refused before anything
+bills.
+
+```json
+{"name": "eu_semiconductor_news", "tool": "search",
+ "description": "EU chip-industry news, English, trade press only",
+ "params": {"max_results": 20, "search_depth": "fast", "country": "DE", "locale": "en",
+            "include_domains": ["reuters.com", "eetimes.eu", "semiengineering.com"],
+            "exclude_domains": ["reddit.com"]}}
+```
+
+`create_preset` takes that, and `search` with `{"query": "ASML export licences",
+"preset": "eu_semiconductor_news", "max_results": 5}` runs it with five results.
+`tool` is the library method, so a `browser_open` preset is an `open_browser`
+one. Presets are never edited or deleted over MCP.
+
+Where they are kept is the operator's choice, `WEB_ROUTER_PRESETS`: a
+directory (`FilePresetStore`, JSON and, with the `yaml` extra, YAML files a
+team can review in git), a database URL (`SqlPresetStore`, the `sql` extra;
+run `python -m web_router.presets_sql upgrade <url>` first), or unset, the
+server's memory, gone when it stops. It is read once at startup from the
+process environment, never from a `.env` file.
 
 ### `research` never blocks the session
 
@@ -653,5 +691,6 @@ the server is restarted.
 | `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
 | `WEB_ROUTER_MCP_MAX_COST_USD` | unset | The ceiling on what one connection may spend, in US dollars at estimated list prices. An empty value stops the server from starting. |
 | `WEB_ROUTER_MCP_TIME_LIMIT_S` | unset | The ceiling on how long one connection may run billed calls, in seconds from its start. An empty value stops the server from starting. |
+| `WEB_ROUTER_PRESETS` | unset (in memory) | Where presets are kept: a directory or a database URL. See [Presets](#presets-list_presets-get_preset-create_preset). Set empty, it stops the server. |
 
 Everything else it reads is a provider credential, and belongs to the provider.

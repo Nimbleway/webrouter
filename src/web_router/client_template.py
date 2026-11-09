@@ -7,25 +7,48 @@ methods are where they always were.
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Mapping
 from typing import Any
 
+from web_router.client_presets import with_preset
+from web_router.client_requests import build_template_request
 from web_router.providers.base import TemplateProvider
+from web_router.registry import create_template_provider
 from web_router.types import (
     ExtractFormat,
     Provider,
     Template,
     TemplatePage,
-    TemplateRequest,
     TemplateResponse,
+    provider_name,
 )
 
 
 class _TemplateLookup:
-    """What both routers share for templates: the backend that holds them, from :class:`~web_router.WebRouter`."""
+    """What both routers share for templates: the backend that holds them."""
+
+    _providers_lock: threading.Lock
+    _template_instances: dict[str, TemplateProvider]
+
+    def _config_for(self, key: str) -> dict[str, Any]:
+        raise NotImplementedError
 
     def get_template_provider(self, name: str | Provider | TemplateProvider) -> TemplateProvider:
-        raise NotImplementedError
+        """Return the named template provider, constructing and caching it on first use.
+
+        The template counterpart of :meth:`~web_router.WebRouter.get_provider`, with the same
+        ownership rule -- but no default: a template's name belongs to one
+        vendor, so the caller always says which.
+        """
+        if isinstance(name, TemplateProvider):
+            return name
+
+        key = provider_name(name)
+        with self._providers_lock:
+            if key not in self._template_instances:
+                self._template_instances[key] = create_template_provider(key, **self._config_for(key))
+            return self._template_instances[key]
 
 
 class SyncTemplate(_TemplateLookup):
@@ -57,6 +80,7 @@ class SyncTemplate(_TemplateLookup):
         """Describe one template: the inputs a run takes and the record it returns, as JSON Schema."""
         return self.get_template_provider(provider).template(name)
 
+    @with_preset("run_template")
     def run_template(
         self,
         template: str,
@@ -65,6 +89,7 @@ class SyncTemplate(_TemplateLookup):
         provider: str | Provider | TemplateProvider,
         format: ExtractFormat | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
     ) -> TemplateResponse:
         """Run one of ``provider``'s templates on one page and return its record.
 
@@ -79,9 +104,7 @@ class SyncTemplate(_TemplateLookup):
         inputs would answer through its synchronous endpoint, under that
         endpoint's own time cap.
         """
-        request = TemplateRequest(
-            template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
-        )
+        request = build_template_request(template, inputs, format=format, provider_options=provider_options)
         return self.get_template_provider(provider).run(request)
 
 
@@ -105,6 +128,7 @@ class AsyncTemplate(_TemplateLookup):
         """Describe one template: the inputs a run takes and the record it returns, as JSON Schema."""
         return await self.get_template_provider(provider).atemplate(name)
 
+    @with_preset("run_template")
     async def run_template(
         self,
         template: str,
@@ -113,13 +137,12 @@ class AsyncTemplate(_TemplateLookup):
         provider: str | Provider | TemplateProvider,
         format: ExtractFormat | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
     ) -> TemplateResponse:
         """Run one of ``provider``'s templates on one page and return its record.
 
         As on the sync router: ``inputs`` are the template's own, and
         ``format`` asks for the page beside the record.
         """
-        request = TemplateRequest(
-            template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
-        )
+        request = build_template_request(template, inputs, format=format, provider_options=provider_options)
         return await self.get_template_provider(provider).arun(request)

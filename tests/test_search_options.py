@@ -51,7 +51,7 @@ def test_the_mcp_schema_offers_every_level_and_says_what_effort_costs() -> None:
 
 
 def test_the_mcp_schema_lists_every_shared_option() -> None:
-    assert set(MCP_SEARCH_PROPERTIES) == NORMALIZED_PARAMETERS | {"query"}
+    assert set(MCP_SEARCH_PROPERTIES) == NORMALIZED_PARAMETERS | {"query", "preset"}
 
 
 @pytest.mark.parametrize("name, value", [("recency", "year"), ("effort", "high")])

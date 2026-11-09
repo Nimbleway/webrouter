@@ -31,6 +31,8 @@ from web_router.types_page import PageLoadState as PageLoadState
 from web_router.types_page import PageSnapshot as PageSnapshot
 from web_router.types_page import PageState as PageState
 from web_router.types_page import Screenshot as Screenshot
+from web_router.types_page import Viewport as Viewport
+from web_router.types_preset import PRESET_APPLIED_DESCRIPTION, PresetApplied
 
 ExtractFormat = Literal["markdown", "html", "text"]
 """Which representation of a page to return.
@@ -252,6 +254,7 @@ class SearchResponse(BaseModel):
     request_id: str | None = None
     raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    preset: PresetApplied | None = Field(default=None, description=PRESET_APPLIED_DESCRIPTION)
 
     def __len__(self) -> int:
         return len(self.results)
@@ -326,6 +329,7 @@ class ExtractResponse(BaseModel):
         ),
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    preset: PresetApplied | None = Field(default=None, description=PRESET_APPLIED_DESCRIPTION)
 
     def __len__(self) -> int:
         return len(self.documents)
@@ -500,6 +504,7 @@ class TemplateResponse(BaseModel):
         description="Provider-specific fields with no normalized equivalent -- pagination hints, say.",
     )
     raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
+    preset: PresetApplied | None = Field(default=None, description=PRESET_APPLIED_DESCRIPTION)
 
 
 JobState = Literal["queued", "running", "completed", "failed", "cancelled"]
@@ -607,6 +612,7 @@ class ResearchResponse(BaseModel):
         description="The provider's untouched payloads, one per call the run took.",
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    preset: PresetApplied | None = Field(default=None, description=PRESET_APPLIED_DESCRIPTION)
 
     @property
     def urls(self) -> list[str]:
@@ -658,15 +664,6 @@ when a backend can tell it apart from these. A backend that cannot serve the
 level asked for raises :class:`~web_router.exceptions.UnsupportedParameterError`
 rather than serving another one under its name.
 """
-
-
-class Viewport(BaseModel):
-    """The size of the page a session renders, in CSS pixels."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    width: Annotated[int, Field(ge=1, description="Width in pixels.")]
-    height: Annotated[int, Field(ge=1, description="Height in pixels.")]
 
 
 class BrowserRequest(NormalizedRequest):
@@ -911,6 +908,7 @@ class BrowseResponse(BaseModel):
         ),
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    preset: PresetApplied | None = Field(default=None, description=PRESET_APPLIED_DESCRIPTION)
 
 
 class BrowseProgress(BaseModel):

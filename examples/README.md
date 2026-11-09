@@ -14,6 +14,7 @@ Runnable scripts, roughly in the order worth reading them.
 | [`browser_vendor.py`](browser_vendor.py) | The same session through `auto` on a cloud vendor, and your own Playwright over `cdp_url` | any browser key |
 | [`browse.py`](browse.py) | `browse()`: a task handed to a hosted browser agent, waited on or submitted | any browse key |
 | [`main.py`](main.py) | Guided tour of search and extract in one file | no |
+| [`presets.py`](presets.py) | `preset=`: optional arguments saved under a name, in memory, as files, and in SQLite with its shipped migration | no |
 | [`routing.py`](routing.py) | Defaults, per-call overrides, `provider_config`, `provider_options` | no |
 | [`router_rules.py`](router_rules.py) | Your own router in a few lines: a URL extracts, "compare", "report" or "analyze" researches, anything else has no opinion | no |
 | [`router_classifier.py`](router_classifier.py) | A scikit-learn pipeline, saved and loaded with joblib, ranking methods by `predict_proba`; `timeout_s = 0.05` | no, but scikit-learn |

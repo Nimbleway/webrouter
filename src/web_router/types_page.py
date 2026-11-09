@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -67,3 +67,12 @@ class Screenshot(BaseModel):
     width: int = Field(description="Width of the image in pixels.")
     height: int = Field(description="Height of the image in pixels.")
     url: str = Field(description="The page it was taken of.")
+
+
+class Viewport(BaseModel):
+    """The size of the page a session renders, in CSS pixels."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    width: Annotated[int, Field(ge=1, description="Width in pixels.")]
+    height: Annotated[int, Field(ge=1, description="Height in pixels.")]

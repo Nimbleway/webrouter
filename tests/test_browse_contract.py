@@ -42,7 +42,7 @@ from web_router.registry import (
 )
 from web_router.types import BROWSE_ALWAYS_SENT, BROWSE_PARAMETERS, BrowseRequest, BrowseResponse, BrowseStep
 
-ROUTER_ONLY_ARGUMENTS = {"self", "task", "provider", "budget"}
+ROUTER_ONLY_ARGUMENTS = {"self", "task", "provider", "budget", "preset"}
 
 PUBLIC_METHODS = (
     "submit",

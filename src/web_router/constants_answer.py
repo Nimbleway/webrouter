@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any, get_args
 
 from web_router._chains import chain as _chain
+from web_router.constants_mcp_presets import MCP_ARG_PRESET, MCP_PRESET_PROPERTY
 from web_router.types_answer import Recency
 from web_router.types_options import RECENCY_DESCRIPTION
 
@@ -71,6 +72,7 @@ MCP_ANSWER_PROPERTIES: dict[str, dict[str, Any]] = {
         "enum": list(get_args(Recency)),
         "description": RECENCY_DESCRIPTION,
     },
+    MCP_ARG_PRESET: MCP_PRESET_PROPERTY,
 }
 
 MCP_DESC_ANSWER = (

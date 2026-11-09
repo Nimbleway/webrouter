@@ -16,6 +16,7 @@ handle failures uniformly regardless of which backend served the request:
     ├── BenchmarkTimeoutError       one benchmark row outlasted the comparison's timeout
     ├── DeadlineExceededError       a call outlasted its per-call deadline
     ├── RouterError                 an attached router failed, under fail_on_router_error=True
+    ├── PresetError                 a preset could not be found, kept or read (exceptions_presets)
     ├── ProviderError               the backend itself failed
     └── BrowserActionError          a page action on an open browser session failed
         ├── StaleElementError           a snapshot ref no longer names an element

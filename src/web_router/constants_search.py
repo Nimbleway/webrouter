@@ -10,6 +10,7 @@ from typing import Any, get_args
 
 from pydantic import BaseModel
 
+from web_router.constants_mcp_presets import MCP_ARG_PRESET, MCP_PRESET_PROPERTY
 from web_router.types import SearchRequest
 from web_router.types_options import Recency, ResearchEffort, SearchDepth
 
@@ -51,6 +52,7 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
         "enum": list(get_args(ResearchEffort)),
         "description": described(SearchRequest, "effort"),
     },
+    MCP_ARG_PRESET: MCP_PRESET_PROPERTY,
 }
 
 MCP_DESC_SEARCH = (

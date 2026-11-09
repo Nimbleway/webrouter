@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Literal, get_args
 
+from web_router import constants_mcp_presets as _presets
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
 from web_router.constants_mcp import (
@@ -501,18 +502,6 @@ YOU_MCP_SSE_DATA_PREFIX = MCP_SSE_DATA_PREFIX
 
 MSG_MCP_ERROR = "MCP call failed: {error}"
 MSG_MCP_NO_RESULT = "MCP response carried no result payload"
-
-# --- Parallel MCP, a keyless route ------------------------------------------
-# Parallel's hosted Search MCP, documented as free without a key, with higher
-# limits for one (docs.parallel.ai/integrations/mcp/quickstart). Verified live on
-# 2026-10-01: no handshake needed, plain JSON replies, and the payload is the
-# REST /v1beta/search shape. It ignores max_results -- asked for 3 it returned
-# 10 -- so ParallelMcpProvider keeps the first max_results itself, and raw keeps
-# all of them.
-
-PARALLEL_MCP_BASE_URL = "https://search.parallel.ai"
-PARALLEL_MCP_SEARCH_PATH = "/mcp"
-PARALLEL_MCP_SEARCH_TOOL = "web_search"
 
 # --- auto -------------------------------------------------------------------
 
@@ -3709,6 +3698,7 @@ MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
             "rather than returning a different one."
         ),
     },
+    _presets.MCP_ARG_PRESET: _presets.MCP_PRESET_PROPERTY,
 }
 
 MCP_TEMPLATES_PROPERTIES: dict[str, dict[str, Any]] = {
@@ -3737,6 +3727,7 @@ MCP_RUN_TEMPLATE_PROPERTIES: dict[str, dict[str, Any]] = {
             "which is usually all you need."
         ),
     },
+    _presets.MCP_ARG_PRESET: _presets.MCP_PRESET_PROPERTY,
 }
 
 MCP_RESEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
@@ -3768,6 +3759,7 @@ MCP_RESEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
         "items": {"type": "string"},
         "description": _described(ResearchRequest, "exclude_domains"),
     },
+    _presets.MCP_ARG_PRESET: _presets.MCP_PRESET_PROPERTY,
 }
 
 MCP_RESEARCH_STATUS_PROPERTIES: dict[str, dict[str, Any]] = {
@@ -3791,6 +3783,7 @@ MCP_BROWSE_PROPERTIES: dict[str, dict[str, Any]] = {
         "minItems": 1,
         "description": _described(BrowseRequest, "allowed_domains"),
     },
+    _presets.MCP_ARG_PRESET: _presets.MCP_PRESET_PROPERTY,
 }
 
 MCP_BROWSE_STATUS_PROPERTIES: dict[str, dict[str, Any]] = {
@@ -3860,6 +3853,7 @@ MCP_BROWSER_OPEN_PROPERTIES: dict[str, dict[str, Any]] = {
         "description": "How hard the backend hides automation: 'off', 'low' or 'high'. Unset, its default.",
     },
     "solve_captchas": {"type": "boolean", "description": _described(BrowserRequest, "solve_captchas")},
+    _presets.MCP_ARG_PRESET: _presets.MCP_PRESET_PROPERTY,
 }
 
 _MCP_SESSION_ID_PROPERTY: dict[str, Any] = {"type": "string", "description": "The session_id `browser_open` returned."}
@@ -3978,6 +3972,7 @@ MCP_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_WEB_RUN: MCP_WEB_RUN_PROPERTIES,
     MCP_TOOL_BUDGET_START: MCP_BUDGET_START_PROPERTIES,
     MCP_TOOL_BUDGET_STATUS: {},
+    **_presets.MCP_PRESET_TOOL_PROPERTIES,
 }
 """Each tool's input schema, minus the ``provider`` argument.
 
@@ -4014,6 +4009,7 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_WEB_RUN: ("prompt",),
     MCP_TOOL_BUDGET_START: ("max_cost_usd", "time_limit_s"),
     MCP_TOOL_BUDGET_STATUS: (),
+    **_presets.MCP_PRESET_TOOL_REQUIRED,
 }
 
 MCP_PROVIDER_DESCRIPTION = "The backend to use, of those configured here; omit it and the router picks one."
@@ -4166,6 +4162,7 @@ MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
     MCP_TOOL_WEB_RUN: MCP_DESC_WEB_RUN,
     MCP_TOOL_BUDGET_START: MCP_DESC_BUDGET_START,
     MCP_TOOL_BUDGET_STATUS: MCP_DESC_BUDGET_STATUS,
+    **_presets.MCP_PRESET_TOOL_DESCRIPTIONS,
 }
 
 MCP_MSG_NO_BACKEND = " NOTHING IS CONFIGURED FOR THIS METHOD on this machine, so every call will fail."

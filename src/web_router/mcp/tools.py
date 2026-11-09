@@ -103,6 +103,7 @@ from web_router.mcp.browsers import BrowserSessions, check_target, playwright_in
 from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.methods import METHODS
+from web_router.mcp.presets import PRESET_TOOLS, echoed, expanded
 from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.shaping import (
@@ -192,7 +193,7 @@ class WebRouterTools:
             MCP_TOOL_BROWSE_STATUS: self._browse_status,
             MCP_TOOL_FETCH_RAW: self._fetch_raw,
             MCP_TOOL_LOAD_ENV: self._load_env,
-            **{name: functools.partial(handler, self) for name, handler in ROUTING_TOOLS.items()},
+            **{name: functools.partial(handler, self) for name, handler in {**ROUTING_TOOLS, **PRESET_TOOLS}.items()},
             MCP_TOOL_BROWSER_OPEN: self._browser_open,
             MCP_TOOL_BROWSER_GOTO: self._browser_goto,
             MCP_TOOL_BROWSER_SNAPSHOT: self._browser_snapshot,
@@ -276,7 +277,7 @@ class WebRouterTools:
             names, allowed_text = ", ".join(unknown), ", ".join(allowed) or MCP_NO_ARGUMENTS
             raise ValueError(MCP_MSG_UNKNOWN_ARGUMENTS.format(tool=name, names=names, allowed=allowed_text))
         with self.budget.bound():
-            return await handler(arguments)
+            return echoed(await handler(arguments))
 
     async def aclose(self) -> None:
         """Release every browser session still open, then close every provider every router built."""
@@ -559,7 +560,6 @@ class WebRouterTools:
         table to drift. :meth:`call` has already refused a name the tool does not
         declare; one left unset stays unset rather than being sent as a default of ours.
         """
-        names = schema.argument_names(tool)
         # `is None`, not truthiness: browser_type's required `text` may be ""
         # -- the way a field is cleared -- and supplied-but-empty is not missing.
         missing = [name for name in MCP_TOOL_REQUIRED[tool] if arguments.get(name) is None]
@@ -569,7 +569,7 @@ class WebRouterTools:
             raise ValueError(MCP_MSG_NOTHING_CONFIGURED.format(tool=tool, env_vars=env_vars))
         if missing:
             raise ValueError(MCP_MSG_MISSING_ARGUMENT.format(tool=tool, name=missing[0]))
-        return {name: arguments[name] for name in names if arguments.get(name) is not None}
+        return expanded(self.router.presets, tool, arguments, schema.argument_names(tool))
 
     def _description(self, tool: str) -> str:
         """The tool's description, plus a warning when nothing can serve it here."""

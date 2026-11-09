@@ -55,7 +55,7 @@ from web_router.types import (
     StealthLevel,
 )
 
-ROUTER_ONLY_ARGUMENTS = {"self", "provider"}
+ROUTER_ONLY_ARGUMENTS = {"self", "provider", "preset"}
 
 PUBLIC_METHODS = ("open", "aopen", "release", "arelease", "status", "astatus", "validate")
 """Everything a caller reaches, all of which enforce something on the backend's behalf."""

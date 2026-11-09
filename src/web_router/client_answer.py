@@ -9,12 +9,14 @@ from __future__ import annotations
 import threading
 from typing import Any
 
+from web_router.client_presets import with_preset
+from web_router.client_requests import build_answer_request
 from web_router.providers.answer import AnswerProvider
 from web_router.registry_answer import create_answer_provider, default_answer_provider
 from web_router.routing import Budget
 from web_router.routing.routed import AsyncRouted, SyncRouted
 from web_router.types import Provider, provider_name
-from web_router.types_answer import AnswerRequest, AnswerResponse, Recency
+from web_router.types_answer import AnswerResponse, Recency
 
 
 class _AnswerLookup:
@@ -47,12 +49,9 @@ class _AnswerLookup:
                 self._answer_instances[key] = create_answer_provider(key, **self._config_for(key))
             return self._answer_instances[key]
 
-    @staticmethod
-    def _answer_request(query: str, provider_options: dict[str, Any] | None, **options: Any) -> AnswerRequest:
-        return AnswerRequest(query=query, provider_options=provider_options or {}, **options)
-
 
 class SyncAnswer(_AnswerLookup, SyncRouted):
+    @with_preset("answer")
     def answer(
         self,
         query: str,
@@ -64,6 +63,7 @@ class SyncAnswer(_AnswerLookup, SyncRouted):
         locale: str | None = None,
         recency: Recency | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
         budget: Budget | None = None,
     ) -> AnswerResponse:
         """Ask ``provider`` one question and return its written answer with the sources it rests on.
@@ -80,9 +80,9 @@ class SyncAnswer(_AnswerLookup, SyncRouted):
         backends you hold a key for, in ranked order: one that fails or answers
         with nothing is passed over for the next, and each one tried bills.
         """
-        request = self._answer_request(
+        request = build_answer_request(
             query,
-            provider_options,
+            provider_options=provider_options,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
             country=country,
@@ -94,6 +94,7 @@ class SyncAnswer(_AnswerLookup, SyncRouted):
 
 
 class AsyncAnswer(_AnswerLookup, AsyncRouted):
+    @with_preset("answer")
     async def answer(
         self,
         query: str,
@@ -105,12 +106,13 @@ class AsyncAnswer(_AnswerLookup, AsyncRouted):
         locale: str | None = None,
         recency: Recency | None = None,
         provider_options: dict[str, Any] | None = None,
+        preset: str | None = None,
         budget: Budget | None = None,
     ) -> AnswerResponse:
         """Ask ``provider`` one question and await its written answer, as on the sync router."""
-        request = self._answer_request(
+        request = build_answer_request(
             query,
-            provider_options,
+            provider_options=provider_options,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
             country=country,

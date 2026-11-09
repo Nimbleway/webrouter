@@ -171,3 +171,16 @@ PARALLEL_ANSWER_BASIS_EXTRA = frozenset({"confidence"})
 
 PARALLEL_ANSWER_TRUNCATED = "length"
 """The ``finish_reason`` saying the generation was cut short, the one early stop the API reports."""
+
+
+# --- Parallel MCP, a keyless route ------------------------------------------
+# Parallel's hosted Search MCP, documented as free without a key, with higher
+# limits for one (docs.parallel.ai/integrations/mcp/quickstart). Verified live on
+# 2026-10-01: no handshake needed, plain JSON replies, and the payload is the
+# REST /v1beta/search shape. It ignores max_results -- asked for 3 it returned
+# 10 -- so ParallelMcpProvider keeps the first max_results itself, and raw keeps
+# all of them.
+
+PARALLEL_MCP_BASE_URL = "https://search.parallel.ai"
+PARALLEL_MCP_SEARCH_PATH = "/mcp"
+PARALLEL_MCP_SEARCH_TOOL = "web_search"

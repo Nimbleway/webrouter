@@ -24,12 +24,8 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from web_router.constants import (
-    PARALLEL_MCP_BASE_URL,
-    PARALLEL_MCP_SEARCH_PATH,
-    PARALLEL_MCP_SEARCH_TOOL,
-    PROVIDER_PARALLEL_MCP,
-)
+from web_router.constants import PROVIDER_PARALLEL_MCP
+from web_router.constants_parallel import PARALLEL_MCP_BASE_URL, PARALLEL_MCP_SEARCH_PATH, PARALLEL_MCP_SEARCH_TOOL
 from web_router.providers._mcp import McpSearchMixin
 from web_router.providers._utils import build_payload
 from web_router.providers.parallel_search import ParallelProvider

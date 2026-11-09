@@ -97,6 +97,18 @@ src/web_router/
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
 ├── client_template.py  templates(), template() and run_template(), mixed into both routers
+├── client_lookup.py    get_research_provider(), get_browser_provider(), get_browse_provider()
+├── client_presets.py   with_preset(): the `preset=` every method takes, one decorator
+├── presets/            Preset, PresetStore, InMemoryPresetStore, FilePresetStore; params.py
+│                       derives each method's preset params from its request builder,
+│                       limits.py the managed presets' tighter limits
+├── presets_sql/        SqlPresetStore ([sql]): _sql.py holds every SQLAlchemy/Alembic import,
+│                       migrations/ the shipped schema, __main__ the `upgrade` command
+├── mcp/presets.py      list_presets, get_preset, create_preset and the `preset` argument, resolved
+│                       before the server's own limits; WEB_ROUTER_PRESETS picks the store
+├── constants_mcp_presets.py  those tools' names, text and examples
+├── types_preset.py     PresetApplied, the `preset` field on responses; imports nothing of ours
+├── constants_presets.py, exceptions_presets.py  presets' messages and errors
 ├── client_plan.py      plan() and run(), prompt-level routing, mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers

@@ -42,8 +42,11 @@ from web_router.constants_mcp import (
     MCP_URL_POLICY,
     MCP_URL_POLICY_NOTE,
 )
+from web_router.constants_mcp_presets import ENV_MCP_PRESETS
 from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError
+from web_router.mcp.presets import store_from
+from web_router.presets import InMemoryPresetStore, PresetStore
 from web_router.routing.contract import Budget
 from web_router.routing.invoke import RouterLike
 from web_router.routing.rules import rules
@@ -57,30 +60,35 @@ class McpRouting:
     router_name: str = RULES_ROUTER_NAME
     """What the capabilities resource names it: ``rules``, ``off``, or ``operator``, never the import path."""
     ceiling: Budget = field(default_factory=Budget)
+    presets: PresetStore = field(default_factory=InMemoryPresetStore)
+    """The store every router this builds reads presets from: one, so a ``load_env`` rebuild keeps them."""
 
     @classmethod
     def from_environ(cls, environ: Mapping[str, str] | None = None) -> McpRouting:
         """What the process environment sets: read once, at startup.
 
         Raises:
-            ConfigurationError: for a router set empty or that does not import, or a ceiling that is not a positive
-                number.
+            ConfigurationError: for a router set empty or that does not import, a ceiling that is not a positive
+                number, or ``WEB_ROUTER_PRESETS`` set empty.
         """
         env = os.environ if environ is None else environ
         ceiling = Budget(
             max_cost_usd=_positive(env, ENV_MCP_MAX_COST_USD), time_limit_s=_positive(env, ENV_MCP_TIME_LIMIT_S)
         )
+        presets = store_from(env.get(ENV_MCP_PRESETS))
         raw = env.get(ENV_MCP_ROUTER)
         if raw is None:
-            return cls(ceiling=ceiling)
+            return cls(ceiling=ceiling, presets=presets)
         spec = raw.strip()
         if spec == MCP_ROUTER_OFF:
-            return cls(router=None, router_name=MCP_ROUTER_OFF, ceiling=ceiling)
-        return cls(router=_imported(spec), router_name=MCP_ROUTER_OPERATOR, ceiling=ceiling)
+            return cls(router=None, router_name=MCP_ROUTER_OFF, ceiling=ceiling, presets=presets)
+        return cls(router=_imported(spec), router_name=MCP_ROUTER_OPERATOR, ceiling=ceiling, presets=presets)
 
     def build(self, *args: Any, **kwargs: Any) -> AsyncWebRouter:
         """An :class:`~web_router.AsyncWebRouter` with this router attached for ``plan`` and ``run`` alone."""
-        return AsyncWebRouter(*args, router=self.router, route_tools=(), url_policy=MCP_URL_POLICY, **kwargs)
+        return AsyncWebRouter(
+            *args, router=self.router, route_tools=(), url_policy=MCP_URL_POLICY, presets=self.presets, **kwargs
+        )
 
     def capabilities(self, budget: dict[str, Any] | None) -> dict[str, Any]:
         """The capabilities resource's ``routing`` section, with ``budget``, where the connection's budget stands."""
