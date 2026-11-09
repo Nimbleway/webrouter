@@ -4,9 +4,12 @@
 
 Please do **not** open a public GitHub issue for security problems.
 
-Email <support@nimbleway.com> with a description of the issue, the affected
-version, and steps to reproduce. We aim to acknowledge reports within three
-business days and to keep you updated until the issue is resolved.
+Report it privately through GitHub:
+[open a security advisory](https://github.com/Nimbleway/webrouter/security/advisories/new)
+with a description of the issue, the affected version, and steps to reproduce.
+If you can't use GitHub, email <support@nimbleway.com> instead.
+We aim to acknowledge reports within three business days and to keep you
+updated until the issue is resolved.
 
 ## Supported versions
 

@@ -91,7 +91,7 @@ MSG_REMOTE_HTTPS = "router_config['url'] must use https; plain http is allowed o
 MSG_REMOTE_TIMEOUT = "router_config['timeout_s'] must be a positive number of seconds; got {value!r}."
 MSG_REMOTE_KEY = "router_config['api_key'] must be a string."
 MSG_REMOTE_NO_HTTPX = (
-    "router='remote' needs httpx, which web-router's '{extra}' extra installs: pip install 'web-router[{extra}]'."
+    "router='remote' needs httpx, which web-router's '{extra}' extra installs: pip install 'webrouter[{extra}]'."
 )
 MSG_REMOTE_FAILED = "The router service at {host} failed: {why}."
 REMOTE_WHY_TRANSPORT = "no answer ({kind})"

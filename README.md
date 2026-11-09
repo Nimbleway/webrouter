@@ -4,7 +4,7 @@
 
 > **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
 
-[![CI](https://github.com/WebContextLayer/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WebContextLayer/webrouter/actions/workflows/ci.yml)
+[![CI](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
@@ -80,9 +80,9 @@ dropped** — so a call never runs under weaker constraints than you asked for.
 Install the package from PyPI, with the extras you need:
 
 ```bash
-pip install "web-router[all]"         # any virtualenv
-uv add "web-router[all]"              # a uv project
-pip install "web-router[mcp,browser]" # the MCP server with its browser tools
+pip install "webrouter[all]"         # any virtualenv
+uv add "webrouter[all]"              # a uv project
+pip install "webrouter[mcp,browser]" # the MCP server with its browser tools
 ```
 
 Then put the keys you hold in your environment or a `.env` file; none is
@@ -93,13 +93,13 @@ required. [`.env.example`](.env.example) names each variable.
 the right Python itself.
 
 ```bash
-git clone https://github.com/WebContextLayer/webrouter.git
+git clone https://github.com/Nimbleway/webrouter.git
 cd webrouter
 make setup              # every extra: the library, the MCP server, the browser tools and a local Chromium
 cp .env.example .env    # then fill in only the keys you hold; none is required
 ```
 
-Using a coding agent? Tell it *"clone https://github.com/WebContextLayer/webrouter
+Using a coding agent? Tell it *"clone https://github.com/Nimbleway/webrouter
 and set it up"*. [CLAUDE.md](CLAUDE.md) walks it through the rest. To use the
 clone from another project, install it in editable mode
 (`uv add --editable "/path/to/webrouter[all]"` or
@@ -117,7 +117,7 @@ to get right at install time.
 Three extras are not methods. `mcp` names a transport — it installs the
 [MCP server](#the-mcp-server), which exposes the methods above rather than
 adding one of its own. It does not include `browser`: the server's `browser_*`
-tools need Playwright, so they appear only with `web-router[mcp,browser]`.
+tools need Playwright, so they appear only with `webrouter[mcp,browser]`.
 `evals` installs the OpenAI and Anthropic SDKs behind the built-in judges that
 [`evaluate()`](#evaluating-accuracy) grades answers with; bring your own judge
 and you do not need it. `langchain` installs `langchain-core` for the
@@ -936,7 +936,7 @@ the pages, and `research()`, a job of minutes.
 
 Three steps to a first answer:
 
-1. Install with the `answer` extra: `pip install "web-router[answer]"`
+1. Install with the `answer` extra: `pip install "webrouter[answer]"`
    (`make setup` in a clone installs every extra).
 2. Set one answer backend's key in your environment or `.env`, for example
    `PERPLEXITY_API_KEY` -- the [answer table](#answer) lists each one's variable.
@@ -2180,7 +2180,7 @@ field may be left out or `null`):
   own bearer key, `api_key` in `router_config` or
   `WEB_ROUTER_REMOTE_ROUTER_API_KEY` (read once, when the router is built),
   never logged.
-- **Transport.** httpx (`pip install "web-router[remote]"`, or any method
+- **Transport.** httpx (`pip install "webrouter[remote]"`, or any method
   extra), imported only when the router is built. The router is async only,
   so a call past its time is cancelled rather than left running, from sync and
   async code alike. Its one connection pool belongs to the event loop that

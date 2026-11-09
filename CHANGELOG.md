@@ -16,6 +16,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
+## [0.11.0] - 2026-11-09
+
+### Changed
+
+- The repository moved to [github.com/Nimbleway/webrouter](https://github.com/Nimbleway/webrouter). Links to the old location redirect, and the package metadata now points to the new one. Security reports go through GitHub's private vulnerability reporting (see SECURITY.md).
+- **Breaking (install name):** the package is now named `webrouter` and is published to [PyPI](https://pypi.org/project/webrouter/): install it with `pip install "webrouter[all]"` or `uv add "webrouter[all]"`. Earlier releases were named `web-router` and published only to a private index. The import is unchanged (`import web_router`), as are the `web-router-mcp` command and the MCP server's name.
+
 ## [0.10.0] - 2026-11-09
 
 ### Added
