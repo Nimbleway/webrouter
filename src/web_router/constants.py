@@ -256,8 +256,8 @@ ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 """Which variables each answer provider needs, all of them.
 
 Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. Every answer backend bills the
-call, so there is no keyless tier, and there is no ``auto`` yet: its order
-waits on a comparison of the backends' answers.
+call, so there is no keyless tier; ``auto`` tries the configured ones in the
+order route-eval ranked them, and is not listed here since it needs no key.
 """
 
 BROWSER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -3423,8 +3423,8 @@ MCP_ENV_STATUS_USED = "used"
 MCP_ENV_STATUS_MISSING = "missing"
 MCP_ENV_STATUS_UNREADABLE = "unreadable"
 MCP_ENV_STATUS_NO_CREDENTIALS = "no credentials"
-MCP_ENV_STATUS_NOT_READ = "not read"
-"""A place looked at after an earlier one was used: the first file that sets a credential wins."""
+MCP_ENV_STATUS_NOTHING_NEW = "nothing new"
+"""A file whose every credential an earlier place had set already: an earlier file wins, per variable."""
 
 MCP_ENV_REASON_NOT_A_FILE = "it is not a regular file"
 MCP_ENV_REASON_TOO_LARGE = "it is larger than {limit} bytes, far more than a .env holds"
@@ -3798,13 +3798,7 @@ MCP_BROWSE_STATUS_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_FETCH_RAW_PROPERTIES: dict[str, dict[str, Any]] = {
-    MCP_ARG_HANDLE: {
-        "type": "string",
-        "description": (
-            "A handle from `search`, `extract`, `templates`, `template`, `run_template`, `answer`, `research`, "
-            "`research_status`, `browse`, `browse_status` or `browser_read`."
-        ),
-    },
+    MCP_ARG_HANDLE: {"type": "string", "description": "The handle an earlier result carried."},
 }
 
 MCP_ARG_PATH = "path"
@@ -3817,7 +3811,7 @@ MCP_LOAD_ENV_PROPERTIES: dict[str, dict[str, Any]] = {
     },
     MCP_ARG_REMEMBER: {
         "type": "boolean",
-        "description": "Record the path so the server reads this file again every time it starts.",
+        "description": "Read this file on every start too. Only when the user asks for that.",
     },
 }
 
@@ -3863,11 +3857,7 @@ MCP_BROWSER_OPEN_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_STEALTH: {
         "type": "string",
         "enum": list(get_args(StealthLevel)),
-        "description": (
-            "How hard the backend hides that the browser is automated: 'off' for none, 'low' for its standard "
-            "stealth, 'high' for its strongest. Unset keeps the backend's default. A backend that lacks the level "
-            "refuses it rather than using another."
-        ),
+        "description": "How hard the backend hides automation: 'off', 'low' or 'high'. Unset, its default.",
     },
     "solve_captchas": {"type": "boolean", "description": _described(BrowserRequest, "solve_captchas")},
 }
@@ -3917,8 +3907,7 @@ MCP_BROWSER_SNAPSHOT_PROPERTIES: dict[str, dict[str, Any]] = {
         "maximum": MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT,
         "description": (
             f"Cap on the tree, in characters. Unset, {MCP_BROWSER_SNAPSHOT_MAX_CHARS}; at most "
-            f"{MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT}. Past it the tree is cut "
-            "at a line boundary, and the elements beyond the cut have no ref you can use."
+            f"{MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT}."
         ),
     },
     "timeout": _MCP_ACTION_TIMEOUT_PROPERTY,
@@ -4027,127 +4016,88 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_BUDGET_STATUS: (),
 }
 
-MCP_PROVIDER_DESCRIPTION = (
-    "Which backend to serve this with. Only the backends this machine is configured for are "
-    "listed; omit it and the router picks one."
-)
+MCP_PROVIDER_DESCRIPTION = "The backend to use, of those configured here; omit it and the router picks one."
 
-# A tool description is the routing decision: the model choosing between these
-# twenty-four is the actual router (`web_run` hands it to ours), and latency and cost are what it chooses on.
+# A tool description is the routing decision: the model choosing between the tools is the actual router
+# (`web_run` hands it to ours), and latency and cost are what it chooses on.
 
 MCP_DESC_EXTRACT = (
-    "Read pages you already have URLs for, as markdown, HTML or plain text. Returns in about a "
-    "second for a small batch. It reads pages, it does not find them -- pass URLs from `search`, "
-    "from the user, or from a page you just read. Cheaper and far more reliable than guessing at "
-    "a page's contents from a search snippet. A page whose content appears only after a login, a "
-    "form or clicks cannot be read this way: suggest a browser session (`browser_open`) to the user "
-    "instead. provider='max' sends the page to every configured backend at once and returns the "
-    "first that answers -- the fastest read any backend can give, at the cost of one fetch per "
-    "backend per URL -- so use it only when the user has asked for speed over cost."
+    "Read pages you already have URLs for, as markdown, HTML or plain text, in about a second for a small "
+    "batch. It reads pages, it does not find them: pass URLs from `search`, the user or a page you read. A "
+    "page whose content needs a login, a form or clicks cannot be read this way; that is `browser_open`'s. "
+    "provider='max' races every configured backend and returns the first answer, at one fetch per backend "
+    "per URL: use it only when the user asked for speed over cost."
 )
 
 MCP_DESC_TEMPLATES = (
-    "List a vendor's templates: saved, site-specific extractions, each turning one kind of "
-    "page -- a retailer's product page, a job listing, a search results page -- into a record with "
-    "fixed fields. Returns in about a second, with each template's name, site, what it extracts, "
-    "the names of the inputs a run must pass (`required_inputs`) and one input the vendor recorded "
-    "a run with (`sample_inputs`), so a URL-keyed template is told from an id-keyed one here. "
-    "Call it before `run_template` to find a template for the site at hand; a catalogue can be "
-    "long, so page with `limit` and `offset`. Then `template` for the full schemas and samples."
+    "List a vendor's Extract Templates: saved, site-specific extractions, each turning one kind of page -- a "
+    "product page, a job listing, a results page -- into a record with fixed fields. Free, about a second. "
+    "Each row names the inputs a run must pass (`required_inputs`) and one recorded input (`sample_inputs`). "
+    "Call it before `run_template` to find one for the site at hand, paging with `limit` and `offset`; "
+    "`template` then gives the full schemas."
 )
 
 MCP_DESC_TEMPLATE = (
-    "Describe one Extract Template: its input_schema, which says exactly what `run_template` must "
-    "pass as `inputs`, its output_schema, which says what the record will hold, and its `samples`, "
-    "runs the vendor recorded -- an input and the record it returned -- to copy a first run from. "
-    "Returns in about a second and bills nothing. Read it before running a template you have not "
-    "run in this conversation. Names, inputs and fields are the vendor's own: the same page differs "
-    "between vendors."
+    "Describe one Extract Template: its input_schema, what `run_template` must pass as `inputs`; its "
+    "output_schema, what the record holds; and `samples`, recorded runs to copy a first call from. Free, "
+    "about a second. Read it before running a template you have not run in this conversation."
 )
 
 MCP_DESC_RUN_TEMPLATE = (
-    "Run an Extract Template on one page and get its record back -- the page's fields, parsed by a "
-    "saved extraction built for that site, rather than prose to read through. Returns in about a "
-    "second and bills one template run on the vendor's account, at the vendor's per-run template "
-    "rate; on Nimble that is one flat rate for every template, whatever the site, listed on its "
-    "pricing page. `provider` is required, since a template's name belongs to one vendor. Use it "
-    "when `templates` lists a template for the site and item you have; use `extract` for a page no "
-    "template covers, and `search` to find pages. `inputs` are the template's own inputs, from "
-    "`template`: a URL for some templates, an id, a slug or a search term for others. A run the "
-    "backend could not complete is an error, never an empty record."
+    "Run an Extract Template on one page and get its record back: the page's fields, parsed by an extraction "
+    "built for that site. About a second, and bills one template run at the vendor's per-run rate. Use it "
+    "when `templates` lists one for the site and item at hand; `extract` reads a page no template covers. "
+    "`inputs` are the template's own, from `template`: a URL for some, an id, a slug or a search term for "
+    "others. A run the backend could not complete is an error, never an empty record."
 )
 
 MCP_DESC_RESEARCH = (
-    "Start an agentic research run: the backend searches, reads and cross-checks over many turns, "
-    "which takes MINUTES, not milliseconds, and bills for the run. Worth it for a question a "
-    "handful of searches cannot settle -- a comparison across sources, a structured dataset, "
-    "enriching records you already hold. Not worth it for a lookup: use `search` for that. This "
-    "tool waits {wait:g}s and then hands back a job handle rather than holding the session open; "
-    "poll `research_status` with that handle instead of calling this again, which would start -- "
-    "and pay for -- a second run."
+    "Start an agentic research run: the backend searches, reads and cross-checks over many turns, which takes "
+    "MINUTES and bills for the run. Worth it for what a handful of searches cannot settle -- a comparison "
+    "across sources, a structured dataset, enriching records you hold; a lookup is `search`'s. It waits "
+    "{wait:g}s, then hands back a handle: poll `research_status` with it, since calling this again starts, "
+    "and pays for, a second run."
 )
 
 MCP_DESC_RESEARCH_STATUS = (
-    "Poll a research run started by `research`. Returns in about a second with the run's state, "
-    "or with the answer once it has one. The run is already paid for, so polling costs nothing: "
-    "poll this rather than starting the question over."
+    "Poll a run `research` started: its state, or the answer once it has one. Free, about a second."
 )
 
 MCP_DESC_BROWSE = (
-    "Hand a task to a hosted browser agent: it opens a real browser, clicks, types and reads "
-    "through pages until the task is done, which takes MINUTES and bills for the run. Worth it "
-    "for what needs a browser -- filling a form, working through a site's own search, a page "
-    "behind interaction. Not worth it for reading a page you have the URL of: use `extract` for "
-    "that. This tool waits {wait:g}s and then hands back a job handle rather than holding the "
-    "session open; poll `browse_status` with that handle instead of calling this again, which "
-    "would start -- and pay for -- a second task."
+    "Hand a task to a hosted browser agent that clicks, types and reads through pages until it is done, "
+    "which takes MINUTES and bills for the run. Worth it for what needs a browser -- a form, a site's own "
+    "search, a page behind interaction; a page you have the URL of is `extract`'s. It waits {wait:g}s, then "
+    "hands back a handle: poll `browse_status` with it, since calling this again starts, and pays for, a "
+    "second task."
 )
 
 MCP_DESC_BROWSE_STATUS = (
-    "Poll a browse task started by `browse`. Returns in about a second with the task's state, or "
-    "with the answer and the steps the agent took once it has one. The task is already paid for, "
-    "so polling costs nothing: poll this rather than starting the task over."
+    "Poll a task `browse` started: its state, or the answer and the agent's steps once it has one. Free, "
+    "about a second."
 )
 
 MCP_DESC_FETCH_RAW = (
-    "Return the backend's full, unshaped payload for a handle from `search`, `extract`, `templates`, "
-    "`template`, `run_template`, `answer`, `research`, `research_status`, `browse` or `browse_status`. Instant -- "
-    "nothing is called again, the "
-    "payload was kept from the original call -- but it can be very large and is not shortened. "
-    "Ask for it when a shaped result said it was truncated and you need what was cut. For a browse "
-    "or browser handle, session and live-view URLs and credentials are redacted."
+    "Return the backend's full, unshaped payload for a handle an earlier result carried. Instant -- nothing "
+    "is called again -- but it can be very large: ask for it when a result says it was cut and you need "
+    "the rest. Session URLs and credentials in a browse or browser payload are redacted."
 )
 
 MCP_DESC_LOAD_ENV = (
     "Load API keys from a .env file on this machine, so the backends they unlock work at once, without a "
-    "restart. Instant. Pass only the file's path: ask the user where their .env is, and never ask them to "
-    "paste a key into the conversation. Only the provider credentials web-router reads are taken from the "
-    "file and everything else in it is ignored; a variable already set keeps its value. The result names "
-    "the variables loaded -- never their values -- and the backends now configured per method. "
-    "`remember` has the server read the same file every time it starts."
+    "restart. Instant. Call it only with a path the user gave you: ask them where their .env is, and never ask "
+    "them to paste a key. Only the provider credentials web-router reads are taken, and a variable already set "
+    "keeps its value. The result names the variables loaded -- never their values -- and the backends now "
+    "configured. Set `remember`, which has the server read the file on every start, only when the user asks."
 )
 
 MCP_DESC_BROWSER_OPEN = (
-    "Open a browser session you drive yourself, and get back a `session_id` for the other browser_* "
-    "tools: `browser_goto`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_press`, "
-    "`browser_screenshot`, `browser_read` and `browser_close`. Takes a few seconds. A cloud backend "
-    "BILLS FOR EVERY MINUTE the session is open; `local` runs a browser on this machine and costs "
-    "nothing. Call `browser_close` when you are done -- a session with no call for {idle:g}s is "
-    "released anyway, and at most {max_sessions} can be open at once. Use a browser for pages that "
-    "need interaction -- logins, forms, multi-step portals, results gated on the user's own details -- "
-    "and ask the user before opening one. For a page that needs their own credentials, open "
-    "provider='local' with headless=false: a visible window opens on their machine and they type their "
-    "details themselves, so the details never enter the conversation -- never ask for them. For reading, "
-    "`extract` reads a page you have the URL of faster and cheaper, and `browse` hands a whole task to "
-    "an agent. With no `provider`, the router picks one: `stealth` at "
-    "any level ('off' included), `proxy_country` or `solve_captchas` skip `local`, which offers none of "
-    "them, so only a BILLED cloud vendor can serve them -- leave them unset, or pass provider='local', to "
-    "stay free. A vendor that lacks the stealth level asked for, or needs another option beside it, is "
-    "skipped too. "
-    "Backend-specific options (`provider_options`, which for `local` are Chrome command-line switches) "
-    "and saved profiles are deliberately not accepted here; an option a backend does not support is "
-    "refused rather than ignored. Only http(s) pages open: the session's own debugging endpoint, "
-    "cloud metadata addresses and file:, chrome:, data: and javascript: URLs are refused."
+    "Open a browser session you drive yourself and get a `session_id` for the other browser_* tools. Takes "
+    "a few seconds. A cloud backend BILLS FOR EVERY MINUTE it is open; `local` runs a browser on this machine "
+    "for free, and with headless=false opens a visible window there. Use it for logins, forms, multi-step "
+    "portals and results gated on the user's own details, and ask the user first. Call `browser_close` when "
+    "done; a session idle for {idle:g}s is released anyway, and at most {max_sessions} are open at once. "
+    "With no `provider`, `stealth`, `proxy_country` or `solve_captchas` route past `local` to a BILLED "
+    "vendor. Only http(s) pages open."
 )
 
 MCP_DESC_BROWSER_GOTO = (
@@ -4220,16 +4170,7 @@ MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
 
 MCP_MSG_NO_BACKEND = " NOTHING IS CONFIGURED FOR THIS METHOD on this machine, so every call will fail."
 
-MCP_MSG_NO_BACKEND_HINT = (
-    " Put one of {env_vars} in a .env file and call `load_env` with its path, or set it in the environment "
-    "this server runs in and restart it."
-)
-
-MCP_MSG_NO_KEYS = (
-    " No API keys were found here, so only the keyless backends answer. If the user has a .env file with "
-    "keys, ask them for its path and call `load_env`; never ask them to paste a key. If they have none, "
-    "carry on: the keyless backends work."
-)
+MCP_MSG_NO_BACKEND_HINT = " A key in one of {env_vars} turns it on: see `load_env`."
 
 MCP_MSG_ENV_HINT = (
     "No API keys were found, so only the keyless backends are configured; they work meanwhile. To add "
@@ -4318,11 +4259,6 @@ MCP_MSG_BROWSER_NO_PLAYWRIGHT = (
     "The browser_* tools need Playwright, which is not installed where this server runs. Install it "
     "with: uv sync --extra mcp --extra {extra} in your web-router clone (or make setup) and restart the server. "
     "No session was opened."
-)
-
-MCP_MSG_BROWSER_UNDECLARED = (
-    "browser_open does not accept {names}. Backend-specific options such as `provider_options` and "
-    "saved profiles are set in code, never from a conversation. It takes: {allowed}."
 )
 
 MCP_MSG_BROWSER_TOO_MANY = (

@@ -85,6 +85,7 @@ from web_router.exceptions import (
     describe,
 )
 from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_window, current_deadline
+from web_router.providers._error_pages import split_error_pages
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.types import (
     BrowseProgress,
@@ -391,15 +392,15 @@ class _Collected:
         self.failures: list[ExtractFailure] = []
         self.payloads: list[dict[str, Any]] = []
         self.request_id: str | None = None
-        self.reported = 0
-        """Failures a backend reported in an answer, rather than a call that raised."""
+        self.reported = 0  # failures a backend reported in an answer, not a call that raised
         self.errors: list[tuple[list[str], ProviderError | DeadlineExceededError]] = []
 
     def add(self, urls: list[str], response: ExtractResponse) -> None:
         self.served_by = self.served_by or response.provider
-        self.documents.extend(response.documents)
-        self.failures.extend(response.failures)
-        self.reported += len(response.failures)
+        documents, error_pages = split_error_pages(response.documents)
+        self.documents.extend(documents)
+        self.failures.extend([*response.failures, *error_pages])
+        self.reported += len(response.failures) + len(error_pages)
         self.payloads.extend(response.raw or [])
         self.request_id = self.request_id or response.request_id
         self._account_for(urls, response)
@@ -428,8 +429,7 @@ class _Collected:
         self.failures.extend(ExtractFailure(url=url, error=str(error)) for url in urls)
 
     def resolved(self) -> ExtractResponse:
-        # Not `if self.failures`: a backend can also answer successfully with nothing in it, and an empty response is
-        # the one outcome a caller cannot distinguish from a page that had no text.
+        # Not `if self.failures`: an empty answer is the one outcome a caller cannot tell from a page with no text.
         if not self.documents:
             raise self._exhausted()
         return ExtractResponse(
