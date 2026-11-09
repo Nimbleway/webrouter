@@ -214,7 +214,8 @@ class RemoteRouter:
     def close(self) -> None:
         """Close the pool on its own loop, waiting at most 2 s, and the router with it.
 
-        From the pool's own running loop it cannot wait, so the close runs there as a task: use ``aclose()``.
+        From the pool's own running loop it cannot wait, so the close runs there as a task, bounded by the same
+        2 s: use ``aclose()``.
         """
         pool, loop = self._shut()
         if pool is None or loop is None or loop.is_closed():
@@ -224,7 +225,7 @@ class RemoteRouter:
         except RuntimeError:
             here = None
         if loop is here:
-            task = loop.create_task(pool.aclose())
+            task = loop.create_task(asyncio.wait_for(pool.aclose(), REMOTE_CLOSE_WAIT_S))
             _CLOSING.add(task)  # held until done: a loop keeps only a weak reference to a task
             task.add_done_callback(self._closed_task)
             return
