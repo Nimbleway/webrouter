@@ -1,7 +1,7 @@
 {
   "provider": "brave",
   "method": "answer",
-  "class": "web_router.providers.brave.BraveAnswerProvider",
+  "class": "web_router.providers.brave_answer.BraveAnswerProvider",
   "transport": {
     "kind": "http",
     "base_url": "https://api.search.brave.com",

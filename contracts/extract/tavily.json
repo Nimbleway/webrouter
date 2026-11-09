@@ -1,7 +1,7 @@
 {
   "provider": "tavily",
   "method": "extract",
-  "class": "web_router.providers.tavily.TavilyExtractProvider",
+  "class": "web_router.providers.tavily_extract.TavilyExtractProvider",
   "transport": {
     "kind": "sdk"
   },

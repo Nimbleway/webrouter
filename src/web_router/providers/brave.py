@@ -1,9 +1,9 @@
-"""Brave Search provider, over the Web Search API, and Brave's answers, over its Answers API.
+"""Brave Search provider, over the Web Search API.
 
 Brave publishes no Python SDK, so this talks to the REST endpoints directly.
-Install with the ``search`` extra (the ``answer`` extra for answers). Search
-reads ``BRAVE_SEARCH_API_KEY`` and answers ``BRAVE_ANSWER_API_KEY`` -- Brave
-sells them as separate plans -- unless a key is passed explicitly.
+Install with the ``search`` extra. Reads ``BRAVE_SEARCH_API_KEY`` unless a key
+is passed explicitly. :class:`BraveAnswerProvider`, over Brave's Answers API,
+lives in :mod:`web_router.providers.brave_answer` and is re-exported here.
 
 Search maps every shared option but ``effort``, which Brave has no tier for.
 ``search_depth`` serves ``lite`` alone: the endpoint returns a description and
@@ -16,53 +16,37 @@ is reachable through ``provider_options``.
 
 from __future__ import annotations
 
-import json
-import re
 from typing import Any, ClassVar, Literal
-
-import httpx
 
 from web_router.constants import (
     BRAVE_API_KEY_HEADER,
     BRAVE_BASE_URL,
     BRAVE_HIGHLIGHT_TAGS,
     BRAVE_SEARCH_PATH,
-    ENV_BRAVE_ANSWER_API_KEY,
     ENV_BRAVE_API_KEY,
-    MCP_SSE_DATA_PREFIX,
     PROVIDER_BRAVE,
 )
 from web_router.constants_brave import (
-    BRAVE_ANSWER_CITATION_MAPPED,
-    BRAVE_ANSWER_MODEL,
-    BRAVE_ANSWER_PATH,
-    BRAVE_ANSWER_TAGS,
     BRAVE_COUNTRIES,
     BRAVE_EXCLUDE_DOMAIN,
-    BRAVE_FINISH_LENGTH,
     BRAVE_FRESHNESS,
     BRAVE_QUERY_MAX_CHARS,
     BRAVE_QUERY_MAX_WORDS,
     BRAVE_SEARCH_PARAM_NAMES,
     BRAVE_SEARCH_PARAMETERS,
-    BRAVE_SSE_DONE,
-    MSG_BRAVE_ANSWER_STREAM_CUT,
-    MSG_BRAVE_ANSWER_STREAM_ERROR,
     MSG_BRAVE_QUERY_TOO_LONG,
     MSG_BRAVE_SEARCH_VALUES,
 )
 from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.exceptions import ProviderError
-from web_router.providers._http import HttpAnswerProvider, HttpSearchProvider
+from web_router.providers._http import HttpSearchProvider
 from web_router.providers._language import language_tag, off_the_lists
-from web_router.providers._search_text import as_snippet, lite_body, site_operators, unsited_domains
+from web_router.providers._search_text import lite_body, site_operators, unsited_domains
 from web_router.providers._utils import build_payload, mapped
-from web_router.types import Citation, SearchDepth, SearchRequest, SearchResponse, SearchResult
-from web_router.types_answer import AnswerRequest, AnswerResponse
+from web_router.providers.brave_answer import BraveAnswerProvider as BraveAnswerProvider
+from web_router.types import SearchDepth, SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "extra_snippets", "page_age"})
-
-_ANSWER_TAG = re.compile(r"<({names})>(.*?)</\1>".format(names="|".join(BRAVE_ANSWER_TAGS)), re.DOTALL)
 
 
 def _unmark(text: str) -> str:
@@ -146,83 +130,4 @@ class BraveProvider(HttpSearchProvider):
             content=lite_body("\n\n".join([description, *snippets]).strip(), request.search_depth),
             published_date=hit.get("page_age"),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},
-        )
-
-
-class BraveAnswerProvider(HttpAnswerProvider):
-    """Answers a question through Brave's Answers API, ``POST /res/v1/chat/completions``.
-
-    Sent streamed with ``enable_citations``, the only way Brave returns its
-    sources, and read whole before answering. The answer is the streamed text
-    with Brave's ``<citation>`` and ``<usage>`` tags taken out, as search takes
-    out its ``<strong>`` markup; each citation tag becomes a :class:`Citation`
-    in order, its ``number`` and its ``start_index`` / ``end_index`` into that
-    answer in ``extra``. Brave writes no marker into the text, so ``field`` is
-    unset. ``raw`` is the stream's events, untouched, the ``<usage>`` tag and
-    its stated cost among them. An answer cut off at its token limit is
-    ``partial``.
-
-    No normalized option is mapped: the API has no source filter, and
-    ``language`` showed no effect live, so ``locale`` is refused.
-    """
-
-    name: ClassVar[str] = PROVIDER_BRAVE
-    supported_parameters: ClassVar[frozenset[str]] = frozenset()
-
-    base_url: ClassVar[str] = BRAVE_BASE_URL
-    answer_path: ClassVar[str] = BRAVE_ANSWER_PATH
-    env_api_key: ClassVar[str] = ENV_BRAVE_ANSWER_API_KEY
-    api_key_header: ClassVar[str] = BRAVE_API_KEY_HEADER
-
-    def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
-        return build_payload(
-            request,
-            model=BRAVE_ANSWER_MODEL,
-            messages=[{"role": "user", "content": request.query}],
-            stream=True,
-            enable_citations=True,
-        )
-
-    def _payload(self, response: httpx.Response) -> dict[str, Any]:
-        """The stream's events in order, each decoded.
-
-        An event that reports an error raises, and so does a stream that ends
-        before ``[DONE]``: a connection dropped mid-answer is a failure, not a
-        short answer.
-        """
-        self._raise_for_status(response)
-        events: list[dict[str, Any]] = []
-        for line in response.text.splitlines():
-            if not line.startswith(MCP_SSE_DATA_PREFIX):
-                continue
-            data = line[len(MCP_SSE_DATA_PREFIX) :].strip()
-            if data == BRAVE_SSE_DONE:
-                return {"events": events}
-            event = json.loads(data)
-            if event.get("error"):
-                raise ProviderError(self.name, MSG_BRAVE_ANSWER_STREAM_ERROR.format(error=event["error"]))
-            events.append(event)
-        raise ProviderError(self.name, MSG_BRAVE_ANSWER_STREAM_CUT.format(count=len(events)))
-
-    def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
-        events = payload.get("events") or []
-        choices = [choice for event in events for choice in event.get("choices") or []]
-        text = "".join((choice.get("delta") or {}).get("content") or "" for choice in choices)
-        cited = [json.loads(body) for tag, body in _ANSWER_TAG.findall(text) if tag == "citation"]
-        finished = {choice.get("finish_reason") for choice in choices} - {None}
-        return AnswerResponse(
-            provider=self.name,
-            query=request.query,
-            answer=_ANSWER_TAG.sub("", text),
-            citations=[
-                Citation(
-                    url=source.get("url", ""),
-                    snippet=as_snippet(source.get("snippet") or ""),
-                    extra={key: value for key, value in source.items() if key not in BRAVE_ANSWER_CITATION_MAPPED},
-                )
-                for source in cited
-            ],
-            outcome="partial" if BRAVE_FINISH_LENGTH in finished else "complete",
-            request_id=next((event["id"] for event in events if event.get("id")), None),
-            raw=[payload],
         )
