@@ -152,13 +152,15 @@ def cold_builds(
         attached = AttachedRouter(router)  # inside the caller's try: a router it refuses is still closed
         return attached, replace(req, deadline_s=_deadline(attached, deadline_s))
 
-    order = list(_rounds(random.Random(seed), list(builders), len(plan)))
+    def fresh() -> Iterator[tuple[str, Any, RouteRequest]]:
+        """Each call's router, built just before it, in the seeded order."""
+        for i, name in _rounds(random.Random(seed), list(builders), len(plan)):
+            yield name, built(name), plan[i]
 
     async def arun() -> None:
-        for i, name in order:
-            router = built(name)
+        for name, router, req in fresh():
             try:
-                attached, req = ready(router, plan[i])
+                attached, req = ready(router, req)
                 calls[name].add(await attached.acall(req))
             finally:
                 close(router)
@@ -166,10 +168,9 @@ def cold_builds(
     if use_async:
         asyncio.run(arun())
     else:
-        for i, name in order:
-            router = built(name)
+        for name, router, req in fresh():
             try:
-                attached, req = ready(router, plan[i])
+                attached, req = ready(router, req)
                 calls[name].add(attached.call(req))
             finally:
                 close(router)
@@ -248,16 +249,23 @@ def _pair(rng: random.Random, clients: tuple[Any, Any]) -> list[tuple[int, Any]]
     return pair
 
 
-def _e2e_sync(routers: Mapping[str, Any], prompts: Sequence[str], chain: Sequence[str], paired: _Paired,
-              rng: random.Random) -> None:  # fmt: skip
-    clients = {name: _clients(WebRouter, router, chain) for name, router in routers.items()}
+def _timed(clients: Mapping[str, tuple[Any, Any]], prompts: Sequence[str], paired: _Paired,
+           rng: random.Random) -> Iterator[tuple[Any, str]]:  # fmt: skip
+    """Each search to make, as a client and its prompt; the time from yielding it to resuming is the call's."""
     for i, name in _rounds(rng, list(clients), len(prompts)):
         took = {}
         for which, client in _pair(rng, clients[name]):
             started = time.perf_counter()
-            client.search(prompts[i])
+            yield client, prompts[i]
             took[which] = (time.perf_counter() - started) * 1000
         paired.record(i, name, took)
+
+
+def _e2e_sync(routers: Mapping[str, Any], prompts: Sequence[str], chain: Sequence[str], paired: _Paired,
+              rng: random.Random) -> None:  # fmt: skip
+    clients = {name: _clients(WebRouter, router, chain) for name, router in routers.items()}
+    for client, prompt in _timed(clients, prompts, paired, rng):
+        client.search(prompt)
     for both in clients.values():
         for client in both:
             client.close()
@@ -266,13 +274,8 @@ def _e2e_sync(routers: Mapping[str, Any], prompts: Sequence[str], chain: Sequenc
 async def _e2e_async(routers: Mapping[str, Any], prompts: Sequence[str], chain: Sequence[str], paired: _Paired,
                      rng: random.Random) -> None:  # fmt: skip
     clients = {name: _clients(AsyncWebRouter, router, chain) for name, router in routers.items()}
-    for i, name in _rounds(rng, list(clients), len(prompts)):
-        took = {}
-        for which, client in _pair(rng, clients[name]):
-            started = time.perf_counter()
-            await client.search(prompts[i])
-            took[which] = (time.perf_counter() - started) * 1000
-        paired.record(i, name, took)
+    for client, prompt in _timed(clients, prompts, paired, rng):
+        await client.search(prompt)
     for both in clients.values():
         for client in both:
             await client.aclose()
