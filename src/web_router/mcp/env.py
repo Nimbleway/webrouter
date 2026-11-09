@@ -18,7 +18,7 @@ user's. At runtime :meth:`EnvSources.load` reads one more, from a path the user
 gives the model, so only a path ever passes through a conversation.
 
 The rules are the same wherever a file comes from. Only provider credentials
-are read -- the variables the ``*_ENV_BY_PROVIDER`` tables name -- because a
+are read -- :func:`credential_variables` -- because a
 server registered at user scope can start in any workspace, and a foreign file
 must not flip a policy switch such as file-URL navigation or point
 ``CHROME_PATH`` at a binary of its choosing. A variable already set keeps its
@@ -32,14 +32,17 @@ import io
 import os
 import stat
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from web_router.constants import (
+    ANSWER_ENV_BY_PROVIDER,
     BROWSE_ENV_BY_PROVIDER,
     BROWSER_ENV_BY_PROVIDER,
     ENV_BY_PROVIDER,
+    ENV_JINA_API_KEY,
     ENV_MCP_ENV_FILE,
     EXTRACT_ENV_BY_PROVIDER,
     MCP_ENV_FILE,
@@ -66,7 +69,22 @@ from web_router.constants import (
     MCP_USER_CONFIG_ROOT_BY_PLATFORM,
     MCP_USER_CONFIG_ROOT_DEFAULT,
     RESEARCH_ENV_BY_PROVIDER,
+    TEMPLATE_ENV_BY_PROVIDER,
 )
+
+ALL_ENV_TABLES: tuple[Mapping[str, str | tuple[str, ...] | None], ...] = (
+    ENV_BY_PROVIDER,
+    EXTRACT_ENV_BY_PROVIDER,
+    TEMPLATE_ENV_BY_PROVIDER,
+    ANSWER_ENV_BY_PROVIDER,
+    RESEARCH_ENV_BY_PROVIDER,
+    BROWSER_ENV_BY_PROVIDER,
+    BROWSE_ENV_BY_PROVIDER,
+)
+"""Every method's ``*_ENV_BY_PROVIDER`` table: what a file may set, and, in the tools, what would unlock more."""
+
+_OPTIONAL_KEYS = (ENV_JINA_API_KEY,)
+"""Keys a keyless backend takes only to raise its rate limit, so no table names them: Jina Reader's."""
 
 
 def env_names(env: str | tuple[str, ...] | None) -> tuple[str, ...]:
@@ -77,11 +95,9 @@ def env_names(env: str | tuple[str, ...] | None) -> tuple[str, ...]:
 
 
 def credential_variables() -> frozenset[str]:
-    """Every provider credential variable, from the tables that already name them."""
-    tables = (EXTRACT_ENV_BY_PROVIDER, RESEARCH_ENV_BY_PROVIDER, BROWSER_ENV_BY_PROVIDER, BROWSE_ENV_BY_PROVIDER)
-    single = {var for var in ENV_BY_PROVIDER.values() if var}
-    grouped = {var for table in tables for env_vars in table.values() for var in env_vars}
-    return frozenset(single | grouped)
+    """Every provider credential variable: what :data:`ALL_ENV_TABLES` names, and the optional keys none does."""
+    named = {name for table in ALL_ENV_TABLES for env in table.values() for name in env_names(env)}
+    return frozenset(named | set(_OPTIONAL_KEYS))
 
 
 def _set_in_environment() -> tuple[str, ...]:

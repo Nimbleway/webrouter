@@ -28,6 +28,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 - The provider scan's recommended order now uses route-eval's ranking: within the noise floor the cheaper backend goes first (a row's stated cost, else its list price), and the keyless tier last. A search that failed on a rate-limit or quota error is left out, not counted a miss, and shown in the *Rate limit or quota* column.
 - Contributors: `make check` now limits size. Ruff holds a function to 50 statements (`PLR0915`) and a complexity of 10 (`C901`); the few over either today carry a `noqa`. `tests/test_shape.py` holds a file to 400 lines, test files included; files already longer are listed in `tests/shape_baseline.json` and may only shrink, and `make shape-baseline` records a shrink and refuses a new or grown entry. `CHANGELOG.md` merges with git's union driver, so parallel pull requests that each add a line no longer conflict.
 
+### Fixed
+
+- The MCP server now loads `BRAVE_ANSWER_API_KEY` and `JINA_API_KEY` from a `.env` file, at startup and through `load_env`. Before, both were ignored, so a Brave Answers key could not turn on `answer` the way the server's own hints said.
+
 ### Removed
 
 - The decider spike: `WebRouter(decider=, decider_config=)`, `WebRouter.classify()`, `WebRouter.execute()`, `Route` and the `web_router.decisions` package (`DecisionProvider`, `register_decider()` and the `keywords`, `jev` and `llm` deciders). It was a proof of concept for routing; `router=`, `plan()` and `run()` replace it. To keep using it, pin `web-router==0.9.0`, the last version that has it.
