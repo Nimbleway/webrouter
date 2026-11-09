@@ -77,7 +77,7 @@ MSG_PERPLEXITY_SEARCH_DOMAINS = (
 )
 
 PERPLEXITY_LANGUAGE_FIELD = "search_language_filter"
-PERPLEXITY_LANGUAGE_PATTERN = r"^[A-Za-z]{2}$"
+PERPLEXITY_LANGUAGE_PATTERN = r"[A-Za-z]{2}"
 """A ``locale`` Perplexity can take: a bare two-letter language code. ``en-US`` is refused, not cut to ``en``."""
 
 MSG_PERPLEXITY_LOCALE = "Perplexity takes a locale as a two-letter ISO 639-1 language code, such as 'en'."

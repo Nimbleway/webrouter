@@ -100,7 +100,7 @@ class PerplexityProvider(HttpSearchProvider):
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
         """Both domain lists, more than its cap of domains, or a ``locale`` that is not a bare language code."""
         refused: dict[str, Any] = refused_domains(request, limit=PERPLEXITY_MAX_DOMAINS)
-        if request.locale is not None and not _LANGUAGE.match(request.locale):
+        if request.locale is not None and not _LANGUAGE.fullmatch(request.locale):
             refused["locale"] = request.locale
         return refused
 

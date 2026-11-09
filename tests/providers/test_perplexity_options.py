@@ -62,9 +62,10 @@ def test_effort_collapses_onto_fast_and_the_web_default(
         ({"include_domains": ["a.com"], "exclude_domains": ["b.com"]}, "one domain list"),
         ({"include_domains": [f"d{n}.com" for n in range(21)]}, "at most 20 domains"),
         ({"locale": "en-US"}, "two-letter"),
+        ({"locale": "en\n"}, "two-letter"),
         ({"search_depth": "deep"}, "serves search_depth at 'lite', 'fast'"),
     ],
-    ids=["both-lists", "too-many-domains", "regional-locale", "deep"],
+    ids=["both-lists", "too-many-domains", "regional-locale", "trailing-newline", "deep"],
 )
 def test_a_value_perplexity_cannot_take_is_refused_unsent(
     provider: PerplexityProvider, options: dict, named: str
