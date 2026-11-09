@@ -28,7 +28,6 @@ from web_router.constants import (
 )
 from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.constants_you import (
-    MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE,
     YOU_FRESHNESS_FIELD,
     YOU_MCP_COUNTRY,
     YOU_MCP_LANGUAGE,
@@ -54,12 +53,8 @@ class YouMcpProvider(McpSearchMixin, YouProvider):
 
     name: ClassVar[str] = PROVIDER_YOU_MCP
     mcp_tool: ClassVar[str] = YOU_MCP_SEARCH_TOOL
-    refusal_reasons: ClassVar[dict[str, str]] = {
-        **YouProvider.refusal_reasons,
-        **dict.fromkeys(
-            ("include_domains", "exclude_domains"), f"{MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE} {MSG_SITE_DOMAINS}"
-        ),
-    }
+    # Only ``include_domains`` goes in as ``site:``; with both lists set, ``exclude_domains`` gives the REST reason.
+    refusal_reasons: ClassVar[dict[str, str]] = {**YouProvider.refusal_reasons, "include_domains": MSG_SITE_DOMAINS}
 
     base_url: ClassVar[str] = YOU_MCP_BASE_URL
     search_path: ClassVar[str] = YOU_MCP_SEARCH_PATH

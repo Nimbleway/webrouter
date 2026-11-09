@@ -9,6 +9,7 @@ import httpx
 import pytest
 
 from web_router.exceptions import ProviderError, UnsupportedParameterError
+from web_router.providers.you_mcp import YouMcpProvider
 from web_router.registry import get_provider_class
 from web_router.types import SearchRequest
 
@@ -36,3 +37,12 @@ def test_a_domain_filter_that_is_not_a_host_name_is_refused_unsent(
     assert len(sent) == int(sends)
     if sends:  # in the query string (Brave) or the JSON body (the rest)
         assert "site:example.com" in unquote_plus(str(sent[0].url)) + sent[0].content.decode()
+
+
+def test_you_mcp_sends_an_exclude_filter_as_given_since_it_is_a_tool_argument() -> None:
+    sent: list[httpx.Request] = []
+    provider = YouMcpProvider(transport=httpx.MockTransport(lambda r: sent.append(r) or httpx.Response(200)))
+    with contextlib.suppress(ProviderError):
+        provider.search(SearchRequest(query="hi", exclude_domains=["https://example.com"]))
+    assert len(sent) == 1
+    assert "site:" not in YouMcpProvider.refusal_reasons["exclude_domains"]

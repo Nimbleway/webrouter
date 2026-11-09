@@ -695,7 +695,7 @@ query too long for its operators raises `ProviderError`), and `auto` moves on:
 | WebIQ | a `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters with its `site:` operators |
 | Keenable | more than one `include_domains` entry |
 | DeepSeek | a query past 128 characters with its operators |
-| Brave, WebIQ, DeepSeek, You.com MCP | a domain filter that is not a host name (optionally with a path), since it goes into the query as `site:` |
+| Brave, WebIQ, DeepSeek, You.com MCP | a domain filter that is not a host name (optionally with a path), since it goes into the query as `site:` (for You.com MCP, `include_domains` only; `exclude_domains` is a tool argument) |
 
 ## Extracting page contents
 
