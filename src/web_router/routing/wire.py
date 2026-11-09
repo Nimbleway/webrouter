@@ -190,8 +190,16 @@ def _schema(adapter: TypeAdapter[Any], title: str, mode: str) -> dict[str, Any]:
 
 
 def request_schema() -> dict[str, Any]:
-    """The JSON Schema of a request, generated from :class:`RouteRequest`."""
-    return _schema(_request_adapter(), WIRE_REQUEST_TITLE, "serialization")
+    """The JSON Schema of a request, generated from :class:`RouteRequest`, its budget caps held to 0 or more.
+
+    :class:`Budget` refuses a negative cap, so a request the schema passes is one :func:`request_from_wire` reads.
+    """
+    schema = _schema(_request_adapter(), WIRE_REQUEST_TITLE, "serialization")
+    for name in ("max_cost_usd", "time_limit_s"):
+        for option in schema["$defs"]["Budget"]["properties"][name]["anyOf"]:
+            if option.get("type") == "number":
+                option["minimum"] = 0
+    return schema
 
 
 def _cap(node: Any) -> None:

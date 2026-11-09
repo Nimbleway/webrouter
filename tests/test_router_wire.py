@@ -92,6 +92,16 @@ def test_the_response_schema_publishes_the_entry_limit_the_client_holds() -> Non
     assert len(decision_from_wire(at).exclude) == WIRE_MAX_NAMES
 
 
+def test_the_request_schema_holds_the_budget_caps_to_zero_or_more() -> None:
+    budget = request_schema()["$defs"]["Budget"]["properties"]
+    for name in ("max_cost_usd", "time_limit_s"):
+        assert {"type": "number", "minimum": 0} in budget[name]["anyOf"]
+    wire = request_to_wire(REQUEST)
+    wire["budget"]["max_cost_usd"] = -1
+    with pytest.raises(WireError):
+        request_from_wire(wire)
+
+
 def test_a_request_round_trips_through_json() -> None:
     wire = json.loads(json.dumps(request_to_wire(REQUEST)))
     assert wire["schema"] == 1 and wire["budget"]["time_limit_s"] == 30.0

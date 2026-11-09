@@ -7,7 +7,8 @@
         "max_cost_usd": {
           "anyOf": [
             {
-              "type": "number"
+              "type": "number",
+              "minimum": 0
             },
             {
               "type": "null"
@@ -20,7 +21,8 @@
         "time_limit_s": {
           "anyOf": [
             {
-              "type": "number"
+              "type": "number",
+              "minimum": 0
             },
             {
               "type": "null"
