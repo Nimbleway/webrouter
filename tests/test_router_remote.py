@@ -114,17 +114,29 @@ def test_a_slow_drip_answer_is_cancelled_at_the_deadline() -> None:
     assert plan.decision.reason == "router_timeout"
 
 
+def test_a_decision_of_another_schema_version_is_router_error() -> None:
+    with running(lambda body: {"schema": 2, "tools": ["extract"]}) as server:
+        plan = WebRouter(router="remote", router_config=config(server)).plan(URL_PROMPT)
+        assert plan.tool == "search" and plan.decision.reason == "router_error"
+        strict = WebRouter(router="remote", router_config=config(server), fail_on_router_error=True)
+        with pytest.raises(RouterError, match="router_error") as raised:
+            strict.plan(URL_PROMPT)
+    cause = raised.value.__cause__
+    assert isinstance(cause, RemoteRouterError) and not isinstance(cause, RemoteRouterInvalid)
+    assert "version other than 1" in str(cause)
+
+
 @pytest.mark.parametrize(
     ("answer", "why"),
     [
-        ({"schema": 2, "tools": ["extract"]}, "missing or not 1"),
-        ({"tools": ["extract"]}, "missing or not 1"),
+        ({"tools": ["extract"]}, "missing or not a number"),
+        ({"schema": "1", "tools": ["extract"]}, "missing or not a number"),
         ({"schema": 1, "tools": "extract"}, "does not fit"),
         ({"schema": 1, "tools": ["search"] * 65}, "more than 64 entries"),
     ],
-    ids=["schema-2", "no-schema", "ill-typed", "too-many"],
+    ids=["no-schema", "string-schema", "ill-typed", "too-many"],
 )
-def test_a_decision_of_another_schema_or_shape_is_router_invalid(answer: dict[str, Any], why: str) -> None:
+def test_a_decision_without_a_schema_or_of_another_shape_is_router_invalid(answer: dict[str, Any], why: str) -> None:
     with running(lambda body: answer) as server:
         wr = WebRouter(router="remote", router_config=config(server))
         plan = wr.plan(URL_PROMPT)

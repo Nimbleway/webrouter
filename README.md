@@ -2196,10 +2196,11 @@ field may be left out or `null`):
   or `::1` (not `*.localhost`, not `0.0.0.0`); a URL with credentials, a query
   or a fragment, or one a browser could read two ways, is refused when the
   router is built, and the error does not echo it.
-- **Failures.** A timeout is `router_timeout`; a transport error or a status
-  other than 200 is `router_error`; an answer that is not an `application/json` schema-1 decision
-  of at most 64 KiB, with at most 64 entries in any one list or mapping -- a
-  `schema` that is missing or not 1 included -- is `router_invalid`. Either
+- **Failures.** A timeout is `router_timeout`; a transport error, a status
+  other than 200 or a decision naming a `schema` other than 1 is
+  `router_error`; an answer that is not an `application/json` decision of at
+  most 64 KiB, with at most 64 entries in any one list or mapping -- a
+  missing `schema` included -- is `router_invalid`. Either
   way the static order runs, the record's `reason` says which, and
   `fail_on_router_error=True` raises `RouterError` instead. The service's
   `reason` and `exclude` reasons are cut to 300 characters.

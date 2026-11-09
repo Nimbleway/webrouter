@@ -29,10 +29,10 @@ retried; no redirect is followed, and no proxy or other setting is read from
 the environment. The URL must be ``https``, or ``http`` to ``localhost`` or a
 loopback address (:mod:`.remote_url`).
 
-A timeout is ``router_timeout``; a transport error or a status other than 200
-is ``router_error``; an
-answer that is not an ``application/json`` schema-1 decision within 64 KiB --
-``schema`` missing or not 1 included -- is ``router_invalid``. Either way the
+A timeout is ``router_timeout``; a transport error, a status other than 200 or
+a decision naming a ``schema`` other than 1 is ``router_error``; an answer that
+is not an ``application/json`` decision within 64 KiB -- ``schema`` missing
+included -- is ``router_invalid``. Either way the
 call runs on the static order and the decision record says why. Fields the
 service adds that this version does not know are ignored; its reasons are cut
 short. Router-set URLs are held to ``public_only`` when the caller sets no
@@ -91,7 +91,7 @@ from web_router.exceptions import ConfigurationError, WebRouterError
 from web_router.routing._runner import InvalidAnswer, TimedOut
 from web_router.routing.contract import RouteDecision, RouteRequest
 from web_router.routing.remote_url import checked_url
-from web_router.routing.wire import WireError, decision_from_wire, request_to_wire
+from web_router.routing.wire import WireError, WireVersionError, decision_from_wire, request_to_wire
 
 if TYPE_CHECKING:
     import httpx
@@ -111,7 +111,7 @@ class RemoteRouterTimeout(RemoteRouterError, TimedOut):
 
 
 class RemoteRouterInvalid(RemoteRouterError, InvalidAnswer):
-    """The service answered, but not with a schema-1 decision: recorded as ``router_invalid``."""
+    """The service answered, but not with a well-formed decision: recorded as ``router_invalid``."""
 
 
 def _httpx() -> Any:
@@ -318,5 +318,7 @@ class RemoteRouter:
             return decision_from_wire(data)
         except WireError as exc:
             raise RemoteRouterInvalid(self.host, str(exc)) from None
+        except WireVersionError as exc:  # well formed, of another version: a mismatch, so a router error
+            raise RemoteRouterError(self.host, str(exc)) from None
         except RecursionError:
             raise RemoteRouterInvalid(self.host, REMOTE_WHY_DECISION) from None

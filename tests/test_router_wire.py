@@ -11,6 +11,7 @@ from web_router import Budget, Candidate, RouteDecision, RouteRequest
 from web_router.constants_remote import WIRE_REQUEST_FILE, WIRE_RESPONSE_FILE
 from web_router.routing.wire import (
     WireError,
+    WireVersionError,
     decision_from_wire,
     decision_to_wire,
     published,
@@ -102,12 +103,22 @@ def test_a_decision_with_nulls_or_nothing_set_is_no_opinion() -> None:
     assert decision_from_wire({"schema": 1, "exclude": None, "tools": None}) == RouteDecision()
 
 
-@pytest.mark.parametrize("version", [2, 0, "1", True, None, 1.5, "https://session.example/secret"])
-def test_another_major_version_is_refused_without_echoing_it(version: Any) -> None:
+@pytest.mark.parametrize("version", ["1", True, None, "https://session.example/secret"])
+def test_a_missing_or_ill_typed_schema_is_a_wire_error_without_echoing_it(version: Any) -> None:
     body = {"tools": ["search"]} if version is None else {"schema": version, "tools": ["search"]}
-    with pytest.raises(WireError, match="wire schema that is missing or not 1") as refused:
+    with pytest.raises(WireError, match="wire schema that is missing or not a number") as refused:
         decision_from_wire(body)
     assert "secret" not in str(refused.value)
+
+
+@pytest.mark.parametrize("version", [2, 0, 1.5, 9_999_999])
+def test_another_major_version_is_a_version_error_without_echoing_it(version: Any) -> None:
+    with pytest.raises(WireVersionError, match="version other than 1") as refused:
+        decision_from_wire({"schema": version, "tools": ["search"]})
+    assert not isinstance(refused.value, WireError), "a mismatch, not an invalid answer"
+    assert str(version) not in str(refused.value).replace("other than 1", "")
+    with pytest.raises(WireError, match="version other than 1"):
+        request_from_wire({"schema": version, "prompt": "x", "candidates": [], "deadline_s": 1.0})
 
 
 @pytest.mark.parametrize(

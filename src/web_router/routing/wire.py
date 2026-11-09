@@ -10,8 +10,9 @@ a test fails when they drift; regenerate them with
 
 Two rules keep the two sides working across versions, as they do in process: a
 service ignores request fields it does not know, and the client ignores
-decision fields it does not know. A decision of another major version is a
-router error, and the call runs on the static order.
+decision fields it does not know. A decision naming another major version is
+a router error (:class:`WireVersionError`); one with no ``schema`` is an invalid
+answer. Either way the call runs on the static order.
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ from web_router.constants_remote import (
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_SCHEMA,
     REMOTE_WHY_TOO_MANY,
+    REMOTE_WHY_VERSION,
     WIRE_CONFIDENCE_RANGE,
     WIRE_JSON_SCHEMA_DIALECT,
     WIRE_MAX_NAMES,
@@ -49,7 +51,11 @@ from web_router.routing.contract import Budget, Candidate, RouteDecision, RouteR
 
 
 class WireError(InvalidAnswer, ValueError):
-    """A payload that does not fit the wire format: not an object, another major version, or ill-typed fields."""
+    """A payload that does not fit the wire format: not an object, no ``schema``, or ill-typed fields."""
+
+
+class WireVersionError(ValueError):
+    """A well-formed payload of another major version: a version mismatch, not an invalid answer."""
 
 
 @cache
@@ -70,13 +76,16 @@ def _payload(data: object) -> dict[str, Any]:
     """``data`` as an object of this major version, the version key and unset (``null``) fields left out.
 
     Raises:
-        WireError: for anything but an object whose ``schema`` is this major version.
+        WireError: for anything but an object whose ``schema`` is a number.
+        WireVersionError: for a ``schema`` other than this major version.
     """
     if not isinstance(data, Mapping):
         raise WireError(REMOTE_WHY_NOT_JSON)
-    version = data.get(WIRE_SCHEMA_KEY)
-    if isinstance(version, bool) or version != WIRE_SCHEMA_VERSION:
-        raise WireError(REMOTE_WHY_SCHEMA.format(expected=WIRE_SCHEMA_VERSION))  # never echoes the service's value
+    version = data.get(WIRE_SCHEMA_KEY)  # neither message echoes the service's value
+    if isinstance(version, bool) or not isinstance(version, int | float):
+        raise WireError(REMOTE_WHY_SCHEMA)
+    if version != WIRE_SCHEMA_VERSION:
+        raise WireVersionError(REMOTE_WHY_VERSION.format(expected=WIRE_SCHEMA_VERSION))
     return {key: value for key, value in data.items() if key != WIRE_SCHEMA_KEY and value is not None}
 
 
@@ -89,11 +98,11 @@ def request_from_wire(data: object) -> RouteRequest:
     """A router service's side: the :class:`RouteRequest` a JSON object carries, unknown fields ignored.
 
     Raises:
-        WireError: for anything but a schema-1 request.
+        WireError: for anything but a schema-1 request, another major version included.
     """
     try:
         return _request_adapter().validate_json(json.dumps(_payload(data)), strict=True)
-    except (ValidationError, ValueError) as exc:
+    except (ValidationError, ValueError) as exc:  # a WireVersionError too: a service answers either with a 400
         raise WireError(str(exc)) from None
 
 
@@ -106,7 +115,9 @@ def decision_from_wire(data: object) -> RouteDecision:
     """The :class:`RouteDecision` a service's JSON answer carries; fields this version does not know are ignored.
 
     Raises:
-        WireError: for anything but a schema-1 decision whose fields have the contract's types.
+        WireError: for anything but a decision whose ``schema`` is a number and whose fields have the
+            contract's types.
+        WireVersionError: for a decision of another major version.
     """
     payload = _payload(data)
     try:
