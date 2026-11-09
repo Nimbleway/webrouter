@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from web_router._urls import host_of
 from web_router.constants import MCP_BROWSER_REFUSED_SCHEMES
 from web_router.constants_mcp import MCP_MSG_URL_REFUSED
+from web_router.constants_urls import URL_SCHEMES
 from web_router.routing.url_policy import public_only
 
 
@@ -32,8 +33,8 @@ def url_values(inputs: object) -> list[str]:
     """Every URL among a template's inputs, however deep -- an id, a slug or a search term is not screened.
 
     A URL is a value with ``://`` in it, a scheme-relative ``//host/...``, or
-    one that starts with a scheme a URL needs no ``//`` for: ``file:/etc/passwd``,
-    ``data:``, ``javascript:``.
+    one word that starts with a scheme a browser reads without ``//``:
+    ``file:/etc/passwd``, ``http:/127.0.0.1/``, ``javascript:``.
     """
     if isinstance(inputs, Mapping):
         return [url for value in inputs.values() for url in url_values(value)]
@@ -43,9 +44,11 @@ def url_values(inputs: object) -> list[str]:
 
 
 def _looks_like_url(value: str) -> bool:
-    scheme, sep, _ = value.partition(":")
-    return (
-        "://" in value
-        or value.lstrip().startswith("//")
-        or (bool(sep) and scheme.strip().lower() in MCP_BROWSER_REFUSED_SCHEMES)
-    )
+    """``://`` anywhere, ``//host``, or one word opening with a scheme a browser reads without ``//``."""
+    scheme, sep, _ = value.strip().partition(":")
+    one_word = bool(sep) and not any(ch.isspace() for ch in value.strip())
+    return "://" in value or value.lstrip().startswith("//") or (one_word and scheme.lower() in _SCHEMES)
+
+
+_SCHEMES = MCP_BROWSER_REFUSED_SCHEMES | URL_SCHEMES
+"""A search term such as ``http: 404`` has a space in it, so it is not taken for one of these."""

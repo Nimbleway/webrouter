@@ -39,6 +39,7 @@ async def test_a_refusal_names_the_host_and_never_the_path(tools: WebRouterTools
         (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"urls": ["JavaScript:alert(1)"]}}),
         (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"page": {"at": ["http://10.0.0.1/"]}}}),
         (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "//127.0.0.1/admin"}}),
+        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "http:/127.0.0.1/"}}),
     ],
 )
 async def test_browse_and_a_template_run_screen_their_urls_too(
@@ -51,7 +52,9 @@ async def test_browse_and_a_template_run_screen_their_urls_too(
 
 async def test_a_template_input_that_is_not_a_url_is_left_alone(tools: WebRouterTools) -> None:
     result = await call_tool(
-        tools, MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"asin": "B0", "q": "a:b"}}
+        tools,
+        MCP_TOOL_RUN_TEMPLATE,
+        {"template": "t", "provider": FAKE, "inputs": {"asin": "B0", "q": "http: 404 meaning"}},
     )
 
     assert "nothing was sent" not in result.content[0].text
