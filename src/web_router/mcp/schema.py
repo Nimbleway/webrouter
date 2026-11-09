@@ -14,13 +14,14 @@ from web_router.constants import (
     MCP_TOOL_BROWSER_OPEN,
     MCP_TOOL_PROPERTIES,
     MCP_TOOL_RUN_TEMPLATE,
+    MCP_TOOL_SEARCH,
 )
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.mcp.chains import CHAIN_OF
 from web_router.mcp.methods import METHODS
-from web_router.providers.base import BrowserProvider, TemplateProvider, _BaseProvider
-from web_router.types import ExtractFormat, StealthLevel
+from web_router.providers.base import BrowserProvider, SearchProvider, TemplateProvider, _BaseProvider
+from web_router.types import ExtractFormat, SearchDepth, StealthLevel
 
 if TYPE_CHECKING:
     from web_router.client import AsyncWebRouter
@@ -54,23 +55,27 @@ def serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[typ
 NARROWED: dict[str, tuple[str, tuple[str, ...], type[_BaseProvider], str]] = {
     MCP_TOOL_BROWSER_OPEN: (MCP_ARG_STEALTH, get_args(StealthLevel), BrowserProvider, "stealth_levels"),
     MCP_TOOL_RUN_TEMPLATE: (MCP_ARG_FORMAT, get_args(ExtractFormat), TemplateProvider, "supported_formats"),
+    MCP_TOOL_SEARCH: ("search_depth", get_args(SearchDepth), SearchProvider, "depth_levels"),
 }
-"""Per tool, an option every backend maps with choices of its own: the option, its choices, and where they are listed.
+"""Per tool, an option whose choices differ per backend: the option, its choices, and where a backend lists its own.
 
-A browser's ``stealth`` levels and a template run's page ``format`` differ per backend.
+A browser's ``stealth`` levels, a template run's page ``format`` and a search's ``search_depth`` levels.
 """
 
 
 def narrow(tool: str, properties: dict[str, Any], serving: list[type[_BaseProvider]]) -> None:
-    """Narrow ``tool``'s :data:`NARROWED` option to the choices some backend serving here has.
+    """Narrow ``tool``'s :data:`NARROWED` option to the choices some backend serving here, that maps it, has.
 
     A choice none of them has would be refused on every route, so it is not
-    offered; with none at all the option goes too.
+    offered; with none at all the option goes too. A backend that does not map
+    the option lists choices it never serves, so it adds none.
     """
     if tool not in NARROWED or NARROWED[tool][0] not in properties:
         return
     name, choices, base, attribute = NARROWED[tool]
-    served = frozenset().union(*(getattr(cls, attribute) for cls in serving if issubclass(cls, base)))
+    optional = name in METHODS[tool].options
+    mapping = [cls for cls in serving if issubclass(cls, base) and (not optional or name in cls.supported_parameters)]
+    served = frozenset().union(*(getattr(cls, attribute) for cls in mapping))
     if offered := [choice for choice in choices if choice in served]:
         properties[name] = {**properties[name], "enum": offered}
     else:

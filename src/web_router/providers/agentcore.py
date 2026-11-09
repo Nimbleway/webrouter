@@ -10,10 +10,10 @@ region, read from its hostname. Setup, with a teardown: ``docs/agentcore-setup.m
 The gateway names its tool after the target, ``<target>___WebSearch``, so the
 first search lists the gateway's tools once and keeps the one with that suffix.
 The same listing says whether the target takes filters: the connector accepts
-them from version 1.2.0, and on an earlier target ``include_domains`` and
-``exclude_domains`` are refused rather than sent to be ignored. A date range
-is AgentCore's own ``filters.publishedDateFilter``, passed through
-``provider_options``; it merges with the mapped domain filter.
+them from version 1.2.0, and on an earlier target ``include_domains``,
+``exclude_domains`` and ``recency`` are refused rather than sent to be ignored.
+``recency`` sets ``filters.publishedDateFilter.from``; an end date goes through
+``provider_options`` and merges with the mapped filters.
 
 Results must be shown with their citations, and may not be stored in bulk or
 used to build an index (AWS's acceptable-use terms for the tool).
@@ -44,6 +44,9 @@ from web_router.constants import (
     PROVIDER_AGENTCORE,
 )
 from web_router.constants_agentcore import (
+    AGENTCORE_DATE_FILTER_FIELD,
+    AGENTCORE_DATE_FORMAT,
+    AGENTCORE_DATE_FROM_FIELD,
     AGENTCORE_DEFAULT_PATH,
     AGENTCORE_DOMAIN_FIELDS,
     AGENTCORE_DOMAIN_FILTER_FIELD,
@@ -68,9 +71,11 @@ from web_router.constants_agentcore import (
     MSG_AGENTCORE_TOOL,
 )
 from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._mcp import McpSearchMixin
-from web_router.providers._utils import as_snippet, build_payload, compact
+from web_router.providers._search_text import as_snippet
+from web_router.providers._utils import build_payload, compact
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 _HOST = re.compile(AGENTCORE_HOST_PATTERN)
@@ -130,8 +135,8 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
     """
 
     name: ClassVar[str] = PROVIDER_AGENTCORE
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(AGENTCORE_PARAM_NAMES) | frozenset(
-        AGENTCORE_DOMAIN_FIELDS
+    supported_parameters: ClassVar[frozenset[str]] = frozenset(
+        {*AGENTCORE_PARAM_NAMES, *AGENTCORE_DOMAIN_FIELDS, "recency"}
     )
     # Both replaced per instance from the gateway URL and its tool listing.
     base_url: ClassVar[str] = ""
@@ -171,22 +176,33 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
     # -- The request --------------------------------------------------------
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        # filters is set from both sides -- the mapped domains and a date range
-        # in provider_options -- so it is merged here rather than left to
-        # build_payload, whose last-wins update would drop the domains.
+        # filters is set from both sides -- the mapped domains and dates, and
+        # a filter in provider_options -- so it is merged here rather than left
+        # to build_payload, whose last-wins update would drop the mapped ones.
         options = dict(request.provider_options)
         filters = dict(options.pop(AGENTCORE_FILTERS_FIELD, None) or {})
         payload = build_payload(
             request.model_copy(update={"provider_options": options}), AGENTCORE_PARAM_NAMES, query=request.query
         )
-        domains = compact({theirs: getattr(request, ours) for ours, theirs in AGENTCORE_DOMAIN_FIELDS.items()})
-        if domains:
-            given = dict(filters.get(AGENTCORE_DOMAIN_FILTER_FIELD) or {})
-            clash = sorted(set(given) & set(domains))
+        since = recency_start(request.recency)
+        mapped = {
+            AGENTCORE_DOMAIN_FILTER_FIELD: compact(
+                {theirs: getattr(request, ours) for ours, theirs in AGENTCORE_DOMAIN_FIELDS.items()}
+            ),
+            AGENTCORE_DATE_FILTER_FIELD: {AGENTCORE_DATE_FROM_FIELD: since.strftime(AGENTCORE_DATE_FORMAT)}
+            if since
+            else {},
+        }
+        for field, ours in mapped.items():
+            if not ours:
+                continue
+            given = dict(filters.get(field) or {})
+            clash = sorted(set(given) & set(ours))
             if clash:
-                keys = ", ".join(f"{AGENTCORE_DOMAIN_FILTER_FIELD}.{key}" for key in clash)
-                raise ConfigurationError(MSG_AGENTCORE_FILTER_CLASH.format(keys=keys))
-            filters[AGENTCORE_DOMAIN_FILTER_FIELD] = {**given, **domains}
+                raise ConfigurationError(
+                    MSG_AGENTCORE_FILTER_CLASH.format(keys=", ".join(f"{field}.{k}" for k in clash))
+                )
+            filters[field] = {**given, **ours}
         if filters:
             payload[AGENTCORE_FILTERS_FIELD] = filters
         return payload
@@ -299,7 +315,7 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
         """
         if self._takes_filters:
             return
-        asked = [ours for ours in AGENTCORE_DOMAIN_FIELDS if getattr(request, ours)]
+        asked = [ours for ours in (*AGENTCORE_DOMAIN_FIELDS, "recency") if getattr(request, ours)]
         if request.provider_options.get(AGENTCORE_FILTERS_FIELD):
             asked.append(f"provider_options[{AGENTCORE_FILTERS_FIELD!r}]")
         if asked:

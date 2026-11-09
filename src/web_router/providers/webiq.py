@@ -5,10 +5,11 @@ SDK needs Python 3.11, and this package supports 3.10. Install with
 the ``search`` extra or ``extract``. Reads
 ``WEBIQ_API_KEY`` unless a key is passed explicitly.
 
-Slim by design: search maps only ``max_results`` and extract only ``format``.
-Everything else -- ``region``, ``language``, ``safeSearch``, Browse's
-``liveCrawl`` and link lists -- is reachable through ``provider_options``;
-mapping one properly is a welcome PR -- see CONTRIBUTING.md.
+Search maps ``max_results``, ``search_depth`` (as ``maxLength``, and whole-page
+text for ``deep``), the domain filters (as ``site:`` operators in the query),
+``country`` (as ``region``) and ``locale`` (as ``language``); extract maps only
+``format``. Everything else -- ``safeSearch``, ``location``, Browse's
+``liveCrawl`` and link lists -- is reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -29,8 +30,20 @@ from web_router.constants import (
     WEBIQ_PARAM_NAMES,
     WEBIQ_SEARCH_PATH,
 )
+from web_router.constants_languages import ISO_639_1
+from web_router.constants_search import MSG_SITE_DOMAINS
+from web_router.constants_webiq import (
+    MSG_WEBIQ_CODE,
+    MSG_WEBIQ_QUERY_TOO_LONG,
+    WEBIQ_PARAMS_BY_DEPTH,
+    WEBIQ_QUERY_LIMIT,
+    WEBIQ_SEARCH_PARAMETERS,
+)
+from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, build_payload
+from web_router.providers._language import language_code
+from web_router.providers._search_text import as_snippet, site_operators, unsited_domains
+from web_router.providers._utils import build_payload
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,
@@ -53,10 +66,15 @@ class WebIQProvider(HttpSearchProvider):
     Each result carries the passages of its page that answer the query, in
     ``content``; WebIQ returns no snippet and no relevance score, so
     ``description`` is the head of those passages and ``score`` stays unset.
+    ``deep`` asks for each page's whole text instead.
     """
 
     name: ClassVar[str] = PROVIDER_WEBIQ
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(WEBIQ_PARAM_NAMES)
+    supported_parameters: ClassVar[frozenset[str]] = WEBIQ_SEARCH_PARAMETERS
+    refusal_reasons: ClassVar[dict[str, str]] = {
+        **dict.fromkeys(("country", "locale"), MSG_WEBIQ_CODE),
+        **dict.fromkeys(("include_domains", "exclude_domains"), MSG_SITE_DOMAINS),
+    }
 
     base_url: ClassVar[str] = WEBIQ_BASE_URL
     search_path: ClassVar[str] = WEBIQ_SEARCH_PATH
@@ -64,7 +82,31 @@ class WebIQProvider(HttpSearchProvider):
     api_key_header: ClassVar[str] = WEBIQ_API_KEY_HEADER
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        return build_payload(request, WEBIQ_PARAM_NAMES, query=request.query, **WEBIQ_CONTENT_FORMAT)
+        query = self._query(request)
+        if len(query) > WEBIQ_QUERY_LIMIT:
+            raise ProviderError(self.name, MSG_WEBIQ_QUERY_TOO_LONG.format(limit=WEBIQ_QUERY_LIMIT, length=len(query)))
+        depth = WEBIQ_PARAMS_BY_DEPTH[request.search_depth] if request.search_depth else {}
+        return build_payload(
+            request,
+            WEBIQ_PARAM_NAMES,
+            query=query,
+            region=request.country.upper() if request.country else None,
+            language=language_code(request.locale) if request.locale else None,
+            **{**WEBIQ_CONTENT_FORMAT, **depth},
+        )
+
+    @staticmethod
+    def _query(request: SearchRequest) -> str:
+        return " ".join([request.query, *site_operators(request.include_domains, request.exclude_domains)])
+
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        refused: dict[str, Any] = unsited_domains(request)
+        if request.country is not None and not _two_letters(request.country):
+            refused["country"] = request.country
+        if request.locale is not None and language_code(request.locale) not in ISO_639_1:
+            refused["locale"] = request.locale
+        return refused
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         return SearchResponse(
@@ -87,6 +129,10 @@ class WebIQProvider(HttpSearchProvider):
             content=content,
             extra={k: v for k, v in hit.items() if k not in _MAPPED_FIELDS},
         )
+
+
+def _two_letters(code: str) -> bool:
+    return len(code) == 2 and code.isascii() and code.isalpha()
 
 
 class WebIQExtractProvider(HttpExtractProvider):

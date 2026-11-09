@@ -64,8 +64,8 @@ def test_the_key_goes_in_x_api_key_on_the_keyed_path(provider: KeenableProvider)
 
 
 def test_an_unmapped_option_is_refused_rather_than_dropped(provider: KeenableProvider) -> None:
-    with pytest.raises(UnsupportedParameterError, match="search_depth"):
-        provider.validate(SearchRequest(query="hi", search_depth="deep"))
+    with pytest.raises(UnsupportedParameterError, match="exclude_domains"):
+        provider.validate(SearchRequest(query="hi", exclude_domains=["a.com"]))
 
 
 def test_the_snippet_is_the_content_and_nothing_is_invented(provider: KeenableProvider) -> None:

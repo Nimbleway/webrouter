@@ -31,6 +31,11 @@ def test_the_clock_runs_from_when_the_scope_is_made(chain: Chain, priced: Table)
     assert shared.status().elapsed_s >= 0.06
 
 
+def test_a_scope_with_only_a_cost_cap_has_no_time_left_to_report() -> None:
+    with WebRouter().budget(SHARED) as shared:
+        assert shared.status().time_left_s is None
+
+
 @pytest.mark.parametrize("tool", ["search"], indirect=True)
 def test_a_call_gets_the_time_left_in_the_scope_or_its_own_limit_when_shorter(chain: Chain, priced: Table) -> None:
     priced.update(first=(None, 9.0), second=(None, 3.0), third=(None, 1.0))

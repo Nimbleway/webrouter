@@ -5,7 +5,7 @@
   "transport": {
     "kind": "mcp",
     "url": "https://mcp.exa.ai",
-    "tool": "web_search_exa"
+    "tool": "web_search_advanced_exa"
   },
   "credentials": [],
   "keyless": "always",
@@ -13,30 +13,169 @@
     "body.id": 1,
     "body.jsonrpc": "2.0",
     "body.method": "tools/call",
-    "body.params.arguments.objective": "probe query",
+    "body.params.arguments.enableHighlights": true,
     "body.params.arguments.query": "probe query",
-    "body.params.name": "web_search_exa"
+    "body.params.name": "web_search_advanced_exa",
+    "query.tools": "web_search_advanced_exa"
   },
   "options": {
     "max_results": {
       "sample": {
         "body.params.arguments.numResults": 3
       }
+    },
+    "search_depth": {
+      "lite": {
+        "body.params.arguments.highlightsMaxCharacters": 500
+      },
+      "fast": {
+        "body.params.arguments.enableHighlights": "<removed>",
+        "body.params.arguments.textMaxCharacters": 3000
+      },
+      "deep": {
+        "body.params.arguments.enableHighlights": "<removed>"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.params.arguments.includeDomains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.params.arguments.excludeDomains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.params.arguments.userLocation": "US"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.params.arguments.startPublishedDate": "2026-01-14"
+      },
+      "week": {
+        "body.params.arguments.startPublishedDate": "2026-01-08"
+      },
+      "month": {
+        "body.params.arguments.startPublishedDate": "2025-12-16"
+      },
+      "year": {
+        "body.params.arguments.startPublishedDate": "2025-01-15"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.params.arguments.type": "lite"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "unchanged": "no wire change"
+      },
+      "max": {
+        "unchanged": "no wire change"
+      }
     }
   },
   "not_mapped": [
-    "country",
-    "exclude_domains",
-    "include_domains",
-    "locale",
-    "search_depth"
+    "locale"
   ],
   "source": [
     "https://exa.ai/docs/reference/exa-mcp",
-    "web_search_exa tool, from tools/list on https://mcp.exa.ai/mcp"
+    "web_search_advanced_exa tool, from tools/list on https://mcp.exa.ai/mcp?tools=web_search_advanced_exa (2026-11-09)"
   ],
   "verified": {
-    "max_results": "live: tests/providers/test_exa_mcp.py::test_live_keyless_search_returns_results"
+    "max_results": "live: tests/providers/test_exa_mcp.py::test_live_keyless_search_returns_results",
+    "search_depth": "live: tests/providers/test_exa_mcp.py::test_live_each_depth_comes_back_at_its_size (2026-11-09: fast at most 3,000 characters, deep past 3,000; a lite highlight overshot the 500 cap -- 995, and 2,830 on another query -- so lite is cut to a snippet in the provider, then re-checked keyless at most 500)",
+    "include_domains": "live: tests/providers/test_exa_mcp.py::test_live_filters_are_honoured_at_low_effort (2026-11-09: wikipedia.org alone came back at effort=low)",
+    "exclude_domains": "docs: tools/list of web_search_advanced_exa",
+    "country": "docs: tools/list of web_search_advanced_exa (accepted keyless 2026-11-09; GB and US shared 67% of their results for 'best football club', so it moves results rather than filtering them)",
+    "recency": "live: 2026-11-09 search-options check: month, 10 of 10 results dated inside the window",
+    "effort": "live: 2026-11-09 search-options check: low (type=lite) with a domain filter, every result on the domain"
   },
-  "vendor_options": {}
+  "vendor_options": {
+    "category": {
+      "status": "passthrough",
+      "note": "company | publication | news | pdf | github | personal site | people | financial report."
+    },
+    "endPublishedDate": {
+      "status": "passthrough",
+      "note": "YYYY-MM-DD; recency sets only the start."
+    },
+    "startCrawlDate": {
+      "status": "passthrough",
+      "note": "YYYY-MM-DD."
+    },
+    "endCrawlDate": {
+      "status": "passthrough",
+      "note": "YYYY-MM-DD."
+    },
+    "includeText": {
+      "status": "passthrough",
+      "note": "Strings every result must contain."
+    },
+    "excludeText": {
+      "status": "passthrough",
+      "note": "Strings no result may contain."
+    },
+    "moderation": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "additionalQueries": {
+      "status": "passthrough",
+      "note": "Extra query variations."
+    },
+    "contextMaxCharacters": {
+      "status": "passthrough",
+      "note": "A combined context string; it stays in raw."
+    },
+    "enableSummary": {
+      "status": "passthrough",
+      "note": "Boolean; with summaryQuery. A summary becomes the description."
+    },
+    "summaryQuery": {
+      "status": "passthrough",
+      "note": "Focus for enableSummary."
+    },
+    "highlightsQuery": {
+      "status": "passthrough",
+      "note": "Query the highlights are picked for."
+    },
+    "highlightsNumSentences": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of highlightsMaxCharacters."
+    },
+    "highlightsPerUrl": {
+      "status": "passthrough",
+      "note": "Deprecated and ignored."
+    },
+    "maxAgeHours": {
+      "status": "passthrough",
+      "note": "Maximum age of cached content; 0 always fetches fresh."
+    },
+    "livecrawlTimeout": {
+      "status": "passthrough",
+      "note": "Milliseconds, with maxAgeHours."
+    },
+    "subpages": {
+      "status": "passthrough",
+      "note": "1-10 subpages per result."
+    },
+    "subpageTarget": {
+      "status": "passthrough",
+      "note": "Keywords for picking subpages."
+    },
+    "objective": {
+      "status": "not_supported",
+      "note": "Only on web_search_exa; web_search_advanced_exa refuses arguments its schema does not declare."
+    }
+  }
 }

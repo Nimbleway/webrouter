@@ -29,12 +29,12 @@ from web_router.mcp.tools import WebRouterTools
 
 
 async def test_an_unknown_argument_is_refused_with_the_valid_names(tools: WebRouterTools) -> None:
-    """A guessed option must not look applied: ``recency`` dropped silently returns unfiltered results."""
-    result = await call_tool(tools, MCP_TOOL_SEARCH, {"query": "hello", "recency": "week"})
+    """A guessed option must not look applied: ``freshness`` dropped silently returns unfiltered results."""
+    result = await call_tool(tools, MCP_TOOL_SEARCH, {"query": "hello", "freshness": "week"})
 
     assert result.is_error
     text = result.content[0].text
-    assert "recency" in text and "max_results" in text and "provider" in text
+    assert "freshness" in text and "max_results" in text and "provider" in text
     assert tools.router.get_provider(FAKE).requests == []  # type: ignore[attr-defined]
 
 

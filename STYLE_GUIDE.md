@@ -139,9 +139,10 @@ sent to an SDK that does not declare it.
 
 ## Send providers the minimum
 
-A provider is called with what the method actually needs — the query,
-`max_results` and `search_depth` for a search; the URLs and `format` for an
-extract — and nothing else. No option is sent because the API happens to accept
+A provider is called with what the method actually needs — the query and the
+shared options it maps (`max_results`, `search_depth`, `include_domains`,
+`exclude_domains`, `country`, `locale`, `recency`, `effort`) for a search; the
+URLs and `format` for an extract — and nothing else. No option is sent because the API happens to accept
 it.
 
 This keeps each integration small enough to verify completely, and keeps the

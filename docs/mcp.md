@@ -236,6 +236,14 @@ the library refuses, this refuses in the library's own words, and an argument a
 tool does not declare -- a typo, a guessed option -- is refused before anything
 runs, with the names it takes.
 
+`search` offers an option only when a backend reachable from here maps it, and
+`search_depth` only at the levels one serves, as `browser_open` narrows
+`stealth`. With no key the keyless tier between them (You.com MCP, Exa MCP,
+Tavily keyless, Keenable) maps every search option. The tool's description
+tells the model that `search_depth` is how much text comes back per result and
+`effort` how hard the backend looks, and that higher effort costs more and
+takes longer, so it leaves `effort` unset unless needed.
+
 Over MCP the model chooses `max_results`, not you. Its description steers it
 away from a single result, but the choice stays the model's. A host that wants
 the number fixed should [wrap `search` itself](../README.md#wrapping-search-for-your-own-agent).

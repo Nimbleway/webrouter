@@ -9,7 +9,8 @@ way when offered and another when run.
   unknown -- ``None`` -- when the list has no price (no row, ``unknown``, or
   billed by tokens), when the row is only a floor with charges billed on top
   (``estimate_is_floor``), when the request carries ``provider_options``,
-  which can change the mode the vendor bills, and when a search asks for more
+  which can change the mode the vendor bills, or a search ``effort`` other
+  than ``medium`` (which sends nothing), whose tier the list does not key, and when a search asks for more
   results than the row's price assumes (``results_assumed``), where each
   result is charged. An extract is charged per URL, and a browser session
   per minute of its lifetime (``timeout``), rounded up to whole minutes as
@@ -19,7 +20,7 @@ way when offered and another when run.
 - **p90** is the price list's measured latency; for research, the effort
   table's measured p90 for the effort first (the backend's default when none
   is set), then the price list's. Unknown otherwise, and with
-  ``provider_options``, which can change the mode that runs.
+  ``provider_options`` or a search ``effort`` past ``medium``, which change the mode that runs.
 """
 
 from __future__ import annotations
@@ -112,7 +113,7 @@ def attempt_mode(attempt: Attempt) -> str | None:
 
 def attempt_cost(attempt: Attempt) -> float | None:
     """The estimated list price of ``attempt`` in US dollars, or ``None`` when it cannot be known before the call."""
-    if attempt.request.provider_options or _more_results_than_priced(attempt):
+    if _unpriced_mode(attempt) or _more_results_than_priced(attempt):
         return None
     cost = mode_cost(attempt.provider, attempt.tool, attempt_mode(attempt))
     if cost is not None and isinstance(attempt.request, ExtractRequest):
@@ -123,6 +124,14 @@ def attempt_cost(attempt: Attempt) -> float | None:
             return None
         return cost * math.ceil(lifetime / SECONDS_PER_MINUTE)
     return cost
+
+
+def _unpriced_mode(attempt: Attempt) -> bool:
+    """``provider_options``, or a search ``effort`` that picks a vendor tier: either can change the mode billed."""
+    request = attempt.request
+    return bool(request.provider_options) or (
+        isinstance(request, SearchRequest) and request.effort not in (None, "medium")
+    )
 
 
 def _more_results_than_priced(attempt: Attempt) -> bool:
@@ -137,6 +146,6 @@ def _more_results_than_priced(attempt: Attempt) -> bool:
 
 def attempt_p90(attempt: Attempt) -> float | None:
     """The measured p90 seconds of ``attempt``, or ``None`` when unmeasured or ``provider_options`` may change it."""
-    if attempt.request.provider_options:
+    if _unpriced_mode(attempt):
         return None
     return mode_p90(attempt.provider, attempt.tool, attempt_mode(attempt))

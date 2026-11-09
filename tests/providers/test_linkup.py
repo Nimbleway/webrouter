@@ -8,7 +8,7 @@ below are trimmed from those calls.
 
 Not verified live, and documentation-derived: the shape of an image result
 (`name`, `url` and `type` alone) -- `includeImages` never returned one, on the
-queries tried -- and every option left unmapped: `fromDate` and `toDate`,
+queries tried -- and every option left unmapped: `toDate`,
 `includeImages`, `sourcedAnswer` and `structured` output, and `/fetch`'s `mode`,
 `renderJs`, `extractImages` and `schema`. All of them reach the API through
 `provider_options`.

@@ -40,7 +40,7 @@ from web_router.constants_params import (
 )
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
-from web_router.routing.effort_table import RESEARCH, effort_table, measured_efforts, noise_floor
+from web_router.routing.effort_table import RESEARCH, measured_efforts, noise_floor, table_set
 from web_router.routing.pricing import fit_reason, mode_cost, mode_p90
 from web_router.types import Provider, ResearchEffort, ResearchRequest, provider_name
 
@@ -140,7 +140,7 @@ def map_effort(
     fitting = {e: accuracy for e, accuracy in measured.items() if effort_misfit(name, e, budget) is None}
     if len(measured) < MIN_MEASURED_EFFORTS:
         # Too few to rank: the default stands while it fits; when it does not, a measured effort that fits runs.
-        unmeasured = MSG_EFFORT_UNMEASURED.format(provider=name, min=MIN_MEASURED_EFFORTS, set=effort_table()["set"])
+        unmeasured = MSG_EFFORT_UNMEASURED.format(provider=name, min=MIN_MEASURED_EFFORTS, set=table_set())
         default = _default(name, budget, unmeasured)
         return default if default.misfit is None or not fitting else _chosen(name, fitting)
     if not fitting:

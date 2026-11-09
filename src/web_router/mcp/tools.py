@@ -590,13 +590,11 @@ class WebRouterTools:
     def _schema(self, tool: str) -> dict[str, Any]:
         """The tool's input schema, offering only what some backend reachable from here maps.
 
-        An option no configured backend and not the router's default declares
-        would fail on every route the model can pick, so it is left out rather
-        than advertised; so is a stealth level none of them serves. A search,
-        extract or browser ``auto`` counts as the members it would try, because
-        it declares what any member maps. A model that sends one anyway still reaches the
-        library and its :class:`~web_router.exceptions.UnsupportedParameterError`,
-        never a silent drop.
+        An option no configured backend and not the router's default declares would fail on every route the model
+        can pick, so it is left out rather than advertised; so is a stealth or depth level none of them serves. A
+        search, extract or browser ``auto`` counts as the members it would try, because it declares what any member
+        maps. A model that sends one anyway still reaches the library and its
+        :class:`~web_router.exceptions.UnsupportedParameterError`, never a silent drop.
         """
         properties: dict[str, Any] = dict(MCP_TOOL_PROPERTIES[tool])
         method = METHODS.get(tool)

@@ -1,12 +1,12 @@
 {
   "provider": "parallel",
   "method": "search",
-  "class": "web_router.providers.parallel.ParallelProvider",
+  "class": "web_router.providers.parallel_search.ParallelProvider",
   "transport": {
     "kind": "http",
     "base_url": "https://api.parallel.ai",
     "paths": {
-      "search_path": "/v1beta/search"
+      "search_path": "/v1/search"
     },
     "method": "POST",
     "auth_header": "x-api-key"
@@ -16,6 +16,7 @@
   ],
   "keyless": null,
   "always_sent": {
+    "body.mode": "fast",
     "body.objective": "probe query",
     "body.search_queries": [
       "probe query"
@@ -24,60 +25,114 @@
   "options": {
     "max_results": {
       "sample": {
-        "body.max_results": 3
+        "body.advanced_settings.max_results": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "body.advanced_settings.excerpt_settings.max_chars_per_result": 500
+      },
+      "fast": {
+        "body.advanced_settings.excerpt_settings.max_chars_per_result": 3000
+      },
+      "deep": {
+        "refused": "UnsupportedParameterError"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.advanced_settings.source_policy.include_domains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.advanced_settings.source_policy.exclude_domains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.advanced_settings.location": "us"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.advanced_settings.source_policy.after_date": "2026-01-14"
+      },
+      "week": {
+        "body.advanced_settings.source_policy.after_date": "2026-01-08"
+      },
+      "month": {
+        "body.advanced_settings.source_policy.after_date": "2025-12-16"
+      },
+      "year": {
+        "body.advanced_settings.source_policy.after_date": "2025-01-15"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.mode": "turbo"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "body.mode": "advanced"
+      },
+      "max": {
+        "body.mode": "advanced"
       }
     }
   },
   "not_mapped": [
-    "country",
-    "exclude_domains",
-    "include_domains",
-    "locale",
-    "search_depth"
+    "locale"
   ],
   "source": [
+    "https://docs.parallel.ai/api-reference/search-api/search",
     "https://docs.parallel.ai/search/search-migration-guide",
-    "parallel-web (before 1.0) Parallel.beta.search"
+    "https://docs.parallel.ai/search/modes",
+    "https://docs.parallel.ai/search/advanced-search-settings"
   ],
   "verified": {
-    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound"
+    "max_results": "live: 2026-11-09 search-options check on /v1: max_results=3 returned 3 results",
+    "search_depth": "live: 2026-11-09 search-options check: fast answered (1,377-1,488 characters a result); the lite cap of 500 did not bind (1,377-1,488 characters), so lite is cut to a snippet in the provider",
+    "include_domains": "live: 2026-11-09 search-options check: 10 of 10 results from the included wikipedia.org",
+    "exclude_domains": "live: 2026-11-09 search-options check: no result from the excluded domain",
+    "country": "docs: https://docs.parallel.ai/search/advanced-search-settings (advanced_settings.location, one of 37 listed codes; any other is ignored, so web-router refuses it). Accepted live on 2026-11-09, but gb and us returned the same 10 hosts for the same query, so it had no measurable effect there",
+    "recency": "live: 2026-11-09 search-options check: day, 4 of 4 dated results inside the window; year, 9 of 9",
+    "effort": "live: 2026-11-09 search-options check: low (turbo) in 0.56 s, also on a non-English query, and high (advanced) in 2.68 s"
   },
   "vendor_options": {
-    "mode": {
+    "max_chars_total": {
       "status": "passthrough",
-      "note": "fast | one-shot | agentic."
-    },
-    "excerpts": {
-      "status": "passthrough",
-      "note": "Object with max_chars_per_result and max_chars_total."
-    },
-    "source_policy": {
-      "status": "passthrough",
-      "note": "include_domains, exclude_domains and after_date; a candidate for the shared domain filters."
+      "note": "Top level: an upper bound on excerpt characters across all results."
     },
     "fetch_policy": {
       "status": "passthrough",
-      "note": "Controls live fetching versus indexed content."
-    },
-    "location": {
-      "status": "passthrough",
-      "note": "ISO 3166-1 alpha-2 code; a candidate for the shared country option."
+      "note": "Under advanced_settings: max_age_seconds (600 or more), timeout_seconds, disable_cache_fallback. Cached content unless set."
     },
     "client_model": {
       "status": "passthrough",
-      "note": "The model consuming the results."
+      "note": "The model consuming the results; Parallel tailors default settings to it."
     },
     "session_id": {
       "status": "passthrough",
-      "note": "Groups related search and extract calls."
+      "note": "Groups related search and extract calls, up to 1,000 characters; the response echoes it, or one the server made."
+    },
+    "excerpts": {
+      "status": "not_supported",
+      "note": "Beta only; /v1/search rejects undeclared fields. Its successors are max_chars_total and advanced_settings.excerpt_settings."
     },
     "max_chars_per_result": {
-      "status": "passthrough",
-      "note": "Deprecated in favour of excerpts.max_chars_per_result."
+      "status": "not_supported",
+      "note": "Beta only, deprecated there; on /v1 it sits under advanced_settings.excerpt_settings."
     },
     "processor": {
-      "status": "passthrough",
-      "note": "Deprecated in favour of mode."
+      "status": "not_supported",
+      "note": "Beta only, deprecated there in favour of mode."
     }
   }
 }

@@ -34,8 +34,8 @@ def test_the_key_is_sent_as_a_bearer_token(provider: PerplexityProvider) -> None
     assert provider._client.headers["Authorization"] == "Bearer test-key"
 
 
-def test_depth_is_rejected_until_someone_maps_it(provider: PerplexityProvider) -> None:
-    with pytest.raises(UnsupportedParameterError, match="search_depth"):
+def test_deep_is_refused_until_a_live_call_shows_whole_pages(provider: PerplexityProvider) -> None:
+    with pytest.raises(UnsupportedParameterError, match="search_depth='deep'"):
         provider.validate(SearchRequest(query="hi", search_depth="deep"))
 
 
