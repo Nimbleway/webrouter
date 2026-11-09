@@ -208,7 +208,7 @@ def test_without_httpx_the_error_names_the_extra(monkeypatch: pytest.MonkeyPatch
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", no_httpx)
-    with pytest.raises(ConfigurationError, match=r"web-router\[remote\]"):
+    with pytest.raises(ConfigurationError, match=r"webrouter\[remote\]"):
         RemoteRouter(url="https://router.example.com")
 
 
