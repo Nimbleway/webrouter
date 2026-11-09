@@ -173,11 +173,11 @@ async def test_with_no_file_anywhere_the_model_is_told_and_can_load_one(setup: S
         after, after_text = await _capabilities(session)
         relisted = {tool.name: tool for tool in (await session.list_tools()).tools}
 
-    # Keyless, and saying how to change that -- in the resource and on the tool a model reaches for first.
+    # Keyless, and saying how to change that.
     assert before[MCP_TOOL_SEARCH] == [PROVIDER_AUTO, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP, PROVIDER_YOU_MCP]
     assert before["env"]["loaded"] == {}
     assert MCP_TOOL_LOAD_ENV in before["env"]["hint"]
-    assert MCP_TOOL_LOAD_ENV in (listed[MCP_TOOL_SEARCH].description or "")
+    assert PROVIDER_BRAVE not in listed[MCP_TOOL_SEARCH].input_schema["properties"]["provider"]["enum"]
 
     assert not loaded.is_error, loaded.content[0].text
     result_text: str = loaded.content[0].text
@@ -192,7 +192,6 @@ async def test_with_no_file_anywhere_the_model_is_told_and_can_load_one(setup: S
     assert after["env"]["loaded_at_runtime"] == [{"file": str(keys), "loaded": [ENV_BRAVE_API_KEY]}]
     assert FAKE_KEY not in after_text
     assert PROVIDER_BRAVE in relisted[MCP_TOOL_SEARCH].input_schema["properties"]["provider"]["enum"]
-    assert MCP_TOOL_LOAD_ENV not in (relisted[MCP_TOOL_SEARCH].description or "")
 
 
 async def test_a_remembered_file_is_read_on_the_next_start(setup: Setup) -> None:

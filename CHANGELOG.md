@@ -40,6 +40,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - The `mcp` extra now requires `mcp>=2.2,<3`. It allowed 1.x, which cannot import the server.
 
+- The MCP tool list is about a sixth smaller (31 KB to 26 KB with no keys): each rule is said once, in the server instructions or the one tool it belongs to, and `browser_open`'s description is cut from 1,769 to 623 characters. The no-key hint is in the instructions, not repeated on `search`.
+
 ### Removed
 
 - The decider spike: `WebRouter(decider=, decider_config=)`, `WebRouter.classify()`, `WebRouter.execute()`, `Route` and the `web_router.decisions` package (`DecisionProvider`, `register_decider()` and the `keywords`, `jev` and `llm` deciders). It was a proof of concept for routing; `router=`, `plan()` and `run()` replace it. To keep using it, pin `web-router==0.9.0`, the last version that has it.

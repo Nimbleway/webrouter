@@ -176,8 +176,8 @@ file it came from; whether `WEB_ROUTER_ENV_FILE` named a file that is not
 there; the variables the client already exported, by name; and each `load_env`
 since. With no provider key at
 all it also carries a `hint` saying how to add one, the server's instructions
-and the `search` description say no keys were found and that the model can ask
-for a `.env` path and call `load_env` — or carry on keyless — and every other
+say no keys were found and that the model can ask for a `.env` path and call
+`load_env` — or carry on keyless — and every other
 place the server reports keys says the same thing: names and paths, never
 values.
 

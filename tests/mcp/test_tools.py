@@ -487,13 +487,11 @@ def test_a_keyless_backends_optional_key_is_not_a_configured_key(
 def test_with_no_key_search_and_the_instructions_say_so(
     tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    search = _tool(tools, MCP_TOOL_SEARCH).description
-    assert "No API keys were found" in search and MCP_TOOL_LOAD_ENV in search
-    assert "No API keys were found" in tools.instructions()
+    # Said once, in the instructions: not repeated in every listed tool.
+    assert "No API keys were found" in tools.instructions() and MCP_TOOL_LOAD_ENV in tools.instructions()
+    assert "No API keys were found" not in _tool(tools, MCP_TOOL_SEARCH).description
 
     monkeypatch.setenv(ENV_BRAVE_API_KEY, "x")
-
-    assert "No API keys were found" not in _tool(tools, MCP_TOOL_SEARCH).description
     assert "No API keys were found" not in tools.instructions()
 
 
@@ -839,7 +837,7 @@ def test_the_server_steers_an_interactive_page_to_a_browser_the_user_agrees_to(t
     assert "provider='local' and headless=false" in instructions
     assert "never ask for a password" in instructions
     described = {tool.name: tool.description for tool in tools.list_tools()}
-    assert "browser_open" in described["search"] and "browser_open" in described["extract"]
+    assert "browser_open" in described["extract"]
     opener = described.get("browser_open")
     if opener is not None:  # listed only where Playwright imports
         assert "logins, forms, multi-step portals" in opener and "headless=false" in opener

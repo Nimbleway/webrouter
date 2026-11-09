@@ -322,7 +322,6 @@ async def test_open_offers_no_way_to_pass_browser_switches(session: WebRouterToo
 
     assert {"provider_options", "profile", "persist_profile"}.isdisjoint(properties)
     assert {"headless", "timeout", "provider"} <= set(properties)
-    assert "provider_options" in (tool.description or "")
     assert "BILLS" in (tool.description or "")
 
     message = _error(

@@ -68,7 +68,6 @@ from web_router.constants import (
     MCP_MSG_MISSING_ARGUMENT,
     MCP_MSG_NO_BACKEND,
     MCP_MSG_NO_BACKEND_HINT,
-    MCP_MSG_NO_KEYS,
     MCP_MSG_NO_RAW,
     MCP_MSG_NOT_A_JOB,
     MCP_MSG_RESEARCH_PENDING,
@@ -672,7 +671,7 @@ class WebRouterTools:
         return {name: arguments[name] for name in names if arguments.get(name) is not None}
 
     def _description(self, tool: str) -> str:
-        """The tool's description, plus a warning when nothing can serve it here, or no key reached the server."""
+        """The tool's description, plus a warning when nothing can serve it here."""
         description = MCP_TOOL_DESCRIPTIONS[tool]
         if tool in self._waits:
             description = description.format(wait=self._waits[tool])
@@ -686,9 +685,6 @@ class WebRouterTools:
             env_vars = _env_vars(method)
             if env_vars:
                 description += MCP_MSG_NO_BACKEND_HINT.format(env_vars=", ".join(env_vars))
-        if tool == MCP_TOOL_SEARCH and not self.keyed():
-            # On search alone: it still works keyless, and it is the tool a model reaches for first.
-            description += MCP_MSG_NO_KEYS
         return description
 
     def _schema(self, tool: str) -> dict[str, Any]:
