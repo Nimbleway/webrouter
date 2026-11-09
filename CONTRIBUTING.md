@@ -15,7 +15,7 @@ are enforced by review rather than by tooling.
 We use [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
-git clone https://github.com/WebContextLayer/webrouter.git
+git clone https://github.com/Nimbleway/webrouter.git
 cd webrouter
 make install
 ```
@@ -310,7 +310,7 @@ time.
   `Not fixing: <reason>`); the maintainers are asked to review only then. Qodo does not review
   drafts on its own; a `/agentic_review` comment asks it to.
 - Don't commit drafts, decks, PDFs or images for feedback; open a
-  [Discussion](https://github.com/WebContextLayer/webrouter/discussions) and attach them.
+  [Discussion](https://github.com/Nimbleway/webrouter/discussions) and attach them.
 
 Every unit test must work without an API key. Anything that needs one belongs
 behind `@pytest.mark.integration`.

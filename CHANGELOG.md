@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Changed
+
+- The repository moved to [github.com/Nimbleway/webrouter](https://github.com/Nimbleway/webrouter). Links to the old location redirect, and the package metadata now points to the new one. Security reports go through GitHub's private vulnerability reporting (see SECURITY.md).
+
 ### Added
 
 ### Fixed

@@ -4,7 +4,7 @@
 
 > **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
 
-[![CI](https://github.com/WebContextLayer/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WebContextLayer/webrouter/actions/workflows/ci.yml)
+[![CI](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
@@ -93,13 +93,13 @@ required. [`.env.example`](.env.example) names each variable.
 the right Python itself.
 
 ```bash
-git clone https://github.com/WebContextLayer/webrouter.git
+git clone https://github.com/Nimbleway/webrouter.git
 cd webrouter
 make setup              # every extra: the library, the MCP server, the browser tools and a local Chromium
 cp .env.example .env    # then fill in only the keys you hold; none is required
 ```
 
-Using a coding agent? Tell it *"clone https://github.com/WebContextLayer/webrouter
+Using a coding agent? Tell it *"clone https://github.com/Nimbleway/webrouter
 and set it up"*. [CLAUDE.md](CLAUDE.md) walks it through the rest. To use the
 clone from another project, install it in editable mode
 (`uv add --editable "/path/to/webrouter[all]"` or
