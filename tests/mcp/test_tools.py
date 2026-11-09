@@ -7,6 +7,7 @@ handlers call, against the in-memory fakes from `tests/conftest.py`.
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -134,13 +135,12 @@ def test_a_router_whose_default_is_max_still_lists_every_tool(no_keys: None) -> 
     assert _tool(session, MCP_TOOL_BROWSER_OPEN).input_schema["properties"]
 
 
-def test_a_method_with_only_delegating_providers_configured_is_not_usable(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_method_with_only_delegating_providers_configured_is_not_usable() -> None:
     """``max`` needs no key of its own any more than ``auto`` does, so neither counts as a backend that can run."""
     from web_router.mcp import tools as module
 
-    monkeypatch.setitem(module._CONFIGURED, MCP_TOOL_EXTRACT, lambda: [PROVIDER_AUTO, PROVIDER_MAX])
-
-    assert not module._usable(MCP_TOOL_EXTRACT)
+    method = replace(module._METHODS[MCP_TOOL_EXTRACT], configured=lambda: [PROVIDER_AUTO, PROVIDER_MAX])
+    assert not module._usable(method)
 
 
 def test_the_extract_tool_says_what_max_costs(tools: WebRouterTools) -> None:

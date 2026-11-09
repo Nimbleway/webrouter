@@ -69,6 +69,13 @@ from web_router.constants import (
 )
 
 
+def env_names(env: str | tuple[str, ...] | None) -> tuple[str, ...]:
+    """The variable names one ``*_ENV_BY_PROVIDER`` entry holds: search's a name or none, every other a tuple."""
+    if env is None:
+        return ()
+    return (env,) if isinstance(env, str) else env
+
+
 def credential_variables() -> frozenset[str]:
     """Every provider credential variable, from the tables that already name them."""
     tables = (EXTRACT_ENV_BY_PROVIDER, RESEARCH_ENV_BY_PROVIDER, BROWSER_ENV_BY_PROVIDER, BROWSE_ENV_BY_PROVIDER)
