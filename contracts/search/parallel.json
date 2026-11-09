@@ -97,13 +97,13 @@
     "https://docs.parallel.ai/search/advanced-search-settings"
   ],
   "verified": {
-    "max_results": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.max_results); live on /v1beta through tests/test_integration_surface.py::test_max_results_is_an_upper_bound, not yet re-run on /v1",
-    "search_depth": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.excerpt_settings.max_chars_per_result, an upper bound per URL); not yet run live",
-    "include_domains": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.source_policy.include_domains); not yet run live",
-    "exclude_domains": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.source_policy.exclude_domains, ignored when include_domains is set); not yet run live",
-    "country": "docs: https://docs.parallel.ai/search/advanced-search-settings (advanced_settings.location, one of 37 listed codes; any other is ignored, so web-router refuses it); not yet run live",
-    "recency": "docs: https://docs.parallel.ai/api-reference/search-api/search (advanced_settings.source_policy.after_date, YYYY-MM-DD); not yet run live",
-    "effort": "docs: https://docs.parallel.ai/search/modes (turbo, fast, basic, advanced); not yet run live"
+    "max_results": "live: 2026-11-09 search-options check on /v1: max_results=3 returned 3 results",
+    "search_depth": "live: 2026-11-09 search-options check: fast answered (1,377-1,488 characters a result); the lite cap of 500 did not bind (1,377-1,488 characters), so lite is cut to a snippet in the provider",
+    "include_domains": "live: 2026-11-09 search-options check: 10 of 10 results from the included wikipedia.org",
+    "exclude_domains": "live: 2026-11-09 search-options check: no result from the excluded domain",
+    "country": "docs: https://docs.parallel.ai/search/advanced-search-settings (advanced_settings.location, one of 37 listed codes; any other is ignored, so web-router refuses it). Accepted live on 2026-11-09, but gb and us returned the same 10 hosts for the same query, so it had no measurable effect there",
+    "recency": "live: 2026-11-09 search-options check: day, 4 of 4 dated results inside the window; year, 9 of 9",
+    "effort": "live: 2026-11-09 search-options check: low (turbo) in 0.56 s, also on a non-English query, and high (advanced) in 2.68 s"
   },
   "vendor_options": {
     "max_chars_total": {

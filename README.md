@@ -619,14 +619,14 @@ less under its name.
 
 | Depth | What you get | Nimble | Tavily | You.com, You.com MCP | Exa, Exa MCP | WebIQ | Parallel | Perplexity | Keenable | Brave | DeepSeek |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `lite` | A snippet, up to about 500 characters | `lite` | `basic`, cut to 500 | no extraction, cut to 500 | highlights ≤ 500, cut to 500 | passage ≤ 500 | excerpts ≤ 500 | 100 tokens a page | snippet ≤ 500 | its snippets, cut to 500 | its default |
+| `lite` | A snippet, up to about 500 characters | `lite` | `basic`, cut to 500 | no extraction, cut to 500 | highlights ≤ 500, cut to 500 | passage ≤ 500 | excerpts ≤ 500, cut to 500 | 100 tokens a page | snippet ≤ 500 | its snippets, cut to 500 | its default |
 | `fast` | A truncated body, a few thousand characters | `standard` | `advanced` | `highlights` | text ≤ 3,000 | passage ≤ 3,000 | excerpts ≤ 3,000 | 1,024 tokens a page | snippet ≤ 3,000 | refused | refused |
 | `deep` | The whole page | `standard` + `full_content` | `advanced` + raw content | `full_page` | whole text | `text` | refused | refused | refused | refused | `need_content` |
 
 Linkup, AgentCore and Parallel MCP do not map it. Where a vendor's size setting
 does not bind (Tavily's `basic` returns up to three chunks of about 500
-characters, You.com's snippets can run past 500, Exa's highlights cap and
-Perplexity's token budget are soft, DeepSeek's default carries its whole
+characters, You.com's snippets can run past 500, Exa's highlights cap,
+Parallel's excerpt cap and Perplexity's token budget are soft, DeepSeek's default carries its whole
 summary, and Brave has no size setting at all), web-router cuts `lite` to a snippet of about 500
 characters itself; the vendor's full text stays in `raw`.
 Unset, Exa asks for the whole text and Exa MCP for highlights, as before.

@@ -10,7 +10,7 @@ from __future__ import annotations
 from web_router.types_options import ResearchEffort, SearchDepth
 
 # The Search API on /v1, per Parallel's API reference and migration guide
-# (checked 2026-11-09; not yet run live). /v1beta/search took every setting at the
+# (checked 2026-11-09, run live the same day). /v1beta/search took every setting at the
 # top level; /v1/search takes only the objective, the queries, `mode` and a few
 # session fields there, and nests the rest under `advanced_settings`, rejecting
 # any field it does not declare. The response is the beta's: `search_id`, and
@@ -50,7 +50,8 @@ PARALLEL_EXCERPT_CHARS: dict[SearchDepth, int] = {"lite": 500, "fast": 3000}
 
 Parallel documents this as an upper bound per URL on excerpts chosen for the
 query, never the page, so ``deep`` is left out and refused: no setting returns
-a whole page.
+a whole page. The 500 at ``lite`` did not bind live (1,377-1,488 characters on
+2026-11-09), so the provider cuts ``lite`` to a snippet itself.
 """
 
 PARALLEL_MODE_BY_EFFORT: dict[ResearchEffort, str] = {

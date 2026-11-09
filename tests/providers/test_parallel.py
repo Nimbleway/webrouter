@@ -168,6 +168,18 @@ def test_a_short_excerpt_is_used_whole(provider: ParallelProvider) -> None:
     assert result.description == "a short excerpt"
 
 
+@pytest.mark.parametrize(("depth", "cut"), [("lite", True), ("fast", False)])
+def test_lite_is_cut_to_a_snippet_since_the_excerpt_cap_does_not_bind(
+    provider: ParallelProvider, depth: str, cut: bool
+) -> None:
+    """The 500-character cap at lite returned 1,377-1,488 characters live; raw keeps them."""
+    excerpt = "word " * 290
+    payload = {"results": [{"url": "https://a.com", "excerpts": [excerpt]}]}
+    response = provider._to_response(SearchRequest(query="q", search_depth=depth), payload)  # type: ignore[arg-type]
+    assert (len(response.results[0].content) <= SNIPPET_LIMIT + 1) is cut
+    assert response.raw["results"][0]["excerpts"] == [excerpt]
+
+
 def test_missing_excerpts_leave_the_text_empty(provider: ParallelProvider) -> None:
     result = provider._to_response(SearchRequest(query="hi"), {"results": [{"url": "https://a.com"}]}).results[0]
     assert (result.description, result.content) == ("", "")

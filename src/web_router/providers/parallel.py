@@ -59,13 +59,14 @@ from web_router.constants_parallel import (
 )
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, build_payload, compact
+from web_router.providers._utils import as_snippet, build_payload, compact, lite_body
 from web_router.types import (
     Citation,
     ResearchProgress,
     ResearchRequest,
     ResearchResponse,
     ResearchState,
+    SearchDepth,
     SearchRequest,
     SearchResponse,
     SearchResult,
@@ -202,22 +203,23 @@ class ParallelProvider(HttpSearchProvider):
         return SearchResponse(
             provider=self.name,
             query=request.query,
-            results=[self._to_result(hit) for hit in payload.get("results") or []],
+            results=[self._to_result(hit, request.search_depth) for hit in payload.get("results") or []],
             request_id=payload.get("search_id"),
             raw=payload,
         )
 
     @staticmethod
-    def _to_result(hit: dict[str, Any]) -> SearchResult:
+    def _to_result(hit: dict[str, Any], depth: SearchDepth | None) -> SearchResult:
         # Parallel returns ranked page excerpts rather than a snippet, and they
         # run to thousands of characters -- so the body is all of them, and the
-        # description is the head of the first.
+        # description is the head of the first. The excerpt cap does not bind
+        # at lite (1,377-1,488 characters live), so lite is cut here.
         excerpts = [excerpt for excerpt in hit.get("excerpts") or [] if excerpt]
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
             description=as_snippet(excerpts[0]) if excerpts else "",
-            content="\n\n".join(excerpts),
+            content=lite_body("\n\n".join(excerpts), depth),
             published_date=hit.get("publish_date"),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},
         )
