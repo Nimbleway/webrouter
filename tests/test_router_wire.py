@@ -119,6 +119,7 @@ def test_another_major_version_is_refused_without_echoing_it(version: Any) -> No
         {"schema": 1, "exclude": ["search:exa"]},
         {"schema": 1, "confidence": "very"},
         {"schema": 1, "confidence": True},
+        {"schema": 1, "confidence": 2},
         {"schema": 1, "confidence": "0.5"},
         {"schema": 1, "tools": [1]},
     ],

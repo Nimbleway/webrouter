@@ -67,6 +67,7 @@ from web_router.constants_remote import (
     REMOTE_TIMEOUT_S,
     REMOTE_URL_POLICY,
     REMOTE_WHY_CONTENT_TYPE,
+    REMOTE_WHY_DECISION,
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_STATUS,
     REMOTE_WHY_TOO_LARGE,
@@ -246,9 +247,11 @@ class RemoteRouter:
             raise RemoteRouterError(self.host, REMOTE_WHY_TRANSPORT.format(kind=failed))
         try:
             data = json.loads(body)
-        except ValueError:
+        except (ValueError, RecursionError):  # a reply nested deeper than Python parses is no decision either
             raise RemoteRouterInvalid(self.host, REMOTE_WHY_NOT_JSON) from None
         try:
             return decision_from_wire(data)
         except WireError as exc:
             raise RemoteRouterInvalid(self.host, str(exc)) from None
+        except RecursionError:
+            raise RemoteRouterInvalid(self.host, REMOTE_WHY_DECISION) from None

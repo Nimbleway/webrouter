@@ -216,3 +216,9 @@ def test_each_loop_gets_its_own_pool_and_one_never_closes_anothers() -> None:
         loop.call_soon_threadsafe(loop.stop)
         thread.join(5)
         loop.close()
+
+
+def test_a_reply_nested_too_deep_to_parse_is_invalid() -> None:
+    deep = b'{"schema": 1, "params": {"search": ' + b"[" * 30_000 + b"]" * 30_000 + b"}}"
+    with canned(Canned(body=deep)) as base, pytest.raises(RemoteRouterInvalid, match="not a JSON object"):
+        _ask(RemoteRouter(url=base + "/route"))

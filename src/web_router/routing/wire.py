@@ -129,6 +129,8 @@ def _bounded(decision: RouteDecision) -> RouteDecision:
     sized += list((decision.params or {}).values())
     if any(len(entry) > WIRE_MAX_NAMES for entry in sized):
         raise WireError(REMOTE_WHY_TOO_MANY.format(limit=WIRE_MAX_NAMES))
+    if decision.confidence is not None and not 0 <= decision.confidence <= 1:
+        raise WireError(REMOTE_WHY_DECISION)  # the response schema's range, held here too
     return replace(
         decision,
         reason=None if decision.reason is None else decision.reason[:WIRE_MAX_TEXT],
