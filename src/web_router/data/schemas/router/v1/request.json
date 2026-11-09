@@ -90,7 +90,7 @@
         },
         "id": {
           "default": "",
-          "description": "``tool:provider``, the name every decision field uses. Filled in when left empty.",
+          "description": "``tool:provider``, the name every decision field uses: filled in when left empty, refused when it differs.",
           "title": "Id",
           "type": "string"
         }
