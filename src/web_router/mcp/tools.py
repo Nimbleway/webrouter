@@ -20,23 +20,16 @@ there.
 from __future__ import annotations
 
 import functools
-import os
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AsyncExitStack
-from dataclasses import dataclass, replace
 from typing import Any, get_args
 
-from mcp_types import Tool
+from mcp_types import Tool, ToolAnnotations
 
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
-    ANSWER_ENV_BY_PROVIDER,
-    BROWSE_ENV_BY_PROVIDER,
-    BROWSER_ENV_BY_PROVIDER,
     DELEGATING_PROVIDERS,
-    ENV_BY_PROVIDER,
     ENV_MCP_ENV_FILE,
-    EXTRACT_ENV_BY_PROVIDER,
     MCP_ARG_FORMAT,
     MCP_ARG_HANDLE,
     MCP_ARG_MAX_CHARS,
@@ -54,8 +47,6 @@ from web_router.constants import (
     MCP_BROWSER_SNAPSHOT_MAX_CHARS,
     MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT,
     MCP_BROWSER_TOOLS,
-    MCP_METHOD_BROWSER,
-    MCP_METHOD_TEMPLATE,
     MCP_MSG_BROWSE_PENDING,
     MCP_MSG_BROWSER_ALREADY_ENDED,
     MCP_MSG_BROWSER_LOWERED,
@@ -101,20 +92,20 @@ from web_router.constants import (
     MCP_TOOL_TEMPLATE,
     MCP_TOOL_TEMPLATES,
     MCP_TOOL_WAITS,
-    RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
 )
-from web_router.constants_mcp import MCP_MSG_UNKNOWN_ARGUMENTS, MCP_SERVER_INSTRUCTIONS
+from web_router.constants_mcp import MCP_MSG_UNKNOWN_ARGUMENTS, MCP_SERVER_INSTRUCTIONS, MCP_TOOL_HINTS
 from web_router.exceptions import (
     BrowseTimeoutError,
     ProviderNotFoundError,
     ProviderNotInstalledError,
     ResearchTimeoutError,
 )
+from web_router.mcp import methods
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
 from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
 from web_router.mcp.chains import CHAIN_OF
-from web_router.mcp.env import EnvSources, env_names, user_config_dir
+from web_router.mcp.env import EnvSources, user_config_dir
+from web_router.mcp.methods import METHODS
 from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.shaping import (
@@ -134,109 +125,12 @@ from web_router.mcp.shaping import (
 )
 from web_router.mcp.shaping_templates import shape_template, shape_template_run, shape_templates
 from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
-from web_router.registry import (
-    configured_browse_providers,
-    configured_browser_providers,
-    configured_extract_providers,
-    configured_providers,
-    configured_research_providers,
-    configured_template_providers,
-    get_browse_provider_class,
-    get_browser_provider_class,
-    get_extract_provider_class,
-    get_provider_class,
-    get_research_provider_class,
-    get_template_provider_class,
-)
-from web_router.registry_answer import configured_answer_providers, get_answer_provider_class
 from web_router.types import (
-    BROWSE_PARAMETERS,
-    BROWSER_PARAMETERS,
-    EXTRACT_PARAMETERS,
-    NORMALIZED_PARAMETERS,
-    RESEARCH_PARAMETERS,
-    TEMPLATE_PARAMETERS,
     ExtractFormat,
     ExtractResponse,
     StealthLevel,
 )
-from web_router.types_answer import ANSWER_PARAMETERS
 from web_router.types_page import PageState
-
-
-@dataclass(frozen=True)
-class _Method:
-    """What a provider-picking tool needs to know about the library method behind it."""
-
-    key: str
-    """How the capabilities resource names the method: the tool's own name, but ``template`` and ``open_browser``."""
-    configured: Callable[[], list[str]]
-    """Which backends this install can actually serve it with."""
-    cls: Callable[[str], type[_BaseProvider]]
-    """The class lookup, which reads ``supported_parameters`` without a credential."""
-    env: Mapping[str, Any]
-    """The method's ``*_ENV_BY_PROVIDER`` table."""
-    options: frozenset[str] = frozenset()
-    """The arguments a backend may or may not map, as opposed to the ones every backend takes."""
-
-
-_TEMPLATE = _Method(
-    MCP_METHOD_TEMPLATE, configured_template_providers, get_template_provider_class, TEMPLATE_ENV_BY_PROVIDER
-)
-
-_METHODS: dict[str, _Method] = {
-    MCP_TOOL_SEARCH: _Method(
-        MCP_TOOL_SEARCH, configured_providers, get_provider_class, ENV_BY_PROVIDER, NORMALIZED_PARAMETERS
-    ),
-    MCP_TOOL_EXTRACT: _Method(
-        MCP_TOOL_EXTRACT,
-        configured_extract_providers,
-        get_extract_provider_class,
-        EXTRACT_ENV_BY_PROVIDER,
-        EXTRACT_PARAMETERS,
-    ),
-    # Listing and describing take no option a backend may decline; a run takes the template's.
-    MCP_TOOL_TEMPLATES: _TEMPLATE,
-    MCP_TOOL_TEMPLATE: _TEMPLATE,
-    MCP_TOOL_RUN_TEMPLATE: replace(_TEMPLATE, options=TEMPLATE_PARAMETERS),
-    MCP_TOOL_ANSWER: _Method(
-        MCP_TOOL_ANSWER,
-        configured_answer_providers,
-        get_answer_provider_class,
-        ANSWER_ENV_BY_PROVIDER,
-        ANSWER_PARAMETERS,
-    ),
-    MCP_TOOL_RESEARCH: _Method(
-        MCP_TOOL_RESEARCH,
-        configured_research_providers,
-        get_research_provider_class,
-        RESEARCH_ENV_BY_PROVIDER,
-        RESEARCH_PARAMETERS,
-    ),
-    MCP_TOOL_BROWSE: _Method(
-        MCP_TOOL_BROWSE,
-        configured_browse_providers,
-        get_browse_provider_class,
-        BROWSE_ENV_BY_PROVIDER,
-        BROWSE_PARAMETERS,
-    ),
-    MCP_TOOL_BROWSER_OPEN: _Method(
-        MCP_METHOD_BROWSER,
-        configured_browser_providers,
-        get_browser_provider_class,
-        BROWSER_ENV_BY_PROVIDER,
-        BROWSER_PARAMETERS,
-    ),
-}
-"""The nine tools that reach a backend, and the method each serves.
-
-The two ``*_status`` tools, ``fetch_raw`` and the browser actions work on what
-an earlier call left behind and never pick a provider. The three template
-tools share one method.
-"""
-
-_EACH_METHOD: tuple[_Method, ...] = tuple({method.key: method for method in _METHODS.values()}.values())
-"""Every method once, in the order the capabilities resource lists them."""
 
 _Handler = Callable[[Mapping[str, Any]], Awaitable["dict[str, Any] | ToolOutput"]]
 
@@ -327,8 +221,10 @@ class WebRouterTools:
         return [
             Tool(
                 name=name,
+                title=MCP_TOOL_HINTS[name][0],
                 description=self._description(name),
                 input_schema=self._schema(name),
+                annotations=_annotations(name),
             )
             for name in self._handlers
             if name not in hidden
@@ -345,10 +241,10 @@ class WebRouterTools:
         if not self.keyed():
             env["hint"] = MCP_MSG_ENV_HINT.format(env_var=ENV_MCP_ENV_FILE, user_dir=user_config_dir())
         return {
-            **_configured(),
+            **methods.configured(),
             "default_provider": self.router.default_provider,
             "env": env,
-            "unlock": _unlock(),
+            "unlock": methods.unlock(),
             "routing": self.capabilities_routing(),
         }
 
@@ -358,7 +254,7 @@ class WebRouterTools:
 
     def keyed(self) -> bool:
         """Whether any backend is configured here that needed a credential to be."""
-        return any(_keyed(method) for method in _EACH_METHOD)
+        return any(methods.keyed(method) for method in methods.EACH_METHOD)
 
     def instructions(self) -> str:
         """The server's instructions, saying what the model can do about it when no key reached the server."""
@@ -503,7 +399,7 @@ class WebRouterTools:
         payload: dict[str, Any] = {"file": str(applied.path), "loaded": list(applied.loaded)}
         if applied.already_set:
             payload["already_set"] = list(applied.already_set)
-        payload["configured"] = _configured()
+        payload["configured"] = methods.configured()
         notes = [] if applied.loaded else [MCP_MSG_ENV_NOTHING_NEW]
         if applied.remembered is not None:
             notes.append(MCP_MSG_ENV_REMEMBERED.format(pointer=applied.remembered))
@@ -679,12 +575,11 @@ class WebRouterTools:
             description = description.format(idle=self.browsers.idle_timeout, max_sessions=self.browsers.max_sessions)
         elif tool == MCP_TOOL_BROWSER_SNAPSHOT:
             description = description.format(max_chars=MCP_BROWSER_SNAPSHOT_MAX_CHARS)
-        method = _METHODS.get(tool)
-        if method is not None and not _usable(method):
+        method = METHODS.get(tool)
+        if method is not None and not methods.usable(method):
             description += MCP_MSG_NO_BACKEND
-            env_vars = _env_vars(method)
-            if env_vars:
-                description += MCP_MSG_NO_BACKEND_HINT.format(env_vars=", ".join(env_vars))
+            if names := methods.env_vars(method):
+                description += MCP_MSG_NO_BACKEND_HINT.format(env_vars=", ".join(names))
         return description
 
     def _schema(self, tool: str) -> dict[str, Any]:
@@ -699,7 +594,7 @@ class WebRouterTools:
         never a silent drop.
         """
         properties: dict[str, Any] = dict(MCP_TOOL_PROPERTIES[tool])
-        method = _METHODS.get(tool)
+        method = METHODS.get(tool)
         providers = method.configured() if method is not None else []
         if method is not None:
             serving = _serving(tool, [*providers, self.router.default_provider], self.router)
@@ -724,9 +619,20 @@ class WebRouterTools:
         }
 
 
+def _annotations(tool: str) -> ToolAnnotations:
+    title, read_only, destructive, idempotent, open_world = MCP_TOOL_HINTS[tool]
+    return ToolAnnotations(
+        title=title,
+        read_only_hint=read_only,
+        destructive_hint=destructive,
+        idempotent_hint=idempotent,
+        open_world_hint=open_world,
+    )
+
+
 def _argument_names(tool: str) -> list[str]:
     """Every argument ``tool`` declares, not only this install's schema: the library refuses what none here maps."""
-    return [*MCP_TOOL_PROPERTIES.get(tool, {}), *([MCP_ARG_PROVIDER] if tool in _METHODS else [])]
+    return [*MCP_TOOL_PROPERTIES.get(tool, {}), *([MCP_ARG_PROVIDER] if tool in METHODS else [])]
 
 
 def _serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[type[_BaseProvider]]:
@@ -748,7 +654,7 @@ def _serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[ty
     classes: list[type[_BaseProvider]] = []
     for name in dict.fromkeys(names):
         try:
-            classes.append(_METHODS[tool].cls(name))
+            classes.append(METHODS[tool].cls(name))
         except (ProviderNotFoundError, ProviderNotInstalledError):
             continue
     return classes
@@ -797,46 +703,3 @@ def _lower(kwargs: dict[str, Any], name: str, limit: float, lowered: list[str]) 
 
 def _noted(note: str, lowered: list[str]) -> str:
     return " ".join(part for part in (note, *lowered) if part)
-
-
-def _configured() -> dict[str, list[str]]:
-    """The backends configured here, per method, keyed as the capabilities resource names them."""
-    return {method.key: method.configured() for method in _EACH_METHOD}
-
-
-def _unlock() -> dict[str, dict[str, list[str]]]:
-    """Per method, the backends no key has reached yet and the variables that would add each -- names only."""
-    unlock: dict[str, dict[str, list[str]]] = {}
-    for method in _EACH_METHOD:
-        configured = set(method.configured())
-        missing = {
-            provider: [name for name in env_names(env) if not os.environ.get(name)]
-            for provider, env in method.env.items()
-            if env and provider not in configured
-        }
-        if missing:
-            unlock[method.key] = missing
-    return unlock
-
-
-def _keyed(method: _Method) -> list[str]:
-    """The backends configured for this method that needed a credential to be."""
-    return [provider for provider in method.configured() if method.env.get(provider)]
-
-
-def _usable(method: _Method) -> bool:
-    """Whether anything but a delegating provider is configured for this method.
-
-    ``auto`` and ``max`` are always "configured" because they need no credential
-    of their own -- they need whatever their chain does. For search and extract
-    that chain ends in a keyless backend and always works; for research and
-    browse every backend bills, so ``auto`` alone means nothing here can
-    actually run. Answer's ``auto`` is not listed among its backends, so it is usable exactly when a
-    key is there.
-    """
-    return any(provider not in DELEGATING_PROVIDERS for provider in method.configured())
-
-
-def _env_vars(method: _Method) -> list[str]:
-    """Every variable that would configure a backend for this method."""
-    return sorted({name for env in method.env.values() for name in env_names(env)})

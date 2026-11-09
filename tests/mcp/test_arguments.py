@@ -1,4 +1,4 @@
-"""What a tool call is checked for before anything runs: the arguments' names."""
+"""What a tool says about itself beyond its schema, and what a call is checked for before anything runs."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from typing import Any
 import pytest
 
 from tests.mcp.conftest import FAKE
-from web_router.constants import MCP_TOOL_SEARCH
-from web_router.constants_mcp import MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
+from web_router.constants import MCP_TOOL_RESEARCH, MCP_TOOL_SEARCH
+from web_router.constants_mcp import MCP_TOOL_BUDGET_STATUS, MCP_TOOL_HINTS, MCP_TOOL_WEB_RUN
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
 
@@ -38,3 +38,13 @@ async def test_every_tool_refuses_a_name_it_does_not_declare(
 
     assert result.is_error
     assert "does not take" in result.content[0].text
+
+
+def test_every_listed_tool_carries_a_title_and_behaviour_hints(tools: WebRouterTools) -> None:
+    listed = {tool.name: tool for tool in tools.list_tools()}
+
+    assert set(MCP_TOOL_HINTS) >= set(listed) and set(MCP_TOOL_HINTS) == set(tools._handlers)
+    assert all(tool.title and tool.annotations for tool in listed.values())
+    # A client auto-approves a free lookup and asks before a billed run.
+    assert listed[MCP_TOOL_SEARCH].annotations.read_only_hint is True  # type: ignore[union-attr]
+    assert listed[MCP_TOOL_RESEARCH].annotations.idempotent_hint is False  # type: ignore[union-attr]

@@ -14,8 +14,8 @@ from web_router.constants import (
     ENV_LOCAL_BROWSER_PATH,
     ENV_OPENAI_API_KEY,
 )
-from web_router.mcp import tools as tools_module
 from web_router.mcp.env import ALL_ENV_TABLES, EnvSources, credential_variables
+from web_router.mcp.methods import METHODS
 
 ENV_EXAMPLE = Path(__file__).resolve().parents[2] / ".env.example"
 
@@ -33,7 +33,7 @@ def test_every_credential_in_env_example_loads_and_nothing_else_does() -> None:
 
 def test_the_tools_read_the_same_tables_the_loader_does() -> None:
     """``unlock`` and the no-backend hints name only variables a ``.env`` can actually set."""
-    in_tools = {id(method.env) for method in tools_module._METHODS.values()}
+    in_tools = {id(method.env) for method in METHODS.values()}
     assert in_tools == {id(table) for table in ALL_ENV_TABLES}
 
 

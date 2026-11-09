@@ -137,10 +137,10 @@ def test_a_router_whose_default_is_max_still_lists_every_tool(no_keys: None) -> 
 
 def test_a_method_with_only_delegating_providers_configured_is_not_usable() -> None:
     """``max`` needs no key of its own any more than ``auto`` does, so neither counts as a backend that can run."""
-    from web_router.mcp import tools as module
+    from web_router.mcp import methods
 
-    method = replace(module._METHODS[MCP_TOOL_EXTRACT], configured=lambda: [PROVIDER_AUTO, PROVIDER_MAX])
-    assert not module._usable(method)
+    method = replace(methods.METHODS[MCP_TOOL_EXTRACT], configured=lambda: [PROVIDER_AUTO, PROVIDER_MAX])
+    assert not methods.usable(method)
 
 
 def test_the_extract_tool_says_what_max_costs(tools: WebRouterTools) -> None:

@@ -208,6 +208,8 @@ src/web_router/
 ├── exceptions.py       WebRouterError and subclasses
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
+│   ├── methods.py      the library method behind each provider-picking tool: its
+│   │                   registry, classes, options and env table, in one table
 │   ├── routing_config.py the operator's router and ceiling, read once at startup
 │   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
 │   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and

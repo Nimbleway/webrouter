@@ -214,6 +214,10 @@ the client's `env` block or a file the server already read takes a restart.
 | `browser_read` | The page as it is now, as text or HTML, shaped like `extract`. | about a second |
 | `browser_close` | End the session and stop paying for it. | about a second |
 
+Each tool also carries a `title` and MCP's behaviour hints (`readOnlyHint`,
+`destructiveHint`, `idempotentHint`, `openWorldHint`), so a client can let a
+free lookup through and ask before a billed run or a click on a live page.
+
 The descriptions the model reads say the same thing, because with twenty-four tools in
 front of it the model *is* the router: what it needs to choose on is what each
 tool is for, what it costs and how long it takes.
