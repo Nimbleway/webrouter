@@ -36,6 +36,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - An MCP tool call with an argument the tool does not declare, such as a typo or a guessed `recency`, is now refused with the names the tool takes, instead of running with the argument silently dropped.
 
+- An MCP result that is over its size budget now cuts every result's text further before it drops any result, so `max_results=3` returns three results; before, it dropped whole results first.
+
 ### Removed
 
 - The decider spike: `WebRouter(decider=, decider_config=)`, `WebRouter.classify()`, `WebRouter.execute()`, `Route` and the `web_router.decisions` package (`DecisionProvider`, `register_decider()` and the `keywords`, `jev` and `llm` deciders). It was a proof of concept for routing; `router=`, `plan()` and `run()` replace it. To keep using it, pin `web-router==0.9.0`, the last version that has it.
