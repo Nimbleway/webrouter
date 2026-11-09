@@ -314,3 +314,15 @@ def test_a_named_host_follows_the_base_url_rules() -> None:
         _vendor(hosts={"bulk": "http://bulk.querykey.test"})
     with pytest.raises(ValidationError, match="not one of the vendor's hosts"):
         _vendor(endpoints=[_endpoint("querykey.x.y", "GET", "/x", host="nope")])
+
+
+def test_a_path_input_is_required_even_when_the_entry_forgets_to_say_so(catalog: VendorCatalog) -> None:
+    from tests.vendors.conftest import ACME, _endpoint
+    from web_router.vendors.schema import Vendor
+
+    vendor = Vendor.model_validate(
+        {**ACME, "endpoints": [_endpoint("acme.thing.get", "GET", "/v1/thing/{id}", params={"id": {"in": "path"}})]}
+    )
+    with pytest.raises(MissingParameterError) as raised:
+        plan_endpoint(vendor, vendor.endpoints[0], {})
+    assert raised.value.parameters == ["id"]

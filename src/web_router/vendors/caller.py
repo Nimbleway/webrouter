@@ -111,7 +111,12 @@ def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str,
     if unknown:
         detail = f"{endpoint.id} takes: {', '.join(sorted(endpoint.params)) or 'no parameters'}."
         raise UnsupportedParameterError(vendor.vendor, unknown, detail=detail)
-    missing = {name for name, spec in endpoint.params.items() if spec.required and params.get(name) is None}
+    # A path placeholder cannot be left out, whatever the entry says: the URL has no shape without it.
+    missing = {
+        name
+        for name, spec in endpoint.params.items()
+        if (spec.required or spec.location == "path") and params.get(name) is None
+    }
     if missing:
         raise MissingParameterError(vendor.vendor, missing, detail=f"{endpoint.id} requires them.")
     plan = _Plan(vendor=vendor, endpoint=endpoint.id, method=endpoint.method, path=endpoint.path)
