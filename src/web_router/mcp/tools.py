@@ -316,8 +316,7 @@ class WebRouterTools:
 
     async def _run_template(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_RUN_TEMPLATE, arguments)
-        inputs = kwargs.get("inputs")
-        screen(MCP_TOOL_RUN_TEMPLATE, url_values(inputs) if isinstance(inputs, Mapping) else [])
+        screen(MCP_TOOL_RUN_TEMPLATE, url_values(kwargs.get("inputs")))
         with template_charged(self.router, kwargs):
             response = await self.router.run_template(**kwargs)
         record = self.store.add(MCP_TOOL_RUN_TEMPLATE, raw=response.raw)

@@ -9,7 +9,6 @@ keyed account hand a vendor a ``file:``, loopback, private or metadata URL.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
 
 from web_router._urls import host_of
 from web_router.constants import MCP_BROWSER_REFUSED_SCHEMES
@@ -29,16 +28,24 @@ def screen(tool: str, urls: object) -> None:
         raise ValueError(MCP_MSG_URL_REFUSED.format(tool=tool, refused="; ".join(refused)))
 
 
-def url_values(inputs: Mapping[str, Any]) -> list[str]:
-    """A template's inputs that are URLs -- an id, a slug or a search term is not screened.
+def url_values(inputs: object) -> list[str]:
+    """Every URL among a template's inputs, however deep -- an id, a slug or a search term is not screened.
 
-    A URL is a value with ``://`` in it, or one that starts with a scheme a URL
-    needs no ``//`` for: ``file:/etc/passwd``, ``data:``, ``javascript:``.
+    A URL is a value with ``://`` in it, a scheme-relative ``//host/...``, or
+    one that starts with a scheme a URL needs no ``//`` for: ``file:/etc/passwd``,
+    ``data:``, ``javascript:``.
     """
-    values = [item for value in inputs.values() for item in (value if isinstance(value, list) else [value])]
-    return [value for value in values if isinstance(value, str) and ("://" in value or _bare_scheme(value))]
+    if isinstance(inputs, Mapping):
+        return [url for value in inputs.values() for url in url_values(value)]
+    if isinstance(inputs, list):
+        return [url for value in inputs for url in url_values(value)]
+    return [inputs] if isinstance(inputs, str) and _looks_like_url(inputs) else []
 
 
-def _bare_scheme(value: str) -> bool:
+def _looks_like_url(value: str) -> bool:
     scheme, sep, _ = value.partition(":")
-    return bool(sep) and scheme.strip().lower() in MCP_BROWSER_REFUSED_SCHEMES
+    return (
+        "://" in value
+        or value.lstrip().startswith("//")
+        or (bool(sep) and scheme.strip().lower() in MCP_BROWSER_REFUSED_SCHEMES)
+    )

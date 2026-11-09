@@ -37,6 +37,8 @@ async def test_a_refusal_names_the_host_and_never_the_path(tools: WebRouterTools
         (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "file:///etc/passwd"}}),
         (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "file:/etc/passwd"}}),
         (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"urls": ["JavaScript:alert(1)"]}}),
+        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"page": {"at": ["http://10.0.0.1/"]}}}),
+        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "//127.0.0.1/admin"}}),
     ],
 )
 async def test_browse_and_a_template_run_screen_their_urls_too(
