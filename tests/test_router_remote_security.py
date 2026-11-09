@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import builtins
 import logging
+import socket
+import time
 from typing import Any
 
 import pytest
 
-from tests.routing_remote_helpers import KEY, Canned, Recorder, canned, config, running
+from tests.routing_remote_helpers import KEY, Canned, Recorder, canned, config, reference, running
 from web_router import RouteDecision, RouteRequest, RouterError, WebRouter
 from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY
 from web_router.exceptions import ConfigurationError
@@ -251,3 +253,23 @@ def test_the_reference_server_answers_a_too_deeply_nested_body_with_400() -> Non
         assert answer.status_code == 400 and "nested" in answer.json()["error"]
         body = {"schema": 1, "prompt": "x", "candidates": [], "deadline_s": 1.0}
         assert client.post(server.url, json=body, headers=headers).status_code == 200, "the server still answers"
+
+
+def test_the_example_server_closes_connections_past_its_worker_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(reference, "MAX_WORKERS", 2)
+    with running() as server:
+        address = server.server_address[:2]
+        idle = [socket.create_connection(address) for _ in range(2)]  # hold both workers, sending nothing
+        time.sleep(0.2)
+        with socket.create_connection(address, timeout=2) as third:
+            assert third.recv(1) == b"", "a third connection is closed, not given a thread"
+        for conn in idle:
+            conn.close()
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:  # the workers notice the close and give their slots back
+            with socket.create_connection(address, timeout=2) as again:
+                again.sendall(b"POST /nowhere HTTP/1.1\r\nHost: " + f"{address[0]}:{address[1]}".encode() + b"\r\n\r\n")
+                if again.recv(12).startswith(b"HTTP/1.0 404"):
+                    return
+            time.sleep(0.05)
+        pytest.fail("the slots were never given back")

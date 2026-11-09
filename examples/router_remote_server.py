@@ -24,7 +24,8 @@ Run it with::
 Set `WEB_ROUTER_REMOTE_ROUTER_API_KEY` before starting it to require that key;
 the `remote` router reads the same variable. It binds 127.0.0.1 unless
 `--host` says otherwise, answers only a `Host` header naming that address or
-`localhost`, and caps a request at 1 MB. Plain `http` is accepted only to
+`localhost`, caps a request at 1 MB, serves at most 32 connections at once
+and drops one that sends nothing for 10 seconds. Plain `http` is accepted only to
 `localhost` or a loopback address: put a real service behind `https`.
 """
 
@@ -47,6 +48,7 @@ PATH = "/route"
 MAX_BODY_BYTES = 1_000_000
 POLL_S = 0.05  # how soon shutdown() is noticed
 SOCKET_TIMEOUT_S = 10.0
+MAX_WORKERS = 32  # connections served at once; more are closed before a thread is spent on them
 PROMPTS = (
     "what is retrieval augmented generation",
     "read https://en.wikipedia.org/wiki/Web_scraping",
@@ -70,6 +72,24 @@ class RouterServer(ThreadingHTTPServer):
         super().__init__(address, _Handler)
         self.api_key = api_key
         self.decide = decide
+        self._slots = threading.BoundedSemaphore(MAX_WORKERS)
+
+    def process_request(self, request: Any, client_address: Any) -> None:
+        """Serve a connection on its own thread while a slot is free; close it otherwise."""
+        if not self._slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._slots.release()  # no thread started, so none will give the slot back
+            raise
+
+    def process_request_thread(self, request: Any, client_address: Any) -> None:
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()
 
     @property
     def hosts(self) -> set[str]:
