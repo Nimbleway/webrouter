@@ -2,10 +2,9 @@
 
 **One interface over many web search, extraction, answer, research and browser APIs.**
 
-> **Alpha.** You have early access to `web-router` under your agreement with
-> Nimble. Please don't share the code or this repository. Issues and pull
-> requests are welcome here.
+> **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
 
+[![CI](https://github.com/WebContextLayer/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WebContextLayer/webrouter/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -77,9 +76,20 @@ dropped** — so a call never runs under weaker constraints than you asked for.
 
 ## Install
 
-`web-router` is installed from this repository, not from PyPI. The one
-prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/),
-which fetches the right Python itself.
+Install the package from PyPI, with the extras you need:
+
+```bash
+pip install "web-router[all]"         # any virtualenv
+uv add "web-router[all]"              # a uv project
+pip install "web-router[mcp,browser]" # the MCP server with its browser tools
+```
+
+Then put the keys you hold in your environment or a `.env` file; none is
+required. [`.env.example`](.env.example) names each variable.
+
+**From source**, for contributors or to track `main`: the one prerequisite is
+[uv](https://docs.astral.sh/uv/getting-started/installation/), which fetches
+the right Python itself.
 
 ```bash
 git clone https://github.com/WebContextLayer/webrouter.git
@@ -89,17 +99,11 @@ cp .env.example .env    # then fill in only the keys you hold; none is required
 ```
 
 Using a coding agent? Tell it *"clone https://github.com/WebContextLayer/webrouter
-and set it up"*. [CLAUDE.md](CLAUDE.md) walks it through the rest.
-
-**From your own project**, install the clone in editable mode, so a `git pull`
-in the clone is the whole update:
-
-```bash
-uv add --editable "/path/to/webrouter[all]"     # a uv project
-pip install -e "/path/to/webrouter[all]"        # any other virtualenv
-```
-
-To pick up a new release: `git pull && make setup` in the clone.
+and set it up"*. [CLAUDE.md](CLAUDE.md) walks it through the rest. To use the
+clone from another project, install it in editable mode
+(`uv add --editable "/path/to/webrouter[all]"` or
+`pip install -e "/path/to/webrouter[all]"`), so `git pull && make setup` in the
+clone is the whole update.
 
 You can install fewer extras by naming them in place of `all`:
 
@@ -848,7 +852,7 @@ the pages, and `research()`, a job of minutes.
 
 Three steps to a first answer:
 
-1. Install with the `answer` extra: `pip install -e "/path/to/webrouter[answer]"`
+1. Install with the `answer` extra: `pip install "web-router[answer]"`
    (`make setup` in a clone installs every extra).
 2. Set one answer backend's key in your environment or `.env`, for example
    `PERPLEXITY_API_KEY` -- the [answer table](#answer) lists each one's variable.
@@ -2448,7 +2452,7 @@ make test-browser
 
 ## License
 
-`web-router` is proprietary and shared with alpha users under their agreement
-with Nimble; no open-source license applies to this repository. The SimpleQA
-grader prompt vendored at `src/web_router/evals/prompts/` keeps its own MIT
-license, in `LICENSE-simple-evals` beside it.
+A license will be added once it is chosen.
+
+The SimpleQA grader prompt vendored at `src/web_router/evals/prompts/` keeps
+its own MIT license, in `LICENSE-simple-evals` beside it.
