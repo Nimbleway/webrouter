@@ -1,5 +1,5 @@
 [project]
-name = "web-router"
+name = "webrouter"
 dynamic = ["version"]
 description = "A provider-agnostic router for web search and page-extraction APIs (Nimble, Exa, Tavily, Brave, Oxylabs, Bright Data, ...)"
 readme = "README.md"
@@ -105,9 +105,9 @@ browser = [
 # rather than adding one of its own.
 # Not `browser`: Playwright is a large install most MCP users never drive. The
 # server lists its browser_* tools only when it is present, so
-# `web-router[mcp,browser]` is what turns them on.
+# `webrouter[mcp,browser]` is what turns them on.
 mcp = [
-    "web-router[search,extract,research,answer]",
+    "webrouter[search,extract,research,answer]",
     "mcp>=2.2,<3",
     # The server's entry point loads the project .env, so keys reach it
     # without being exported; the library itself never reads dotfiles.
@@ -119,7 +119,7 @@ mcp = [
 # there so a GPT-family system under test is not graded by its own family.
 # Bring your own `Judge` subclass and this extra is not needed.
 evals = [
-    "web-router[search]",
+    "webrouter[search]",
     "openai>=1.0,<4",
     "anthropic>=1.8,<2",
     # SealQA is published as Parquet; read only inside Dataset.sealqa().
@@ -129,7 +129,7 @@ evals = [
 # built on LangChain rather than one that speaks MCP. langchain-core is all the
 # tools need -- the agent loop and the model are the caller's own install.
 langchain = [
-    "web-router[search,extract]",
+    "webrouter[search,extract]",
     "langchain-core>=1.0,<2",
 ]
 # The second exception to the method rule (EXTRA_AWS in constants.py): the
@@ -137,10 +137,10 @@ langchain = [
 # their requests with botocore, a large install that a search user who never
 # touches AWS should not carry. Only signing is used, so no boto3.
 aws = [
-    "web-router[search]",
+    "webrouter[search]",
     "botocore>=1.35",
 ]
-all = ["web-router[search,extract,research,answer,browser,aws]"]
+all = ["webrouter[search,extract,research,answer,browser,aws]"]
 
 [project.scripts]
 web-router-mcp = "web_router.mcp.server:main"

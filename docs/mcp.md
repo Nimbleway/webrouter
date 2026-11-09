@@ -453,7 +453,7 @@ untranslated — for `local` they are Chrome command-line switches — or `profi
 / `persist_profile`, a saved, logged-in identity you own. Those are set in code,
 never from a conversation, and passing one is refused by name.
 
-The tools need Playwright: install `web-router[mcp,browser]`. Where it is
+The tools need Playwright: install `webrouter[mcp,browser]`. Where it is
 missing the server leaves every `browser_*` tool out of its tool list, and a
 client that calls `browser_open` anyway is refused before a session is opened —
 and billed for — that nothing could drive.
