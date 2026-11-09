@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import warnings
 from datetime import datetime
-from typing import Annotated, Any, ClassVar
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -153,6 +153,14 @@ class LiveDataSourcePage(BaseModel):
     total: int | None = Field(default=None, description="How many sources the backend holds, when it says.")
     offset: int | None = Field(default=None, description="How many sources precede this page, when it says.")
     limit: int | None = Field(default=None, description="The page size the backend applied, when it says.")
+    query: str | None = Field(default=None, description="The keywords the page was searched with; None for a listing.")
+    search: Literal["native", "local"] | None = Field(
+        default=None,
+        description=(
+            "How `query` was matched: by the vendor's own search ('native', in its relevance order), or here "
+            "over the whole catalogue on name, site and description ('local'). None for a listing."
+        ),
+    )
     raw: Any = Field(default=None, description="The provider's untouched response payload, object or array.")
 
     @model_validator(mode="before")

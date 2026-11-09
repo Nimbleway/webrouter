@@ -29,6 +29,14 @@ def _payload(result: Any) -> dict[str, Any]:
     return parsed
 
 
+async def test_live_data_sources_searches_by_query_and_says_how(tools: WebRouterTools) -> None:
+    found = _payload(await call_tool(tools, MCP_TOOL_LIVE_DATA_SOURCES, {"query": "jobs", "provider": FAKE}))
+
+    assert [row["name"] for row in found["sources"]] == ["jobs_listing"]
+    assert found["query"] == "jobs" and found["search"] == "local"
+    assert "query" in _tool(tools, MCP_TOOL_LIVE_DATA_SOURCES).input_schema["properties"]
+
+
 async def test_live_data_sources_lists_the_catalogue_and_live_data_source_describes_one(tools: WebRouterTools) -> None:
     listed = _payload(await call_tool(tools, MCP_TOOL_LIVE_DATA_SOURCES, {"limit": 10, "provider": FAKE}))
 

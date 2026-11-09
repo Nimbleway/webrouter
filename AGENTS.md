@@ -26,7 +26,9 @@ dedicated sources), run for this call and answering with structured
 `records` shaped by the source's own output schema rather than page text. Its
 inputs are the source's own -- a URL for some, an id, a slug or a search term
 for others -- which is why it is a method and not an option on `extract`.
-`live_data_sources` lists one page of the vendor's catalogue and
+`live_data_sources` lists one page of the vendor's catalogue (or searches it
+by `query`: natively where the vendor's API has a search, as Apify's Store
+does, otherwise by reading the whole catalogue and matching here) and
 `live_data_source` describes one, schemas and all; the three share one
 registry. Nimble, Apify, Bright Data and Oxylabs. No keyless tier and no
 `auto`: a run fetches and parses on the backend's account, and a source's
@@ -105,6 +107,8 @@ src/web_router/
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
 ├── client_live_data.py live_data(), live_data_sources(), live_data_source() and the
 │                       deprecated template names, mixed into both routers
+├── live_data_search.py live_data_sources(query=...): NativeSourceSearch for vendors that
+│                       search their own catalogue, a local match for the rest
 ├── live_data_compat.py the old Template* names, importable from web_router with a warning
 ├── client_plan.py      plan() and run(), prompt-level routing, mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into

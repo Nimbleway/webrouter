@@ -69,6 +69,7 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.exceptions_budget import BudgetExceededError
+from web_router.live_data_search import NativeSourceSearch
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -224,6 +225,7 @@ __all__ = [
     "LiveDataSourceNotFoundError",
     "LiveDataSourcePage",
     "MissingParameterError",
+    "NativeSourceSearch",
     "NavigationError",
     "NoAnswerProviderError",
     "PageClosedError",

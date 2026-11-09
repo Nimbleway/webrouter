@@ -44,6 +44,11 @@ MSG_LIVE_DATA_BAD_PAGE: Final = (
     "a page needs a limit and an offset of 0 or more, not limit={limit!r}, offset={offset!r}"
 )
 
+MSG_LIVE_DATA_SEARCH_CAPPED: Final = (
+    "searching {provider}'s live data sources for {query!r} stopped after {read} sources; "
+    "the matches come from those alone, so `total` is unset"
+)
+
 MSG_LIVE_DATA_DEPRECATED_FIELD: Final = "`{old}` is deprecated and will be removed: use `{new}`."
 
 MSG_LIVE_DATA_DEPRECATED_NAME: Final = (
@@ -59,6 +64,14 @@ MCP_METHOD_LIVE_DATA: Final = "live_data"
 """The key the capabilities resource lists live data providers under; the three tools share one registry."""
 
 MCP_LIVE_DATA_SOURCES_PROPERTIES: dict[str, dict[str, Any]] = {
+    "query": {
+        "type": "string",
+        "description": (
+            "Keywords to find a source by -- a site, a brand, the kind of page ('amazon product', 'linkedin "
+            "jobs'). Searched by the vendor's own search where it has one, else matched here on name, site "
+            "and description. Unset lists the catalogue in order."
+        ),
+    },
     "limit": {"type": "integer", "minimum": 1, "description": "How many sources to list. Unset, the backend's page."},
     "offset": {"type": "integer", "minimum": 0, "description": "How many to skip first, for the next page."},
 }
@@ -92,7 +105,9 @@ MCP_DESC_LIVE_DATA_SOURCES = (
     "fixed fields, fetched fresh on every run. Returns in about a second, with each source's name, "
     "site, what it extracts, the names of the inputs a run must pass (`required_inputs`) and one input "
     "the vendor recorded a run with (`sample_inputs`). Call it before `live_data` to find a source for "
-    "the site at hand; a catalogue can be long, so page with `limit` and `offset`. Then "
+    "the site at hand; a catalogue can be long, so pass `query` with the site or the kind of page, and "
+    "page with `limit` and `offset`. The answer's `search` says whether the vendor searched ('native') "
+    "or the catalogue was matched here ('local'). Then "
     "`live_data_source` for the full schemas and samples."
 )
 
@@ -114,6 +129,17 @@ MCP_DESC_LIVE_DATA = (
     "to find pages. `inputs` are the source's own, from `live_data_source`. A run the backend could "
     "not complete is an error, never an empty answer."
 )
+
+# -- search -----------------------------------------------------------------
+
+LIVE_DATA_SEARCH_PAGE: Final = 100
+"""Sources asked for per page while reading a catalogue to search it here; Nimble's own cap on a page."""
+
+LIVE_DATA_SEARCH_MAX_SOURCES: Final = 5000
+"""Sources read at most to search one catalogue here, so a vendor that pages forever cannot hold a call."""
+
+LIVE_DATA_SEARCH_NATIVE: Final = "native"
+LIVE_DATA_SEARCH_LOCAL: Final = "local"
 
 # -- HTTP backends ----------------------------------------------------------
 

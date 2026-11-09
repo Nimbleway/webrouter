@@ -885,6 +885,9 @@ page = router.live_data_sources(provider="apify", limit=20)  # one page of the c
 for source in page.sources:
     print(source.name, source.domain, source.description)
 
+page = router.live_data_sources(provider="nimble", query="walmart product")  # find one by keyword
+page.search  # "native" where the vendor searched (Apify), "local" where it was matched here
+
 source = router.live_data_source("apify~google-maps-scraper", provider="apify")
 source.input_schema  # JSON Schema of what a run passes as `inputs`
 
@@ -913,6 +916,24 @@ router.live_data("amazon_product", {"query": "B0CHX1W1XY", "domain": "com"}, pro
 | `apify` | `username~name` (or `username/name`) | the Apify Store, paged by Apify | the Actor's input, sent as the body untouched | every dataset item is a record; waits up to 300 s; `provider_options` go to the run's query (`memory`, `maxItems`, `maxTotalChargeUsd`) |
 | `brightdata` | the dataset id, `gd_l7q7dkf244hwjntr0`, or the scraper's name -- Bright Data's as written (`Amazon products`) or as listed (`amazon_products`); each discovery method is its own source, `amazon_products_by_keyword` | every scraper and method, paged here (Bright Data answers with all of them; read once per provider) | one input object, e.g. `{"url": ...}` or `{"keyword": ...}` | waits about a minute, then raises naming the snapshot to fetch later; failed inputs land in `extra["errors"]`; `extra["dataset_id"]` names the scraper behind a source |
 | `oxylabs` | the source's own name, `amazon_product` | the sources with a dedicated parser, from Oxylabs' docs | `query` or `url`, plus the source's parameters (`domain`, `geo_location`) | run with `parse: true`; a partial parse is still a record; `created_at` stays in `extra`, as its meaning is undocumented |
+
+**Searching a catalogue.** `query` finds sources by keyword -- a site, a
+brand, the kind of page -- searched the way each vendor allows:
+
+| Backend | How `query` is searched | Order |
+| --- | --- | --- |
+| `apify` | natively: the Store's own `search`, over an Actor's title, name, description, owner and readme | the Store's relevance |
+| `nimble` | locally: Nimble's template list takes no keywords, so the catalogue is read page by page and matched here | name and site matches first, then catalogue order |
+| `brightdata` | locally: Bright Data's dataset list takes no parameters | as above |
+| `oxylabs` | locally: there is no listing API, only the documented sources | as above |
+
+A local search matches every word, ignoring case, on a source's name, site,
+kind of page and description, reads at most 5,000 sources, and pages its
+matches with `limit` and `offset`. `page.total` counts the matches, and is
+`None` if the catalogue was read only in part. `page.query` and `page.search`
+(`"native"` or `"local"`) say what was asked and how. A custom backend whose
+vendor searches its own catalogue derives from `NativeSourceSearch` as well
+and implements `_search`/`_asearch`.
 
 **A source's inputs are its own, not ours.** `inputs` is whatever its
 `input_schema` names: a URL for some sources, an id, a slug or a search term

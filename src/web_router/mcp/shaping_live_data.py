@@ -31,6 +31,7 @@ def shape_live_data_sources(page: LiveDataSourcePage, handle: str, *, budget: in
         "total": page.total,
         "offset": page.offset,
         "limit": page.limit,
+        **({"query": page.query, "search": page.search} if page.query else {}),
         "sources": templates,
     }
     # A recorded input is copied whole or not at all, so one larger than its

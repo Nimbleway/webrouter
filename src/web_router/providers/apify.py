@@ -37,6 +37,7 @@ from web_router.constants_apify import (
     APIFY_STORE_PATH,
 )
 from web_router.constants_live_data import ENV_APIFY_TOKEN
+from web_router.live_data_search import NativeSourceSearch
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.types import Provider
 from web_router.types_live_data import (
@@ -56,7 +57,7 @@ def actor_id(source: str) -> str:
     return source.strip().replace("/", "~")
 
 
-class ApifyLiveDataProvider(HttpLiveDataProvider):
+class ApifyLiveDataProvider(HttpLiveDataProvider, NativeSourceSearch):
     """Runs Apify Store Actors as live data sources."""
 
     name: ClassVar[str] = Provider.APIFY.value
@@ -109,6 +110,16 @@ class ApifyLiveDataProvider(HttpLiveDataProvider):
 
     async def _alist(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         return self._to_page(await self._asend("GET", APIFY_STORE_PATH, params={"limit": limit, "offset": offset}))
+
+    # The Store searches itself: `search` matches an Actor's title, name, description, owner and readme,
+    # and its default `sortBy=relevance` orders the matches.
+    def _search(self, query: str, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
+        params = {"search": query, "limit": limit, "offset": offset}
+        return self._to_page(self._send("GET", APIFY_STORE_PATH, params=params))
+
+    async def _asearch(self, query: str, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
+        params = {"search": query, "limit": limit, "offset": offset}
+        return self._to_page(await self._asend("GET", APIFY_STORE_PATH, params=params))
 
     def _to_page(self, payload: dict[str, Any]) -> LiveDataSourcePage:
         data = payload.get("data") or {}

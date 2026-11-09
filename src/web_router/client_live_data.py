@@ -23,6 +23,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from web_router.constants_live_data import MSG_LIVE_DATA_DEPRECATED_NAME
+from web_router.live_data_search import asearch_live_data_sources, search_live_data_sources
 from web_router.providers.base import LiveDataProvider
 from web_router.registry import create_live_data_provider
 from web_router.types import ExtractFormat, Provider, provider_name
@@ -80,10 +81,11 @@ class SyncLiveData(_LiveDataLookup):
         self,
         *,
         provider: str | Provider | LiveDataProvider,
+        query: str | None = None,
         limit: int | None = None,
         offset: int | None = None,
     ) -> LiveDataSourcePage:
-        """List one page of the live data sources ``provider`` holds.
+        """List one page of the live data sources ``provider`` holds, or of those that match ``query``.
 
         Each source is a vendor's ready-made scraper for one site: run with its
         own inputs, it fetches the site and returns records with fixed fields.
@@ -91,8 +93,19 @@ class SyncLiveData(_LiveDataLookup):
         ``provider`` has no default. The page says where in the catalogue it
         sits and, when the backend reports it, how many sources there are in
         all; ``limit`` and ``offset`` left unset leave the paging to the backend.
+
+        ``query`` finds sources by keyword -- a site, a brand, the kind of
+        page. It is searched the way the vendor allows: by the vendor's own
+        search where its catalogue API has one (Apify), in the vendor's
+        relevance order; otherwise the whole catalogue is read and matched
+        here, every word ignoring case, on each source's name, site, kind of
+        page and description, name and site matches first (Nimble, Bright
+        Data, Oxylabs). The page's ``search`` says which happened.
         """
-        return self.get_live_data_provider(provider).live_data_sources(limit=limit, offset=offset)
+        backend = self.get_live_data_provider(provider)
+        if query and query.strip():
+            return search_live_data_sources(backend, query.strip(), limit=limit, offset=offset)
+        return backend.live_data_sources(limit=limit, offset=offset)
 
     def live_data_source(self, name: str, *, provider: str | Provider | LiveDataProvider) -> LiveDataSource:
         """Describe one source: the inputs a run takes and the records it returns, as JSON Schema."""
@@ -145,11 +158,15 @@ class AsyncLiveData(_LiveDataLookup):
         self,
         *,
         provider: str | Provider | LiveDataProvider,
+        query: str | None = None,
         limit: int | None = None,
         offset: int | None = None,
     ) -> LiveDataSourcePage:
-        """List one page of the live data sources ``provider`` holds."""
-        return await self.get_live_data_provider(provider).alive_data_sources(limit=limit, offset=offset)
+        """List one page of ``provider``'s live data sources, or of those matching ``query``. As on the sync router."""
+        backend = self.get_live_data_provider(provider)
+        if query and query.strip():
+            return await asearch_live_data_sources(backend, query.strip(), limit=limit, offset=offset)
+        return await backend.alive_data_sources(limit=limit, offset=offset)
 
     async def live_data_source(self, name: str, *, provider: str | Provider | LiveDataProvider) -> LiveDataSource:
         """Describe one source: the inputs a run takes and the records it returns, as JSON Schema."""

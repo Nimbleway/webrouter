@@ -106,6 +106,18 @@ def test_the_store_listing_maps_each_actor() -> None:
     assert source.input_schema is None, "the Store listing carries no schema unless asked"
 
 
+def test_a_query_is_searched_by_the_store_itself() -> None:
+    store = {"data": {"total": 1, "offset": 0, "limit": 5, "items": [{"username": "apify", "name": "web-scraper"}]}}
+    provider, api = _provider(lambda request: httpx.Response(200, json=store))
+    page = WebRouter().live_data_sources(provider=provider, query="web scraper", limit=5)
+
+    assert api.last.url.path == "/v2/store"
+    assert dict(api.last.url.params) == {"search": "web scraper", "limit": "5"}
+    assert page.names == ["apify~web-scraper"]
+    assert page.search == "native" and page.query == "web scraper"
+    assert page.total == 1, "the Store's own count of its matches"
+
+
 @pytest.mark.parametrize("schema_field", ["object", "string"])
 def test_a_description_reads_the_input_schema_from_the_default_build(schema_field: str) -> None:
     actor = {
