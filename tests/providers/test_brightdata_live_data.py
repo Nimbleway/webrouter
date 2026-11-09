@@ -269,3 +269,21 @@ def test_a_negative_page_is_refused(limit: int | None, offset: int | None) -> No
     provider, _ = _provider(lambda request: httpx.Response(200, json=[SCRAPER]))
     with pytest.raises(ProviderError, match="0 or more"):
         provider.live_data_sources(limit=limit, offset=offset)
+
+
+@pytest.mark.parametrize("source", ["amazon_products", DATASET])
+def test_options_cannot_turn_a_url_source_into_discovery(source: str) -> None:
+    provider, api = _provider(_by_path([{"title": "x"}]))
+    options = {"type": "discover_new", "discover_by": "keyword"}
+    provider.run(LiveDataRequest(source=source, inputs={"url": URL}, provider_options=options))
+    assert "type" not in api.last.url.params and "discover_by" not in api.last.url.params
+
+
+def test_a_scraper_named_like_anothers_discovery_method_keeps_both() -> None:
+    lookalike = {"id": "gd_Look", "name": "Amazon products by keyword", "domain": "amazon.com"}
+    provider, _ = _provider(lambda request: httpx.Response(200, json=[SCRAPER, lookalike]))
+    assert provider.live_data_sources().names == [
+        "amazon_products",
+        f"amazon_products_by_keyword_{DATASET}",
+        "amazon_products_by_keyword_gd_look",
+    ]

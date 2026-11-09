@@ -10,7 +10,8 @@ source, named from the scraper's own name:
 - a name two scrapers share gets the site appended
   (``sephora_products_sephora_fr``), and if that still clashes, the dataset id.
 
-A dataset id is still accepted as a source, meaning that scraper's URL method.
+A final name that still clashes once the method is added gets the dataset id
+too. A dataset id is still accepted as a source, meaning that scraper's URL method.
 Checked against Bright Data's published catalogue on 2026-11-09: 1,301
 scrapers give 1,297 distinct base names before the site rule.
 """
@@ -19,7 +20,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from web_router.constants_live_data_vendors import BRIGHTDATA_DEFAULT_METHOD, BRIGHTDATA_DISCOVER_PREFIX
@@ -52,17 +53,15 @@ class Scraper:
 
 
 def methods_of(item: dict[str, Any]) -> list[str]:
-    """A scraper's collection methods, URL first: the management API's ``scrapers`` keys, or ``collection_methods``."""
+    """A scraper's collection methods, URL first: the keys of the management API's ``scrapers``."""
     found = item.get("scrapers")
-    names = list(found) if isinstance(found, dict) else list(item.get("collection_methods") or [])
-    if BRIGHTDATA_DEFAULT_METHOD not in names:
-        names.insert(0, BRIGHTDATA_DEFAULT_METHOD)
-    return [BRIGHTDATA_DEFAULT_METHOD, *sorted(name for name in names if name != BRIGHTDATA_DEFAULT_METHOD)]
+    names = set(found) if isinstance(found, dict) else set()
+    return [BRIGHTDATA_DEFAULT_METHOD, *sorted(names - {BRIGHTDATA_DEFAULT_METHOD})]
 
 
 def dataset_id(item: dict[str, Any]) -> str:
-    """The scraper's id: ``id`` in the management API, ``dataset_id`` in the published catalogue."""
-    return str(item.get("id") or item.get("dataset_id") or "")
+    """The scraper's id, the management API's ``id``."""
+    return str(item.get("id") or "")
 
 
 def _base_names(items: list[dict[str, Any]]) -> list[str]:
@@ -80,10 +79,19 @@ def _base_names(items: list[dict[str, Any]]) -> list[str]:
 
 
 def scrapers(items: list[dict[str, Any]]) -> list[Scraper]:
-    """Every runnable source in a catalogue, in catalogue order, each scraper's URL method first."""
+    """Every runnable source in a catalogue, in catalogue order, each scraper's URL method first.
+
+    A final name two sources share -- a scraper named "Foo by keyword" beside
+    "Foo"'s keyword discovery -- gets each one's dataset id appended, so
+    neither is lost from the listing.
+    """
     found: list[Scraper] = []
     for base, item in zip(_base_names(items), items, strict=True):
         for method in methods_of(item):
             name = base if method == BRIGHTDATA_DEFAULT_METHOD else f"{base}_{method.removeprefix('discover_')}"
             found.append(Scraper(name=name, dataset_id=dataset_id(item), method=method, item=item))
-    return found
+    clashing = {name for name, count in Counter(scraper.name for scraper in found).items() if count > 1}
+    return [
+        replace(scraper, name=f"{scraper.name}_{scraper.dataset_id.lower()}") if scraper.name in clashing else scraper
+        for scraper in found
+    ]

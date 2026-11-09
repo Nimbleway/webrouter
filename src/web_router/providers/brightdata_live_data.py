@@ -44,6 +44,7 @@ from web_router.constants import (
     PROVIDER_BRIGHTDATA,
 )
 from web_router.constants_live_data_vendors import (
+    BRIGHTDATA_DEFAULT_METHOD,
     BRIGHTDATA_DISCOVER_TYPE,
     BRIGHTDATA_ID_PREFIX,
     BRIGHTDATA_PENDING_STATUS,
@@ -63,6 +64,9 @@ from web_router.types_live_data import (
     LiveDataSource,
     LiveDataSourcePage,
 )
+
+_METHOD_PARAMS = frozenset({"type", "discover_by"})
+"""Query parameters a source sets from its own collection method, never from ``provider_options``."""
 
 _LISTED_MAPPED = frozenset({"id", "name", "description", "domain", "category"})
 
@@ -137,7 +141,7 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
     def _resolve(self, source: str, known: dict[str, Scraper] | None) -> Scraper:
         """The scraper a name means; a ``gd_…`` id is its URL method, and needs no catalogue."""
         if source.startswith(BRIGHTDATA_ID_PREFIX):
-            return Scraper(name=source, dataset_id=source, method="collect_by_url")
+            return Scraper(name=source, dataset_id=source, method=BRIGHTDATA_DEFAULT_METHOD)
         # Bright Data's own name works as written too: "Amazon products" is amazon_products.
         scraper = (known or {}).get(source) or (known or {}).get(slug(source))
         if scraper is None:
@@ -162,8 +166,10 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
 
     @staticmethod
     def _scrape(request: LiveDataRequest, scraper: Scraper) -> dict[str, Any]:
-        # Options first, then what the source names: an option can never pick another dataset or method.
-        params: dict[str, Any] = {**request.provider_options, "dataset_id": scraper.dataset_id}
+        # Options first, then what the source names: an option can never pick another dataset or method,
+        # nor turn a URL source into discovery, so `type` and `discover_by` come only from the source.
+        chosen = {key: value for key, value in request.provider_options.items() if key not in _METHOD_PARAMS}
+        params: dict[str, Any] = {**chosen, "dataset_id": scraper.dataset_id}
         if scraper.discovers:
             params.update(type=BRIGHTDATA_DISCOVER_TYPE, discover_by=scraper.discover_by)
         params.update(format="json", include_errors="true")

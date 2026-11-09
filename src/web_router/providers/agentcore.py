@@ -26,15 +26,12 @@ from __future__ import annotations
 import contextlib
 import json
 import os
-import re
 from collections.abc import Generator
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
 import httpx
-from botocore.auth import SigV4Auth
-from botocore.awsrequest import AWSRequest
-from botocore.session import Session, get_session
+from botocore.session import get_session
 
 from web_router.constants import (
     ENV_AGENTCORE_GATEWAY_URL,
@@ -51,21 +48,15 @@ from web_router.constants_agentcore import (
     AGENTCORE_DOMAIN_FIELDS,
     AGENTCORE_DOMAIN_FILTER_FIELD,
     AGENTCORE_FILTERS_FIELD,
-    AGENTCORE_HOST_PATTERN,
     AGENTCORE_MAX_QUERY_CHARS,
     AGENTCORE_MAX_RESULTS,
     AGENTCORE_PARAM_NAMES,
     AGENTCORE_SETUP_DOC,
-    AGENTCORE_SIGNING_SERVICE,
     AGENTCORE_TOOL_SUFFIX,
-    AGENTCORE_UNSIGNED_HEADER,
-    ENV_AWS_REGION,
     MSG_AGENTCORE_BAD_URL,
     MSG_AGENTCORE_CURSOR_REPEATED,
     MSG_AGENTCORE_FILTER_CLASH,
-    MSG_AGENTCORE_NO_CREDENTIALS,
     MSG_AGENTCORE_NO_FILTERS,
-    MSG_AGENTCORE_NO_REGION,
     MSG_AGENTCORE_QUERY_TOO_LONG,
     MSG_AGENTCORE_TOO_MANY_RESULTS,
     MSG_AGENTCORE_TOOL,
@@ -76,54 +67,10 @@ from web_router.providers._http import HttpSearchProvider
 from web_router.providers._mcp import McpSearchMixin
 from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import build_payload, compact
+from web_router.providers.agentcore_sigv4 import _SigV4
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
-_HOST = re.compile(AGENTCORE_HOST_PATTERN)
 _MAPPED_RESULT_FIELDS = frozenset({"text", "url", "title", "publishedDate"})
-
-
-class _SigV4(httpx.Auth):
-    """Signs each request for the gateway's region, with credentials resolved on first use.
-
-    Resolved late so a provider can be built -- by ``auto``, by a test -- on a
-    machine with no AWS credential, and fail only when it is actually called.
-    Frozen per request, so a refreshable credential (SSO, an assumed role) is
-    renewed by botocore rather than going stale inside a long-lived router.
-    """
-
-    requires_request_body = True
-
-    def __init__(self, session: Session, host: str) -> None:
-        self._session = session
-        self._host = host
-        self._credentials: Any = None
-        self._region: str | None = None
-
-    def auth_flow(self, request: httpx.Request) -> Generator[httpx.Request, httpx.Response, None]:
-        if self._credentials is None:
-            self._credentials = self._session.get_credentials()
-            if self._credentials is None:
-                raise ConfigurationError(MSG_AGENTCORE_NO_CREDENTIALS.format(doc=AGENTCORE_SETUP_DOC))
-        headers = {name: value for name, value in request.headers.items() if name.lower() != AGENTCORE_UNSIGNED_HEADER}
-        signed = AWSRequest(method=request.method, url=str(request.url), data=request.content, headers=headers)
-        SigV4Auth(
-            self._credentials.get_frozen_credentials(), AGENTCORE_SIGNING_SERVICE, self._signing_region()
-        ).add_auth(signed)
-        request.headers.update(dict(signed.headers.items()))
-        yield request
-
-    def _signing_region(self) -> str:
-        if self._region is None:
-            match = _HOST.match(self._host)
-            region = (
-                match["region"]
-                if match
-                else os.environ.get(ENV_AWS_REGION) or self._session.get_config_variable("region")
-            )
-            if not region:
-                raise ConfigurationError(MSG_AGENTCORE_NO_REGION.format(host=self._host, doc=AGENTCORE_SETUP_DOC))
-            self._region = region
-        return self._region
 
 
 class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):

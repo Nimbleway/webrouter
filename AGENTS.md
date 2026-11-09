@@ -282,9 +282,15 @@ src/web_router/
     ├── apify.py        live data: Apify Store Actors, run synchronously
     ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
     ├── oxylabs_live_data.py     live data: Oxylabs' dedicated sources, parsed
-    ├── tavily.py       search + extract, via the tavily-python SDK
-    ├── exa.py          search + extract, via httpx (its research API is retired)
-    ├── you.py          search + research, via httpx — You.com publishes no Python SDK
+    ├── tavily.py       search, via the tavily-python SDK; re-exports tavily_extract.py
+    ├── tavily_extract.py  extract, and the SDK clients, key and timeout both classes share
+    ├── exa.py          search + extract, via httpx (its research API is retired);
+    │                   re-exports exa_answer.py
+    ├── exa_answer.py   answer, via httpx
+    ├── you.py          search, via httpx — You.com publishes no Python SDK; re-exports
+    │                   you_research.py and you_answer.py
+    ├── you_research.py research, a polled background task
+    ├── you_answer.py   answer, in one call
     ├── _mcp.py         the keyless MCP search transport: one JSON-RPC tools/call
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
@@ -305,16 +311,20 @@ src/web_router/
     │                   chain ends with `local`)
     ├── auto_browser.py the browser chain's `auto`, apart so auto.py stops growing;
     │                   auto.py re-exports it
-    ├── brave.py        search, via httpx
+    ├── brave.py        search, via httpx; re-exports brave_answer.py
+    ├── brave_answer.py answer, streamed, via httpx
     ├── parallel.py     research + answer, via httpx; re-exports parallel_search.py
     ├── parallel_search.py  search, via httpx
     ├── perplexity.py   search + research, via httpx; re-exports perplexity_answer.py
     ├── perplexity_answer.py  answer, and the answer text and sources research reads
     ├── linkup.py       search + extract + research, via httpx
     ├── webiq.py        search, via httpx — Microsoft AI's Web Search API
-    ├── keenable.py     search + extract, via httpx — keyless on its /public twins
+    ├── keenable.py     search, via httpx — keyless on its /public twins;
+    │                   re-exports keenable_extract.py
+    ├── keenable_extract.py  extract, and the keyless switch both classes share
     ├── deepseek.py     search + extract, via httpx — filters ride in the query
     ├── agentcore.py    search, MCP via the caller's AgentCore Gateway: SigV4 (botocore, `aws` extra)
+    ├── agentcore_sigv4.py  the SigV4 signing agentcore.py's requests go through
     ├── firecrawl.py    extract, via httpx
     ├── oxylabs.py      extract, via httpx — HTTP Basic, username + password
     ├── brightdata.py   extract, via httpx — needs a zone beside its token
