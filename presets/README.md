@@ -5,7 +5,7 @@ Presets for common tasks, to use as they are or copy and change. Load a folder, 
 ```python
 from web_router import WebRouter
 
-with WebRouter("nimble") as router:
+with WebRouter() as router:  # auto, for search and answers
     router.presets.load("presets/ecommerce")  # relative to the root of the clone
     results = router.search("UPC 049000028911", preset="ecommerce.product-by-gtin@1.0.0")
 ```
@@ -34,7 +34,7 @@ A call can replace a preset's domain list with its own. Passing `[]` replaces it
 
 ### Examples
 
-What came back through `auto` routing in November 2026, on a router with keys for the backends above. Results change as the web does.
+What came back through `auto` routing in November 2026, on the router above with keys for the backends above. The `answer()` examples need a Linkup, Perplexity or You.com key, since `auto` only tries configured answer backends. Results change as the web does.
 
 ```python
 router.search("UPC 049000028911", preset="ecommerce.product-by-gtin@1.0.0")
