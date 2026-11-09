@@ -217,3 +217,15 @@ def test_the_reference_server_binds_loopback_and_turns_away_a_foreign_host_no_ke
         big = b"{" + b" " * (1_000_001) + b"}"
         large = {**auth, "Content-Type": "application/json"}
         assert client.post(server.url, content=big, headers=large).status_code == 413
+
+
+def test_the_reference_server_answers_a_too_deeply_nested_body_with_400() -> None:
+    import httpx
+
+    deep = b"[" * 200_000 + b"]" * 200_000  # under the 1 MB cap, deeper than json.loads recurses
+    headers = {"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
+    with running() as server, httpx.Client(trust_env=False) as client:
+        answer = client.post(server.url, content=deep, headers=headers)
+        assert answer.status_code == 400 and "nested" in answer.json()["error"]
+        body = {"schema": 1, "prompt": "x", "candidates": [], "deadline_s": 1.0}
+        assert client.post(server.url, json=body, headers=headers).status_code == 200, "the server still answers"
