@@ -184,7 +184,7 @@ path = "src/web_router/_version.py"
 packages = ["src/web_router"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/web_router", "tests", "scripts", "contracts", "README.md", "CHANGELOG.md", "LICENSE", "NOTICE"]
+include = ["src/web_router", "tests", "scripts", "contracts", "README.md", "CHANGELOG.md"]
 
 [tool.uv]
 managed = true
