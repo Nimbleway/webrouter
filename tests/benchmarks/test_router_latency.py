@@ -99,7 +99,7 @@ def test_routers_are_timed_interleaved_first_call_and_warm_up_apart(latency: Mod
 
     plan = [_req()] * 6
     out = _module("router_latency_run").interleaved(
-        {"fast": fast, "slow": slow}, plan, warmup=2, deadline_s=0.01, seed=0, use_async=False
+        {"fast": fast, "slow": slow}, plan, warmup=2, deadline_s=0.01, seed=0, loop=None
     )
     assert out["fast"]["first_call"]["answered"] == 1
     assert out["fast"]["warm"]["calls"] == 3 and out["fast"]["warm"]["fallback_rate"] == 0.0
@@ -115,7 +115,7 @@ def test_each_round_is_in_its_own_random_order(latency: ModuleType) -> None:
 def test_the_added_wall_time_runs_on_stubs_and_puts_the_registry_back(latency: ModuleType) -> None:
     run = _module("router_latency_run")
     out = run.added_wall_time(
-        {"none": lambda req: RouteDecision()}, ["q"] * 4, ("perplexity", "nimble"), warmup=1, seed=0, use_async=False
+        {"none": lambda req: RouteDecision()}, ["q"] * 4, ("perplexity", "nimble"), warmup=1, seed=0, loop=None
     )
     assert out["none"]["calls"] == 3 and out["none"]["routed_p50_ms"] is not None
     assert "perplexity" not in registry._CUSTOM_PROVIDERS
@@ -126,8 +126,41 @@ def test_the_async_timing_runs_from_an_event_loop(latency: ModuleType) -> None:
         return RouteDecision()
 
     run = _module("router_latency_run")
-    out = run.interleaved({"a": aroute}, [_req()] * 3, warmup=1, deadline_s=1.0, seed=0, use_async=True)
+    loop = asyncio.new_event_loop()
+    try:
+        out = run.interleaved({"a": aroute}, [_req()] * 3, warmup=1, deadline_s=1.0, seed=0, loop=loop)
+    finally:
+        loop.close()
     assert out["a"]["warm"]["answered"] == 1
+
+
+class _LoopBound:
+    """An async router holding something of the loop it was first called on, as an SDK's kept-alive connection is."""
+
+    timeout_s = 1.0
+
+    def __init__(self, loops: list[asyncio.AbstractEventLoop], closed: list[asyncio.AbstractEventLoop]) -> None:
+        self.loops, self.closed = loops, closed
+
+    async def aroute(self, req: RouteRequest) -> RouteDecision:
+        self.loops.append(asyncio.get_running_loop())
+        return RouteDecision()
+
+    async def aclose(self) -> None:
+        self.closed.append(asyncio.get_running_loop())
+
+
+def test_an_async_run_calls_and_closes_every_router_on_one_loop(latency: ModuleType) -> None:
+    # The LLM example's AsyncOpenAI client printed "RuntimeError: Event loop is closed" at exit when a run's
+    # phases each had a loop of their own: its connections, opened on one, were collected after it closed.
+    loops: list[asyncio.AbstractEventLoop] = []
+    closed: list[asyncio.AbstractEventLoop] = []
+    spec = _module("router_latency_routers").RouterSpec("bound", "bound", lambda: _LoopBound(loops, closed))
+    args = latency.parse_args(["--async", "-n", "2", "--warmup", "1", "--cold", "2", "--e2e", "2"])
+    latency.run(args, [spec], [_req(), _req("who lost")])
+    assert len(set(loops)) == 1 and len(loops) > 4
+    assert set(closed) == set(loops) and len(closed) == 3  # the shared router, then the two cold builds
+    assert loops[0].is_closed()
 
 
 # The remote router
@@ -262,5 +295,5 @@ def test_a_freshly_built_router_the_library_refuses_is_closed(latency: ModuleTyp
         return router
 
     with pytest.raises(Exception, match="timeout_s"):
-        _module("router_latency_run").cold_builds({"bad": refused}, [_req()], deadline_s=None, seed=0, use_async=False)
+        _module("router_latency_run").cold_builds({"bad": refused}, [_req()], deadline_s=None, seed=0, loop=None)
     assert log == ["bad"]

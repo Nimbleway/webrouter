@@ -102,6 +102,7 @@ class LLMRouter:
     route_tools = ("research", "browse")
 
     def __init__(self, client: Any = None, model: str | None = None) -> None:
+        self._owns_client = client is None
         if client is None:
             from openai import AsyncOpenAI
 
@@ -123,6 +124,15 @@ class LLMRouter:
         )
         answer = json.loads(response.choices[0].message.content)
         return decision(req, answer["ranked"], answer["reason"])
+
+    async def aclose(self) -> None:
+        """Close the client this router opened, on the loop that used it; one passed in is yours to close.
+
+        Its kept-alive connections belong to that loop: left open, they are collected after it closes, and Python
+        prints ``RuntimeError: Event loop is closed`` at exit.
+        """
+        if self._owns_client:
+            await self.client.close()
 
 
 def main() -> None:

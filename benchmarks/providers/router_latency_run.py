@@ -9,8 +9,10 @@ session lands on all of them alike. A call is given the router's own deadline
 another; a call that hits it is **censored**: counted, never used as a value.
 The added wall time is a stubbed search through ``auto`` with the router
 attached against the same with ``route_tools=()``, interleaved, so candidate
-building, pricing and the hop are in it and no backend's noise is. Imported as
-a sibling, by name, as ``_common`` is.
+building, pricing and the hop are in it and no backend's noise is. An async
+run passes one event loop as ``loop`` to all three, so a router keeps its
+connections on one loop and is closed on it. Imported as a sibling, by name, as
+``_common`` is.
 
 Experimental until 1.0, like the router contract it measures.
 """
@@ -95,7 +97,7 @@ def interleaved(
     warmup: int,
     deadline_s: float | None,
     seed: int,
-    use_async: bool,
+    loop: asyncio.AbstractEventLoop | None,
 ) -> dict[str, dict[str, Any]]:
     """Each router called once per request of ``plan``, in a random order per round.
 
@@ -117,8 +119,8 @@ def interleaved(
         for i, name, req in calls:
             keep(i, name, await attached[name].acall(req))
 
-    if use_async:
-        asyncio.run(arun())
+    if loop is not None:
+        loop.run_until_complete(arun())
     else:
         for i, name, req in calls:
             keep(i, name, attached[name].call(req))
@@ -131,13 +133,13 @@ def cold_builds(
     *,
     deadline_s: float | None,
     seed: int,
-    use_async: bool,
+    loop: asyncio.AbstractEventLoop | None,
 ) -> dict[str, dict[str, Any]]:
     """Each router built anew for every call of ``plan``: what a short-lived process pays on each one.
 
     The call's time is the first call's on a fresh router; ``build_*`` is the build's own (a model load, a client).
     """
-    from router_latency_routers import close
+    from router_latency_routers import aclose, close
 
     calls: dict[str, Series] = {name: Series() for name in builders}
     builds: dict[str, list[float]] = {name: [] for name in builders}
@@ -163,10 +165,10 @@ def cold_builds(
                 attached, req = ready(router, req)
                 calls[name].add(await attached.acall(req))
             finally:
-                close(router)
+                await aclose(router)  # on this loop, which its connections belong to
 
-    if use_async:
-        asyncio.run(arun())
+    if loop is not None:
+        loop.run_until_complete(arun())
     else:
         for name, router, req in fresh():
             try:
@@ -288,14 +290,14 @@ def added_wall_time(
     *,
     warmup: int,
     seed: int,
-    use_async: bool,
+    loop: asyncio.AbstractEventLoop | None,
 ) -> dict[str, dict[str, Any]]:
     """A stubbed ``search`` routed against the same unrouted, per router: both p50s and the paired difference's."""
     paired = _Paired(warmup)
     rng = random.Random(seed)
     with stubbed(chain):
-        if use_async:
-            asyncio.run(_e2e_async(routers, prompts, chain, paired, rng))
+        if loop is not None:
+            loop.run_until_complete(_e2e_async(routers, prompts, chain, paired, rng))
         else:
             _e2e_sync(routers, prompts, chain, paired, rng)
     return paired.summary()

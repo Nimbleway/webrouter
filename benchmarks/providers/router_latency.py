@@ -24,6 +24,7 @@ interleaved, from one host in one session. Experimental until 1.0.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import importlib.metadata
 import json
 import math
@@ -32,7 +33,7 @@ import platform
 import random
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -43,7 +44,7 @@ from frozen import JOINED_DIR
 from route_eval_merge import request_for
 from route_eval_sets import load_set
 from router_latency_report import dry_run, markdown
-from router_latency_routers import RouterSpec, close, plan_cost, router_specs
+from router_latency_routers import RouterSpec, aclose, close, plan_cost, router_specs
 from router_latency_run import added_wall_time, cold_builds, interleaved
 from router_latency_tools import CHAIN_ALL, CHAINS, SHARE, chain_orders, definition, tool_latencies
 
@@ -206,30 +207,43 @@ def _plan(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[
     ]
 
 
+def _close(routers: Iterable[Any], loop: asyncio.AbstractEventLoop | None) -> None:
+    """Close every router: on the async run's loop, which its calls ran on, and then that loop; else as sync code."""
+    if loop is None:
+        for router in routers:
+            close(router)
+        return
+    try:
+        for router in routers:
+            loop.run_until_complete(aclose(router))
+        loop.run_until_complete(loop.shutdown_asyncgens())
+    finally:
+        loop.close()
+
+
 def run(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[RouteRequest]) -> dict[str, Any]:
     """Every router timed interleaved, then built fresh for each cold call, then routed against unrouted."""
     tools = tool_latencies(args.chain)
     plan = sample(pool, 1 + args.warmup + args.n, args.seed)
     built: dict[str, Any] = {}
+    # One loop for every async phase: a router's kept-alive connections belong to the loop that opened them.
+    loop = asyncio.new_event_loop() if args.use_async else None
     try:
         for s in specs:
             built[s.name] = s.build()  # inside the try: one that fails still closes those built before it
-        measured = interleaved(
-            built, plan, warmup=args.warmup, deadline_s=args.deadline_s, seed=args.seed, use_async=args.use_async
-        )
+        measured = interleaved(built, plan, warmup=args.warmup, deadline_s=args.deadline_s, seed=args.seed, loop=loop)
         cold = cold_builds(
             {s.name: s.build for s in specs},
             sample(pool, args.cold, args.seed + 2),
             deadline_s=args.deadline_s,
             seed=args.seed,
-            use_async=args.use_async,
+            loop=loop,
         )
         prompts = [r.prompt for r in sample(pool, args.warmup + args.e2e, args.seed + 1)]
         chain = chain_orders(args.chain)["search"]
-        added = added_wall_time(built, prompts, chain, warmup=args.warmup, seed=args.seed, use_async=args.use_async)
+        added = added_wall_time(built, prompts, chain, warmup=args.warmup, seed=args.seed, loop=loop)
     finally:
-        for router in built.values():
-            close(router)
+        _close(built.values(), loop)
     costs = {row["name"]: row["cost_usd"] for row in _plan(args, specs, pool)}
     return {
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),

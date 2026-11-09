@@ -128,3 +128,18 @@ class TestLLM:
         out = capsys.readouterr().out
         assert "(ok[2J done)" in out
         assert "\x1b" not in out and "\x07" not in out
+
+    async def test_aclose_closes_the_client_it_opened_and_never_yours(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        closed: list[str] = []
+
+        class _Client:
+            def __init__(self, name: str) -> None:
+                self.name = name
+
+            async def close(self) -> None:
+                closed.append(self.name)
+
+        monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(AsyncOpenAI=lambda **_: _Client("opened")))
+        await llm.LLMRouter(model="m").aclose()
+        await llm.LLMRouter(client=_Client("yours"), model="m").aclose()
+        assert closed == ["opened"]

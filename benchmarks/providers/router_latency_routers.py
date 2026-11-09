@@ -30,7 +30,7 @@ from typing import Any
 from web_router._urls import host_of
 from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY
 from web_router.routing.contract import RouteDecision, RouteRequest
-from web_router.routing.registry import discard_router
+from web_router.routing.registry import aclose_router, discard_router
 from web_router.routing.remote import RemoteRouter
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
@@ -135,6 +135,9 @@ class DelayedRouter:
 
     def close(self) -> None:
         close(self.inner)
+
+    async def aclose(self) -> None:
+        await aclose(self.inner)
 
 
 def llm_tokens(req: RouteRequest) -> tuple[int, int]:
@@ -249,6 +252,11 @@ def router_spec(
 def close(router: Any) -> None:
     """Close what a built router holds open: its ``close()``, else its ``aclose()``, as the library does."""
     discard_router(router)
+
+
+async def aclose(router: Any) -> None:
+    """:func:`close` on the event loop that ran the router's calls: its ``aclose()``, else its ``close()``."""
+    await aclose_router(router)
 
 
 def plan_cost(spec: RouterSpec, requests: Sequence[RouteRequest]) -> float | None:
