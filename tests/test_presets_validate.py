@@ -198,6 +198,14 @@ def test_validate_reports_a_search_value_the_backend_refuses_once(settings: dict
     assert all("cannot serve the value" in issue.message for issue in check.issues)
 
 
+def test_validate_reports_a_depth_level_the_backend_does_not_serve() -> None:
+    """Perplexity maps ``search_depth`` but serves ``lite`` and ``fast`` only, so ``deep`` is refused before billing."""
+    check = PresetRegistry(default_provider="perplexity").validate("search", {"query": "q", "search_depth": "deep"})
+
+    assert [issue.field for issue in check.issues] == ["search_depth"]
+    assert "cannot serve the value" in check.issues[0].message
+
+
 def test_validate_reports_an_unmapped_option_once_though_the_backend_inherits_its_refusal() -> None:
     """Parallel MCP maps neither domain list but inherits Parallel's ``refused_options`` for them."""
     both = {"query": "q", "include_domains": ["a.com"], "exclude_domains": ["b.com"]}
