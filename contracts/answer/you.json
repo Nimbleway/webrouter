@@ -1,7 +1,7 @@
 {
   "provider": "you",
   "method": "answer",
-  "class": "web_router.providers.you.YouAnswerProvider",
+  "class": "web_router.providers.you_answer.YouAnswerProvider",
   "transport": {
     "kind": "http",
     "base_url": "https://api.you.com",

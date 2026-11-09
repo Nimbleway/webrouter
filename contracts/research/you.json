@@ -1,7 +1,7 @@
 {
   "provider": "you",
   "method": "research",
-  "class": "web_router.providers.you.YouResearchProvider",
+  "class": "web_router.providers.you_research.YouResearchProvider",
   "transport": {
     "kind": "http",
     "base_url": "https://api.you.com",

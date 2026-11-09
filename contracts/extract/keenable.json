@@ -1,7 +1,7 @@
 {
   "provider": "keenable",
   "method": "extract",
-  "class": "web_router.providers.keenable.KeenableExtractProvider",
+  "class": "web_router.providers.keenable_extract.KeenableExtractProvider",
   "transport": {
     "kind": "http",
     "base_url": "https://api.keenable.ai",
