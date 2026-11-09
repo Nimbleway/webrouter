@@ -152,13 +152,13 @@ def _why(exc: BaseException) -> str:
 
 
 def _unechoed(value: Any, key: str) -> Any:
-    """``value`` with ``key`` redacted from every string in it: an echo reaches no reason a record or a model shows."""
+    """``value`` with ``key`` redacted from every string and mapping key in it: no record or model sees an echo."""
     if isinstance(value, str):
         return value.replace(key, REMOTE_KEY_REDACTED)
     if isinstance(value, list):
         return [_unechoed(item, key) for item in value]
     if isinstance(value, dict):
-        return {name: _unechoed(item, key) for name, item in value.items()}
+        return {_unechoed(name, key): _unechoed(item, key) for name, item in value.items()}
     return value  # a number, a bool or null is the decision's own
 
 

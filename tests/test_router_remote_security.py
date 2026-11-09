@@ -127,7 +127,7 @@ def test_no_key_value_reaches_the_service_the_record_or_a_failure(monkeypatch: p
 
 def test_a_service_echoing_its_key_in_its_reasons_has_it_redacted() -> None:
     def echo(body: dict[str, Any]) -> dict[str, Any]:
-        return {"schema": 1, "tools": ["search"], "reason": f"key {KEY}", "exclude": {"search:exa": KEY}}
+        return {"schema": 1, "tools": ["search"], "reason": f"key {KEY}", "exclude": {"search:exa": KEY, KEY: "x"}}
 
     with running(echo) as server, WebRouter(router="remote", router_config=config(server)) as wr:
         plan = wr.plan("solar news")
