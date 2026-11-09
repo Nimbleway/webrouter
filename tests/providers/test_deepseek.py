@@ -132,7 +132,7 @@ def test_recency_counts_toward_the_query_limit(provider: DeepSeekProvider) -> No
 
 
 def test_lite_is_the_default_and_deep_asks_for_the_page_body(
-    provider: DeepSeekProvider, monkeypatch: pytest.MonkeyPatch
+    provider: DeepSeekProvider, transport: httpx.MockTransport, sent: list[httpx.Request]
 ) -> None:
     """Snippet and summary always come back; need_content adds the body. Nothing sits between, so fast is refused."""
     assert provider._build_payload(SearchRequest(query="hi", search_depth="lite")) == {"query": "hi"}
@@ -140,9 +140,10 @@ def test_lite_is_the_default_and_deep_asks_for_the_page_body(
         "query": "hi",
         "need_content": True,
     }
-    monkeypatch.setattr(provider, "_search", lambda request: pytest.fail("sent"))
+    provider = DeepSeekProvider(transport=transport)
     with pytest.raises(UnsupportedParameterError, match=r"search_depth='fast'.*'lite', 'deep'"):
         provider.search(SearchRequest(query="hi", search_depth="fast"))
+    assert not sent
 
 
 def test_results_map_and_nothing_is_invented(provider: DeepSeekProvider) -> None:

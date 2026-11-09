@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 
+import httpx
 import pytest
 
 from web_router.exceptions import UnsupportedParameterError
@@ -82,20 +83,24 @@ def test_a_locale_reaches_the_language_list(provider: YouProvider, locale: str, 
     [("locale", "pt"), ("locale", "zh"), ("locale", "xx"), ("country", "GR"), ("country", "IL")],
 )
 def test_a_value_off_the_lists_is_refused_unsent(
-    provider: YouProvider, monkeypatch: pytest.MonkeyPatch, option: str, value: str
+    provider: YouProvider, transport: httpx.MockTransport, sent: list[httpx.Request], option: str, value: str
 ) -> None:
     """Upper-casing pt or zh sends a value You.com answers 422 for, and GR is not among its 36 countries."""
-    monkeypatch.setattr(provider, "_search", lambda request: pytest.fail("sent"))
+    provider = YouProvider(transport=transport)
     with pytest.raises(UnsupportedParameterError, match=rf"{option}='{value}'") as caught:
         provider.search(SearchRequest(query="hi", **{option: value}))
     assert caught.value.values == {option: value}
     assert YouProvider.refused_values(SearchRequest(query="hi", **{option: value})) == {option: value}
+    assert not sent
 
 
-def test_both_domain_lists_are_refused_unsent(provider: YouProvider, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(provider, "_search", lambda request: pytest.fail("sent"))
+def test_both_domain_lists_are_refused_unsent(
+    provider: YouProvider, transport: httpx.MockTransport, sent: list[httpx.Request]
+) -> None:
+    provider = YouProvider(transport=transport)
     with pytest.raises(UnsupportedParameterError, match="one domain list"):
         provider.search(SearchRequest(query="hi", include_domains=["a.com"], exclude_domains=["b.com"]))
+    assert not sent
 
 
 def test_provider_options_reach_the_api_untranslated(provider: YouProvider) -> None:

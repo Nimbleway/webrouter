@@ -70,10 +70,10 @@ def test_filters_go_inline_or_as_tool_arguments(provider: YouMcpProvider) -> Non
 
 
 def test_values_the_rest_api_refuses_are_refused_here_too(
-    provider: YouMcpProvider, monkeypatch: pytest.MonkeyPatch
+    provider: YouMcpProvider, transport: httpx.MockTransport, sent: list[httpx.Request]
 ) -> None:
     """The tool drops an unknown loc: or lang: in silence, so the REST lists hold here, before anything is sent."""
-    monkeypatch.setattr(provider, "_search", lambda request: pytest.fail("sent"))
+    provider = YouMcpProvider(transport=transport)
     for request in (
         SearchRequest(query="hi", country="ZZ"),
         SearchRequest(query="hi", locale="pt"),
@@ -82,6 +82,7 @@ def test_values_the_rest_api_refuses_are_refused_here_too(
     ):
         with pytest.raises(UnsupportedParameterError):
             provider.search(request)
+    assert not sent
 
 
 def test_the_payload_is_unwrapped_from_the_event_stream(provider: YouMcpProvider) -> None:

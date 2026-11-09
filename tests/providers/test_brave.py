@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 
+import httpx
 import pytest
 
 from web_router.constants import SNIPPET_LIMIT
@@ -25,14 +26,15 @@ def test_max_results_maps_onto_count(provider: BraveProvider) -> None:
 
 
 def test_lite_sends_nothing_and_longer_depths_are_refused_unsent(
-    provider: BraveProvider, monkeypatch: pytest.MonkeyPatch
+    provider: BraveProvider, transport: httpx.MockTransport, sent: list[httpx.Request]
 ) -> None:
     """The endpoint returns a description and a few snippets, never a body, so lite is what it always does."""
     assert provider._build_payload(SearchRequest(query="hi", search_depth="lite")) == {"q": "hi"}
-    monkeypatch.setattr(provider, "_search", lambda request: pytest.fail("sent"))
+    provider = BraveProvider(transport=transport)
     for depth in ("fast", "deep"):
         with pytest.raises(UnsupportedParameterError, match=rf"search_depth='{depth}'.*'lite'"):
             provider.search(SearchRequest(query="hi", search_depth=depth))
+    assert not sent
 
 
 def test_filters_map_onto_brave_fields_and_operators(provider: BraveProvider) -> None:
@@ -59,12 +61,13 @@ def test_every_recency_is_a_freshness_value(provider: BraveProvider, recency: st
 
 @pytest.mark.parametrize(("option", "value"), [("country", "IL"), ("locale", "zh"), ("locale", "xx")])
 def test_a_value_off_the_lists_is_refused_unsent(
-    provider: BraveProvider, monkeypatch: pytest.MonkeyPatch, option: str, value: str
+    provider: BraveProvider, transport: httpx.MockTransport, sent: list[httpx.Request], option: str, value: str
 ) -> None:
-    monkeypatch.setattr(provider, "_search", lambda request: pytest.fail("sent"))
+    provider = BraveProvider(transport=transport)
     with pytest.raises(UnsupportedParameterError, match=rf"{option}='{value}'"):
         provider.search(SearchRequest(query="hi", **{option: value}))
     assert BraveProvider.refused_values(SearchRequest(query="hi", **{option: value})) == {option: value}
+    assert not sent
 
 
 @pytest.mark.parametrize("depth", [None, "lite"])

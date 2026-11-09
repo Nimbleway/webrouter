@@ -89,7 +89,7 @@ def test_a_country_tavily_cannot_boost_is_refused_unsent(
     provider: TavilyProvider, monkeypatch: pytest.MonkeyPatch, request_: SearchRequest
 ) -> None:
     """Only the 166 countries it names, and only on topic general."""
-    monkeypatch.setattr(provider, "_search", lambda request: pytest.fail("sent"))
+    monkeypatch.setattr(provider._client.session, "post", lambda *_, **__: pytest.fail("sent"))
     with pytest.raises(UnsupportedParameterError, match="country=") as caught:
         provider.search(request_)
     assert caught.value.values == {"country": request_.country}
