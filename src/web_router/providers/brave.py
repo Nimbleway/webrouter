@@ -39,8 +39,6 @@ from web_router.constants_brave import (
     BRAVE_EXCLUDE_DOMAIN,
     BRAVE_FINISH_LENGTH,
     BRAVE_FRESHNESS,
-    BRAVE_INCLUDE_DOMAIN,
-    BRAVE_INCLUDE_JOINER,
     BRAVE_QUERY_MAX_CHARS,
     BRAVE_QUERY_MAX_WORDS,
     BRAVE_SEARCH_PARAM_NAMES,
@@ -51,10 +49,10 @@ from web_router.constants_brave import (
     MSG_BRAVE_QUERY_TOO_LONG,
     MSG_BRAVE_SEARCH_VALUES,
 )
-from web_router.exceptions import ProviderError, UnsupportedParameterError
+from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider, HttpSearchProvider
-from web_router.providers._language import language_tag
-from web_router.providers._utils import as_snippet, build_payload
+from web_router.providers._language import language_tag, off_the_lists
+from web_router.providers._utils import as_snippet, build_payload, site_operators
 from web_router.types import Citation, SearchDepth, SearchRequest, SearchResponse, SearchResult
 from web_router.types_answer import AnswerRequest, AnswerResponse
 
@@ -74,16 +72,6 @@ def _unmark(text: str) -> str:
     return text
 
 
-def _off_the_lists(request: SearchRequest) -> dict[str, Any]:
-    """A ``country`` or ``locale`` off Brave's lists, by name."""
-    refused: dict[str, Any] = {}
-    if request.country and request.country.upper() not in BRAVE_COUNTRIES:
-        refused["country"] = request.country
-    if request.locale and language_tag(request.locale) is None:
-        refused["locale"] = request.locale
-    return refused
-
-
 class BraveProvider(HttpSearchProvider):
     """Routes searches to the Brave Web Search API."""
 
@@ -91,6 +79,7 @@ class BraveProvider(HttpSearchProvider):
     supported_parameters: ClassVar[frozenset[str]] = BRAVE_SEARCH_PARAMETERS
     # A description and at most five extra snippets: a snippet, never a truncated body or a page.
     depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset({"lite"})
+    refusal_reasons: ClassVar[dict[str, str]] = dict.fromkeys(("country", "locale"), MSG_BRAVE_SEARCH_VALUES)
 
     base_url: ClassVar[str] = BRAVE_BASE_URL
     search_path: ClassVar[str] = BRAVE_SEARCH_PATH
@@ -98,18 +87,9 @@ class BraveProvider(HttpSearchProvider):
     api_key_header: ClassVar[str] = BRAVE_API_KEY_HEADER
     http_method: ClassVar[Literal["GET", "POST"]] = "GET"
 
-    def validate(self, request: SearchRequest) -> None:
-        """Also refuse a ``country`` or ``locale`` off Brave's lists, naming them, before anything is sent."""
-        self._reject_unmapped(request)
-        if refused := _off_the_lists(request):
-            detail = MSG_BRAVE_SEARCH_VALUES.format(countries=", ".join(sorted(BRAVE_COUNTRIES)))
-            raise UnsupportedParameterError(self.name, refused, values=refused, detail=detail)
-        super().validate(request)
-
     @classmethod
-    def refused_values(cls, request: SearchRequest) -> dict[str, Any]:
-        """A depth it lacks, or a ``country`` or ``locale`` off its lists; read by ``auto`` keyless."""
-        return {**super().refused_values(request), **_off_the_lists(request)}
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        return off_the_lists(request, BRAVE_COUNTRIES)
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         query = self._query(request)
@@ -133,12 +113,9 @@ class BraveProvider(HttpSearchProvider):
 
     @staticmethod
     def _query(request: SearchRequest) -> str:
-        operators = []
-        if request.include_domains:
-            operators.append(
-                BRAVE_INCLUDE_JOINER.join(BRAVE_INCLUDE_DOMAIN.format(domain=d) for d in request.include_domains)
-            )
-        operators.extend(BRAVE_EXCLUDE_DOMAIN.format(domain=d) for d in request.exclude_domains or ())
+        operators = site_operators(
+            request.include_domains, request.exclude_domains, exclude_format=BRAVE_EXCLUDE_DOMAIN
+        )
         return " ".join([request.query, *operators])
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:

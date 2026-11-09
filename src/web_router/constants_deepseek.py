@@ -58,9 +58,6 @@ A longer one is refused before it is sent, never cut: a query missing its tail,
 or the filters web-router appended to it, would answer a different question.
 """
 
-DEEPSEEK_INCLUDE_DOMAIN = "site:{domain}"
-DEEPSEEK_INCLUDE_JOINER = " OR "
-DEEPSEEK_EXCLUDE_DOMAIN = "-site:{domain}"
 DEEPSEEK_LANGUAGE = "lang:{language}"
 DEEPSEEK_AFTER = "after:{day}"
 """Search filters by domain and language through operators in the query, not through fields.

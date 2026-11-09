@@ -7,7 +7,6 @@ search path stay there, beside its search, extract and research settings.
 
 from __future__ import annotations
 
-from web_router.types_answer import Recency
 from web_router.types_options import ResearchEffort
 
 # Verified live on 2026-11-01. An answer is a search with `outputType:
@@ -32,20 +31,12 @@ LINKUP_ANSWER_PARAM_NAMES: dict[str, str] = {
 
 LINKUP_ANSWER_FROM_DATE_FIELD = "fromDate"
 
-LINKUP_ANSWER_RECENCY_DAYS: dict[Recency, int] = {
-    "day": 1,
-    "week": 7,
-    "month": 30,
-    "year": 365,
-}
-"""How far back ``fromDate`` is set for each ``recency``, counted from today.
-
-Verified live on 2026-11-01: a week's window turned an answer about a topic's
-latest news from early-October sources to late-October ones, and a ``toDate``
-in 2019 to a 2019-only answer. Linkup filters on the date it holds for a page,
-which is not always its publication date -- one of twenty sources in the week's
-window was a January page.
-"""
+# ``recency`` sets ``fromDate`` to the window's first day (``_clock.recency_start``).
+# Verified live on 2026-11-01: a week's window turned an answer about a topic's
+# latest news from early-October sources to late-October ones, and a ``toDate``
+# in 2019 to a 2019-only answer. Linkup filters on the date it holds for a page,
+# which is not always its publication date -- one of twenty sources in the week's
+# window was a January page.
 
 LINKUP_ANSWER_DATE_FORMAT = "%Y-%m-%d"
 """``fromDate`` takes a calendar date; Linkup's docs give YYYY-MM-DD."""

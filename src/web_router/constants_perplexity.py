@@ -72,13 +72,15 @@ PERPLEXITY_SEARCH_NAMES = {"max_results": "max_results", "country": "country"}
 """Normalized parameter -> Perplexity search field, sent as the caller set it."""
 
 PERPLEXITY_MAX_DOMAINS = 20
-MSG_PERPLEXITY_TOO_MANY_DOMAINS = "Perplexity filters on at most {limit} domains; this request names {count}."
+MSG_PERPLEXITY_SEARCH_DOMAINS = (
+    f"Perplexity search filters on one domain list, not both, of at most {PERPLEXITY_MAX_DOMAINS} domains."
+)
 
 PERPLEXITY_LANGUAGE_FIELD = "search_language_filter"
 PERPLEXITY_LANGUAGE_PATTERN = r"^[A-Za-z]{2}$"
 """A ``locale`` Perplexity can take: a bare two-letter language code. ``en-US`` is refused, not cut to ``en``."""
 
-MSG_PERPLEXITY_LOCALE = "Perplexity takes a two-letter ISO 639-1 language code, such as 'en'; got {locale!r}."
+MSG_PERPLEXITY_LOCALE = "Perplexity takes a locale as a two-letter ISO 639-1 language code, such as 'en'."
 
 PERPLEXITY_TOKENS_FIELD = "max_tokens_per_page"
 PERPLEXITY_TOKENS_BY_DEPTH: dict[SearchDepth, int] = {"lite": 128, "fast": 1024}

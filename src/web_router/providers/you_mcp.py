@@ -31,12 +31,11 @@ from web_router.constants_you import (
     YOU_MCP_COUNTRY,
     YOU_MCP_LANGUAGE,
     YOU_MCP_PARAM_NAMES,
-    YOU_MCP_SITE,
     YOU_RECENCY,
 )
 from web_router.providers._language import language_tag
 from web_router.providers._mcp import McpSearchMixin
-from web_router.providers._utils import build_payload
+from web_router.providers._utils import build_payload, site_operators
 from web_router.providers.you import YouProvider
 from web_router.types import SearchRequest
 
@@ -69,7 +68,7 @@ class YouMcpProvider(McpSearchMixin, YouProvider):
 
     @staticmethod
     def _query(request: SearchRequest) -> str:
-        operators = [YOU_MCP_SITE.format(domain=domain) for domain in request.include_domains or ()]
+        operators = site_operators(request.include_domains, joiner=" ")
         if request.locale and (language := language_tag(request.locale)):
             operators.append(YOU_MCP_LANGUAGE.format(language=language))
         if request.country:

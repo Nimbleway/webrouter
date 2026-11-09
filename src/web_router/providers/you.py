@@ -46,9 +46,8 @@ from web_router.constants_you import (
     YOU_SEARCH_PARAM_NAMES,
     YOU_SEARCH_PARAMETERS,
 )
-from web_router.exceptions import UnsupportedParameterError
 from web_router.providers._http import HttpAnswerProvider, HttpPolledResearchProvider, HttpSearchProvider
-from web_router.providers._language import language_tag
+from web_router.providers._language import language_tag, off_the_lists
 from web_router.providers._utils import best_text, build_payload
 from web_router.providers.answer import refuse_domain_pair
 from web_router.types import (
@@ -66,21 +65,15 @@ _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "contents", "p
 _MAPPED_SOURCE_FIELDS = frozenset({"url", "title", "snippets"})
 
 
-def _off_the_lists(request: SearchRequest) -> dict[str, Any]:
-    """A ``country`` or ``locale`` off You.com's lists, by name; the MCP tool is held to the same lists."""
-    refused: dict[str, Any] = {}
-    if request.country and request.country.upper() not in YOU_COUNTRIES:
-        refused["country"] = request.country
-    if request.locale and language_tag(request.locale) is None:
-        refused["locale"] = request.locale
-    return refused
-
-
 class YouProvider(HttpSearchProvider):
     """Routes searches to the You.com Search API."""
 
     name: ClassVar[str] = PROVIDER_YOU
     supported_parameters: ClassVar[frozenset[str]] = YOU_SEARCH_PARAMETERS
+    refusal_reasons: ClassVar[dict[str, str]] = {
+        **dict.fromkeys(("country", "locale"), MSG_YOU_SEARCH_VALUES),
+        **dict.fromkeys(("include_domains", "exclude_domains"), MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE),
+    }
 
     base_url: ClassVar[str] = YOU_BASE_URL
     search_path: ClassVar[str] = YOU_SEARCH_PATH
@@ -89,20 +82,12 @@ class YouProvider(HttpSearchProvider):
     env_api_key: ClassVar[str | None] = ENV_YOU_API_KEY
     api_key_header: ClassVar[str] = YOU_API_KEY_HEADER
 
-    def validate(self, request: SearchRequest) -> None:
-        """Also refuse both domain lists at once, and a ``country`` or ``locale`` off You.com's lists, unsent."""
-        self._reject_unmapped(request)
-        refuse_domain_pair(self.name, request, MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE)
-        if refused := _off_the_lists(request):
-            countries = ", ".join(sorted(YOU_COUNTRIES))
-            detail = MSG_YOU_SEARCH_VALUES.format(countries=countries)
-            raise UnsupportedParameterError(self.name, refused, values=refused, detail=detail)
-        super().validate(request)
-
     @classmethod
-    def refused_values(cls, request: SearchRequest) -> dict[str, Any]:
-        """A depth it lacks, or a ``country`` or ``locale`` off its lists; read by ``auto`` keyless."""
-        return {**super().refused_values(request), **_off_the_lists(request)}
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        """Both domain lists at once, or a ``country`` or ``locale`` off its lists; the MCP tool is held to them too."""
+        both = request.include_domains and request.exclude_domains
+        domains = {"include_domains": request.include_domains, "exclude_domains": request.exclude_domains}
+        return {**(domains if both else {}), **off_the_lists(request, YOU_COUNTRIES)}
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         # A depth of None, or "lite" which needs no extraction, both map to None

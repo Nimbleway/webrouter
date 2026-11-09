@@ -1,4 +1,4 @@
-"""A search backend may serve only some ``search_depth`` levels: another level raises before anything is sent."""
+"""A search backend may serve only some values of an option it maps: another raises before anything is sent."""
 
 from __future__ import annotations
 
@@ -33,6 +33,17 @@ class WholePages(FakeProvider):
     name = "whole"
 
 
+class OneCountry(ShortBodies):
+    """Refuses a value of an option beside ``search_depth``, through ``refused_options``."""
+
+    name = "onecountry"
+    refusal_reasons: ClassVar[dict[str, str]] = {"country": "It searches from GB alone."}
+
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        return {"country": request.country} if request.country not in (None, "GB") else {}
+
+
 class NoDepth(FakeProvider):
     """Maps nothing about depth, so a level is an unmapped option, not a refused value."""
 
@@ -44,10 +55,10 @@ class NoDepth(FakeProvider):
 @pytest.fixture(autouse=True)
 def members() -> Iterator[None]:
     ShortBodies.sent.clear()
-    for cls in (ShortBodies, WholePages, NoDepth):
+    for cls in (ShortBodies, WholePages, NoDepth, OneCountry):
         register_provider(cls.name, cls)
     yield
-    for cls in (ShortBodies, WholePages, NoDepth):
+    for cls in (ShortBodies, WholePages, NoDepth, OneCountry):
         unregister_provider(cls.name)
 
 
@@ -122,3 +133,28 @@ def test_auto_raises_naming_the_level_when_every_member_refuses_it() -> None:
     assert caught.value.provider == "auto"
     assert caught.value.values == {"search_depth": "deep"}
     assert "short (will not serve search_depth='deep')" in str(caught.value)
+
+
+def test_a_refused_option_value_raises_with_its_reason_beside_a_refused_level() -> None:
+    with pytest.raises(UnsupportedParameterError) as caught:
+        OneCountry().search(SearchRequest(query="q", country="US", search_depth="deep"))
+
+    assert caught.value.values == {"country": "US", "search_depth": "deep"}
+    assert "It searches from GB alone." in str(caught.value) and "'lite', 'fast'" in str(caught.value)
+    assert ShortBodies.sent == []
+
+
+def test_auto_passes_over_a_member_that_refuses_an_option_value() -> None:
+    provider = AutoProvider(chain=(("onecountry", {}), ("whole", {})))
+    try:
+        assert provider.search(SearchRequest(query="q", country="US")).provider == "whole"
+        assert provider.search(SearchRequest(query="q", country="GB")).provider == "onecountry"
+    finally:
+        provider.close()
+
+
+def test_an_option_a_subclass_no_longer_maps_is_refused_as_an_option_not_a_value() -> None:
+    """Parallel MCP inherits Parallel's value checks but maps none of their options."""
+    request = SearchRequest(query="q", country="ZZ", include_domains=[f"d{n}.com" for n in range(300)])
+    assert get_provider_class("parallel").refused_values(request).keys() == {"country", "include_domains"}
+    assert get_provider_class("parallel-mcp").refused_values(request) == {}

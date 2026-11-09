@@ -23,11 +23,8 @@ from web_router.constants_deepseek import (
     DEEPSEEK_BASE_URL,
     DEEPSEEK_DEEP,
     DEEPSEEK_DEPTH_LEVELS,
-    DEEPSEEK_EXCLUDE_DOMAIN,
     DEEPSEEK_FETCH_INTERVAL,
     DEEPSEEK_FETCH_PATH,
-    DEEPSEEK_INCLUDE_DOMAIN,
-    DEEPSEEK_INCLUDE_JOINER,
     DEEPSEEK_LANGUAGE,
     DEEPSEEK_MAX_COUNT,
     DEEPSEEK_QUERY_LIMIT,
@@ -38,7 +35,8 @@ from web_router.constants_deepseek import (
 from web_router.exceptions import ProviderError
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, best_text, build_payload
+from web_router.providers._language import language_code
+from web_router.providers._utils import as_snippet, best_text, build_payload, site_operators
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,
@@ -89,16 +87,10 @@ class DeepSeekProvider(HttpSearchProvider):
 
     @staticmethod
     def _query(request: SearchRequest) -> str:
-        operators = []
-        if request.include_domains:
-            operators.append(
-                DEEPSEEK_INCLUDE_JOINER.join(DEEPSEEK_INCLUDE_DOMAIN.format(domain=d) for d in request.include_domains)
-            )
-        operators.extend(DEEPSEEK_EXCLUDE_DOMAIN.format(domain=d) for d in request.exclude_domains or ())
+        operators = site_operators(request.include_domains, request.exclude_domains)
         if request.locale:
             # lang: takes bare language codes, so en-US and en_us both send lang:en.
-            language = request.locale.replace("_", "-").split("-")[0].lower()
-            operators.append(DEEPSEEK_LANGUAGE.format(language=language))
+            operators.append(DEEPSEEK_LANGUAGE.format(language=language_code(request.locale)))
         if since := recency_start(request.recency):
             operators.append(DEEPSEEK_AFTER.format(day=since.isoformat()))
         return " ".join([request.query, *operators])

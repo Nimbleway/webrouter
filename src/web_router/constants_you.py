@@ -111,7 +111,9 @@ YOU_COUNTRIES = frozenset(
 """The 36 ISO codes You.com's ``country`` takes; another is refused before the call."""
 
 MSG_YOU_SEARCH_VALUES = (
-    "You.com searches only the countries and languages it lists: country at {countries}, and locale at a language "
+    "You.com searches only the countries and languages it lists: country at "
+    + ", ".join(sorted(YOU_COUNTRIES))
+    + ", and locale at a language "
     "it lists (see its language list; pt and zh alone are refused, as each could be either of two). Ask for one of "
     "those, leave it unset, or name another provider -- see the search table in README.md."
 )
@@ -129,7 +131,6 @@ MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE = (
 YOU_MCP_PARAM_NAMES: dict[str, str] = {"max_results": "count", "exclude_domains": "exclude_domains"}
 """Normalized parameter -> argument of ``you-search``; the other filters go into the query, below."""
 
-YOU_MCP_SITE = "site:{domain}"
 YOU_MCP_LANGUAGE = "lang:{language}"
 YOU_MCP_COUNTRY = "loc:{country}"
 """The inline operators ``you-search`` maps itself, appended to the query; values are You.com's list values."""

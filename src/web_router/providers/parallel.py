@@ -54,7 +54,6 @@ from web_router.constants_parallel import (
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
 from web_router.providers._utils import as_snippet, build_payload, compact
-from web_router.providers._value_refusals import RefusesValues
 from web_router.types import (
     Citation,
     ResearchProgress,
@@ -115,7 +114,7 @@ def _merged(ours: dict[str, Any], theirs: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
-class ParallelProvider(RefusesValues, HttpSearchProvider):
+class ParallelProvider(HttpSearchProvider):
     """Routes searches to the Parallel Search API.
 
     ``search_depth`` caps the excerpts each result carries, and ``deep`` is

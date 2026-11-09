@@ -194,6 +194,9 @@ class SearchProvider(_BaseProvider):
     it narrows this. Another level raises :class:`UnsupportedParameterError` naming it, before anything is sent, and
     ``auto`` passes the backend over -- one whose longest body is short of a page lists no ``deep``."""
 
+    refusal_reasons: ClassVar[Mapping[str, str]] = {}
+    """Option -> why :meth:`refused_options` refuses a value of it, said in the error after the value."""
+
     # -- What subclasses implement -------------------------------------------
 
     @abc.abstractmethod
@@ -217,19 +220,28 @@ class SearchProvider(_BaseProvider):
         return await self._abounded(lambda: self._asearch(request), MSG_SEARCH_FAILED)
 
     def validate(self, request: SearchRequest) -> None:
-        """Raise :class:`UnsupportedParameterError` for an option this backend does not map, or a depth it lacks."""
+        """Raise :class:`UnsupportedParameterError` for an option this backend does not map, or a value it refuses."""
         self._reject_unmapped(request)
         if refused := self.refused_values(request):
             levels = ", ".join(repr(level) for level in get_args(SearchDepth) if level in self.depth_levels)
-            detail = MSG_UNSUPPORTED_DEPTH.format(levels=levels)
+            reasons = {**self.refusal_reasons, "search_depth": MSG_UNSUPPORTED_DEPTH.format(levels=levels)}
+            detail = " ".join(dict.fromkeys(reasons[name] for name in sorted(refused)))
             raise UnsupportedParameterError(self.name, refused, values=refused, detail=detail)
 
     @classmethod
     def refused_values(cls, request: SearchRequest) -> dict[str, Any]:
-        """A ``search_depth`` outside :attr:`depth_levels`, by name; on the class, so ``auto`` reads it keyless."""
+        """A depth outside :attr:`depth_levels` and :meth:`refused_options`, mapped ones only; read keyless."""
         depth = request.search_depth
         mapped = depth is not None and "search_depth" in cls.supported_parameters
-        return {"search_depth": depth} if mapped and depth not in cls.depth_levels else {}
+        refused = {"search_depth": depth} if mapped and depth not in cls.depth_levels else {}
+        options = cls.refused_options(request).items()
+        refused |= {name: value for name, value in options if name in cls.supported_parameters}
+        return refused
+
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        """Other options it maps set to a value it will not serve, by name; each has a :attr:`refusal_reasons` entry."""
+        return {}
 
 
 class ExtractProvider(_BaseProvider):
@@ -247,19 +259,11 @@ class ExtractProvider(_BaseProvider):
     """
 
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset()
-    """Representations this backend can return.
-
-    A format outside this set raises :class:`UnsupportedFormatError` rather
-    than coming back as a different representation under the requested name.
-    """
+    """Representations this backend can return; another raises :class:`UnsupportedFormatError`, never substituted."""
 
     default_format: ClassVar[ExtractFormat]
-    """What this API returns when asked for no format in particular.
-
-    A fact about the backend, not a choice: it is what
-    :attr:`~web_router.types.ExtractedDocument.format` reports when the caller
-    named none, so getting it wrong mislabels the content.
-    """
+    """What this API returns when asked for no format in particular: a fact about the backend, not a choice, which
+    :attr:`~web_router.types.ExtractedDocument.format` reports when the caller named none."""
 
     batches_urls: ClassVar[bool] = False
     """Whether one call can carry every URL. Most of these APIs take exactly one."""
@@ -358,17 +362,10 @@ class ExtractProvider(_BaseProvider):
     # -- Helpers for subclasses ----------------------------------------------
 
     def format_of(self, request: ExtractRequest) -> ExtractFormat:
-        """What this call will return: the format asked for, else markdown, else this API's own default.
+        """What this call will return: the format asked for, else markdown, else this API's own default (Exa's text).
 
-        With no format named, every provider that can return
-        :data:`~web_router.constants.EXTRACT_DEFAULT_FORMAT` (markdown) returns
-        it, so the same call answers alike whichever backend serves it; one
-        that cannot -- Exa returns text only -- returns its own
-        :attr:`default_format`. Providers send this to their API rather than
-        omitting the field when the caller named nothing, which is the one
-        place the "unset means unset" rule is deliberately not applied:
-        :attr:`~web_router.ExtractedDocument.format` is then true because it
-        was asked for rather than true because a vendor default has not moved.
+        Providers send it even when the caller named none, so the same call answers alike on every backend and
+        :attr:`~web_router.ExtractedDocument.format` is true because it was asked for, not because a default held.
         """
         if request.format:
             return request.format

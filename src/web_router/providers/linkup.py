@@ -16,7 +16,6 @@ research ``mode`` -- is reachable through ``provider_options``.
 from __future__ import annotations
 
 import json
-from datetime import timedelta
 from typing import Any, ClassVar
 from urllib.parse import quote
 
@@ -51,10 +50,9 @@ from web_router.constants_linkup import (
     LINKUP_ANSWER_INLINE_CITATIONS_FIELD,
     LINKUP_ANSWER_OUTPUT_TYPE,
     LINKUP_ANSWER_PARAM_NAMES,
-    LINKUP_ANSWER_RECENCY_DAYS,
     LINKUP_DEPTH_BY_EFFORT,
 )
-from web_router.providers._clock import recency_start, today
+from web_router.providers._clock import recency_start
 from web_router.providers._http import (
     HttpAnswerProvider,
     HttpExtractProvider,
@@ -305,7 +303,7 @@ class LinkupAnswerProvider(HttpAnswerProvider):
     api_key_prefix: ClassVar[str] = LINKUP_API_KEY_PREFIX
 
     def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
-        since = today() - timedelta(days=LINKUP_ANSWER_RECENCY_DAYS[request.recency]) if request.recency else None
+        since = recency_start(request.recency)
         return build_payload(
             request,
             LINKUP_ANSWER_PARAM_NAMES,

@@ -65,8 +65,6 @@ BRAVE_FRESHNESS: dict[Recency, str] = {"day": "pd", "week": "pw", "month": "pm",
 """``freshness`` by page age, "the most relevant date reported by the content, such as its published or last
 modified date": 24 hours, 7 days, 31 days and 365 days."""
 
-BRAVE_INCLUDE_DOMAIN = "site:{domain}"
-BRAVE_INCLUDE_JOINER = " OR "
 BRAVE_EXCLUDE_DOMAIN = "NOT site:{domain}"
 
 BRAVE_QUERY_MAX_CHARS = 600
@@ -80,7 +78,9 @@ MSG_BRAVE_QUERY_TOO_LONG = (
 )
 
 MSG_BRAVE_SEARCH_VALUES = (
-    "Brave searches only the countries and languages it lists: country at {countries}, and locale at a language "
+    "Brave searches only the countries and languages it lists: country at "
+    + ", ".join(sorted(BRAVE_COUNTRIES))
+    + ", and locale at a language "
     "it lists (pt and zh alone are refused, as each could be either of two). Ask for one of those, leave it "
     "unset, or name another provider -- see the search table in README.md."
 )

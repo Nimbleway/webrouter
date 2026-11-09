@@ -43,7 +43,7 @@ from web_router.constants_perplexity import (
     MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE,
     MSG_PERPLEXITY_ANSWER_STOPPED,
     MSG_PERPLEXITY_LOCALE,
-    MSG_PERPLEXITY_TOO_MANY_DOMAINS,
+    MSG_PERPLEXITY_SEARCH_DOMAINS,
     PERPLEXITY_ANSWER_COUNTRY_FIELD,
     PERPLEXITY_ANSWER_DOMAIN_FIELD,
     PERPLEXITY_ANSWER_EFFORT,
@@ -63,7 +63,7 @@ from web_router.constants_perplexity import (
     PERPLEXITY_TOKENS_BY_DEPTH,
     PERPLEXITY_TOKENS_FIELD,
 )
-from web_router.exceptions import ProviderError, UnsupportedParameterError
+from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
 from web_router.providers._utils import build_payload, compact, error_detail
 from web_router.providers.answer import cited_marker, refuse_domain_pair
@@ -92,6 +92,10 @@ class PerplexityProvider(HttpSearchProvider):
         {*PERPLEXITY_SEARCH_NAMES, "include_domains", "exclude_domains", "locale", "recency", "search_depth", "effort"}
     )
     depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset(PERPLEXITY_TOKENS_BY_DEPTH)
+    refusal_reasons: ClassVar[dict[str, str]] = {
+        **dict.fromkeys(("include_domains", "exclude_domains"), MSG_PERPLEXITY_SEARCH_DOMAINS),
+        "locale": MSG_PERPLEXITY_LOCALE,
+    }
 
     base_url: ClassVar[str] = PERPLEXITY_BASE_URL
     search_path: ClassVar[str] = PERPLEXITY_SEARCH_PATH
@@ -99,20 +103,9 @@ class PerplexityProvider(HttpSearchProvider):
     api_key_header: ClassVar[str] = PERPLEXITY_API_KEY_HEADER
     api_key_prefix: ClassVar[str] = PERPLEXITY_API_KEY_PREFIX
 
-    def validate(self, request: SearchRequest) -> None:
-        """As every search backend, and refuse a value Perplexity's filters cannot take, naming why."""
-        self._reject_unmapped(request)
-        if refused := self._refused_filters(request):
-            raise UnsupportedParameterError(self.name, refused, values=refused, detail=self._why(request, refused))
-        super().validate(request)
-
     @classmethod
-    def refused_values(cls, request: SearchRequest) -> dict[str, Any]:
-        """A depth it lacks, and a filter value it cannot take; read by ``auto`` to pass it over."""
-        return {**super().refused_values(request), **cls._refused_filters(request)}
-
-    @staticmethod
-    def _refused_filters(request: SearchRequest) -> dict[str, Any]:
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        """Both domain lists, more than its cap of domains, or a ``locale`` that is not a bare language code."""
         include, exclude = request.include_domains or [], request.exclude_domains or []
         refused: dict[str, Any] = {}
         if (include and exclude) or len(include) + len(exclude) > PERPLEXITY_MAX_DOMAINS:
@@ -122,15 +115,6 @@ class PerplexityProvider(HttpSearchProvider):
         if request.locale is not None and not _LANGUAGE.match(request.locale):
             refused["locale"] = request.locale
         return refused
-
-    @staticmethod
-    def _why(request: SearchRequest, refused: dict[str, Any]) -> str:
-        if "locale" in refused:
-            return MSG_PERPLEXITY_LOCALE.format(locale=request.locale)
-        if request.include_domains and request.exclude_domains:
-            return MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE
-        count = len(request.include_domains or []) + len(request.exclude_domains or [])
-        return MSG_PERPLEXITY_TOO_MANY_DOMAINS.format(limit=PERPLEXITY_MAX_DOMAINS, count=count)
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         domains = [

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from pydantic import BaseModel
@@ -19,6 +19,7 @@ from web_router.constants import (
     MSG_OPTION_VALUE,
     SNIPPET_LIMIT,
 )
+from web_router.constants_search import EXCLUDE_SITE_OPERATOR, SITE_OPERATOR
 from web_router.exceptions import ConfigurationError
 from web_router.types import (
     REQUEST_VALUE,
@@ -264,3 +265,15 @@ def as_snippet(text: str) -> str:
     head = text[:SNIPPET_LIMIT]
     cut = head.rfind(" ")
     return (head[:cut] if cut > 0 else head).rstrip() + "\u2026"
+
+
+def site_operators(
+    include: Sequence[str] | None,
+    exclude: Sequence[str] | None = None,
+    *,
+    joiner: str = " OR ",
+    exclude_format: str = EXCLUDE_SITE_OPERATOR,
+) -> list[str]:
+    """Domain filters as query operators: the included sites joined into one, then one per excluded site."""
+    included = [joiner.join(SITE_OPERATOR.format(domain=domain) for domain in include)] if include else []
+    return [*included, *(exclude_format.format(domain=domain) for domain in exclude or ())]

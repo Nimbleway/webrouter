@@ -30,9 +30,6 @@ less. Unset, passages run to WebIQ's default of 10,000 characters.
 WEBIQ_QUERY_LIMIT = 1000
 """The longest query WebIQ accepts, operators included; a longer one is refused before it is sent."""
 
-WEBIQ_INCLUDE_DOMAIN = "site:{domain}"
-WEBIQ_INCLUDE_JOINER = " OR "
-WEBIQ_EXCLUDE_DOMAIN = "-site:{domain}"
 """WebIQ filters by domain through ``site:`` and ``-site:`` operators in the query, its only domain filter.
 
 Several included sites are joined with ``OR``, so a result may come from any of them.

@@ -72,3 +72,7 @@ MSG_UNSUPPORTED_DEPTH = (
 
 MSG_AUTO_REFUSES = "will not serve {values}"
 """Why ``auto`` passed over a member that maps the option but not the value it was set to."""
+
+SITE_OPERATOR = "site:{domain}"
+EXCLUDE_SITE_OPERATOR = "-site:{domain}"
+"""A domain filter as the query operators Brave, WebIQ, DeepSeek and You.com MCP read (Brave excludes with ``NOT``)."""

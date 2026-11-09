@@ -40,8 +40,9 @@ from web_router.constants_tavily import (
     TAVILY_SEARCH_PARAMETERS,
     TAVILY_TIME_RANGE,
 )
-from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
+from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._deadline import call_budget, current_deadline
+from web_router.providers._language import language_code
 from web_router.providers._utils import best_text, build_payload, compact, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
@@ -96,6 +97,7 @@ class TavilyProvider(SearchProvider):
 
     name: ClassVar[str] = PROVIDER_TAVILY
     supported_parameters: ClassVar[frozenset[str]] = TAVILY_SEARCH_PARAMETERS
+    refusal_reasons: ClassVar[dict[str, str]] = {"country": MSG_TAVILY_COUNTRY}
 
     def __init__(
         self,
@@ -142,21 +144,13 @@ class TavilyProvider(SearchProvider):
     async def aclose(self) -> None:
         await self._async_client.close()
 
-    def validate(self, request: SearchRequest) -> None:
-        """Also refuse a ``country`` Tavily does not list, or one asked for on a topic other than general."""
-        self._reject_unmapped(request)
-        if "country" in (refused := self.refused_values(request)):
-            raise UnsupportedParameterError(self.name, refused, values=refused, detail=MSG_TAVILY_COUNTRY)
-        super().validate(request)
-
     @classmethod
-    def refused_values(cls, request: SearchRequest) -> dict[str, Any]:
-        """A depth it lacks, or a ``country`` it cannot serve; read by ``auto`` keyless."""
-        refused = super().refused_values(request)
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        """A ``country`` Tavily does not list, or one asked for on a topic other than general."""
         topic = request.provider_options.get("topic", TAVILY_GENERAL_TOPIC)
         if request.country and (request.country.upper() not in TAVILY_COUNTRIES or topic != TAVILY_GENERAL_TOPIC):
-            refused["country"] = request.country
-        return refused
+            return {"country": request.country}
+        return {}
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``search()`` keyword arguments."""
@@ -168,7 +162,7 @@ class TavilyProvider(SearchProvider):
             timeout=self._timeout,
             country=TAVILY_COUNTRIES[request.country.upper()] if request.country else None,
             # The language alone, as the ISO 639-1 code Tavily documents.
-            language=request.locale.replace("_", "-").split("-")[0].lower() if request.locale else None,
+            language=language_code(request.locale) if request.locale else None,
             time_range=TAVILY_TIME_RANGE[request.recency] if request.recency else None,
             **(depth or {}),
             **(TAVILY_LANGUAGE_FILTER if request.locale else {}),

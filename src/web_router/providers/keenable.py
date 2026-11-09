@@ -41,7 +41,6 @@ from web_router.constants_keenable import (
 from web_router.exceptions import ConfigurationError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider, _HttpProvider
 from web_router.providers._utils import as_snippet, best_text, build_payload
-from web_router.providers._value_refusals import RefusesValues
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,
@@ -94,7 +93,7 @@ class _KeenableKeyless(_HttpProvider):
             return None
 
 
-class KeenableProvider(_KeenableKeyless, RefusesValues, HttpSearchProvider):
+class KeenableProvider(_KeenableKeyless, HttpSearchProvider):
     """Routes searches to the Keenable Search API.
 
     Each result carries a snippet of its page and, often, an empty
