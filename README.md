@@ -1952,6 +1952,25 @@ changing the method. `route_tools=` limits that to some methods;
 wr = WebRouter(router=route, route_tools=("search", "research"))
 ```
 
+A router may declare its own default, as it declares `timeout_s`: a
+`route_tools` attribute on the function or object, read when the caller
+passes none. The caller's `route_tools` always wins, and a router that
+declares none is asked on all five. A slow router can leave out the tools it
+would slow down more than its order is worth:
+
+```python
+class SlowRouter:
+    timeout_s = 3.0
+    route_tools = ("research", "browse")  # minutes-long jobs; a search runs in auto's order
+
+    async def aroute(self, req): ...
+```
+
+Which tools a router of each kind should declare is measured by
+[`router_latency.py`](benchmarks/providers/README.md#router-latency-which-tools-a-router-should-order):
+a tool asks the router only when the router's p50 is below a quarter of the
+tool's.
+
 ### `plan()` and `run()`
 
 `plan(prompt, budget=, tool=)` runs nothing. It returns a `Plan`: the method

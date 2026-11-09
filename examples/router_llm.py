@@ -93,6 +93,9 @@ class LLMRouter:
     """Ranks the candidates with one structured-output chat completion."""
 
     timeout_s = 3.0
+    # PLACEHOLDER until benchmarks/providers/router_latency.py's paid run: the tools this router is consulted
+    # on when the caller passes no route_tools. None means all five, as today; the run's per-tool verdicts set it.
+    route_tools: tuple[str, ...] | None = None
 
     def __init__(self, client: Any = None, model: str | None = None) -> None:
         if client is None:

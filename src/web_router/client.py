@@ -132,7 +132,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
                 the only place credentials are passed explicitly; everything
                 else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
-                ask it (all five by default) and whether its failure raises (experimental) -- see
+                ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental) -- see
                 :mod:`web_router.routing.invoke`. ``url_policy="public_only"`` refuses private hosts in a
                 plan's or a router's URLs (experimental) -- see :mod:`web_router.routing.url_policy`.
         """

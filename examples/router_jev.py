@@ -94,6 +94,9 @@ class JevRouter:
     """Ranks the candidates by Jev's probability for each."""
 
     timeout_s = 1.0
+    # PLACEHOLDER until benchmarks/providers/router_latency.py's paid run: the tools this router is consulted
+    # on when the caller passes no route_tools. None means all five, as today; the run's per-tool verdicts set it.
+    route_tools: tuple[str, ...] | None = None
 
     def __init__(self, client: httpx.AsyncClient | None = None, api_key: str | None = None) -> None:
         """``client``: one you open and close yourself; without it, each call opens its own and closes it."""

@@ -3,7 +3,8 @@
 Experimental. The routers take :class:`SyncRouted` or :class:`AsyncRouted` as
 a mixin, and every method that can be routed -- search, extract, answer,
 research and browse -- runs through ``_routed`` / ``_arouted``. The router is
-asked only when one is attached, the method is in ``route_tools``, and the
+asked only when one is attached, the method is in ``route_tools`` (the
+caller's; else the router's own ``route_tools`` attribute; else all five), and the
 call goes to ``auto``: a provider the caller names, or a default that is not
 ``auto``, is a pinned provider and leaves nothing to order. With no router
 attached a call runs exactly as it did before routers existed.
@@ -25,7 +26,7 @@ from typing import Any, TypeVar, get_args
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_invoke import MSG_ROUTE_TOOLS
+from web_router.constants_invoke import MSG_ROUTE_TOOLS, MSG_ROUTER_ROUTE_TOOLS, ROUTER_ROUTE_TOOLS_ATTR
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
@@ -51,13 +52,17 @@ _TOOL_OF: dict[type[NormalizedRequest], ToolName] = {cls: tool for tool, cls in 
 _ALL_TOOLS: frozenset[ToolName] = frozenset(get_args(ToolName))
 
 
-def _route_tools(route_tools: Collection[ToolName] | None) -> frozenset[ToolName]:
-    """The tools that ask the router: ``route_tools``, checked, or all five when it is ``None``."""
+def _route_tools(route_tools: Collection[ToolName] | None, router: object = None) -> frozenset[ToolName]:
+    """The tools that ask the router: the caller's ``route_tools``, else the router's own, else all five."""
+    message = MSG_ROUTE_TOOLS
+    if route_tools is None:
+        route_tools = getattr(router, ROUTER_ROUTE_TOOLS_ATTR, None)
+        message = MSG_ROUTER_ROUTE_TOOLS
     if route_tools is None:
         return _ALL_TOOLS
-    if isinstance(route_tools, str) or not set(route_tools) <= _ALL_TOOLS:
+    if isinstance(route_tools, str) or not isinstance(route_tools, Collection) or not set(route_tools) <= _ALL_TOOLS:
         known = ", ".join(get_args(ToolName))
-        raise ConfigurationError(MSG_ROUTE_TOOLS.format(known=known, got=route_tools))
+        raise ConfigurationError(message.format(known=known, got=route_tools))
     return frozenset(route_tools)
 
 
@@ -77,11 +82,11 @@ class RouterSetup:
     ) -> None:
         """
         Raises:
-            ConfigurationError: for a ``router`` in neither form, a ``route_tools`` naming something else, or an
-                unknown ``url_policy``.
+            ConfigurationError: for a ``router`` in neither form, a ``route_tools`` -- the caller's, or the one
+                the router declares -- naming something else, or an unknown ``url_policy``.
         """
         self._url_check = url_check(url_policy)
-        self._route_tools = _route_tools(route_tools)
+        self._route_tools = _route_tools(route_tools, router)
         self._router = None if router is None else AttachedRouter(router, fail_on_error=fail_on_router_error)
 
     def _route_request(
