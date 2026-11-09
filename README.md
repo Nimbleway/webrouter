@@ -2182,8 +2182,15 @@ field may be left out or `null`):
   never logged.
 - **Transport.** httpx (`pip install "web-router[remote]"`, or any method
   extra), imported only when the router is built. The router is async only,
-  on one connection pool, so a call past its time is cancelled rather than
-  left running, from sync and async code alike. One request, never retried; no
+  so a call past its time is cancelled rather than left running, from sync and
+  async code alike. Its one connection pool belongs to the event loop that
+  first used it -- for `WebRouter`, web-router's private loop, where all its
+  calls run -- so warm calls reuse their connection; a call from another loop
+  gets a client of its own, closed when the call ends. Closing the router
+  closes the pool on its own loop, waiting at most 2 s without blocking an
+  async caller's loop, and leaves the router closed: a later call is a
+  `router_error` and opens nothing. A pool that will not close is dropped
+  with a `ResourceWarning`. One request, never retried; no
   redirect is followed, and no proxy or other setting is read from the
   environment. The URL must be `https`, or `http` to `localhost`, 127.0.0.0/8
   or `::1` (not `*.localhost`, not `0.0.0.0`); a URL with credentials, a query
