@@ -29,7 +29,6 @@ from __future__ import annotations
 import base64
 import json
 import os
-import re
 import signal
 from collections.abc import Mapping
 from functools import partial
@@ -68,10 +67,11 @@ from web_router.constants import (
     MCP_SHUTDOWN_SIGNALS,
     MCP_SIGNAL_EXIT_BASE,
 )
-from web_router.constants_mcp import MCP_MSG_KEY_HINT, MCP_PROVIDER_CONFIG_CLAUSE, MCP_RESOURCE_NOT_FOUND
+from web_router.constants_mcp import MCP_RESOURCE_NOT_FOUND
 from web_router.exceptions import WebRouterError
 from web_router.mcp.env import EnvSources
-from web_router.mcp.shaping import ToolOutput, redact, redaction_note, render
+from web_router.mcp.messages import error_text
+from web_router.mcp.shaping import ToolOutput, render
 from web_router.mcp.tools import WebRouterTools
 
 
@@ -91,15 +91,8 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
     try:
         payload = await tools.call(name, arguments)
     except (WebRouterError, ValueError) as exc:
-        # ValueError covers this layer's own refusals and pydantic's request
-        # validation, both of which are bad arguments rather than bugs.
-        # Every tool's error is redacted, here rather than in each handler, so
-        # no failure path can miss it: a browse backend's own error can quote
-        # the session URL, and a vendor's HTTP error body rides on any method's
-        # message. An ordinary message passes through untouched.
-        message, count = redact(_for_mcp(str(exc)))
-        message += redaction_note(count)
-        return CallToolResult(content=[TextContent(text=message)], is_error=True)
+        # ValueError: this layer's own refusals and pydantic's validation -- bad arguments, not bugs.
+        return CallToolResult(content=[TextContent(text=error_text(exc))], is_error=True)
     output = payload if isinstance(payload, ToolOutput) else ToolOutput(payload=payload)
     text = render(output.payload)
     content: list[ContentBlock] = [TextContent(text=text)]
@@ -110,12 +103,6 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
     # The same object as the first text block, for a client that reads structured results; parsed back from the
     # text so it holds exactly what the model read, every value JSON.
     return CallToolResult(content=content, structured_content=json.loads(text))
-
-
-def _for_mcp(message: str) -> str:
-    """A library message as an MCP user can act on it: ``provider_config`` is code, so the ``.env`` route instead."""
-    rewritten, count = re.subn(MCP_PROVIDER_CONFIG_CLAUSE, "", message)
-    return rewritten + MCP_MSG_KEY_HINT if count else message
 
 
 def list_resources() -> ListResourcesResult:

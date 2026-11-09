@@ -14,7 +14,8 @@ from web_router.constants import (
     ENV_LOCAL_BROWSER_PATH,
     ENV_OPENAI_API_KEY,
 )
-from web_router.mcp.env import ALL_ENV_TABLES, EnvSources, credential_variables
+from web_router.mcp.env import EnvSources
+from web_router.mcp.env_credentials import ALL_ENV_TABLES, credential_variables
 from web_router.mcp.methods import METHODS
 
 ENV_EXAMPLE = Path(__file__).resolve().parents[2] / ".env.example"

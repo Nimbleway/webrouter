@@ -32,7 +32,7 @@ from web_router.constants import (
     RESEARCH_ENV_BY_PROVIDER,
     TEMPLATE_ENV_BY_PROVIDER,
 )
-from web_router.mcp.env import env_names
+from web_router.mcp.env_credentials import env_names
 from web_router.providers.base import _BaseProvider
 from web_router.registry import (
     configured_browse_providers,

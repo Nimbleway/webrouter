@@ -33,19 +33,12 @@ import io
 import os
 import stat
 import sys
-from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from web_router.constants import (
-    ANSWER_ENV_BY_PROVIDER,
-    BROWSE_ENV_BY_PROVIDER,
-    BROWSER_ENV_BY_PROVIDER,
-    ENV_BY_PROVIDER,
-    ENV_JINA_API_KEY,
     ENV_MCP_ENV_FILE,
-    EXTRACT_ENV_BY_PROVIDER,
     MCP_ENV_FILE,
     MCP_ENV_FILE_MAX_BYTES,
     MCP_ENV_POINTER_FILE,
@@ -69,42 +62,8 @@ from web_router.constants import (
     MCP_USER_CONFIG_DIR,
     MCP_USER_CONFIG_ROOT_BY_PLATFORM,
     MCP_USER_CONFIG_ROOT_DEFAULT,
-    RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
 )
-
-ALL_ENV_TABLES: tuple[Mapping[str, str | tuple[str, ...] | None], ...] = (
-    ENV_BY_PROVIDER,
-    EXTRACT_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
-    ANSWER_ENV_BY_PROVIDER,
-    RESEARCH_ENV_BY_PROVIDER,
-    BROWSER_ENV_BY_PROVIDER,
-    BROWSE_ENV_BY_PROVIDER,
-)
-"""Every method's ``*_ENV_BY_PROVIDER`` table: what a file may set, and, in the tools, what would unlock more."""
-
-_OPTIONAL_KEYS = (ENV_JINA_API_KEY,)
-"""Keys a keyless backend takes only to raise its rate limit, so no table names them: Jina Reader's."""
-
-
-_GROUPS: tuple[frozenset[str], ...] = tuple(
-    {frozenset(env) for table in ALL_ENV_TABLES for env in table.values() if isinstance(env, tuple) and len(env) > 1}
-)
-"""Credentials of several variables -- Oxylabs' username and password, Bright Data's token and zone."""
-
-
-def env_names(env: str | tuple[str, ...] | None) -> tuple[str, ...]:
-    """The variable names one ``*_ENV_BY_PROVIDER`` entry holds: search's a name or none, every other a tuple."""
-    if env is None:
-        return ()
-    return (env,) if isinstance(env, str) else env
-
-
-def credential_variables() -> frozenset[str]:
-    """Every provider credential variable: what :data:`ALL_ENV_TABLES` names, and the optional keys none does."""
-    named = {name for table in ALL_ENV_TABLES for env in table.values() for name in env_names(env)}
-    return frozenset(named | set(_OPTIONAL_KEYS))
+from web_router.mcp.env_credentials import EnvLoad, apply_credentials, credential_variables
 
 
 def _set_in_environment() -> tuple[str, ...]:
@@ -143,16 +102,6 @@ class EnvLookup:
     reason: str | None = None
 
 
-@dataclass(frozen=True)
-class EnvLoad:
-    """One file's credentials applied: the names it set, and the ones it left to a value already set."""
-
-    path: Path
-    loaded: tuple[str, ...]
-    already_set: tuple[str, ...]
-    remembered: Path | None = None
-
-
 @dataclass
 class EnvSources:
     """Where this server's provider credentials came from, and the loads that put them there.
@@ -179,7 +128,7 @@ class EnvSources:
                 if source == MCP_ENV_SOURCE_EXPLICIT and exc.status != MCP_ENV_STATUS_NO_CREDENTIALS:
                     sources.explicit_missing = True
                 continue
-            applied = _apply(path, values)
+            applied = apply_credentials(path, values)
             sources.startup.append(applied)
             status = MCP_ENV_STATUS_USED if applied.loaded else MCP_ENV_STATUS_NOTHING_NEW
             sources.searched.append(EnvLookup(source, path, status))
@@ -199,7 +148,7 @@ class EnvSources:
         target = _absolute(path)
         values = read_credentials(target)
         pointer = _remember(target) if remember else None
-        applied = _apply(target, values, remembered=pointer)
+        applied = apply_credentials(target, values, remembered=pointer)
         self.runtime.append(applied)
         return applied
 
@@ -295,22 +244,6 @@ def _remember(target: Path) -> Path:
         reason = exc.strerror or type(exc).__name__
         raise ValueError(MCP_MSG_ENV_REMEMBER_FAILED.format(pointer=pointer, reason=reason)) from exc
     return pointer
-
-
-def _apply(path: Path, values: dict[str, str], *, remembered: Path | None = None) -> EnvLoad:
-    """Set each of ``values`` still unset; a credential of several variables only as a whole.
-
-    Set-and-empty counts as unset, as the registry reads it. A variable whose
-    partner is already set is kept out too: a project's ``BRIGHTDATA_ZONE``
-    beside the user's own token would send the user's account through a zone
-    the project chose.
-    """
-    taken = {name for name in values if os.environ.get(name)}
-    taken |= {name for group in _GROUPS for name in group if name in values and any(os.environ.get(n) for n in group)}
-    for name in values.keys() - taken:
-        os.environ[name] = values[name]
-    loaded = tuple(name for name in values if name not in taken)
-    return EnvLoad(path, loaded, tuple(name for name in values if name in taken), remembered)
 
 
 def _absolute(raw: str) -> Path:

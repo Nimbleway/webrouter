@@ -21,7 +21,7 @@ from web_router.constants import (
     ENV_MCP_ENV_FILE,
     ENV_XDG_CONFIG_HOME,
 )
-from web_router.mcp.env import credential_variables
+from web_router.mcp.env_credentials import credential_variables
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools

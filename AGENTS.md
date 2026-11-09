@@ -213,6 +213,10 @@ src/web_router/
 │   │                   registry, classes, options and env table, in one table
 │   ├── schema.py       a tool's schema narrowed to the backends serving it here,
 │   │                   its declared arguments and its behaviour hints
+│   ├── env_credentials.py which variables are provider credentials, and how a
+│   │                   file's values join the environment
+│   ├── messages.py     a failed tool call's message: provider_config swapped for
+│   │                   load_env, then redacted
 │   ├── urls.py         public_only on the URLs extract, browse and run_template
 │   │                   are given, refused before anything is sent
 │   ├── routing_config.py the operator's router and ceiling, read once at startup
@@ -1325,7 +1329,7 @@ keys but never replace the user's; the capabilities resource's `env` object
 names the file each variable came from, and reports a `WEB_ROUTER_ENV_FILE`
 naming no file, never skipping it silently. Every file, from
 wherever, is read on the same terms: only `credential_variables()` — every
-variable `ALL_ENV_TABLES` in `mcp/env.py` names, and Jina's optional key — a user-scoped server can be started from any
+variable `ALL_ENV_TABLES` in `mcp/env_credentials.py` names, and Jina's optional key — a user-scoped server can be started from any
 workspace, and a foreign `.env` must not flip `WEB_ROUTER_MCP_ALLOW_FILE_URLS`
 or aim `CHROME_PATH` at its own binary; a variable already set wins; nothing is
 interpolated, so `${OTHER}` cannot copy another secret into a provider's key;
