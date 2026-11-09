@@ -1,0 +1,8 @@
+web-router
+Copyright 2026 Nimble
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It includes the SimpleQA grader prompt from OpenAI's simple-evals,
+Copyright (c) 2024 OpenAI, under the MIT License; see
+src/web_router/evals/prompts/LICENSE-simple-evals.

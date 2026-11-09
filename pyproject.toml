@@ -3,6 +3,8 @@ name = "web-router"
 dynamic = ["version"]
 description = "A provider-agnostic router for web search and page-extraction APIs (Nimble, Exa, Tavily, Brave, Oxylabs, Bright Data, ...)"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "src/web_router/evals/prompts/LICENSE-simple-evals"]
 requires-python = ">=3.10"
 authors = [
     { name = "Nimble", email = "support@nimbleway.com" },
@@ -169,7 +171,7 @@ agent-bench = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 # The one place the version lives: RELEASING.md bumps _version.py and the
@@ -182,7 +184,7 @@ path = "src/web_router/_version.py"
 packages = ["src/web_router"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/web_router", "tests", "scripts", "contracts", "README.md", "CHANGELOG.md"]
+include = ["src/web_router", "tests", "scripts", "contracts", "README.md", "CHANGELOG.md", "LICENSE", "NOTICE"]
 
 [tool.uv]
 managed = true
