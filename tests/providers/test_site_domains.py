@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from urllib.parse import unquote_plus
 
 import httpx
 import pytest
@@ -33,3 +34,5 @@ def test_a_domain_filter_that_is_not_a_host_name_is_refused_unsent(
             provider.search(request)
         assert "host name" in str(raised.value)
     assert len(sent) == int(sends)
+    if sends:  # in the query string (Brave) or the JSON body (the rest)
+        assert "site:example.com" in unquote_plus(str(sent[0].url)) + sent[0].content.decode()
