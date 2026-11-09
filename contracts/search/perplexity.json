@@ -26,7 +26,7 @@
     },
     "search_depth": {
       "lite": {
-        "body.max_tokens_per_page": 128
+        "body.max_tokens_per_page": 100
       },
       "fast": {
         "body.max_tokens_per_page": 1024
@@ -97,12 +97,12 @@
   "verified": {
     "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
     "include_domains": "docs: https://docs.perplexity.ai/api-reference/search-post",
-    "exclude_domains": "docs: https://docs.perplexity.ai/api-reference/search-post",
-    "country": "docs: https://docs.perplexity.ai/api-reference/search-post",
-    "locale": "docs: https://docs.perplexity.ai/api-reference/search-post",
-    "recency": "docs: https://docs.perplexity.ai/api-reference/search-post",
-    "search_depth": "docs: https://docs.perplexity.ai/api-reference/search-post (lite and fast budgets not measured live; deep refused until a live call shows whole pages)",
-    "effort": "docs: https://docs.perplexity.ai/api-reference/search-post"
+    "exclude_domains": "live: 2026-11-09 search-options check: sent as -domain, no wikipedia.org result",
+    "country": "live: 2026-11-09 search-options check: GB accepted",
+    "locale": "live: 2026-11-09 search-options check: de accepted with a German query",
+    "recency": "live: 2026-11-09 search-options check: day, 10 of 10 results dated inside the window",
+    "search_depth": "live: 2026-11-09 search-options check: fast (1,024 tokens) 817-3,909 characters; lite at 128 tokens gave 494-707, so it now asks for 100 (not re-run); 8,192 tokens stayed under 3,500, so deep stays refused",
+    "effort": "live: 2026-11-09 search-options check: low (search_type=fast) and medium both answered, in 0.33 s and 0.37 s"
   },
   "vendor_options": {
     "max_tokens": {

@@ -83,11 +83,13 @@ PERPLEXITY_LANGUAGE_PATTERN = r"^[A-Za-z]{2}$"
 MSG_PERPLEXITY_LOCALE = "Perplexity takes a locale as a two-letter ISO 639-1 language code, such as 'en'."
 
 PERPLEXITY_TOKENS_FIELD = "max_tokens_per_page"
-PERPLEXITY_TOKENS_BY_DEPTH: dict[SearchDepth, int] = {"lite": 128, "fast": 1024}
-"""``max_tokens_per_page`` for each ``search_depth`` it serves, at about four characters a token.
+PERPLEXITY_TOKENS_BY_DEPTH: dict[SearchDepth, int] = {"lite": 100, "fast": 1024}
+"""``max_tokens_per_page`` for each ``search_depth`` it serves.
 
-Perplexity documents no default and no whole-page setting, so ``deep`` is
-refused until a live call shows a large budget returns whole pages.
+Live on 2026-11-09 a budget of 128 gave 494-707 characters, up to 5.5 a token
+rather than the four assumed, so ``lite`` asks for 100: about 550 characters
+at that rate. Perplexity documents no default and no whole-page setting, and
+8,192 tokens still came back under 3,500 characters, so ``deep`` stays refused.
 """
 
 PERPLEXITY_SEARCH_TYPE_FIELD = "search_type"
