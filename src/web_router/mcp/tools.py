@@ -299,7 +299,7 @@ class WebRouterTools:
 
     async def _extract(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_EXTRACT, arguments)
-        screen(MCP_TOOL_EXTRACT, kwargs["urls"])
+        kwargs["urls"] = screen(MCP_TOOL_EXTRACT, kwargs["urls"])
         response = await self.router.extract(**kwargs)
         record = self.store.add(MCP_TOOL_EXTRACT, raw=response.raw)
         return shape_extract(response, record.handle, budget=max_response_chars())

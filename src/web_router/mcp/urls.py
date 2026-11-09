@@ -18,18 +18,28 @@ from web_router.constants_urls import URL_SCHEMES
 from web_router.routing.url_policy import public_only
 
 
-def screen(tool: str, urls: object) -> None:
-    """Refuse the call before anything is sent when a URL in ``urls`` is not a public http(s) one.
+def screen(tool: str, urls: object) -> object:
+    """``urls`` as the call should send it, once every URL in it is a public http(s) one.
 
     A string is one URL -- the library takes ``urls="https://..."`` as a list
-    of one -- and any other iterable is read as the library reads it, a
-    mapping by its keys. A value that is not a string is left for the library's
-    validation.
+    of one -- and any other iterable is read once, as the library reads it (a
+    mapping by its keys), and handed back as a list so a one-shot iterator is
+    not read empty a second time. A value that is not a string is left for the
+    library's validation.
+
+    Raises:
+        ValueError: naming each refused host and why, before anything is sent.
     """
-    candidates = [urls] if isinstance(urls, str) else list(urls) if isinstance(urls, Iterable) else []
+    if isinstance(urls, str):
+        candidates: list[object] = [urls]
+    elif isinstance(urls, Iterable):
+        urls = candidates = list(urls)
+    else:
+        candidates = []
     refused = [f"{host_of(url)} ({why})" for url in candidates if isinstance(url, str) and (why := public_only(url))]
     if refused:
         raise ValueError(MCP_MSG_URL_REFUSED.format(tool=tool, refused="; ".join(refused)))
+    return urls
 
 
 def url_values(inputs: object) -> list[str]:
