@@ -18,7 +18,8 @@ from web_router.constants import (
     MCP_TOOL_TEMPLATES,
     PROVIDER_TAVILY,
 )
-from web_router.constants_mcp import MCP_TOOL_BUDGET_STATUS, MCP_TOOL_HINTS, MCP_TOOL_WEB_RUN
+from web_router.constants_mcp import MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
+from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
 

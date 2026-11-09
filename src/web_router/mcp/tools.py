@@ -95,8 +95,8 @@ from web_router.constants_mcp import (
     MCP_MSG_UNKNOWN_ARGUMENTS,
     MCP_NO_ARGUMENTS,
     MCP_SERVER_INSTRUCTIONS,
-    MCP_TOOL_HINTS,
 )
+from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.exceptions import BrowseTimeoutError, ResearchTimeoutError
 from web_router.mcp import methods, schema
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright

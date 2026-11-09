@@ -15,7 +15,7 @@ from web_router.constants import (
     MCP_TOOL_PROPERTIES,
     MCP_TOOL_RUN_TEMPLATE,
 )
-from web_router.constants_mcp import MCP_TOOL_HINTS
+from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.mcp.chains import CHAIN_OF
 from web_router.mcp.methods import METHODS
