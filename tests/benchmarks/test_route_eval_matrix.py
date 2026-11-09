@@ -188,6 +188,11 @@ def test_mcnemar_is_the_exact_two_sided_binomial_p(
     assert common._mcnemar(only_first, only_second) == pytest.approx(p)
 
 
+def test_a_small_p_value_never_prints_as_zero(matrix_report: ModuleType) -> None:
+    assert matrix_report.p_value(2 * 37 / 256) == "0.29"
+    assert matrix_report.p_value(2 / 2**20) == "1.9e-06"
+
+
 def test_each_accuracy_carries_its_wilson_interval(matrix: ModuleType, matrix_report: ModuleType) -> None:
     picked = [_c(f"q{i}", "search", i < 19, 0.001, 1.0) for i in range(30)]
     side = matrix.compare(picked, picked)["first"]

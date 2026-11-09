@@ -144,12 +144,17 @@ def _accuracy(side: Mapping[str, Any]) -> str:
     return _p(side["accuracy"]) + (f" ({_p(ci[0])}-{_p(ci[1])})" if ci else "")
 
 
+def p_value(p: float) -> str:
+    """A p-value to two places, or in scientific notation below 0.01, so a strong result never reads as 0."""
+    return f"{p:.2f}" if p >= 0.01 else f"{p:.1e}"
+
+
 def _compare_row(c: Mapping[str, Any]) -> str:
     a, b = c["first"], c["second"]
     unknown = f" ({c['cost_unknown']} unknown)" if c["cost_unknown"] else ""
     return (
         f"| `{c['router']}` | `{c['against']}` | {c['questions']} | {c['disagree']} | {c['tool_disagree']} "
-        f"| {c['only_first_right']} / {c['only_second_right']} | {c['mcnemar_p']:.2f} "
+        f"| {c['only_first_right']} / {c['only_second_right']} | {p_value(c['mcnemar_p'])} "
         f"| {_accuracy(a)} / {_accuracy(b)} | {_usd(a['mean_cost_usd'])} / {_usd(b['mean_cost_usd'])}{unknown} |"
     )
 
