@@ -23,8 +23,10 @@ calling a router, :mod:`.merge` turning its decision into an order,
 :mod:`.budget` holding a call to its budget, :mod:`.params` the options a
 budget sets, :mod:`.effort_table` the research effort table they read,
 :mod:`.pricing` what an attempt costs and takes, :mod:`.decide` the merged
-decision a call runs with, :mod:`.url_policy` the URLs a call may send, and
-:mod:`.attempts` the seam in ``auto``'s fallback loops.
+decision a call runs with, :mod:`.url_policy` the URLs a call may send,
+:mod:`.attempts` the seam in ``auto``'s fallback loops, :mod:`.registry`
+routers by name, :mod:`.wire` the JSON wire format, and :mod:`.remote` the
+built-in router that speaks it over HTTP.
 """
 
 from web_router.routing.contract import Budget, Candidate, Plan, RouteDecision, RouteRequest, ToolName

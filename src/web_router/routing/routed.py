@@ -18,7 +18,7 @@ budget's research effort -- and recorded on the response's ``decision``.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Collection, Iterator
+from collections.abc import Awaitable, Callable, Collection, Iterator, Mapping
 from contextlib import contextmanager
 from typing import Any, TypeVar, get_args
 
@@ -37,6 +37,7 @@ from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
+from web_router.routing.registry import aclose_router, close_router, resolve_router
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -65,24 +66,40 @@ class RouterSetup:
     """The attached router and the tools it is consulted on, shared by both routers."""
 
     _router: AttachedRouter | None = None
+    _owned_router: RouterLike | None = None
     _route_tools: frozenset[ToolName] = _ALL_TOOLS
     _url_check: UrlCheck | None = None
 
     def _attach_router(
         self,
-        router: RouterLike | None,
+        router: RouterLike | str | None,
         route_tools: Collection[ToolName] | None,
         fail_on_router_error: bool,
         url_policy: UrlPolicy | None = None,
+        router_config: Mapping[str, Any] | None = None,
     ) -> None:
         """
         Raises:
-            ConfigurationError: for a ``router`` in neither form, a ``route_tools`` naming something else, or an
-                unknown ``url_policy``.
+            ConfigurationError: for a ``router`` in neither form nor a registered name, ``router_config`` without a
+                name, a ``route_tools`` naming something else, or an unknown ``url_policy``.
         """
         self._url_check = url_check(url_policy)
         self._route_tools = _route_tools(route_tools)
-        self._router = None if router is None else AttachedRouter(router, fail_on_error=fail_on_router_error)
+        attached, owned = resolve_router(router, router_config)
+        try:
+            self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
+        except BaseException:
+            close_router(owned)  # built here and refused: nothing else would close it
+            raise
+        self._owned_router = owned
+
+    def _close_router(self) -> None:
+        """Close the router when it was built here by name; one passed in is the caller's to close."""
+        close_router(self._owned_router)
+
+    async def _aclose_router(self) -> None:
+        """:meth:`_close_router` from async code: the router's ``aclose()``, else its ``close()``."""
+        await aclose_router(self._owned_router)
 
     def _route_request(
         self, chain: Any, request: NormalizedRequest, budget: Budget | None
