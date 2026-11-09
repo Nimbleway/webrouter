@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 
 import httpx
@@ -47,7 +48,9 @@ def test_a_query_past_webiqs_limit_with_its_operators_is_refused(provider: WebIQ
         provider._build_payload(SearchRequest(query="x" * 990, include_domains=["example.com"]))
 
 
-@pytest.mark.parametrize("options", [{"country": "USA"}, {"locale": "fil"}, {"country": "U1"}])
+@pytest.mark.parametrize(
+    "options", [{"country": "USA"}, {"locale": "fil"}, {"country": "U1"}, {"locale": "zz"}, {"locale": "zz-US"}]
+)
 def test_a_code_webiq_cannot_take_is_refused_unsent(monkeypatch: pytest.MonkeyPatch, options: dict) -> None:
     monkeypatch.setenv("WEBIQ_API_KEY", "test-key")
     sent: list[httpx.Request] = []
@@ -56,6 +59,16 @@ def test_a_code_webiq_cannot_take_is_refused_unsent(monkeypatch: pytest.MonkeyPa
     with pytest.raises(UnsupportedParameterError, match="two-letter"):
         provider.search(SearchRequest(query="hi", **options))
     assert sent == []
+
+
+def test_an_iso_639_1_language_is_sent(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("WEBIQ_API_KEY", "test-key")
+    sent: list[httpx.Request] = []
+    provider = WebIQProvider(transport=httpx.MockTransport(lambda r: sent.append(r) or httpx.Response(200, json={})))
+
+    provider.search(SearchRequest(query="hi", locale="ja"))
+    assert len(sent) == 1
+    assert json.loads(sent[0].content)["language"] == "ja"
 
 
 @pytest.mark.integration

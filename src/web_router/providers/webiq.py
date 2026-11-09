@@ -30,6 +30,7 @@ from web_router.constants import (
     WEBIQ_PARAM_NAMES,
     WEBIQ_SEARCH_PATH,
 )
+from web_router.constants_languages import ISO_639_1
 from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.constants_webiq import (
     MSG_WEBIQ_CODE,
@@ -103,7 +104,7 @@ class WebIQProvider(HttpSearchProvider):
         refused: dict[str, Any] = unsited_domains(request)
         if request.country is not None and not _two_letters(request.country):
             refused["country"] = request.country
-        if request.locale is not None and not _two_letters(language_code(request.locale)):
+        if request.locale is not None and language_code(request.locale) not in ISO_639_1:
             refused["locale"] = request.locale
         return refused
 
