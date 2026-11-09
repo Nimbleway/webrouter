@@ -1,11 +1,12 @@
 """Bright Data live data: its ready-made scrapers, run synchronously on one input, records returned.
 
-A scraper is called by name, like every other vendor's source:
+A scraper is called by its dataset id or by its name, like every other vendor's source:
 ``amazon_products`` collects Amazon product pages by URL, and
 ``amazon_products_by_keyword`` discovers them by keyword -- one source per
 scraper and collection method, named from Bright Data's own catalogue by
-:mod:`~web_router.providers.brightdata_names`. A dataset id (``gd_…``) is still
-accepted, meaning that scraper's URL method. The catalogue is read once per
+:mod:`~web_router.providers.brightdata_names`; Bright Data's own name as
+written ("Amazon products") means the same. A dataset id (``gd_…``) is
+accepted too, meaning that scraper's URL method. The catalogue is read once per
 provider and kept, so a name costs one listing call, not one per run.
 
 One run sends one input to the synchronous scrape endpoint, which collects for
@@ -53,7 +54,7 @@ from web_router.constants_live_data_vendors import (
 )
 from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
 from web_router.providers._http_live_data import HttpLiveDataProvider
-from web_router.providers.brightdata_names import Scraper, scrapers
+from web_router.providers.brightdata_names import Scraper, scrapers, slug
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
     LiveDataRequest,
@@ -137,7 +138,8 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
         """The scraper a name means; a ``gd_…`` id is its URL method, and needs no catalogue."""
         if source.startswith(BRIGHTDATA_ID_PREFIX):
             return Scraper(name=source, dataset_id=source, method="collect_by_url")
-        scraper = (known or {}).get(source)
+        # Bright Data's own name works as written too: "Amazon products" is amazon_products.
+        scraper = (known or {}).get(source) or (known or {}).get(slug(source))
         if scraper is None:
             raise LiveDataSourceNotFoundError(self.name, source)
         return scraper

@@ -65,6 +65,13 @@ def test_a_scraper_is_run_by_its_name() -> None:
     assert response.source == "amazon_products" and response.records == records
 
 
+@pytest.mark.parametrize("name", ["Amazon products", "amazon_products", DATASET])
+def test_a_scraper_runs_by_bright_datas_name_as_written_ours_or_its_id(name: str) -> None:
+    provider, api = _provider(_by_path([{"title": "x"}]))
+    provider.run(LiveDataRequest(source=name, inputs={"url": URL}))
+    assert api.last.url.params["dataset_id"] == DATASET and "discover_by" not in api.last.url.params
+
+
 def test_a_discovery_method_is_a_source_of_its_own() -> None:
     provider, api = _provider(_by_path([]))
     response = provider.run(LiveDataRequest(source="amazon_products_by_keyword", inputs={"keyword": "x"}))
