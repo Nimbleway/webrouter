@@ -3160,7 +3160,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'research'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'search'", specifier = ">=0.27" },
     { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=1.0,<2" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2,<3" },
     { name = "nimble-python", marker = "extra == 'all'", specifier = ">=1.5.0,<2" },
     { name = "nimble-python", marker = "extra == 'aws'", specifier = ">=1.5.0,<2" },
     { name = "nimble-python", marker = "extra == 'evals'", specifier = ">=1.5.0,<2" },

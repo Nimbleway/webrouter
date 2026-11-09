@@ -38,6 +38,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - An MCP result that is over its size budget now cuts every result's text further before it drops any result, so `max_results=3` returns three results; before, it dropped whole results first.
 
+- The `mcp` extra now requires `mcp>=2.2,<3`. It allowed 1.x, which cannot import the server.
+
 ### Removed
 
 - The decider spike: `WebRouter(decider=, decider_config=)`, `WebRouter.classify()`, `WebRouter.execute()`, `Route` and the `web_router.decisions` package (`DecisionProvider`, `register_decider()` and the `keywords`, `jev` and `llm` deciders). It was a proof of concept for routing; `router=`, `plan()` and `run()` replace it. To keep using it, pin `web-router==0.9.0`, the last version that has it.

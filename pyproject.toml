@@ -106,7 +106,7 @@ browser = [
 # `web-router[mcp,browser]` is what turns them on.
 mcp = [
     "web-router[search,extract,research,answer]",
-    "mcp>=1.2",
+    "mcp>=2.2,<3",
     # The server's entry point loads the project .env, so keys reach it
     # without being exported; the library itself never reads dotfiles.
     "python-dotenv>=1.0",
