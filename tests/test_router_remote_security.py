@@ -125,6 +125,16 @@ def test_no_key_value_reaches_the_service_the_record_or_a_failure(monkeypatch: p
     assert KEY not in str(raised.value) + str(cause)
 
 
+def test_a_service_echoing_its_key_in_its_reasons_has_it_redacted() -> None:
+    def echo(body: dict[str, Any]) -> dict[str, Any]:
+        return {"schema": 1, "tools": ["search"], "reason": f"key {KEY}", "exclude": {"search:exa": KEY}}
+
+    with running(echo) as server, WebRouter(router="remote", router_config=config(server)) as wr:
+        plan = wr.plan("solar news")
+    assert plan.decision.reason is not None
+    assert KEY not in plan.decision.model_dump_json() and "[redacted]" in plan.decision.model_dump_json()
+
+
 def test_a_redirect_is_a_router_error_and_the_key_never_follows_it() -> None:
     elsewhere = Canned(body=b'{"schema": 1, "tools": ["extract"]}')
     with canned(elsewhere) as target:

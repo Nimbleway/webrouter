@@ -2203,7 +2203,8 @@ field may be left out or `null`):
   missing `schema` included -- is `router_invalid`. Either
   way the static order runs, the record's `reason` says which, and
   `fail_on_router_error=True` raises `RouterError` instead. The service's
-  `reason` and `exclude` reasons are cut to 300 characters.
+  `reason` and `exclude` reasons are cut to 300 characters, and an echo of its
+  own bearer key is redacted.
 - **The URLs it may set.** The URLs a service sets for extract or browse are
   held to `url_policy="public_only"` even when you set no `url_policy`: a
   service cannot name a loopback, private or metadata address. A

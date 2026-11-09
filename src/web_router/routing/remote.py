@@ -32,11 +32,11 @@ loopback address (:mod:`.remote_url`).
 A timeout is ``router_timeout``; a transport error, a status other than 200 or
 a decision naming a ``schema`` other than 1 is ``router_error``; an answer that
 is not an ``application/json`` decision within 64 KiB -- ``schema`` missing
-included -- is ``router_invalid``. Either way the
-call runs on the static order and the decision record says why. Fields the
-service adds that this version does not know are ignored; its reasons are cut
-short. Router-set URLs are held to ``public_only`` when the caller sets no
-``url_policy`` (``min_url_policy``).
+included -- is ``router_invalid``. Either way the call runs on the static
+order and the decision record says why. Fields the service adds that this
+version does not know are ignored; its reasons are cut short, and an echo of
+its bearer key in its answer is redacted. Router-set URLs are held to
+``public_only`` when the caller sets no ``url_policy`` (``min_url_policy``).
 
 A decision record names it ``remote(<scheme>://<host>)``: never the URL's
 path, and never the key.
@@ -73,6 +73,7 @@ from web_router.constants_remote import (
     REMOTE_DISPLAY_NAME,
     REMOTE_HTTP_OK,
     REMOTE_JSON_TYPE,
+    REMOTE_KEY_REDACTED,
     REMOTE_MAX_RESPONSE_BYTES,
     REMOTE_MEDIA_PARAMS,
     REMOTE_TIMEOUT_S,
@@ -128,10 +129,14 @@ def _checked_timeout(value: object) -> float:
     return float(value)
 
 
-def _auth_headers(api_key: object) -> dict[str, str]:
+def _key(api_key: object) -> str | None:
     key = os.environ.get(ENV_REMOTE_ROUTER_API_KEY) if api_key is None else api_key
     if key is not None and not isinstance(key, str):
         raise ConfigurationError(MSG_REMOTE_KEY)
+    return key or None
+
+
+def _auth_headers(key: str | None) -> dict[str, str]:
     return {**REMOTE_CONTENT_TYPE, **({REMOTE_AUTH_HEADER: REMOTE_AUTH_VALUE.format(key=key)} if key else {})}
 
 
@@ -176,7 +181,9 @@ class RemoteRouter:
         self.host = host_of(self._url)
         self.router_name = REMOTE_DISPLAY_NAME.format(host=self.host)
         self.timeout_s = _checked_timeout(timeout_s)
-        self._request_headers = _auth_headers(api_key)
+        key = _key(api_key)
+        self._request_headers = _auth_headers(key)
+        self._key_bytes = None if key is None else key.encode()
         self._lock = threading.Lock()
         self._closed = False
         self._pool: httpx.AsyncClient | None = None
@@ -311,6 +318,8 @@ class RemoteRouter:
         """The decision ``body`` carries, or the router error: ``failed`` names the transport's error class."""
         if failed is not None:
             raise RemoteRouterError(self.host, REMOTE_WHY_TRANSPORT.format(kind=failed))
+        if self._key_bytes:  # a service echoing its own key puts it in no reason a record or a model shows
+            body = body.replace(self._key_bytes, REMOTE_KEY_REDACTED)
         try:
             data = json.loads(body)
         except (ValueError, RecursionError):  # a reply nested deeper than Python parses is no decision either
