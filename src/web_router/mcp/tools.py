@@ -29,7 +29,6 @@ from mcp_types import Tool
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
     ENV_MCP_ENV_FILE,
-    MCP_ARG_FORMAT,
     MCP_ARG_HANDLE,
     MCP_ARG_MAX_CHARS,
     MCP_ARG_PATH,
@@ -38,7 +37,6 @@ from web_router.constants import (
     MCP_ARG_REMEMBER,
     MCP_ARG_SELECTOR,
     MCP_ARG_SESSION_ID,
-    MCP_ARG_STEALTH,
     MCP_BROWSE_WAIT,
     MCP_BROWSER_ACTION_TIMEOUT_LIMIT,
     MCP_BROWSER_END_CLOSED,
@@ -607,10 +605,7 @@ class WebRouterTools:
             serving = methods.serving(tool, [*providers, self.router.default_provider], self.router)
             mapped = frozenset().union(*(cls.supported_parameters for cls in serving))
             properties = {name: spec for name, spec in properties.items() if name not in method.options - mapped}
-            if MCP_ARG_STEALTH in properties and tool == MCP_TOOL_BROWSER_OPEN:
-                methods.offer_levels(properties, serving)
-            if MCP_ARG_FORMAT in properties and tool == MCP_TOOL_RUN_TEMPLATE:
-                methods.offer_formats(properties, serving)
+            methods.narrow(tool, properties, serving)
         if providers:
             properties[MCP_ARG_PROVIDER] = {
                 "type": "string",

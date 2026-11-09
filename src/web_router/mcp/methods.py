@@ -218,34 +218,30 @@ def serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[typ
     return classes
 
 
-def offer_levels(properties: dict[str, Any], serving: list[type[_BaseProvider]]) -> None:
-    """Narrow ``stealth`` to the levels some backend serving here has, as the options are narrowed.
+NARROWED: dict[str, tuple[str, tuple[str, ...], type[_BaseProvider], str]] = {
+    MCP_TOOL_BROWSER_OPEN: (MCP_ARG_STEALTH, get_args(StealthLevel), BrowserProvider, "stealth_levels"),
+    MCP_TOOL_RUN_TEMPLATE: (MCP_ARG_FORMAT, get_args(ExtractFormat), TemplateProvider, "supported_formats"),
+}
+"""Per tool, an option every backend maps with choices of its own: the option, its choices, and where they are listed.
 
-    A level none of them serves would be refused on every route, so it is not
+A browser's ``stealth`` levels and a template run's page ``format`` differ per backend.
+"""
+
+
+def narrow(tool: str, properties: dict[str, Any], serving: list[type[_BaseProvider]]) -> None:
+    """Narrow ``tool``'s :data:`NARROWED` option to the choices some backend serving here has.
+
+    A choice none of them has would be refused on every route, so it is not
     offered; with none at all the option goes too.
     """
-    served = frozenset().union(*(cls.stealth_levels for cls in serving if issubclass(cls, BrowserProvider)))
-    levels = [level for level in get_args(StealthLevel) if level in served]
-    if levels:
-        properties[MCP_ARG_STEALTH] = {**properties[MCP_ARG_STEALTH], "enum": levels}
+    if tool not in NARROWED or NARROWED[tool][0] not in properties:
+        return
+    name, choices, base, attribute = NARROWED[tool]
+    served = frozenset().union(*(getattr(cls, attribute) for cls in serving if issubclass(cls, base)))
+    if offered := [choice for choice in choices if choice in served]:
+        properties[name] = {**properties[name], "enum": offered}
     else:
-        del properties[MCP_ARG_STEALTH]
-
-
-def offer_formats(properties: dict[str, Any], serving: list[type[_BaseProvider]]) -> None:
-    """Narrow a template run's ``format`` to the page formats some backend serving here returns.
-
-    Every template backend maps the option; what differs is which formats it
-    can return beside the record. A format none of them returns would be
-    refused on every route, so it is not offered, and with none at all the
-    option goes too -- as :func:`offer_levels` narrows ``stealth``.
-    """
-    served = frozenset().union(*(cls.supported_formats for cls in serving if issubclass(cls, TemplateProvider)))
-    formats = [body_format for body_format in get_args(ExtractFormat) if body_format in served]
-    if formats:
-        properties[MCP_ARG_FORMAT] = {**properties[MCP_ARG_FORMAT], "enum": formats}
-    else:
-        del properties[MCP_ARG_FORMAT]
+        del properties[name]
 
 
 def tool_annotations(tool: str) -> ToolAnnotations:
