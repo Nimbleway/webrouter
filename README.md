@@ -5,6 +5,7 @@
 > **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
 
 [![CI](https://github.com/WebContextLayer/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WebContextLayer/webrouter/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -2514,7 +2515,7 @@ make test-browser
 
 ## License
 
-A license will be added once it is chosen.
+web-router is licensed under the [Apache License 2.0](LICENSE).
 
 The SimpleQA grader prompt vendored at `src/web_router/evals/prompts/` keeps
 its own MIT license, in `LICENSE-simple-evals` beside it.
