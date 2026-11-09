@@ -115,6 +115,15 @@ jobs:
       - run: uv build --build-constraints .github/build-constraints.txt --require-hashes
       - run: uvx --from 'twine==7.0.0' twine check --strict dist/*
 
+      - name: The wheel installs on its own and imports as this version
+        # A broken wheel can't be replaced once it is on PyPI, so try it first.
+        run: |
+          uv venv "$RUNNER_TEMP/smoke"
+          uv pip install --python "$RUNNER_TEMP/smoke/bin/python" dist/webrouter-*.whl
+          got=$("$RUNNER_TEMP/smoke/bin/python" -c "import web_router; print(web_router.__version__)")
+          [ "$got" = "${TAG#v}" ] || { echo "::error::the wheel imports as $got, not ${TAG#v}"; exit 1; }
+          echo "webrouter $got installs and imports"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist
