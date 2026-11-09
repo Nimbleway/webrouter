@@ -91,6 +91,19 @@ async def test_a_country_tavily_cannot_boost_is_refused_unsent(
     assert TavilyProvider.refused_values(request_) == {"country": request_.country}
 
 
+def test_a_session_goes_to_the_sync_client_and_a_client_to_the_async_one() -> None:
+    """Each SDK client gets only the transport argument it takes, so neither raises."""
+    import requests
+
+    from web_router.providers.tavily_extract import TavilyExtractProvider
+
+    session, client = requests.Session(), httpx.AsyncClient()
+    for cls in (TavilyProvider, TavilyExtractProvider):
+        provider = cls(api_key="test-key", session=session, client=client)
+        assert provider._client.session is session
+        assert provider._async_client._client is client
+
+
 @pytest.mark.integration
 @pytest.mark.skipif(not os.getenv("TAVILY_API_KEY"), reason="TAVILY_API_KEY not set")
 def test_live_lite_content_size_with_and_without_one_chunk() -> None:
