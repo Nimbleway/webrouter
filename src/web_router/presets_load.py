@@ -97,9 +97,10 @@ def _checked(definition: Preset | Mapping[str, Any], *, where: str | None = None
     """
     data = _plain(definition.model_dump() if isinstance(definition, Preset) else definition)
     lead = MSG_PRESET_DEFINITION_IN.format(where=where) if where else MSG_PRESET_DEFINITION
-    non_finite = [PresetIssue(field=path or "preset", message=MSG_PRESET_NOT_FINITE) for path in _non_finite(data, "")]
-    if non_finite:
-        raise PresetValidationError(non_finite, lead=lead)
+    # Checked here, not only when a file is read: a definition built in code can hold a set or an object too.
+    not_json = [PresetIssue(field=path or "preset", message=message) for path, message in _not_json(data, "")]
+    if not_json:
+        raise PresetValidationError(not_json, lead=lead)
     try:
         preset = Preset.model_validate(data)
     except ValidationError as exc:
@@ -120,16 +121,25 @@ def _checked(definition: Preset | Mapping[str, Any], *, where: str | None = None
     return preset
 
 
-def _non_finite(value: Any, path: str) -> Iterator[str]:
-    """Where ``value`` holds a number JSON cannot: NaN or an infinity, which Python's JSON and YAML both read."""
+def _not_json(value: Any, path: str) -> Iterator[tuple[str, str]]:
+    """Where ``value`` holds what JSON cannot, and why.
+
+    NaN and infinity, which Python's JSON and YAML both read; a key that is not
+    a string; a value of a type JSON has no form for, such as a set or an object.
+    """
     if isinstance(value, float) and not math.isfinite(value):
-        yield path
+        yield path, MSG_PRESET_NOT_FINITE
     elif isinstance(value, Mapping):
         for key, item in value.items():
-            yield from _non_finite(item, f"{path}.{key}" if path else str(key))
+            if not isinstance(key, str):
+                yield path, MSG_PRESET_NOT_JSON
+                continue
+            yield from _not_json(item, f"{path}.{key}" if path else key)
     elif isinstance(value, (builtins.list, tuple)):
         for index, item in enumerate(value):
-            yield from _non_finite(item, f"{path}.{index}" if path else str(index))
+            yield from _not_json(item, f"{path}.{index}" if path else str(index))
+    elif value is not None and not isinstance(value, (str, int, float)):
+        yield path, MSG_PRESET_NOT_JSON
 
 
 def _plain(value: Any) -> Any:

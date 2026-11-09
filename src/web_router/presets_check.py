@@ -10,7 +10,7 @@ import builtins
 from collections.abc import Callable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from web_router.constants_presets import (
     MSG_PRESET_BACKEND_NEEDS,
@@ -50,6 +50,7 @@ from web_router.registry import (
     get_template_provider_class,
 )
 from web_router.registry_answer import default_answer_provider, get_answer_provider_class
+from web_router.routing.contract import Budget
 from web_router.types import provider_name
 from web_router.types_meta import (
     PresetComponent,
@@ -107,24 +108,48 @@ def _native_inputs(
 
     Shaped first as the method shapes them -- one URL is a list of one, template
     inputs are a dict -- so a value the call takes is not reported. A bad one is
-    named by field, never repeated, and left out of what the backend's checks read.
+    named by field and never repeated; the backend's checks never read it. One
+    left out is not checked, so a preset's check need not name them, but one
+    given as ``None`` is, since the call refuses a required input set to ``None``.
     """
     native: dict[str, Any] = {}
     issues: builtins.list[PresetIssue] = []
     for name in sorted(PRESET_NATIVE_INPUTS[component]):
-        value = arguments.get(name)
-        if value is None:
+        if name not in arguments:
             continue
+        value = arguments[name]
         if name == "urls" and isinstance(value, str):
             value = [value]
         elif name == "inputs" and isinstance(value, Mapping):
             value = dict(value)
         try:
-            native[name] = _adapter(component, name).validate_python(value)
+            checked = _adapter(component, name).validate_python(value)
         except ValidationError as exc:
             error = "; ".join(item["msg"] for item in exc.errors())
             issues.append(PresetIssue(field=name, message=MSG_PRESET_BAD_ARGUMENT.format(field=name, error=error)))
+            continue
+        if checked is not None:
+            native[name] = checked
     return native, issues
+
+
+_CALL_ARGUMENT_TYPES: dict[str, TypeAdapter[Any]] = {
+    "budget": TypeAdapter(Budget | None),
+    "timeout": TypeAdapter(float | None),
+}
+"""What each call argument takes. Strict: the method reads a ``Budget``'s fields and never builds one from a dict."""
+
+
+def _call_argument_issues(component: PresetComponent, arguments: Mapping[str, Any]) -> builtins.list[PresetIssue]:
+    """The call arguments the method could not use, named by field and never repeated."""
+    issues: builtins.list[PresetIssue] = []
+    for name in sorted(PRESET_CALL_ARGUMENTS[component] & set(arguments)):
+        try:
+            _CALL_ARGUMENT_TYPES[name].validate_python(arguments[name], strict=True)
+        except ValidationError as exc:
+            error = "; ".join(item["msg"] for item in exc.errors())
+            issues.append(PresetIssue(field=name, message=MSG_PRESET_BAD_ARGUMENT.format(field=name, error=error)))
+    return issues
 
 
 def _argument_issues(
@@ -168,6 +193,7 @@ def preflight(
     ]
     if given_twice:
         issues.append(PresetIssue(field=PRESET_ARGUMENT, message=MSG_PRESET_GIVEN_TWICE))
+    issues.extend(_call_argument_issues(component, arguments))
     explicit = {name: arguments.get(name) for name in settable}
     coerced, argument_issues = _argument_issues(component, explicit)
     issues.extend(argument_issues)

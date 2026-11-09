@@ -51,6 +51,9 @@ def test_every_argument_a_method_takes_is_one_validate_knows(router: type) -> No
         if not name.startswith("_") and PRESET_ARGUMENT in inspect.signature(member).parameters
     }
     assert set(methods) == set(COMPONENT_OF), "map the method to its preset section in COMPONENT_OF"
+    for component, arguments in PRESET_CALL_ARGUMENTS.items():
+        taken = set().union(*(methods[name] for name, mapped in COMPONENT_OF.items() if mapped == component))
+        assert arguments <= taken, f"no {component} method takes {sorted(arguments - taken)}"
     for name, parameters in methods.items():
         component = COMPONENT_OF[name]
         known = (
@@ -67,6 +70,42 @@ def test_validate_takes_a_budget_where_the_method_does(component: PresetComponen
     check = WebRouter().presets.validate(component, {**CALLS[component], "budget": Budget(max_cost_usd=0.05)})
 
     assert check.ok, check.issues
+
+
+@pytest.mark.parametrize(
+    ("component", "call"),
+    [
+        ("search", {"query": "q", "budget": {"max_cost_usd": 1}}),
+        ("research", {"query": "q", "timeout": "soon"}),
+    ],
+    ids=["budget-as-dict", "timeout-as-text"],
+)
+def test_validate_checks_a_call_argument_as_the_call_uses_it(component: PresetComponent, call: dict[str, Any]) -> None:
+    """The call reads a budget's fields and waits a number of seconds: anything else fails once it runs."""
+    check = WebRouter().presets.validate(component, call)
+
+    assert [issue.field for issue in check.issues] == sorted(set(call) - set(CALLS[component]))
+
+
+@pytest.mark.parametrize(
+    ("component", "call"),
+    [
+        ("search", {"query": None}),
+        ("extract", {"urls": None}),
+        ("browse", {"task": None}),
+        ("templates", {"template": None, "provider": "nimble"}),
+    ],
+    ids=["query", "urls", "task", "template"],
+)
+def test_a_required_input_given_as_none_is_an_issue(component: PresetComponent, call: dict[str, Any]) -> None:
+    check = WebRouter().presets.validate(component, call)
+
+    assert [issue.field for issue in check.issues] == [next(iter(call))]
+
+
+def test_an_input_left_out_is_not_checked_and_an_optional_one_may_be_none() -> None:
+    assert WebRouter().presets.validate("search").ok
+    assert WebRouter().presets.validate("research", {"query": "q", "records": None}).ok
 
 
 def test_validate_refuses_a_budget_where_the_method_takes_none() -> None:

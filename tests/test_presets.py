@@ -1,4 +1,4 @@
-"""Presets: loading a definition, checking it against its methods, and reading a file.
+"""Presets: loading a definition, checking it against its methods and reading a file.
 
 Every router method takes ``preset=``, and these run each one over the in-memory
 fakes in conftest, so nothing here touches the network or needs a key. A fake's
@@ -303,3 +303,21 @@ def test_nan_is_refused_in_yaml_and_in_a_definition_built_in_code(tmp_path: Path
         PresetRegistry().load(path)
     with pytest.raises(PresetValidationError):
         PresetRegistry().add(definition(components={"browser": {"defaults": {"timeout": float("inf")}}}))
+
+
+@pytest.mark.parametrize(
+    ("component", "defaults", "field"),
+    [
+        ("search", {"provider_options": {"k": {1, 2}}}, "components.search.defaults.provider_options.k"),
+        ("research", {"output_schema": {"type": object()}}, "components.research.defaults.output_schema.type"),
+    ],
+    ids=["set", "object"],
+)
+def test_a_definition_built_in_code_holds_only_what_json_can(
+    component: str, defaults: dict[str, Any], field: str
+) -> None:
+    """A file is read as JSON or YAML; one built in code must hold no more, or validate() and meta fail later."""
+    with pytest.raises(PresetValidationError) as caught:
+        PresetRegistry().add(definition(components={component: {"defaults": defaults}}))
+
+    assert [issue.field for issue in caught.value.issues] == [field]

@@ -1483,7 +1483,8 @@ when they are built, taking the router preset's when you name none.
 
 A preset's values count as the call's own, so a router never replaces them,
 and a budget maps research's effort only when neither the call nor a preset
-sets one. A preset's `provider` pins the backend, so no router is asked. A
+sets one. A preset's `provider`, unless it is `auto`, pins the backend, so no
+router is asked. A
 preset's `provider_options` can leave a cost-capped call's price unknown, and
 then the budget refuses the call with `BudgetExceededError`, which names the
 presets and the settings they supplied.

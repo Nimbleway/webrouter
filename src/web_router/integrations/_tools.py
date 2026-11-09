@@ -97,20 +97,24 @@ class WebRouterTools(Generic[ResultT]):
             methods: Which tools to expose, from ``("search", "extract",
                 "answer")``; unset, search and extract. ``answer`` bills each
                 call on a backend that needs a key, so it is asked for by name.
-            provider: The search backend; unset, the router's default.
-            extract_provider: The extract backend. Unset, ``provider`` when it
-                also extracts, else the router's default -- a name that
-                searches is not always one that extracts.
-            answer_provider: The answer backend. Unset, ``provider`` when it
-                also answers, else the router's default answer backend. The
-                answer tool sends only the question: the search options above
-                are not passed to it.
+            provider: The search backend; unset, the router preset's search
+                backend, else the router's default.
+            extract_provider: The extract backend. Unset, the router preset's
+                extract backend, else ``provider`` when it also extracts, else
+                the router's default -- a name that searches is not always one
+                that extracts.
+            answer_provider: The answer backend. Unset, the router preset's
+                answer backend, else ``provider`` when it also answers, else
+                the router's default answer backend. The answer tool sends only
+                the question: the search options above are not passed to it.
 
         Raises:
-            ConfigurationError: The extract tool is exposed and neither
-                ``provider`` nor the router's default extracts.
-            NoAnswerProviderError: The answer tool is exposed, no backend is
-                named, and the router has no single answer backend to use.
+            ConfigurationError: The extract tool is exposed, the router's
+                preset names no extract backend and neither ``provider`` nor
+                the router's default extracts.
+            NoAnswerProviderError: The answer tool is exposed, neither it nor
+                the router's preset names a backend and the router has no
+                single answer backend to use.
         """
         unknown = [m for m in methods if m not in KNOWN_METHODS]
         if unknown:

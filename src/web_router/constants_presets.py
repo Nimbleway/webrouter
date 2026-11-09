@@ -74,6 +74,7 @@ __all__ = [
     "PRESET_FILE_SUFFIXES",
     "PRESET_FORMATS",
     "PRESET_NATIVE_INPUTS",
+    "PRESET_PRICED_FIELDS",
     "PRESET_PROVIDER_FIELD",
     "PRESET_REF_PATTERN",
     "PRESET_REQUEST_MODELS",
@@ -160,6 +161,12 @@ PRESET_CASE_BLIND: dict[PresetComponent, frozenset[str]] = {
 
 PRESET_FORMATS: frozenset[str] = frozenset(get_args(ExtractFormat))
 """Every format there is. :meth:`~web_router.PresetRegistry.validate` checks a backend's formats only for these."""
+
+PRESET_PRICED_FIELDS = frozenset({PRESET_PROVIDER_FIELD, "provider_options", "search_depth", "max_results", "effort"})
+"""The settings a budget prices a call by (:mod:`web_router.routing.pricing`): the backend, its mode, its size.
+
+A budget's refusal names those of them a preset supplied, and no other.
+"""
 
 PRESET_WITHHELD_FIELDS = frozenset({"provider_options"})
 """Settings metadata shows by their keys alone and errors never show by value: a backend's options can hold a key."""

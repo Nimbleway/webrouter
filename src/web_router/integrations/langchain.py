@@ -149,8 +149,9 @@ class WebRouterAnswer(_WebRouterTool):
 
     Not among :func:`web_router_tools`: every answer backend needs a key and
     bills each call, so it is added by name. Unset, ``provider`` is the
-    router's default answer backend, and with none to use the first call
-    raises :class:`~web_router.exceptions.NoAnswerProviderError`.
+    router preset's answer backend, else the router's default answer backend,
+    and with none to use the first call raises
+    :class:`~web_router.exceptions.NoAnswerProviderError`.
     """
 
     name: str = LANGCHAIN_ANSWER_TOOL_NAME
@@ -192,10 +193,11 @@ def web_router_tools(
     """Both tools on one router: a search and an extract.
 
     ``search_options`` are :class:`WebRouterSearch`'s -- ``max_results``,
-    ``search_depth`` and the rest. ``extract_provider`` defaults to
-    ``provider`` when that one also extracts, and to the router's default when
-    it does not, since a name that searches is not always one that extracts;
-    when that default cannot extract either, it raises ``ConfigurationError``.
+    ``search_depth`` and the rest. ``extract_provider`` defaults to the router
+    preset's extract backend, else to ``provider`` when that one also extracts,
+    else to the router's default, since a name that searches is not always one
+    that extracts; when that default cannot extract either, it raises
+    ``ConfigurationError``.
     Left unset, ``router`` is one default router the two tools share.
     """
     router = router if router is not None else WebRouter()

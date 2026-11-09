@@ -187,6 +187,22 @@ def test_the_agent_tools_take_the_router_presets_backends(
     assert answer_provider_for(None, "linkup", router) == "linkup"
 
 
+def test_a_locked_router_preset_backend_wins_over_the_search_provider(
+    fake_answer_provider: Any, fake_extract_provider: Any
+) -> None:
+    """``exa`` searches, extracts and answers; sent in place of a locked preset's backend, every call would conflict."""
+    from web_router.integrations._tools import WebRouterTools
+
+    sections = {"answer": {"defaults": {"provider": "fake"}}, "extract": {"defaults": {"provider": "fake"}}}
+    router = WebRouter("brave", preset=Preset.model_validate(definition(components=sections)))
+    tools: WebRouterTools[Any] = WebRouterTools(router, methods=("extract", "answer"), provider="exa")
+
+    assert tools.extract_provider is None and tools.answer_provider == "fake"
+    extracted = router.extract("https://example.com", provider=tools.extract_provider)
+    answered = router.answer("q", provider=tools.answer_provider)
+    assert extracted.provider == "fake" and answered.provider == "fake"
+
+
 async def test_the_extract_tool_leaves_each_router_its_own_preset(fake_extract_provider: Any) -> None:
     pytest.importorskip("langchain_core")
     from web_router.integrations.langchain import web_router_tools

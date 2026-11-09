@@ -23,6 +23,7 @@ from web_router.constants_presets import (
     MSG_PRESET_SOURCE_PRESET,
     MSG_PRESET_SUPPLIED,
     PRESET_CASE_BLIND,
+    PRESET_PRICED_FIELDS,
     PRESET_PROVIDER_FIELD,
     PRESET_WITHHELD_FIELDS,
 )
@@ -118,8 +119,9 @@ class PresetResolution:
         The error keeps its type and its fields, so a caller handling it as
         before still does; only its message gains the preset, since the advice
         it carries is written for a caller who set the option themselves. A
-        budget prices the whole request, so its refusal names every setting the
-        presets supplied: ``provider_options`` alone leaves a price unknown.
+        budget's refusal names the settings the presets supplied among those it
+        prices the call by (``PRESET_PRICED_FIELDS``): ``provider_options``
+        alone leaves a price unknown.
         """
         try:
             yield
@@ -127,7 +129,7 @@ class PresetResolution:
             if isinstance(exc, UnsupportedParameterError):
                 named = sorted(set(exc.parameters) & set(self.effective))
             elif isinstance(exc, BudgetExceededError):
-                named = sorted(self.effective)
+                named = sorted(set(self.effective) & PRESET_PRICED_FIELDS)
             else:
                 named = ["format"] if "format" in self.effective else []
             if named:
@@ -140,7 +142,7 @@ class PresetResolution:
 def _layered(
     component: PresetComponent, layers: builtins.list[tuple[PresetSource, Preset]]
 ) -> tuple[dict[str, _Supplied], builtins.list[PresetIssue]]:
-    """Every setting the presets supply for ``component``, the lock holding each, and the conflicts between layers.
+    """Every setting the presets supply for ``component`` with the lock holding each, then the layers' conflicts.
 
     Lowest precedence first, so each layer is laid over the one beneath it.
     """

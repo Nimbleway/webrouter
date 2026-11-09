@@ -566,7 +566,9 @@ preset that repeats a locked value does not release it. Every refusal -- an
 unknown or malformed reference, a per-call preset for another method, a
 setting the method does not take, a bad value, a locked setting replaced -- is
 raised before a provider is called. A backend's own refusal of a setting a
-preset supplied keeps its type and fields and gains the presets' names
+preset supplied keeps its type and fields and gains the presets' names, and so
+does a budget's refusal (`BudgetExceededError`) of a call whose price a preset's
+setting shaped, naming only the settings in `PRESET_PRICED_FIELDS`
 (`PresetResolution.explained`, in `presets_layers.py`). A call with no preset that applies must
 build the request it built before presets existed, and its response carries
 `meta=None`. `PresetMeta.effective` holds only what a preset supplied, never a
