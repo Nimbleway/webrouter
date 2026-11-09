@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import gzip
 import time
 from typing import Any
 
@@ -193,6 +194,20 @@ def test_an_answer_over_64_kib_is_invalid() -> None:
             _ask(RemoteRouter(**config(server)))
         plan = WebRouter(router="remote", router_config=config(server)).plan("solar news")
     assert plan.decision.reason == "router_invalid"
+
+
+def test_a_compressed_answer_is_invalid_and_never_decompressed() -> None:
+    bomb = gzip.compress(b"{" + b" " * (8 * 1024 * 1024) + b"}")
+    answer = Canned(body=bomb, headers={"Content-Encoding": "gzip"})
+    with canned(answer) as base, pytest.raises(RemoteRouterInvalid, match="Content-Encoding"):
+        _ask(RemoteRouter(url=base + "/route"))
+    assert answer.seen[0][1]["Accept-Encoding"] == "identity"
+
+
+def test_a_plain_answer_under_the_cap_is_read() -> None:
+    answer = Canned(body=b'{"schema": 1, "tools": ["extract"]}', headers={"Content-Encoding": "identity"})
+    with canned(answer) as base:
+        assert _ask(RemoteRouter(url=base + "/route")).tools == ["extract"]
 
 
 def test_nothing_listening_is_a_router_error_without_a_retry() -> None:

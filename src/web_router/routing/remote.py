@@ -31,8 +31,8 @@ loopback address (:mod:`.remote_url`).
 
 A timeout is ``router_timeout``; a transport error, a status other than 200 or
 a decision naming a ``schema`` other than 1 is ``router_error``; an answer that
-is not an ``application/json`` decision within 64 KiB -- ``schema`` missing
-included -- is ``router_invalid``. Either way the call runs on the static
+is not an uncompressed ``application/json`` decision within 64 KiB on the
+wire -- ``schema`` missing included -- is ``router_invalid``. Either way the call runs on the static
 order and the decision record says why. Fields the service adds that this
 version does not know are ignored; its reasons are cut short, and an echo of
 its bearer key in its answer is redacted. Router-set URLs are held to
@@ -68,10 +68,12 @@ from web_router.constants_remote import (
     REMOTE_AUTH_HEADER,
     REMOTE_AUTH_VALUE,
     REMOTE_CLOSE_WAIT_S,
+    REMOTE_CONTENT_ENCODING_HEADER,
     REMOTE_CONTENT_TYPE,
     REMOTE_CONTENT_TYPE_HEADER,
     REMOTE_DISPLAY_NAME,
     REMOTE_HTTP_OK,
+    REMOTE_IDENTITY_ENCODING,
     REMOTE_JSON_TYPE,
     REMOTE_KEY_REDACTED,
     REMOTE_MAX_RESPONSE_BYTES,
@@ -83,6 +85,7 @@ from web_router.constants_remote import (
     REMOTE_WHY_CLOSED,
     REMOTE_WHY_CONTENT_TYPE,
     REMOTE_WHY_DECISION,
+    REMOTE_WHY_ENCODING,
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_STATUS,
     REMOTE_WHY_TOO_LARGE,
@@ -215,7 +218,7 @@ class RemoteRouter:
             ):
                 self._check_head(r)
                 size = 0
-                async for chunk in r.aiter_bytes():
+                async for chunk in r.aiter_raw():  # bytes as sent: identity only, so nothing grows past the cap
                     size += len(chunk)
                     if size > REMOTE_MAX_RESPONSE_BYTES:
                         raise RemoteRouterInvalid(
@@ -324,6 +327,9 @@ class RemoteRouter:
         media = header.partition(REMOTE_MEDIA_PARAMS)[0].strip().lower()
         if media != REMOTE_JSON_TYPE:
             raise RemoteRouterInvalid(self.host, REMOTE_WHY_CONTENT_TYPE)
+        coding = response.headers.get(REMOTE_CONTENT_ENCODING_HEADER, "").strip().lower()
+        if coding not in ("", REMOTE_IDENTITY_ENCODING):  # asked for identity; a compressed answer is not read
+            raise RemoteRouterInvalid(self.host, REMOTE_WHY_ENCODING)
 
     def _decision(self, body: bytes, failed: str | None) -> RouteDecision:
         """The decision ``body`` carries, or the router error: ``failed`` names the transport's error class."""
