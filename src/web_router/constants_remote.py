@@ -25,7 +25,7 @@ REMOTE_MAX_RESPONSE_BYTES = 64 * 1024
 """The largest answer read from a router service: a decision is a few hundred bytes. Past it, a router error."""
 
 REMOTE_CLOSE_WAIT_S = 2.0
-"""Seconds a close from another thread waits for the pool to close on its own loop."""
+"""Seconds a close from another loop waits for the pool to close on its own; past it, the pool is dropped."""
 
 REMOTE_JSON_TYPE = "application/json"
 """The one ``Content-Type`` a decision is read from (parameters such as ``charset`` aside)."""
@@ -94,6 +94,10 @@ REMOTE_WHY_NOT_JSON = "an answer that is not a JSON object"
 REMOTE_WHY_CONTENT_TYPE = "an answer that is not application/json"
 REMOTE_WHY_TOO_MANY = "a decision with more than {limit} entries in one field"
 REMOTE_WHY_SCHEMA = "a wire schema that is missing or not {expected}, the one this client reads"
+REMOTE_WHY_CLOSED = "this router is closed"
+MSG_REMOTE_CLOSE_FAILED = "The router service at {host}: its connection pool did not close ({why}) and is dropped."
+REMOTE_WHY_CLOSE_SLOW = "not closed within {wait} s"
+REMOTE_WHY_CLOSE_LOOP = "its event loop is not running"
 REMOTE_WHY_DECISION = "a decision that does not fit the wire schema"
 
 REMOTE_HTTP_OK = 200

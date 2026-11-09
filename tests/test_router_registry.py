@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterator
 from typing import Any
 
@@ -208,3 +209,25 @@ def test_the_sync_router_runs_an_async_only_routers_aclose() -> None:
     finally:
         unregister_router(NAME)
     assert made == ["aclosed"]
+
+
+async def test_a_refused_async_only_router_is_closed_before_the_error_with_a_loop_running() -> None:
+    made: list[str] = []
+
+    class AsyncOnly:
+        timeout_s = -1  # refused when attached
+
+        async def aroute(self, req: RouteRequest) -> RouteDecision:
+            return RouteDecision()
+
+        async def aclose(self) -> None:
+            await asyncio.sleep(0)
+            made.append("aclosed")
+
+    register_router(NAME, AsyncOnly)
+    try:
+        with pytest.raises(ConfigurationError, match="timeout_s"):
+            AsyncWebRouter(router=NAME)
+    finally:
+        unregister_router(NAME)
+    assert made == ["aclosed"], "awaited before the error, not left as a task"
