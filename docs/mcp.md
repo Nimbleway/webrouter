@@ -96,9 +96,10 @@ in this order:
 | 4 | `.env` in the working directory | a checkout of this repo, where `.mcp.json` starts the server at the root |
 
 An earlier place wins, per variable; a later file only fills what is still
-unset. So a project's own `.env` and a remembered file can add keys but never
-replace yours: a repo that commits a `.env` with its owner's key does not take
-over your traffic. The capabilities resource says which file each variable came
+unset, and a credential of two variables (Oxylabs' username and password,
+Bright Data's token and zone) only as a whole. So a project's own `.env` and a
+remembered file can add keys but never replace or complete yours: a repo that
+commits a `.env` with its owner's key does not take over your traffic. The capabilities resource says which file each variable came
 from. The server never creates the user config directory except to record a
 remembered path. A `WEB_ROUTER_ENV_FILE` that names no file is reported rather
 than silently skipped. With no file anywhere the server starts keyless.

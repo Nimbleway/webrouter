@@ -17,6 +17,8 @@ import pytest
 from web_router.constants import (
     ENV_APPDATA,
     ENV_BRAVE_API_KEY,
+    ENV_BRIGHTDATA_API_KEY,
+    ENV_BRIGHTDATA_ZONE,
     ENV_EXA_API_KEY,
     ENV_LOCAL_BROWSER_PATH,
     ENV_MCP_BROWSER_ALLOW_FILE_URLS,
@@ -111,6 +113,18 @@ def test_a_project_env_only_adds_and_never_hides_the_users_keys(isolated_home: P
         (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_USED),
         (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_NOTHING_NEW),
     ]
+
+
+def test_a_later_file_never_completes_a_credential_the_user_half_holds(isolated_home: Path) -> None:
+    """A project's zone beside the user's own Bright Data token would route the user's account its way."""
+    _write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRIGHTDATA_API_KEY}={KEY}\n")
+    _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRIGHTDATA_ZONE}=project-zone\n{ENV_NIMBLE_API_KEY}={OTHER_KEY}\n")
+
+    sources = EnvSources.at_startup()
+
+    assert not _is_set(ENV_BRIGHTDATA_ZONE)
+    assert _holds(ENV_NIMBLE_API_KEY, OTHER_KEY), "an unrelated key still adds"
+    assert list(sources.report()["loaded"]) == [ENV_BRIGHTDATA_API_KEY, ENV_NIMBLE_API_KEY]
 
 
 def test_the_user_config_dir_is_read_from_any_working_directory(isolated_home: Path) -> None:

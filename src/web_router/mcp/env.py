@@ -88,6 +88,12 @@ _OPTIONAL_KEYS = (ENV_JINA_API_KEY,)
 """Keys a keyless backend takes only to raise its rate limit, so no table names them: Jina Reader's."""
 
 
+_GROUPS: tuple[frozenset[str], ...] = tuple(
+    {frozenset(env) for table in ALL_ENV_TABLES for env in table.values() if isinstance(env, tuple) and len(env) > 1}
+)
+"""Credentials of several variables -- Oxylabs' username and password, Bright Data's token and zone."""
+
+
 def env_names(env: str | tuple[str, ...] | None) -> tuple[str, ...]:
     """The variable names one ``*_ENV_BY_PROVIDER`` entry holds: search's a name or none, every other a tuple."""
     if env is None:
@@ -292,16 +298,19 @@ def _remember(target: Path) -> Path:
 
 
 def _apply(path: Path, values: dict[str, str], *, remembered: Path | None = None) -> EnvLoad:
-    loaded: list[str] = []
-    kept: list[str] = []
-    for name, value in values.items():
-        # Set-and-empty counts as unset, as the registry reads it.
-        if os.environ.get(name):
-            kept.append(name)
-        else:
-            os.environ[name] = value
-            loaded.append(name)
-    return EnvLoad(path, tuple(loaded), tuple(kept), remembered)
+    """Set each of ``values`` still unset; a credential of several variables only as a whole.
+
+    Set-and-empty counts as unset, as the registry reads it. A variable whose
+    partner is already set is kept out too: a project's ``BRIGHTDATA_ZONE``
+    beside the user's own token would send the user's account through a zone
+    the project chose.
+    """
+    taken = {name for name in values if os.environ.get(name)}
+    taken |= {name for group in _GROUPS for name in group if name in values and any(os.environ.get(n) for n in group)}
+    for name in values.keys() - taken:
+        os.environ[name] = values[name]
+    loaded = tuple(name for name in values if name not in taken)
+    return EnvLoad(path, loaded, tuple(name for name in values if name in taken), remembered)
 
 
 def _absolute(raw: str) -> Path:

@@ -872,8 +872,9 @@ does not install it.
 
 **A template's inputs are the template's, never ours.** `TemplateRequest.params`
 is sent as the caller gave it, keyed by whatever the template's `input_schema`
-names; nothing here reads a URL out of it, derives one, or checks it against
-the schema -- the backend refuses inputs that do not match, in its own words.
+names; the library reads no URL out of it, derives none, and checks nothing
+against the schema -- the backend refuses inputs that do not match, in its own
+words. The MCP layer alone screens an input that is a URL (`mcp/urls.py`).
 A run is one page and one record: a page the backend could not fetch, or a
 template that failed to parse it, raises `ProviderError` with the backend's
 reason, because an empty `data` cannot be told from a record with nothing in
@@ -1316,7 +1317,7 @@ than a `platformdirs` dependency the `mcp` extra does not otherwise have; the pa
 `load_env(remember=true)` recorded in `MCP_ENV_POINTER_FILE`; and
 `MCP_ENV_FILE` in its working directory — the repo root when `.mcp.json`
 launches it. An earlier place wins per variable and a later file fills only
-what is still unset, so a project's own `.env` and a remembered path can add
+what is still unset -- a two-variable credential only as a whole -- so a project's own `.env` and a remembered path can add
 keys but never replace the user's; the capabilities resource's `env` object
 names the file each variable came from, and reports a `WEB_ROUTER_ENV_FILE`
 naming no file, never skipping it silently. Every file, from

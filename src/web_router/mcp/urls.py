@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from web_router._urls import host_of
+from web_router.constants import MCP_BROWSER_REFUSED_SCHEMES
 from web_router.constants_mcp import MCP_MSG_URL_REFUSED
 from web_router.routing.url_policy import public_only
 
@@ -29,6 +30,15 @@ def screen(tool: str, urls: object) -> None:
 
 
 def url_values(inputs: Mapping[str, Any]) -> list[str]:
-    """A template's inputs that are URLs -- an id, a slug or a search term is not screened."""
+    """A template's inputs that are URLs -- an id, a slug or a search term is not screened.
+
+    A URL is a value with ``://`` in it, or one that starts with a scheme a URL
+    needs no ``//`` for: ``file:/etc/passwd``, ``data:``, ``javascript:``.
+    """
     values = [item for value in inputs.values() for item in (value if isinstance(value, list) else [value])]
-    return [value for value in values if isinstance(value, str) and "://" in value]
+    return [value for value in values if isinstance(value, str) and ("://" in value or _bare_scheme(value))]
+
+
+def _bare_scheme(value: str) -> bool:
+    scheme, sep, _ = value.partition(":")
+    return bool(sep) and scheme.strip().lower() in MCP_BROWSER_REFUSED_SCHEMES
