@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from web_router.constants import (
     ANSWER_ENV_BY_PROVIDER,
@@ -58,9 +58,6 @@ from web_router.types import (
     TEMPLATE_PARAMETERS,
 )
 from web_router.types_answer import ANSWER_PARAMETERS
-
-if TYPE_CHECKING:
-    pass
 
 
 @dataclass(frozen=True)
