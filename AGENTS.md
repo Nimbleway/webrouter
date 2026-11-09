@@ -237,6 +237,8 @@ src/web_router/
     │                   HttpBrowserProvider — for APIs with no SDK
     ├── _utils.py       payload assembly, key and setting resolution, dict
     │                   coercion, body selection
+    ├── _search_text.py a body cut to a snippet; domain filters as site:
+    │                   operators, and the domain lists a backend refuses
     ├── _deadline.py    the per-call deadline, its budgets, and the mixin
     │                   that holds a provider's call to it
     ├── _clamp.py       a transport's own timeout, clamped to the deadline's time left
@@ -253,7 +255,7 @@ src/web_router/
     ├── _mcp.py         the keyless MCP search transport: one JSON-RPC tools/call
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
-    ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel.py
+    ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel_search.py
     ├── max.py          extract's parallel chain: auto's members all at once,
     │                   the first document wins, with an optional hedge
     ├── _race.py        max's bookkeeping: the calls of one race, sync or async,
@@ -269,8 +271,10 @@ src/web_router/
     ├── auto_browser.py the browser chain's `auto`, apart so auto.py stops growing;
     │                   auto.py re-exports it
     ├── brave.py        search, via httpx
-    ├── parallel.py     search + research, via httpx
-    ├── perplexity.py   search + research, via httpx
+    ├── parallel.py     research + answer, via httpx; re-exports parallel_search.py
+    ├── parallel_search.py  search, via httpx
+    ├── perplexity.py   search + research, via httpx; re-exports perplexity_answer.py
+    ├── perplexity_answer.py  answer, and the answer text and sources research reads
     ├── linkup.py       search + extract + research, via httpx
     ├── webiq.py        search, via httpx — Microsoft AI's Web Search API
     ├── keenable.py     search + extract, via httpx — keyless on its /public twins

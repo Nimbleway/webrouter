@@ -43,7 +43,8 @@ from web_router.constants_tavily import (
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._deadline import call_budget, current_deadline
 from web_router.providers._language import language_code
-from web_router.providers._utils import best_text, build_payload, compact, lite_body, mapped, resolve_api_key
+from web_router.providers._search_text import lite_body
+from web_router.providers._utils import best_text, build_payload, compact, mapped, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,

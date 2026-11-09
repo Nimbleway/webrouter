@@ -37,14 +37,8 @@ from web_router.exceptions import ProviderError
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._language import language_code
-from web_router.providers._utils import (
-    as_snippet,
-    best_text,
-    build_payload,
-    lite_body,
-    site_operators,
-    unsited_domains,
-)
+from web_router.providers._search_text import as_snippet, lite_body, site_operators, unsited_domains
+from web_router.providers._utils import best_text, build_payload
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,

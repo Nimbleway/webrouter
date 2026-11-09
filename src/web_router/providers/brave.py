@@ -55,7 +55,8 @@ from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider, HttpSearchProvider
 from web_router.providers._language import language_tag, off_the_lists
-from web_router.providers._utils import as_snippet, build_payload, lite_body, mapped, site_operators, unsited_domains
+from web_router.providers._search_text import as_snippet, lite_body, site_operators, unsited_domains
+from web_router.providers._utils import build_payload, mapped
 from web_router.types import Citation, SearchDepth, SearchRequest, SearchResponse, SearchResult
 from web_router.types_answer import AnswerRequest, AnswerResponse
 

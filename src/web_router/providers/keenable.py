@@ -40,7 +40,8 @@ from web_router.constants_keenable import (
 )
 from web_router.exceptions import ConfigurationError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider, _HttpProvider
-from web_router.providers._utils import as_snippet, best_text, build_payload, mapped
+from web_router.providers._search_text import as_snippet
+from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,

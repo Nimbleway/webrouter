@@ -37,7 +37,8 @@ from web_router.constants_you import (
 )
 from web_router.providers._language import language_tag
 from web_router.providers._mcp import McpSearchMixin
-from web_router.providers._utils import build_payload, mapped, site_operators, unsited_domains
+from web_router.providers._search_text import site_operators, unsited_domains
+from web_router.providers._utils import build_payload, mapped
 from web_router.providers.you import YouProvider
 from web_router.types import SearchRequest
 

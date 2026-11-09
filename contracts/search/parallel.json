@@ -1,7 +1,7 @@
 {
   "provider": "parallel",
   "method": "search",
-  "class": "web_router.providers.parallel.ParallelProvider",
+  "class": "web_router.providers.parallel_search.ParallelProvider",
   "transport": {
     "kind": "http",
     "base_url": "https://api.parallel.ai",

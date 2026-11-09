@@ -48,7 +48,8 @@ from web_router.constants_you import (
 )
 from web_router.providers._http import HttpAnswerProvider, HttpPolledResearchProvider, HttpSearchProvider
 from web_router.providers._language import language_tag, off_the_lists
-from web_router.providers._utils import best_text, build_payload, lite_body, mapped, refused_domains
+from web_router.providers._search_text import lite_body, refused_domains
+from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.providers.answer import refuse_domain_pair
 from web_router.types import (
     Citation,

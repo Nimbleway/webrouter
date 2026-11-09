@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 _BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_AUTO: ("web_router.providers.auto_answer", "AutoAnswerProvider", EXTRA_ANSWER),
-    PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityAnswerProvider", EXTRA_ANSWER),
+    PROVIDER_PERPLEXITY: ("web_router.providers.perplexity_answer", "PerplexityAnswerProvider", EXTRA_ANSWER),
     PROVIDER_PARALLEL: ("web_router.providers.parallel", "ParallelAnswerProvider", EXTRA_ANSWER),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupAnswerProvider", EXTRA_ANSWER),
     PROVIDER_YOU: ("web_router.providers.you", "YouAnswerProvider", EXTRA_ANSWER),

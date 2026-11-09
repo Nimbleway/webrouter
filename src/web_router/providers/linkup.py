@@ -59,7 +59,8 @@ from web_router.providers._http import (
     HttpResearchProvider,
     HttpSearchProvider,
 )
-from web_router.providers._utils import as_snippet, build_payload, error_detail, mapped
+from web_router.providers._search_text import as_snippet
+from web_router.providers._utils import build_payload, error_detail, mapped
 from web_router.providers.answer import cited_marker
 from web_router.types import (
     EXTRACT_PARAMETERS,

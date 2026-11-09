@@ -264,7 +264,7 @@ and a router's default drops it:
 - **Any other value** (a country off its list, both domain lists at once):
   override the classmethod `refused_options` to return each refused option and
   its value, and give each option a sentence in `refusal_reasons`.
-  `perplexity.py` and `parallel.py` are the examples.
+  `perplexity.py` and `parallel_search.py` are the examples.
 
 A field the vendor documents but its SDK's signature lacks, and that the SDK
 still forwards into the body from `**kwargs`, goes in `SDK_FORWARDED` in

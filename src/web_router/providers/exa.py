@@ -41,7 +41,8 @@ from web_router.constants_exa import (
 )
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, best_text, build_payload, lite_body, mapped
+from web_router.providers._search_text import as_snippet, lite_body
+from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.providers.answer import cited_marker
 from web_router.types import (
     EXTRACT_PARAMETERS,

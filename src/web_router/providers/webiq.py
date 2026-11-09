@@ -41,7 +41,8 @@ from web_router.constants_webiq import (
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._language import language_code
-from web_router.providers._utils import as_snippet, build_payload, site_operators, unsited_domains
+from web_router.providers._search_text import as_snippet, site_operators, unsited_domains
+from web_router.providers._utils import build_payload
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,
