@@ -113,7 +113,7 @@ def test_provider_enum_offers_only_configured_backends(tools: WebRouterTools, no
 
 def test_the_extract_schema_reads_max_as_the_members_it_would_race(no_keys: None) -> None:
     """``max`` declares every option as ``auto`` does, so it is read as its chain, never as its own class."""
-    from web_router.mcp.tools import _serving
+    from web_router.mcp.methods import serving as _serving
     from web_router.providers.max import MaxExtractProvider
 
     router = AsyncWebRouter(PROVIDER_MAX)

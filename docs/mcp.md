@@ -278,8 +278,12 @@ or a `.env` file. Set empty, it stops the server from starting.
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
 loopback, private or cloud-metadata host is not sent to a backend as a URL.
 It is a check of the host as written: it resolves no DNS and follows no
-redirect. It holds for `web_run`'s plans only. The direct `extract`
-and `browse` tools send the URLs the agent passes as they are, and the browser
+redirect. The same check holds for the URLs an agent passes the direct tools:
+`extract`'s `urls`, `browse`'s `start_url` and any URL among `run_template`'s
+`inputs` that is not a public `http(s)` one -- `file:`, loopback, private,
+metadata -- refuses the call before anything is sent, naming the URL's scheme
+and host and why. So a page that steers the model cannot have your keyed
+account hand a vendor an intranet or metadata URL. The browser
 tools have their own guard ([Where the browser may go](#where-the-browser-may-go)),
 which checks DNS answers and redirects but refuses only cloud metadata hosts
 and the browser's debugging port: other loopback and private hosts are
@@ -344,8 +348,8 @@ starting rather than leaving the connection without the ceiling you meant. The c
 all of it under `routing`: the router (`rules`, `operator` for yours -- never
 its `<module>:<attribute>` -- or `off`), where it runs (`router_runs`: `in_process` for the built-in router or
 none, `operator` with a `router_note` for yours), a `prompt_note` saying the
-prompt goes to the backend, the `url_policy` with a `url_policy_note` saying it
-holds for `web_run` alone, the ceiling, and the budget in
+prompt goes to the backend, the `url_policy` with a `url_policy_note` saying
+where it holds, the ceiling, and the budget in
 force (`null` with none).
 
 ### A browse result never carries its session

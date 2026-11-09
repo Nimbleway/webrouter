@@ -22,13 +22,12 @@ from __future__ import annotations
 import functools
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AsyncExitStack
-from typing import Any, get_args
+from typing import Any
 
 from mcp_types import Tool, ToolAnnotations
 
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
-    DELEGATING_PROVIDERS,
     ENV_MCP_ENV_FILE,
     MCP_ARG_FORMAT,
     MCP_ARG_HANDLE,
@@ -93,17 +92,18 @@ from web_router.constants import (
     MCP_TOOL_TEMPLATES,
     MCP_TOOL_WAITS,
 )
-from web_router.constants_mcp import MCP_MSG_UNKNOWN_ARGUMENTS, MCP_SERVER_INSTRUCTIONS, MCP_TOOL_HINTS
+from web_router.constants_mcp import (
+    MCP_MSG_UNKNOWN_ARGUMENTS,
+    MCP_SERVER_INSTRUCTIONS,
+    MCP_TOOL_HINTS,
+)
 from web_router.exceptions import (
     BrowseTimeoutError,
-    ProviderNotFoundError,
-    ProviderNotInstalledError,
     ResearchTimeoutError,
 )
 from web_router.mcp import methods
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
 from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
-from web_router.mcp.chains import CHAIN_OF
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.methods import METHODS
 from web_router.mcp.routing import ROUTING_TOOLS
@@ -124,11 +124,10 @@ from web_router.mcp.shaping import (
     shape_search,
 )
 from web_router.mcp.shaping_templates import shape_template, shape_template_run, shape_templates
-from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
+from web_router.mcp.urls import screen, url_values
+from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
-    ExtractFormat,
     ExtractResponse,
-    StealthLevel,
 )
 from web_router.types_page import PageState
 
@@ -298,7 +297,9 @@ class WebRouterTools:
         return shape_search(response, record.handle, budget=max_response_chars())
 
     async def _extract(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        response = await self.router.extract(**self.arguments(MCP_TOOL_EXTRACT, arguments))
+        kwargs = self.arguments(MCP_TOOL_EXTRACT, arguments)
+        screen(MCP_TOOL_EXTRACT, kwargs["urls"])
+        response = await self.router.extract(**kwargs)
         record = self.store.add(MCP_TOOL_EXTRACT, raw=response.raw)
         return shape_extract(response, record.handle, budget=max_response_chars())
 
@@ -314,6 +315,8 @@ class WebRouterTools:
 
     async def _run_template(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_RUN_TEMPLATE, arguments)
+        inputs = kwargs.get("inputs")
+        screen(MCP_TOOL_RUN_TEMPLATE, url_values(inputs) if isinstance(inputs, Mapping) else [])
         with template_charged(self.router, kwargs):
             response = await self.router.run_template(**kwargs)
         record = self.store.add(MCP_TOOL_RUN_TEMPLATE, raw=response.raw)
@@ -347,7 +350,9 @@ class WebRouterTools:
         return shape_research(progress.response, record.handle, budget=max_response_chars())
 
     async def _browse(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        job = await self.router.submit_browse(**self.arguments(MCP_TOOL_BROWSE, arguments))
+        kwargs = self.arguments(MCP_TOOL_BROWSE, arguments)
+        screen(MCP_TOOL_BROWSE, [kwargs["start_url"]] if "start_url" in kwargs else [])
+        job = await self.router.submit_browse(**kwargs)
         try:
             response = await job.aresult(timeout=(waited := wait_left(self.browse_wait)))
         except BrowseTimeoutError:
@@ -597,13 +602,13 @@ class WebRouterTools:
         method = METHODS.get(tool)
         providers = method.configured() if method is not None else []
         if method is not None:
-            serving = _serving(tool, [*providers, self.router.default_provider], self.router)
+            serving = methods.serving(tool, [*providers, self.router.default_provider], self.router)
             mapped = frozenset().union(*(cls.supported_parameters for cls in serving))
             properties = {name: spec for name, spec in properties.items() if name not in method.options - mapped}
             if MCP_ARG_STEALTH in properties and tool == MCP_TOOL_BROWSER_OPEN:
-                _offer_levels(properties, serving)
+                methods.offer_levels(properties, serving)
             if MCP_ARG_FORMAT in properties and tool == MCP_TOOL_RUN_TEMPLATE:
-                _offer_formats(properties, serving)
+                methods.offer_formats(properties, serving)
         if providers:
             properties[MCP_ARG_PROVIDER] = {
                 "type": "string",
@@ -633,61 +638,6 @@ def _annotations(tool: str) -> ToolAnnotations:
 def _argument_names(tool: str) -> list[str]:
     """Every argument ``tool`` declares, not only this install's schema: the library refuses what none here maps."""
     return [*MCP_TOOL_PROPERTIES.get(tool, {}), *([MCP_ARG_PROVIDER] if tool in METHODS else [])]
-
-
-def _serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[type[_BaseProvider]]:
-    """The classes that would serve ``providers`` for this tool's method: each one's own, a delegating one's chain.
-
-    A name this method does not know, or whose extra is not installed, can
-    serve nothing, so it adds nothing.
-    """
-    names: list[str] = []
-    for provider in providers:
-        if provider in DELEGATING_PROVIDERS and tool in CHAIN_OF:
-            # Not every delegating name is every method's: ``max`` is extract's alone.
-            try:
-                names.extend(CHAIN_OF[tool](router, provider))
-            except (ProviderNotFoundError, ProviderNotInstalledError):
-                continue
-        else:
-            names.append(provider)
-    classes: list[type[_BaseProvider]] = []
-    for name in dict.fromkeys(names):
-        try:
-            classes.append(METHODS[tool].cls(name))
-        except (ProviderNotFoundError, ProviderNotInstalledError):
-            continue
-    return classes
-
-
-def _offer_levels(properties: dict[str, Any], serving: list[type[_BaseProvider]]) -> None:
-    """Narrow ``stealth`` to the levels some backend serving here has, as the options are narrowed.
-
-    A level none of them serves would be refused on every route, so it is not
-    offered; with none at all the option goes too.
-    """
-    served = frozenset().union(*(cls.stealth_levels for cls in serving if issubclass(cls, BrowserProvider)))
-    levels = [level for level in get_args(StealthLevel) if level in served]
-    if levels:
-        properties[MCP_ARG_STEALTH] = {**properties[MCP_ARG_STEALTH], "enum": levels}
-    else:
-        del properties[MCP_ARG_STEALTH]
-
-
-def _offer_formats(properties: dict[str, Any], serving: list[type[_BaseProvider]]) -> None:
-    """Narrow a template run's ``format`` to the page formats some backend serving here returns.
-
-    Every template backend maps the option; what differs is which formats it
-    can return beside the record. A format none of them returns would be
-    refused on every route, so it is not offered, and with none at all the
-    option goes too -- as :func:`_offer_levels` narrows ``stealth``.
-    """
-    served = frozenset().union(*(cls.supported_formats for cls in serving if issubclass(cls, TemplateProvider)))
-    formats = [body_format for body_format in get_args(ExtractFormat) if body_format in served]
-    if formats:
-        properties[MCP_ARG_FORMAT] = {**properties[MCP_ARG_FORMAT], "enum": formats}
-    else:
-        del properties[MCP_ARG_FORMAT]
 
 
 def _lower(kwargs: dict[str, Any], name: str, limit: float, lowered: list[str]) -> None:

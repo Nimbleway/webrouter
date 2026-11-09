@@ -210,6 +210,8 @@ src/web_router/
 │                       for an agent to call, installed by [mcp]
 │   ├── methods.py      the library method behind each provider-picking tool: its
 │   │                   registry, classes, options and env table, in one table
+│   ├── urls.py         public_only on the URLs extract, browse and run_template
+│   │                   are given, refused before anything is sent
 │   ├── routing_config.py the operator's router and ceiling, read once at startup
 │   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
 │   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
