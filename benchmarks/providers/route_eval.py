@@ -36,7 +36,7 @@ from frozen import FROZEN_DIR
 from route_eval_cli import DEFAULT_ROUTERS, DEFAULT_SEED, DEFAULT_TEST_FRACTION, run, skip_absent_specs
 from route_eval_cli import DEFAULT_SETS as DEFAULT_SETS
 from route_eval_floor import Floor, floor_for
-from route_eval_matrix import choices, comparisons, matrices
+from route_eval_matrix import EVERY_CHOICES, HELD_OUT_CHOICES, choices, comparisons, matrices
 from route_eval_paths import DEFAULT_PATH_ROUTERS, MIXED, research_by_effort
 from route_eval_rank import KEYLESS as KEYLESS
 from route_eval_rank import backend_stats, recommended, too_few
@@ -55,6 +55,8 @@ BASELINE = "baseline"
 NO_GAIN_FLOOR = "no gain (within noise floor)"
 NO_GAIN_INTERVAL = "no gain (static inside the 95% interval)"
 PARTS = ("in_sample", "held_out")
+EVERY_QUESTION = "every_question"
+"""A router not fit on the training split is scored on every question too, under this key."""
 
 MSG_ROUTER_RAISED = "{spec} raised on {set_name}, first time shown, scored as a router failure: {error}"
 MSG_EMPTY_SPLIT = (
@@ -140,10 +142,16 @@ def _score_router(
     first = next((o.router_error for part in outcomes.values() for o in part if o.router_error), None)
     if first is not None:
         print(MSG_ROUTER_RAISED.format(spec=spec, set_name=name, error=first), file=sys.stderr)
-    return {
+    result: dict[str, Any] = {
         **{part: score(found) for part, found in outcomes.items()},
-        "choices": choices(test, outcomes["held_out"], method),
+        "fit": callable(fit),
+        HELD_OUT_CHOICES: choices(test, outcomes["held_out"], method),
     }
+    if not callable(fit):  # nothing learned from the training split, so every question is fair to score it on
+        every = [*outcomes["in_sample"], *outcomes["held_out"]]
+        result[EVERY_QUESTION] = score(every)
+        result[EVERY_CHOICES] = choices([*train, *test], every, method)
+    return result
 
 
 def _add_regret(routers: dict[str, dict[str, Any]], floor: float) -> None:
@@ -180,7 +188,9 @@ def evaluate_set(
     choice is not a candidate here is skipped, with a note, instead of refused: a backend is no path.
     ``floor`` of ``None`` ranks and judges with the method's own floor (:func:`~route_eval_floor.floor_for`).
     Each router is compared, held out, with ``static`` and every router in ``against``, which are scored too
-    (:mod:`route_eval_matrix`), and has its cost-weighted tool confusion matrix against the oracle.
+    (:mod:`route_eval_matrix`), and has its cost-weighted tool confusion matrix against the oracle. A router
+    with no ``fit`` -- ``static``, ``always:``, a file router that learns nothing -- is also scored and
+    compared on every question, where the held-out split only costs it questions.
     """
     method, questions = load_set(name, folder, joined)
     ranked_with = floor_for(method) if floor is None else Floor(method, floor, None)
@@ -210,6 +220,7 @@ def evaluate_set(
         "routers": routers,
         "confusion": matrices(routers, ORACLE),
         "comparisons": comparisons(routers, bases, ORACLE),
+        "comparisons_every_question": comparisons(routers, bases, ORACLE, EVERY_CHOICES),
         "backends": stats,
         "noise_floor": ranked_with.as_json(),
         "recommended_order": recommended(stats, ranked_with.value),

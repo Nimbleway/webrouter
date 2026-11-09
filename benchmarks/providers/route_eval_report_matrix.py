@@ -16,34 +16,44 @@ MATRIX_INTRO = (
     "### Tool confusion, held out\n\n"
     "Each router's held-out questions by the tool its choice ran (rows) against the best tool (columns): the "
     "tool of the oracle's path, the one that got the question right, cheapest then fastest, or *none right*. "
-    "A cell reads *questions (right), extra cost, extra time*: the router's cost and latency minus the oracle's "
-    "on those questions, as the replay charged them, signed, so a cheaper wrong choice is negative and pays in "
-    "accuracy instead. An extra with either side unknown is left out of the sum and counted unknown. A "
-    "**misroute** is a question some path got right, served by another tool than the best; its cost is the "
-    "extra of those questions, signed, its overspend only the dearer ones', and per question divides the cost "
-    "by every held-out question.\n"
+    "A cell reads *questions (right), overspend, time over*: what the router's choices cost and took beyond "
+    "the oracle's on those questions, as the replay charged them; a cheaper or faster choice adds nothing, and "
+    "pays in accuracy instead. An extra with either side unknown is left out and counted unknown.\n\n"
+    "A question's right tools are every tool with a path that got it right. **Wrong tool, wrong answer** counts "
+    "the questions some tool got right and the router's did not: the accuracy its tool choice lost. **Right, "
+    "not the cheapest tool** counts those it got right on another tool than the best, and its cost regret is "
+    "their overspend over the cheapest right path. A wrong answer from a right tool on another backend is "
+    "neither. Accuracy lost is the oracle's correct answers minus the router's, from every cause. The oracle "
+    "is one frozen sample per path, an upper bound: a path right once by chance makes its tool a right one.\n"
 )
 COMPARE_INTRO = (
     "### Where routers disagree, held out\n\n"
     "Each router against `static` and every `--against` router, on the same held-out questions: how often the "
     "path that served differs (another backend of the same tool counts), how often the tool does, and on "
-    "those questions which of the two alone was right. Accuracy is correct out of the held-out questions and "
-    "mean cost is over the questions whose cost is known, as in the table above. Each pair's disagreements "
-    "follow by tool, with the router's extra cost over the other there.\n"
+    "those questions which of the two alone was right, with the exact McNemar p-value of those two counts. "
+    "Each accuracy carries its Wilson 95% interval. Mean cost is over the questions where both costs are "
+    "known; the rest are counted once. Each pair's disagreements follow by tool, with the router's extra cost "
+    "over the other there.\n"
 )
+EVERY_INTRO = (
+    "### Where routers disagree, every question\n\n"
+    "The same comparison on every question, for the routers that learn nothing from the training split (no "
+    "`fit`): `static`, `always:` and a file router without one. For them the held-out split only costs "
+    "questions.\n"
+)
+COMPARE_HEAD = [
+    "| Router | Against | Questions | Different path | Different tool | Only router right / only other right "
+    "| McNemar p | Accuracy, 95% interval (router / other) | Mean cost, both known (router / other) |",
+    "|---|---|---|---|---|---|---|---|---|",
+]
 
 
 def _signed_usd(value: float) -> str:
     return f"{'-' if value < 0 else '+'}${abs(value):.4f}"
 
 
-def _signed_s(value: float) -> str:
-    return f"{value:+.1f}s"
-
-
-def _usd(value: float | None, unknown: int = 0) -> str:
-    text = "unknown" if value is None else f"${value:.4f}"
-    return text + (f" ({unknown} unknown)" if unknown else "")
+def _usd(value: float | None) -> str:
+    return "unknown" if value is None else f"${value:.4f}"
 
 
 def _unknowns(cell: Mapping[str, Any]) -> str:
@@ -58,32 +68,32 @@ def _left_out(cell: Mapping[str, Any], key: str) -> str:
 
 
 def cell_text(cell: Mapping[str, Any] | None) -> str:
-    """One matrix cell: questions (right), extra cost, extra time, and any extra left unknown."""
+    """One matrix cell: questions (right), overspend, time over, and any extra left unknown."""
     if not cell:
         return NO_CELL
     return (
-        f"{cell['questions']} ({cell['correct']} right), {_signed_usd(cell['extra_cost_usd'])}, "
-        f"{_signed_s(cell['extra_latency_s'])}{_unknowns(cell)}"
+        f"{cell['questions']} ({cell['correct']} right), ${cell['overspend_usd']:.4f}, "
+        f"+{cell['overtime_s']:.1f}s{_unknowns(cell)}"
     )
 
 
 def _totals(confusion: Mapping[str, Mapping[str, Any]]) -> list[str]:
     out = [
-        "| Router | Misrouted | Right of those | Extra cost of misroutes | Overspend on misroutes | Per question "
-        "| Extra time of misroutes | Per question | Extra cost over the oracle, every question |",
+        "| Router | Questions | Wrong tool, wrong answer | Right, not the cheapest tool | Cost regret of those "
+        "| Overspend, every question | Per question | Accuracy lost to the oracle | Time over, per question |",
         "|---|---|---|---|---|---|---|---|---|",
     ]
     for spec, m in confusion.items():
-        mis, every = m["misrouted"], m["all"]
-        per_q = m["misroute_cost_per_question_usd"]
-        per_s = m["misroute_latency_per_question_s"]
+        wrong, dear, every = m["wrong_tool"], m["not_cheapest"], m["all"]
+        per_q, per_s, lost = m["overspend_per_question_usd"], m["overtime_per_question_s"], m["accuracy_lost"]
+        lost_text = NO_CELL if lost is None else f"{m['oracle_correct'] - every['correct']} ({_p(lost)})"
+        time_text = NO_CELL if per_s is None else f"+{per_s:.1f}s{_left_out(every, 'latency_unknown')}"
         out.append(
-            f"| `{spec}` | {mis['questions']} of {every['questions']} | {mis['correct']} "
-            f"| {_signed_usd(mis['extra_cost_usd'])}{_unknowns(mis)} | ${mis['overspend_usd']:.4f} "
-            f"| {NO_CELL if per_q is None else _signed_usd(per_q) + _left_out(mis, 'cost_unknown')} "
-            f"| {_signed_s(mis['extra_latency_s'])}{_left_out(mis, 'latency_unknown')} "
-            f"| {NO_CELL if per_s is None else _signed_s(per_s) + _left_out(mis, 'latency_unknown')} "
-            f"| {_signed_usd(every['extra_cost_usd'])}{_left_out(every, 'cost_unknown')} |"
+            f"| `{spec}` | {every['questions']} | {wrong['questions']} | {dear['questions']} "
+            f"| ${dear['overspend_usd']:.4f}{_left_out(dear, 'cost_unknown')} "
+            f"| ${every['overspend_usd']:.4f}{_left_out(every, 'cost_unknown')} "
+            f"| {NO_CELL if per_q is None else _usd(per_q) + _left_out(every, 'cost_unknown')} "
+            f"| {lost_text} | {time_text} |"
         )
     return [*out, ""]
 
@@ -102,7 +112,7 @@ def _matrix(spec: str, m: Mapping[str, Any]) -> list[str]:
 
 
 def matrix_section(s: Mapping[str, Any]) -> list[str]:
-    """Every router's held-out confusion matrix, the misroutes' totals first."""
+    """Every router's held-out confusion matrix, the totals first."""
     confusion = s.get("confusion")
     if not confusion:
         return []
@@ -129,26 +139,31 @@ def _pattern(c: Mapping[str, Any]) -> list[str]:
     return [*out, ""]
 
 
+def _accuracy(side: Mapping[str, Any]) -> str:
+    ci = side["accuracy_ci95"]
+    return _p(side["accuracy"]) + (f" ({_p(ci[0])}-{_p(ci[1])})" if ci else "")
+
+
+def _compare_row(c: Mapping[str, Any]) -> str:
+    a, b = c["first"], c["second"]
+    unknown = f" ({c['cost_unknown']} unknown)" if c["cost_unknown"] else ""
+    return (
+        f"| `{c['router']}` | `{c['against']}` | {c['questions']} | {c['disagree']} | {c['tool_disagree']} "
+        f"| {c['only_first_right']} / {c['only_second_right']} | {c['mcnemar_p']:.2f} "
+        f"| {_accuracy(a)} / {_accuracy(b)} | {_usd(a['mean_cost_usd'])} / {_usd(b['mean_cost_usd'])}{unknown} |"
+    )
+
+
 def compare_section(s: Mapping[str, Any]) -> list[str]:
     """Each pair of routers compared: one summary row each, then each pair's disagreements by tool."""
     pairs = s.get("comparisons")
     if not pairs:
         return []
-    out = [
-        COMPARE_INTRO,
-        "| Router | Against | Questions | Different path | Different tool | Only router right | Only other right "
-        "| Accuracy (router / other) | Mean cost (router / other) |",
-        "|---|---|---|---|---|---|---|---|---|",
-    ]
-    for c in pairs:
-        a, b = c["first"], c["second"]
-        out.append(
-            f"| `{c['router']}` | `{c['against']}` | {c['questions']} | {c['disagree']} | {c['tool_disagree']} "
-            f"| {c['only_first_right']} | {c['only_second_right']} | {_p(a['accuracy'])} / {_p(b['accuracy'])} "
-            f"| {_usd(a['mean_cost_usd'], a['cost_unknown'])} / {_usd(b['mean_cost_usd'], b['cost_unknown'])} |"
-        )
-    out.append("")
+    out = [COMPARE_INTRO, *COMPARE_HEAD, *(_compare_row(c) for c in pairs), ""]
     for c in pairs:
         if c["patterns"]:
             out += _pattern(c)
+    every = s.get("comparisons_every_question")
+    if every:
+        out += [EVERY_INTRO, *COMPARE_HEAD, *(_compare_row(c) for c in every), ""]
     return out
