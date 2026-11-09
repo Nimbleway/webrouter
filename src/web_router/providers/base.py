@@ -225,7 +225,7 @@ class SearchProvider(_BaseProvider):
         if refused := self.refused_values(request):
             levels = ", ".join(repr(level) for level in get_args(SearchDepth) if level in self.depth_levels)
             reasons = {**self.refusal_reasons, "search_depth": MSG_UNSUPPORTED_DEPTH.format(levels=levels)}
-            detail = " ".join(dict.fromkeys(reasons[name] for name in sorted(refused)))
+            detail = " ".join(dict.fromkeys(reasons[name] for name in sorted(refused) if name in reasons))
             raise UnsupportedParameterError(self.name, refused, values=refused, detail=detail)
 
     @classmethod

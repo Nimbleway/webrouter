@@ -2027,7 +2027,8 @@ failed attempt still counts.
   (Brave's answer, Browser Use's browse, Anchor's browser) counts as unknown,
   and so does a search asking for more results than its price assumes
   (Nimble's and You.com's deep search, Exa's search), and any request with
-  `provider_options`, which can change what is billed. With no cost cap it
+  `provider_options` or a search `effort` other than `medium`, either of which
+  can change what is billed. With no cost cap it
   runs.
 - **Free tiers.** The keyless MCP search endpoints (`you-mcp`, `exa-mcp`,
   `parallel-mcp`) are priced $0, so a cost cap does not skip them. Keyless
