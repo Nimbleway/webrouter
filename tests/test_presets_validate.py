@@ -185,11 +185,10 @@ def test_validate_runs_the_backends_own_class_checks(fake_browse_provider: Any, 
 @pytest.mark.parametrize(
     ("settings", "fields"),
     [
-        ({"search_depth": "deep"}, ["search_depth"]),
         ({"include_domains": ["a.com"], "exclude_domains": ["b.com"]}, ["exclude_domains", "include_domains"]),
         ({"locale": "en-US"}, ["locale"]),
     ],
-    ids=["depth", "both-domain-lists", "locale"],
+    ids=["both-domain-lists", "locale"],
 )
 def test_validate_reports_a_search_value_the_backend_refuses_once(settings: dict[str, Any], fields: list[str]) -> None:
     """A search backend's ``refused_values`` already holds its ``refused_options``; each refusal is one issue."""
@@ -197,6 +196,15 @@ def test_validate_reports_a_search_value_the_backend_refuses_once(settings: dict
 
     assert [issue.field for issue in check.issues] == fields
     assert all("cannot serve the value" in issue.message for issue in check.issues)
+
+
+def test_validate_reports_an_unmapped_option_once_though_the_backend_inherits_its_refusal() -> None:
+    """Parallel MCP maps neither domain list but inherits Parallel's ``refused_options`` for them."""
+    both = {"query": "q", "include_domains": ["a.com"], "exclude_domains": ["b.com"]}
+    check = PresetRegistry(default_provider="parallel-mcp").validate("search", both)
+
+    assert [issue.field for issue in check.issues] == ["exclude_domains", "include_domains"]
+    assert all("does not map" in issue.message for issue in check.issues)
 
 
 @pytest.mark.parametrize(
