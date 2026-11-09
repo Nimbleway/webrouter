@@ -116,3 +116,30 @@ def test_a_bad_caller_route_tools_is_refused_before_a_router_is_built_by_name() 
         assert built == []
     finally:
         unregister_router("test-counting")
+
+
+class _Shifting:
+    """A collection that names ``research`` the first time it is iterated and ``search`` every time after."""
+
+    def __init__(self) -> None:
+        self.reads = 0
+
+    def __iter__(self) -> Any:
+        self.reads += 1
+        return iter(["research"] if self.reads == 1 else ["search"])
+
+    def __len__(self) -> int:
+        return 1
+
+    def __contains__(self, item: object) -> bool:
+        return item in list(self)
+
+
+@pytest.mark.parametrize("cls", [WebRouter, AsyncWebRouter])
+def test_the_caller_s_route_tools_are_read_once(cls: type) -> None:
+    from collections.abc import Collection
+
+    shifting = _Shifting()
+    assert isinstance(shifting, Collection)
+    router = cls(router=Declaring(None), route_tools=shifting)
+    assert router._route_tools == frozenset({"research"}) and shifting.reads == 1

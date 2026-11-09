@@ -66,15 +66,16 @@ def _route_tools(route_tools: Collection[ToolName] | None, router: object = None
         message = MSG_ROUTER_ROUTE_TOOLS
     if route_tools is None:
         return _ALL_TOOLS
+    # Iterated once: a collection that reads differently each time is held to this one reading.
+    tools = None if isinstance(route_tools, str) or not isinstance(route_tools, Collection) else tuple(route_tools)
     if (
-        isinstance(route_tools, str)
-        or not isinstance(route_tools, Collection)
-        or not all(isinstance(tool, str) for tool in route_tools)  # an unhashable member never reaches set()
-        or not set(route_tools) <= _ALL_TOOLS
+        tools is None
+        or not all(isinstance(tool, str) for tool in tools)  # an unhashable member never reaches set()
+        or not set(tools) <= _ALL_TOOLS
     ):
         known = ", ".join(get_args(ToolName))
         raise ConfigurationError(message.format(known=known, got=route_tools))
-    return frozenset(route_tools)
+    return frozenset(tools)
 
 
 class RouterSetup:
@@ -103,11 +104,11 @@ class RouterSetup:
                 or an unknown ``url_policy``.
         """
         self._url_check = url_check(url_policy)
-        if route_tools is not None:
-            _route_tools(route_tools)  # a bad value is refused before a router is built by name
+        # Checked once, before a router is built by name, and that result kept: the caller's value is not read again.
+        callers = None if route_tools is None else _route_tools(route_tools)
         attached, owned = resolve_router(router, router_config)
         try:
-            self._route_tools = _route_tools(route_tools, attached)  # the resolved router's own, by name or not
+            self._route_tools = _route_tools(None, attached) if callers is None else callers
             self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
             floor = getattr(attached, ROUTER_URL_POLICY_ATTR, None) if url_policy is None else url_policy
             self._router_url_check = url_check(floor)
