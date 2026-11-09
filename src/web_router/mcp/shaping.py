@@ -448,19 +448,16 @@ def _fit(
     ``extra_note`` is appended to the note, and sets one on its own when nothing
     was cut; it is inside the loop so the budget counts it.
 
-    Long text goes first, each item getting an equal share of the budget. Only
-    when that is not enough are whole items dropped, from the end -- the least
-    useful place to cut a ranked list. The last item is never dropped: a result
-    listing nothing at all tells the reader less than a heavily cut one, so it
-    is squeezed further instead.
+    Long text goes first: each item gets an equal share of the budget, lowered
+    until the payload fits. Only at :data:`MCP_MIN_FIELD_CHARS` are whole items
+    dropped, from the end -- the least useful place to cut a ranked list. The
+    last item is never dropped: a result listing nothing tells the reader less
+    than a heavily cut one, so it is squeezed further instead.
     """
     share = max(MCP_MIN_FIELD_CHARS, budget // max(len(items), 1))
-    for item in items:
-        shortened = _shorten(item, text_keys, share) or shortened
-
-    dropped = 0
-    total = len(items)
+    dropped, total = 0, len(items)
     while True:
+        shortened = any([_shorten(item, text_keys, share) for item in items]) or shortened  # a list: cut every item
         payload["handle"] = handle
         payload["truncated"] = shortened or dropped > 0
         note = ""
@@ -474,7 +471,10 @@ def _fit(
         overflow = len(render(payload)) - budget
         if overflow <= 0:
             return payload
-        if len(items) > 1:
+        if len(items) > 1 and share > MCP_MIN_FIELD_CHARS:
+            # Spread the overflow over the items; the marker each cut adds back counts too.
+            share = max(MCP_MIN_FIELD_CHARS, share - -(-overflow // len(items)) - len(MCP_TRUNCATION_MARKER))
+        elif len(items) > 1:
             items.pop()
             dropped += 1
         # The marker is added back by the cut, so its own length has to come out

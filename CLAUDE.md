@@ -74,7 +74,7 @@ call its `load_env` tool with the path of the user's `.env`.
 
 The `web-router://capabilities` resource shows which backends are configured,
 and its `unlock` map lists each backend still missing a key and the variable
-that would add it.
+that would add it: ask the model to read it.
 
 ## Update
 

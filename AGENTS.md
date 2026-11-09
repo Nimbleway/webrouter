@@ -191,6 +191,7 @@ src/web_router/
 ├── constants_merge.py  the options a router may set, and the merge's reasons and notes
 ├── constants_mcp.py    the MCP server's instructions, and its routing tools' names, schemas,
 │                       descriptions, environment variables and messages
+├── constants_mcp_hints.py each MCP tool's title and behaviour hints
 ├── _urls.py            urls_in(): the URLs written in a query's prose; host_of(): a
 │                       URL shown as its scheme and host only
 ├── _hosts.py           a URL host's kind -- loopback, cloud metadata, private -- in
@@ -207,6 +208,16 @@ src/web_router/
 ├── exceptions.py       WebRouterError and subclasses
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
+│   ├── methods.py      the library method behind each provider-picking tool: its
+│   │                   registry, classes, options and env table, in one table
+│   ├── schema.py       a tool's schema narrowed to the backends serving it here,
+│   │                   its declared arguments and its behaviour hints
+│   ├── env_credentials.py which variables are provider credentials, and how a
+│   │                   file's values join the environment
+│   ├── messages.py     a failed tool call's message: provider_config swapped for
+│   │                   load_env, then redacted
+│   ├── urls.py         public_only on the URLs extract, browse and run_template
+│   │                   are given, refused before anything is sent
 │   ├── routing_config.py the operator's router and ceiling, read once at startup
 │   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
 │   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
@@ -879,8 +890,9 @@ does not install it.
 
 **A template's inputs are the template's, never ours.** `TemplateRequest.params`
 is sent as the caller gave it, keyed by whatever the template's `input_schema`
-names; nothing here reads a URL out of it, derives one, or checks it against
-the schema -- the backend refuses inputs that do not match, in its own words.
+names; the library reads no URL out of it, derives none, and checks nothing
+against the schema -- the backend refuses inputs that do not match, in its own
+words. The MCP layer alone screens an input that is a URL (`mcp/urls.py`).
 A run is one page and one record: a page the backend could not fetch, or a
 template that failed to parse it, raises `ProviderError` with the backend's
 reason, because an empty `data` cannot be told from a record with nothing in
@@ -1314,19 +1326,21 @@ run from the repo, and the MCP server —
 its `main()` at startup and its `load_env` tool at runtime, both through
 `mcp/env.py` — because an application started by a client, often installed
 from PyPI with no repo beside it and started in whatever directory the client
-picks, has no other way to see keys nobody exports. At startup it loads the
-first file that sets a provider credential, looking in this order: the path in
-`WEB_ROUTER_ENV_FILE` (`ENV_MCP_ENV_FILE`); `MCP_ENV_FILE` in its working
-directory — the repo root when `.mcp.json` launches it; the path
-`load_env(remember=true)` recorded in `MCP_ENV_POINTER_FILE`; and
-`MCP_ENV_FILE` in `user_config_dir()` — XDG on Linux, Application Support on
+picks, has no other way to see keys nobody exports. At startup it reads
+every one of four places, in this order: the path in
+`WEB_ROUTER_ENV_FILE` (`ENV_MCP_ENV_FILE`); `MCP_ENV_FILE` in
+`user_config_dir()` — XDG on Linux, Application Support on
 macOS, `%APPDATA%` on Windows, from `MCP_USER_CONFIG_ROOT_BY_PLATFORM` rather
-than a `platformdirs` dependency the `mcp` extra does not otherwise have. A
-file that sets no credential is not "found", so a project's own `.env` does not
-hide the user's, and a `WEB_ROUTER_ENV_FILE` naming no file is reported in the
-capabilities resource's `env` object, never skipped silently. Every file, from
-wherever, is read on the same terms: only the variables the
-`*_ENV_BY_PROVIDER` tables name — a user-scoped server can be started from any
+than a `platformdirs` dependency the `mcp` extra does not otherwise have; the path
+`load_env(remember=true)` recorded in `MCP_ENV_POINTER_FILE`; and
+`MCP_ENV_FILE` in its working directory — the repo root when `.mcp.json`
+launches it. An earlier place wins per variable and a later file fills only
+what is still unset -- a two-variable credential only as a whole -- so a project's own `.env` and a remembered path can add
+keys but never replace the user's; the capabilities resource's `env` object
+names the file each variable came from, and reports a `WEB_ROUTER_ENV_FILE`
+naming no file, never skipping it silently. Every file, from
+wherever, is read on the same terms: only `credential_variables()` — every
+variable `ALL_ENV_TABLES` in `mcp/env_credentials.py` names, and Jina's optional key — a user-scoped server can be started from any
 workspace, and a foreign `.env` must not flip `WEB_ROUTER_MCP_ALLOW_FILE_URLS`
 or aim `CHROME_PATH` at its own binary; a variable already set wins; nothing is
 interpolated, so `${OTHER}` cannot copy another secret into a provider's key;
