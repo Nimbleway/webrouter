@@ -98,7 +98,7 @@ from web_router.constants_mcp import (
     MCP_TOOL_HINTS,
 )
 from web_router.exceptions import BrowseTimeoutError, ResearchTimeoutError
-from web_router.mcp import methods
+from web_router.mcp import methods, schema
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
 from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
@@ -220,7 +220,7 @@ class WebRouterTools:
                 title=MCP_TOOL_HINTS[name][0],
                 description=self._description(name),
                 input_schema=self._schema(name),
-                annotations=methods.tool_annotations(name),
+                annotations=schema.tool_annotations(name),
             )
             for name in self._handlers
             if name not in hidden
@@ -272,7 +272,7 @@ class WebRouterTools:
         handler = self._handlers.get(name)
         if handler is None:
             raise ValueError(MCP_MSG_UNKNOWN_TOOL.format(name=name, tools=", ".join(self._handlers)))
-        if unknown := sorted(set(arguments) - set(allowed := methods.argument_names(name))):
+        if unknown := sorted(set(arguments) - set(allowed := schema.argument_names(name))):
             names, allowed_text = ", ".join(unknown), ", ".join(allowed) or MCP_NO_ARGUMENTS
             raise ValueError(MCP_MSG_UNKNOWN_ARGUMENTS.format(tool=name, names=names, allowed=allowed_text))
         with self.budget.bound():
@@ -559,7 +559,7 @@ class WebRouterTools:
         table to drift. :meth:`call` has already refused a name the tool does not
         declare; one left unset stays unset rather than being sent as a default of ours.
         """
-        names = methods.argument_names(tool)
+        names = schema.argument_names(tool)
         # `is None`, not truthiness: browser_type's required `text` may be ""
         # -- the way a field is cleared -- and supplied-but-empty is not missing.
         missing = [name for name in MCP_TOOL_REQUIRED[tool] if arguments.get(name) is None]
@@ -602,10 +602,10 @@ class WebRouterTools:
         method = METHODS.get(tool)
         providers = method.configured() if method is not None else []
         if method is not None:
-            serving = methods.serving(tool, [*providers, self.router.default_provider], self.router)
+            serving = schema.serving(tool, [*providers, self.router.default_provider], self.router)
             mapped = frozenset().union(*(cls.supported_parameters for cls in serving))
             properties = {name: spec for name, spec in properties.items() if name not in method.options - mapped}
-            methods.narrow(tool, properties, serving)
+            schema.narrow(tool, properties, serving)
         if providers:
             properties[MCP_ARG_PROVIDER] = {
                 "type": "string",
