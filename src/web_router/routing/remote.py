@@ -74,13 +74,13 @@ from web_router.constants_remote import (
     REMOTE_CONTENT_TYPE_HEADER,
     REMOTE_DISPLAY_NAME,
     REMOTE_EXCLUDE_FIELD,
-    REMOTE_PARAMS_FIELD,
     REMOTE_HTTP_OK,
     REMOTE_IDENTITY_ENCODING,
     REMOTE_JSON_TYPE,
     REMOTE_KEY_REDACTED,
     REMOTE_MAX_RESPONSE_BYTES,
     REMOTE_MEDIA_PARAMS,
+    REMOTE_PARAMS_FIELD,
     REMOTE_TIMEOUT_S,
     REMOTE_URL_POLICY,
     REMOTE_WHY_CLOSE_LOOP,
@@ -300,7 +300,7 @@ class RemoteRouter:
             _close_failed(self.host, _why(exc))
 
     def _submit(self, pool: httpx.AsyncClient, loop: asyncio.AbstractEventLoop) -> Future[None] | None:
-        """The pool's close, started on its own loop from another thread; ``None``, said once, when that loop stopped."""
+        """The pool's close, started on its own loop from another thread; ``None``, warned, once that loop stopped."""
         if loop.is_running():
             coro = pool.aclose()
             try:
