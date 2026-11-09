@@ -191,6 +191,7 @@ MCP_RESOURCE_NOT_FOUND = -32002
 """The JSON-RPC error code MCP gives a read of a resource the server does not have."""
 
 MCP_MSG_UNKNOWN_ARGUMENTS = "{tool} does not take {names}, so nothing was run. It takes: {allowed}."
+MCP_NO_ARGUMENTS = "no arguments"
 """An argument the tool does not declare -- a typo, a guessed option -- refused rather than dropped."""
 
 MCP_MSG_ROUTER_SPEC = "{env_var}={value!r} names no router: expected <module>:<attribute>, or 'off'."

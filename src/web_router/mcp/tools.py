@@ -95,13 +95,11 @@ from web_router.constants import (
 from web_router.constants_mcp import (
     MCP_MSG_NOTHING_CONFIGURED,
     MCP_MSG_UNKNOWN_ARGUMENTS,
+    MCP_NO_ARGUMENTS,
     MCP_SERVER_INSTRUCTIONS,
     MCP_TOOL_HINTS,
 )
-from web_router.exceptions import (
-    BrowseTimeoutError,
-    ResearchTimeoutError,
-)
+from web_router.exceptions import BrowseTimeoutError, ResearchTimeoutError
 from web_router.mcp import methods
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
 from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
@@ -277,7 +275,7 @@ class WebRouterTools:
         if handler is None:
             raise ValueError(MCP_MSG_UNKNOWN_TOOL.format(name=name, tools=", ".join(self._handlers)))
         if unknown := sorted(set(arguments) - set(allowed := methods.argument_names(name))):
-            names, allowed_text = ", ".join(unknown), ", ".join(allowed) or "no arguments"
+            names, allowed_text = ", ".join(unknown), ", ".join(allowed) or MCP_NO_ARGUMENTS
             raise ValueError(MCP_MSG_UNKNOWN_ARGUMENTS.format(tool=name, names=names, allowed=allowed_text))
         with self.budget.bound():
             return await handler(arguments)
