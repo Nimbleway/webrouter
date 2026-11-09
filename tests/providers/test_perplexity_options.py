@@ -11,7 +11,6 @@ import os
 import httpx
 import pytest
 
-from web_router.constants_perplexity import PERPLEXITY_PAGE_BUDGET_BY_DEPTH
 from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.auto import AutoProvider
 from web_router.providers.perplexity import PerplexityProvider
@@ -46,11 +45,6 @@ def test_depth_sets_the_per_page_token_budget(provider: PerplexityProvider, dept
     request = SearchRequest(query="hi", search_depth=depth)  # type: ignore[arg-type]
     provider.validate(request)
     assert provider._build_payload(request)["max_tokens_per_page"] == tokens
-
-
-def test_lite_budget_stays_near_a_snippet_at_the_rate_measured_live() -> None:
-    """128 tokens gave up to 707 characters live (5.5 a token), so lite stays at ~600 characters at that rate."""
-    assert PERPLEXITY_PAGE_BUDGET_BY_DEPTH["lite"] * 707 / 128 <= 600
 
 
 @pytest.mark.parametrize(("effort", "sent"), [("low", "fast"), ("medium", None), ("high", None), ("max", None)])

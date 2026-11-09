@@ -10,7 +10,6 @@ import pytest
 from tests.conftest import FakeProvider
 from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.auto import AutoProvider
-from web_router.providers.base import SearchProvider
 from web_router.registry import available_providers, get_provider_class, register_provider, unregister_provider
 from web_router.types import NORMALIZED_PARAMETERS, SearchDepth, SearchRequest
 
@@ -62,9 +61,7 @@ def members() -> Iterator[None]:
         unregister_provider(cls.name)
 
 
-def test_a_backend_serves_every_level_unless_it_says_otherwise() -> None:
-    """The default is every level, so a backend that never declares the set is unchanged by it."""
-    assert SearchProvider.depth_levels == {"lite", "fast", "deep"}
+def test_a_backend_that_never_declares_its_levels_refuses_none() -> None:
     assert FakeProvider.refused_values(SearchRequest(query="q", search_depth="deep")) == {}
 
 

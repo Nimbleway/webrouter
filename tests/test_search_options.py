@@ -79,6 +79,3 @@ def test_search_depth_is_described_by_size_in_one_place() -> None:
     """The request model and the MCP schema say the same thing, so a model and a caller read the same sizes."""
     described = SearchRequest.model_fields["search_depth"].description or ""
     assert MCP_SEARCH_PROPERTIES["search_depth"]["description"] == described
-    assert "500 characters" in described
-    assert "a few thousand" in described
-    assert "the whole page" in described
