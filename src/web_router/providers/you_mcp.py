@@ -26,7 +26,9 @@ from web_router.constants import (
     YOU_MCP_SEARCH_PATH,
     YOU_MCP_SEARCH_TOOL,
 )
+from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.constants_you import (
+    MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE,
     YOU_FRESHNESS_FIELD,
     YOU_MCP_COUNTRY,
     YOU_MCP_LANGUAGE,
@@ -35,7 +37,7 @@ from web_router.constants_you import (
 )
 from web_router.providers._language import language_tag
 from web_router.providers._mcp import McpSearchMixin
-from web_router.providers._utils import build_payload, site_operators
+from web_router.providers._utils import build_payload, site_operators, unsited_domains
 from web_router.providers.you import YouProvider
 from web_router.types import SearchRequest
 
@@ -51,10 +53,21 @@ class YouMcpProvider(McpSearchMixin, YouProvider):
 
     name: ClassVar[str] = PROVIDER_YOU_MCP
     mcp_tool: ClassVar[str] = YOU_MCP_SEARCH_TOOL
+    refusal_reasons: ClassVar[dict[str, str]] = {
+        **YouProvider.refusal_reasons,
+        **dict.fromkeys(
+            ("include_domains", "exclude_domains"), f"{MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE} {MSG_SITE_DOMAINS}"
+        ),
+    }
 
     base_url: ClassVar[str] = YOU_MCP_BASE_URL
     search_path: ClassVar[str] = YOU_MCP_SEARCH_PATH
     env_api_key: ClassVar[str | None] = None
+
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        """The REST API's refusals, and an ``include_domains`` that cannot go into the query as ``site:``."""
+        return {**super().refused_options(request), **unsited_domains(request, ("include_domains",))}
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         extraction = YOU_MCP_EXTRACTION_BY_DEPTH.get(request.search_depth) if request.search_depth else None

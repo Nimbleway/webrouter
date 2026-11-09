@@ -32,11 +32,19 @@ from web_router.constants_deepseek import (
     DEEPSEEK_SEARCH_PATH,
     MSG_DEEPSEEK_QUERY_TOO_LONG,
 )
+from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.exceptions import ProviderError
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._language import language_code
-from web_router.providers._utils import as_snippet, best_text, build_payload, lite_body, site_operators
+from web_router.providers._utils import (
+    as_snippet,
+    best_text,
+    build_payload,
+    lite_body,
+    site_operators,
+    unsited_domains,
+)
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,
@@ -66,11 +74,16 @@ class DeepSeekProvider(HttpSearchProvider):
     name: ClassVar[str] = PROVIDER_DEEPSEEK
     supported_parameters: ClassVar[frozenset[str]] = DEEPSEEK_SEARCH_PARAMETERS
     depth_levels: ClassVar[frozenset[SearchDepth]] = DEEPSEEK_DEPTH_LEVELS
+    refusal_reasons: ClassVar[dict[str, str]] = dict.fromkeys(("include_domains", "exclude_domains"), MSG_SITE_DOMAINS)
 
     base_url: ClassVar[str] = DEEPSEEK_BASE_URL
     search_path: ClassVar[str] = DEEPSEEK_SEARCH_PATH
     env_api_key: ClassVar[str] = ENV_DEEPSEEK_API_KEY
     api_key_prefix: ClassVar[str] = DEEPSEEK_API_KEY_PREFIX
+
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        return unsited_domains(request)
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         query = self._query(request)

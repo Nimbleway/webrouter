@@ -35,7 +35,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
   - Keenable: `search_depth` at `lite` and `fast`, one `include_domains` entry, `recency` and `effort`.
   - Linkup: `recency` and `effort` (as its `depth`: `low` `flash`, `medium` `fast`, still sent when unset, `high` `standard`, `max` `deep`, which Linkup bills at ten times the others).
   - DeepSeek: `recency` as `after:` in the query, and `search_depth` at `lite` (its summary cut to about 500 characters by web-router) and `deep` (the page body).
-  - A domain filter that goes into the query as `site:` (Brave, WebIQ, DeepSeek, You.com MCP) must be a host name, optionally with a path; anything else raises `ValueError` before the call, so a value cannot add its own operators.
+  - A domain filter that goes into the query as `site:` (Brave, WebIQ, DeepSeek, You.com MCP) must be a host name, optionally with a path; anything else is refused before the call with `UnsupportedParameterError` (and `auto` passes the backend over), so a value cannot add its own operators.
   - AgentCore Web Search: `recency`, on connector 1.2.0 or later.
   - Nimble: `recency` as its `time_range`; it refuses `effort`, and no longer takes a new shared option unmapped.
 - Parallel search moves from `/v1beta/search` to `/v1/search`, with `mode=fast` pinned (unset, `/v1` runs `advanced`, the old `agentic`, at five times the price). `max_results` now goes under `advanced_settings`, and an `advanced_settings` object in `provider_options` is merged with it rather than replacing it. The beta-only `processor`, `excerpts` and top-level `max_chars_per_result` are rejected by `/v1`.

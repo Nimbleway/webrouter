@@ -30,6 +30,7 @@ from web_router.constants import (
     WEBIQ_PARAM_NAMES,
     WEBIQ_SEARCH_PATH,
 )
+from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.constants_webiq import (
     MSG_WEBIQ_CODE,
     MSG_WEBIQ_QUERY_TOO_LONG,
@@ -40,7 +41,7 @@ from web_router.constants_webiq import (
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._language import language_code
-from web_router.providers._utils import as_snippet, build_payload, site_operators
+from web_router.providers._utils import as_snippet, build_payload, site_operators, unsited_domains
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,
@@ -68,7 +69,10 @@ class WebIQProvider(HttpSearchProvider):
 
     name: ClassVar[str] = PROVIDER_WEBIQ
     supported_parameters: ClassVar[frozenset[str]] = WEBIQ_SEARCH_PARAMETERS
-    refusal_reasons: ClassVar[dict[str, str]] = {"country": MSG_WEBIQ_CODE, "locale": MSG_WEBIQ_CODE}
+    refusal_reasons: ClassVar[dict[str, str]] = {
+        **dict.fromkeys(("country", "locale"), MSG_WEBIQ_CODE),
+        **dict.fromkeys(("include_domains", "exclude_domains"), MSG_SITE_DOMAINS),
+    }
 
     base_url: ClassVar[str] = WEBIQ_BASE_URL
     search_path: ClassVar[str] = WEBIQ_SEARCH_PATH
@@ -95,7 +99,7 @@ class WebIQProvider(HttpSearchProvider):
 
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
-        refused: dict[str, Any] = {}
+        refused: dict[str, Any] = unsited_domains(request)
         if request.country is not None and not _two_letters(request.country):
             refused["country"] = request.country
         if request.locale is not None and not _two_letters(language_code(request.locale)):

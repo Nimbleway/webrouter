@@ -83,3 +83,5 @@ MSG_NOT_A_DOMAIN = (
     " so it must be a host name, optionally with a path."
 )
 """A domain filter as the query operators Brave, WebIQ, DeepSeek and You.com MCP read (Brave excludes with ``NOT``)."""
+MSG_SITE_DOMAINS = "A domain filter goes into the query as site:, so each must be a host name, optionally with a path."
+"""Why a backend that searches by ``site:`` refuses a domain filter :data:`SITE_DOMAIN_PATTERN` does not match."""
