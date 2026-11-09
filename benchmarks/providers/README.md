@@ -562,6 +562,77 @@ fewer than 20 questions is listed as *too few questions*, not ranked: today
 `research:perplexity:medium` (19).
 A set that mixes methods other than these paths is refused by name.
 
+## Router latency: which tools a router should order
+
+A router attached with `router=` is asked for the backend order of every call
+to a tool in `route_tools`, and each ask adds the router's time to the call.
+`router_latency.py` times routers and weighs each against each tool. It runs
+outside CI.
+
+```bash
+uv run --all-extras --with scikit-learn python benchmarks/providers/router_latency.py --router rules --router sklearn
+uv run --all-extras python benchmarks/providers/router_latency.py --router llm --router jev \
+    --llm-model <model> --llm-price <in>,<out> --jev-price <usd> --dry-run
+uv run --all-extras python benchmarks/providers/router_latency.py \
+    --router remote:http://127.0.0.1:8765/route --remote-rtt-ms 40
+```
+
+**The rule.** A tool asks the router for its backend order only when the
+router's p50 is below 25% of the tool's p50 (`--share`). **A tool's p50** is
+the p50 of the first backend in its default `auto` chain, with a key for every
+backend (`--chain here`: the keys this machine holds), from the price list's
+measured latency. Only search and answer are measured; for extract, research
+and browse the verdict is a judgement call, and the script never makes a
+number up. The latency belongs to the router, not the tool, so the result is a
+row per router: a router declares the tools it fits as its own `route_tools`
+(see the README's Smart routing), and a caller's `route_tools` always wins.
+
+**How it times.** A router is one of `rules` (the built-in rules router),
+`sklearn`, `llm` and `jev` (the examples in `examples/`), `remote:<url>` (a
+router service in the wire format, schema 1; `--remote-rtt-ms` adds the same
+service behind a simulated round trip, three of them on a new connection), or
+your own `module:attr`. Each is called through the library's own router call,
+so a sample is the `router_ms` a decision record holds. The prompts are
+route-eval's public questions, `tools-effort-60` and `simpleqa-300-v2`, put
+back by `frozen.py join`; each request is the one route-eval shows a router,
+one candidate per backend the set has rows for. Every router in one run is
+timed in the same session, interleaved in a seeded random order: a first
+call, reported apart, then `--warmup` calls dropped, then `-n` timed calls
+(200 by default). A call that reaches the router's deadline (its `timeout_s`,
+or `--deadline-s`) is censored: it counts toward the timeout rate and ranks
+above every answer, never as a value. `--cold` calls each build the router
+anew, and `--e2e` stubbed searches through `auto`, routed and with
+`route_tools=()`, give the wall time routing adds, candidates and the thread
+hop included. `--dry-run` prints each router's calls, the variables it needs
+and an estimated cost, and calls nothing. Each run writes a JSON file and its
+table to `results/router-latency/`.
+
+**Results.** 2026-11-09 on an Apple M4 Pro (12 CPUs), macOS 26.6, Python
+3.12.13, scikit-learn 1.9.1, web-router 0.10.0; sync calls, 200 timed per
+router after a first call and 5 warm-up; the sklearn router is the example's
+toy-trained pipeline. The LLM, Jev and remote rows are placeholders until
+their runs.
+
+| Tool | First backend in `auto` | p50 s | p90 s |
+|---|---|--:|--:|
+| search | perplexity | 0.316 | 1.719 |
+| answer | perplexity | 1.874 | 2.128 |
+| extract, research, browse | nimble, nimble, browser-use | not measured | not measured |
+
+| Router | p50 ms | p90 ms | Timeouts | First call ms | Added wall time p50 ms | search | answer |
+|---|--:|--:|--:|--:|--:|---|---|
+| rules | 0.035 | 0.042 | 0% | 0.093 | 0.21 | consult (0.01%) | consult (0.002%) |
+| sklearn | 0.23 | 0.25 | 0% | 0.39 | 0.41 | consult (0.07%) | consult (0.01%) |
+| llm (`<model>`) | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |
+| jev (`jev-1.14.0`) | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |
+| remote, loopback | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |
+| remote, `<rtt>` ms RTT | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |
+
+The rules and sklearn routers fit every measured tool by three orders of
+magnitude and declare no `route_tools`. Extract, research and browse take
+seconds to minutes, so any router measured here fits them by judgement.
+Experimental until 1.0, like the router contract.
+
 ## Keeping results
 
 Each run of either scan writes `rows.jsonl`, `summary.json` and `report.md` to

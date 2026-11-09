@@ -8,6 +8,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- A router may declare its own `route_tools` (experimental): an optional attribute on the router function or object, like `timeout_s`, read when the caller passes `route_tools=None`. The caller's `route_tools` always wins, and a router that declares none is still asked on all five tools; a declaration naming anything else raises `ConfigurationError`. The LLM and Jev example routers carry a placeholder (`None`, all five) until their latency is measured. See the README's [Smart routing](README.md#smart-routing-experimental).
+- `benchmarks/providers/router_latency.py` (experimental): times routers -- the built-in rules, the scikit-learn, LLM and Jev examples, a `remote:<url>` service in the wire format, or your own -- on route-eval's public prompts, interleaved through the library's own router call, with timeouts censored, cold first calls and fresh builds apart, and a stubbed call's added wall time. It weighs each router against each tool's p50 by the starting rule, a router p50 under 25% of the tool's, and `--dry-run` prints the calls and cost of a run without making one.
+
 ### Fixed
 
 ## [0.10.0] - 2026-11-09
