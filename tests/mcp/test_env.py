@@ -14,11 +14,10 @@ from pathlib import Path
 
 import pytest
 
+from tests.mcp.env_helpers import KEY, OTHER_KEY, holds, is_set, statuses, write
 from web_router.constants import (
     ENV_APPDATA,
     ENV_BRAVE_API_KEY,
-    ENV_BRIGHTDATA_API_KEY,
-    ENV_BRIGHTDATA_ZONE,
     ENV_EXA_API_KEY,
     ENV_LOCAL_BROWSER_PATH,
     ENV_MCP_BROWSER_ALLOW_FILE_URLS,
@@ -41,60 +40,34 @@ from web_router.constants import (
 )
 from web_router.mcp.env import EnvFileError, EnvSources, user_config_dir
 
-KEY = "not-a-real-key-0123"
-OTHER_KEY = "not-a-real-key-4567"
-
-
-def _is_set(name: str) -> bool:
-    return name in os.environ
-
-
-def _holds(name: str, value: str) -> bool:
-    return os.environ.get(name) == value
-
-
-# Assert through these, never on os.environ itself: pytest prints the operands of
-# a failed assertion, and os.environ's repr is every variable this process holds,
-# the developer's real keys included.
-
-
-def _write(path: Path, text: str) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
-    return path
-
-
-def _statuses(sources: EnvSources) -> list[tuple[str, str]]:
-    return [(lookup.source, lookup.status) for lookup in sources.searched]
-
 
 def test_the_entry_point_reads_credentials_from_its_working_directory(isolated_home: Path) -> None:
-    _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}=from-file\n")
+    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}=from-file\n")
 
     sources = EnvSources.at_startup()
 
-    assert _holds(ENV_NIMBLE_API_KEY, "from-file")
+    assert holds(ENV_NIMBLE_API_KEY, "from-file")
     assert sources.report()["loaded"] == {ENV_NIMBLE_API_KEY: str(Path.cwd() / MCP_ENV_FILE)}
-    assert _statuses(sources)[-1] == (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_USED)
+    assert statuses(sources)[-1] == (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_USED)
 
 
 def test_every_place_is_read_and_an_earlier_one_wins_per_variable(
     isolated_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    explicit = _write(isolated_home / "elsewhere" / "keys.env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
-    user_env = _write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={OTHER_KEY}\n{ENV_EXA_API_KEY}={KEY}\n")
-    project = _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_EXA_API_KEY}={OTHER_KEY}\n{ENV_NIMBLE_API_KEY}={KEY}\n")
+    explicit = write(isolated_home / "elsewhere" / "keys.env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    user_env = write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={OTHER_KEY}\n{ENV_EXA_API_KEY}={KEY}\n")
+    project = write(Path.cwd() / MCP_ENV_FILE, f"{ENV_EXA_API_KEY}={OTHER_KEY}\n{ENV_NIMBLE_API_KEY}={KEY}\n")
     monkeypatch.setenv(ENV_MCP_ENV_FILE, str(explicit))
 
     sources = EnvSources.at_startup()
 
-    assert _holds(ENV_BRAVE_API_KEY, KEY) and _holds(ENV_EXA_API_KEY, KEY) and _holds(ENV_NIMBLE_API_KEY, KEY)
+    assert holds(ENV_BRAVE_API_KEY, KEY) and holds(ENV_EXA_API_KEY, KEY) and holds(ENV_NIMBLE_API_KEY, KEY)
     assert sources.report()["loaded"] == {
         ENV_BRAVE_API_KEY: str(explicit),
         ENV_EXA_API_KEY: str(user_env),
         ENV_NIMBLE_API_KEY: str(project),
     }
-    assert _statuses(sources) == [
+    assert statuses(sources) == [
         (MCP_ENV_SOURCE_EXPLICIT, MCP_ENV_STATUS_USED),
         (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_USED),
         (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_USED),
@@ -103,59 +76,27 @@ def test_every_place_is_read_and_an_earlier_one_wins_per_variable(
 
 def test_a_project_env_only_adds_and_never_hides_the_users_keys(isolated_home: Path) -> None:
     """A user-scoped server starts in every project; one that commits a key must not take the user's traffic."""
-    _write(user_config_dir() / MCP_ENV_FILE, f"{ENV_TAVILY_API_KEY}={KEY}\n")
-    _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_TAVILY_API_KEY}={OTHER_KEY}\n")
+    write(user_config_dir() / MCP_ENV_FILE, f"{ENV_TAVILY_API_KEY}={KEY}\n")
+    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_TAVILY_API_KEY}={OTHER_KEY}\n")
 
     sources = EnvSources.at_startup()
 
-    assert _holds(ENV_TAVILY_API_KEY, KEY)
-    assert _statuses(sources) == [
+    assert holds(ENV_TAVILY_API_KEY, KEY)
+    assert statuses(sources) == [
         (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_USED),
         (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_NOTHING_NEW),
     ]
 
 
-def test_a_file_never_completes_a_credential_the_user_half_holds(
-    isolated_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A project's zone beside the user's own Bright Data token would route the user's account its way."""
-    monkeypatch.setenv(ENV_BRIGHTDATA_API_KEY, KEY)
-    _write(
-        Path.cwd() / MCP_ENV_FILE,
-        f"{ENV_BRIGHTDATA_API_KEY}={OTHER_KEY}\n{ENV_BRIGHTDATA_ZONE}=project-zone\n{ENV_NIMBLE_API_KEY}={OTHER_KEY}\n",
-    )
-
-    sources = EnvSources.at_startup()
-
-    assert not _is_set(ENV_BRIGHTDATA_ZONE) and _holds(ENV_BRIGHTDATA_API_KEY, KEY)
-    assert _holds(ENV_NIMBLE_API_KEY, OTHER_KEY), "an unrelated key still adds"
-    assert list(sources.report()["loaded"]) == [ENV_NIMBLE_API_KEY]
-
-
-def test_half_a_credential_in_one_file_never_shuts_out_the_whole_one_in_the_next(isolated_home: Path) -> None:
-    """A lone token applies nothing, so a later file's token and zone arrive as the pair they are."""
-    _write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRIGHTDATA_API_KEY}={KEY}\n")
-    project = _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRIGHTDATA_API_KEY}={OTHER_KEY}\n{ENV_BRIGHTDATA_ZONE}=zone\n")
-
-    sources = EnvSources.at_startup()
-
-    assert _holds(ENV_BRIGHTDATA_API_KEY, OTHER_KEY) and _holds(ENV_BRIGHTDATA_ZONE, "zone")
-    assert sources.report()["loaded"] == {ENV_BRIGHTDATA_API_KEY: str(project), ENV_BRIGHTDATA_ZONE: str(project)}
-    assert _statuses(sources) == [
-        (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_NOTHING_NEW),
-        (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_USED),
-    ]
-
-
 def test_the_user_config_dir_is_read_from_any_working_directory(isolated_home: Path) -> None:
     """The case a PyPI install lives in: no repo, a client starting the server wherever it likes."""
-    user_env = _write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    user_env = write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
 
     sources = EnvSources.at_startup()
 
-    assert _holds(ENV_BRAVE_API_KEY, KEY)
+    assert holds(ENV_BRAVE_API_KEY, KEY)
     assert sources.report()["loaded"] == {ENV_BRAVE_API_KEY: str(user_env)}
-    assert _statuses(sources) == [
+    assert statuses(sources) == [
         (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_USED),
         (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_MISSING),
     ]
@@ -164,13 +105,13 @@ def test_the_user_config_dir_is_read_from_any_working_directory(isolated_home: P
 def test_a_file_that_sets_no_credential_does_not_hide_the_next_one(isolated_home: Path) -> None:
     # A client starts a user-scoped server in whatever project is open, and
     # that project's own .env says nothing about web-router.
-    _write(Path.cwd() / MCP_ENV_FILE, "DATABASE_URL=postgres://localhost/app\n")
-    _write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    write(Path.cwd() / MCP_ENV_FILE, "DATABASE_URL=postgres://localhost/app\n")
+    write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
 
     sources = EnvSources.at_startup()
 
-    assert _holds(ENV_BRAVE_API_KEY, KEY)
-    assert _statuses(sources) == [
+    assert holds(ENV_BRAVE_API_KEY, KEY)
+    assert statuses(sources) == [
         (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_USED),
         (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_NO_CREDENTIALS),
     ]
@@ -181,7 +122,7 @@ def test_an_explicit_path_that_is_missing_is_reported_not_ignored(
 ) -> None:
     missing = isolated_home / "nowhere" / ".env"
     monkeypatch.setenv(ENV_MCP_ENV_FILE, str(missing))
-    _write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
 
     sources = EnvSources.at_startup()
     report = sources.report()
@@ -197,8 +138,8 @@ def test_an_explicit_path_that_is_missing_is_reported_not_ignored(
 
 
 def test_a_remembered_path_is_read_on_the_next_start_and_only_adds_to_the_user_env(isolated_home: Path) -> None:
-    remembered = _write(isolated_home / "secrets" / "web.env", f"{ENV_BRAVE_API_KEY}={KEY}\n{ENV_NIMBLE_API_KEY}=x\n")
-    _write(user_config_dir() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}={OTHER_KEY}\n")
+    remembered = write(isolated_home / "secrets" / "web.env", f"{ENV_BRAVE_API_KEY}={KEY}\n{ENV_NIMBLE_API_KEY}=x\n")
+    write(user_config_dir() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}={OTHER_KEY}\n")
 
     loaded = EnvSources().load(str(remembered), remember=True)
     os.environ.pop(ENV_BRAVE_API_KEY)
@@ -211,18 +152,18 @@ def test_a_remembered_path_is_read_on_the_next_start_and_only_adds_to_the_user_e
 
     sources = EnvSources.at_startup()
 
-    assert _holds(ENV_BRAVE_API_KEY, KEY)
-    assert (MCP_ENV_SOURCE_REMEMBERED, MCP_ENV_STATUS_USED) in _statuses(sources)
-    assert _holds(ENV_NIMBLE_API_KEY, OTHER_KEY), "a remembered file never replaces the user's own key"
+    assert holds(ENV_BRAVE_API_KEY, KEY)
+    assert (MCP_ENV_SOURCE_REMEMBERED, MCP_ENV_STATUS_USED) in statuses(sources)
+    assert holds(ENV_NIMBLE_API_KEY, OTHER_KEY), "a remembered file never replaces the user's own key"
 
 
 def test_a_variable_already_exported_wins_over_the_file(isolated_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(ENV_NIMBLE_API_KEY, "exported")
-    _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}=from-file\n{ENV_BRAVE_API_KEY}={KEY}\n")
+    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}=from-file\n{ENV_BRAVE_API_KEY}={KEY}\n")
 
     sources = EnvSources.at_startup()
 
-    assert _holds(ENV_NIMBLE_API_KEY, "exported")
+    assert holds(ENV_NIMBLE_API_KEY, "exported")
     report = sources.report()
     assert list(report["loaded"]) == [ENV_BRAVE_API_KEY]
     assert report["from_environment"] == [ENV_NIMBLE_API_KEY]
@@ -239,16 +180,16 @@ def test_only_credentials_load_so_a_foreign_env_cannot_set_policy(
     """
     monkeypatch.delenv(ENV_MCP_BROWSER_ALLOW_FILE_URLS, raising=False)
     monkeypatch.delenv(ENV_LOCAL_BROWSER_PATH, raising=False)
-    _write(
+    write(
         Path.cwd() / MCP_ENV_FILE,
         f"{ENV_MCP_BROWSER_ALLOW_FILE_URLS}=1\n{ENV_LOCAL_BROWSER_PATH}=/tmp/evil\n{ENV_MCP_ENV_FILE}=/tmp/x\n",
     )
 
     EnvSources.at_startup()
 
-    assert not _is_set(ENV_MCP_BROWSER_ALLOW_FILE_URLS)
-    assert not _is_set(ENV_LOCAL_BROWSER_PATH)
-    assert not _is_set(ENV_MCP_ENV_FILE)
+    assert not is_set(ENV_MCP_BROWSER_ALLOW_FILE_URLS)
+    assert not is_set(ENV_LOCAL_BROWSER_PATH)
+    assert not is_set(ENV_MCP_ENV_FILE)
 
 
 def test_nothing_is_interpolated_so_a_file_cannot_copy_another_secret(
@@ -256,34 +197,34 @@ def test_nothing_is_interpolated_so_a_file_cannot_copy_another_secret(
 ) -> None:
     # Expanded, this would send another service's secret to Brave with every search.
     monkeypatch.setenv("SOME_OTHER_SECRET", OTHER_KEY)
-    _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}=${{SOME_OTHER_SECRET}}\n")
+    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}=${{SOME_OTHER_SECRET}}\n")
 
     EnvSources.at_startup()
 
-    assert _holds(ENV_BRAVE_API_KEY, "${SOME_OTHER_SECRET}")
+    assert holds(ENV_BRAVE_API_KEY, "${SOME_OTHER_SECRET}")
 
 
 def test_nothing_found_anywhere_is_a_no_op_so_a_fresh_install_still_starts(isolated_home: Path) -> None:
     sources = EnvSources.at_startup()
 
     assert sources.report()["loaded"] == {}
-    assert {status for _, status in _statuses(sources)} == {MCP_ENV_STATUS_MISSING}
+    assert {status for _, status in statuses(sources)} == {MCP_ENV_STATUS_MISSING}
 
 
 def test_an_empty_assignment_is_no_credential(isolated_home: Path) -> None:
     # A copied .env.example is every name with no value.
-    _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}=\n{ENV_BRAVE_API_KEY}=\n")
+    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}=\n{ENV_BRAVE_API_KEY}=\n")
 
     sources = EnvSources.at_startup()
 
-    assert not _is_set(ENV_NIMBLE_API_KEY)
-    assert _statuses(sources)[-1] == (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_NO_CREDENTIALS)
+    assert not is_set(ENV_NIMBLE_API_KEY)
+    assert statuses(sources)[-1] == (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_NO_CREDENTIALS)
 
 
 def test_the_report_names_variables_and_never_values(isolated_home: Path) -> None:
-    _write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
     sources = EnvSources.at_startup()
-    extra = _write(isolated_home / "more.env", f"{ENV_NIMBLE_API_KEY}={OTHER_KEY}\n")
+    extra = write(isolated_home / "more.env", f"{ENV_NIMBLE_API_KEY}={OTHER_KEY}\n")
     sources.load(str(extra))
 
     text = json.dumps(sources.report())
@@ -293,23 +234,23 @@ def test_the_report_names_variables_and_never_values(isolated_home: Path) -> Non
 
 
 def test_load_expands_the_home_directory(isolated_home: Path) -> None:
-    _write(isolated_home / "keys.env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    write(isolated_home / "keys.env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
 
     loaded = EnvSources().load("~/keys.env")
 
     assert loaded.path == isolated_home / "keys.env"
     assert loaded.loaded == (ENV_BRAVE_API_KEY,)
-    assert _holds(ENV_BRAVE_API_KEY, KEY)
+    assert holds(ENV_BRAVE_API_KEY, KEY)
 
 
 def test_load_keeps_a_value_already_set(isolated_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(ENV_BRAVE_API_KEY, "exported")
-    path = _write(isolated_home / "keys.env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    path = write(isolated_home / "keys.env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
 
     loaded = EnvSources().load(str(path))
 
     assert (loaded.loaded, loaded.already_set) == ((), (ENV_BRAVE_API_KEY,))
-    assert _holds(ENV_BRAVE_API_KEY, "exported")
+    assert holds(ENV_BRAVE_API_KEY, "exported")
 
 
 def test_load_of_a_file_that_is_not_a_dotenv_yields_nothing_and_quotes_none_of_it(
@@ -328,7 +269,7 @@ def test_load_of_a_file_that_is_not_a_dotenv_yields_nothing_and_quotes_none_of_i
         'password = "hunter2"\n'
         '{"token": "json-secret"}\n'
     )
-    path = _write(isolated_home / "notes.txt", secrets)
+    path = write(isolated_home / "notes.txt", secrets)
 
     with pytest.raises(EnvFileError) as raised:
         EnvSources().load(str(path))
@@ -339,7 +280,7 @@ def test_load_of_a_file_that_is_not_a_dotenv_yields_nothing_and_quotes_none_of_i
     for value in ("not-real-openai-value", "also-secret", "/tmp/evil", "hunter2", "json-secret"):
         assert value not in message
     for name in ("OPENAI_API_KEY", "AWS_SECRET_ACCESS_KEY", ENV_LOCAL_BROWSER_PATH):
-        assert not _is_set(name)
+        assert not is_set(name)
 
 
 @pytest.mark.parametrize("kind", ["missing", "directory", "too large", "binary"])
@@ -357,18 +298,18 @@ def test_load_refuses_what_is_not_a_readable_dotenv_by_path_alone(isolated_home:
 
     assert str(path) in str(raised.value)
     assert KEY not in str(raised.value)
-    assert not _is_set(ENV_BRAVE_API_KEY)
+    assert not is_set(ENV_BRAVE_API_KEY)
 
 
 def test_a_path_that_cannot_be_remembered_loads_nothing(isolated_home: Path) -> None:
-    path = _write(isolated_home / "keys.env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    path = write(isolated_home / "keys.env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
     # A file where the config directory should be, so it cannot be created.
-    _write(user_config_dir(), "in the way")
+    write(user_config_dir(), "in the way")
 
     with pytest.raises(ValueError, match="could not be recorded"):
         EnvSources().load(str(path), remember=True)
 
-    assert not _is_set(ENV_BRAVE_API_KEY)
+    assert not is_set(ENV_BRAVE_API_KEY)
 
 
 @pytest.mark.parametrize(
