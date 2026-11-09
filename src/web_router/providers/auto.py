@@ -80,7 +80,6 @@ from web_router.constants import (
     MSG_AUTO_BROWSE_SKIPPED,
     MSG_AUTO_BROWSE_UNKNOWN_JOB,
     MSG_AUTO_BROWSE_UNMAPPED,
-    MSG_AUTO_EXTRACT_NO_MEMBER,
     MSG_AUTO_RESEARCH_NEEDS,
     MSG_AUTO_RESEARCH_NO_CAPABLE_BACKEND,
     MSG_AUTO_RESEARCH_REFUSES,
@@ -88,7 +87,6 @@ from web_router.constants import (
     MSG_AUTO_RESEARCH_UNKNOWN_JOB,
     MSG_AUTO_SEARCH_NO_MEMBER,
     MSG_AUTO_SKIPPED,
-    MSG_AUTO_UNFORMATTED,
     MSG_AUTO_UNMAPPED,
     PROVIDER_AUTO,
 )
@@ -98,10 +96,10 @@ from web_router.exceptions import (
     MissingParameterError,
     ProviderError,
     ProviderNotInstalledError,
-    UnsupportedFormatError,
     UnsupportedParameterError,
     WebRouterError,
 )
+from web_router.providers._auto_extract import extract_eligible
 from web_router.providers._chain import (
     _RECOVERABLE,
     _ChainSpec,
@@ -380,7 +378,7 @@ class AutoExtractProvider(ExtractProvider):
         delegated = self._delegated(request, urls)
         failures: dict[str, WebRouterError] = {}
         held: ExtractResponse | None = None
-        for position, provider_name in in_call_order("extract", self._eligible(self.format_of(request))):
+        for position, provider_name in in_call_order("extract", self._eligible(request)):
             if (late := _late_answer(held, self.name, failures)) is not None:
                 return late
             if not admitted("extract", provider_name, delegated):
@@ -401,7 +399,7 @@ class AutoExtractProvider(ExtractProvider):
         delegated = self._delegated(request, urls)
         failures: dict[str, WebRouterError] = {}
         held: ExtractResponse | None = None
-        for position, provider_name in in_call_order("extract", self._eligible(self.format_of(request))):
+        for position, provider_name in in_call_order("extract", self._eligible(request)):
             if (late := _late_answer(held, self.name, failures)) is not None:
                 return late
             if not admitted("extract", provider_name, delegated):
@@ -418,38 +416,9 @@ class AutoExtractProvider(ExtractProvider):
             held = response if held is None else held
         return _held_or_raise(held, self.name, failures)
 
-    def _eligible(self, wanted: ExtractFormat) -> list[tuple[int, str]]:
-        """The chain members that return ``wanted``, in order, read from their classes as search's are.
-
-        Raises:
-            UnsupportedFormatError: if no member returns it, naming what each one
-                returns instead. Nothing has been fetched.
-        """
-        from web_router.registry import get_extract_provider_class
-
-        eligible: list[tuple[int, str]] = []
-        skipped: list[str] = []
-        returned: frozenset[ExtractFormat] = frozenset()
-        for position, (provider_name, _) in enumerate(self._chain):
-            try:
-                formats = get_extract_provider_class(provider_name).supported_formats
-            except ProviderNotInstalledError:
-                eligible.append((position, provider_name))
-                continue
-            returned |= formats
-            if wanted in formats:
-                eligible.append((position, provider_name))
-                continue
-            skipped.append(
-                MSG_AUTO_SKIPPED.format(
-                    name=provider_name, reasons=MSG_AUTO_UNFORMATTED.format(formats=_quoted(formats))
-                )
-            )
-
-        if eligible or not skipped:
-            return eligible
-        detail = MSG_AUTO_EXTRACT_NO_MEMBER.format(skipped=", ".join(dict.fromkeys(skipped)))
-        raise UnsupportedFormatError(self.name, wanted, returned, detail=detail)
+    def _eligible(self, request: ExtractRequest) -> list[tuple[int, str]]:
+        """The chain members that return the format and map every other option set; see :func:`extract_eligible`."""
+        return extract_eligible(self.name, self._chain, self.format_of(request), request)
 
     def _delegated(self, request: ExtractRequest, urls: list[str]) -> ExtractRequest:
         """The request to hand a member, with the format named explicitly.

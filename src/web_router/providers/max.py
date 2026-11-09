@@ -181,7 +181,7 @@ class MaxExtractProvider(AutoExtractProvider):
                 format, which :meth:`_eligible` already keeps out of the race.
         """
         runners: list[_Runner] = []
-        for position, provider_name in self._eligible(self.format_of(delegated)):
+        for position, provider_name in self._eligible(delegated):
             try:
                 member = self._member(position)
             except _RECOVERABLE as exc:

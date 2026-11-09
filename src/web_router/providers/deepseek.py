@@ -40,7 +40,7 @@ from web_router.providers._language import language_code
 from web_router.providers._search_text import as_snippet, lite_body, site_operators, unsited_domains
 from web_router.providers._utils import best_text, build_payload
 from web_router.types import (
-    EXTRACT_PARAMETERS,
+    EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
     ExtractFailure,
     ExtractFormat,
@@ -140,7 +140,7 @@ class DeepSeekExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_DEEPSEEK
-    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset({"markdown"})
     # Fetch has no format field: it returns markdown alone.
     default_format: ClassVar[ExtractFormat] = "markdown"

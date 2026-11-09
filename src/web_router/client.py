@@ -389,6 +389,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
         *,
         provider: str | Provider | ExtractProvider | None = None,
         format: ExtractFormat | None = None,
+        profile: str | None = None,
         provider_options: dict[str, Any] | None = None,
         budget: Budget | None = None,
     ) -> ExtractResponse:
@@ -397,9 +398,11 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
         Several URLs can partly succeed: what came back is in
         :attr:`~web_router.ExtractResponse.documents` and everything that did
         not is in :attr:`~web_router.ExtractResponse.failures`. A call where
-        nothing came back raises instead.
+        nothing came back raises instead. ``profile`` names a saved identity on
+        the backend -- the one a browser session logged into -- whose cookies
+        are sent with each fetch; a backend without saved profiles refuses it.
         """
-        request = build_extract_request(urls, format=format, provider_options=provider_options)
+        request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
         return self._routed(chain, request, budget, chain.extract)
 
@@ -681,6 +684,7 @@ class AsyncWebRouter(
         *,
         provider: str | Provider | ExtractProvider | None = None,
         format: ExtractFormat | None = None,
+        profile: str | None = None,
         provider_options: dict[str, Any] | None = None,
         budget: Budget | None = None,
     ) -> ExtractResponse:
@@ -688,9 +692,10 @@ class AsyncWebRouter(
 
         Backends that take one URL per call are fanned out concurrently. As on
         the sync router, a partly successful call returns its failures and one
-        where nothing came back raises.
+        where nothing came back raises, and ``profile`` is the saved identity
+        whose cookies each fetch carries.
         """
-        request = build_extract_request(urls, format=format, provider_options=provider_options)
+        request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
         return await self._arouted(chain, request, budget, chain.aextract)
 

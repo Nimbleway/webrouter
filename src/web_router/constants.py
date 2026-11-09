@@ -218,6 +218,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_KEENABLE: (ENV_KEENABLE_API_KEY,),
     PROVIDER_DEEPSEEK: (ENV_DEEPSEEK_API_KEY,),
     PROVIDER_JINA: (),
+    PROVIDER_BROWSERBASE: (ENV_BROWSERBASE_API_KEY,),
     PROVIDER_AUTO: (),
     PROVIDER_MAX: (),
 }
@@ -636,12 +637,16 @@ AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
     PROVIDER_WEBIQ,
     PROVIDER_KEENABLE,
     PROVIDER_DEEPSEEK,
+    PROVIDER_BROWSERBASE,
 )
 """Members added after the chain existed, tried after the keyless tier, as :data:`AUTO_APPENDED` is for search.
 
 ``exa`` returns plain text alone, so it serves only ``format="text"``.
 ``webiq`` reads only pages in WebIQ's own index; one it lacks fails, and the
-chain moves on. ``keenable`` and ``deepseek`` return markdown alone.
+chain moves on. ``keenable`` and ``deepseek`` return markdown alone. ``browserbase``
+joined last (2026-10-29): its Fetch API never renders a page, so it is the
+member of last resort for an ordinary fetch, and the only one that maps
+``profile`` -- a request setting it passes over every other member.
 """
 
 AUTO_EXTRACT_FORMATS: frozenset[ExtractFormat] = frozenset({"markdown", "html", "text"})
@@ -738,6 +743,12 @@ MSG_AUTO_EXTRACT_NO_MEMBER = (
     "credential for a backend that returns it, or name one -- see the extract table in README.md."
 )
 """Replaces the usual advice on the format error. Raised before any member is tried."""
+
+MSG_AUTO_EXTRACT_UNMAPPED = (
+    "No backend in its chain maps it, so nothing was fetched: {skipped}. Drop the option, set a "
+    "credential for a backend that maps it, or name one -- see the extract table in README.md."
+)
+"""The same for an option -- ``profile`` -- that no member returning the format maps."""
 
 # --- Benchmark --------------------------------------------------------------
 # One search, or one extract, fanned out across several backends, measured
@@ -1364,106 +1375,6 @@ Steel reports every ended session as ``released`` and says why beside it, so
 the reason is what tells a session somebody ended from one that ran out of time
 or never started.
 """
-
-# --- Browserbase browser ----------------------------------------------------
-# From Browserbase's API reference and its stealth / proxies guides, not a live
-# call: no account was available as of 2026-09-24. See
-# tests/providers/test_browserbase_browser.py, and its docstring for what these
-# checks found.
-
-BROWSERBASE_BASE_URL = "https://api.browserbase.com"
-BROWSERBASE_OPEN_PATH = "/v1/sessions"
-BROWSERBASE_SESSION_PATH = "/v1/sessions/{session_id}"
-"""Reads a session on ``GET`` and, on ``POST``, updates it -- which is how one is released."""
-
-BROWSERBASE_API_KEY_HEADER = "X-BB-API-Key"
-
-BROWSERBASE_STEALTH: dict[StealthLevel, dict[tuple[str, ...], Any]] = {
-    # The reference deprecates `browserSettings.advancedStealth` in favor of
-    # `browserSettings.verified` -- same boolean, same Scale-plan gate -- so
-    # `verified` is what these levels set rather than the field the original
-    # spec named. Sending `false` for `low` says "the ordinary session" rather
-    # than leaving the option unread, matching the row for `high`. The
-    # reference gives no field for turning a session's baseline evasion off,
-    # so `off` has no row and is refused by `stealth_levels` below.
-    "low": {("browserSettings", "verified"): False},
-    "high": {("browserSettings", "verified"): True},
-}
-"""Stealth level -> the field it sets in Browserbase's body. Unverified -- see the module docstring."""
-
-BROWSERBASE_FIELDS: dict[str, BrowserFieldRow] = {
-    "timeout": ("timeout",),
-    "stealth": BROWSERBASE_STEALTH,
-    "solve_captchas": ("browserSettings", "solveCaptchas"),
-    "proxy_country": BrowserField(
-        {("proxies",): [{"type": "browserbase", "geolocation": {"country": REQUEST_VALUE}}]},
-        case="upper",
-    ),
-    "profile": ("browserSettings", "context", "id"),
-    "persist_profile": ("browserSettings", "context", "persist"),
-}
-"""Normalized option -> where it goes in Browserbase's body.
-
-``profile`` is a context id and ``persist_profile`` its ``persist`` flag, both
-checked live on 2026-10-20: a cookie and a localStorage entry set in a session
-opened with ``persist`` were there in the next session opened on the context.
-The other rows are unverified -- see the module docstring.
-"""
-
-BROWSERBASE_DEBUG_PATH = "/v1/sessions/{session_id}/debug"
-"""Answers a running session's live-view links. Checked live on 2026-10-20."""
-
-BROWSERBASE_CONTROL_URL_FIELD = "debuggerFullscreenUrl"
-"""The debug answer's link to the session's page alone, without Chrome's DevTools around it."""
-
-BROWSERBASE_RELEASE_BODY: dict[str, str] = {"status": "REQUEST_RELEASE"}
-"""Ends a session: Browserbase has no release call, only an update asking for one."""
-
-BROWSERBASE_SESSION_STATES: dict[str, BrowserState] = {
-    "PENDING": "starting",
-    "RUNNING": "running",
-    "COMPLETED": "released",
-    "TIMED_OUT": "expired",
-    "ERROR": "failed",
-}
-"""Browserbase's session ``status`` -> the normalized state."""
-
-# --- Browserbase browse -----------------------------------------------------
-# From Browserbase's Agents API reference, checked against live prose runs on
-# 2026-09-30 and 2026-10-21; ``resultSchema`` has not had one. See
-# tests/providers/test_browserbase_browse.py. The base URL, key header and env
-# var are the session provider's above.
-
-BROWSERBASE_BROWSE_START_PATH = "/v1/agents/runs"
-"""Starts a run. With no ``agentId`` it also creates a new Agent in the account for that run."""
-
-BROWSERBASE_BROWSE_RUN_PATH = "/v1/agents/runs/{job_id}"
-BROWSERBASE_BROWSE_STOP_PATH = "/v1/agents/runs/{job_id}/stop"
-"""Answers 202 while the run winds down, and 409 for a run that has already finished."""
-
-BROWSERBASE_RESULT_SCHEMA_FIELD = "resultSchema"
-"""The request field that asks for a result conforming to a schema -- the one case its ``result`` is ``structured``."""
-
-BROWSERBASE_RESULT_SUMMARY_FIELD = "summary"
-"""Where a run with no schema puts its answer.
-
-Verified live on 2026-09-30: a run with no ``resultSchema`` came back with an
-object ``result`` -- ``{"summary": "...", "stepsTaken": 2, "taskDuration":
-3756}`` -- not the prose string the docs describe, so the answer is its summary
-and the object is not reported as structured output nobody asked for.
-"""
-
-BROWSERBASE_BROWSE_STATES: dict[str, JobState] = {
-    "PENDING": "queued",
-    "RUNNING": "running",
-    "COMPLETED": "completed",
-    "FAILED": "failed",
-    # "Exceeded maximum time": Browserbase's own limit, with no sign of how far
-    # the agent got, so a failure rather than a partial answer.
-    "TIMED_OUT": "failed",
-    "STOPPED": "cancelled",
-}
-"""Browserbase's run ``status`` -> the normalized state."""
 
 # --- Hyperbrowser browser ---------------------------------------------------
 # `timeout` is from Hyperbrowser's OpenAPI reference and the hyperbrowser
@@ -3751,6 +3662,8 @@ The three template tools share one registry, and the browser tools' method is
 ``provider_config`` speak the same name.
 """
 
+# `profile` is left out on purpose, as on `browser_open`: a saved, logged-in
+# identity is the user's own, set in code, never from a conversation.
 MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
     "urls": {
         "type": "array",

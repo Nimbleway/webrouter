@@ -122,8 +122,6 @@ from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
-    BenchmarkReport,
-    BenchmarkRun,
     BrowseOutcome,
     BrowseProgress,
     BrowseRequest,
@@ -133,8 +131,6 @@ from web_router.types import (
     BrowserState,
     BrowseStep,
     Citation,
-    ExtractBenchmarkReport,
-    ExtractBenchmarkRun,
     ExtractedDocument,
     ExtractFailure,
     ExtractFormat,
@@ -155,6 +151,7 @@ from web_router.types import (
     Viewport,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
+from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,

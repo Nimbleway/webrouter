@@ -18,14 +18,8 @@ from web_router import AsyncWebRouter, BenchmarkTimeoutError, WebRouter, configu
 from web_router.constants import BENCHMARK_EXCLUDED, EXTRACT_ENV_BY_PROVIDER
 from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedFormatError
 from web_router.registry import register_extract_provider, unregister_extract_provider
-from web_router.types import (
-    ExtractBenchmarkRun,
-    ExtractedDocument,
-    ExtractFailure,
-    ExtractFormat,
-    ExtractRequest,
-    ExtractResponse,
-)
+from web_router.types import ExtractedDocument, ExtractFailure, ExtractFormat, ExtractRequest, ExtractResponse
+from web_router.types_benchmark import ExtractBenchmarkRun
 
 
 class _Registered:
