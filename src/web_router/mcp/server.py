@@ -1,4 +1,4 @@
-"""The MCP server itself: twenty-four tools, one resource, over stdio.
+"""The MCP server itself: the tools, one resource, over stdio.
 
 Built on the SDK's low-level :class:`~mcp.server.Server` rather than FastMCP,
 because the input schemas are not knowable until the server starts: the
@@ -27,6 +27,7 @@ them, so a client there sees the new schemas when it next lists the tools.
 from __future__ import annotations
 
 import base64
+import json
 import os
 import signal
 from collections.abc import Mapping
@@ -36,6 +37,7 @@ from typing import Any
 import anyio
 from mcp.server import NotificationOptions, Server, ServerRequestContext
 from mcp.server.stdio import stdio_server
+from mcp.shared.exceptions import MCPError
 from mcp_types import (
     CallToolRequestParams,
     CallToolResult,
@@ -65,6 +67,7 @@ from web_router.constants import (
     MCP_SHUTDOWN_SIGNALS,
     MCP_SIGNAL_EXIT_BASE,
 )
+from web_router.constants_mcp import MCP_RESOURCE_NOT_FOUND
 from web_router.exceptions import WebRouterError
 from web_router.mcp.env import EnvSources
 from web_router.mcp.shaping import ToolOutput, redact, redaction_note, render
@@ -96,14 +99,16 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
         message, count = redact(str(exc))
         message += redaction_note(count)
         return CallToolResult(content=[TextContent(text=message)], is_error=True)
-    if not isinstance(payload, ToolOutput):
-        return CallToolResult(content=[TextContent(text=render(payload))])
-    content: list[ContentBlock] = [TextContent(text=render(payload.payload))]
-    if payload.text is not None:
-        content.append(TextContent(text=payload.text))
-    if payload.png is not None:
-        content.append(ImageContent(data=base64.b64encode(payload.png).decode("ascii"), mime_type=MCP_MIME_PNG))
-    return CallToolResult(content=content)
+    output = payload if isinstance(payload, ToolOutput) else ToolOutput(payload=payload)
+    text = render(output.payload)
+    content: list[ContentBlock] = [TextContent(text=text)]
+    if output.text is not None:
+        content.append(TextContent(text=output.text))
+    if output.png is not None:
+        content.append(ImageContent(data=base64.b64encode(output.png).decode("ascii"), mime_type=MCP_MIME_PNG))
+    # The same object as the first text block, for a client that reads structured results; parsed back from the
+    # text so it holds exactly what the model read, every value JSON.
+    return CallToolResult(content=content, structured_content=json.loads(text))
 
 
 def list_resources() -> ListResourcesResult:
@@ -124,7 +129,8 @@ def list_resources() -> ListResourcesResult:
 def read_resource(tools: WebRouterTools, uri: str) -> ReadResourceResult:
     """The configured providers per method, so a client learns them without a round trip."""
     if uri != MCP_RESOURCE_URI:
-        raise ValueError(MCP_MSG_UNKNOWN_RESOURCE.format(uri=uri, known=MCP_RESOURCE_URI))
+        # The spec's resource-not-found code: anything else reaches the client as an internal error.
+        raise MCPError(MCP_RESOURCE_NOT_FOUND, MCP_MSG_UNKNOWN_RESOURCE.format(uri=uri, known=MCP_RESOURCE_URI))
     return ReadResourceResult(
         contents=[
             TextResourceContents(uri=uri, mime_type=MCP_MIME_JSON, text=render(tools.capabilities())),

@@ -161,6 +161,9 @@ MCP_DESC_BUDGET_STATUS = (
     "seconds elapsed and left; and the operator's ceiling, if one is set. Free: it calls nothing."
 )
 
+MCP_RESOURCE_NOT_FOUND = -32002
+"""The JSON-RPC error code MCP gives a read of a resource the server does not have."""
+
 MCP_MSG_UNKNOWN_ARGUMENTS = "{tool} does not take {names}, so nothing was run. It takes: {allowed}."
 """An argument the tool does not declare -- a typo, a guessed option -- refused rather than dropped."""
 

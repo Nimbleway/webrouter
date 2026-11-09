@@ -608,7 +608,9 @@ So a shaped result:
   enough, and never drops the last one;
 - **never inlines `raw`**;
 - says in the result itself that it was shortened, and which handle gets the
-  rest.
+  rest;
+- comes back as JSON text and, for a client that reads it, the same object as
+  `structuredContent`.
 
 Every result carries a `handle`. `fetch_raw` takes it and returns the backend's
 untouched payload, uncapped — nothing is lost, it is just not spent on the

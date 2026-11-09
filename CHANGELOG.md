@@ -21,6 +21,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 - route-eval, `benchmarks/providers/route_eval.py` (experimental): replays a router -- `static`, `oracle`, `always:<backend>` or your own `RouteRequest` → `RouteDecision` callable -- over the frozen results, offline, through the library's merge rule, and scores accuracy, cost, latency and regret against the static order, held out and in-sample, against each method's noise floor. It covers search and answer backend order and, on `tools-effort-60`, the method and research effort.
 - Internals (experimental, for router authors and contributors): `web_router.routing.candidates.build_candidates()` (a research backend that refuses the effort the budget maps for the request, such as Nimble's enrichment at `low`, is left out with its reason), `web_router.routing.merge.merge()`, `web_router.routing.params.map_effort()` (from `data/efforts.json`, `make efforts`), `web_router.routing.pricing`, and the per-call deadline under every method, which clamps each request to the time left. Their docstrings hold the rules.
 - Every MCP tool now carries a `title` and MCP behaviour hints (read-only, destructive, idempotent, open-world), so a client can let free lookups through and ask before a billed run or a page action.
+- MCP tool results now carry `structuredContent`, the same object as their JSON text, and reading an unknown resource returns MCP's resource-not-found error (-32002) instead of an internal error.
 
 ### Changed
 
