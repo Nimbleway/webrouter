@@ -8,7 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Changed
 
-- The package description, GitHub About line and README title now read "WebRouter is an open source standard that connects your agent to the web". The import (`web_router`) and the `web-router-mcp` command are unchanged.
+- The package description and the README tagline now read "WebRouter is an open source standard that connects your agent to the web", and the README title is WebRouter. The import (`web_router`) and the `web-router-mcp` command are unchanged.
 
 ### Added
 
