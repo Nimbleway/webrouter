@@ -37,7 +37,8 @@ ENV_MCP_TIME_LIMIT_S = "WEB_ROUTER_MCP_TIME_LIMIT_S"
 """The operator's ceiling on how long one connection may run billed calls, in seconds from its start."""
 
 ENV_MCP_ROUTER = "WEB_ROUTER_MCP_ROUTER"
-"""``<module>:<attribute>``, the router ``web_run`` plans with; ``off`` for none. The built-in rules router when unset.
+"""``<module>:<attribute>``, the router ``web_run`` plans with; ``remote`` for a router service at
+``WEB_ROUTER_REMOTE_ROUTER_URL``; ``off`` for none. The built-in rules router when unset.
 
 The three are read once, when the server starts, from the process environment
 only: no ``.env`` file and no ``load_env`` call can set or change them.
@@ -80,8 +81,21 @@ MCP_ROUTER_OPERATOR_NOTE = (
 )
 """Where an operator's router runs, and what that means for the prompt."""
 
+MCP_ROUTER_REMOTE = "remote"
+MCP_ROUTER_REMOTE_NOTE = (
+    "web_run sends each prompt, the URLs in it whole, the budget and the candidate ids (tool:provider, which name the "
+    "backends configured here) to the router service at {host}; never a key value."
+)
+"""Where the ``remote`` router runs, and what it is sent: the capabilities resource names the service's host."""
+
 MCP_PROMPT_NOTE = "web_run sends the prompt to the backend that serves it, as its query or task, as search does."
 """What the capabilities resource says of the prompt whatever the router: a backend always receives it."""
+
+MCP_REMOTE_PROMPT_NOTE = (
+    " With the remote router, web_run also sends each prompt to the router service, the URLs in it whole,"
+    " query strings included, before the plan is made."
+)
+"""What the ``prompt_note`` adds with the ``remote`` router: the prompt and its URLs leave the machine whole."""
 
 MCP_TOOL_WEB_RUN = "web_run"
 MCP_TOOL_BUDGET_START = "budget_start"
@@ -166,6 +180,7 @@ MCP_NO_ARGUMENTS = "no arguments"
 
 MCP_MSG_ROUTER_SPEC = "{env_var}={value!r} names no router: expected <module>:<attribute>, or 'off'."
 MCP_MSG_ROUTER_IMPORT = "{env_var}={value!r}: {error}"
+MCP_MSG_REMOTE_URL = "{env_var}=remote needs {url_var}, the router service's https URL, set in the same environment."
 MCP_MSG_CEILING_VALUE = "{env_var}={value!r} is not a positive number."
 MCP_MSG_BUDGET_LIMIT = "{tool}: `{name}` must be a positive number, got {value!r}."
 

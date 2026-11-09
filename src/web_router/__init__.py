@@ -115,6 +115,7 @@ from web_router.registry_answer import (
 )
 from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, RouterLike, ToolName
 from web_router.routing.pool_status import BudgetStatus
+from web_router.routing.registry import register_router, unregister_router
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -282,6 +283,7 @@ __all__ = [
     "register_extract_provider",
     "register_provider",
     "register_research_provider",
+    "register_router",
     "register_template_provider",
     "unregister_answer_provider",
     "unregister_browse_provider",
@@ -289,5 +291,6 @@ __all__ = [
     "unregister_extract_provider",
     "unregister_provider",
     "unregister_research_provider",
+    "unregister_router",
     "unregister_template_provider",
 ]

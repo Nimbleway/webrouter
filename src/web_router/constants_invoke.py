@@ -36,3 +36,15 @@ MSG_ROUTER_FAILED = (
     "Router {router!r} failed ({code}); fail_on_router_error=True raises rather than use the static order."
 )
 MSG_ROUTER_OTHER_LOOP = "The router answered with a future bound to another event loop, which this call cannot await."
+
+ROUTER_URL_POLICY_ATTR = "min_url_policy"
+"""The attribute a router sets to hold the URLs it sets to a ``url_policy`` when the caller sets none: the
+``remote`` router sets ``public_only``, since its answers come over the network."""
+
+ROUTER_NAME_ATTR = "router_name"
+"""The attribute, on a router function or object, that names it in a decision record; its qualified name if unset."""
+
+MSG_ROUTER_NAME = "A router's name must be a non-empty string; got {name!r}."
+MSG_ROUTER_FACTORY = "register_router({name!r}, ...) takes a callable that builds a router; got {kind}."
+MSG_ROUTER_UNKNOWN = "router={name!r} names no registered router; register_router() adds one. Known: {known}."
+MSG_ROUTER_CONFIG_UNNAMED = "router_config= configures a router named by string, router='name'; pass it with one."

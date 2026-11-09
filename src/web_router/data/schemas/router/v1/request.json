@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Budget": {
+      "description": "A cap on what one call may spend and how long it may wait.\n\nEvery field is optional: a budget with nothing set caps nothing.",
+      "properties": {
+        "max_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The most the call may spend, in US dollars, at estimated list prices.\n\nUnder a cost cap, a candidate whose price is unknown is never run.",
+          "title": "Max Cost Usd"
+        },
+        "time_limit_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The most seconds the call may wait: a cap on waiting, not a latency estimate.\n\nIt bounds when web-router stops waiting and starting attempts: a provider call that blocks past it\nreturns late. The built-in backends clamp each HTTP request to the time left, so theirs do not.",
+          "title": "Time Limit S"
+        },
+        "strict": {
+          "default": false,
+          "description": "Under a time cap, drop the candidates with no measured p90 latency instead of trying them.",
+          "title": "Strict",
+          "type": "boolean"
+        }
+      },
+      "title": "Budget",
+      "type": "object"
+    },
+    "Candidate": {
+      "description": "One (tool, provider) pair that could serve the call, with what it is estimated to cost and take.",
+      "properties": {
+        "tool": {
+          "description": "The method this candidate calls.",
+          "enum": [
+            "search",
+            "extract",
+            "answer",
+            "research",
+            "browse"
+          ],
+          "title": "Tool",
+          "type": "string"
+        },
+        "provider": {
+          "description": "The backend that would serve it, by registry name.",
+          "title": "Provider",
+          "type": "string"
+        },
+        "est_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Its estimated cost in US dollars, at list price. ``None`` when unknown or billed by tokens.",
+          "title": "Est Cost Usd"
+        },
+        "est_latency_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Its p90 latency in seconds, as measured by the provider scans. ``None`` when unmeasured.",
+          "title": "Est Latency S"
+        },
+        "id": {
+          "default": "",
+          "description": "``tool:provider``, the name every decision field uses. Filled in when left empty.",
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "provider"
+      ],
+      "title": "Candidate",
+      "type": "object"
+    }
+  },
+  "description": "What a router is shown for one call.\n\nLater versions add fields: a router must ignore the ones it does not know.",
+  "properties": {
+    "schema": {
+      "type": "integer",
+      "const": 1,
+      "description": "The wire format's major version."
+    },
+    "prompt": {
+      "description": "The query for search, answer and research; the URLs, one per line, for extract; the task for browse.",
+      "title": "Prompt",
+      "type": "string"
+    },
+    "candidates": {
+      "description": "Every (tool, provider) pair that could serve the call and that the budget allows.",
+      "items": {
+        "$ref": "#/$defs/Candidate"
+      },
+      "title": "Candidates",
+      "type": "array"
+    },
+    "deadline_s": {
+      "description": "Seconds the router has to answer before the static order is used instead.",
+      "title": "Deadline S",
+      "type": "number"
+    },
+    "urls": {
+      "default": [],
+      "description": "The URLs the call names: extract's URLs, or browse's ``start_url``.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Urls",
+      "type": "array"
+    },
+    "budget": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Budget"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The call's budget, when it has one."
+    },
+    "pinned_tool": {
+      "anyOf": [
+        {
+          "enum": [
+            "search",
+            "extract",
+            "answer",
+            "research",
+            "browse"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The method the caller called. Set, the router orders backends only and does not change the tool.",
+      "title": "Pinned Tool"
+    }
+  },
+  "required": [
+    "schema",
+    "prompt",
+    "candidates",
+    "deadline_s"
+  ],
+  "title": "web-router RouteRequest, wire schema v1",
+  "type": "object",
+  "examples": [
+    {
+      "schema": 1,
+      "prompt": "read https://example.com/pricing",
+      "candidates": [
+        {
+          "tool": "extract",
+          "provider": "jina",
+          "est_cost_usd": 0.0,
+          "est_latency_s": 2.1,
+          "id": "extract:jina"
+        },
+        {
+          "tool": "search",
+          "provider": "tavily",
+          "est_cost_usd": 0.008,
+          "est_latency_s": 1.2,
+          "id": "search:tavily"
+        }
+      ],
+      "deadline_s": 1.0,
+      "urls": [
+        "https://example.com/pricing"
+      ],
+      "budget": {
+        "max_cost_usd": 0.05,
+        "time_limit_s": 30.0,
+        "strict": false
+      },
+      "pinned_tool": null
+    }
+  ]
+}
