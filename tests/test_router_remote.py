@@ -74,9 +74,19 @@ def test_the_deadline_is_its_timeout_s_cut_to_the_budget() -> None:
     assert recorder.bodies[1]["budget"]["time_limit_s"] == 0.7
 
 
-def test_the_default_timeout_is_one_second() -> None:
-    with running() as server:
-        assert RemoteRouter(url=server.url).timeout_s == 1.0
+def test_with_no_timeout_s_a_slow_service_is_abandoned_at_one_second() -> None:
+    def slow(body: dict[str, Any]) -> dict[str, Any]:
+        time.sleep(2.5)
+        return reference.decide(body)
+
+    recorder = Recorder(slow)
+    with running(recorder) as server, WebRouter(router="remote", router_config=config(server)) as wr:
+        started = time.perf_counter()
+        plan = wr.plan(URL_PROMPT)
+        waited = time.perf_counter() - started
+    assert plan.decision.reason == "router_timeout"
+    assert 0.9 < waited < 1.8, "the 1 s default, not the service's 2.5 s"
+    assert recorder.bodies[0]["deadline_s"] == 1.0
 
 
 @pytest.mark.parametrize("cls", [WebRouter, AsyncWebRouter])
@@ -104,17 +114,29 @@ def test_a_slow_drip_answer_is_cancelled_at_the_deadline() -> None:
     assert plan.decision.reason == "router_timeout"
 
 
+def test_a_decision_of_another_schema_version_is_router_error() -> None:
+    with running(lambda body: {"schema": 2, "tools": ["extract"]}) as server:
+        plan = WebRouter(router="remote", router_config=config(server)).plan(URL_PROMPT)
+        assert plan.tool == "search" and plan.decision.reason == "router_error"
+        strict = WebRouter(router="remote", router_config=config(server), fail_on_router_error=True)
+        with pytest.raises(RouterError, match="router_error") as raised:
+            strict.plan(URL_PROMPT)
+    cause = raised.value.__cause__
+    assert isinstance(cause, RemoteRouterError) and not isinstance(cause, RemoteRouterInvalid)
+    assert "version other than 1" in str(cause)
+
+
 @pytest.mark.parametrize(
     ("answer", "why"),
     [
-        ({"schema": 2, "tools": ["extract"]}, "missing or not 1"),
-        ({"tools": ["extract"]}, "missing or not 1"),
+        ({"tools": ["extract"]}, "missing or not a number"),
+        ({"schema": "1", "tools": ["extract"]}, "missing or not a number"),
         ({"schema": 1, "tools": "extract"}, "does not fit"),
         ({"schema": 1, "tools": ["search"] * 65}, "more than 64 entries"),
     ],
-    ids=["schema-2", "no-schema", "ill-typed", "too-many"],
+    ids=["no-schema", "string-schema", "ill-typed", "too-many"],
 )
-def test_a_decision_of_another_schema_or_shape_is_router_invalid(answer: dict[str, Any], why: str) -> None:
+def test_a_decision_without_a_schema_or_of_another_shape_is_router_invalid(answer: dict[str, Any], why: str) -> None:
     with running(lambda body: answer) as server:
         wr = WebRouter(router="remote", router_config=config(server))
         plan = wr.plan(URL_PROMPT)

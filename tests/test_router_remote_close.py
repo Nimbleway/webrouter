@@ -206,6 +206,19 @@ async def test_close_on_the_pools_own_loop_closes_it_there_as_a_task() -> None:
         assert pool is not None and pool.is_closed and not remote._CLOSING
 
 
+async def test_close_on_the_pools_own_loop_is_bounded_too(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(remote, "REMOTE_CLOSE_WAIT_S", SHORT_WAIT_S)
+    with running() as server:
+        router = RemoteRouter(**config(server))
+        await router.aroute(_request())
+        done = _stuck(router._pool)
+        router.close()
+        with pytest.warns(ResourceWarning, match="not closed within"):
+            await asyncio.gather(*remote._CLOSING, return_exceptions=True)
+            await asyncio.sleep(0)  # the task's done callback, which warns
+        assert done == ["cancelled"] and not remote._CLOSING
+
+
 async def test_aclose_on_the_pools_own_loop_is_bounded_too(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(remote, "REMOTE_CLOSE_WAIT_S", SHORT_WAIT_S)
     with running() as server:

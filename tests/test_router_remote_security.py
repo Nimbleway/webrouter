@@ -125,6 +125,28 @@ def test_no_key_value_reaches_the_service_the_record_or_a_failure(monkeypatch: p
     assert KEY not in str(raised.value) + str(cause)
 
 
+def test_a_service_echoing_its_key_in_its_reasons_has_it_redacted() -> None:
+    def echo(body: dict[str, Any]) -> dict[str, Any]:
+        return {"schema": 1, "tools": ["search"], "reason": f"key {KEY}", "exclude": {"search:exa": KEY, KEY: "x"}}
+
+    with running(echo) as server, WebRouter(router="remote", router_config=config(server)) as wr:
+        plan = wr.plan("solar news")
+    record = plan.decision.model_dump_json()
+    assert KEY not in record and "[redacted]" in record
+
+
+def test_an_escaped_echo_is_redacted_and_a_numeric_key_changes_no_number() -> None:
+    escaped = KEY.replace("r", "\\u0072")  # the key, JSON-escaped: decoded, it is the key again
+    body = f'{{"schema": 1, "tools": ["search"], "reason": "key {escaped}"}}'.encode()
+    with canned(Canned(body=body)) as base:
+        plan = WebRouter(router="remote", router_config={"url": base + "/route", "api_key": KEY}).plan("solar news")
+    record = plan.decision.model_dump_json()
+    assert KEY not in record and "[redacted]" in record
+    with canned(Canned(body=b'{"schema": 1, "tools": ["search"]}')) as base:
+        plan = WebRouter(router="remote", router_config={"url": base + "/route", "api_key": "1"}).plan("solar news")
+    assert plan.decision.reason != "router_invalid", "a key of 1 leaves the schema version alone"
+
+
 def test_a_redirect_is_a_router_error_and_the_key_never_follows_it() -> None:
     elsewhere = Canned(body=b'{"schema": 1, "tools": ["extract"]}')
     with canned(elsewhere) as target:
@@ -217,3 +239,15 @@ def test_the_reference_server_binds_loopback_and_turns_away_a_foreign_host_no_ke
         big = b"{" + b" " * (1_000_001) + b"}"
         large = {**auth, "Content-Type": "application/json"}
         assert client.post(server.url, content=big, headers=large).status_code == 413
+
+
+def test_the_reference_server_answers_a_too_deeply_nested_body_with_400() -> None:
+    import httpx
+
+    deep = b"[" * 200_000 + b"]" * 200_000  # under the 1 MB cap, deeper than json.loads recurses
+    headers = {"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
+    with running() as server, httpx.Client(trust_env=False) as client:
+        answer = client.post(server.url, content=deep, headers=headers)
+        assert answer.status_code == 400 and "nested" in answer.json()["error"]
+        body = {"schema": 1, "prompt": "x", "candidates": [], "deadline_s": 1.0}
+        assert client.post(server.url, json=body, headers=headers).status_code == 200, "the server still answers"

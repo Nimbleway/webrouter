@@ -104,6 +104,8 @@ class _Handler(BaseHTTPRequestHandler):
             return self._answer(200, self.server.decide(body))
         except (ValueError, WireError) as exc:  # WireError is a ValueError; bad JSON is one too
             return self._answer(400, {"error": str(exc)})
+        except RecursionError:  # JSON nested deeper than Python parses
+            return self._answer(400, {"error": "a request nested too deeply"})
 
     def _authorized(self) -> bool:
         if not self.server.api_key:

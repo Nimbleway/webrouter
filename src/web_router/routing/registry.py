@@ -20,6 +20,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from web_router.constants_invoke import (
+    MSG_ROUTER_BUILT_NONE,
     MSG_ROUTER_CONFIG_UNNAMED,
     MSG_ROUTER_FACTORY,
     MSG_ROUTER_NAME,
@@ -83,13 +84,17 @@ def resolve_router(
     """The router to attach, and the same router again when it was built here by name, so its owner closes it.
 
     Raises:
-        ConfigurationError: for a name no router is registered under, or ``router_config`` without a name.
+        ConfigurationError: for a name no router is registered under, a factory that returns ``None``, or
+            ``router_config`` without a name.
     """
     if not isinstance(router, str):
         if router_config is not None:
             raise ConfigurationError(MSG_ROUTER_CONFIG_UNNAMED)
         return router, None
-    built = _factory(_checked_name(router))(**dict(router_config or {}))
+    key = _checked_name(router)
+    built = _factory(key)(**dict(router_config or {}))
+    if built is None:  # attached as is, None would turn routing off without a word
+        raise ConfigurationError(MSG_ROUTER_BUILT_NONE.format(name=key))
     return built, built
 
 

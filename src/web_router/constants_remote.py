@@ -56,7 +56,7 @@ WIRE_SCHEMA_KEY = "schema"
 """The field that carries the wire format's major version, on a request and on a decision."""
 
 WIRE_SCHEMA_VERSION = 1
-"""The wire format's major version. A decision of another major version is a router error."""
+"""The wire format's major version. A decision naming another one is a router error; one naming none is invalid."""
 
 WIRE_SCHEMA_DIR = ("data", "schemas", "router", "v1")
 """Where the JSON Schema files live inside the package, under ``web_router``."""
@@ -93,8 +93,11 @@ REMOTE_WHY_TOO_LARGE = "an answer over {limit} bytes"
 REMOTE_WHY_NOT_JSON = "an answer that is not a JSON object"
 REMOTE_WHY_CONTENT_TYPE = "an answer that is not application/json"
 REMOTE_WHY_TOO_MANY = "a decision with more than {limit} entries in one field"
-REMOTE_WHY_SCHEMA = "a wire schema that is missing or not {expected}, the one this client reads"
+REMOTE_WHY_SCHEMA = "a wire schema that is missing or not a number"
+REMOTE_WHY_VERSION = "a wire schema version other than {expected}, the one this client reads"
 REMOTE_WHY_CLOSED = "this router is closed"
+REMOTE_KEY_REDACTED = "[redacted]"
+"""What an echo of the service's own bearer key in its answer's text becomes, before the answer is read."""
 MSG_REMOTE_CLOSE_FAILED = "The router service at {host}: its connection pool did not close ({why}) and is dropped."
 REMOTE_WHY_CLOSE_SLOW = "not closed within {wait} s"
 REMOTE_WHY_CLOSE_LOOP = "its event loop is not running"

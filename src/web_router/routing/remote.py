@@ -29,14 +29,14 @@ retried; no redirect is followed, and no proxy or other setting is read from
 the environment. The URL must be ``https``, or ``http`` to ``localhost`` or a
 loopback address (:mod:`.remote_url`).
 
-A timeout is ``router_timeout``; a transport error or a status other than 200
-is ``router_error``; an
-answer that is not an ``application/json`` schema-1 decision within 64 KiB --
-``schema`` missing or not 1 included -- is ``router_invalid``. Either way the
-call runs on the static order and the decision record says why. Fields the
-service adds that this version does not know are ignored; its reasons are cut
-short. Router-set URLs are held to ``public_only`` when the caller sets no
-``url_policy`` (``min_url_policy``).
+A timeout is ``router_timeout``; a transport error, a status other than 200 or
+a decision naming a ``schema`` other than 1 is ``router_error``; an answer that
+is not an ``application/json`` decision within 64 KiB -- ``schema`` missing
+included -- is ``router_invalid``. Either way the call runs on the static
+order and the decision record says why. Fields the service adds that this
+version does not know are ignored; its reasons are cut short, and an echo of
+its bearer key in its answer is redacted. Router-set URLs are held to
+``public_only`` when the caller sets no ``url_policy`` (``min_url_policy``).
 
 A decision record names it ``remote(<scheme>://<host>)``: never the URL's
 path, and never the key.
@@ -73,6 +73,7 @@ from web_router.constants_remote import (
     REMOTE_DISPLAY_NAME,
     REMOTE_HTTP_OK,
     REMOTE_JSON_TYPE,
+    REMOTE_KEY_REDACTED,
     REMOTE_MAX_RESPONSE_BYTES,
     REMOTE_MEDIA_PARAMS,
     REMOTE_TIMEOUT_S,
@@ -91,7 +92,7 @@ from web_router.exceptions import ConfigurationError, WebRouterError
 from web_router.routing._runner import InvalidAnswer, TimedOut
 from web_router.routing.contract import RouteDecision, RouteRequest
 from web_router.routing.remote_url import checked_url
-from web_router.routing.wire import WireError, decision_from_wire, request_to_wire
+from web_router.routing.wire import WireError, WireVersionError, decision_from_wire, request_to_wire
 
 if TYPE_CHECKING:
     import httpx
@@ -111,7 +112,7 @@ class RemoteRouterTimeout(RemoteRouterError, TimedOut):
 
 
 class RemoteRouterInvalid(RemoteRouterError, InvalidAnswer):
-    """The service answered, but not with a schema-1 decision: recorded as ``router_invalid``."""
+    """The service answered, but not with a well-formed decision: recorded as ``router_invalid``."""
 
 
 def _httpx() -> Any:
@@ -128,10 +129,14 @@ def _checked_timeout(value: object) -> float:
     return float(value)
 
 
-def _auth_headers(api_key: object) -> dict[str, str]:
+def _key(api_key: object) -> str | None:
     key = os.environ.get(ENV_REMOTE_ROUTER_API_KEY) if api_key is None else api_key
     if key is not None and not isinstance(key, str):
         raise ConfigurationError(MSG_REMOTE_KEY)
+    return key or None
+
+
+def _auth_headers(key: str | None) -> dict[str, str]:
     return {**REMOTE_CONTENT_TYPE, **({REMOTE_AUTH_HEADER: REMOTE_AUTH_VALUE.format(key=key)} if key else {})}
 
 
@@ -144,6 +149,17 @@ def _why(exc: BaseException) -> str:
     """A close failure by its class only: an httpx error's text names the whole URL."""
     late = isinstance(exc, (TimeoutError, asyncio.TimeoutError, FutureTimeout))  # three classes on Python 3.10
     return REMOTE_WHY_CLOSE_SLOW.format(wait=REMOTE_CLOSE_WAIT_S) if late else type(exc).__name__
+
+
+def _unechoed(value: Any, key: str) -> Any:
+    """``value`` with ``key`` redacted from every string and mapping key in it: no record or model sees an echo."""
+    if isinstance(value, str):
+        return value.replace(key, REMOTE_KEY_REDACTED)
+    if isinstance(value, list):
+        return [_unechoed(item, key) for item in value]
+    if isinstance(value, dict):
+        return {_unechoed(name, key): _unechoed(item, key) for name, item in value.items()}
+    return value  # a number, a bool or null is the decision's own
 
 
 _CLOSING: set[asyncio.Task[None]] = set()
@@ -184,7 +200,9 @@ class RemoteRouter:
         self.router_name = REMOTE_DISPLAY_NAME.format(host=self.host)
         self.timeout_s = _checked_timeout(timeout_s)
         self.route_tools = route_tools
-        self._request_headers = _auth_headers(api_key)
+        key = _key(api_key)
+        self._request_headers = _auth_headers(key)
+        self._key = key
         self._lock = threading.Lock()
         self._closed = False
         self._pool: httpx.AsyncClient | None = None
@@ -222,7 +240,8 @@ class RemoteRouter:
     def close(self) -> None:
         """Close the pool on its own loop, waiting at most 2 s, and the router with it.
 
-        From the pool's own running loop it cannot wait, so the close runs there as a task: use ``aclose()``.
+        From the pool's own running loop it cannot wait, so the close runs there as a task, bounded by the same
+        2 s: use ``aclose()``.
         """
         pool, loop = self._shut()
         if pool is None or loop is None or loop.is_closed():
@@ -232,7 +251,7 @@ class RemoteRouter:
         except RuntimeError:
             here = None
         if loop is here:
-            task = loop.create_task(pool.aclose())
+            task = loop.create_task(asyncio.wait_for(pool.aclose(), REMOTE_CLOSE_WAIT_S))
             _CLOSING.add(task)  # held until done: a loop keeps only a weak reference to a task
             task.add_done_callback(self._closed_task)
             return
@@ -323,8 +342,10 @@ class RemoteRouter:
         except (ValueError, RecursionError):  # a reply nested deeper than Python parses is no decision either
             raise RemoteRouterInvalid(self.host, REMOTE_WHY_NOT_JSON) from None
         try:
-            return decision_from_wire(data)
+            return decision_from_wire(_unechoed(data, self._key) if self._key else data)
         except WireError as exc:
             raise RemoteRouterInvalid(self.host, str(exc)) from None
+        except WireVersionError as exc:  # well formed, of another version: a mismatch, so a router error
+            raise RemoteRouterError(self.host, str(exc)) from None
         except RecursionError:
             raise RemoteRouterInvalid(self.host, REMOTE_WHY_DECISION) from None
