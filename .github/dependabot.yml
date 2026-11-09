@@ -6,6 +6,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    labels: ["dependencies", "skip-changelog"]
     groups:
       github-actions:
         patterns: ["*"]
