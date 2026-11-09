@@ -96,7 +96,8 @@ def _annotation(tool: str, spec: _ToolSpec, name: str, hints: dict[str, Any]) ->
     return model_field.rebuild_annotation()
 
 
-def _arguments(tool: str) -> list[tuple[str, Any]]:
+@cache
+def _arguments(tool: str) -> tuple[tuple[str, Any], ...]:
     """``(name, type)`` for each optional argument the tool's method takes, in the method's order."""
     spec = _SPECS[tool]
     # `Unpack` and the options' TypedDict are imported for type checking only, where a builder takes them.
@@ -117,7 +118,7 @@ def _arguments(tool: str) -> list[tuple[str, Any]]:
         arguments.insert(0, ("provider", Text))
     if spec.timeout:
         arguments.append(("timeout", float | None))
-    return arguments
+    return tuple(arguments)
 
 
 @cache

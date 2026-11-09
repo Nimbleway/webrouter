@@ -8,7 +8,9 @@ PRESET_NAME_PATTERN = r"^[A-Za-z0-9_]+$"
 PRESET_NAME_MAX_LENGTH = 100
 PRESET_DESCRIPTION_MAX_LENGTH = 2000
 # Postgres text refuses NUL: refused when the preset is made, not when a store writes it.
-PRESET_DESCRIPTION_PATTERN = r"^[^\x00]*$"
+PRESET_TEXT_PATTERN = r"^[^\x00]*$"
+"""No NUL: Postgres text refuses it. Every text a preset keeps -- its description and its params -- is held to it."""
+PRESET_DESCRIPTION_PATTERN = PRESET_TEXT_PATTERN
 
 PRESET_NAME_DESCRIPTION = (
     "The preset's name: ASCII letters, digits and `_` only, like `supplier_research`. Unique in its store and "
@@ -57,7 +59,6 @@ MSG_PRESETS_UPGRADED = "presets schema is at revision {revision}"
 PRESETS_SQL_WHERE = "table {table}, preset '{name}'"
 
 # The managed presets' limits, for the params both have (presets/limits.py).
-PRESET_TEXT_PATTERN = r"^[^\x00]*$"
 PRESET_URL_PATTERN = r"^[Hh][Tt][Tt][Pp][Ss]?://\S+$"
 PRESET_DOMAINS_MAX = 50
 PRESET_MAX_RESULTS_MAX = 100

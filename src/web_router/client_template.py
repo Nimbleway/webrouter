@@ -7,48 +7,26 @@ methods are where they always were.
 
 from __future__ import annotations
 
-import threading
 from collections.abc import Mapping
 from typing import Any
 
 from web_router.client_presets import with_preset
 from web_router.client_requests import build_template_request
 from web_router.providers.base import TemplateProvider
-from web_router.registry import create_template_provider
 from web_router.types import (
     ExtractFormat,
     Provider,
     Template,
     TemplatePage,
     TemplateResponse,
-    provider_name,
 )
 
 
 class _TemplateLookup:
-    """What both routers share for templates: the backend that holds them."""
-
-    _providers_lock: threading.Lock
-    _template_instances: dict[str, TemplateProvider]
-
-    def _config_for(self, key: str) -> dict[str, Any]:
-        raise NotImplementedError
+    """What both routers share for templates: the backend that holds them, from :class:`~web_router.WebRouter`."""
 
     def get_template_provider(self, name: str | Provider | TemplateProvider) -> TemplateProvider:
-        """Return the named template provider, constructing and caching it on first use.
-
-        The template counterpart of :meth:`~web_router.WebRouter.get_provider`, with the same
-        ownership rule -- but no default: a template's name belongs to one
-        vendor, so the caller always says which.
-        """
-        if isinstance(name, TemplateProvider):
-            return name
-
-        key = provider_name(name)
-        with self._providers_lock:
-            if key not in self._template_instances:
-                self._template_instances[key] = create_template_provider(key, **self._config_for(key))
-            return self._template_instances[key]
+        raise NotImplementedError
 
 
 class SyncTemplate(_TemplateLookup):
