@@ -44,6 +44,7 @@ __all__ = [
     "MSG_PRESET_GIVEN_TWICE",
     "MSG_PRESET_INCOMPATIBLE",
     "MSG_PRESET_INVALID",
+    "MSG_PRESET_KEY_NOT_STRING",
     "MSG_PRESET_LOCKED",
     "MSG_PRESET_NOT_FINITE",
     "MSG_PRESET_NOT_FOUND",
@@ -57,6 +58,7 @@ __all__ = [
     "MSG_PRESET_SOURCE_PRESET",
     "MSG_PRESET_SUPPLIED",
     "MSG_PRESET_TEMPLATES_PROVIDER",
+    "MSG_PRESET_TOOLS_EXTRACT_SPLIT",
     "MSG_PRESET_UNKNOWN_BACKEND",
     "MSG_PRESET_UNKNOWN_FIELD",
     "MSG_PRESET_UNKNOWN_PROVIDER",
@@ -80,6 +82,8 @@ __all__ = [
     "PRESET_REQUEST_MODELS",
     "PRESET_WITHHELD_FIELDS",
     "PRESET_YAML_SUFFIXES",
+    "YAML_BOOL_PATTERN",
+    "YAML_BOOL_TAG",
     "YAML_TIMESTAMP_TAG",
 ]
 
@@ -91,6 +95,13 @@ PRESET_ARGUMENT = "preset"
 
 YAML_TIMESTAMP_TAG = "tag:yaml.org,2002:timestamp"
 """The resolver presets leave out of PyYAML's safe loader, so a YAML file holds the strings a JSON one would."""
+
+YAML_BOOL_TAG = "tag:yaml.org,2002:bool"
+YAML_BOOL_PATTERN = re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$")
+"""The only plain scalars a preset's YAML reads as booleans: YAML 1.2's, not 1.1's ``yes``, ``no``, ``on`` or ``off``.
+
+A free-form value such as a country code ``NO`` must reach the backend as written.
+"""
 
 PRESET_PROVIDER_FIELD = "provider"
 """The one setting that is not a request field: which backend serves the call, as ``provider=`` on the method."""
@@ -214,6 +225,9 @@ MSG_PRESET_SECTION_NOT_DECLARED = "has settings for {component} but does not lis
 MSG_PRESET_UNKNOWN_FIELD = "{field!r} is not a {component} setting a preset can hold; it can hold {allowed}"
 MSG_PRESET_BAD_VALUE = "not a valid {field}: {error}"
 """Names the field, never the value: a definition can hold a key by mistake, and errors get logged."""
+MSG_PRESET_KEY_NOT_STRING = (
+    "it holds a key that is not a string, which JSON cannot; in YAML, quote a key such as a number, true, false or null"
+)
 MSG_PRESET_NOT_FINITE = "NaN and infinity are not numbers JSON can hold; a preset holds only what JSON can"
 MSG_PRESET_NULL_DEFAULT = "a default of null sets nothing; leave the setting out instead"
 MSG_PRESET_PARSE_POSITION = "{problem} at line {line}, column {column}"
@@ -225,6 +239,10 @@ MSG_PRESET_UNKNOWN_PROVIDER = "the provider named does not serve {component}; it
 MSG_PRESET_LOCKED = "preset {ref!r} sets {field} and does not let it be overridden, but {source} set another value"
 """Names the field, never either value: a preset's or a caller's can hold a key, and errors get logged."""
 MSG_PRESET_UNKNOWN_REQUEST_KEY = "{key!r} is not an argument {component} takes"
+MSG_PRESET_TOOLS_EXTRACT_SPLIT = (
+    "The extract tool's routers disagree: one router's preset names an extract backend and the other's names none, "
+    "so no backend fits both. Pass extract_provider= to name one for both."
+)
 MSG_PRESET_TEMPLATES_PROVIDER = "run_template has no default backend; name one with provider"
 MSG_PRESET_BAD_PROVIDER_ARGUMENT = "provider takes a backend's name or an instance of a {component} backend"
 MSG_PRESET_UNKNOWN_BACKEND = "no {component} backend has the name given; these do: {available}"

@@ -120,8 +120,8 @@ def _native_inputs(
         value = arguments[name]
         if name == "urls" and isinstance(value, str):
             value = [value]
-        elif name == "inputs" and isinstance(value, Mapping):
-            value = dict(value)
+        elif name == "inputs" and (value is None or isinstance(value, Mapping)):
+            value = dict(value or {})
         try:
             checked = _adapter(component, name).validate_python(value)
         except ValidationError as exc:

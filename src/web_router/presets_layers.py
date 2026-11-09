@@ -33,7 +33,7 @@ from web_router.exceptions import (
 )
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_presets import PresetValidationError
-from web_router.presets_load import _adapter, _coerced
+from web_router.presets_load import _adapter, _coerced, _identical
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     BrowseProvider,
@@ -187,7 +187,7 @@ def _same(component: PresetComponent, name: str, one: Any, other: Any) -> bool:
         one, other = (value.name if isinstance(value, base) else value for value in (one, other))
     if name in PRESET_CASE_BLIND[component] and isinstance(one, str) and isinstance(other, str):
         return one.upper() == other.upper()
-    return bool(one == other)
+    return _identical(one, other)
 
 
 def _normalized(component: PresetComponent, name: str, given: Any) -> Any:

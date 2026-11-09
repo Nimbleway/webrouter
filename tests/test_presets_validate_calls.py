@@ -106,6 +106,8 @@ def test_a_required_input_given_as_none_is_an_issue(component: PresetComponent, 
 def test_an_input_left_out_is_not_checked_and_an_optional_one_may_be_none() -> None:
     assert WebRouter().presets.validate("search").ok
     assert WebRouter().presets.validate("research", {"query": "q", "records": None}).ok
+    # run_template takes inputs=None as no inputs, so validate() must too.
+    assert WebRouter().presets.validate("templates", {"template": "t", "inputs": None, "provider": "nimble"}).ok
 
 
 def test_validate_refuses_a_budget_where_the_method_takes_none() -> None:

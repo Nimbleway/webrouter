@@ -40,7 +40,7 @@ from web_router.constants_presets import (
 from web_router.exceptions_presets import PresetCompatibilityError, PresetError, PresetNotFoundError
 from web_router.presets_check import preflight
 from web_router.presets_layers import PresetResolution, applied
-from web_router.presets_load import _changed, _checked, _copy, _read, _version_key, parse_ref
+from web_router.presets_load import _changed, _checked, _copy, _identical, _read, _version_key, parse_ref
 from web_router.types_meta import (
     PresetComponent,
     PresetSource,
@@ -107,7 +107,7 @@ class PresetRegistry:
             files = [source]
         batch: dict[str, Preset] = {}
         for preset in (_checked(data, where=str(file)) for file in files for data in _read(file)):
-            if batch.setdefault(preset.ref, preset) != preset:
+            if not _identical(batch.setdefault(preset.ref, preset), preset):
                 raise _changed(preset.ref, MSG_PRESET_DEFINED_TWICE)
         with self._lock:
             for preset in batch.values():
@@ -208,7 +208,7 @@ class PresetRegistry:
 
     def _refuse_change(self, preset: Preset) -> None:
         known = self._presets.get(preset.ref)
-        if known is not None and known != preset:
+        if known is not None and not _identical(known, preset):
             raise _changed(preset.ref, MSG_PRESET_ALREADY_LOADED)
 
     def list(self, component: PresetComponent | None = None) -> builtins.list[Preset]:
