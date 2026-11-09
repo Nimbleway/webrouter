@@ -126,7 +126,7 @@ def main() -> None:
     try:
         router = LLMRouter()
     except ImportError:
-        print("This example needs the openai SDK: make setup, or pip install 'web-router[evals]'.")
+        print("This example needs the openai SDK: make setup, or pip install 'webrouter[evals]'.")
         return
     with WebRouter(router=router) as client:
         for prompt in PROMPTS:

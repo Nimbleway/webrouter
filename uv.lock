@@ -3082,7 +3082,7 @@ wheels = [
 ]
 
 [[package]]
-name = "web-router"
+name = "webrouter"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },

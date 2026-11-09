@@ -320,6 +320,14 @@ behind `@pytest.mark.integration`.
 The maintainers cut each release. A pull request merged here is carried into
 the next one.
 
+A release is a `vX.Y.Z` tag on `main` whose `_version.py` says `X.Y.Z`. A
+maintainer runs the [Release](.github/workflows/release.yml) workflow on that
+tag (`gh workflow run release.yml --ref vX.Y.Z -f tag=vX.Y.Z`): it builds the sdist and wheel from the tag, and after a maintainer
+approves the `pypi` environment, publishes them to
+[PyPI](https://pypi.org/project/webrouter/) through trusted publishing, so no
+upload token exists. It refuses a tag that is not on `main`, does not match
+`__version__`, or is not above every version already on PyPI.
+
 ## AI coding agents
 
 [AGENTS.md](AGENTS.md) holds the conventions agents should follow in this repo.

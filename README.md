@@ -80,9 +80,9 @@ dropped** — so a call never runs under weaker constraints than you asked for.
 Install the package from PyPI, with the extras you need:
 
 ```bash
-pip install "web-router[all]"         # any virtualenv
-uv add "web-router[all]"              # a uv project
-pip install "web-router[mcp,browser]" # the MCP server with its browser tools
+pip install "webrouter[all]"         # any virtualenv
+uv add "webrouter[all]"              # a uv project
+pip install "webrouter[mcp,browser]" # the MCP server with its browser tools
 ```
 
 Then put the keys you hold in your environment or a `.env` file; none is
@@ -117,7 +117,7 @@ to get right at install time.
 Three extras are not methods. `mcp` names a transport — it installs the
 [MCP server](#the-mcp-server), which exposes the methods above rather than
 adding one of its own. It does not include `browser`: the server's `browser_*`
-tools need Playwright, so they appear only with `web-router[mcp,browser]`.
+tools need Playwright, so they appear only with `webrouter[mcp,browser]`.
 `evals` installs the OpenAI and Anthropic SDKs behind the built-in judges that
 [`evaluate()`](#evaluating-accuracy) grades answers with; bring your own judge
 and you do not need it. `langchain` installs `langchain-core` for the
@@ -934,7 +934,7 @@ the pages, and `research()`, a job of minutes.
 
 Three steps to a first answer:
 
-1. Install with the `answer` extra: `pip install "web-router[answer]"`
+1. Install with the `answer` extra: `pip install "webrouter[answer]"`
    (`make setup` in a clone installs every extra).
 2. Set one answer backend's key in your environment or `.env`, for example
    `PERPLEXITY_API_KEY` -- the [answer table](#answer) lists each one's variable.
