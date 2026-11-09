@@ -52,6 +52,11 @@ def _unknowns(cell: Mapping[str, Any]) -> str:
     return f" ({', '.join(shown)})" if shown else ""
 
 
+def _left_out(cell: Mapping[str, Any], key: str) -> str:
+    """`` (n unknown)`` after a sum that left out ``n`` questions, so a partial sum never reads as whole."""
+    return f" ({cell[key]} unknown)" if cell[key] else ""
+
+
 def cell_text(cell: Mapping[str, Any] | None) -> str:
     """One matrix cell: questions (right), extra cost, extra time, and any extra left unknown."""
     if not cell:
@@ -75,8 +80,10 @@ def _totals(confusion: Mapping[str, Mapping[str, Any]]) -> list[str]:
         out.append(
             f"| `{spec}` | {mis['questions']} of {every['questions']} | {mis['correct']} "
             f"| {_signed_usd(mis['extra_cost_usd'])}{_unknowns(mis)} | ${mis['overspend_usd']:.4f} "
-            f"| {NO_CELL if per_q is None else _signed_usd(per_q)} | {_signed_s(mis['extra_latency_s'])} "
-            f"| {NO_CELL if per_s is None else _signed_s(per_s)} | {_signed_usd(every['extra_cost_usd'])} |"
+            f"| {NO_CELL if per_q is None else _signed_usd(per_q) + _left_out(mis, 'cost_unknown')} "
+            f"| {_signed_s(mis['extra_latency_s'])}{_left_out(mis, 'latency_unknown')} "
+            f"| {NO_CELL if per_s is None else _signed_s(per_s) + _left_out(mis, 'latency_unknown')} "
+            f"| {_signed_usd(every['extra_cost_usd'])}{_left_out(every, 'cost_unknown')} |"
         )
     return [*out, ""]
 

@@ -97,6 +97,13 @@ def test_an_unknown_cost_is_counted_unknown_not_zero(matrix: ModuleType) -> None
     assert m["misrouted"]["extra_cost_usd"] == pytest.approx(-0.499)
 
 
+def test_a_total_that_left_questions_out_says_how_many(matrix: ModuleType, matrix_report: ModuleType) -> None:
+    router = [_c("q1", "research", True, None, None), *ROUTER[1:]]
+    row = matrix_report.matrix_section({"confusion": {"r": matrix.confusion(router, ORACLE)}})[3]
+
+    assert row.count("(1 unknown)") >= 4, row
+
+
 def test_the_oracle_against_itself_misroutes_nothing_and_costs_nothing_extra(matrix: ModuleType) -> None:
     m = matrix.confusion(ORACLE, ORACLE)
 
