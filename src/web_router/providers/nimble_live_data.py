@@ -14,35 +14,39 @@ from typing import Any, ClassVar
 from nimble_python import NotFoundError
 
 from web_router.constants import (
-    MSG_TEMPLATE_BAD_STATUS,
-    MSG_TEMPLATE_NO_RECORD,
-    MSG_TEMPLATE_PAGE_FAILED,
-    MSG_TEMPLATE_PARSING_FAILED,
     NIMBLE_EXTRACT_FORMATS,
-    NIMBLE_TEMPLATE_ERROR_FIELD,
-    NIMBLE_TEMPLATE_ERROR_SHAPE,
-    NIMBLE_TEMPLATE_FAILED_STATUS_FLOOR,
-    NIMBLE_TEMPLATE_PARSING_ERROR_STATUS,
-    NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS,
-    NIMBLE_TEMPLATE_RECORD_FIELD,
-    NIMBLE_TEMPLATE_RECORD_SHAPE,
-    NIMBLE_TEMPLATE_STATUS_FIELD,
-    NIMBLE_TEMPLATE_SUCCESS_STATUS,
+    NIMBLE_LIVE_DATA_ERROR_FIELD,
+    NIMBLE_LIVE_DATA_ERROR_SHAPE,
+    NIMBLE_LIVE_DATA_FAILED_STATUS_FLOOR,
+    NIMBLE_LIVE_DATA_PARSING_ERROR_STATUS,
+    NIMBLE_LIVE_DATA_PARSING_SUCCESS_STATUS,
+    NIMBLE_LIVE_DATA_RECORD_FIELD,
+    NIMBLE_LIVE_DATA_RECORD_SHAPE,
+    NIMBLE_LIVE_DATA_STATUS_FIELD,
+    NIMBLE_LIVE_DATA_SUCCESS_STATUS,
     PROVIDER_NIMBLE,
 )
-from web_router.exceptions import ProviderError, TemplateNotFoundError
+from web_router.constants_live_data import (
+    MSG_LIVE_DATA_BAD_STATUS,
+    MSG_LIVE_DATA_NO_RECORD,
+    MSG_LIVE_DATA_PAGE_FAILED,
+    MSG_LIVE_DATA_PARSING_FAILED,
+)
+from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
 from web_router.providers._utils import build_payload, compact, model_to_dict
-from web_router.providers.base import TemplateProvider
+from web_router.providers.base import LiveDataProvider
 from web_router.providers.nimble import _as_int, _NimbleClients
 from web_router.types import (
-    TEMPLATE_PARAMETERS,
     ExtractedDocument,
     ExtractFormat,
-    Template,
-    TemplatePage,
-    TemplateRequest,
-    TemplateResponse,
-    TemplateSample,
+)
+from web_router.types_live_data import (
+    LIVE_DATA_PARAMETERS,
+    LiveDataRequest,
+    LiveDataResponse,
+    LiveDataSample,
+    LiveDataSource,
+    LiveDataSourcePage,
 )
 
 
@@ -61,7 +65,7 @@ def _sample_input(sample: object) -> dict[str, Any] | None:
     return inputs if isinstance(inputs, dict) else None
 
 
-class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
+class NimbleLiveDataProvider(_NimbleClients, LiveDataProvider):
     """Lists, describes and runs Nimble Extract Templates.
 
     A template run is the Extract API's realtime endpoint with a template
@@ -73,38 +77,38 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
     """
 
     name: ClassVar[str] = PROVIDER_NIMBLE
-    supported_parameters: ClassVar[frozenset[str]] = TEMPLATE_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = LIVE_DATA_PARAMETERS
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(NIMBLE_EXTRACT_FORMATS)
 
-    def _run(self, request: TemplateRequest) -> TemplateResponse:
-        with _unknown_template_named(self.name, request.template):
+    def _run(self, request: LiveDataRequest) -> LiveDataResponse:
+        with _unknown_live_data_source_named(self.name, request.source):
             raw = self._within_deadline(self._sync_client).extract.templates.run(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
 
-    async def _arun(self, request: TemplateRequest) -> TemplateResponse:
-        with _unknown_template_named(self.name, request.template):
+    async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
+        with _unknown_live_data_source_named(self.name, request.source):
             raw = await self._within_deadline(self._async_client).extract.templates.run(**self._build_payload(request))
         return self._to_response(request, model_to_dict(raw))
 
-    def _list(self, *, limit: int | None, offset: int | None) -> TemplatePage:
+    def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         raw = self._sync_client.extract.templates.list(**compact({"limit": limit, "offset": offset}))
         return self._to_page(model_to_dict(raw))
 
-    async def _alist(self, *, limit: int | None, offset: int | None) -> TemplatePage:
+    async def _alist(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         raw = await self._async_client.extract.templates.list(**compact({"limit": limit, "offset": offset}))
         return self._to_page(model_to_dict(raw))
 
-    def _get(self, name: str) -> Template:
-        with _unknown_template_named(self.name, name):
+    def _get(self, name: str) -> LiveDataSource:
+        with _unknown_live_data_source_named(self.name, name):
             raw = self._sync_client.extract.templates.get(name)
-        return self._to_template(model_to_dict(raw))
+        return self._to_source(model_to_dict(raw))
 
-    async def _aget(self, name: str) -> Template:
-        with _unknown_template_named(self.name, name):
+    async def _aget(self, name: str) -> LiveDataSource:
+        with _unknown_live_data_source_named(self.name, name):
             raw = await self._async_client.extract.templates.get(name)
-        return self._to_template(model_to_dict(raw))
+        return self._to_source(model_to_dict(raw))
 
-    def _build_payload(self, request: TemplateRequest) -> dict[str, Any]:
+    def _build_payload(self, request: LiveDataRequest) -> dict[str, Any]:
         """Translate a normalized request into Nimble ``extract.templates.run()`` keyword arguments.
 
         ``formats`` is sent only when a format was asked for: Nimble returns no
@@ -112,35 +116,35 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
         """
         return build_payload(
             request,
-            template=request.template,
+            template=request.source,
             params=dict(request.inputs),
             formats=[NIMBLE_EXTRACT_FORMATS[request.format]] if request.format else None,
         )
 
-    def _to_response(self, request: TemplateRequest, payload: dict[str, Any]) -> TemplateResponse:
+    def _to_response(self, request: LiveDataRequest, payload: dict[str, Any]) -> LiveDataResponse:
         status = payload.get("status")
         data = payload.get("data") or {}
 
         # As for an extract: a block or a fatal fetch error is a 200 whose
         # `status` says so, and a record cannot have been parsed from nothing.
-        if status != NIMBLE_TEMPLATE_SUCCESS_STATUS:
-            detail = MSG_TEMPLATE_BAD_STATUS.format(template=request.template, status=status)
+        if status != NIMBLE_LIVE_DATA_SUCCESS_STATUS:
+            detail = MSG_LIVE_DATA_BAD_STATUS.format(source=request.source, status=status)
             raise ProviderError(self.name, "; ".join([detail, *(payload.get("warnings") or [])]))
 
         # The envelope says `success` whenever the fetch completed, a 404 page
         # included, and the template then parses the error page. What it
         # parsed is not the record the template promises.
         status_code = _as_int(payload.get("status_code"))
-        if status_code is not None and status_code >= NIMBLE_TEMPLATE_FAILED_STATUS_FLOOR:
-            detail = MSG_TEMPLATE_PAGE_FAILED.format(template=request.template, status=status_code)
+        if status_code is not None and status_code >= NIMBLE_LIVE_DATA_FAILED_STATUS_FLOOR:
+            detail = MSG_LIVE_DATA_PAGE_FAILED.format(source=request.source, status=status_code)
             raise ProviderError(self.name, "; ".join([detail, *(payload.get("warnings") or [])]))
 
         record = self._record(request, data.get("parsing"))
         document = self._document(request, payload, data)
 
-        return TemplateResponse(
+        return LiveDataResponse(
             provider=self.name,
-            template=request.template,
+            source=request.source,
             inputs=dict(request.inputs),
             data=record,
             url=payload.get("url"),
@@ -159,10 +163,10 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
             raw=payload,
         )
 
-    def _record(self, request: TemplateRequest, parsing: Any) -> dict[str, Any]:
+    def _record(self, request: LiveDataRequest, parsing: Any) -> dict[str, Any]:
         """The record under ``data.parsing``, in whichever of its three shapes Nimble sent it.
 
-        See ``NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS``: the record may arrive
+        See ``NIMBLE_LIVE_DATA_PARSING_SUCCESS_STATUS``: the record may arrive
         bare, or wrapped beside a status that says it parsed, or replaced by
         one that says it did not.
 
@@ -171,24 +175,24 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
                 the page, or the page came back with no record at all.
         """
         if not isinstance(parsing, dict) or not parsing:
-            raise ProviderError(self.name, MSG_TEMPLATE_NO_RECORD.format(template=request.template))
+            raise ProviderError(self.name, MSG_LIVE_DATA_NO_RECORD.format(source=request.source))
         # A wrapper is exactly the SDK's two fields and nothing else: a record
         # whose own schema names `status` and `entities` beside other fields is
         # still the record, and unwrapping it would lose the others.
-        reported = parsing.get(NIMBLE_TEMPLATE_STATUS_FIELD)
-        if set(parsing) == NIMBLE_TEMPLATE_ERROR_SHAPE and reported == NIMBLE_TEMPLATE_PARSING_ERROR_STATUS:
-            error = parsing[NIMBLE_TEMPLATE_ERROR_FIELD]
-            raise ProviderError(self.name, MSG_TEMPLATE_PARSING_FAILED.format(template=request.template, error=error))
+        reported = parsing.get(NIMBLE_LIVE_DATA_STATUS_FIELD)
+        if set(parsing) == NIMBLE_LIVE_DATA_ERROR_SHAPE and reported == NIMBLE_LIVE_DATA_PARSING_ERROR_STATUS:
+            error = parsing[NIMBLE_LIVE_DATA_ERROR_FIELD]
+            raise ProviderError(self.name, MSG_LIVE_DATA_PARSING_FAILED.format(source=request.source, error=error))
         if (
-            set(parsing) == NIMBLE_TEMPLATE_RECORD_SHAPE
-            and reported == NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS
-            and isinstance(parsing[NIMBLE_TEMPLATE_RECORD_FIELD], dict)
+            set(parsing) == NIMBLE_LIVE_DATA_RECORD_SHAPE
+            and reported == NIMBLE_LIVE_DATA_PARSING_SUCCESS_STATUS
+            and isinstance(parsing[NIMBLE_LIVE_DATA_RECORD_FIELD], dict)
         ):
-            return dict(parsing[NIMBLE_TEMPLATE_RECORD_FIELD])
+            return dict(parsing[NIMBLE_LIVE_DATA_RECORD_FIELD])
         return dict(parsing)
 
     def _document(
-        self, request: TemplateRequest, payload: dict[str, Any], data: dict[str, Any]
+        self, request: LiveDataRequest, payload: dict[str, Any], data: dict[str, Any]
     ) -> ExtractedDocument | None:
         """The page beside the record, only when a format asked for it."""
         if request.format is None:
@@ -200,17 +204,17 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
             status_code=_as_int(payload.get("status_code")),
         )
 
-    def _to_page(self, payload: dict[str, Any]) -> TemplatePage:
-        return TemplatePage(
+    def _to_page(self, payload: dict[str, Any]) -> LiveDataSourcePage:
+        return LiveDataSourcePage(
             provider=self.name,
-            templates=[self._to_template(item) for item in payload.get("items") or []],
+            sources=[self._to_source(item) for item in payload.get("items") or []],
             total=_as_int(payload.get("total")),
             offset=_as_int(payload.get("offset")),
             limit=_as_int(payload.get("limit")),
             raw=payload,
         )
 
-    def _to_template(self, item: dict[str, Any]) -> Template:
+    def _to_source(self, item: dict[str, Any]) -> LiveDataSource:
         """One template as Nimble describes it: the published version carries everything a run needs.
 
         A listing's rows carry the published version too, schemas and samples
@@ -219,7 +223,7 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
         """
         version = item.get("published_version") or {}
         metadata = version.get("metadata") or {}
-        return Template(
+        return LiveDataSource(
             provider=self.name,
             name=item.get("name") or "",
             description=metadata.get("description") or "",
@@ -228,7 +232,7 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
             input_schema=version.get("input_schema"),
             output_schema=version.get("output_schema"),
             samples=[
-                TemplateSample(input=inputs, output=sample.get("output"))
+                LiveDataSample(input=inputs, output=sample.get("output"))
                 for sample in version.get("samples") or []
                 if (inputs := _sample_input(sample)) is not None
             ],
@@ -238,8 +242,8 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
             updated_at=item.get("updated_at"),
             extra=compact(
                 {
-                    **{k: v for k, v in item.items() if k not in _TEMPLATE_MAPPED},
-                    **{k: v for k, v in metadata.items() if k not in _TEMPLATE_METADATA_MAPPED},
+                    **{k: v for k, v in item.items() if k not in _SOURCE_MAPPED},
+                    **{k: v for k, v in metadata.items() if k not in _SOURCE_METADATA_MAPPED},
                 }
             ),
             raw=item,
@@ -247,13 +251,13 @@ class NimbleTemplateProvider(_NimbleClients, TemplateProvider):
 
 
 @contextmanager
-def _unknown_template_named(provider: str, template: str) -> Iterator[None]:
-    """Turn Nimble's 404 for a template name into :class:`TemplateNotFoundError`, on a run and on a describe alike."""
+def _unknown_live_data_source_named(provider: str, source: str) -> Iterator[None]:
+    """Turn Nimble's 404 for a template name into :class:`LiveDataSourceNotFoundError`, on a run or a describe."""
     try:
         yield
     except NotFoundError as exc:
-        raise TemplateNotFoundError(provider, template, original=exc) from exc
+        raise LiveDataSourceNotFoundError(provider, source, original=exc) from exc
 
 
-_TEMPLATE_MAPPED = frozenset({"name", "created_at", "updated_at", "published_version"})
-_TEMPLATE_METADATA_MAPPED = frozenset({"description", "domain", "entity_type"})
+_SOURCE_MAPPED = frozenset({"name", "created_at", "updated_at", "published_version"})
+_SOURCE_METADATA_MAPPED = frozenset({"description", "domain", "entity_type"})

@@ -26,8 +26,8 @@ from web_router.constants import (
     ENV_XDG_CONFIG_HOME,
     EXTRACT_ENV_BY_PROVIDER,
     RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
@@ -38,7 +38,7 @@ FAKE = "fake"
 _EVERY_ENV_VAR = sorted(
     {name for name in ENV_BY_PROVIDER.values() if name}
     | {name for names in EXTRACT_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in TEMPLATE_ENV_BY_PROVIDER.values() for name in names}
+    | {name for names in LIVE_DATA_ENV_BY_PROVIDER.values() for name in names}
     | {name for names in RESEARCH_ENV_BY_PROVIDER.values() for name in names}
     | {name for names in BROWSE_ENV_BY_PROVIDER.values() for name in names}
     | {name for names in BROWSER_ENV_BY_PROVIDER.values() for name in names}
@@ -108,7 +108,7 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_keys: None
 def tools(
     fake_provider: Any,
     fake_extract_provider: Any,
-    fake_template_provider: Any,
+    fake_live_data_provider: Any,
     fake_research_provider: Any,
     fake_answer_provider: Any,
     fake_browse_provider: Any,

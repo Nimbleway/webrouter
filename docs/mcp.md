@@ -2,8 +2,8 @@
 
 A self-hosted stdio MCP server that gives an agent — Claude Code, Claude
 Desktop, Cursor, anything that speaks MCP — the methods this package
-routes: `search`, `extract`, `answer`, `research` and a vendor's templates (`templates`,
-`template`, `run_template`) — plus `browse` for a hosted browser agent, the
+routes: `search`, `extract`, `answer`, `research` and a vendor's live data (`live_data_sources`,
+`live_data_source`, `live_data`) — plus `browse` for a hosted browser agent, the
 `browser_*` tools for driving a browser yourself, and `web_run`, which picks the
 method for a request in words.
 
@@ -187,9 +187,9 @@ the client's `env` block or a file the server already read takes a restart.
 | --- | --- | --- |
 | `search` | Find pages: ranked links with their titles and page text. | about a second |
 | `extract` | Read pages you already have URLs for, as markdown, HTML or text. `provider="max"` reads through every configured backend at once and returns the first answer, at one fetch per backend per URL. | about a second |
-| `templates` | List a vendor's templates: saved, site-specific extractions, each turning one kind of page into a record. Each row names the inputs a run must pass (`required_inputs`) and one input the vendor recorded a run with (`sample_inputs`). `provider` is required, as on the two tools below. Paged with `limit` and `offset`. | about a second, and free |
-| `template` | Describe one template: the `input_schema` a run must pass as `inputs`, the `output_schema` of the record, and `samples`, recorded runs to copy a first call from. | about a second, and free |
-| `run_template` | Run a template on one page and get its record back. | about a second, and it bills one template run -- on Nimble, one flat rate for every template, on [its pricing page](https://www.nimbleway.com/pricing) |
+| `live_data_sources` | List a vendor's live data sources: ready-made scrapers for one site each -- Nimble's templates, Apify's Actors, Bright Data's scrapers, Oxylabs' sources -- each turning one kind of page into records, fetched on every run. Each row names the inputs a run must pass (`required_inputs`) and one input the vendor recorded a run with (`sample_inputs`). `provider` is required, as on the two tools below. Paged with `limit` and `offset`. | about a second, and free |
+| `live_data_source` | Describe one source: the `input_schema` a run must pass as `inputs`, the `output_schema` of each record, and `samples`, recorded runs to copy a first call from. A schema the vendor does not publish is `null`. | about a second, and free |
+| `live_data` | Run a source and get its `records` back, fetched for this call, with `fetched_at` when the vendor states it. | seconds to a few minutes (Apify waits up to 300 s), and it bills one run at the vendor's own rate -- see `benchmarks/providers/PRICING.md` |
 | `answer` | One question, answered by the backend in a few sentences, with the sources it rests on. A source the answer cites inline carries the marker in `field`. Unnamed, the configured answer backends are tried in ranked order, and one that fails is passed over. | a few seconds; each backend tried bills one call |
 | `research` | Start an agentic run that searches, reads and cross-checks over many turns. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the run** |
 | `research_status` | Poll a handle from `research`: its state, or the answer once it has one. | about a second, and free |
@@ -216,7 +216,7 @@ tool is for, what it costs and how long it takes.
 
 Arguments mirror the library's own, name for name — `query`, `max_results`,
 `search_depth`, `include_domains`, `exclude_domains`, `country`, `locale`,
-`urls`, `format`, `template`, `inputs`, `name`, `limit`, `offset`,
+`urls`, `format`, `source`, `inputs`, `name`, `limit`, `offset`,
 `output_schema`, `records`, `effort`, `task`, `start_url`,
 `max_steps`, `allowed_domains`, `provider`, and for the browser tools the
 handle's own — `url`, `wait_until`, `ref`, `selector`, `text`, `submit`, `key`,
@@ -281,11 +281,11 @@ sends nothing out; an operator's router runs there too, but it is your code,
 and may send the prompt on, to a model's server for instance.
 
 **The budget.** Every billed tool -- `search`, `extract`, `answer`, `research`,
-`browse`, `run_template`, `browser_open` and `web_run` -- spends from one budget
+`browse`, `live_data`, `browser_open` and `web_run` -- spends from one budget
 per connection, a shared budget as `wr.budget(...)` is in the library. Each
 attempt reserves its estimated list price before it starts, and a call that
 does not fit is refused with `BudgetExceededError` before anything bills. A
-template run is charged its list price; a cloud browser per minute of its
+live data run is charged its list price; a cloud browser per minute of its
 lifetime (`timeout`), rounded up to whole minutes, on the dearest backend that
 can serve the options asked for. A browser option that can bill an extra
 charge (a proxy country, stealth, CAPTCHA solving, a profile) makes a paid
@@ -568,16 +568,16 @@ With nothing configured at all the enums read:
 ```
 search   ["auto", "you-mcp"]     # keyless
 extract  ["auto", "jina", "max"] # keyless; max races whatever auto would try
-template []                      # no keyless tier and no auto: a template's name belongs to one vendor
+live_data []                     # no keyless tier and no auto: a source's name belongs to one vendor
 research ["auto"]                # every research backend bills, so nothing here can run
 answer   []                      # every answer backend bills, and there is no auto yet
 ```
 
-and the `research`, `answer` and template tools' own descriptions say so, in as many
+and the `research`, `answer` and live data tools' own descriptions say so, in as many
 words, rather than pretending to be tools that work.
 
 The resource `web-router://capabilities` carries the same lists as JSON, plus `browse` and `browser`
--- the three template tools under one `template` key --
+-- the three live data tools under one `live_data` key --
 so a client can learn what this install can do without a round trip through the
 model — and the `env` object [above](#what-the-server-found), saying where those
 keys came from.

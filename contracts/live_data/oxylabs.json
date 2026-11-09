@@ -1,0 +1,59 @@
+{
+  "provider": "oxylabs",
+  "method": "live_data",
+  "class": "web_router.providers.oxylabs_live_data.OxylabsLiveDataProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://realtime.oxylabs.io",
+    "paths": {
+      "run_path": "/v1/queries"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "OXYLABS_USERNAME",
+    "OXYLABS_PASSWORD"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.parse": true,
+    "body.source": "probe-source",
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "refused": "UnsupportedFormatError"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "source": [
+    "https://developers.oxylabs.io/scraping-solutions/web-scraper-api/integration-methods/realtime",
+    "https://developers.oxylabs.io/scraping-solutions/web-scraper-api/features/result-processing-and-storage/dedicated-parsers",
+    "https://developers.oxylabs.io/scraping-solutions/web-scraper-api/response-codes"
+  ],
+  "verified": {
+    "format": "docs: https://developers.oxylabs.io/scraping-solutions/web-scraper-api/integration-methods/realtime"
+  },
+  "vendor_options": {
+    "render": {
+      "status": "passthrough",
+      "note": "Body field: `html` renders JavaScript before parsing; it costs more."
+    },
+    "user_agent_type": {
+      "status": "passthrough",
+      "note": "Body field: the device type to fetch as."
+    },
+    "context": {
+      "status": "passthrough",
+      "note": "Body field: source-specific settings such as `context:currency`; each source documents its own."
+    }
+  }
+}

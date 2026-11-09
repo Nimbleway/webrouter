@@ -39,7 +39,7 @@ Research is the exception to the fallback: there is no keyless tier after the
 credentialed ones, because every research backend bills for the run. It is also
 the one method where the choice outlives the call -- a run is a job, so the
 member that accepted it is the one every later poll goes back to. An Extract
-Template run has no keyless tier either -- it fetches and parses on the
+LiveDataSource run has no keyless tier either -- it fetches and parses on the
 backend's account -- but it is a call, not a job, so a member that refused
 falls through to the next as a search does.
 

@@ -10,9 +10,10 @@ from typing import Any, Literal
 
 MCP_SERVER_INSTRUCTIONS = (
     "Search, read and research the web through whichever backends this machine holds keys for. "
-    "`search` and `extract` answer in about a second, and so does `run_template`, which runs a "
-    "backend's Extract Template -- a saved, site-specific extraction that turns one page into a "
-    "record; `templates` lists them and `template` describes one, inputs and all. `answer` returns a "
+    "`search` and `extract` answer in about a second. `live_data` runs a vendor's ready-made scraper "
+    "for one site -- a product page, a search, a listing -- and returns structured records fetched "
+    "for this call; `live_data_sources` lists them and `live_data_source` describes one, inputs and all. "
+    "`answer` returns a "
     "backend's own written answer to one question, with its sources, in a few seconds. `research` runs an "
     "agentic job that takes "
     "minutes and bills for the run, and `browse` hands a task to a hosted browser agent on the same "
@@ -131,7 +132,7 @@ MCP_DESC_WEB_RUN = (
 MCP_DESC_BUDGET_START = (
     "Start a new task budget for the calls that follow: `max_cost_usd` dollars at estimated list prices, "
     "and `time_limit_s` seconds from now. Every billed tool -- search, extract, answer, research, browse, "
-    "run_template, browser_open and web_run -- spends from it, and a call that does not fit is refused "
+    "live_data, browser_open and web_run -- spends from it, and a call that does not fit is refused "
     "with BudgetExceededError before anything bills. State both limits each time: the previous task's "
     "budget closes, and a call still running stays charged. The operator's ceiling for this connection, "
     "if one is set, still caps the task: the limits are cut to what the ceiling has left, and no call can "
@@ -148,6 +149,6 @@ MCP_MSG_ROUTER_IMPORT = "{env_var}={value!r}: {error}"
 MCP_MSG_CEILING_VALUE = "{env_var}={value!r} is not a positive number."
 MCP_MSG_BUDGET_LIMIT = "{tool}: `{name}` must be a positive number, got {value!r}."
 
-MCP_PRICE_RUN_TEMPLATE = "run_template"
+MCP_PRICE_LIVE_DATA = "live_data"
 MCP_PRICE_OPEN_BROWSER = "open_browser"
 """The price list's methods for the two billed tools no ``auto`` hooks, which the server charges itself."""

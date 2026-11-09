@@ -1,0 +1,64 @@
+{
+  "provider": "brightdata",
+  "method": "live_data",
+  "class": "web_router.providers.brightdata_live_data.BrightDataLiveDataProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.brightdata.com",
+    "paths": {
+      "run_path": "/datasets/v3/scrape"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "BRIGHTDATA_API_TOKEN"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.input": [
+      {
+        "url": "https://example.com"
+      }
+    ]
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "refused": "UnsupportedFormatError"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "source": [
+    "https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests",
+    "https://docs.brightdata.com/api-reference/scrapers/management-apis/get-scrapers",
+    "https://docs.brightdata.com/products/scrapers/error-codes"
+  ],
+  "verified": {
+    "format": "docs: https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests"
+  },
+  "vendor_options": {
+    "type": {
+      "status": "passthrough",
+      "note": "Query parameter: `discover_new` for a discovery method."
+    },
+    "discover_by": {
+      "status": "passthrough",
+      "note": "Query parameter: the discovery method's name without its `discover_by_` prefix, e.g. `keyword`."
+    },
+    "limit_per_input": {
+      "status": "passthrough",
+      "note": "Query parameter: the most records one input may return."
+    },
+    "custom_output_fields": {
+      "status": "passthrough",
+      "note": "Query parameter: the output fields to keep, pipe-separated."
+    }
+  }
+}

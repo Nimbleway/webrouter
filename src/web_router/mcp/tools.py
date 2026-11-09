@@ -23,6 +23,7 @@ import functools
 import os
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AsyncExitStack
+from functools import partial
 from typing import Any, get_args
 
 from mcp_types import Tool
@@ -54,7 +55,6 @@ from web_router.constants import (
     MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT,
     MCP_BROWSER_TOOLS,
     MCP_METHOD_BROWSER,
-    MCP_METHOD_TEMPLATE,
     MCP_MSG_BROWSE_PENDING,
     MCP_MSG_BROWSER_ALREADY_ENDED,
     MCP_MSG_BROWSER_LOWERED,
@@ -97,13 +97,16 @@ from web_router.constants import (
     MCP_TOOL_REQUIRED,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
-    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
-    MCP_TOOL_TEMPLATE,
-    MCP_TOOL_TEMPLATES,
     MCP_TOOL_WAITS,
     RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
+)
+from web_router.constants_live_data import (
+    LIVE_DATA_ENV_BY_PROVIDER,
+    MCP_METHOD_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA_SOURCE,
+    MCP_TOOL_LIVE_DATA_SOURCES,
 )
 from web_router.constants_mcp import MCP_SERVER_INSTRUCTIONS
 from web_router.exceptions import (
@@ -113,9 +116,10 @@ from web_router.exceptions import (
     ResearchTimeoutError,
 )
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
-from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
+from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.chains import CHAIN_OF
 from web_router.mcp.env import EnvSources, user_config_dir
+from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.shaping import (
@@ -133,21 +137,20 @@ from web_router.mcp.shaping import (
     shape_research,
     shape_search,
 )
-from web_router.mcp.shaping_templates import shape_template, shape_template_run, shape_templates
-from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
+from web_router.providers.base import BrowseJob, BrowserProvider, LiveDataProvider, ResearchJob, _BaseProvider
 from web_router.registry import (
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
+    configured_live_data_providers,
     configured_providers,
     configured_research_providers,
-    configured_template_providers,
     get_browse_provider_class,
     get_browser_provider_class,
     get_extract_provider_class,
+    get_live_data_provider_class,
     get_provider_class,
     get_research_provider_class,
-    get_template_provider_class,
 )
 from web_router.registry_answer import configured_answer_providers, get_answer_provider_class
 from web_router.types import (
@@ -156,20 +159,20 @@ from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
-    TEMPLATE_PARAMETERS,
     ExtractFormat,
     ExtractResponse,
     StealthLevel,
 )
 from web_router.types_answer import ANSWER_PARAMETERS
+from web_router.types_live_data import LIVE_DATA_PARAMETERS
 from web_router.types_page import PageState
 
 _CONFIGURED: dict[str, Callable[[], list[str]]] = {
     MCP_TOOL_SEARCH: configured_providers,
     MCP_TOOL_EXTRACT: configured_extract_providers,
-    MCP_TOOL_TEMPLATES: configured_template_providers,
-    MCP_TOOL_TEMPLATE: configured_template_providers,
-    MCP_TOOL_RUN_TEMPLATE: configured_template_providers,
+    MCP_TOOL_LIVE_DATA_SOURCES: configured_live_data_providers,
+    MCP_TOOL_LIVE_DATA_SOURCE: configured_live_data_providers,
+    MCP_TOOL_LIVE_DATA: configured_live_data_providers,
     MCP_TOOL_ANSWER: configured_answer_providers,
     MCP_TOOL_RESEARCH: configured_research_providers,
     MCP_TOOL_BROWSE: configured_browse_providers,
@@ -183,9 +186,9 @@ and never pick a provider. The three template tools share one registry.
 """
 
 _METHOD_OF: dict[str, str] = {
-    MCP_TOOL_TEMPLATES: MCP_METHOD_TEMPLATE,
-    MCP_TOOL_TEMPLATE: MCP_METHOD_TEMPLATE,
-    MCP_TOOL_RUN_TEMPLATE: MCP_METHOD_TEMPLATE,
+    MCP_TOOL_LIVE_DATA_SOURCES: MCP_METHOD_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA_SOURCE: MCP_METHOD_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA: MCP_METHOD_LIVE_DATA,
     MCP_TOOL_BROWSER_OPEN: MCP_METHOD_BROWSER,
 }
 """The tools whose method the capabilities resource keys under another name; every other tool is its method's."""
@@ -193,9 +196,9 @@ _METHOD_OF: dict[str, str] = {
 _CLASS_OF: dict[str, Callable[[str], type[_BaseProvider]]] = {
     MCP_TOOL_SEARCH: get_provider_class,
     MCP_TOOL_EXTRACT: get_extract_provider_class,
-    MCP_TOOL_TEMPLATES: get_template_provider_class,
-    MCP_TOOL_TEMPLATE: get_template_provider_class,
-    MCP_TOOL_RUN_TEMPLATE: get_template_provider_class,
+    MCP_TOOL_LIVE_DATA_SOURCES: get_live_data_provider_class,
+    MCP_TOOL_LIVE_DATA_SOURCE: get_live_data_provider_class,
+    MCP_TOOL_LIVE_DATA: get_live_data_provider_class,
     MCP_TOOL_ANSWER: get_answer_provider_class,
     MCP_TOOL_RESEARCH: get_research_provider_class,
     MCP_TOOL_BROWSE: get_browse_provider_class,
@@ -208,9 +211,9 @@ _OPTIONS: dict[str, frozenset[str]] = {
     MCP_TOOL_SEARCH: NORMALIZED_PARAMETERS,
     MCP_TOOL_EXTRACT: EXTRACT_PARAMETERS,
     # Listing and describing take no option a backend may decline.
-    MCP_TOOL_TEMPLATES: frozenset(),
-    MCP_TOOL_TEMPLATE: frozenset(),
-    MCP_TOOL_RUN_TEMPLATE: TEMPLATE_PARAMETERS,
+    MCP_TOOL_LIVE_DATA_SOURCES: frozenset(),
+    MCP_TOOL_LIVE_DATA_SOURCE: frozenset(),
+    MCP_TOOL_LIVE_DATA: LIVE_DATA_PARAMETERS,
     MCP_TOOL_ANSWER: ANSWER_PARAMETERS,
     MCP_TOOL_RESEARCH: RESEARCH_PARAMETERS,
     MCP_TOOL_BROWSE: BROWSE_PARAMETERS,
@@ -221,9 +224,9 @@ _OPTIONS: dict[str, frozenset[str]] = {
 _ENV_TABLE: dict[str, dict[str, Any]] = {
     MCP_TOOL_SEARCH: ENV_BY_PROVIDER,
     MCP_TOOL_EXTRACT: EXTRACT_ENV_BY_PROVIDER,
-    MCP_TOOL_TEMPLATES: TEMPLATE_ENV_BY_PROVIDER,
-    MCP_TOOL_TEMPLATE: TEMPLATE_ENV_BY_PROVIDER,
-    MCP_TOOL_RUN_TEMPLATE: TEMPLATE_ENV_BY_PROVIDER,
+    MCP_TOOL_LIVE_DATA_SOURCES: LIVE_DATA_ENV_BY_PROVIDER,
+    MCP_TOOL_LIVE_DATA_SOURCE: LIVE_DATA_ENV_BY_PROVIDER,
+    MCP_TOOL_LIVE_DATA: LIVE_DATA_ENV_BY_PROVIDER,
     MCP_TOOL_ANSWER: ANSWER_ENV_BY_PROVIDER,
     MCP_TOOL_RESEARCH: RESEARCH_ENV_BY_PROVIDER,
     MCP_TOOL_BROWSE: BROWSE_ENV_BY_PROVIDER,
@@ -284,9 +287,9 @@ class WebRouterTools:
         self._handlers: dict[str, _Handler] = {
             MCP_TOOL_SEARCH: self._search,
             MCP_TOOL_EXTRACT: self._extract,
-            MCP_TOOL_TEMPLATES: self._templates,
-            MCP_TOOL_TEMPLATE: self._template,
-            MCP_TOOL_RUN_TEMPLATE: self._run_template,
+            MCP_TOOL_LIVE_DATA_SOURCES: partial(live_data_sources_tool, self),
+            MCP_TOOL_LIVE_DATA_SOURCE: partial(live_data_source_tool, self),
+            MCP_TOOL_LIVE_DATA: partial(live_data_tool, self),
             MCP_TOOL_ANSWER: self._answer,
             MCP_TOOL_RESEARCH: self._research,
             MCP_TOOL_RESEARCH_STATUS: self._research_status,
@@ -394,23 +397,6 @@ class WebRouterTools:
         response = await self.router.extract(**self.arguments(MCP_TOOL_EXTRACT, arguments))
         record = self.store.add(MCP_TOOL_EXTRACT, raw=response.raw)
         return shape_extract(response, record.handle, budget=max_response_chars())
-
-    async def _templates(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        page = await self.router.templates(**self.arguments(MCP_TOOL_TEMPLATES, arguments))
-        record = self.store.add(MCP_TOOL_TEMPLATES, raw=page.raw)
-        return shape_templates(page, record.handle, budget=max_response_chars())
-
-    async def _template(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        template = await self.router.template(**self.arguments(MCP_TOOL_TEMPLATE, arguments))
-        record = self.store.add(MCP_TOOL_TEMPLATE, raw=template.raw)
-        return shape_template(template, record.handle, budget=max_response_chars())
-
-    async def _run_template(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        kwargs = self.arguments(MCP_TOOL_RUN_TEMPLATE, arguments)
-        with template_charged(self.router, kwargs):
-            response = await self.router.run_template(**kwargs)
-        record = self.store.add(MCP_TOOL_RUN_TEMPLATE, raw=response.raw)
-        return shape_template_run(response, record.handle, budget=max_response_chars())
 
     async def _answer(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         response = await self.router.answer(**self.arguments(MCP_TOOL_ANSWER, arguments))
@@ -706,7 +692,7 @@ class WebRouterTools:
             properties = {name: spec for name, spec in properties.items() if name not in _OPTIONS[tool] - mapped}
             if MCP_ARG_STEALTH in properties and tool == MCP_TOOL_BROWSER_OPEN:
                 _offer_levels(properties, serving)
-            if MCP_ARG_FORMAT in properties and tool == MCP_TOOL_RUN_TEMPLATE:
+            if MCP_ARG_FORMAT in properties and tool == MCP_TOOL_LIVE_DATA:
                 _offer_formats(properties, serving)
         if providers:
             properties[MCP_ARG_PROVIDER] = {
@@ -770,7 +756,7 @@ def _offer_formats(properties: dict[str, Any], serving: list[type[_BaseProvider]
     refused on every route, so it is not offered, and with none at all the
     option goes too -- as :func:`_offer_levels` narrows ``stealth``.
     """
-    served = frozenset().union(*(cls.supported_formats for cls in serving if issubclass(cls, TemplateProvider)))
+    served = frozenset().union(*(cls.supported_formats for cls in serving if issubclass(cls, LiveDataProvider)))
     formats = [body_format for body_format in get_args(ExtractFormat) if body_format in served]
     if formats:
         properties[MCP_ARG_FORMAT] = {**properties[MCP_ARG_FORMAT], "enum": formats}
@@ -798,7 +784,7 @@ def _configured() -> dict[str, list[str]]:
     return {
         MCP_TOOL_SEARCH: configured_providers(),
         MCP_TOOL_EXTRACT: configured_extract_providers(),
-        MCP_METHOD_TEMPLATE: configured_template_providers(),
+        MCP_METHOD_LIVE_DATA: configured_live_data_providers(),
         MCP_TOOL_ANSWER: configured_answer_providers(),
         MCP_TOOL_RESEARCH: configured_research_providers(),
         MCP_TOOL_BROWSE: configured_browse_providers(),

@@ -59,8 +59,8 @@ from web_router.constants import (
     PROVIDER_YOU,
     PROVIDER_YOU_MCP,
     RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.types import Provider, provider_name
 
@@ -69,9 +69,9 @@ if TYPE_CHECKING:
         BrowseProvider,
         BrowserProvider,
         ExtractProvider,
+        LiveDataProvider,
         ResearchProvider,
         SearchProvider,
-        TemplateProvider,
         _BaseProvider,
     )
 
@@ -118,9 +118,7 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
 
 # A template run is the Extract API's, so the class ships with the extract extra.
 # No `auto`: a template's name belongs to one vendor, so there is nothing to route.
-_BUILTIN_TEMPLATE_PROVIDERS: dict[str, tuple[str, str, str]] = {
-    PROVIDER_NIMBLE: ("web_router.providers.nimble_template", "NimbleTemplateProvider", EXTRA_EXTRACT),
-}
+_BUILTIN_LIVE_DATA_PROVIDERS = BUILTIN_LIVE_DATA_PROVIDERS
 
 _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_NIMBLE: ("web_router.providers.nimble", "NimbleResearchProvider", EXTRA_RESEARCH),
@@ -155,7 +153,7 @@ _BUILTIN_BROWSE_PROVIDERS: dict[str, tuple[str, str, str]] = {
 
 _CUSTOM_PROVIDERS: dict[str, type[SearchProvider]] = {}
 _CUSTOM_EXTRACT_PROVIDERS: dict[str, type[ExtractProvider]] = {}
-_CUSTOM_TEMPLATE_PROVIDERS: dict[str, type[TemplateProvider]] = {}
+_CUSTOM_LIVE_DATA_PROVIDERS: dict[str, type[LiveDataProvider]] = {}
 _CUSTOM_RESEARCH_PROVIDERS: dict[str, type[ResearchProvider]] = {}
 _CUSTOM_BROWSER_PROVIDERS: dict[str, type[BrowserProvider]] = {}
 _CUSTOM_BROWSE_PROVIDERS: dict[str, type[BrowseProvider]] = {}
@@ -181,14 +179,14 @@ def unregister_extract_provider(name: str | Provider) -> None:
     _CUSTOM_EXTRACT_PROVIDERS.pop(provider_name(name), None)
 
 
-def register_template_provider(name: str | Provider, provider_cls: type[TemplateProvider]) -> None:
+def register_live_data_provider(name: str | Provider, provider_cls: type[LiveDataProvider]) -> None:
     """Register an Extract Template provider class under ``name``, overriding any builtin of that name."""
-    _CUSTOM_TEMPLATE_PROVIDERS[provider_name(name)] = provider_cls
+    _CUSTOM_LIVE_DATA_PROVIDERS[provider_name(name)] = provider_cls
 
 
-def unregister_template_provider(name: str | Provider) -> None:
+def unregister_live_data_provider(name: str | Provider) -> None:
     """Remove a previously registered custom template provider. A no-op if it was never registered."""
-    _CUSTOM_TEMPLATE_PROVIDERS.pop(provider_name(name), None)
+    _CUSTOM_LIVE_DATA_PROVIDERS.pop(provider_name(name), None)
 
 
 def register_research_provider(name: str | Provider, provider_cls: type[ResearchProvider]) -> None:
@@ -231,9 +229,9 @@ def available_extract_providers() -> list[str]:
     return sorted(set(_BUILTIN_EXTRACT_PROVIDERS) | set(_CUSTOM_EXTRACT_PROVIDERS))
 
 
-def available_template_providers() -> list[str]:
+def available_live_data_providers() -> list[str]:
     """Every Extract Template provider name the router knows, installed or not."""
-    return sorted(set(_BUILTIN_TEMPLATE_PROVIDERS) | set(_CUSTOM_TEMPLATE_PROVIDERS))
+    return sorted(set(_BUILTIN_LIVE_DATA_PROVIDERS) | set(_CUSTOM_LIVE_DATA_PROVIDERS))
 
 
 def available_research_providers() -> list[str]:
@@ -283,7 +281,7 @@ def configured_extract_providers() -> list[str]:
     )
 
 
-def configured_template_providers() -> list[str]:
+def configured_live_data_providers() -> list[str]:
     """Every builtin template provider you currently have credentials for.
 
     The same caveats as :func:`configured_providers`. A template run fetches
@@ -291,7 +289,7 @@ def configured_template_providers() -> list[str]:
     no ``auto``; with no key at all this is empty.
     """
     return sorted(
-        name for name, env_vars in TEMPLATE_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
+        name for name, env_vars in LIVE_DATA_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
     )
 
 
@@ -393,19 +391,19 @@ def create_extract_provider(name: str | Provider, **kwargs: Any) -> ExtractProvi
     return get_extract_provider_class(name)(**kwargs)
 
 
-def get_template_provider_class(name: str | Provider) -> type[TemplateProvider]:
+def get_live_data_provider_class(name: str | Provider) -> type[LiveDataProvider]:
     """Resolve an Extract Template provider name to its class, importing the module on first use."""
     return _resolve(
         name,
-        builtin=_BUILTIN_TEMPLATE_PROVIDERS,
-        custom=_CUSTOM_TEMPLATE_PROVIDERS,
-        available=available_template_providers(),
+        builtin=_BUILTIN_LIVE_DATA_PROVIDERS,
+        custom=_CUSTOM_LIVE_DATA_PROVIDERS,
+        available=available_live_data_providers(),
     )
 
 
-def create_template_provider(name: str | Provider, **kwargs: Any) -> TemplateProvider:
+def create_live_data_provider(name: str | Provider, **kwargs: Any) -> LiveDataProvider:
     """Instantiate an Extract Template provider by name, passing ``kwargs`` to its constructor."""
-    return get_template_provider_class(name)(**kwargs)
+    return get_live_data_provider_class(name)(**kwargs)
 
 
 def get_research_provider_class(name: str | Provider) -> type[ResearchProvider]:

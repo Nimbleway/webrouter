@@ -67,11 +67,18 @@ from web_router.constants import (
     MCP_USER_CONFIG_ROOT_DEFAULT,
     RESEARCH_ENV_BY_PROVIDER,
 )
+from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 
 
 def credential_variables() -> frozenset[str]:
     """Every provider credential variable, from the tables that already name them."""
-    tables = (EXTRACT_ENV_BY_PROVIDER, RESEARCH_ENV_BY_PROVIDER, BROWSER_ENV_BY_PROVIDER, BROWSE_ENV_BY_PROVIDER)
+    tables = (
+        EXTRACT_ENV_BY_PROVIDER,
+        RESEARCH_ENV_BY_PROVIDER,
+        BROWSER_ENV_BY_PROVIDER,
+        BROWSE_ENV_BY_PROVIDER,
+        LIVE_DATA_ENV_BY_PROVIDER,
+    )
     single = {var for var in ENV_BY_PROVIDER.values() if var}
     grouped = {var for table in tables for env_vars in table.values() for var in env_vars}
     return frozenset(single | grouped)

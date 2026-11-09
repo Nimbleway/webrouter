@@ -15,7 +15,7 @@ from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_BUDGET_VALU
 from web_router.types_decision import DecisionRecord
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
-"""The methods a router may choose between. ``run_template`` and ``open_browser`` are never routed."""
+"""The methods a router may choose between. ``live_data`` and ``open_browser`` are never routed."""
 
 
 def candidate_id(tool: str, provider: str) -> str:

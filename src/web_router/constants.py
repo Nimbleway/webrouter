@@ -14,6 +14,17 @@ from pydantic import BaseModel
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_live_data import (
+    MCP_DESC_LIVE_DATA,
+    MCP_DESC_LIVE_DATA_SOURCE,
+    MCP_DESC_LIVE_DATA_SOURCES,
+    MCP_LIVE_DATA_PROPERTIES,
+    MCP_LIVE_DATA_SOURCE_PROPERTIES,
+    MCP_LIVE_DATA_SOURCES_PROPERTIES,
+    MCP_TOOL_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA_SOURCE,
+    MCP_TOOL_LIVE_DATA_SOURCES,
+)
 from web_router.constants_mcp import (
     MCP_BUDGET_START_PROPERTIES,
     MCP_DESC_BUDGET_START,
@@ -219,16 +230,6 @@ zone that routes the request beside its token. ``jina`` needs nothing -- a key
 only raises its rate limit -- and ``auto`` needs whatever its chain does.
 """
 
-TEMPLATE_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
-    PROVIDER_NIMBLE: (ENV_NIMBLE_API_KEY,),
-}
-"""Which variables each template provider needs, all of them.
-
-Shaped like :data:`EXTRACT_ENV_BY_PROVIDER`. A template run fetches and
-parses a page on the backend's account, so there is no keyless tier, and no
-``auto``: a template's name belongs to one vendor.
-"""
-
 RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_NIMBLE: (ENV_NIMBLE_API_KEY,),
     PROVIDER_PARALLEL: (ENV_PARALLEL_API_KEY,),
@@ -377,12 +378,12 @@ HTTP 200 and no content, so the status is the only thing that distinguishes a
 fetched page from one that was refused.
 """
 
-NIMBLE_TEMPLATE_SUCCESS_STATUS = NIMBLE_EXTRACT_SUCCESS_STATUS
-"""A template run answers with the same task envelope as an extract, and the same one ``status`` means fetched."""
+NIMBLE_LIVE_DATA_SUCCESS_STATUS = NIMBLE_EXTRACT_SUCCESS_STATUS
+"""A Nimble live data run answers with an extract's task envelope, and the same one ``status`` means fetched."""
 
-NIMBLE_TEMPLATE_PARSING_ERROR_STATUS = "error"
-NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS = "success"
-"""What ``data.parsing`` says when a template reports how it did rather than the record itself.
+NIMBLE_LIVE_DATA_PARSING_ERROR_STATUS = "error"
+NIMBLE_LIVE_DATA_PARSING_SUCCESS_STATUS = "success"
+"""What ``data.parsing`` says when a Nimble template reports how it did rather than the record itself.
 
 Verified live on 2026-10-22: a successful run put the record straight under
 ``data.parsing`` -- its keys the template's own output fields -- which is the
@@ -391,12 +392,14 @@ third shape the SDK's ``DataParsing`` union allows. The other two wrap it: a
 beside an ``error``. All three are read; only the last is a failure.
 """
 
-NIMBLE_TEMPLATE_STATUS_FIELD = "status"
-NIMBLE_TEMPLATE_RECORD_FIELD = "entities"
-NIMBLE_TEMPLATE_ERROR_FIELD = "error"
+NIMBLE_LIVE_DATA_STATUS_FIELD = "status"
+NIMBLE_LIVE_DATA_RECORD_FIELD = "entities"
+NIMBLE_LIVE_DATA_ERROR_FIELD = "error"
 
-NIMBLE_TEMPLATE_RECORD_SHAPE: frozenset[str] = frozenset({NIMBLE_TEMPLATE_STATUS_FIELD, NIMBLE_TEMPLATE_RECORD_FIELD})
-NIMBLE_TEMPLATE_ERROR_SHAPE: frozenset[str] = frozenset({NIMBLE_TEMPLATE_STATUS_FIELD, NIMBLE_TEMPLATE_ERROR_FIELD})
+NIMBLE_LIVE_DATA_RECORD_SHAPE: frozenset[str] = frozenset(
+    {NIMBLE_LIVE_DATA_STATUS_FIELD, NIMBLE_LIVE_DATA_RECORD_FIELD}
+)
+NIMBLE_LIVE_DATA_ERROR_SHAPE: frozenset[str] = frozenset({NIMBLE_LIVE_DATA_STATUS_FIELD, NIMBLE_LIVE_DATA_ERROR_FIELD})
 """The exact keys of the SDK's two wrapped shapes; a dict with any other key beside them is a bare record."""
 
 # --- You.com ----------------------------------------------------------------
@@ -2703,15 +2706,6 @@ MSG_SEARCH_FAILED = "search failed: {error}"
 
 MSG_EXTRACT_FAILED = "extract failed: {error}"
 
-MSG_TEMPLATE_FAILED = "template run failed: {error}"
-
-MSG_TEMPLATES_FAILED = "listing templates failed: {error}"
-
-MSG_TEMPLATE_GET_FAILED = "fetching template {name!r} failed: {error}"
-
-MSG_TEMPLATE_NOT_FOUND = "the backend has no template named {name!r}"
-"""An unknown template name, as a backend reports it -- Nimble with a 404 on describe and on run."""
-
 MSG_RESEARCH_FAILED = "research failed: {error}"
 
 MSG_JOB_FAILED = "job failed: {error}"
@@ -2935,28 +2929,8 @@ Not a case any provider here should reach: it means a payload was shaped in a
 way its mapping did not expect. Saying so beats returning an empty response.
 """
 
-MSG_TEMPLATE_BAD_STATUS = "the backend fetched nothing for template {template!r} and reported status {status!r}"
-
-MSG_TEMPLATE_PARSING_FAILED = "the backend fetched the page but template {template!r} failed to parse it: {error}"
-
-MSG_TEMPLATE_PAGE_FAILED = "the site answered template {template!r} with HTTP {status}, so there is no page to parse"
-"""A fetch the site refused: the envelope says ``success`` and the page body is an error page.
-
-Verified on a recorded response: a run on a page that does not exist comes
-back ``status: success`` with ``status_code: 404`` and a "record" whose
-title is the error page's. A record parsed from an error page is not the
-record the template promises, so the run is a failure.
-"""
-
-NIMBLE_TEMPLATE_FAILED_STATUS_FLOOR = 400
+NIMBLE_LIVE_DATA_FAILED_STATUS_FLOOR = 400
 """The first HTTP status that means the site did not serve the page; everything from here up is a failed run."""
-
-MSG_TEMPLATE_NO_RECORD = "the backend fetched the page but answered without a record for template {template!r}"
-"""Stands in when a fetched page carries no parsed record and no reason.
-
-Not a case Nimble reaches: a run either parses, or says in ``data.parsing``
-that it failed. Saying so beats returning an empty record as the answer.
-"""
 
 MSG_REDIRECTS_WITH_CREDENTIAL = (
     "Provider {provider!r} refuses follow_redirects=True while it is sending a credential. "
@@ -3377,9 +3351,6 @@ MCP_MSG_INSTRUCTIONS_NO_KEYS = (
 
 MCP_TOOL_SEARCH = "search"
 MCP_TOOL_EXTRACT = "extract"
-MCP_TOOL_TEMPLATES = "templates"
-MCP_TOOL_TEMPLATE = "template"
-MCP_TOOL_RUN_TEMPLATE = "run_template"
 MCP_TOOL_ANSWER = "answer"
 MCP_TOOL_RESEARCH = "research"
 MCP_TOOL_RESEARCH_STATUS = "research_status"
@@ -3824,7 +3795,6 @@ MCP_MIME_JSON = "application/json"
 MCP_ARG_PROVIDER = "provider"
 MCP_ARG_HANDLE = "handle"
 
-MCP_METHOD_TEMPLATE = "template"
 MCP_METHOD_BROWSER = AUTO_CHAIN_BROWSER
 """How the capabilities resource keys a method whose tools are not named after it.
 
@@ -3883,34 +3853,6 @@ MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
         "description": (
             "Which representation of each page to return. A backend that cannot produce it says so "
             "rather than returning a different one."
-        ),
-    },
-}
-
-MCP_TEMPLATES_PROPERTIES: dict[str, dict[str, Any]] = {
-    "limit": {"type": "integer", "minimum": 1, "description": "How many templates to list. Unset, the backend's page."},
-    "offset": {"type": "integer", "minimum": 0, "description": "How many to skip first, for the next page."},
-}
-
-MCP_TEMPLATE_PROPERTIES: dict[str, dict[str, Any]] = {
-    "name": {"type": "string", "description": "The template's name, as `templates` lists it."},
-}
-
-MCP_RUN_TEMPLATE_PROPERTIES: dict[str, dict[str, Any]] = {
-    "template": {"type": "string", "description": "The template's name, as `templates` lists it."},
-    "inputs": {
-        "type": "object",
-        "description": (
-            "The template's inputs, named by its input_schema from `template` -- a URL for some, an id, "
-            "a slug or a search term for others. Omit it only for a template whose schema names nothing."
-        ),
-    },
-    "format": {
-        "type": "string",
-        "enum": list(get_args(ExtractFormat)),
-        "description": (
-            "Also return the page the record came from, in this representation. Unset returns the record alone, "
-            "which is usually all you need."
         ),
     },
 }
@@ -3977,7 +3919,7 @@ MCP_FETCH_RAW_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_HANDLE: {
         "type": "string",
         "description": (
-            "A handle from `search`, `extract`, `templates`, `template`, `run_template`, `answer`, `research`, "
+            "A handle from `search`, `extract`, `templates`, `template`, `live_data`, `answer`, `research`, "
             "`research_status`, `browse`, `browse_status` or `browser_read`."
         ),
     },
@@ -4143,9 +4085,9 @@ MCP_BROWSER_CLOSE_PROPERTIES: dict[str, dict[str, Any]] = {MCP_ARG_SESSION_ID: _
 MCP_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_SEARCH: MCP_SEARCH_PROPERTIES,
     MCP_TOOL_EXTRACT: MCP_EXTRACT_PROPERTIES,
-    MCP_TOOL_TEMPLATES: MCP_TEMPLATES_PROPERTIES,
-    MCP_TOOL_TEMPLATE: MCP_TEMPLATE_PROPERTIES,
-    MCP_TOOL_RUN_TEMPLATE: MCP_RUN_TEMPLATE_PROPERTIES,
+    MCP_TOOL_LIVE_DATA_SOURCES: MCP_LIVE_DATA_SOURCES_PROPERTIES,
+    MCP_TOOL_LIVE_DATA_SOURCE: MCP_LIVE_DATA_SOURCE_PROPERTIES,
+    MCP_TOOL_LIVE_DATA: MCP_LIVE_DATA_PROPERTIES,
     MCP_TOOL_ANSWER: MCP_ANSWER_PROPERTIES,
     MCP_TOOL_RESEARCH: MCP_RESEARCH_PROPERTIES,
     MCP_TOOL_RESEARCH_STATUS: MCP_RESEARCH_STATUS_PROPERTIES,
@@ -4177,9 +4119,9 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_SEARCH: ("query",),
     MCP_TOOL_EXTRACT: ("urls",),
     # `provider` is required here and nowhere else: a template's name belongs to one vendor.
-    MCP_TOOL_TEMPLATES: (MCP_ARG_PROVIDER,),
-    MCP_TOOL_TEMPLATE: ("name", MCP_ARG_PROVIDER),
-    MCP_TOOL_RUN_TEMPLATE: ("template", MCP_ARG_PROVIDER),
+    MCP_TOOL_LIVE_DATA_SOURCES: (MCP_ARG_PROVIDER,),
+    MCP_TOOL_LIVE_DATA_SOURCE: ("name", MCP_ARG_PROVIDER),
+    MCP_TOOL_LIVE_DATA: ("source", MCP_ARG_PROVIDER),
     # Not `provider`: unnamed, the router's default answers -- `auto`, the configured backends in ranked order.
     MCP_TOOL_ANSWER: ("query",),
     MCP_TOOL_RESEARCH: ("query",),
@@ -4231,37 +4173,6 @@ MCP_DESC_EXTRACT = (
     "backend per URL -- so use it only when the user has asked for speed over cost."
 )
 
-MCP_DESC_TEMPLATES = (
-    "List a vendor's templates: saved, site-specific extractions, each turning one kind of "
-    "page -- a retailer's product page, a job listing, a search results page -- into a record with "
-    "fixed fields. Returns in about a second, with each template's name, site, what it extracts, "
-    "the names of the inputs a run must pass (`required_inputs`) and one input the vendor recorded "
-    "a run with (`sample_inputs`), so a URL-keyed template is told from an id-keyed one here. "
-    "Call it before `run_template` to find a template for the site at hand; a catalogue can be "
-    "long, so page with `limit` and `offset`. Then `template` for the full schemas and samples."
-)
-
-MCP_DESC_TEMPLATE = (
-    "Describe one Extract Template: its input_schema, which says exactly what `run_template` must "
-    "pass as `inputs`, its output_schema, which says what the record will hold, and its `samples`, "
-    "runs the vendor recorded -- an input and the record it returned -- to copy a first run from. "
-    "Returns in about a second and bills nothing. Read it before running a template you have not "
-    "run in this conversation. Names, inputs and fields are the vendor's own: the same page differs "
-    "between vendors."
-)
-
-MCP_DESC_RUN_TEMPLATE = (
-    "Run an Extract Template on one page and get its record back -- the page's fields, parsed by a "
-    "saved extraction built for that site, rather than prose to read through. Returns in about a "
-    "second and bills one template run on the vendor's account, at the vendor's per-run template "
-    "rate; on Nimble that is one flat rate for every template, whatever the site, listed on its "
-    "pricing page. `provider` is required, since a template's name belongs to one vendor. Use it "
-    "when `templates` lists a template for the site and item you have; use `extract` for a page no "
-    "template covers, and `search` to find pages. `inputs` are the template's own inputs, from "
-    "`template`: a URL for some templates, an id, a slug or a search term for others. A run the "
-    "backend could not complete is an error, never an empty record."
-)
-
 MCP_DESC_RESEARCH = (
     "Start an agentic research run: the backend searches, reads and cross-checks over many turns, "
     "which takes MINUTES, not milliseconds, and bills for the run. Worth it for a question a "
@@ -4296,7 +4207,7 @@ MCP_DESC_BROWSE_STATUS = (
 
 MCP_DESC_FETCH_RAW = (
     "Return the backend's full, unshaped payload for a handle from `search`, `extract`, `templates`, "
-    "`template`, `run_template`, `answer`, `research`, `research_status`, `browse` or `browse_status`. Instant -- "
+    "`template`, `live_data`, `answer`, `research`, `research_status`, `browse` or `browse_status`. Instant -- "
     "nothing is called again, the "
     "payload was kept from the original call -- but it can be very large and is not shortened. "
     "Ask for it when a shaped result said it was truncated and you need what was cut. For a browse "
@@ -4379,9 +4290,9 @@ MCP_DESC_BROWSER_CLOSE = (
 MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
     MCP_TOOL_SEARCH: MCP_DESC_SEARCH,
     MCP_TOOL_EXTRACT: MCP_DESC_EXTRACT,
-    MCP_TOOL_TEMPLATES: MCP_DESC_TEMPLATES,
-    MCP_TOOL_TEMPLATE: MCP_DESC_TEMPLATE,
-    MCP_TOOL_RUN_TEMPLATE: MCP_DESC_RUN_TEMPLATE,
+    MCP_TOOL_LIVE_DATA_SOURCES: MCP_DESC_LIVE_DATA_SOURCES,
+    MCP_TOOL_LIVE_DATA_SOURCE: MCP_DESC_LIVE_DATA_SOURCE,
+    MCP_TOOL_LIVE_DATA: MCP_DESC_LIVE_DATA,
     MCP_TOOL_ANSWER: MCP_DESC_ANSWER,
     MCP_TOOL_RESEARCH: MCP_DESC_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS: MCP_DESC_RESEARCH_STATUS,
@@ -4486,7 +4397,7 @@ MCP_MSG_UNKNOWN_TOOL = "Unknown tool {name!r}. This server serves: {tools}."
 
 MCP_MSG_UNKNOWN_HANDLE = (
     "Unknown handle {handle!r}. Handles come back from search, extract, templates, template, "
-    "run_template, answer, research, browse and browser_read, and only the {limit} most recent are kept."
+    "live_data, answer, research, browse and browser_read, and only the {limit} most recent are kept."
 )
 
 MCP_MSG_NOT_A_JOB = (

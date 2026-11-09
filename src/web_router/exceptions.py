@@ -45,7 +45,6 @@ from web_router.constants import (
     MSG_OPTION_VALUE,
     MSG_PROVIDER_NOT_INSTALLED,
     MSG_RESEARCH_TIMEOUT,
-    MSG_TEMPLATE_NOT_FOUND,
     MSG_UNKNOWN_PROVIDER,
     MSG_UNSUPPORTED_FORMAT,
     MSG_UNSUPPORTED_FORMAT_ADVICE,
@@ -55,6 +54,9 @@ from web_router.constants import (
 )
 from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
 from web_router.constants_invoke import MSG_ROUTER_FAILED
+from web_router.constants_live_data import (
+    MSG_LIVE_DATA_SOURCE_NOT_FOUND,
+)
 
 
 def describe(exc: BaseException) -> str:
@@ -315,18 +317,19 @@ class ProviderError(WebRouterError):
         self.original = original
 
 
-class TemplateNotFoundError(ProviderError):
-    """A template run or describe named a template the backend does not have.
+class LiveDataSourceNotFoundError(ProviderError):
+    """A live data run or describe named a source the backend does not have.
 
     A :class:`ProviderError`, because the backend answered and said so, with
     its own class so a caller can tell a wrong name from a run that failed.
-    Template names are the vendor's own: the same page has a different name
-    on each.
+    Source names are the vendor's own: the same site has a different name on
+    each. :attr:`template` is the deprecated name of :attr:`source`.
     """
 
-    def __init__(self, provider: str, template: str, *, original: BaseException | None = None) -> None:
-        self.template = template
-        super().__init__(provider, MSG_TEMPLATE_NOT_FOUND.format(name=template), original=original)
+    def __init__(self, provider: str, source: str, *, original: BaseException | None = None) -> None:
+        self.source = source
+        self.template = source
+        super().__init__(provider, MSG_LIVE_DATA_SOURCE_NOT_FOUND.format(name=source), original=original)
 
 
 class BrowserActionError(WebRouterError):

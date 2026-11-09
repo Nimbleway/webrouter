@@ -13,25 +13,25 @@ from typing import Any
 
 from web_router.constants import MCP_JSON_INDENT, MCP_MIN_FIELD_CHARS, MCP_MSG_OVERSIZED, MCP_MSG_SAMPLES_OMITTED
 from web_router.mcp.shaping import _fit, render
-from web_router.types import Template, TemplatePage, TemplateResponse
+from web_router.types_live_data import LiveDataResponse, LiveDataSource, LiveDataSourcePage
 
 
-def shape_templates(page: TemplatePage, handle: str, *, budget: int) -> dict[str, Any]:
-    """One page of a template catalogue, cut to fit: names, what each extracts and what each takes, never the schemas.
+def shape_live_data_sources(page: LiveDataSourcePage, handle: str, *, budget: int) -> dict[str, Any]:
+    """One page of a live data catalogue, cut to fit: names, what each extracts and what each takes, never the schemas.
 
     A catalogue runs to thousands, so each row is the few words a model picks
-    a template by, plus the names of the inputs a run must pass and one
-    recorded input, enough to tell a URL-keyed template from an id-keyed one
-    without a second call; ``template`` returns the schemas and the full
-    samples for the one it picked.
+    a source by, plus the names of the inputs a run must pass and one
+    recorded input, enough to tell a URL-keyed source from an id-keyed one
+    without a second call; ``live_data_source`` returns the schemas and the
+    full samples for the one it picked.
     """
-    templates = [_template_listing_row(template) for template in page.templates]
+    templates = [_source_listing_row(source) for source in page.sources]
     payload: dict[str, Any] = {
         "provider": page.provider,
         "total": page.total,
         "offset": page.offset,
         "limit": page.limit,
-        "templates": templates,
+        "sources": templates,
     }
     # A recorded input is copied whole or not at all, so one larger than its
     # row's share of the budget is left out rather than crowding out the rows.
@@ -47,12 +47,12 @@ def shape_templates(page: TemplatePage, handle: str, *, budget: int) -> dict[str
     fitted["truncated"] = fitted["truncated"] or bool(omitted)
     fitted = _bounded(fitted, tuple((row, "sample_inputs") for row in templates), handle=handle, budget=budget)
     # Counted after the fit, which may have dropped rows: the count is of what is shown.
-    fitted["template_count"] = len(templates)
+    fitted["source_count"] = len(templates)
     return fitted
 
 
-def shape_template(template: Template, handle: str, *, budget: int) -> dict[str, Any]:
-    """One template with its schemas and samples, cut to fit.
+def shape_live_data_source(template: LiveDataSource, handle: str, *, budget: int) -> dict[str, Any]:
+    """One live data source with its schemas and samples, cut to fit.
 
     The schemas are never shortened: a run has to match ``input_schema``
     exactly, and a cut schema would send the model guessing at the inputs it
@@ -62,26 +62,27 @@ def shape_template(template: Template, handle: str, *, budget: int) -> dict[str,
     holds it, rather than inlined over the budget.
     """
     row = {
-        **_template_row(template),
+        **_source_row(template),
         "version": template.version,
         "input_schema": template.input_schema,
         "output_schema": template.output_schema,
         "samples": [sample.model_dump() for sample in template.samples],
     }
-    payload: dict[str, Any] = {"provider": template.provider, "template": row}
+    payload: dict[str, Any] = {"provider": template.provider, "source": row}
     fitted = _fit(payload, [row], ("description",), handle=handle, budget=budget)
     return _bounded(
         fitted, ((row, "samples"), (row, "output_schema"), (row, "input_schema")), handle=handle, budget=budget
     )
 
 
-def shape_template_run(response: TemplateResponse, handle: str, *, budget: int) -> dict[str, Any]:
-    """A template run, cut to fit. The record is never shortened, as a research run's ``structured`` is not.
+def shape_live_data(response: LiveDataResponse, handle: str, *, budget: int) -> dict[str, Any]:
+    """A live data run, cut to fit. No record is ever shortened, as a research run's ``structured`` is not.
 
-    The record is what the caller asked for, shaped by the template's own
-    schema; the page beside it, when one was asked for, is the one thing
-    long enough to cut. A record that does not fit even on its own is left
-    out whole, with a note naming the handle that holds it.
+    The records are what the caller asked for, shaped by the source's own
+    schema; the page beside them, when one was asked for, is the one thing
+    long enough to cut. Records that do not fit are left out whole, with a
+    note naming the handle that holds them, and ``record_count`` still says
+    how many the run returned.
     """
     page = (
         {
@@ -97,14 +98,16 @@ def shape_template_run(response: TemplateResponse, handle: str, *, budget: int) 
     # could fill the budget on their own.
     payload: dict[str, Any] = {
         "provider": response.provider,
-        "template": response.template,
+        "source": response.source,
         "url": response.url,
         "status_code": response.status_code,
-        "data": response.data,
+        "fetched_at": response.fetched_at,
+        "record_count": len(response.records),
+        "records": response.records,
         "document": page,
     }
     fitted = _fit(payload, [page] if page is not None else [], ("content",), handle=handle, budget=budget)
-    return _bounded(fitted, ((payload, "data"),), handle=handle, budget=budget)
+    return _bounded(fitted, ((payload, "records"),), handle=handle, budget=budget)
 
 
 def _bounded(
@@ -137,7 +140,7 @@ def _size(value: Any) -> int:
     return 0 if value is None else len(json.dumps(value, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str))
 
 
-def _template_row(template: Template) -> dict[str, Any]:
+def _source_row(template: LiveDataSource) -> dict[str, Any]:
     return {
         "name": template.name,
         "description": template.description,
@@ -147,7 +150,7 @@ def _template_row(template: Template) -> dict[str, Any]:
     }
 
 
-def _template_listing_row(template: Template) -> dict[str, Any]:
+def _source_listing_row(template: LiveDataSource) -> dict[str, Any]:
     """A catalogue row: the picking words plus what a run must pass, read from the schema and the first sample.
 
     ``required_inputs`` is the schema's own ``required`` list, so it is empty
@@ -158,7 +161,7 @@ def _template_listing_row(template: Template) -> dict[str, Any]:
     schema = template.input_schema
     required = schema.get("required") if isinstance(schema, dict) else None
     return {
-        **_template_row(template),
+        **_source_row(template),
         "required_inputs": list(required) if isinstance(required, list) else ([] if isinstance(schema, dict) else None),
         "sample_inputs": next(
             (sample.input for sample in template.samples if sample.input),
