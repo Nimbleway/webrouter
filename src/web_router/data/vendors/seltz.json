@@ -1,0 +1,339 @@
+{
+  "vendor": "seltz",
+  "name": "Seltz",
+  "category": "search",
+  "summary": "Web search, cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports.",
+  "docs_url": "https://docs.seltz.ai/",
+  "base_url": "https://api.seltz.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SELTZ_API_KEY"
+        ],
+        "description": "A Seltz API key (console.seltz.ai/api-keys). Sent in the x-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Prices follow tier (search, fetch), model (answer) and effort (agent); unknown tier names are rejected rather than defaulted. New keys come with 20,000 search credits (seltz.ai).",
+    "Creating, editing and deleting monitors are writes and are not in this entry."
+  ],
+  "sources": [
+    "https://docs.seltz.ai/",
+    "https://docs.seltz.ai/api-reference/openapi.json",
+    "https://seltz.ai"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "seltz.search",
+      "name": "Search the web for context",
+      "summary": "Ranked documents with content for a query, within one scope and optional date and domain filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "The search query.",
+          "required": true,
+          "example": "latest EU AI Act guidance"
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return, default 10; larger values are served as 1000."
+        },
+        "scope": {
+          "in": "body",
+          "type": "string",
+          "description": "One of web (beta), news, wikipedia, people, companies, financial-reports; omitted searches the default scope."
+        },
+        "tier": {
+          "in": "body",
+          "type": "string",
+          "description": "base (first-stage ranking) or pro (adds a reranking stage; the default). The value selects the price.",
+          "enum": [
+            "base",
+            "pro"
+          ]
+        },
+        "include_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Only results from these domains."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Exclude results from these domains."
+        },
+        "from_date": {
+          "in": "body",
+          "type": "string",
+          "description": "Published on or after: a date, a UTC datetime, or an offset like now-7d (units s, m, h, d, w, M, y)."
+        },
+        "to_date": {
+          "in": "body",
+          "type": "string",
+          "description": "Published on or before, same spellings as from_date."
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://docs.seltz.ai/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.seltz.ai/api-reference/openapi.json"
+      },
+      "notes": [
+        "A read over POST."
+      ]
+    },
+    {
+      "id": "seltz.answer",
+      "name": "Answer a question with citations",
+      "summary": "An answer grounded in search results, with citations.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/answer",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "The natural-language question.",
+          "required": true
+        },
+        "scope": {
+          "in": "body",
+          "type": "string",
+          "description": "One of web (beta), news, wikipedia, people, companies, financial-reports; omitted searches the default scope."
+        },
+        "model": {
+          "in": "body",
+          "type": "string",
+          "description": "Answer tier, which sets behavior and billing; omitted is the default tier."
+        },
+        "include_content": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Citations carry the document text; default false."
+        },
+        "system_prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Steers tone, voice and format of the answer."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "object",
+          "description": "OpenAI-style response_format object for structured output; no inline citations then."
+        },
+        "stream": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Stream as OpenAI-style SSE chunks; default false."
+        }
+      },
+      "job": "web.answer",
+      "docs_url": "https://docs.seltz.ai/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.seltz.ai/api-reference/openapi.json"
+      },
+      "notes": [
+        "A read over POST."
+      ]
+    },
+    {
+      "id": "seltz.fetch",
+      "name": "Fetch URLs as Markdown",
+      "summary": "Main content of up to 20 URLs as Markdown, boilerplate removed.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/fetch",
+      "params": {
+        "urls": {
+          "in": "body",
+          "type": "array",
+          "description": "1 to 20 distinct URLs, each at most 2048 bytes.",
+          "required": true,
+          "example": [
+            "https://example.com"
+          ]
+        },
+        "formats": {
+          "in": "body",
+          "type": "array",
+          "description": "Representations to return; only markdown is documented, and it is the default."
+        },
+        "tier": {
+          "in": "body",
+          "type": "string",
+          "description": "Service tier, which selects the price; send pro (the default)."
+        },
+        "timeout_ms": {
+          "in": "body",
+          "type": "integer",
+          "description": "Per-URL time budget in milliseconds; a URL over it gets error.code timeout."
+        }
+      },
+      "job": "web.extract",
+      "docs_url": "https://docs.seltz.ai/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.seltz.ai/api-reference/openapi.json"
+      },
+      "notes": [
+        "A read over POST. Invalid URL lists are rejected before billing."
+      ]
+    },
+    {
+      "id": "seltz.agent.start",
+      "name": "Start a research agent run",
+      "summary": "Starts a multi-round research run on a question; returns the run in pending state.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/agent/runs",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "The natural-language question.",
+          "required": true
+        },
+        "effort": {
+          "in": "body",
+          "type": "string",
+          "description": "Effort level, which sets how much research the run does and its price, e.g. low, medium, high, max."
+        },
+        "output_schema": {
+          "in": "body",
+          "type": "object",
+          "description": "OpenAI-style response_format object requesting structured output."
+        }
+      },
+      "job": "research.start",
+      "docs_url": "https://docs.seltz.ai/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.seltz.ai/api-reference/openapi.json"
+      },
+      "notes": [
+        "Asynchronous and billed by effort: poll seltz.agent.get with the returned id until status is completed, failed or cancelled."
+      ]
+    },
+    {
+      "id": "seltz.agent.get",
+      "name": "Get an agent run",
+      "summary": "A run's status and, once completed, its output and sources.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/agent/runs/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The run id."
+        }
+      },
+      "job": "research.result",
+      "docs_url": "https://docs.seltz.ai/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.seltz.ai/api-reference/openapi.json"
+      },
+      "notes": [
+        "Status moves pending, running, then completed, failed or cancelled."
+      ]
+    },
+    {
+      "id": "seltz.monitors.list",
+      "name": "List monitors",
+      "summary": "The organization's monitors, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/monitors",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact monitor name."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "active, paused or disabled."
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "monitor_id to start after."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Exclusive upper bound; pass the last monitor_id of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default 100, max 1,000."
+        }
+      },
+      "job": "web.monitors.list",
+      "docs_url": "https://docs.seltz.ai/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.seltz.ai/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "seltz.monitors.records",
+      "name": "Read a monitor's records",
+      "summary": "New content a monitor has found, oldest first, as a record cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/monitors/{monitor_id}/records",
+      "params": {
+        "monitor_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The monitor id."
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "Exclusive lower bound on record_id."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Exclusive upper bound on record_id."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default 100, max 1,000; a page can end early at a byte budget."
+        },
+        "include_content": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include document content and properties; default true."
+        }
+      },
+      "job": "web.monitors.records",
+      "docs_url": "https://docs.seltz.ai/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.seltz.ai/api-reference/openapi.json"
+      },
+      "notes": [
+        "Page by passing the last record_id as since."
+      ]
+    }
+  ]
+}

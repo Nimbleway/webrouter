@@ -1,0 +1,262 @@
+{
+  "vendor": "saperly",
+  "name": "Saperly",
+  "category": "messaging",
+  "summary": "Phone carrier for AI agents: numbers, SMS, outbound voice calls with transcripts, consent records and usage.",
+  "docs_url": "https://saperly.com/docs",
+  "base_url": "https://api.saperly.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SAPERLY_API_KEY"
+        ],
+        "description": "A scoped Saperly key (sap_sk_live_...) from the dashboard. Its scopes, number allow-list and spend cap limit what it can do."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Paths sit at the API root, with no /v2 prefix.",
+    "Prepaid: usage reserves funds from the balance and settles on completion; a call or SMS fails when the balance or the key's spend cap is short.",
+    "Outbound SMS and calls are blocked unless the destination has an active consent record for the sending number; check it with consent.check first.",
+    "Mutating endpoints accept an Idempotency-Key header so a retry does not send twice."
+  ],
+  "sources": [
+    "https://saperly.com/llms.txt",
+    "https://saperly.com/AGENTS.md",
+    "https://saperly.com/openapi.json",
+    "https://saperly.com/docs/guides/messaging",
+    "https://saperly.com/docs/guides/voice",
+    "https://saperly.com/docs/guides/numbers",
+    "https://saperly.com/docs/guides/compliance"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "saperly.numbers.list",
+      "name": "List phone numbers",
+      "summary": "Every number in the workspace.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/numbers",
+      "docs_url": "https://saperly.com/docs/guides/numbers",
+      "verified": {
+        "docs": "https://saperly.com/openapi.json"
+      }
+    },
+    {
+      "id": "saperly.connections.list",
+      "name": "List connections",
+      "summary": "The handlers (instructions and voice) that answer the workspace's numbers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/connections",
+      "docs_url": "https://saperly.com/docs/guides/connections",
+      "verified": {
+        "docs": "https://saperly.com/openapi.json"
+      }
+    },
+    {
+      "id": "saperly.messages.list",
+      "name": "List SMS messages",
+      "summary": "Messages in the workspace, optionally for one number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/messages",
+      "params": {
+        "numberId": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages sent from or received on this number."
+        }
+      },
+      "job": "messaging.messages.list",
+      "docs_url": "https://saperly.com/docs/guides/messaging",
+      "verified": {
+        "docs": "https://saperly.com/openapi.json"
+      }
+    },
+    {
+      "id": "saperly.calls.list",
+      "name": "List calls",
+      "summary": "Call records in the workspace.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/calls",
+      "docs_url": "https://saperly.com/docs/guides/voice",
+      "verified": {
+        "docs": "https://saperly.com/openapi.json"
+      }
+    },
+    {
+      "id": "saperly.calls.get",
+      "name": "Get a call",
+      "summary": "One call record.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/calls/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The call id."
+        }
+      },
+      "docs_url": "https://saperly.com/docs/guides/voice",
+      "verified": {
+        "docs": "https://saperly.com/openapi.json"
+      }
+    },
+    {
+      "id": "saperly.calls.transcript",
+      "name": "Get a call transcript",
+      "summary": "The transcript of a call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/calls/{id}/transcript",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The call id."
+        }
+      },
+      "docs_url": "https://saperly.com/docs/guides/voice",
+      "verified": {
+        "docs": "https://saperly.com/openapi.json"
+      }
+    },
+    {
+      "id": "saperly.consent.check",
+      "name": "Check consent for a contact",
+      "summary": "Whether a contact has active consent to be called or texted from one of your numbers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/consent/check",
+      "params": {
+        "numberId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Your number's id."
+        },
+        "peerNumber": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The contact's number, E.164.",
+          "example": "+14155550123"
+        }
+      },
+      "docs_url": "https://saperly.com/docs/guides/compliance",
+      "verified": {
+        "docs": "https://saperly.com/openapi.json"
+      }
+    },
+    {
+      "id": "saperly.usage.get",
+      "name": "Get usage summary",
+      "summary": "Usage of the workspace, optionally since a timestamp.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usage",
+      "params": {
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-8601 lower bound of the window, e.g. 2026-01-01T00:00:00Z."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://saperly.com/docs/guides/billing",
+      "verified": {
+        "docs": "https://saperly.com/openapi.json"
+      }
+    },
+    {
+      "id": "saperly.messages.send",
+      "name": "Send an SMS",
+      "summary": "Text a phone number from one of your numbers.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/messages",
+      "params": {
+        "fromNumberId": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The id of your sending number (within the key's allow-list)."
+        },
+        "to": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Recipient, E.164.",
+          "example": "+14155550123"
+        },
+        "body": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text, 1 to 1600 characters."
+        }
+      },
+      "notes": [
+        "Sends a real, billed SMS; long text is split into segments, each billed. Refused without the recipient's consent record."
+      ],
+      "job": "messaging.message.send",
+      "docs_url": "https://saperly.com/docs/guides/messaging",
+      "verified": {
+        "docs": "https://saperly.com/openapi.json"
+      }
+    },
+    {
+      "id": "saperly.calls.create",
+      "name": "Place an outbound call",
+      "summary": "Call a number from one of yours; the bound connection runs the conversation.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/calls",
+      "params": {
+        "fromNumberId": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The Saperly number id to call from."
+        },
+        "to": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Destination, E.164."
+        },
+        "connectionId": {
+          "in": "body",
+          "type": "string",
+          "description": "Use this connection instead of the number's bound one."
+        },
+        "instructions": {
+          "in": "body",
+          "type": "string",
+          "description": "Per-call system prompt overriding the connection's instructions."
+        }
+      },
+      "notes": [
+        "Places a real, billed call; funds are reserved at start and settled at the end. Refused without the recipient's consent record."
+      ],
+      "docs_url": "https://saperly.com/docs/guides/voice",
+      "verified": {
+        "docs": "https://saperly.com/openapi.json"
+      }
+    }
+  ]
+}

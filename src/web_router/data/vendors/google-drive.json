@@ -1,0 +1,250 @@
+{
+  "vendor": "google-drive",
+  "name": "Google Drive",
+  "category": "other",
+  "summary": "Search a Google user's Drive, read file metadata, download files and export Google Docs, Sheets and Slides as text, Markdown, CSV or PDF.",
+  "docs_url": "https://developers.google.com/workspace/drive/api/reference/rest/v3",
+  "base_url": "https://www.googleapis.com/drive/v3",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "GOOGLE_DRIVE_CLIENT_ID"
+        ],
+        "description": "the OAuth client id of a Google Cloud OAuth app with the Google Drive API enabled (Google Cloud console > APIs & Services > Credentials)"
+      },
+      "client_secret": {
+        "env": [
+          "GOOGLE_DRIVE_CLIENT_SECRET"
+        ],
+        "description": "that OAuth app's client secret"
+      },
+      "refresh_token": {
+        "env": [
+          "GOOGLE_DRIVE_REFRESH_TOKEN"
+        ],
+        "description": "a refresh token minted with that OAuth app for https://www.googleapis.com/auth/drive.readonly (or drive.metadata.readonly for metadata only)"
+      }
+    },
+    "oauth2": {
+      "grant": "refresh_token",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "refresh_token": "{refresh_token}"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Own-account API: sees what the Google user who granted the refresh token can see. drive.readonly is a restricted scope; an app used outside its own Google Workspace may need Google's verification.",
+    "Responses are minimal by default; set fields to get more than id, name and mimeType (and nextPageToken for paging).",
+    "Google Docs, Sheets and Slides have no bytes to download; export them. Other files download with alt=media."
+  ],
+  "sources": [
+    "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list",
+    "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get",
+    "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/export",
+    "https://developers.google.com/workspace/drive/api/reference/rest/v3/about/get",
+    "https://developers.google.com/workspace/drive/api/guides/fields-parameter",
+    "https://developers.google.com/workspace/drive/api/guides/ref-export-formats"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "google-drive.files.list",
+      "name": "Search files",
+      "summary": "Files and folders the user can access, filtered by a Drive query and sorted.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/files",
+      "params": {
+        "q": {
+          "in": "query",
+          "description": "Drive search query.",
+          "example": "name contains 'budget' and trashed = false"
+        },
+        "orderBy": {
+          "in": "query",
+          "description": "Comma-separated keys, add ' desc' to reverse: createdTime, folder, modifiedByMeTime, modifiedTime, name, name_natural, quotaBytesUsed, recency, sharedWithMeTime, starred, viewedByMeTime.",
+          "example": "modifiedTime desc"
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Files per page, at most 1000."
+        },
+        "pageToken": {
+          "in": "query",
+          "description": "nextPageToken from the previous page."
+        },
+        "corpora": {
+          "in": "query",
+          "description": "Which collection to search; default user.",
+          "enum": [
+            "user",
+            "domain",
+            "drive",
+            "allDrives"
+          ]
+        },
+        "driveId": {
+          "in": "query",
+          "description": "Shared drive id, with corpora=drive."
+        },
+        "includeItemsFromAllDrives": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include shared-drive items as well as My Drive."
+        },
+        "supportsAllDrives": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Set true to reach files in shared drives."
+        },
+        "spaces": {
+          "in": "query",
+          "description": "Comma-separated: drive, appDataFolder."
+        },
+        "fields": {
+          "in": "query",
+          "description": "Which fields to return, e.g. 'nextPageToken,files(id,name,mimeType,modifiedTime,owners(emailAddress))'. Without it only kind, id, name and mimeType come back."
+        }
+      },
+      "notes": [
+        "Ask for nextPageToken in fields, or you cannot page. Shared-drive items need includeItemsFromAllDrives=true and supportsAllDrives=true."
+      ],
+      "job": "files.search",
+      "docs_url": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list",
+      "verified": {
+        "docs": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list"
+      }
+    },
+    {
+      "id": "google-drive.files.get",
+      "name": "Get file metadata",
+      "summary": "A file's metadata: name, type, size, owners, dates, parents and links, as chosen by fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/files/{fileId}",
+      "params": {
+        "fileId": {
+          "in": "path",
+          "required": true,
+          "description": "The file id (from files.list, or the /d/<id>/ part of a Drive URL)."
+        },
+        "supportsAllDrives": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Set true to reach files in shared drives."
+        },
+        "fields": {
+          "in": "query",
+          "description": "Which fields to return, e.g. 'nextPageToken,files(id,name,mimeType,modifiedTime,owners(emailAddress))'. Without it only kind, id, name and mimeType come back."
+        }
+      },
+      "job": "files.get",
+      "docs_url": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get",
+      "verified": {
+        "docs": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get"
+      }
+    },
+    {
+      "id": "google-drive.files.download",
+      "name": "Download a file's content",
+      "summary": "The bytes of a file stored in Drive (PDF, image, upload). Not for Google Docs, Sheets or Slides.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/files/{fileId}",
+      "params": {
+        "fileId": {
+          "in": "path",
+          "required": true,
+          "description": "The file id (from files.list, or the /d/<id>/ part of a Drive URL)."
+        },
+        "alt": {
+          "in": "query",
+          "required": true,
+          "description": "Must be 'media' to get the content instead of metadata.",
+          "enum": [
+            "media"
+          ],
+          "example": "media"
+        },
+        "acknowledgeAbuse": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Accept the risk of downloading a file flagged as malware; only for the file's owner or shared drive organizer."
+        },
+        "supportsAllDrives": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Set true to reach files in shared drives."
+        }
+      },
+      "notes": [
+        "Google Workspace files (Docs, Sheets, Slides) answer an error here; use files.export."
+      ],
+      "job": "files.download",
+      "docs_url": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get",
+      "verified": {
+        "docs": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get"
+      }
+    },
+    {
+      "id": "google-drive.files.export",
+      "name": "Export a Google Doc, Sheet or Slides file",
+      "summary": "A Google Workspace document converted to another format: text, Markdown, PDF, CSV, Office.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/files/{fileId}/export",
+      "params": {
+        "fileId": {
+          "in": "path",
+          "required": true,
+          "description": "The file id (from files.list, or the /d/<id>/ part of a Drive URL)."
+        },
+        "mimeType": {
+          "in": "query",
+          "required": true,
+          "description": "Target format. Docs: text/plain, text/markdown, text/html, application/pdf, docx. Sheets: text/csv (first sheet only), xlsx, application/pdf. Slides: text/plain, application/pdf, pptx.",
+          "example": "text/markdown"
+        }
+      },
+      "notes": [
+        "Exported content is limited to 10 MB."
+      ],
+      "job": "files.export",
+      "docs_url": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/export",
+      "verified": {
+        "docs": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/export"
+      }
+    },
+    {
+      "id": "google-drive.about.get",
+      "name": "Get the user and storage quota",
+      "summary": "The signed-in user, storage quota and, on request, import and export formats.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/about",
+      "params": {
+        "fields": {
+          "in": "query",
+          "required": true,
+          "description": "Required here: which fields, e.g. 'user,storageQuota' or 'exportFormats'.",
+          "example": "user,storageQuota"
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://developers.google.com/workspace/drive/api/reference/rest/v3/about/get",
+      "verified": {
+        "docs": "https://developers.google.com/workspace/drive/api/reference/rest/v3/about/get"
+      }
+    }
+  ]
+}

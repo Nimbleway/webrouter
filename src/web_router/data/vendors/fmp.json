@@ -1,0 +1,383 @@
+{
+  "vendor": "fmp",
+  "name": "Financial Modeling Prep",
+  "category": "finance",
+  "summary": "Stock quotes, end-of-day prices, company profiles, financial statements, key metrics, news, earnings calendar and Treasury rates from Financial Modeling Prep (FMP).",
+  "docs_url": "https://site.financialmodelingprep.com/developer/docs",
+  "pricing_url": "https://site.financialmodelingprep.com/developer/docs/pricing",
+  "base_url": "https://financialmodelingprep.com/stable",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FMP_API_KEY"
+        ],
+        "description": "a Financial Modeling Prep API key (site.financialmodelingprep.com dashboard)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Plans limit history depth, the number of rows per call, exchanges (some plans US-only) and statement periods (some plans annual only).",
+    "Dates are YYYY-MM-DD."
+  ],
+  "sources": [
+    "https://site.financialmodelingprep.com/developer/docs",
+    "https://site.financialmodelingprep.com/developer/docs/stable/income-statement",
+    "https://site.financialmodelingprep.com/developer/docs/stable/search-symbol"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fmp.symbol.search",
+      "name": "Search stock symbols",
+      "summary": "Find tickers by symbol across exchanges, with name, exchange and currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search-symbol",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Symbol or partial symbol.",
+          "example": "AAPL"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max results.",
+          "example": 50
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Restrict to an exchange.",
+          "example": "NASDAQ"
+        }
+      },
+      "docs_url": "https://site.financialmodelingprep.com/developer/docs/stable/search-symbol",
+      "verified": {
+        "docs": "https://site.financialmodelingprep.com/developer/docs/stable/search-symbol"
+      }
+    },
+    {
+      "id": "fmp.company.profile",
+      "name": "Get a company profile",
+      "summary": "Price, market cap, industry, sector, CEO, description, identifiers (CIK, ISIN, CUSIP), address and IPO date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/profile",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol.",
+          "example": "AAPL"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://site.financialmodelingprep.com/developer/docs/stable/profile-symbol",
+      "verified": {
+        "docs": "https://site.financialmodelingprep.com/developer/docs/stable/profile-symbol"
+      }
+    },
+    {
+      "id": "fmp.quote.get",
+      "name": "Get a stock quote",
+      "summary": "Real-time price, change, volume, day and year range for one symbol.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/quote",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol.",
+          "example": "AAPL"
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://site.financialmodelingprep.com/developer/docs/stable/quote",
+      "verified": {
+        "docs": "https://site.financialmodelingprep.com/developer/docs/stable/quote"
+      }
+    },
+    {
+      "id": "fmp.prices.eod",
+      "name": "Get daily price history",
+      "summary": "End-of-day open, high, low, close, volume, change and VWAP for a symbol over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/historical-price-eod/full",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol.",
+          "example": "AAPL"
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, YYYY-MM-DD."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "End date, YYYY-MM-DD."
+        }
+      },
+      "notes": [
+        "At most 5000 rows per call; split a long history into date ranges."
+      ],
+      "job": "market.history",
+      "docs_url": "https://site.financialmodelingprep.com/developer/docs/stable/historical-price-eod-full",
+      "verified": {
+        "docs": "https://site.financialmodelingprep.com/developer/docs/stable/historical-price-eod-full"
+      }
+    },
+    {
+      "id": "fmp.statements.income",
+      "name": "Get income statements",
+      "summary": "Revenue, expenses, net income and EPS per period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/income-statement",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol.",
+          "example": "AAPL"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of periods to return, up to 1000.",
+          "example": 5
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "annual (default) or quarter, or one fiscal period Q1-Q4 / FY.",
+          "enum": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4",
+            "FY",
+            "annual",
+            "quarter"
+          ]
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://site.financialmodelingprep.com/developer/docs/stable/income-statement",
+      "verified": {
+        "docs": "https://site.financialmodelingprep.com/developer/docs/stable/income-statement"
+      }
+    },
+    {
+      "id": "fmp.statements.balance",
+      "name": "Get balance sheets",
+      "summary": "Assets, liabilities and shareholder equity per period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/balance-sheet-statement",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol.",
+          "example": "AAPL"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of periods to return, up to 1000.",
+          "example": 5
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "annual (default) or quarter, or one fiscal period Q1-Q4 / FY.",
+          "enum": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4",
+            "FY",
+            "annual",
+            "quarter"
+          ]
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://site.financialmodelingprep.com/developer/docs/stable/balance-sheet-statement",
+      "verified": {
+        "docs": "https://site.financialmodelingprep.com/developer/docs/stable/balance-sheet-statement"
+      }
+    },
+    {
+      "id": "fmp.metrics.key",
+      "name": "Get key metrics",
+      "summary": "Per-period valuation and performance metrics such as market cap, EV and per-share values.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/key-metrics",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol.",
+          "example": "AAPL"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of periods to return, up to 1000.",
+          "example": 5
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "annual (default) or quarter, or one fiscal period Q1-Q4 / FY.",
+          "enum": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4",
+            "FY",
+            "annual",
+            "quarter"
+          ]
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://site.financialmodelingprep.com/developer/docs/stable/key-metrics",
+      "verified": {
+        "docs": "https://site.financialmodelingprep.com/developer/docs/stable/key-metrics"
+      }
+    },
+    {
+      "id": "fmp.news.stock",
+      "name": "Search stock news",
+      "summary": "News articles about one or more tickers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/news/stock",
+      "params": {
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker, or comma-separated tickers.",
+          "example": "AAPL"
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, YYYY-MM-DD."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "End date, YYYY-MM-DD."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 0.",
+          "example": 0
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 250.",
+          "example": 20
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://site.financialmodelingprep.com/developer/docs/stable/search-stock-news",
+      "verified": {
+        "docs": "https://site.financialmodelingprep.com/developer/docs/stable/search-stock-news"
+      }
+    },
+    {
+      "id": "fmp.earnings.calendar",
+      "name": "Get the earnings calendar",
+      "summary": "Earnings announcement dates with estimated and actual EPS.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/earnings-calendar",
+      "params": {
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, YYYY-MM-DD."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "End date, YYYY-MM-DD."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 0."
+        },
+        "includeReportTimes": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include the report time of day."
+        }
+      },
+      "notes": [
+        "Up to 4000 rows per call; keep the from/to window short."
+      ],
+      "job": "events.list",
+      "docs_url": "https://site.financialmodelingprep.com/developer/docs/stable/earnings-calendar",
+      "verified": {
+        "docs": "https://site.financialmodelingprep.com/developer/docs/stable/earnings-calendar"
+      }
+    },
+    {
+      "id": "fmp.treasury.rates",
+      "name": "Get Treasury rates",
+      "summary": "Daily US Treasury yields for every maturity over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/treasury-rates",
+      "params": {
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, YYYY-MM-DD."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "End date, YYYY-MM-DD."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://site.financialmodelingprep.com/developer/docs/stable/treasury-rates",
+      "verified": {
+        "docs": "https://site.financialmodelingprep.com/developer/docs/stable/treasury-rates"
+      }
+    }
+  ]
+}

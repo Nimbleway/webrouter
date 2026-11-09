@@ -1,0 +1,367 @@
+{
+  "vendor": "google-maps",
+  "name": "Google Maps Platform",
+  "category": "other",
+  "summary": "Places search and details (Places API New), forward and reverse geocoding, and Street View coverage lookups.",
+  "docs_url": "https://developers.google.com/maps/documentation",
+  "pricing_url": "https://developers.google.com/maps/billing-and-pricing/pricing",
+  "base_url": "https://places.googleapis.com/v1",
+  "hosts": {
+    "maps": "https://maps.googleapis.com/maps/api"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GOOGLE_MAPS_API_KEY"
+        ],
+        "description": "a Google Maps Platform API key from a Cloud project with billing and the Places API (New), Geocoding API and Street View Static API enabled (Google Cloud console > Google Maps Platform > Keys & Credentials)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billed per request by SKU, on a Cloud project with billing enabled; Places calls are billed by the most expensive field in the mask, so keep field masks short.",
+    "Places (New) calls need a field mask (the fields parameter); without one they fail.",
+    "Geocoding and Street View metadata answer HTTP 200 with a status field; read it."
+  ],
+  "sources": [
+    "https://developers.google.com/maps/documentation/places/web-service/text-search",
+    "https://developers.google.com/maps/documentation/places/web-service/nearby-search",
+    "https://developers.google.com/maps/documentation/places/web-service/place-details",
+    "https://developers.google.com/maps/documentation/geocoding/requests-geocoding",
+    "https://developers.google.com/maps/documentation/geocoding/requests-reverse-geocoding",
+    "https://developers.google.com/maps/documentation/streetview/metadata"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "google-maps.places.text_search",
+      "name": "Search places by text",
+      "summary": "Places matching a text query such as 'pizza in New York', with the fields you ask for.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/places:searchText",
+      "params": {
+        "fields": {
+          "in": "query",
+          "required": true,
+          "description": "Field mask, comma-separated with no spaces; required, there is no default. It sets the billing SKU, so ask only for what you need. '*' is all fields.",
+          "example": "places.id,places.displayName,places.formattedAddress"
+        },
+        "textQuery": {
+          "in": "body",
+          "required": true,
+          "description": "The query.",
+          "example": "vegetarian restaurants in Austin"
+        },
+        "includedType": {
+          "in": "body",
+          "description": "One place type from Table A to restrict to."
+        },
+        "strictTypeFiltering": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only places of includedType."
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1 to 20; default 20."
+        },
+        "pageToken": {
+          "in": "body",
+          "description": "nextPageToken from the previous response; every other parameter must be the same."
+        },
+        "locationBias": {
+          "in": "body",
+          "type": "object",
+          "description": "{circle: {center: {latitude, longitude}, radius: metres up to 50000}} or {rectangle: {low, high}}. Not with locationRestriction."
+        },
+        "locationRestriction": {
+          "in": "body",
+          "type": "object",
+          "description": "{rectangle: {low: {latitude, longitude}, high: {...}}}; results outside are dropped."
+        },
+        "openNow": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only places open now."
+        },
+        "minRating": {
+          "in": "body",
+          "type": "number",
+          "description": "Minimum average rating, 0.0 to 5.0 in steps of 0.5."
+        },
+        "priceLevels": {
+          "in": "body",
+          "type": "array",
+          "description": "Price levels to include, e.g. ['PRICE_LEVEL_MODERATE']."
+        },
+        "rankPreference": {
+          "in": "body",
+          "description": "Result order.",
+          "enum": [
+            "RELEVANCE",
+            "DISTANCE"
+          ]
+        },
+        "languageCode": {
+          "in": "body",
+          "description": "Response language; default en."
+        },
+        "regionCode": {
+          "in": "body",
+          "description": "Two-character CLDR region code; affects formatting and biases results."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "At most 20 results per page and 60 across all pages.",
+        "Put nextPageToken in fields to be able to page."
+      ],
+      "job": "places.search",
+      "docs_url": "https://developers.google.com/maps/documentation/places/web-service/text-search",
+      "verified": {
+        "docs": "https://developers.google.com/maps/documentation/places/web-service/text-search"
+      }
+    },
+    {
+      "id": "google-maps.places.nearby_search",
+      "name": "Search places near a point",
+      "summary": "Places of given types within a circle, ranked by popularity or distance.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/places:searchNearby",
+      "params": {
+        "fields": {
+          "in": "query",
+          "required": true,
+          "description": "Field mask, comma-separated with no spaces; required, there is no default. It sets the billing SKU, so ask only for what you need. '*' is all fields.",
+          "example": "places.id,places.displayName,places.location"
+        },
+        "locationRestriction": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{circle: {center: {latitude, longitude}, radius: metres, above 0 and at most 50000}}.",
+          "example": {
+            "circle": {
+              "center": {
+                "latitude": 37.7937,
+                "longitude": -122.3965
+              },
+              "radius": 500.0
+            }
+          }
+        },
+        "includedTypes": {
+          "in": "body",
+          "type": "array",
+          "description": "Table A place types to include, up to 50.",
+          "example": [
+            "restaurant"
+          ]
+        },
+        "excludedTypes": {
+          "in": "body",
+          "type": "array",
+          "description": "Table A place types to exclude, up to 50."
+        },
+        "includedPrimaryTypes": {
+          "in": "body",
+          "type": "array",
+          "description": "Primary types to include, up to 50."
+        },
+        "excludedPrimaryTypes": {
+          "in": "body",
+          "type": "array",
+          "description": "Primary types to exclude, up to 50."
+        },
+        "maxResultCount": {
+          "in": "body",
+          "type": "integer",
+          "description": "1 to 20; default 20."
+        },
+        "rankPreference": {
+          "in": "body",
+          "description": "Default POPULARITY.",
+          "enum": [
+            "POPULARITY",
+            "DISTANCE"
+          ]
+        },
+        "languageCode": {
+          "in": "body",
+          "description": "Response language; default en."
+        },
+        "regionCode": {
+          "in": "body",
+          "description": "Two-character CLDR region code; affects formatting and biases results."
+        }
+      },
+      "notes": [
+        "A read over POST. No paging: at most 20 results."
+      ],
+      "job": "places.search",
+      "docs_url": "https://developers.google.com/maps/documentation/places/web-service/nearby-search",
+      "verified": {
+        "docs": "https://developers.google.com/maps/documentation/places/web-service/nearby-search"
+      }
+    },
+    {
+      "id": "google-maps.places.details",
+      "name": "Get place details",
+      "summary": "One place by place id: name, address, location, hours, rating, website and any field in the mask.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/places/{place_id}",
+      "params": {
+        "place_id": {
+          "in": "path",
+          "required": true,
+          "description": "The bare place id (not 'places/...').",
+          "example": "ChIJj61dQgK6j4AR4GeTYWZsKWw"
+        },
+        "fields": {
+          "in": "query",
+          "required": true,
+          "description": "Field mask, comma-separated with no spaces; required, there is no default. It sets the billing SKU, so ask only for what you need. '*' is all fields.",
+          "example": "id,displayName,formattedAddress,rating,websiteUri"
+        },
+        "languageCode": {
+          "in": "query",
+          "description": "Response language; default en."
+        },
+        "regionCode": {
+          "in": "query",
+          "description": "Two-character CLDR region code."
+        },
+        "sessionToken": {
+          "in": "query",
+          "description": "The autocomplete session token this details call closes, for session billing."
+        }
+      },
+      "notes": [
+        "Reviews are a field of the details response (reviews), billed at the Enterprise + Atmosphere SKU."
+      ],
+      "job": "places.details",
+      "docs_url": "https://developers.google.com/maps/documentation/places/web-service/place-details",
+      "verified": {
+        "docs": "https://developers.google.com/maps/documentation/places/web-service/place-details"
+      }
+    },
+    {
+      "id": "google-maps.geocode.forward",
+      "name": "Geocode an address",
+      "summary": "Coordinates, place id and structured address components for an address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geocode/json",
+      "params": {
+        "address": {
+          "in": "query",
+          "description": "The address to geocode; this or components is required.",
+          "example": "1600 Amphitheatre Parkway, Mountain View, CA"
+        },
+        "components": {
+          "in": "query",
+          "description": "Pipe-separated component:value filters that restrict results, e.g. 'country:GB|postal_code:SW1A'."
+        },
+        "bounds": {
+          "in": "query",
+          "description": "Viewport to bias toward, 'swLat,swLng|neLat,neLng'."
+        },
+        "language": {
+          "in": "query",
+          "description": "Response language."
+        },
+        "region": {
+          "in": "query",
+          "description": "ccTLD-style region code to bias results."
+        }
+      },
+      "notes": [
+        "Errors come back as HTTP 200 with a status field: check status is OK (ZERO_RESULTS, OVER_QUERY_LIMIT, REQUEST_DENIED, INVALID_REQUEST)."
+      ],
+      "job": "geo.geocode",
+      "host": "maps",
+      "docs_url": "https://developers.google.com/maps/documentation/geocoding/requests-geocoding",
+      "verified": {
+        "docs": "https://developers.google.com/maps/documentation/geocoding/requests-geocoding"
+      }
+    },
+    {
+      "id": "google-maps.geocode.reverse",
+      "name": "Reverse geocode coordinates",
+      "summary": "Addresses for a latitude/longitude, most precise first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geocode/json",
+      "params": {
+        "latlng": {
+          "in": "query",
+          "required": true,
+          "description": "'lat,lng' with no space.",
+          "example": "40.714224,-73.961452"
+        },
+        "result_type": {
+          "in": "query",
+          "description": "Pipe-separated address types to keep, e.g. 'street_address|locality'. A post-filter."
+        },
+        "location_type": {
+          "in": "query",
+          "description": "Pipe-separated: ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER, APPROXIMATE. A post-filter."
+        },
+        "language": {
+          "in": "query",
+          "description": "Response language."
+        },
+        "region": {
+          "in": "query",
+          "description": "ccTLD region code."
+        }
+      },
+      "job": "geo.reverse",
+      "host": "maps",
+      "docs_url": "https://developers.google.com/maps/documentation/geocoding/requests-reverse-geocoding",
+      "verified": {
+        "docs": "https://developers.google.com/maps/documentation/geocoding/requests-reverse-geocoding"
+      }
+    },
+    {
+      "id": "google-maps.streetview.metadata",
+      "name": "Check Street View coverage",
+      "summary": "Whether a Street View panorama exists near a place, with its id, date and exact location. Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/streetview/metadata",
+      "params": {
+        "location": {
+          "in": "query",
+          "description": "An address, 'lat,lng' or 'place_id:<id>'. This or pano is required.",
+          "example": "40.457375,-80.009353"
+        },
+        "pano": {
+          "in": "query",
+          "description": "A panorama id."
+        }
+      },
+      "notes": [
+        "No charge and no quota for metadata; only loading the image is billed. The image itself is the Street View Static API (binary JPEG), not in this entry."
+      ],
+      "job": "geo.streetview",
+      "host": "maps",
+      "docs_url": "https://developers.google.com/maps/documentation/streetview/metadata",
+      "verified": {
+        "docs": "https://developers.google.com/maps/documentation/streetview/metadata"
+      }
+    }
+  ]
+}

@@ -1,0 +1,295 @@
+{
+  "vendor": "creatify",
+  "name": "Creatify",
+  "category": "media-generation",
+  "summary": "AI video ads from a product link: scrape a URL, generate avatar-led short videos, and list avatars and voices.",
+  "docs_url": "https://docs.creatify.ai/introduction",
+  "pricing_url": "https://creatify.ai/pricing",
+  "base_url": "https://api.creatify.ai",
+  "auth": {
+    "credentials": {
+      "api_id": {
+        "env": [
+          "CREATIFY_API_ID"
+        ],
+        "description": "the X-API-ID from the Creatify API Dashboard (account menu > API Dashboard > Show API Keys)."
+      },
+      "api_key": {
+        "env": [
+          "CREATIFY_API_KEY"
+        ],
+        "description": "the X-API-KEY from the same page."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-ID",
+        "value": "{api_id}"
+      },
+      {
+        "in": "header",
+        "name": "X-API-KEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Generation is credit-billed and asynchronous: create a job, then poll its GET endpoint (or pass webhook_url).",
+    "Paths end with a trailing slash.",
+    "Aurora, AI avatar (lipsync), custom template, ad clone, text-to-speech and other generators follow the same create-then-poll pattern but are not in this entry."
+  ],
+  "sources": [
+    "https://docs.creatify.ai/quickstart",
+    "https://docs.creatify.ai/api-reference/links/post-apilinks",
+    "https://docs.creatify.ai/api-reference/link_to_videos/post-apilink_to_videos",
+    "https://docs.creatify.ai/api-reference/link_to_videos/get-apilink_to_videos-",
+    "https://docs.creatify.ai/api-reference/personas/get-apipersonas-paginated",
+    "https://docs.creatify.ai/api-reference/voices/get-apivoices-paginated",
+    "https://docs.creatify.ai/api-reference/workspace/get-remainingcredits"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "creatify.links.create",
+      "name": "Scrape a product link",
+      "summary": "Reads a product or landing page URL into a link record (title, description, images, videos, logo, AI summary) that video generation takes.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/links/",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Product or landing page URL, up to 1,000 characters.",
+          "example": "https://www.example.com/product"
+        }
+      },
+      "notes": [
+        "Creates a link record in the workspace and reports credits_used; its id is the link input of creatify.link_to_videos.create."
+      ],
+      "job": "ai.video.generate",
+      "docs_url": "https://docs.creatify.ai/api-reference/links/post-apilinks",
+      "verified": {
+        "docs": "https://docs.creatify.ai/api-reference/links/post-apilinks"
+      }
+    },
+    {
+      "id": "creatify.link_to_videos.create",
+      "name": "Create a video ad from a link",
+      "summary": "Starts generating a short video ad (script, avatar, voice, b-roll) from a scraped link.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/link_to_videos/",
+      "params": {
+        "link": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Link id from creatify.links.create."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Video name."
+        },
+        "target_platform": {
+          "in": "body",
+          "type": "string",
+          "description": "Platform the ad is for; default tiktok."
+        },
+        "target_audience": {
+          "in": "body",
+          "type": "string",
+          "description": "Audience; default 'young adults'."
+        },
+        "language": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter language code; default en.",
+          "example": "en"
+        },
+        "video_length": {
+          "in": "body",
+          "type": "integer",
+          "enum": [
+            15,
+            30,
+            45,
+            60
+          ],
+          "description": "Seconds; default 15."
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "16x9",
+            "1x1",
+            "9x16"
+          ],
+          "description": "Default 16x9."
+        },
+        "script_style": {
+          "in": "body",
+          "type": "string",
+          "description": "Script style name, e.g. DiscoveryWriter (default), BenefitsV2, HowToV2, ProblemSolutionV2."
+        },
+        "visual_style": {
+          "in": "body",
+          "type": "string",
+          "description": "Visual template, e.g. AvatarBubbleTemplate (default), DynamicProductTemplate, FullScreenTemplate; some fit only certain aspect ratios."
+        },
+        "override_avatar": {
+          "in": "body",
+          "type": "string",
+          "description": "Avatar (persona) id to use instead of a random one."
+        },
+        "override_voice": {
+          "in": "body",
+          "type": "string",
+          "description": "Voice id to use."
+        },
+        "override_script": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own script instead of a generated one."
+        },
+        "model_version": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "standard",
+            "aurora_v1",
+            "aurora_v1_fast",
+            "boreal",
+            "aurora_v2"
+          ],
+          "description": "Avatar model; default standard. Changes the credit price."
+        },
+        "no_background_music": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Default false."
+        },
+        "no_caption": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Default false."
+        },
+        "no_cta": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Default false."
+        },
+        "no_stock_broll": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Default false."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "URL Creatify POSTs id, status, video_output and failed_reason to when the job ends."
+        }
+      },
+      "notes": [
+        "Spends credits: standard costs 5 credits per 30 seconds, aurora_v1 1 credit per second, aurora_v1_fast 0.5, aurora_v2 0.7 per second, boreal 10 per 30 seconds.",
+        "Asynchronous: poll creatify.link_to_videos.get until status is done (or failed/rejected), then read video_output."
+      ],
+      "job": "ai.video.generate",
+      "docs_url": "https://docs.creatify.ai/api-reference/link_to_videos/post-apilink_to_videos",
+      "verified": {
+        "docs": "https://docs.creatify.ai/api-reference/link_to_videos/post-apilink_to_videos"
+      }
+    },
+    {
+      "id": "creatify.link_to_videos.get",
+      "name": "Get a link-to-video job",
+      "summary": "Status, progress, credits used and, when done, the video and thumbnail URLs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/link_to_videos/{id}/",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Job UUID."
+        }
+      },
+      "notes": [
+        "status is one of pending, in_queue, running, failed, done, rejected."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.creatify.ai/api-reference/link_to_videos/get-apilink_to_videos-",
+      "verified": {
+        "docs": "https://docs.creatify.ai/api-reference/link_to_videos/get-apilink_to_videos-"
+      }
+    },
+    {
+      "id": "creatify.personas.list",
+      "name": "List avatars",
+      "summary": "Available stock and custom avatars (personas), paginated.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/personas/paginated/",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10."
+        }
+      },
+      "job": "ai.avatars.list",
+      "docs_url": "https://docs.creatify.ai/api-reference/personas/get-apipersonas-paginated",
+      "verified": {
+        "docs": "https://docs.creatify.ai/api-reference/personas/get-apipersonas-paginated"
+      }
+    },
+    {
+      "id": "creatify.voices.list",
+      "name": "List voices",
+      "summary": "Available voices, paginated.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/voices/paginated/",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10."
+        }
+      },
+      "job": "ai.voices.list",
+      "docs_url": "https://docs.creatify.ai/api-reference/voices/get-apivoices-paginated",
+      "verified": {
+        "docs": "https://docs.creatify.ai/api-reference/voices/get-apivoices-paginated"
+      }
+    },
+    {
+      "id": "creatify.credits.get",
+      "name": "Get remaining credits",
+      "summary": "The workspace's remaining API credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/remaining_credits/",
+      "job": "account.usage",
+      "docs_url": "https://docs.creatify.ai/api-reference/workspace/get-remainingcredits",
+      "verified": {
+        "docs": "https://docs.creatify.ai/api-reference/workspace/get-remainingcredits"
+      }
+    }
+  ]
+}

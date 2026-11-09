@@ -1,0 +1,491 @@
+{
+  "vendor": "discogs",
+  "name": "Discogs",
+  "category": "other",
+  "summary": "The Discogs music database (releases, masters, artists, labels, search) and marketplace prices and stats for a release.",
+  "docs_url": "https://www.discogs.com/developers",
+  "base_url": "https://api.discogs.com",
+  "settings": {
+    "user_agent": {
+      "env": [
+        "DISCOGS_USER_AGENT"
+      ],
+      "default": "web-router",
+      "description": "The User-Agent Discogs requires every application to send, identifying it, e.g. 'MyDiscogsClient/1.0 +http://mydiscogsclient.org'."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DISCOGS_API_KEY"
+        ],
+        "description": "A Discogs personal access token (discogs.com/settings/developers > Generate new token). Sent as 'Authorization: Discogs token=...'."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Discogs token={api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "User-Agent": "{user_agent}"
+  },
+  "notes": [
+    "Discogs is ending unauthenticated API use, and search already requires authentication, so this entry always sends the token.",
+    "Rate limit: 60 requests per minute authenticated, as a moving 60-second window; X-Discogs-Ratelimit, -Used and -Remaining headers report it.",
+    "Lists page with page and per_page (max 100); pagination.urls.next in the answer, or the Link header, gives the next page.",
+    "Image URLs are only returned to authenticated requests."
+  ],
+  "sources": [
+    "https://www.discogs.com/developers"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "discogs.search",
+      "name": "Search the database",
+      "summary": "Releases, masters, artists or labels matching a query and field filters (artist, title, label, barcode, catno, year...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/database/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search query.",
+          "example": "nirvana"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "release",
+            "master",
+            "artist",
+            "label"
+          ]
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Combined 'Artist Name - Release Title'.",
+          "example": "nirvana - nevermind"
+        },
+        "release_title": {
+          "in": "query",
+          "type": "string",
+          "description": "Release title."
+        },
+        "credit": {
+          "in": "query",
+          "type": "string",
+          "description": "Release credits."
+        },
+        "artist": {
+          "in": "query",
+          "type": "string",
+          "description": "Artist name."
+        },
+        "anv": {
+          "in": "query",
+          "type": "string",
+          "description": "Artist name variation."
+        },
+        "label": {
+          "in": "query",
+          "type": "string",
+          "description": "Label name."
+        },
+        "genre": {
+          "in": "query",
+          "type": "string"
+        },
+        "style": {
+          "in": "query",
+          "type": "string"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Release country."
+        },
+        "year": {
+          "in": "query",
+          "type": "string",
+          "description": "Release year."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Format, e.g. album."
+        },
+        "catno": {
+          "in": "query",
+          "type": "string",
+          "description": "Catalog number."
+        },
+        "barcode": {
+          "in": "query",
+          "type": "string"
+        },
+        "track": {
+          "in": "query",
+          "type": "string",
+          "description": "Track title."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "score",
+            "title",
+            "have",
+            "want",
+            "hot",
+            "date_added",
+            "date_changed",
+            "year"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer"
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Up to 100."
+        }
+      },
+      "job": "music.search",
+      "docs_url": "https://www.discogs.com/developers#page:database,header:database-search",
+      "verified": {
+        "docs": "https://www.discogs.com/developers"
+      }
+    },
+    {
+      "id": "discogs.release.get",
+      "name": "Get a release",
+      "summary": "One release: tracklist, credits, formats, labels, identifiers, community have/want and lowest marketplace price.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/releases/{release_id}",
+      "params": {
+        "release_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "example": 249504
+        },
+        "curr_abbr": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "USD",
+            "GBP",
+            "EUR",
+            "CAD",
+            "AUD",
+            "JPY",
+            "CHF",
+            "MXN",
+            "BRL",
+            "NZD",
+            "SEK",
+            "ZAR"
+          ],
+          "description": "Currency for marketplace data; defaults to the user's."
+        }
+      },
+      "job": "music.release.get",
+      "docs_url": "https://www.discogs.com/developers#page:database,header:database-release",
+      "verified": {
+        "docs": "https://www.discogs.com/developers"
+      }
+    },
+    {
+      "id": "discogs.master.get",
+      "name": "Get a master release",
+      "summary": "A master (the set of versions of one release) with its main release.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/masters/{master_id}",
+      "params": {
+        "master_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "example": 1000
+        }
+      },
+      "job": "music.release.get",
+      "docs_url": "https://www.discogs.com/developers#page:database,header:database-master-release",
+      "verified": {
+        "docs": "https://www.discogs.com/developers"
+      }
+    },
+    {
+      "id": "discogs.master.versions",
+      "name": "List a master's versions",
+      "summary": "Every release that is a version of a master, filterable by format, label, year and country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/masters/{master_id}/versions",
+      "params": {
+        "master_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "example": 1000
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "example": "Vinyl"
+        },
+        "label": {
+          "in": "query",
+          "type": "string"
+        },
+        "released": {
+          "in": "query",
+          "type": "string",
+          "description": "Release year."
+        },
+        "country": {
+          "in": "query",
+          "type": "string"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "released",
+            "title",
+            "format",
+            "label",
+            "catno",
+            "country"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer"
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer"
+        }
+      },
+      "job": "music.release.list",
+      "docs_url": "https://www.discogs.com/developers#page:database,header:database-master-release-versions",
+      "verified": {
+        "docs": "https://www.discogs.com/developers"
+      }
+    },
+    {
+      "id": "discogs.artist.get",
+      "name": "Get an artist",
+      "summary": "An artist's profile, aliases, members and links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/artists/{artist_id}",
+      "params": {
+        "artist_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "example": 108713
+        }
+      },
+      "job": "music.artist.get",
+      "docs_url": "https://www.discogs.com/developers#page:database,header:database-artist",
+      "verified": {
+        "docs": "https://www.discogs.com/developers"
+      }
+    },
+    {
+      "id": "discogs.artist.releases",
+      "name": "List an artist's releases",
+      "summary": "Releases and masters associated with an artist.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/artists/{artist_id}/releases",
+      "params": {
+        "artist_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "example": 108713
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "year",
+            "title",
+            "format"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer"
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer"
+        }
+      },
+      "job": "music.release.list",
+      "docs_url": "https://www.discogs.com/developers#page:database,header:database-artist-releases",
+      "verified": {
+        "docs": "https://www.discogs.com/developers"
+      }
+    },
+    {
+      "id": "discogs.label.get",
+      "name": "Get a label",
+      "summary": "A label (or company, studio) with its profile, sublabels and links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/labels/{label_id}",
+      "params": {
+        "label_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "example": 1
+        }
+      },
+      "job": "music.label.get",
+      "docs_url": "https://www.discogs.com/developers#page:database,header:database-label",
+      "verified": {
+        "docs": "https://www.discogs.com/developers"
+      }
+    },
+    {
+      "id": "discogs.label.releases",
+      "name": "List a label's releases",
+      "summary": "Releases on a label.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/labels/{label_id}/releases",
+      "params": {
+        "label_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "example": 1
+        },
+        "page": {
+          "in": "query",
+          "type": "integer"
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer"
+        }
+      },
+      "job": "music.release.list",
+      "docs_url": "https://www.discogs.com/developers#page:database,header:database-all-label-releases",
+      "verified": {
+        "docs": "https://www.discogs.com/developers"
+      }
+    },
+    {
+      "id": "discogs.marketplace.stats",
+      "name": "Get a release's marketplace stats",
+      "summary": "Items for sale now, lowest listed price, and whether the release is blocked from sale.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/marketplace/stats/{release_id}",
+      "params": {
+        "release_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "example": 249504
+        },
+        "curr_abbr": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "USD",
+            "GBP",
+            "EUR",
+            "CAD",
+            "AUD",
+            "JPY",
+            "CHF",
+            "MXN",
+            "BRL",
+            "NZD",
+            "SEK",
+            "ZAR"
+          ],
+          "description": "Currency; defaults to the user's buyer currency."
+        }
+      },
+      "notes": [
+        "lowest_price and num_for_sale are null when nothing is for sale or the release is blocked."
+      ],
+      "job": "music.marketplace.stats",
+      "docs_url": "https://www.discogs.com/developers#page:marketplace,header:marketplace-release-statistics",
+      "verified": {
+        "docs": "https://www.discogs.com/developers"
+      }
+    },
+    {
+      "id": "discogs.marketplace.price_suggestions",
+      "name": "Get price suggestions for a release",
+      "summary": "Suggested prices for a release, in the user's selling currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/marketplace/price_suggestions/{release_id}",
+      "params": {
+        "release_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "example": 249504
+        }
+      },
+      "notes": [
+        "The token's user must have filled out their seller settings; an empty object means no suggestions."
+      ],
+      "job": "music.marketplace.stats",
+      "docs_url": "https://www.discogs.com/developers#page:marketplace,header:marketplace-price-suggestions",
+      "verified": {
+        "docs": "https://www.discogs.com/developers"
+      }
+    }
+  ]
+}

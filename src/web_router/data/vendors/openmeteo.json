@@ -1,0 +1,415 @@
+{
+  "vendor": "openmeteo",
+  "name": "Open-Meteo",
+  "category": "other",
+  "summary": "Keyless weather forecasts, historical weather since 1940, air quality, marine forecasts and place-name geocoding for any coordinate.",
+  "docs_url": "https://open-meteo.com/en/docs",
+  "pricing_url": "https://open-meteo.com/en/pricing",
+  "base_url": "https://api.open-meteo.com/v1",
+  "hosts": {
+    "geocoding": "https://geocoding-api.open-meteo.com/v1",
+    "archive": "https://archive-api.open-meteo.com/v1",
+    "air_quality": "https://air-quality-api.open-meteo.com/v1",
+    "marine": "https://marine-api.open-meteo.com/v1"
+  },
+  "notes": [
+    "No key: the free API is for non-commercial use. Commercial customers call the customer- prefixed hosts with an apikey parameter, which this entry does not cover.",
+    "Locations are latitude/longitude (WGS84); geocode a place name first with openmeteo.geocoding.search. Several comma-separated coordinates return one result per location.",
+    "Nothing is returned unless variables are named: pass hourly, daily and/or current as comma-separated variable names (e.g. temperature_2m,precipitation).",
+    "Times are GMT unless timezone is set; daily variables need timezone (a tz database name or auto).",
+    "Units default to celsius, km/h and mm; change with temperature_unit, wind_speed_unit and precipitation_unit."
+  ],
+  "sources": [
+    "https://open-meteo.com/en/docs",
+    "https://open-meteo.com/en/docs/geocoding-api",
+    "https://open-meteo.com/en/docs/historical-weather-api",
+    "https://open-meteo.com/en/docs/air-quality-api",
+    "https://open-meteo.com/en/docs/marine-weather-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "openmeteo.geocoding.search",
+      "name": "Geocode a place name",
+      "summary": "Places matching a name or postal code, with coordinates, elevation, timezone, country and population.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "host": "geocoding",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Place name or postal code; add a comma and a country or region to narrow it.",
+          "example": "Berlin"
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1 to 100, default 10."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language of the returned names, default en."
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-3166-1 alpha-2 country filter."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or protobuf.",
+          "enum": [
+            "json",
+            "protobuf"
+          ]
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://open-meteo.com/en/docs/geocoding-api",
+      "verified": {
+        "docs": "https://open-meteo.com/en/docs/geocoding-api"
+      }
+    },
+    {
+      "id": "openmeteo.forecast.get",
+      "name": "Get a weather forecast",
+      "summary": "Current conditions and hourly, 15-minute or daily forecast variables for up to 16 days, plus up to 92 past days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/forecast",
+      "params": {
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "WGS84 latitude; comma-separate for several locations.",
+          "example": 52.52
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "WGS84 longitude; negative for the Americas.",
+          "example": 13.41
+        },
+        "hourly": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated hourly variables, e.g. temperature_2m,precipitation,wind_speed_10m,weather_code."
+        },
+        "daily": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated daily variables, e.g. temperature_2m_max,precipitation_sum,sunrise. Needs timezone."
+        },
+        "current": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated current-condition variables, e.g. temperature_2m,weather_code."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "tz database name or auto; default GMT."
+        },
+        "forecast_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 16, default 7."
+        },
+        "past_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 92, default 0."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "yyyy-mm-dd; with end_date, replaces forecast_days/past_days."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "yyyy-mm-dd."
+        },
+        "temperature_unit": {
+          "in": "query",
+          "type": "string",
+          "description": "Default celsius.",
+          "enum": [
+            "celsius",
+            "fahrenheit"
+          ]
+        },
+        "wind_speed_unit": {
+          "in": "query",
+          "type": "string",
+          "description": "Default kmh.",
+          "enum": [
+            "kmh",
+            "ms",
+            "mph",
+            "kn"
+          ]
+        },
+        "precipitation_unit": {
+          "in": "query",
+          "type": "string",
+          "description": "Default mm.",
+          "enum": [
+            "mm",
+            "inch"
+          ]
+        },
+        "timeformat": {
+          "in": "query",
+          "type": "string",
+          "description": "Default iso8601.",
+          "enum": [
+            "iso8601",
+            "unixtime"
+          ]
+        }
+      },
+      "job": "weather.forecast",
+      "docs_url": "https://open-meteo.com/en/docs",
+      "verified": {
+        "docs": "https://open-meteo.com/en/docs"
+      }
+    },
+    {
+      "id": "openmeteo.archive.get",
+      "name": "Get historical weather",
+      "summary": "Hourly or daily reanalysis weather for a past date range (ERA5 from 1940).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/archive",
+      "host": "archive",
+      "params": {
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "WGS84 latitude."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "WGS84 longitude."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "yyyy-mm-dd.",
+          "example": "2024-01-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "yyyy-mm-dd.",
+          "example": "2024-01-31"
+        },
+        "hourly": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated hourly variables."
+        },
+        "daily": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated daily variables; needs timezone."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "tz database name or auto; default GMT."
+        },
+        "temperature_unit": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "celsius",
+            "fahrenheit"
+          ]
+        },
+        "wind_speed_unit": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "kmh",
+            "ms",
+            "mph",
+            "kn"
+          ]
+        },
+        "precipitation_unit": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "mm",
+            "inch"
+          ]
+        }
+      },
+      "notes": [
+        "ERA5 data lags about 5 days behind today; ask the forecast endpoint's past_days for the last few days."
+      ],
+      "job": "weather.history",
+      "docs_url": "https://open-meteo.com/en/docs/historical-weather-api",
+      "verified": {
+        "docs": "https://open-meteo.com/en/docs/historical-weather-api"
+      }
+    },
+    {
+      "id": "openmeteo.air_quality.get",
+      "name": "Get air quality",
+      "summary": "Current and hourly pollutants, AQI (European and US), UV index and pollen from CAMS models.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/air-quality",
+      "host": "air_quality",
+      "params": {
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "WGS84 latitude."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "WGS84 longitude."
+        },
+        "hourly": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated variables, e.g. pm10,pm2_5,ozone,european_aqi,us_aqi,uv_index."
+        },
+        "current": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated current-condition variables."
+        },
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "description": "Default auto.",
+          "enum": [
+            "auto",
+            "cams_europe",
+            "cams_global"
+          ]
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "tz database name or auto; default GMT."
+        },
+        "forecast_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 7, default 5."
+        },
+        "past_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 92, default 0."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "yyyy-mm-dd."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "yyyy-mm-dd."
+        }
+      },
+      "notes": [
+        "Pollen variables cover Europe only, in pollen season."
+      ],
+      "job": "weather.air_quality",
+      "docs_url": "https://open-meteo.com/en/docs/air-quality-api",
+      "verified": {
+        "docs": "https://open-meteo.com/en/docs/air-quality-api"
+      }
+    },
+    {
+      "id": "openmeteo.marine.get",
+      "name": "Get a marine forecast",
+      "summary": "Wave height, direction and period, swell, sea surface temperature and ocean currents.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/marine",
+      "host": "marine",
+      "params": {
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "WGS84 latitude."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "WGS84 longitude."
+        },
+        "hourly": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated variables, e.g. wave_height,wave_direction,wave_period,swell_wave_height,sea_surface_temperature."
+        },
+        "daily": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated daily variables; needs timezone."
+        },
+        "current": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated current-condition variables."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "tz database name or auto; default GMT."
+        },
+        "forecast_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 8."
+        },
+        "past_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 92, default 0."
+        },
+        "length_unit": {
+          "in": "query",
+          "type": "string",
+          "description": "Default metric.",
+          "enum": [
+            "metric",
+            "imperial"
+          ]
+        }
+      },
+      "job": "weather.marine",
+      "docs_url": "https://open-meteo.com/en/docs/marine-weather-api",
+      "verified": {
+        "docs": "https://open-meteo.com/en/docs/marine-weather-api"
+      }
+    }
+  ]
+}

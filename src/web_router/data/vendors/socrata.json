@@ -1,0 +1,605 @@
+{
+  "vendor": "socrata",
+  "name": "Socrata (Tyler Data & Insights)",
+  "category": "other",
+  "summary": "Discovery API over the tens of thousands of government datasets, maps and charts published on Socrata open-data portals: search, autocomplete, and counts by portal, tag and category.",
+  "docs_url": "https://dev.socrata.com/docs/other/discovery",
+  "base_url": "https://api.{region}.socrata.com/api/catalog",
+  "settings": {
+    "region": {
+      "env": [
+        "SOCRATA_REGION"
+      ],
+      "default": "us",
+      "choices": [
+        "us",
+        "eu"
+      ],
+      "description": "us for North American portals, eu for all others."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "app_token": {
+        "env": [
+          "SOCRATA_APP_TOKEN"
+        ],
+        "required": false,
+        "description": "Optional Socrata app token, sent in the X-App-Token header. Without one, calls share a low per-IP throttle; with one they get their own pool."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-App-Token",
+        "value": "{app_token}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Free and keyless for public assets. Throttled calls answer 429.",
+    "Unknown parameters are treated as custom-metadata filters, so a misspelt one (domain instead of domains) silently returns nothing.",
+    "Repeating a parameter is a union (tags=fire&tags=commission); different parameters intersect.",
+    "This entry covers discovery only. A dataset's rows are queried on its own portal (https://<portal>/api/v3/views/<four-by-four>/query.json, or the older /resource/<id>.json) -- a host per portal that this format cannot name. Each search result carries the portal domain and the four-by-four id."
+  ],
+  "sources": [
+    "https://dev.socrata.com/docs/other/discovery",
+    "https://dev.socrata.com/apis/discovery.yaml",
+    "https://dev.socrata.com/docs/app-tokens.html",
+    "https://dev.socrata.com/docs/endpoints.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "socrata.catalog.search",
+      "name": "Search open-data assets",
+      "summary": "Datasets, maps, charts and other assets across Socrata portals, with metadata, portal domain and id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words matched against name, description, category, tags, column names and descriptions, and attribution.",
+          "example": "building permits"
+        },
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "description": "Portal domains to search, comma-separated.",
+          "example": "data.cityofchicago.org"
+        },
+        "search_context": {
+          "in": "query",
+          "type": "string",
+          "description": "A portal domain to search as; required for categories and tags filters."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "The portal's category (needs search_context)."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "A tag (needs search_context)."
+        },
+        "only": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset types, comma-separated; singular or plural: api, calendar, chart, dataset, federated_href, file, filter, form, href, link, map, measure, story, visualization.",
+          "example": "datasets"
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Four-by-four asset ids, comma-separated."
+        },
+        "names": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact asset title, case-insensitive."
+        },
+        "attribution": {
+          "in": "query",
+          "type": "string",
+          "description": "Attributing organisation, case-sensitive."
+        },
+        "provenance": {
+          "in": "query",
+          "type": "string",
+          "description": "Official or community assets.",
+          "enum": [
+            "official",
+            "community"
+          ]
+        },
+        "min_should_match": {
+          "in": "query",
+          "type": "string",
+          "description": "How many query words must match (Elasticsearch syntax); default '3<60%'."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort: relevance (default), name, owner, dataset_id, datatype, domain_category, createdAt, updatedAt, page_views_total, page_views_last_month, page_views_last_week; append ' ASC' or ' DESC'."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start index, default 0; offset + limit over 10000 is a 400."
+        },
+        "scroll_id": {
+          "in": "query",
+          "type": "string",
+          "description": "For deep paging: the id of the last result of the previous chunk (send empty first). Not with order or offset."
+        }
+      },
+      "notes": [
+        "Search with no parameters returns every asset you may see; each parameter only narrows it."
+      ],
+      "job": "datasets.search",
+      "docs_url": "https://dev.socrata.com/docs/other/discovery",
+      "verified": {
+        "docs": "https://dev.socrata.com/docs/other/discovery"
+      }
+    },
+    {
+      "id": "socrata.catalog.autocomplete",
+      "name": "Autocomplete asset titles",
+      "summary": "Asset titles matching typed characters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/autocomplete",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words matched against name, description, category, tags, column names and descriptions, and attribution.",
+          "example": "building permits"
+        },
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "description": "Portal domains to search, comma-separated.",
+          "example": "data.cityofchicago.org"
+        },
+        "search_context": {
+          "in": "query",
+          "type": "string",
+          "description": "A portal domain to search as; required for categories and tags filters."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "The portal's category (needs search_context)."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "A tag (needs search_context)."
+        },
+        "only": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset types, comma-separated; singular or plural: api, calendar, chart, dataset, federated_href, file, filter, form, href, link, map, measure, story, visualization.",
+          "example": "datasets"
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Four-by-four asset ids, comma-separated."
+        },
+        "names": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact asset title, case-insensitive."
+        },
+        "attribution": {
+          "in": "query",
+          "type": "string",
+          "description": "Attributing organisation, case-sensitive."
+        },
+        "provenance": {
+          "in": "query",
+          "type": "string",
+          "description": "Official or community assets.",
+          "enum": [
+            "official",
+            "community"
+          ]
+        },
+        "deduplicate": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: each title once; false: every match with its id."
+        }
+      },
+      "notes": [
+        "q is required here and matched against titles only, character-wise."
+      ],
+      "job": "datasets.search",
+      "docs_url": "https://dev.socrata.com/docs/other/discovery",
+      "verified": {
+        "docs": "https://dev.socrata.com/docs/other/discovery"
+      }
+    },
+    {
+      "id": "socrata.catalog.tags.autocomplete",
+      "name": "Autocomplete tags",
+      "summary": "Tags matching typed characters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/tags/autocomplete",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words matched against name, description, category, tags, column names and descriptions, and attribution.",
+          "example": "building permits"
+        },
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "description": "Portal domains to search, comma-separated.",
+          "example": "data.cityofchicago.org"
+        },
+        "search_context": {
+          "in": "query",
+          "type": "string",
+          "description": "A portal domain to search as; required for categories and tags filters."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "The portal's category (needs search_context)."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "A tag (needs search_context)."
+        },
+        "only": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset types, comma-separated; singular or plural: api, calendar, chart, dataset, federated_href, file, filter, form, href, link, map, measure, story, visualization.",
+          "example": "datasets"
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Four-by-four asset ids, comma-separated."
+        },
+        "names": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact asset title, case-insensitive."
+        },
+        "attribution": {
+          "in": "query",
+          "type": "string",
+          "description": "Attributing organisation, case-sensitive."
+        },
+        "provenance": {
+          "in": "query",
+          "type": "string",
+          "description": "Official or community assets.",
+          "enum": [
+            "official",
+            "community"
+          ]
+        }
+      },
+      "notes": [
+        "q is required."
+      ],
+      "job": "datasets.search",
+      "docs_url": "https://dev.socrata.com/docs/other/discovery",
+      "verified": {
+        "docs": "https://dev.socrata.com/docs/other/discovery"
+      }
+    },
+    {
+      "id": "socrata.catalog.domains",
+      "name": "Count assets by portal",
+      "summary": "How many matching assets each portal domain holds; also lists the portals.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/domains",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words matched against name, description, category, tags, column names and descriptions, and attribution.",
+          "example": "building permits"
+        },
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "description": "Portal domains to search, comma-separated.",
+          "example": "data.cityofchicago.org"
+        },
+        "search_context": {
+          "in": "query",
+          "type": "string",
+          "description": "A portal domain to search as; required for categories and tags filters."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "The portal's category (needs search_context)."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "A tag (needs search_context)."
+        },
+        "only": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset types, comma-separated; singular or plural: api, calendar, chart, dataset, federated_href, file, filter, form, href, link, map, measure, story, visualization.",
+          "example": "datasets"
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Four-by-four asset ids, comma-separated."
+        },
+        "names": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact asset title, case-insensitive."
+        },
+        "attribution": {
+          "in": "query",
+          "type": "string",
+          "description": "Attributing organisation, case-sensitive."
+        },
+        "provenance": {
+          "in": "query",
+          "type": "string",
+          "description": "Official or community assets.",
+          "enum": [
+            "official",
+            "community"
+          ]
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://dev.socrata.com/docs/other/discovery",
+      "verified": {
+        "docs": "https://dev.socrata.com/docs/other/discovery"
+      }
+    },
+    {
+      "id": "socrata.catalog.domain_tags",
+      "name": "Count assets by tag",
+      "summary": "Matching asset counts grouped by tag.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/domain_tags",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words matched against name, description, category, tags, column names and descriptions, and attribution.",
+          "example": "building permits"
+        },
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "description": "Portal domains to search, comma-separated.",
+          "example": "data.cityofchicago.org"
+        },
+        "search_context": {
+          "in": "query",
+          "type": "string",
+          "description": "A portal domain to search as; required for categories and tags filters."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "The portal's category (needs search_context)."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "A tag (needs search_context)."
+        },
+        "only": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset types, comma-separated; singular or plural: api, calendar, chart, dataset, federated_href, file, filter, form, href, link, map, measure, story, visualization.",
+          "example": "datasets"
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Four-by-four asset ids, comma-separated."
+        },
+        "names": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact asset title, case-insensitive."
+        },
+        "attribution": {
+          "in": "query",
+          "type": "string",
+          "description": "Attributing organisation, case-sensitive."
+        },
+        "provenance": {
+          "in": "query",
+          "type": "string",
+          "description": "Official or community assets.",
+          "enum": [
+            "official",
+            "community"
+          ]
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://dev.socrata.com/docs/other/discovery",
+      "verified": {
+        "docs": "https://dev.socrata.com/docs/other/discovery"
+      }
+    },
+    {
+      "id": "socrata.catalog.domain_categories",
+      "name": "Count assets by category",
+      "summary": "Matching asset counts grouped by category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/domain_categories",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words matched against name, description, category, tags, column names and descriptions, and attribution.",
+          "example": "building permits"
+        },
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "description": "Portal domains to search, comma-separated.",
+          "example": "data.cityofchicago.org"
+        },
+        "search_context": {
+          "in": "query",
+          "type": "string",
+          "description": "A portal domain to search as; required for categories and tags filters."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "The portal's category (needs search_context)."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "A tag (needs search_context)."
+        },
+        "only": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset types, comma-separated; singular or plural: api, calendar, chart, dataset, federated_href, file, filter, form, href, link, map, measure, story, visualization.",
+          "example": "datasets"
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Four-by-four asset ids, comma-separated."
+        },
+        "names": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact asset title, case-insensitive."
+        },
+        "attribution": {
+          "in": "query",
+          "type": "string",
+          "description": "Attributing organisation, case-sensitive."
+        },
+        "provenance": {
+          "in": "query",
+          "type": "string",
+          "description": "Official or community assets.",
+          "enum": [
+            "official",
+            "community"
+          ]
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://dev.socrata.com/docs/other/discovery",
+      "verified": {
+        "docs": "https://dev.socrata.com/docs/other/discovery"
+      }
+    },
+    {
+      "id": "socrata.catalog.facets",
+      "name": "Count a portal's assets by facet",
+      "summary": "Counts on one portal by datatype, category, tag, provenance and custom metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/domains/{domain}/facets",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words matched against name, description, category, tags, column names and descriptions, and attribution.",
+          "example": "building permits"
+        },
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "description": "Portal domains to search, comma-separated.",
+          "example": "data.cityofchicago.org"
+        },
+        "search_context": {
+          "in": "query",
+          "type": "string",
+          "description": "A portal domain to search as; required for categories and tags filters."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "The portal's category (needs search_context)."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "A tag (needs search_context)."
+        },
+        "only": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset types, comma-separated; singular or plural: api, calendar, chart, dataset, federated_href, file, filter, form, href, link, map, measure, story, visualization.",
+          "example": "datasets"
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Four-by-four asset ids, comma-separated."
+        },
+        "names": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact asset title, case-insensitive."
+        },
+        "attribution": {
+          "in": "query",
+          "type": "string",
+          "description": "Attributing organisation, case-sensitive."
+        },
+        "provenance": {
+          "in": "query",
+          "type": "string",
+          "description": "Official or community assets.",
+          "enum": [
+            "official",
+            "community"
+          ]
+        },
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Portal domain.",
+          "example": "data.cityofchicago.org"
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://dev.socrata.com/docs/other/discovery",
+      "verified": {
+        "docs": "https://dev.socrata.com/docs/other/discovery"
+      }
+    }
+  ]
+}

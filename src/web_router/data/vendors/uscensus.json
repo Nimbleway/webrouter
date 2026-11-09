@@ -1,0 +1,435 @@
+{
+  "vendor": "uscensus",
+  "name": "US Census Bureau",
+  "category": "other",
+  "summary": "US Census Bureau statistics (American Community Survey, decennial census and more) by geography, plus the Census Geocoder that turns addresses into coordinates and census geographies.",
+  "docs_url": "https://www.census.gov/data/developers/guidance/api-user-guide.html",
+  "base_url": "https://api.census.gov/data",
+  "hosts": {
+    "geocoder": "https://geocoding.geo.census.gov/geocoder",
+    "root": "https://api.census.gov"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CENSUS_API_KEY"
+        ],
+        "required": false,
+        "description": "A free Census Data API key (api.census.gov/data/key_signup.html). Sent as the key query parameter on data queries; the geocoder needs none."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Data answers are a two-dimensional JSON array: the first row is the column names, each later row one geography. Missing values are null. Numbers come back as strings.",
+    "get takes up to 50 variables, comma-separated; NAME gives the geography's name and group(TABLE) every variable of a table. ACS estimates end in E and their margins of error in M (B01001_001E, B01001_001M).",
+    "Geography is for=<level>:<code or *>, narrowed with in=<parent>:<code> (e.g. for=county:*&in=state:06). Codes are FIPS.",
+    "The Census Bureau's guide says a key must be used with data queries; light keyless use is tolerated but limited per IP.",
+    "Find datasets with GET /data.json and a dataset's variables with its variables.json before querying."
+  ],
+  "sources": [
+    "https://www.census.gov/data/developers/guidance/api-user-guide.html",
+    "https://www.census.gov/data/developers/guidance/api-user-guide.Query_Limits.html",
+    "https://www.census.gov/data/developers/guidance/api-user-guide.Example_API_Queries.html",
+    "https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "uscensus.datasets.list",
+      "name": "List datasets",
+      "summary": "Every dataset the Data API serves, with its vintage, title and links to its variables and geographies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data.json",
+      "notes": [
+        "A large catalog file (api.census.gov/data.json); filter it locally."
+      ],
+      "credentials": [],
+      "job": "datasets.list",
+      "docs_url": "https://www.census.gov/data/developers/guidance/api-user-guide.html",
+      "verified": {
+        "docs": "https://www.census.gov/data/developers/guidance/api-user-guide.html"
+      },
+      "host": "root"
+    },
+    {
+      "id": "uscensus.acs.query",
+      "name": "Query American Community Survey detailed tables",
+      "summary": "ACS 1-year, 5-year or supplemental estimates for chosen variables and geographies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{year}/acs/{survey}",
+      "params": {
+        "year": {
+          "in": "path",
+          "required": true,
+          "description": "Vintage (data year).",
+          "example": "2023"
+        },
+        "survey": {
+          "in": "path",
+          "required": true,
+          "description": "acs1 (1-year, areas of 65,000+ people), acs5 (5-year, every area), acsse (supplemental).",
+          "enum": [
+            "acs1",
+            "acs5",
+            "acsse"
+          ]
+        },
+        "get": {
+          "in": "query",
+          "required": true,
+          "description": "Variables, comma-separated (max 50), or group(TABLE).",
+          "example": "NAME,B01001_001E"
+        },
+        "for_": {
+          "in": "query",
+          "wire_name": "for",
+          "required": true,
+          "description": "Geography level and code, * for all.",
+          "example": "state:*"
+        },
+        "in_": {
+          "in": "query",
+          "wire_name": "in",
+          "description": "Parent geography, e.g. state:06."
+        }
+      },
+      "job": "datasets.query",
+      "docs_url": "https://www.census.gov/data/developers/guidance/api-user-guide.Example_API_Queries.html",
+      "verified": {
+        "docs": "https://www.census.gov/data/developers/guidance/api-user-guide.Example_API_Queries.html"
+      }
+    },
+    {
+      "id": "uscensus.acs.tables_query",
+      "name": "Query ACS profile or subject tables",
+      "summary": "ACS data profiles (DP), subject tables (S) or comparison profiles (CP) for chosen geographies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{year}/acs/{survey}/{table_type}",
+      "params": {
+        "year": {
+          "in": "path",
+          "required": true,
+          "description": "Vintage.",
+          "example": "2023"
+        },
+        "survey": {
+          "in": "path",
+          "required": true,
+          "description": "acs1 or acs5.",
+          "enum": [
+            "acs1",
+            "acs5"
+          ]
+        },
+        "table_type": {
+          "in": "path",
+          "required": true,
+          "description": "profile (DP tables), subject (S tables) or cprofile (CP tables).",
+          "enum": [
+            "profile",
+            "subject",
+            "cprofile"
+          ]
+        },
+        "get": {
+          "in": "query",
+          "required": true,
+          "description": "Variables (max 50) or group(TABLE).",
+          "example": "NAME,DP03_0062E"
+        },
+        "for_": {
+          "in": "query",
+          "wire_name": "for",
+          "required": true,
+          "description": "Geography level and code.",
+          "example": "county:*"
+        },
+        "in_": {
+          "in": "query",
+          "wire_name": "in",
+          "description": "Parent geography.",
+          "example": "state:06"
+        }
+      },
+      "job": "datasets.query",
+      "docs_url": "https://www.census.gov/data/developers/guidance/api-user-guide.Example_API_Queries.html",
+      "verified": {
+        "docs": "https://www.census.gov/data/developers/guidance/api-user-guide.Example_API_Queries.html"
+      }
+    },
+    {
+      "id": "uscensus.acs.variables",
+      "name": "List an ACS dataset's variables",
+      "summary": "Every variable of an ACS dataset with its label, concept and group.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{year}/acs/{survey}/variables.json",
+      "params": {
+        "year": {
+          "in": "path",
+          "required": true,
+          "description": "Vintage.",
+          "example": "2023"
+        },
+        "survey": {
+          "in": "path",
+          "required": true,
+          "description": "ACS dataset.",
+          "enum": [
+            "acs1",
+            "acs5",
+            "acsse"
+          ]
+        }
+      },
+      "notes": [
+        "Tens of thousands of variables; a group's own variables are at /{year}/acs/{survey}/groups/{TABLE}.json."
+      ],
+      "credentials": [],
+      "job": "datasets.schema",
+      "docs_url": "https://www.census.gov/data/developers/guidance/api-user-guide.html",
+      "verified": {
+        "docs": "https://www.census.gov/data/developers/guidance/api-user-guide.html"
+      }
+    },
+    {
+      "id": "uscensus.decennial.query",
+      "name": "Query decennial census data",
+      "summary": "Decennial census counts (e.g. redistricting pl, dhc) for chosen variables and geographies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{year}/dec/{dataset}",
+      "params": {
+        "year": {
+          "in": "path",
+          "required": true,
+          "description": "Census year.",
+          "example": "2020"
+        },
+        "dataset": {
+          "in": "path",
+          "required": true,
+          "description": "Decennial dataset id as listed in /data.json (e.g. pl, dhc).",
+          "example": "pl"
+        },
+        "get": {
+          "in": "query",
+          "required": true,
+          "description": "Variables (max 50) or group(TABLE).",
+          "example": "NAME,P1_001N"
+        },
+        "for_": {
+          "in": "query",
+          "wire_name": "for",
+          "required": true,
+          "description": "Geography level and code.",
+          "example": "state:*"
+        },
+        "in_": {
+          "in": "query",
+          "wire_name": "in",
+          "description": "Parent geography."
+        }
+      },
+      "job": "datasets.query",
+      "docs_url": "https://www.census.gov/data/developers/guidance/api-user-guide.Example_API_Queries.html",
+      "verified": {
+        "docs": "https://www.census.gov/data/developers/guidance/api-user-guide.Example_API_Queries.html"
+      }
+    },
+    {
+      "id": "uscensus.geocode.oneline",
+      "name": "Geocode a one-line address",
+      "summary": "Coordinates and matched address for a US address; with returntype geographies, also its state, county, tract and block.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{returntype}/onelineaddress",
+      "params": {
+        "returntype": {
+          "in": "path",
+          "required": true,
+          "description": "locations (coordinates only) or geographies (coordinates plus census geographies).",
+          "enum": [
+            "locations",
+            "geographies"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "required": true,
+          "description": "Full address on one line.",
+          "example": "4600 Silver Hill Rd, Washington, DC 20233"
+        },
+        "benchmark": {
+          "in": "query",
+          "required": true,
+          "description": "Address benchmark name or id.",
+          "example": "Public_AR_Current"
+        },
+        "vintage": {
+          "in": "query",
+          "description": "Geography vintage; required with geographies.",
+          "example": "Current_Current"
+        },
+        "layers": {
+          "in": "query",
+          "description": "Geography layers to return, comma-separated ids or names, or all."
+        },
+        "format": {
+          "in": "query",
+          "description": "json or jsonp.",
+          "enum": [
+            "json",
+            "jsonp"
+          ],
+          "example": "json"
+        }
+      },
+      "notes": [
+        "Keyless. Pass format=json, or the answer is HTML."
+      ],
+      "host": "geocoder",
+      "credentials": [],
+      "job": "places.geocode",
+      "docs_url": "https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html",
+      "verified": {
+        "docs": "https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html"
+      }
+    },
+    {
+      "id": "uscensus.geocode.address",
+      "name": "Geocode an address by parts",
+      "summary": "Like the one-line geocoder, from street, city, state and ZIP fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{returntype}/address",
+      "params": {
+        "returntype": {
+          "in": "path",
+          "required": true,
+          "description": "locations or geographies.",
+          "enum": [
+            "locations",
+            "geographies"
+          ]
+        },
+        "street": {
+          "in": "query",
+          "required": true,
+          "description": "Street address."
+        },
+        "city": {
+          "in": "query",
+          "description": "City (with state, when no zip)."
+        },
+        "state": {
+          "in": "query",
+          "description": "State."
+        },
+        "zip": {
+          "in": "query",
+          "description": "ZIP code (street plus zip is enough)."
+        },
+        "benchmark": {
+          "in": "query",
+          "required": true,
+          "description": "Address benchmark name or id.",
+          "example": "Public_AR_Current"
+        },
+        "vintage": {
+          "in": "query",
+          "description": "Geography vintage; required with geographies.",
+          "example": "Current_Current"
+        },
+        "layers": {
+          "in": "query",
+          "description": "Geography layers, or all."
+        },
+        "format": {
+          "in": "query",
+          "description": "json or jsonp.",
+          "enum": [
+            "json",
+            "jsonp"
+          ],
+          "example": "json"
+        }
+      },
+      "host": "geocoder",
+      "credentials": [],
+      "job": "places.geocode",
+      "docs_url": "https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html",
+      "verified": {
+        "docs": "https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html"
+      }
+    },
+    {
+      "id": "uscensus.geocode.coordinates",
+      "name": "Find census geographies for a point",
+      "summary": "State, county, tract, block and other census geographies containing a longitude/latitude.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geographies/coordinates",
+      "params": {
+        "x": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -76.92744
+        },
+        "y": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 38.845985
+        },
+        "benchmark": {
+          "in": "query",
+          "required": true,
+          "description": "Benchmark name or id.",
+          "example": "Public_AR_Current"
+        },
+        "vintage": {
+          "in": "query",
+          "required": true,
+          "description": "Geography vintage.",
+          "example": "Current_Current"
+        },
+        "layers": {
+          "in": "query",
+          "description": "Geography layers, or all."
+        },
+        "format": {
+          "in": "query",
+          "description": "json or jsonp.",
+          "enum": [
+            "json",
+            "jsonp"
+          ],
+          "example": "json"
+        }
+      },
+      "host": "geocoder",
+      "credentials": [],
+      "job": "places.reverse_geocode",
+      "docs_url": "https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html",
+      "verified": {
+        "docs": "https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html"
+      }
+    }
+  ]
+}

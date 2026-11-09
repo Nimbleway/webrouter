@@ -1,0 +1,400 @@
+{
+  "vendor": "kalshi",
+  "name": "Kalshi",
+  "category": "finance",
+  "summary": "Public market data from Kalshi, a prediction market exchange: series, events, markets, order books, trades and candlesticks.",
+  "docs_url": "https://docs.kalshi.com/getting_started/quick_start_market_data",
+  "base_url": "https://external-api.kalshi.com/trade-api/v2",
+  "notes": [
+    "The market-data endpoints here need no authentication; trading and portfolio endpoints need an authenticated account and are not in this catalog.",
+    "Hierarchy: a series (recurring template, e.g. KXHIGHNY) has events, an event has one or more binary yes/no markets.",
+    "Lists page with limit and cursor: pass the cursor from the previous response until it comes back empty.",
+    "Timestamps are Unix seconds. Markets settled before the historical cutoff are only served by the /historical endpoints."
+  ],
+  "sources": [
+    "https://docs.kalshi.com/getting_started/quick_start_market_data",
+    "https://docs.kalshi.com/llms.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "kalshi.series.list",
+      "name": "List series",
+      "summary": "Browse series (recurring event templates) by category or tags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/series",
+      "params": {
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Category the series is listed under; exact, case-sensitive."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Tag filter."
+        },
+        "include_product_metadata": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "include_volume": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include total volume traded across the series' events."
+        },
+        "min_updated_ts": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only series whose metadata changed after this Unix time."
+        }
+      },
+      "docs_url": "https://docs.kalshi.com/api-reference/market/get-series-list",
+      "verified": {
+        "docs": "https://docs.kalshi.com/api-reference/market/get-series-list"
+      }
+    },
+    {
+      "id": "kalshi.events.list",
+      "name": "List events",
+      "summary": "Events with optional nested markets, filtered by status or series.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/events",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 200 (default 200)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from the previous page; empty for the first."
+        },
+        "with_nested_markets": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include each event's markets."
+        },
+        "with_milestones": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "unopened",
+            "open",
+            "closed",
+            "settled"
+          ]
+        },
+        "series_ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events of this series."
+        },
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated event tickers."
+        },
+        "min_close_ts": {
+          "in": "query",
+          "type": "integer",
+          "description": "Events with a market closing after this Unix time."
+        },
+        "min_updated_ts": {
+          "in": "query",
+          "type": "integer",
+          "description": "Events whose metadata changed after this Unix time."
+        }
+      },
+      "notes": [
+        "Multivariate (combo) events are excluded; they have their own /events/multivariate endpoint."
+      ],
+      "job": "events.list",
+      "docs_url": "https://docs.kalshi.com/api-reference/events/get-events",
+      "verified": {
+        "docs": "https://docs.kalshi.com/api-reference/events/get-events"
+      }
+    },
+    {
+      "id": "kalshi.events.get",
+      "name": "Get an event",
+      "summary": "One event and its markets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/events/{event_ticker}",
+      "params": {
+        "event_ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Event ticker."
+        },
+        "exclude_markets": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return event metadata only; not with with_nested_markets."
+        },
+        "with_nested_markets": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Put markets inside the event object instead of a top-level field."
+        }
+      },
+      "docs_url": "https://docs.kalshi.com/api-reference/events/get-event",
+      "verified": {
+        "docs": "https://docs.kalshi.com/api-reference/events/get-event"
+      }
+    },
+    {
+      "id": "kalshi.markets.list",
+      "name": "List markets",
+      "summary": "Markets filtered by event, series, status, tickers or time window, with current prices and volume.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/markets",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 1000 (default 100)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from the previous page; empty for the first."
+        },
+        "event_ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "One event ticker."
+        },
+        "series_ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Series ticker.",
+          "example": "KXHIGHNY"
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "One status; empty for any.",
+          "enum": [
+            "unopened",
+            "open",
+            "paused",
+            "closed",
+            "settled"
+          ]
+        },
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated market tickers."
+        },
+        "min_created_ts": {
+          "in": "query",
+          "type": "integer"
+        },
+        "max_created_ts": {
+          "in": "query",
+          "type": "integer"
+        },
+        "min_updated_ts": {
+          "in": "query",
+          "type": "integer"
+        },
+        "max_updated_ts": {
+          "in": "query",
+          "type": "integer"
+        },
+        "min_close_ts": {
+          "in": "query",
+          "type": "integer"
+        },
+        "max_close_ts": {
+          "in": "query",
+          "type": "integer"
+        },
+        "min_settled_ts": {
+          "in": "query",
+          "type": "integer"
+        },
+        "max_settled_ts": {
+          "in": "query",
+          "type": "integer"
+        },
+        "mve_filter": {
+          "in": "query",
+          "type": "string",
+          "description": "only or exclude multivariate (combo) markets.",
+          "enum": [
+            "only",
+            "exclude"
+          ]
+        }
+      },
+      "notes": [
+        "Only one timestamp pair may be used, and each pair works only with certain statuses (created: unopened/open; close: closed; settled: settled; updated: none, and needs mve_filter=exclude)."
+      ],
+      "docs_url": "https://docs.kalshi.com/api-reference/market/get-markets",
+      "verified": {
+        "docs": "https://docs.kalshi.com/api-reference/market/get-markets"
+      }
+    },
+    {
+      "id": "kalshi.markets.get",
+      "name": "Get a market",
+      "summary": "One market by ticker: prices, volume, open interest, rules and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/markets/{ticker}",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Market ticker."
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://docs.kalshi.com/api-reference/market/get-market",
+      "verified": {
+        "docs": "https://docs.kalshi.com/api-reference/market/get-market"
+      }
+    },
+    {
+      "id": "kalshi.markets.orderbook",
+      "name": "Get a market's order book",
+      "summary": "Resting yes bids and no bids for one market.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/markets/{ticker}/orderbook",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Market ticker."
+        },
+        "depth": {
+          "in": "query",
+          "type": "integer",
+          "description": "Price levels per side, 1-100; 0 for all."
+        }
+      },
+      "notes": [
+        "Only bids are returned: in a binary market a yes bid is a no ask at the complementary price, so asks are implied from the other side."
+      ],
+      "docs_url": "https://docs.kalshi.com/api-reference/market/get-market-orderbook",
+      "verified": {
+        "docs": "https://docs.kalshi.com/api-reference/market/get-market-orderbook"
+      }
+    },
+    {
+      "id": "kalshi.trades.list",
+      "name": "List trades",
+      "summary": "Completed trades across markets or for one market.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/markets/trades",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 1000 (default 100)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from the previous page; empty for the first."
+        },
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Market ticker."
+        },
+        "min_ts": {
+          "in": "query",
+          "type": "integer",
+          "description": "After this Unix time."
+        },
+        "max_ts": {
+          "in": "query",
+          "type": "integer",
+          "description": "Before this Unix time."
+        },
+        "is_block_trade": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true only block trades, false none; omit for all."
+        }
+      },
+      "docs_url": "https://docs.kalshi.com/api-reference/market/get-trades",
+      "verified": {
+        "docs": "https://docs.kalshi.com/api-reference/market/get-trades"
+      }
+    },
+    {
+      "id": "kalshi.markets.candlesticks",
+      "name": "Get market candlesticks",
+      "summary": "Price and volume candles for one market over a time range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/series/{series_ticker}/markets/{ticker}/candlesticks",
+      "params": {
+        "series_ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Series that contains the market."
+        },
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Market ticker."
+        },
+        "start_ts": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Unix seconds; candles ending on or after."
+        },
+        "end_ts": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Unix seconds; candles ending on or before."
+        },
+        "period_interval": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Candle length in minutes.",
+          "enum": [
+            1,
+            60,
+            1440
+          ]
+        },
+        "include_latest_before_start": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Prepend the last candle before start_ts, projected to the first period boundary."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://docs.kalshi.com/api-reference/market/get-market-candlesticks",
+      "verified": {
+        "docs": "https://docs.kalshi.com/api-reference/market/get-market-candlesticks"
+      }
+    }
+  ]
+}

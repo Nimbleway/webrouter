@@ -1,0 +1,313 @@
+{
+  "vendor": "wolframalpha",
+  "name": "Wolfram|Alpha",
+  "category": "ai",
+  "summary": "Computational answers to natural-language questions (math, science, units, data on places, finance, dates and more): LLM-ready text, one-line answers, structured result pods or a rendered result image.",
+  "docs_url": "https://products.wolframalpha.com/api",
+  "pricing_url": "https://products.wolframalpha.com/api",
+  "base_url": "https://api.wolframalpha.com",
+  "hosts": {
+    "www": "https://www.wolframalpha.com"
+  },
+  "auth": {
+    "credentials": {
+      "appid": {
+        "env": [
+          "WOLFRAM_ALPHA_APPID"
+        ],
+        "description": "A Wolfram|Alpha AppID from the Developer Portal (developer.wolframalpha.com); one per application. Sent as the appid query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "appid",
+        "value": "{appid}"
+      }
+    ]
+  },
+  "notes": [
+    "Free non-commercial access covers up to 2,000 API calls per month; commercial use needs a paid plan under the Commercial Terms of Use.",
+    "HTTP 501 means the input could not be interpreted (or, for short answers, has no short result); rephrase rather than retry. 400 means the input parameter is missing.",
+    "Some topics are restricted by default; access is granted on request.",
+    "Short answers and the simple image use the parameter i; the LLM and full-results APIs use input."
+  ],
+  "sources": [
+    "https://products.wolframalpha.com/api",
+    "https://products.wolframalpha.com/api/documentation",
+    "https://products.wolframalpha.com/llm-api/documentation",
+    "https://products.wolframalpha.com/short-answers-api/documentation",
+    "https://products.wolframalpha.com/simple-api/documentation"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "wolframalpha.llm.query",
+      "name": "Ask for an LLM-ready answer",
+      "summary": "A plain-text result with input interpretation, results, image URLs and a link to the full Wolfram|Alpha page, made for language models.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/llm-api",
+      "params": {
+        "input": {
+          "in": "query",
+          "required": true,
+          "description": "The question, in natural language.",
+          "example": "population of France / population of Germany"
+        },
+        "maxchars": {
+          "in": "query",
+          "type": "integer",
+          "description": "Response length cap, default 6800."
+        },
+        "units": {
+          "in": "query",
+          "description": "metric or imperial; default inferred from the caller's location.",
+          "enum": [
+            "metric",
+            "imperial"
+          ]
+        },
+        "location": {
+          "in": "query",
+          "description": "Location for location-dependent queries."
+        },
+        "latlong": {
+          "in": "query",
+          "description": "lat,long for location-dependent queries."
+        },
+        "timezone": {
+          "in": "query",
+          "description": "Time zone for time-dependent queries."
+        },
+        "currency": {
+          "in": "query",
+          "description": "Currency for money results."
+        },
+        "countrycode": {
+          "in": "query",
+          "description": "Country code."
+        },
+        "languagecode": {
+          "in": "query",
+          "description": "Language code."
+        },
+        "assumption": {
+          "in": "query",
+          "description": "An assumption value from a previous answer, to pick an interpretation."
+        }
+      },
+      "notes": [
+        "Plain text, not JSON. The AppID can also go in 'Authorization: Bearer <AppID>'."
+      ],
+      "job": "ai.answer",
+      "host": "www",
+      "docs_url": "https://products.wolframalpha.com/llm-api/documentation",
+      "verified": {
+        "docs": "https://products.wolframalpha.com/llm-api/documentation"
+      }
+    },
+    {
+      "id": "wolframalpha.short.answer",
+      "name": "Get a one-line answer",
+      "summary": "A single short plain-text result, e.g. '2464 miles'.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/result",
+      "params": {
+        "i": {
+          "in": "query",
+          "required": true,
+          "description": "The question.",
+          "example": "How far is Los Angeles from New York?"
+        },
+        "units": {
+          "in": "query",
+          "description": "metric or imperial; default inferred from the caller's location.",
+          "enum": [
+            "metric",
+            "imperial"
+          ]
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max processing seconds, default 5."
+        }
+      },
+      "notes": [
+        "Fails with 501 when no short result exists even though Wolfram|Alpha has data; fall back to llm.query."
+      ],
+      "job": "ai.answer",
+      "docs_url": "https://products.wolframalpha.com/short-answers-api/documentation",
+      "verified": {
+        "docs": "https://products.wolframalpha.com/short-answers-api/documentation"
+      }
+    },
+    {
+      "id": "wolframalpha.full.query",
+      "name": "Get full structured results",
+      "summary": "Every result pod (interpretation, result, plots, tables) with plaintext and image renderings.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/query",
+      "params": {
+        "input": {
+          "in": "query",
+          "required": true,
+          "description": "The question."
+        },
+        "output": {
+          "in": "query",
+          "description": "xml (default) or json.",
+          "enum": [
+            "xml",
+            "json"
+          ],
+          "example": "json"
+        },
+        "format": {
+          "in": "query",
+          "description": "Pod formats, comma-separated, e.g. plaintext,image,mathml."
+        },
+        "includepodid": {
+          "in": "query",
+          "description": "Only pods with this id."
+        },
+        "excludepodid": {
+          "in": "query",
+          "description": "Leave out pods with this id."
+        },
+        "podtitle": {
+          "in": "query",
+          "description": "Only pods with this title."
+        },
+        "podindex": {
+          "in": "query",
+          "description": "Only pods at these indexes."
+        },
+        "scanner": {
+          "in": "query",
+          "description": "Only pods from this scanner."
+        },
+        "units": {
+          "in": "query",
+          "description": "metric or imperial; default inferred from the caller's location.",
+          "enum": [
+            "metric",
+            "imperial"
+          ]
+        },
+        "location": {
+          "in": "query",
+          "description": "Location for location-dependent queries."
+        },
+        "latlong": {
+          "in": "query",
+          "description": "lat,long."
+        },
+        "ip": {
+          "in": "query",
+          "description": "IP to locate the caller by."
+        },
+        "assumption": {
+          "in": "query",
+          "description": "Assumption value from a previous answer."
+        },
+        "podstate": {
+          "in": "query",
+          "description": "Pod state (e.g. more digits, step-by-step) from a previous answer."
+        },
+        "reinterpret": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Reinterpret input that is not understood."
+        },
+        "translation": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Translate non-English input."
+        },
+        "totaltimeout": {
+          "in": "query",
+          "type": "number",
+          "description": "Overall time limit, seconds."
+        }
+      },
+      "notes": [
+        "Answers XML unless output=json."
+      ],
+      "job": "ai.answer",
+      "docs_url": "https://products.wolframalpha.com/api/documentation",
+      "verified": {
+        "docs": "https://products.wolframalpha.com/api/documentation"
+      }
+    },
+    {
+      "id": "wolframalpha.simple.image",
+      "name": "Get the result as an image",
+      "summary": "A single static image of the whole result page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/simple",
+      "params": {
+        "i": {
+          "in": "query",
+          "required": true,
+          "description": "The question."
+        },
+        "layout": {
+          "in": "query",
+          "description": "Default divider.",
+          "enum": [
+            "divider",
+            "labelbar"
+          ]
+        },
+        "background": {
+          "in": "query",
+          "description": "Color name, hex RGB, decimal RGB, or transparent; default white."
+        },
+        "foreground": {
+          "in": "query",
+          "description": "Default black.",
+          "enum": [
+            "black",
+            "white"
+          ]
+        },
+        "fontsize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Points, default 14."
+        },
+        "width": {
+          "in": "query",
+          "type": "integer",
+          "description": "Image width in pixels, default 500."
+        },
+        "units": {
+          "in": "query",
+          "description": "metric or imperial; default inferred from the caller's location.",
+          "enum": [
+            "metric",
+            "imperial"
+          ]
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max processing seconds, default 5."
+        }
+      },
+      "notes": [
+        "Answers an image, not text."
+      ],
+      "job": "ai.answer",
+      "docs_url": "https://products.wolframalpha.com/simple-api/documentation",
+      "verified": {
+        "docs": "https://products.wolframalpha.com/simple-api/documentation"
+      }
+    }
+  ]
+}

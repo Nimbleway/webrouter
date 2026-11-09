@@ -1,0 +1,434 @@
+{
+  "vendor": "notte",
+  "name": "Notte",
+  "category": "scraping",
+  "summary": "Notte's API: scrape pages to markdown or structured JSON, search the web, and drive hosted browser sessions with plain-language actions.",
+  "docs_url": "https://docs.notte.cc/api-reference/authentication.md",
+  "pricing_url": "https://www.notte.cc/pricing",
+  "base_url": "https://api.notte.cc",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "NOTTE_API_KEY"
+        ],
+        "description": "A Notte API key (console.notte.cc/apikeys). Sent as Authorization: Bearer."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Browser work runs in a session: sessions.start, then page.goto, page.act and page.scrape with its session_id, then sessions.stop. A session also closes after idle_timeout_minutes (default 3) or max_duration_minutes (default 15). The hosted agent APIs are deprecated.",
+    "POST /sessions/start is rate limited per key by minute, hour and day; too many active sessions also returns 429 (NotteApiMaxActiveResourcesError).",
+    "Other page actions, profiles, vaults, personas, functions, the Anything API and the Data APIs (monitors, maps, news, people) are not in this entry."
+  ],
+  "sources": [
+    "https://docs.notte.cc/llms.txt",
+    "https://api.notte.cc/openapi.json",
+    "https://docs.notte.cc/api-reference/authentication.md",
+    "https://docs.notte.cc/api-reference/rate-limits.md",
+    "https://docs.notte.cc/concepts/search.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "notte.scrape",
+      "name": "Scrape a page",
+      "summary": "A page as markdown with links, or structured data shaped by instructions or a JSON Schema, from a one-off browser session.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/scrape",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The page to scrape.",
+          "example": "https://example.com"
+        },
+        "only_main_content": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Drop navbars, footers and the like. Default false."
+        },
+        "selector": {
+          "in": "body",
+          "type": "string",
+          "description": "Playwright selector to scope the scrape to."
+        },
+        "scrape_links": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include links. Default true."
+        },
+        "ignored_tags": {
+          "in": "body",
+          "type": "array",
+          "description": "HTML tags to ignore."
+        },
+        "instructions": {
+          "in": "body",
+          "type": "string",
+          "description": "What to extract, e.g. 'Extract only the title, date and content of the articles.'"
+        },
+        "response_format": {
+          "in": "body",
+          "type": "object",
+          "description": "A JSON Schema for structured output."
+        },
+        "model": {
+          "in": "body",
+          "type": "string",
+          "description": "Model for structured extraction, as an OpenRouter id (e.g. google/gemini-3.5-flash)."
+        },
+        "solve_captchas": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Try to solve captchas. Default true."
+        },
+        "proxies": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Use Notte's default proxies (true, the default) or not."
+        },
+        "browser_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Default chromium.",
+          "enum": [
+            "chromium",
+            "chrome"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. It opens and closes a browser session for you."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.notte.cc/api-reference/scrape/scrape-webpage.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/scrape/scrape-webpage.md"
+      }
+    },
+    {
+      "id": "notte.search",
+      "name": "Search the web",
+      "summary": "Search results, a sourced answer, or structured output for a query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query.",
+          "example": "notte browser automation"
+        },
+        "depth": {
+          "in": "body",
+          "type": "string",
+          "description": "How thorough the search is. Default standard.",
+          "enum": [
+            "standard",
+            "fast",
+            "deep"
+          ]
+        },
+        "outputType": {
+          "in": "body",
+          "type": "string",
+          "description": "What to return. Default searchResults.",
+          "enum": [
+            "searchResults",
+            "sourcedAnswer",
+            "structured"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.notte.cc/api-reference/search/search-web.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/search/search-web.md"
+      }
+    },
+    {
+      "id": "notte.sessions.start",
+      "name": "Start a browser session",
+      "summary": "Open a hosted browser session that agents and page actions run in.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/sessions/start",
+      "params": {
+        "idle_timeout_minutes": {
+          "in": "body",
+          "type": "integer",
+          "description": "Close after this many idle minutes. Default 3."
+        },
+        "max_duration_minutes": {
+          "in": "body",
+          "type": "integer",
+          "description": "Absolute session lifetime in minutes. Default 15."
+        },
+        "solve_captchas": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Try to solve captchas. Default true."
+        },
+        "proxies": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Use Notte's default proxies. Default true."
+        },
+        "browser_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Default chromium.",
+          "enum": [
+            "chromium",
+            "chrome",
+            "chrome-nitro"
+          ]
+        },
+        "block_ads": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Block ads and trackers. Default true."
+        },
+        "record_session": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Save a replay. Default true."
+        }
+      },
+      "notes": [
+        "Creates a billed resource; stop it with sessions.stop. Returns session_id."
+      ],
+      "job": "browser.sessions.create",
+      "docs_url": "https://docs.notte.cc/api-reference/sessions/session-start.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/sessions/session-start.md"
+      }
+    },
+    {
+      "id": "notte.sessions.status",
+      "name": "Get a session",
+      "summary": "A session's status, timings, steps and network bytes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sessions/{session_id}",
+      "params": {
+        "session_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The session id from sessions.start."
+        }
+      },
+      "job": "browser.sessions.get",
+      "docs_url": "https://docs.notte.cc/api-reference/sessions/session-status.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/sessions/session-status.md"
+      }
+    },
+    {
+      "id": "notte.page.goto",
+      "name": "Open a URL in a session",
+      "summary": "Navigate the session's current tab to a URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/sessions/{session_id}/page/execute",
+      "params": {
+        "session_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The session id from sessions.start."
+        },
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be goto for this call.",
+          "enum": [
+            "goto"
+          ],
+          "example": "goto"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The URL to open."
+        },
+        "wait_until": {
+          "in": "body",
+          "type": "string",
+          "description": "Load state to wait for.",
+          "enum": [
+            "commit",
+            "domcontentloaded",
+            "load",
+            "networkidle"
+          ]
+        }
+      },
+      "notes": [
+        "/page/execute takes many action types (click, fill, scroll...); this entry names only goto. Other actions go through a raw call."
+      ],
+      "job": "browser.navigate",
+      "docs_url": "https://docs.notte.cc/api-reference/sessions/page-execute.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/sessions/page-execute.md"
+      }
+    },
+    {
+      "id": "notte.page.act",
+      "name": "Act on the page in plain language",
+      "summary": "Have the model pick and run one browser action from an instruction, e.g. 'accept the cookies'.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/sessions/{session_id}/page/act",
+      "params": {
+        "session_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The session id from sessions.start."
+        },
+        "instruction": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What to do on the page."
+        },
+        "variables": {
+          "in": "body",
+          "type": "object",
+          "description": "Values for {{name}} placeholders in typed text; substituted after the model call so they never reach a model."
+        },
+        "dry_run": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Choose the action without running it (status proposed). Default false."
+        },
+        "min_confidence": {
+          "in": "body",
+          "type": "number",
+          "description": "Run nothing below this confidence (status blocked). Default 0."
+        }
+      },
+      "notes": [
+        "A write: the action can click, type or submit on a live site. Use dry_run to preview."
+      ],
+      "job": "browser.act",
+      "docs_url": "https://docs.notte.cc/api-reference/sessions/page-act.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/sessions/page-act.md"
+      }
+    },
+    {
+      "id": "notte.page.scrape",
+      "name": "Scrape the session's page",
+      "summary": "The current page as markdown, or structured data from instructions or a JSON Schema.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/sessions/{session_id}/page/scrape",
+      "params": {
+        "session_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The session id from sessions.start."
+        },
+        "only_main_content": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Drop navbars, footers and the like. Default false."
+        },
+        "selector": {
+          "in": "body",
+          "type": "string",
+          "description": "Playwright selector to scope the scrape to."
+        },
+        "instructions": {
+          "in": "body",
+          "type": "string",
+          "description": "What to extract."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "object",
+          "description": "A JSON Schema for structured output."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.notte.cc/api-reference/sessions/page-scrape.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/sessions/page-scrape.md"
+      }
+    },
+    {
+      "id": "notte.sessions.stop",
+      "name": "Stop a browser session",
+      "summary": "Close a session and stop its billing.",
+      "kind": "write",
+      "method": "DELETE",
+      "path": "/sessions/{session_id}/stop",
+      "params": {
+        "session_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The session id."
+        },
+        "close_reason": {
+          "in": "query",
+          "type": "string",
+          "description": "Default manual.",
+          "enum": [
+            "manual",
+            "error"
+          ]
+        }
+      },
+      "job": "browser.sessions.stop",
+      "docs_url": "https://docs.notte.cc/api-reference/sessions/session-stop.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/sessions/session-stop.md"
+      }
+    },
+    {
+      "id": "notte.usage",
+      "name": "Get usage",
+      "summary": "Account usage for a monthly period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usage",
+      "params": {
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "The month, e.g. 'May 2025'; the current one by default."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.notte.cc/api-reference/usage/get-usage.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/usage/get-usage.md"
+      }
+    }
+  ]
+}

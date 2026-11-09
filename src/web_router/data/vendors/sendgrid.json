@@ -1,0 +1,332 @@
+{
+  "vendor": "sendgrid",
+  "name": "SendGrid",
+  "category": "messaging",
+  "summary": "Twilio SendGrid email: send mail, delivery statistics, email activity, bounces and spam reports, and credit balance.",
+  "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/how-to-use-the-sendgrid-v3-api",
+  "pricing_url": "https://sendgrid.com/en-us/pricing",
+  "base_url": "https://{host}",
+  "settings": {
+    "host": {
+      "env": [
+        "SENDGRID_API_HOST"
+      ],
+      "default": "api.sendgrid.com",
+      "choices": [
+        "api.sendgrid.com",
+        "api.eu.sendgrid.com"
+      ],
+      "description": "api.sendgrid.com for global accounts; api.eu.sendgrid.com for EU regional subusers."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SENDGRID_API_KEY"
+        ],
+        "description": "A SendGrid API key (SG....) from Settings > API Keys; its scopes limit which endpoints answer."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every path is under /v3. A key without the endpoint's scope answers 403.",
+    "Rate limits are per endpoint and reported in X-RateLimit-Limit, X-RateLimit-Remaining and X-RateLimit-Reset; a 429 means wait until the reset.",
+    "Suppression lists page by limit (max 500) and offset; times there are unix seconds, while stats take YYYY-MM-DD dates.",
+    "Email address validation needs a Pro or Premier plan and its own Email Validation key, so it is not in this entry."
+  ],
+  "sources": [
+    "https://www.twilio.com/docs/sendgrid/api-reference/how-to-use-the-sendgrid-v3-api/rate-limits",
+    "https://www.twilio.com/docs/sendgrid/api-reference/mail-send/mail-send",
+    "https://www.twilio.com/docs/sendgrid/api-reference/email-activity/filter-all-messages",
+    "https://www.twilio.com/docs/sendgrid/api-reference/stats/retrieve-global-email-statistics",
+    "https://github.com/twilio/sendgrid-oai"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "sendgrid.stats.global",
+      "name": "Get global email statistics",
+      "summary": "Requests, delivered, opens, clicks, bounces and spam reports per day, week or month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/stats",
+      "params": {
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DD.",
+          "example": "2026-11-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD, default today."
+        },
+        "aggregated_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Grouping.",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ]
+        },
+        "on_behalf_of": {
+          "in": "header",
+          "type": "string",
+          "description": "Subuser to act for, with the parent account's key.",
+          "wire_name": "on-behalf-of"
+        }
+      },
+      "job": "analytics.report",
+      "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/stats/retrieve-global-email-statistics",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/sendgrid/api-reference/stats/retrieve-global-email-statistics"
+      }
+    },
+    {
+      "id": "sendgrid.messages.search",
+      "name": "Search email activity",
+      "summary": "Recent messages matching a query on recipient, subject, status and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/messages",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Filter in SendGrid's query syntax, e.g. to_email=\"someone@example.com\"; up to 160 conditions."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 1000, default 10."
+        }
+      },
+      "notes": [
+        "Needs the paid Email Activity history add-on; without it the call is refused.",
+        "Values in the query are double-quoted: to_email=\"a@b.com\" (URL-encoded on the wire)."
+      ],
+      "job": "messaging.messages.search",
+      "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/email-activity/filter-all-messages",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/sendgrid/api-reference/email-activity/filter-all-messages"
+      }
+    },
+    {
+      "id": "sendgrid.messages.get",
+      "name": "Get one message's activity",
+      "summary": "Delivery events and details of one message.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/messages/{msg_id}",
+      "params": {
+        "msg_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The message id."
+        }
+      },
+      "notes": [
+        "Needs the Email Activity history add-on; no data for EU regional subusers."
+      ],
+      "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/email-activity/filter-messages-by-message-id",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/sendgrid/api-reference/email-activity/filter-messages-by-message-id"
+      }
+    },
+    {
+      "id": "sendgrid.bounces.list",
+      "name": "List bounces",
+      "summary": "Addresses that bounced, with reason and time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/suppression/bounces",
+      "params": {
+        "start_time": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix seconds, inclusive start of creation time."
+        },
+        "end_time": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix seconds, inclusive end."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, max 500."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Only addresses starting with this prefix."
+        },
+        "on_behalf_of": {
+          "in": "header",
+          "type": "string",
+          "description": "Subuser to act for, with the parent account's key.",
+          "wire_name": "on-behalf-of"
+        }
+      },
+      "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/bounces-api/retrieve-all-bounces",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/sendgrid/api-reference/bounces-api/retrieve-all-bounces"
+      }
+    },
+    {
+      "id": "sendgrid.spam_reports.list",
+      "name": "List spam reports",
+      "summary": "Addresses that marked mail as spam.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/suppression/spam_reports",
+      "params": {
+        "start_time": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix seconds, inclusive start of creation time."
+        },
+        "end_time": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix seconds, inclusive end."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, max 500."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Only addresses starting with this prefix."
+        },
+        "on_behalf_of": {
+          "in": "header",
+          "type": "string",
+          "description": "Subuser to act for, with the parent account's key.",
+          "wire_name": "on-behalf-of"
+        }
+      },
+      "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/spam-reports-api/retrieve-all-spam-reports",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/sendgrid/api-reference/spam-reports-api/retrieve-all-spam-reports"
+      }
+    },
+    {
+      "id": "sendgrid.credits.get",
+      "name": "Get credit balance",
+      "summary": "Emails left before per-email charges, and the reset schedule.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/user/credits",
+      "params": {
+        "on_behalf_of": {
+          "in": "header",
+          "type": "string",
+          "description": "Subuser to act for, with the parent account's key.",
+          "wire_name": "on-behalf-of"
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/users-api/retrieve-your-credit-balance",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/sendgrid/api-reference/users-api/retrieve-your-credit-balance"
+      }
+    },
+    {
+      "id": "sendgrid.mail.send",
+      "name": "Send an email",
+      "summary": "Send one message to one or more personalizations; answers 202 Accepted.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v3/mail/send",
+      "params": {
+        "personalizations": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Envelopes: objects with to (list of {email, name}), optional cc, bcc, subject, dynamic_template_data."
+        },
+        "from": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Sender {email, name}, a verified sender or authenticated domain."
+        },
+        "subject": {
+          "in": "body",
+          "type": "string",
+          "description": "Subject, unless every personalization or the template sets one."
+        },
+        "content": {
+          "in": "body",
+          "type": "array",
+          "description": "Bodies: objects with type (text/plain, text/html) and value."
+        },
+        "template_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Template id; a d- id is a dynamic template."
+        },
+        "reply_to": {
+          "in": "body",
+          "type": "object",
+          "description": "Reply-to {email, name}."
+        },
+        "attachments": {
+          "in": "body",
+          "type": "array",
+          "description": "Objects with base64 content, filename and type."
+        },
+        "categories": {
+          "in": "body",
+          "type": "array",
+          "description": "Category names for stats."
+        },
+        "send_at": {
+          "in": "body",
+          "type": "integer",
+          "description": "Unix time to send, at most 72 hours ahead."
+        },
+        "headers": {
+          "in": "body",
+          "type": "object",
+          "description": "Extra email headers."
+        }
+      },
+      "notes": [
+        "Sends real email. 202 means accepted for delivery, not delivered. Up to 1000 personalizations per request."
+      ],
+      "job": "messaging.message.send",
+      "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/mail-send/mail-send",
+      "verified": {
+        "docs": "https://github.com/twilio/sendgrid-oai"
+      }
+    }
+  ]
+}

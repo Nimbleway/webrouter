@@ -1,0 +1,400 @@
+{
+  "vendor": "origami",
+  "name": "Origami",
+  "category": "company-data",
+  "summary": "An AI agent that builds researched lead lists from a plain-English brief; read the lists and rows back.",
+  "docs_url": "https://docs.origami.chat/v3/overview",
+  "pricing_url": "https://origami.chat/pricing",
+  "base_url": "https://origami.chat/api/v3",
+  "settings": {
+    "project": {
+      "env": [
+        "ORIGAMI_PROJECT_ID"
+      ],
+      "description": "Optional project (child org) id; sent as x-origami-project to scope Leads and Jobs calls. Unset acts on the parent org."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ORIGAMI_API_KEY"
+        ],
+        "description": "An Origami API key (og_live_..., Settings > Developers). Sent as a Bearer token; needs a plan with API access."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      },
+      {
+        "in": "header",
+        "name": "x-origami-project",
+        "value": "{project}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Searches are async: the call answers 202 with a Job; poll origami.jobs.get, honoring next_poll_at / Retry-After, until status leaves queued and running. A few minutes for 25 leads.",
+    "Reads are free; research (searches and enrichment) spends credits, reported on the Job as credits.spent (accurate runs settle later).",
+    "Collections page with cursor + limit (max 100); pass next_cursor back as cursor.",
+    "Limits: 100 requests a minute per organization, 300 per IP; concurrent agent runs depend on the plan (429 CONCURRENT_LIMIT_EXCEEDED).",
+    "Campaign sending, senders, domains, exclusions and webhooks are not in this entry."
+  ],
+  "sources": [
+    "https://docs.origami.chat/llms.txt",
+    "https://docs.origami.chat/authentication.md",
+    "https://docs.origami.chat/v3/quickstart.md",
+    "https://docs.origami.chat/v3/leads.md",
+    "https://docs.origami.chat/v3/conventions.md",
+    "https://docs.origami.chat/v3/jobs.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "origami.searches.create",
+      "name": "Search for leads from a brief",
+      "summary": "Creates a list, sources leads matching a plain-English brief and researches them.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/leads/searches",
+      "params": {
+        "brief": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Who you want, as you would tell a researcher.",
+          "example": "Heads of RevOps at 50-500 person US SaaS companies"
+        },
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Leads to find, 1 to 1,000. Start around 10 and refine."
+        },
+        "quality": {
+          "in": "body",
+          "type": "string",
+          "description": "fast settles billing at once; accurate verifies more and settles after delivery.",
+          "enum": [
+            "fast",
+            "accurate"
+          ]
+        },
+        "exclude_list_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 20 list ids whose people to skip."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "object",
+          "description": "Your own string key/values, kept on the Job."
+        }
+      },
+      "notes": [
+        "Creates a list in the account and spends credits, hence write. Answers 202 with a Job; the finished Job's result carries list_id, search_id and row_ids."
+      ],
+      "job": "lists.search",
+      "docs_url": "https://docs.origami.chat/v3/reference/leads-searches-create",
+      "verified": {
+        "docs": "https://docs.origami.chat/v3/reference/leads-searches-create"
+      }
+    },
+    {
+      "id": "origami.searches.fetch_more",
+      "name": "Fetch more leads for a search",
+      "summary": "More leads with the same criteria, list and columns, no repeats.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/leads/searches/{search_id}/fetch-more",
+      "params": {
+        "search_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Search id."
+        },
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Leads to add, up to 1,000."
+        },
+        "exclude_list_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 20 list ids whose people to skip."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "object",
+          "description": "Your own string key/values."
+        }
+      },
+      "notes": [
+        "Adds rows and spends credits. Check origami.searches.get (remaining_count, has_more) first."
+      ],
+      "job": "lists.search",
+      "docs_url": "https://docs.origami.chat/v3/reference/leads-searches-fetch-more",
+      "verified": {
+        "docs": "https://docs.origami.chat/v3/reference/leads-searches-fetch-more"
+      }
+    },
+    {
+      "id": "origami.searches.get",
+      "name": "Get a search",
+      "summary": "A search with how deep its pool goes (remaining_count, has_more).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/leads/searches/{search_id}",
+      "params": {
+        "search_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Search id."
+        }
+      },
+      "job": "lists.get",
+      "docs_url": "https://docs.origami.chat/v3/reference/leads-searches-get",
+      "verified": {
+        "docs": "https://docs.origami.chat/v3/reference/leads-searches-get"
+      }
+    },
+    {
+      "id": "origami.jobs.get",
+      "name": "Get a job",
+      "summary": "Status, phase, result and credits of an async job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jobs/{job_id}",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Job id."
+        }
+      },
+      "notes": [
+        "status: queued, running, needs_input, succeeded, failed or cancelled. A sourcing job stays running while enriching, so succeeded means done."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.origami.chat/v3/reference/jobs-get",
+      "verified": {
+        "docs": "https://docs.origami.chat/v3/reference/jobs-get"
+      }
+    },
+    {
+      "id": "origami.jobs.list",
+      "name": "List jobs",
+      "summary": "The caller's jobs, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jobs",
+      "params": {
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, max 100."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Job status.",
+          "enum": [
+            "queued",
+            "running",
+            "needs_input",
+            "succeeded",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "operation": {
+          "in": "query",
+          "type": "string",
+          "description": "Operation name, e.g. leads.searches.create."
+        },
+        "target_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Kind of target.",
+          "enum": [
+            "list",
+            "search",
+            "campaign",
+            "chat",
+            "domain_order"
+          ]
+        },
+        "target_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Target id."
+        }
+      },
+      "job": "jobs.list",
+      "docs_url": "https://docs.origami.chat/v3/reference/jobs-list",
+      "verified": {
+        "docs": "https://docs.origami.chat/v3/reference/jobs-list"
+      }
+    },
+    {
+      "id": "origami.lists.list",
+      "name": "List lead lists",
+      "summary": "Lead lists in the org or project.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/leads/lists",
+      "params": {
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, max 100."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact name, case-insensitive."
+        }
+      },
+      "job": "lists.list",
+      "docs_url": "https://docs.origami.chat/v3/reference/leads-lists-list",
+      "verified": {
+        "docs": "https://docs.origami.chat/v3/reference/leads-lists-list"
+      }
+    },
+    {
+      "id": "origami.lists.get",
+      "name": "Get a lead list",
+      "summary": "One list with its columns and searches.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/leads/lists/{list_id}",
+      "params": {
+        "list_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "List id."
+        }
+      },
+      "job": "lists.get",
+      "docs_url": "https://docs.origami.chat/v3/reference/leads-lists-get",
+      "verified": {
+        "docs": "https://docs.origami.chat/v3/reference/leads-lists-get"
+      }
+    },
+    {
+      "id": "origami.rows.list",
+      "name": "Read a list's rows",
+      "summary": "Lead rows with their researched cells, filtered and sorted, or the whole list as CSV.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/leads/lists/{list_id}/rows",
+      "params": {
+        "list_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "List id."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, max 100."
+        },
+        "ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these row ids (up to 100), e.g. a job's result.row_ids."
+        },
+        "min_relevance_score": {
+          "in": "query",
+          "type": "number",
+          "description": "Only rows scoring at least this, 0 to 100."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "relevance_score",
+            "created_at"
+          ]
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "include_duplicates": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return rows hidden as duplicates."
+        },
+        "include_excluded": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return rows hidden by exclusion lists."
+        },
+        "include_disapproved": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return disapproved rows."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "csv exports the whole list as CSV.",
+          "enum": [
+            "csv"
+          ]
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "lists.items",
+      "docs_url": "https://docs.origami.chat/v3/reference/leads-lists-rows-list",
+      "verified": {
+        "docs": "https://docs.origami.chat/v3/reference/leads-lists-rows-list"
+      }
+    },
+    {
+      "id": "origami.credits.get",
+      "name": "Get credit balance",
+      "summary": "Wallet balance in credits, net of reservations.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/credits",
+      "job": "account.usage",
+      "docs_url": "https://docs.origami.chat/v3/reference/account-credits-get",
+      "verified": {
+        "docs": "https://docs.origami.chat/v3/reference/account-credits-get"
+      }
+    }
+  ]
+}

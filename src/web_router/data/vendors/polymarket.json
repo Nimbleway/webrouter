@@ -1,0 +1,508 @@
+{
+  "vendor": "polymarket",
+  "name": "Polymarket",
+  "category": "finance",
+  "summary": "Public prediction-market data from Polymarket: search, events and markets (Gamma API), order books, prices and price history (CLOB API), trades, holders and open interest (Data API).",
+  "docs_url": "https://docs.polymarket.com/",
+  "base_url": "https://gamma-api.polymarket.com",
+  "hosts": {
+    "clob": "https://clob.polymarket.com",
+    "data": "https://data-api.polymarket.com"
+  },
+  "notes": [
+    "The endpoints here are public and need no key; trading and account endpoints (signed, wallet-based) are not in this catalog.",
+    "Three IDs matter: an event holds markets; a market has a condition id (Data API 'condition') and one CLOB token id per outcome (the market's clobTokenIds, used as token_id / market on the CLOB host).",
+    "Prices are between 0 and 1 and read as the implied probability of the outcome."
+  ],
+  "sources": [
+    "https://docs.polymarket.com/llms.txt",
+    "https://docs.polymarket.com/api-spec/gamma-openapi.yaml",
+    "https://docs.polymarket.com/api-spec/clob-openapi.yaml",
+    "https://data-api.polymarket.com/v2/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "polymarket.search",
+      "name": "Search markets, events and profiles",
+      "summary": "Keyword search across events (with their markets), tags and profiles.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/public-search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search text.",
+          "example": "fed rate"
+        },
+        "limit_per_type": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max results per result type."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer"
+        },
+        "events_status": {
+          "in": "query",
+          "type": "string",
+          "description": "Event status filter."
+        },
+        "keep_closed_markets": {
+          "in": "query",
+          "type": "integer"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string"
+        },
+        "ascending": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "search_tags": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "search_profiles": {
+          "in": "query",
+          "type": "boolean"
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://docs.polymarket.com/api-reference/search/search-markets-events-and-profiles",
+      "verified": {
+        "docs": "https://docs.polymarket.com/api-reference/search/search-markets-events-and-profiles"
+      }
+    },
+    {
+      "id": "polymarket.events.list",
+      "name": "List events",
+      "summary": "Events with their markets, filtered by tag, state, volume, liquidity or dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/events",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer"
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer"
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to order by."
+        },
+        "ascending": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "tag_id": {
+          "in": "query",
+          "type": "integer"
+        },
+        "tag_slug": {
+          "in": "query",
+          "type": "string"
+        },
+        "active": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "archived": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "featured": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "closed": {
+          "in": "query",
+          "type": "string",
+          "description": "true closed only, false open only, any for both; omitted includes both."
+        },
+        "volume_min": {
+          "in": "query",
+          "type": "number"
+        },
+        "liquidity_min": {
+          "in": "query",
+          "type": "number"
+        },
+        "start_date_min": {
+          "in": "query",
+          "type": "string"
+        },
+        "end_date_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Ends on or after this ISO date/time."
+        },
+        "end_date_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Ends on or before this ISO date/time."
+        }
+      },
+      "notes": [
+        "Offset paging; a keyset variant (/events/keyset, after_cursor) exists for deep paging."
+      ],
+      "job": "events.list",
+      "docs_url": "https://docs.polymarket.com/api-reference/events/list-events",
+      "verified": {
+        "docs": "https://docs.polymarket.com/api-reference/events/list-events"
+      }
+    },
+    {
+      "id": "polymarket.events.by_slug",
+      "name": "Get an event by slug",
+      "summary": "One event and its markets, by slug.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/events/slug/{slug}",
+      "params": {
+        "slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Event slug."
+        }
+      },
+      "docs_url": "https://docs.polymarket.com/api-reference/events/get-event-by-slug",
+      "verified": {
+        "docs": "https://docs.polymarket.com/api-reference/events/get-event-by-slug"
+      }
+    },
+    {
+      "id": "polymarket.markets.list",
+      "name": "List markets",
+      "summary": "Markets with prices, volume and liquidity, filtered by ids, tag, volume or dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/markets",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer"
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer"
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to order by."
+        },
+        "ascending": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Market slug."
+        },
+        "condition_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "A market condition id."
+        },
+        "clob_token_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "A CLOB outcome token id."
+        },
+        "tag_id": {
+          "in": "query",
+          "type": "integer"
+        },
+        "closed": {
+          "in": "query",
+          "type": "string",
+          "description": "Omitted or false open markets only; true closed; any for both."
+        },
+        "volume_num_min": {
+          "in": "query",
+          "type": "number"
+        },
+        "liquidity_num_min": {
+          "in": "query",
+          "type": "number"
+        },
+        "start_date_min": {
+          "in": "query",
+          "type": "string"
+        },
+        "end_date_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Ends on or after this ISO date/time."
+        },
+        "end_date_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Ends on or before this ISO date/time."
+        }
+      },
+      "notes": [
+        "Defaults to open markets only; pass closed=true for resolved ones."
+      ],
+      "docs_url": "https://docs.polymarket.com/api-reference/markets/list-markets",
+      "verified": {
+        "docs": "https://docs.polymarket.com/api-reference/markets/list-markets"
+      }
+    },
+    {
+      "id": "polymarket.markets.by_slug",
+      "name": "Get a market by slug",
+      "summary": "One market by slug, with outcomes, prices and CLOB token ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/markets/slug/{slug}",
+      "params": {
+        "slug": {
+          "in": "path",
+          "type": "string",
+          "required": true
+        },
+        "include_tag": {
+          "in": "query",
+          "type": "boolean"
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://docs.polymarket.com/api-reference/markets/get-market-by-slug",
+      "verified": {
+        "docs": "https://docs.polymarket.com/api-reference/markets/get-market-by-slug"
+      }
+    },
+    {
+      "id": "polymarket.book.get",
+      "name": "Get an order book",
+      "summary": "Bids, asks and last trade price for one outcome token.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/book",
+      "params": {
+        "token_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "CLOB outcome token id."
+        }
+      },
+      "host": "clob",
+      "docs_url": "https://docs.polymarket.com/api-reference/market-data/get-order-book",
+      "verified": {
+        "docs": "https://docs.polymarket.com/api-reference/market-data/get-order-book"
+      }
+    },
+    {
+      "id": "polymarket.price.get",
+      "name": "Get the best price",
+      "summary": "Best bid (side BUY) or best ask (side SELL) for one outcome token.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/price",
+      "params": {
+        "token_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "CLOB outcome token id."
+        },
+        "side": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "BUY",
+            "SELL"
+          ]
+        }
+      },
+      "job": "market.quote",
+      "host": "clob",
+      "docs_url": "https://docs.polymarket.com/api-reference/market-data/get-market-price",
+      "verified": {
+        "docs": "https://docs.polymarket.com/api-reference/market-data/get-market-price"
+      }
+    },
+    {
+      "id": "polymarket.prices.history",
+      "name": "Get price history",
+      "summary": "Price series for one outcome token.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/prices-history",
+      "params": {
+        "market": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "CLOB outcome token id (asset id)."
+        },
+        "startTs": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix seconds."
+        },
+        "endTs": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix seconds."
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "description": "Time interval for aggregation.",
+          "enum": [
+            "max",
+            "all",
+            "1m",
+            "1w",
+            "1d",
+            "6h",
+            "1h"
+          ]
+        },
+        "fidelity": {
+          "in": "query",
+          "type": "integer",
+          "description": "Resolution in minutes; default 1."
+        }
+      },
+      "job": "market.history",
+      "host": "clob",
+      "docs_url": "https://docs.polymarket.com/api-reference/markets/get-prices-history",
+      "verified": {
+        "docs": "https://docs.polymarket.com/api-reference/markets/get-prices-history"
+      }
+    },
+    {
+      "id": "polymarket.trades.list",
+      "name": "List trades",
+      "summary": "Trade feed for markets, events or a wallet.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/trades",
+      "params": {
+        "condition": {
+          "in": "query",
+          "type": "string",
+          "description": "Condition ids, comma-separated, at most 20."
+        },
+        "event_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Event ids, comma-separated, at most 20."
+        },
+        "user": {
+          "in": "query",
+          "type": "string",
+          "description": "Wallet address."
+        },
+        "side": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "BUY",
+            "SELL"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "First-page size, up to 1000."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous page; it carries the page size."
+        },
+        "taker_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Default true: each fill once, on its taker side."
+        },
+        "filter_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Unit of filter_amount; default TOKENS.",
+          "enum": [
+            "CASH",
+            "TOKENS"
+          ]
+        },
+        "filter_amount": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum trade size; default 0.01."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Epoch seconds; with user only."
+        },
+        "end": {
+          "in": "query",
+          "type": "integer",
+          "description": "Epoch seconds; with user only."
+        }
+      },
+      "host": "data",
+      "docs_url": "https://docs.polymarket.com/api-reference/feeds/list-trades",
+      "verified": {
+        "docs": "https://docs.polymarket.com/api-reference/feeds/list-trades"
+      }
+    },
+    {
+      "id": "polymarket.holders.list",
+      "name": "List a market's top holders",
+      "summary": "Top holders per outcome token of one or more markets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/holders",
+      "params": {
+        "condition": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Condition ids, comma-separated, at most 20."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows per outcome token, default 100, max 1000."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string"
+        },
+        "min_balance": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum net shares."
+        },
+        "include_pnl": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add per-holder entry cost, value and PnL; then one condition only and limit at most 100."
+        }
+      },
+      "host": "data",
+      "docs_url": "https://docs.polymarket.com/api-reference/markets/list-a-markets-top-holders",
+      "verified": {
+        "docs": "https://docs.polymarket.com/api-reference/markets/list-a-markets-top-holders"
+      }
+    }
+  ]
+}

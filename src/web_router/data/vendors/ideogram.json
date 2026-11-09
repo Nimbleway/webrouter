@@ -1,0 +1,299 @@
+{
+  "vendor": "ideogram",
+  "name": "Ideogram",
+  "category": "media-generation",
+  "summary": "Text-to-image with strong typography (Ideogram 4.5), prompt enhancement, and hosted video models.",
+  "docs_url": "https://developer.ideogram.ai/v2/ideogram-api/api-overview",
+  "base_url": "https://api.ideogram.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "IDEOGRAM_API_KEY"
+        ],
+        "description": "An Ideogram API key (API dashboard on ideogram.ai; needs a payment method and credits). Sent in the Api-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "v2 endpoints put the model in the path: POST /v2/{content}/{action}/{model}. Only the endpoints below are listed; the others (edit, remix, upscale, background, describe) take image files as multipart uploads, which this catalog cannot send.",
+    "Image generation answers synchronously with data[].url by default; video and tool endpoints, and any image call with async=true or a webhook_url, answer with a generation_id to poll at ideogram.generations.get.",
+    "Image and video URLs expire: download what you keep. An image with is_image_safe false has an empty url.",
+    "Most generation endpoints take a dry_run=true query parameter that prices the request without running or billing it.",
+    "Default limit is 10 in-flight requests per account; 402 and 429 answers carry a reject_reason (insufficient_funds, inflight_limit, ...)."
+  ],
+  "sources": [
+    "https://developer.ideogram.ai/v2/llms.txt",
+    "https://developer.ideogram.ai/v2/ideogram-api/api-overview.md",
+    "https://developer.ideogram.ai/v2/api-reference/images/generate/ideogram-4-5.md",
+    "https://developer.ideogram.ai/v2/api-reference/video/generate/seedance-2-5-text-to-video.md",
+    "https://developer.ideogram.ai/v2/api-reference/generations/get-generation.md",
+    "https://developer.ideogram.ai/v2/api-reference/account/usage.md",
+    "https://developer.ideogram.ai/v1/api-reference/describe-prompts/magic-prompt-v4.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ideogram.image.generate",
+      "name": "Generate images with Ideogram 4.5",
+      "summary": "Images from a natural-language or structured JSON prompt; returns image URLs.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/image/generate/ideogram-4-5",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural-language prompt, or a structured Ideogram 4.0 JSON prompt.",
+          "example": "A poster that says OPEN LATE in bold neon letters"
+        },
+        "magic_prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "auto (default) and on rewrite and expand the prompt; off keeps your wording."
+        },
+        "size": {
+          "in": "body",
+          "type": "string",
+          "description": "auto (default) or an exact WIDTHxHEIGHT from the supported 1K/2K presets, e.g. 1024x1024 or 2048x2048. Up to 1024x1024 bills as 1K, above as 2K; auto bills as 2K."
+        },
+        "background": {
+          "in": "body",
+          "type": "string",
+          "description": "transparent, opaque or auto."
+        },
+        "quality": {
+          "in": "body",
+          "type": "string",
+          "description": "Rendering quality; higher is slower and costs more. Defaults to high without source images."
+        },
+        "seed": {
+          "in": "body",
+          "type": "integer",
+          "description": "Random seed for reproducible generation."
+        },
+        "num_images": {
+          "in": "body",
+          "type": "integer",
+          "description": "Number of images."
+        },
+        "enable_copyright_detection": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Run copyright detection; flagged images come back with is_image_safe false."
+        },
+        "async": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true returns a generation_id at once to poll; default false waits for the images."
+        },
+        "dry_run": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true validates and prices the request without generating or billing."
+        }
+      },
+      "notes": [
+        "A read over POST that spends credits (priced by size tier and quality); use dry_run=true for a quote. The overview's quickstart sends this endpoint a JSON body; source-image edits need multipart and are not covered here."
+      ],
+      "job": "ai.image.generate",
+      "docs_url": "https://developer.ideogram.ai/v2/api-reference/images/generate/ideogram-4-5",
+      "verified": {
+        "docs": "https://developer.ideogram.ai/v2/api-reference/images/generate/ideogram-4-5.md"
+      }
+    },
+    {
+      "id": "ideogram.video.generate",
+      "name": "Generate a video from text (Seedance 2.5)",
+      "summary": "Starts a text-to-video generation, up to 1080p and 30 seconds; returns a generation_id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/video/generate/seedance-2-5-text-to-video",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What the video should show."
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "Default auto.",
+          "enum": [
+            "auto",
+            "21x9",
+            "16x9",
+            "4x3",
+            "1x1",
+            "3x4",
+            "9x16"
+          ]
+        },
+        "resolution": {
+          "in": "body",
+          "type": "string",
+          "description": "Default 720p.",
+          "enum": [
+            "480p",
+            "720p",
+            "1080p"
+          ]
+        },
+        "duration": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seconds; the model picks when omitted."
+        },
+        "generate_audio": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add an audio track; roughly doubles the cost. Default false."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL to receive the signed result when done."
+        },
+        "dry_run": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true prices the request without running or billing it."
+        }
+      },
+      "notes": [
+        "A read over POST that spends credits. Always asynchronous: poll ideogram.generations.get with the generation_id."
+      ],
+      "job": "ai.video.generate",
+      "docs_url": "https://developer.ideogram.ai/v2/api-reference/video/generate/seedance-2-5-text-to-video",
+      "verified": {
+        "docs": "https://developer.ideogram.ai/v2/api-reference/video/generate/seedance-2-5-text-to-video.md"
+      }
+    },
+    {
+      "id": "ideogram.generations.get",
+      "name": "Poll a generation",
+      "summary": "Status (pending, completed, failed) and, once completed, the image or video URLs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/generations/{generation_id}",
+      "params": {
+        "generation_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "URL-safe base64 id returned when the request was accepted."
+        }
+      },
+      "notes": [
+        "Polling is rate limited per organization; a 429 carries Retry-After in seconds. usage_cost_usd_micros is the billed amount in millionths of a dollar for usage-priced requests."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://developer.ideogram.ai/v2/api-reference/generations/get-generation",
+      "verified": {
+        "docs": "https://developer.ideogram.ai/v2/api-reference/generations/get-generation.md"
+      }
+    },
+    {
+      "id": "ideogram.prompt.enhance",
+      "name": "Generate a magic prompt (Ideogram 4.0)",
+      "summary": "Turns a basic prompt into an enhanced Ideogram 4.0 prompt, and picks an aspect ratio when asked.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/ideogram-v4/magic-prompt",
+      "params": {
+        "text_prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The prompt to enhance."
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "Target aspect ratio; AUTO (default) lets the model choose and return it.",
+          "enum": [
+            "AUTO",
+            "1x4",
+            "1x3",
+            "1x2",
+            "9x16",
+            "10x16",
+            "2x3",
+            "3x4",
+            "4x5",
+            "1x1",
+            "5x4",
+            "4x3",
+            "3x2",
+            "16x10",
+            "16x9",
+            "2x1",
+            "3x1",
+            "4x1"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST, on the v1 API."
+      ],
+      "job": "ai.prompt.enhance",
+      "docs_url": "https://developer.ideogram.ai/v1/api-reference/describe-prompts/magic-prompt-v4",
+      "verified": {
+        "docs": "https://developer.ideogram.ai/v1/api-reference/describe-prompts/magic-prompt-v4.md"
+      }
+    },
+    {
+      "id": "ideogram.account.usage",
+      "name": "Get usage and spend",
+      "summary": "Billed API and app usage in time buckets, with dollar amounts per product and key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/account/usage",
+      "params": {
+        "start_time": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Range start, RFC 3339; snapped down to the bucket boundary (UTC).",
+          "example": "2026-11-01T00:00:00Z"
+        },
+        "end_time": {
+          "in": "query",
+          "type": "string",
+          "description": "Range end, RFC 3339, exclusive; defaults to now."
+        },
+        "bucket_width": {
+          "in": "query",
+          "type": "string",
+          "description": "1d (default; ranges up to 92 days) or 1h (up to 168 hours).",
+          "enum": [
+            "1d",
+            "1h"
+          ]
+        },
+        "sources": {
+          "in": "query",
+          "type": "array",
+          "description": "Billing sources: api, app; both by default."
+        }
+      },
+      "notes": [
+        "Needs a key owned by an organization admin; other keys get 404. Data may lag a few minutes."
+      ],
+      "job": "account.history",
+      "docs_url": "https://developer.ideogram.ai/v2/api-reference/account/usage",
+      "verified": {
+        "docs": "https://developer.ideogram.ai/v2/api-reference/account/usage.md"
+      }
+    }
+  ]
+}

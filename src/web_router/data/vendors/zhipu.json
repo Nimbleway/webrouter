@@ -1,0 +1,374 @@
+{
+  "vendor": "zhipu",
+  "name": "Zhipu AI (BigModel)",
+  "category": "ai",
+  "summary": "GLM chat models, a web search API built for LLMs, a web page reader, embeddings and image generation on Zhipu's BigModel open platform (mainland China).",
+  "docs_url": "https://docs.bigmodel.cn/cn/guide/start/introduction",
+  "pricing_url": "https://bigmodel.cn/pricing",
+  "base_url": "https://open.bigmodel.cn/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ZAI_API_KEY",
+          "ZHIPUAI_API_KEY"
+        ],
+        "description": "a BigModel API key (bigmodel.cn console, API Keys); keys from the international z.ai platform are separate"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Docs and error messages are in Chinese. Every call is a POST with a JSON body except the async result lookup.",
+    "Web search is billed per call by engine: search_std 0.01 CNY, search_pro 0.03, search_pro_sogou and search_pro_quark 0.05 (per the web search guide, 2026-11).",
+    "Error code 1701 on web search means the concurrency limit was hit; retry later."
+  ],
+  "sources": [
+    "https://docs.bigmodel.cn/api-reference/模型-api/对话补全",
+    "https://docs.bigmodel.cn/api-reference/工具-api/网络搜索",
+    "https://docs.bigmodel.cn/api-reference/工具-api/网页阅读",
+    "https://docs.bigmodel.cn/api-reference/模型-api/文本嵌入",
+    "https://docs.bigmodel.cn/api-reference/模型-api/图像生成",
+    "https://docs.bigmodel.cn/api-reference/模型-api/查询异步结果",
+    "https://docs.bigmodel.cn/cn/guide/tools/web-search",
+    "https://docs.bigmodel.cn/cn/guide/develop/python/introduction"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "zhipu.web.search",
+      "name": "Search the web",
+      "summary": "Ranked web results (title, URL, summary, site name, icon) from an LLM-oriented search engine, with optional intent detection.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/paas/v4/web_search",
+      "params": {
+        "search_query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The query; at most 70 characters.",
+          "example": "2026年人工智能政策"
+        },
+        "search_engine": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Engine; priced per call differently.",
+          "example": "search_std",
+          "enum": [
+            "search_std",
+            "search_pro",
+            "search_pro_sogou",
+            "search_pro_quark"
+          ]
+        },
+        "search_intent": {
+          "in": "body",
+          "type": "boolean",
+          "required": true,
+          "description": "True runs intent detection first and searches only if the query has search intent; false searches directly.",
+          "example": false
+        },
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results, 1-50, default 10 (not for search_pro_quark; search_pro_sogou takes 10/20/30/40/50)."
+        },
+        "search_domain_filter": {
+          "in": "body",
+          "type": "string",
+          "description": "Only results from this domain, e.g. www.example.com."
+        },
+        "search_recency_filter": {
+          "in": "body",
+          "type": "string",
+          "description": "Time window; default noLimit.",
+          "enum": [
+            "oneDay",
+            "oneWeek",
+            "oneMonth",
+            "oneYear",
+            "noLimit"
+          ]
+        },
+        "content_size": {
+          "in": "body",
+          "type": "string",
+          "description": "medium returns summaries; high returns fuller page content.",
+          "enum": [
+            "medium",
+            "high"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST; billed per call by engine.",
+        "On search_pro_sogou, count is ignored when both search_domain_filter and search_recency_filter are set."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.bigmodel.cn/api-reference/工具-api/网络搜索",
+      "verified": {
+        "docs": "https://docs.bigmodel.cn/api-reference/工具-api/网络搜索"
+      }
+    },
+    {
+      "id": "zhipu.web.read",
+      "name": "Read a web page",
+      "summary": "Fetches a URL and returns its content as Markdown or text, with optional image and link summaries.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/paas/v4/reader",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "example": "https://www.example.com"
+        },
+        "timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seconds; default 20."
+        },
+        "no_cache": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Bypass the cache; default false."
+        },
+        "return_format": {
+          "in": "body",
+          "type": "string",
+          "description": "markdown (default) or text."
+        },
+        "retain_images": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Keep images; default true."
+        },
+        "with_images_summary": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add a summary of the page's images; default false."
+        },
+        "with_links_summary": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add a summary of the page's links; default false."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.bigmodel.cn/api-reference/工具-api/网页阅读",
+      "verified": {
+        "docs": "https://docs.bigmodel.cn/api-reference/工具-api/网页阅读"
+      }
+    },
+    {
+      "id": "zhipu.chat.create",
+      "name": "Create a chat completion",
+      "summary": "Chat with a GLM model; supports tools including web_search, thinking mode and JSON output.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/paas/v4/chat/completions",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model code, e.g. glm-5.3, glm-4.7-flash, glm-4.6v.",
+          "example": "glm-5.3"
+        },
+        "messages": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Messages with role system, user, assistant or tool; not only system/assistant.",
+          "example": [
+            {
+              "role": "user",
+              "content": "你好"
+            }
+          ]
+        },
+        "temperature": {
+          "in": "body",
+          "type": "number",
+          "description": "0.0-1.0; default 1.0 on GLM-5."
+        },
+        "top_p": {
+          "in": "body",
+          "type": "number",
+          "description": "0.01-1.0; default 0.95 on GLM-5. Tune this or temperature, not both."
+        },
+        "max_tokens": {
+          "in": "body",
+          "type": "integer",
+          "description": "1-131072."
+        },
+        "thinking": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"type\": \"enabled\"|\"disabled\"}; enabled by default."
+        },
+        "tools": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 128 tools of type function, retrieval, web_search or mcp."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"type\": \"text\"} (default) or {\"type\": \"json_object\"}; text models only."
+        },
+        "stream": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Server-sent events ending in data: [DONE]; default false."
+        }
+      },
+      "notes": [
+        "A read over POST; billed per token by model."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://docs.bigmodel.cn/api-reference/模型-api/对话补全",
+      "verified": {
+        "docs": "https://docs.bigmodel.cn/api-reference/模型-api/对话补全"
+      }
+    },
+    {
+      "id": "zhipu.embeddings.create",
+      "name": "Create text embeddings",
+      "summary": "Vectors for one text or a list of texts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/paas/v4/embeddings",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "example": "embedding-3",
+          "enum": [
+            "embedding-3",
+            "embedding-2"
+          ]
+        },
+        "input": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "A string or a list of strings: embedding-3 takes up to 3072 tokens each and 64 items; embedding-2 512 tokens each, 8K total.",
+          "example": [
+            "first text",
+            "second text"
+          ]
+        },
+        "dimensions": {
+          "in": "body",
+          "type": "integer",
+          "description": "embedding-3 only: 256, 512, 1024 or 2048 (default); embedding-2 is fixed at 1024.",
+          "enum": [
+            2048,
+            1024,
+            512,
+            256
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "ai.embeddings",
+      "docs_url": "https://docs.bigmodel.cn/api-reference/模型-api/文本嵌入",
+      "verified": {
+        "docs": "https://docs.bigmodel.cn/api-reference/模型-api/文本嵌入"
+      }
+    },
+    {
+      "id": "zhipu.images.generate",
+      "name": "Generate an image",
+      "summary": "An image from a text prompt with GLM-Image or CogView.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/paas/v4/images/generations",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "example": "glm-image",
+          "enum": [
+            "glm-image",
+            "cogview-4-250304",
+            "cogview-4",
+            "cogview-3-flash"
+          ]
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "example": "一只可爱的小猫咪"
+        },
+        "quality": {
+          "in": "body",
+          "type": "string",
+          "description": "hd (about 20s, default for glm-image and its only option) or standard (5-10s).",
+          "enum": [
+            "hd",
+            "standard"
+          ]
+        },
+        "size": {
+          "in": "body",
+          "type": "string",
+          "description": "WIDTHxHEIGHT; glm-image default 1280x1280, other models 1024x1024.",
+          "example": "1280x1280"
+        },
+        "watermark_enabled": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Watermarks are on by default; turning them off needs a signed waiver."
+        }
+      },
+      "notes": [
+        "Spends credits per image."
+      ],
+      "job": "ai.image.generate",
+      "docs_url": "https://docs.bigmodel.cn/api-reference/模型-api/图像生成",
+      "verified": {
+        "docs": "https://docs.bigmodel.cn/api-reference/模型-api/图像生成"
+      }
+    },
+    {
+      "id": "zhipu.async.result",
+      "name": "Get an async task result",
+      "summary": "Status and result of an async chat completion, image or video generation task.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/paas/v4/async-result/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The task id an async request returned."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://docs.bigmodel.cn/api-reference/模型-api/查询异步结果",
+      "verified": {
+        "docs": "https://docs.bigmodel.cn/api-reference/模型-api/查询异步结果"
+      }
+    }
+  ]
+}

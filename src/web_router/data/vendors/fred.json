@@ -1,0 +1,635 @@
+{
+  "vendor": "fred",
+  "name": "FRED (St. Louis Fed)",
+  "category": "finance",
+  "summary": "US and international economic time series from the Federal Reserve Bank of St. Louis: series search, metadata, observations, categories and release calendars.",
+  "docs_url": "https://fred.stlouisfed.org/docs/api/fred/",
+  "base_url": "https://api.stlouisfed.org/fred",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FRED_API_KEY"
+        ],
+        "description": "a free FRED API key, 32 lowercase alphanumeric characters (fredaccount.stlouisfed.org, API keys page)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every endpoint answers XML unless file_type=json is passed.",
+    "Dates are YYYY-MM-DD. realtime_start/realtime_end select the vintage (ALFRED real-time period) and default to today, so values are the latest revision unless set.",
+    "Paging is limit/offset; most list endpoints cap limit at 1000, series observations at 100000."
+  ],
+  "sources": [
+    "https://fred.stlouisfed.org/docs/api/fred/",
+    "https://fred.stlouisfed.org/docs/api/api_key.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fred.series.search",
+      "name": "Search economic series",
+      "summary": "Find series by keywords or by series id, with tag and attribute filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/series/search",
+      "params": {
+        "search_text": {
+          "in": "query",
+          "type": "string",
+          "description": "Words to match against series.",
+          "example": "consumer price index"
+        },
+        "search_type": {
+          "in": "query",
+          "type": "string",
+          "description": "full_text (default) or series_id (search_text matched against ids, * wildcards allowed).",
+          "enum": [
+            "full_text",
+            "series_id"
+          ]
+        },
+        "file_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; the API defaults to xml, so pass json.",
+          "example": "json",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 1000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort key; default search_rank for full_text, series_id otherwise.",
+          "enum": [
+            "search_rank",
+            "series_id",
+            "title",
+            "units",
+            "frequency",
+            "seasonal_adjustment",
+            "realtime_start",
+            "realtime_end",
+            "last_updated",
+            "observation_start",
+            "observation_end",
+            "popularity",
+            "group_popularity"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "filter_variable": {
+          "in": "query",
+          "type": "string",
+          "description": "Attribute to filter on.",
+          "enum": [
+            "frequency",
+            "units",
+            "seasonal_adjustment"
+          ]
+        },
+        "filter_value": {
+          "in": "query",
+          "type": "string",
+          "description": "Value of filter_variable to keep."
+        },
+        "tag_names": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated tags a series must all carry, e.g. usa;m2."
+        },
+        "exclude_tag_names": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated tags to exclude; needs tag_names."
+        },
+        "realtime_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of the real-time period, YYYY-MM-DD."
+        },
+        "realtime_end": {
+          "in": "query",
+          "type": "string",
+          "description": "End of the real-time period, YYYY-MM-DD."
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://fred.stlouisfed.org/docs/api/fred/series_search.html",
+      "verified": {
+        "docs": "https://fred.stlouisfed.org/docs/api/fred/series_search.html"
+      }
+    },
+    {
+      "id": "fred.series.get",
+      "name": "Get series metadata",
+      "summary": "Title, units, frequency, seasonal adjustment, observation range and last update for one series.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/series",
+      "params": {
+        "series_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Series id.",
+          "example": "GDP"
+        },
+        "file_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; the API defaults to xml, so pass json.",
+          "example": "json",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        },
+        "realtime_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of the real-time period, YYYY-MM-DD."
+        },
+        "realtime_end": {
+          "in": "query",
+          "type": "string",
+          "description": "End of the real-time period, YYYY-MM-DD."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://fred.stlouisfed.org/docs/api/fred/series.html",
+      "verified": {
+        "docs": "https://fred.stlouisfed.org/docs/api/fred/series.html"
+      }
+    },
+    {
+      "id": "fred.series.observations",
+      "name": "Get series observations",
+      "summary": "The data values of a series, optionally transformed (units) or aggregated to a lower frequency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/series/observations",
+      "params": {
+        "series_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Series id.",
+          "example": "CPIAUCSL"
+        },
+        "file_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; the API defaults to xml, so pass json.",
+          "example": "json",
+          "enum": [
+            "xml",
+            "json",
+            "xlsx",
+            "csv"
+          ]
+        },
+        "observation_start": {
+          "in": "query",
+          "type": "string",
+          "description": "First observation date, YYYY-MM-DD."
+        },
+        "observation_end": {
+          "in": "query",
+          "type": "string",
+          "description": "Last observation date, YYYY-MM-DD."
+        },
+        "units": {
+          "in": "query",
+          "type": "string",
+          "description": "Transformation: lin levels (default), chg change, ch1 change from a year ago, pch percent change, pc1 percent change from a year ago, pca compounded annual rate, cch continuously compounded rate, cca continuously compounded annual rate, log natural log.",
+          "enum": [
+            "lin",
+            "chg",
+            "ch1",
+            "pch",
+            "pc1",
+            "pca",
+            "cch",
+            "cca",
+            "log"
+          ]
+        },
+        "frequency": {
+          "in": "query",
+          "type": "string",
+          "description": "Aggregate to a lower frequency: d, w, bw, m, q, sa, a, or a period variant (wef, weth, wew, wetu, wem, wesu, wesa, bwew, bwem).",
+          "enum": [
+            "d",
+            "w",
+            "bw",
+            "m",
+            "q",
+            "sa",
+            "a",
+            "wef",
+            "weth",
+            "wew",
+            "wetu",
+            "wem",
+            "wesu",
+            "wesa",
+            "bwew",
+            "bwem"
+          ]
+        },
+        "aggregation_method": {
+          "in": "query",
+          "type": "string",
+          "description": "avg (default), sum or eop; only applies with frequency.",
+          "enum": [
+            "avg",
+            "sum",
+            "eop"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "By observation date.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 100000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "output_type": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 by real-time period (default), 2 by vintage date all observations, 3 by vintage date new and revised only, 4 initial release only.",
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "vintage_dates": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated YYYY-MM-DD vintage dates, used instead of a real-time period."
+        },
+        "realtime_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of the real-time period, YYYY-MM-DD."
+        },
+        "realtime_end": {
+          "in": "query",
+          "type": "string",
+          "description": "End of the real-time period, YYYY-MM-DD."
+        }
+      },
+      "notes": [
+        "Values are strings; a missing observation is '.'.",
+        "frequency cannot be higher than the series' native frequency (an error), and aggregation only works with xml or json output.",
+        "csv output arrives as a zip holding the csv and a README."
+      ],
+      "job": "market.history",
+      "docs_url": "https://fred.stlouisfed.org/docs/api/fred/series_observations.html",
+      "verified": {
+        "docs": "https://fred.stlouisfed.org/docs/api/fred/series_observations.html"
+      }
+    },
+    {
+      "id": "fred.series.updates",
+      "name": "List recently updated series",
+      "summary": "Series ordered by when their observations were last updated, within the last two weeks.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/series/updates",
+      "params": {
+        "file_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; the API defaults to xml, so pass json.",
+          "example": "json",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 1000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "filter_value": {
+          "in": "query",
+          "type": "string",
+          "description": "macro, regional or all (default).",
+          "enum": [
+            "macro",
+            "regional",
+            "all"
+          ]
+        },
+        "start_time": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYYMMDDHHmm; needs end_time.",
+          "example": "201803020000"
+        },
+        "end_time": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYYMMDDHHmm; needs start_time."
+        },
+        "realtime_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of the real-time period, YYYY-MM-DD."
+        },
+        "realtime_end": {
+          "in": "query",
+          "type": "string",
+          "description": "End of the real-time period, YYYY-MM-DD."
+        }
+      },
+      "docs_url": "https://fred.stlouisfed.org/docs/api/fred/series_updates.html",
+      "verified": {
+        "docs": "https://fred.stlouisfed.org/docs/api/fred/series_updates.html"
+      }
+    },
+    {
+      "id": "fred.category.series",
+      "name": "List series in a category",
+      "summary": "The series filed under one FRED category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/category/series",
+      "params": {
+        "category_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Category id; 0 is the root.",
+          "example": 125
+        },
+        "file_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; the API defaults to xml, so pass json.",
+          "example": "json",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 1000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "series_id",
+            "title",
+            "units",
+            "frequency",
+            "seasonal_adjustment",
+            "realtime_start",
+            "realtime_end",
+            "last_updated",
+            "observation_start",
+            "observation_end",
+            "popularity",
+            "group_popularity"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "filter_variable": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "frequency",
+            "units",
+            "seasonal_adjustment"
+          ]
+        },
+        "filter_value": {
+          "in": "query",
+          "type": "string",
+          "description": "Value of filter_variable to keep."
+        },
+        "tag_names": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated tags a series must all carry."
+        },
+        "exclude_tag_names": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated tags to exclude; needs tag_names."
+        },
+        "realtime_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of the real-time period, YYYY-MM-DD."
+        },
+        "realtime_end": {
+          "in": "query",
+          "type": "string",
+          "description": "End of the real-time period, YYYY-MM-DD."
+        }
+      },
+      "docs_url": "https://fred.stlouisfed.org/docs/api/fred/category_series.html",
+      "verified": {
+        "docs": "https://fred.stlouisfed.org/docs/api/fred/category_series.html"
+      }
+    },
+    {
+      "id": "fred.releases.dates",
+      "name": "List release dates",
+      "summary": "Upcoming and past publication dates across all economic data releases.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/releases/dates",
+      "params": {
+        "file_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; the API defaults to xml, so pass json.",
+          "example": "json",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 1000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Default release_date.",
+          "enum": [
+            "release_date",
+            "release_id",
+            "release_name"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "Default desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "include_release_dates_with_no_data": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include dates with no data yet (future dates); default false."
+        },
+        "realtime_start": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD; defaults to the first day of the current year."
+        },
+        "realtime_end": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD; defaults to 9999-12-31."
+        }
+      },
+      "job": "events.list",
+      "docs_url": "https://fred.stlouisfed.org/docs/api/fred/releases_dates.html",
+      "verified": {
+        "docs": "https://fred.stlouisfed.org/docs/api/fred/releases_dates.html"
+      }
+    },
+    {
+      "id": "fred.release.dates",
+      "name": "List one release's dates",
+      "summary": "Publication dates of one release (e.g. the Employment Situation).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/release/dates",
+      "params": {
+        "release_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Release id.",
+          "example": 82
+        },
+        "file_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; the API defaults to xml, so pass json.",
+          "example": "json",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 10000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "include_release_dates_with_no_data": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include dates with no data yet; default false."
+        },
+        "realtime_start": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD; defaults to 1776-07-04."
+        },
+        "realtime_end": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD; defaults to 9999-12-31."
+        }
+      },
+      "job": "events.list",
+      "docs_url": "https://fred.stlouisfed.org/docs/api/fred/release_dates.html",
+      "verified": {
+        "docs": "https://fred.stlouisfed.org/docs/api/fred/release_dates.html"
+      }
+    }
+  ]
+}
