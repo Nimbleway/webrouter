@@ -23,7 +23,7 @@ import sys
 import tempfile
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cache
 from pathlib import Path
 from types import ModuleType
@@ -31,6 +31,7 @@ from typing import Any
 
 from pydantic import TypeAdapter
 
+from web_router._urls import host_of
 from web_router.routing.contract import RouteDecision, RouteRequest
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
@@ -58,6 +59,7 @@ MTOK = 1_000_000
 
 MSG_BAD_ROUTER = "{spec!r}: a router is one of {known}, or module:attr / path/file.py:attr"
 MSG_NO_SKLEARN = "the sklearn router needs scikit-learn: uv run --all-extras --with scikit-learn python ..."
+MSG_LINK_TIMEOUT = "the simulated round trip took the whole deadline"
 MSG_WIRE = "the router service answered {why}"
 
 
@@ -177,9 +179,13 @@ class DelayedRouter:
         self._first = True
 
     def route(self, req: RouteRequest) -> RouteDecision:
-        time.sleep(self.rtt_s * (HANDSHAKE_RTTS if self._first else 1))
+        slept = self.rtt_s * (HANDSHAKE_RTTS if self._first else 1)
         self._first = False
-        return self.inner.route(req)  # type: ignore[no-any-return]
+        if slept >= req.deadline_s:
+            time.sleep(req.deadline_s)
+            raise TimeoutError(MSG_LINK_TIMEOUT)
+        time.sleep(slept)
+        return self.inner.route(replace(req, deadline_s=req.deadline_s - slept))  # type: ignore[no-any-return]
 
     def close(self) -> None:
         close(self.inner)
@@ -248,15 +254,16 @@ def _custom(spec: str) -> RouterSpec:
 
 def _remote(spec: str, rtt_ms: float) -> RouterSpec:
     url = spec.removeprefix(REMOTE)
+    shown = REMOTE + host_of(url)  # never the path, query or credentials: they may carry a token
     if not rtt_ms:
-        name, build = spec, lambda: remote_router(url)
+        name, build = shown, lambda: remote_router(url)
         link = "as the URL lies (loopback: no network)"
     else:
-        name, build = f"{spec} +{rtt_ms:g}ms", lambda: DelayedRouter(remote_router(url), rtt_ms)
+        name, build = f"{shown} +{rtt_ms:g}ms", lambda: DelayedRouter(remote_router(url), rtt_ms)
         link = f"plus a simulated {rtt_ms:g} ms RTT ({HANDSHAKE_RTTS} RTTs on a new connection)"
     return RouterSpec(
         name,
-        f"remote router at {url}, client: {remote_client()}, link {link}",
+        f"remote router at {host_of(url)}, client: {remote_client()}, link {link}",
         build,
         optional_env=(REMOTE_KEY_ENV,),
         cost_note="free to the caller: the service's own cost is not counted",

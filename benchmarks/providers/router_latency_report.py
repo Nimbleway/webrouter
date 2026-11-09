@@ -57,7 +57,7 @@ def tools_table(tools: Mapping[str, ToolLatency]) -> list[str]:
 
 def routers_table(routers: Mapping[str, Mapping[str, Any]]) -> list[str]:
     lines = [
-        "| Router | p50 ms | p90 ms | Timeouts | Fallbacks | First call ms | Fresh build p50 ms "
+        "| Router | p50 ms | p90 ms | Timeouts | Fallbacks | First call ms | Fresh: build / call p50 ms "
         "| Added wall time p50 ms (p90) | Est. cost |",
         "|---|--:|--:|--:|--:|--:|--:|--:|--:|",
     ]
@@ -66,7 +66,8 @@ def routers_table(routers: Mapping[str, Mapping[str, Any]]) -> list[str]:
         added_cell = NONE if not added else f"{_ms(added.get('added_p50_ms'))} ({_ms(added.get('added_p90_ms'))})"
         lines.append(
             f"| {name} | {_ms(warm['p50_ms'])} | {_ms(warm['p90_ms'])} | {_rate(warm['timeout_rate'])} "
-            f"| {_rate(warm['fallback_rate'])} | {_ms(first['p50_ms'])} | {_ms(cold.get('p50_ms'))} "
+            f"| {_rate(warm['fallback_rate'])} | {_ms(first['p50_ms'])} "
+            f"| {_ms(cold.get('build_p50_ms'))} / {_ms(cold.get('p50_ms'))} "
             f"| {added_cell} | {_usd(r.get('cost_usd'))} |"
         )
     return lines

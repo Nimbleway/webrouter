@@ -610,8 +610,8 @@ table to `results/router-latency/`.
 **Results.** 2026-11-09 on an Apple M4 Pro (12 CPUs), macOS 26.6, Python
 3.12.13, scikit-learn 1.9.1, web-router 0.10.0; sync calls, 200 timed per
 router after a first call and 5 warm-up; the sklearn router is the example's
-toy-trained pipeline. The LLM, Jev and remote rows are placeholders until
-their runs.
+toy-trained pipeline. Called from an event loop (`--async`) both add about
+0.05 ms. The LLM, Jev and remote rows are placeholders until their runs.
 
 | Tool | First backend in `auto` | p50 s | p90 s |
 |---|---|--:|--:|
@@ -621,8 +621,8 @@ their runs.
 
 | Router | p50 ms | p90 ms | Timeouts | First call ms | Added wall time p50 ms | search | answer |
 |---|--:|--:|--:|--:|--:|---|---|
-| rules | 0.035 | 0.042 | 0% | 0.093 | 0.21 | consult (0.01%) | consult (0.002%) |
-| sklearn | 0.23 | 0.25 | 0% | 0.39 | 0.41 | consult (0.07%) | consult (0.01%) |
+| rules | 0.034 | 0.044 | 0% | 0.093 | 0.21 | consult (0.01%) | consult (0.002%) |
+| sklearn | 0.23 | 0.24 | 0% | 0.34 | 0.41 | consult (0.07%) | consult (0.01%) |
 | llm (`<model>`) | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |
 | jev (`jev-1.14.0`) | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |
 | remote, loopback | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |

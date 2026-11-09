@@ -73,14 +73,6 @@ class Series:
         }
 
 
-def _outcome(attached: AttachedRouter, req: RouteRequest) -> RouterOutcome:
-    return attached.call(req)
-
-
-async def _aoutcome(attached: AttachedRouter, req: RouteRequest) -> RouterOutcome:
-    return await attached.acall(req)
-
-
 def _deadline(attached: AttachedRouter, override: float | None) -> float:
     return attached.timeout_s if override is None else override
 
@@ -121,35 +113,63 @@ def interleaved(
 
     async def arun() -> None:
         for i, name, req in calls:
-            keep(i, name, await _aoutcome(attached[name], req))
+            keep(i, name, await attached[name].acall(req))
 
     if use_async:
         asyncio.run(arun())
     else:
         for i, name, req in calls:
-            keep(i, name, _outcome(attached[name], req))
+            keep(i, name, attached[name].call(req))
     return {name: {"first_call": first.stats(), "warm": warm.stats()} for name, (first, warm) in series.items()}
 
 
 def cold_builds(
-    builders: Mapping[str, Any], plan: Sequence[RouteRequest], *, deadline_s: float | None, seed: int
+    builders: Mapping[str, Any],
+    plan: Sequence[RouteRequest],
+    *,
+    deadline_s: float | None,
+    seed: int,
+    use_async: bool,
 ) -> dict[str, dict[str, Any]]:
-    """Each router built anew for every call of ``plan``: what a short-lived process pays on each one."""
+    """Each router built anew for every call of ``plan``: what a short-lived process pays on each one.
+
+    The call's time is the first call's on a fresh router; ``build_*`` is the build's own (a model load, a client).
+    """
     from router_latency_routers import close
 
-    rng = random.Random(seed)
-    series: dict[str, Series] = {name: Series() for name in builders}
-    for req in plan:
-        names = list(builders)
-        rng.shuffle(names)
-        for name in names:
-            router = builders[name]()
+    calls: dict[str, Series] = {name: Series() for name in builders}
+    builds: dict[str, list[float]] = {name: [] for name in builders}
+
+    def built(name: str, req: RouteRequest) -> tuple[Any, AttachedRouter, RouteRequest]:
+        started = time.perf_counter()
+        router = builders[name]()
+        builds[name].append((time.perf_counter() - started) * 1000)
+        attached = AttachedRouter(router)
+        return router, attached, replace(req, deadline_s=_deadline(attached, deadline_s))
+
+    order = list(_rounds(random.Random(seed), list(builders), len(plan)))
+
+    async def arun() -> None:
+        for i, name in order:
+            router, attached, req = built(name, plan[i])
             try:
-                attached = AttachedRouter(router)
-                series[name].add(_outcome(attached, replace(req, deadline_s=_deadline(attached, deadline_s))))
+                calls[name].add(await attached.acall(req))
             finally:
                 close(router)
-    return {name: s.stats() for name, s in series.items()}
+
+    if use_async:
+        asyncio.run(arun())
+    else:
+        for i, name in order:
+            router, attached, req = built(name, plan[i])
+            try:
+                calls[name].add(attached.call(req))
+            finally:
+                close(router)
+    return {
+        name: {**s.stats(), "build_p50_ms": _pct(builds[name], P50), "build_p90_ms": _pct(builds[name], P90)}
+        for name, s in calls.items()
+    }
 
 
 class _Stub(SearchProvider):
@@ -168,18 +188,23 @@ class _Stub(SearchProvider):
 @contextmanager
 def stubbed(chain: Sequence[str]) -> Iterator[None]:
     """Every backend of ``chain`` replaced by a stub of the same name, so candidates are priced as the real ones."""
+    before = {name: registry._CUSTOM_PROVIDERS.get(name) for name in chain}  # a backend of your own, put back
     for name in chain:
         registry.register_provider(name, type(f"Stub_{name}", (_Stub,), {"name": name}))
     try:
         yield
     finally:
-        for name in chain:
-            registry.unregister_provider(name)
+        for name, kept in before.items():
+            if kept is None:
+                registry.unregister_provider(name)
+            else:
+                registry.register_provider(name, kept)
 
 
 def _clients(cls: type, router: Any, chain: Sequence[str]) -> tuple[Any, Any]:
     config = {"auto": {"chain": list(chain)}}
-    return cls(provider_config=config, router=router), cls(provider_config=config, router=router, route_tools=())
+    routed = cls(provider_config=config, router=router, route_tools=("search",))  # whatever the router declares
+    return routed, cls(provider_config=config, router=router, route_tools=())
 
 
 @dataclass

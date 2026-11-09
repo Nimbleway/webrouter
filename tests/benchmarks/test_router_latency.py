@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import random
 import sys
 import time
 from collections.abc import Iterator
@@ -104,7 +105,12 @@ def test_routers_are_timed_interleaved_first_call_and_warm_up_apart(latency: Mod
     assert out["fast"]["first_call"]["answered"] == 1
     assert out["fast"]["warm"]["calls"] == 3 and out["fast"]["warm"]["fallback_rate"] == 0.0
     assert out["slow"]["warm"]["timeouts"] == 3 and out["slow"]["warm"]["p50_ms"] is None
-    assert calls[:2] != calls[2:4] or calls[2:4] != calls[4:6], "the order is shuffled each round"
+
+
+def test_each_round_is_in_its_own_random_order(latency: ModuleType) -> None:
+    rounds = list(_module("router_latency_run")._rounds(random.Random(0), ["a", "b", "c"], 12))
+    orders = {tuple(name for i, name in rounds if i == r) for r in range(12)}
+    assert len(orders) > 1 and all(sorted(order) == ["a", "b", "c"] for order in orders)
 
 
 def test_the_added_wall_time_runs_on_stubs_and_puts_the_registry_back(latency: ModuleType) -> None:
@@ -153,9 +159,42 @@ def test_the_wire_client_refuses_another_status_or_schema(latency: ModuleType, s
 
 
 def test_a_stated_rtt_adds_a_simulated_remote_beside_loopback(latency: ModuleType) -> None:
-    specs = _module("router_latency_routers").router_specs("remote:http://127.0.0.1:1/route", rtts_ms=[40.0])
-    assert [s.name for s in specs] == ["remote:http://127.0.0.1:1/route", "remote:http://127.0.0.1:1/route +40ms"]
+    specs = _module("router_latency_routers").router_specs("remote:http://u:pw@127.0.0.1:1/r?token=s", rtts_ms=[40.0])
+    assert [s.name for s in specs] == ["remote:http://127.0.0.1", "remote:http://127.0.0.1 +40ms"]
     assert "simulated 40 ms" in specs[1].describe
+    assert not any(secret in s.name + s.describe for s in specs for secret in ("pw", "token", "/r"))
+
+
+def test_a_simulated_link_keeps_the_call_within_its_deadline(latency: ModuleType) -> None:
+    routers = _module("router_latency_routers")
+    seen: list[float] = []
+
+    class Inner:
+        def route(self, req: RouteRequest) -> RouteDecision:
+            seen.append(req.deadline_s)
+            return RouteDecision()
+
+    routers.DelayedRouter(Inner(), 10.0).route(_req())  # first call: three round trips, 30 ms of 1 s
+    assert seen and seen[0] == pytest.approx(0.97)
+    with pytest.raises(TimeoutError):
+        routers.DelayedRouter(Inner(), 400.0).route(_req())
+
+
+def test_a_router_named_twice_is_refused(latency: ModuleType) -> None:
+    with pytest.raises(SystemExit, match="more than once"):
+        latency.main(["--router", "rules", "--router", "rules", "--dry-run"])
+
+
+def test_stubbing_puts_a_backend_of_your_own_back(latency: ModuleType) -> None:
+    run = _module("router_latency_run")
+    mine = type("Mine", (run._Stub,), {"name": "mine"})
+    registry.register_provider("perplexity", mine)
+    try:
+        with run.stubbed(("perplexity",)):
+            assert registry._CUSTOM_PROVIDERS["perplexity"] is not mine
+        assert registry._CUSTOM_PROVIDERS["perplexity"] is mine
+    finally:
+        registry.unregister_provider("perplexity")
 
 
 # The dry run

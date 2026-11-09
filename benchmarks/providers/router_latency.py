@@ -66,6 +66,7 @@ MSG_NOT_JOINED = (
     "{name}: no question text in {folder}; run `uv run --all-extras python benchmarks/providers/frozen.py join` "
     "first, or --dry-run to see the plan without it"
 )
+MSG_REPEATED = "each router is timed once per run; named more than once: {names}"
 MSG_PRICE = "--llm-price takes IN,OUT: USD per million input and output tokens, as 0.15,0.60"
 
 
@@ -153,6 +154,9 @@ def _specs(args: argparse.Namespace) -> list[RouterSpec]:
             jev_price=args.jev_price,
             rtts_ms=args.remote_rtt_ms,
         )
+    names = [s.name for s in specs]
+    if len(set(names)) != len(names):
+        raise SystemExit(MSG_REPEATED.format(names=", ".join(sorted({n for n in names if names.count(n) > 1}))))
     return specs
 
 
@@ -187,7 +191,11 @@ def run(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[Ro
             built, plan, warmup=args.warmup, deadline_s=args.deadline_s, seed=args.seed, use_async=args.use_async
         )
         cold = cold_builds(
-            {s.name: s.build for s in specs}, plan[: args.cold], deadline_s=args.deadline_s, seed=args.seed
+            {s.name: s.build for s in specs},
+            sample(pool, args.cold, args.seed + 2),
+            deadline_s=args.deadline_s,
+            seed=args.seed,
+            use_async=args.use_async,
         )
         prompts = [r.prompt for r in sample(pool, args.warmup + args.e2e, args.seed + 1)]
         chain = chain_orders(args.chain)["search"]
