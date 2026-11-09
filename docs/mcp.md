@@ -11,106 +11,119 @@ It runs as a subprocess of your own client, on your own machine, and reads your
 own credentials out of your own environment. There is no hosted service in the
 middle and nothing to sign up for: no key ever leaves the process you started.
 
-## Start with no credentials at all
+Installing and adding keys are the next two sections; the rest of this page is
+reference.
+
+## Install, with no credentials at all
 
 The default `auto` chain falls back to backends that need no key, so the first
-run needs nothing but a clone and the command:
+run needs nothing but a clone and [uv](https://docs.astral.sh/uv/):
 
 ```bash
 git clone https://github.com/WebContextLayer/webrouter.git
 cd webrouter && make setup
-uv run web-router-mcp
+uv run web-router-mcp    # a check that it starts: it waits silently for a client; Ctrl-C stops it
 ```
 
 That is a working `search` and a working `extract` with no account, no key and
-no signup — the same keyless tiers the library uses, reached through MCP. Point
-a client at it:
+no signup — the keyless backends listed in the README's
+[Working with no credentials](../README.md#working-with-no-credentials). Then
+register it with your client, using the absolute path of your clone:
 
-```bash
-claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
-```
+- **Inside the clone**, Claude Code needs nothing: the committed `.mcp.json`
+  starts the server, and you approve it once.
+- **Claude Code, from every project**: register it once at user scope.
 
-or, for a client configured by file (Claude Desktop, Cursor):
+  ```bash
+  claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
+  ```
 
-```json
-{
-  "mcpServers": {
-    "web-router": {
-      "command": "uv",
-      "args": ["run", "--project", "/path/to/webrouter", "--all-extras", "web-router-mcp"]
+- **Claude Desktop, Cursor and other clients configured by file**: add this
+  block. Claude Desktop keeps it in `claude_desktop_config.json` (Settings >
+  Developer > Edit Config); Cursor in `~/.cursor/mcp.json`, or a project's
+  `.cursor/mcp.json`. Then restart the client.
+
+  ```json
+  {
+    "mcpServers": {
+      "web-router": {
+        "command": "uv",
+        "args": ["run", "--project", "/path/to/webrouter", "--all-extras", "web-router-mcp"]
+      }
     }
   }
-}
-```
+  ```
+
+  A client started from the desktop often has no shell `PATH`, so it may not
+  find `uv`: put the output of `which uv` in `command` instead.
 
 `--project` points uv at your clone and keeps the working directory your client
-chose, so a `.env` in the project you're working in is the one the server reads.
-Inside the clone itself, the committed `.mcp.json` already starts it.
+chose. `--all-extras` turns on every tool, the `browser_*` ones included, and
+lets a fresh clone start before `make setup` has run; `make setup` also
+installs the Chromium the `local` browser drives. Without Playwright the server
+does not list the browser tools at all.
 
-`--all-extras` turns on every tool, the `browser_*` ones included; `make setup`
-also installs the Chromium the `local` browser drives. Without Playwright the
-server does not list the browser tools at all.
+To see what the server found, ask the model to read the
+`web-router://capabilities` resource: the backends configured per method, where
+the keys came from, and `unlock`, the keys that would add more.
 
 ## Then add whichever keys you have
 
+The quickest way is one file in your user config directory, which the server
+reads wherever it starts. On macOS:
+
+```bash
+mkdir -p "$HOME/Library/Application Support/web-router"
+cp .env.example "$HOME/Library/Application Support/web-router/.env"
+```
+
+On Linux the directory is `~/.config/web-router` (or
+`$XDG_CONFIG_HOME/web-router`), on Windows `%APPDATA%\web-router`. Fill in the
+keys you hold, then restart the client: a server keeps the environment it
+started with, unless the model loads the file with [`load_env`](#loading-keys-mid-conversation-load_env).
+Each person brings their own keys: there is no shared key store, and no key
+leaves the machine it was set on.
+
 Credentials come from the environment of the process your client launches, and
-then from one `.env` file. An installed server has no repo beside it and starts
-in whatever directory the client picks, so at startup it looks in four places,
-in this order, and loads the first file that sets a provider credential:
+then from `.env` files. At startup the server reads every one of four places,
+in this order:
 
 | # | Where | For |
 | --- | --- | --- |
 | 1 | the path in `WEB_ROUTER_ENV_FILE` | pointing a client's config at a `.env` you already keep somewhere |
-| 2 | `.env` in the working directory | a checkout of this repo, where `.mcp.json` starts the server at the root |
+| 2 | `.env` in the user config directory | one file for every client and every project |
 | 3 | the path `load_env` recorded with `remember: true` | a file named in a conversation, read again on every start |
-| 4 | `.env` in the user config directory | one file for every client and every project |
+| 4 | `.env` in the working directory | a checkout of this repo, where `.mcp.json` starts the server at the root |
 
-The user config directory is `~/.config/web-router` on Linux (or
-`$XDG_CONFIG_HOME/web-router`), `~/Library/Application Support/web-router` on
-macOS and `%APPDATA%\web-router` on Windows; the server never creates it except
-to record a remembered path. A file that sets no provider credential does not
-count as found — a project's own `.env`, in whatever directory a client starts
-the server in, does not hide yours — and a `WEB_ROUTER_ENV_FILE` that names
-no file is reported rather than silently skipped. With no file anywhere the
-server starts keyless.
+An earlier place wins, per variable; a later file only fills what is still
+unset, and a credential of two variables (Oxylabs' username and password,
+Bright Data's token and zone) only as a whole: a file holding half of one sets
+none of it, so it never blocks a later file holding both. So a project's own `.env` and a
+remembered file can add keys but never replace or complete yours: a repo that
+commits a `.env` with its owner's key does not take over your traffic. The capabilities resource says which file each variable came
+from. The server never creates the user config directory except to record a
+remembered path. A `WEB_ROUTER_ENV_FILE` that names no file is reported rather
+than silently skipped. With no file anywhere the server starts keyless.
 
-So, from Claude Code, either name a file you already have:
+To use a `.env` you already keep elsewhere, name it in `WEB_ROUTER_ENV_FILE`:
 
 ```bash
 claude mcp add --scope user web-router -e WEB_ROUTER_ENV_FILE="$HOME/work/.env" -- uv run --project /path/to/webrouter --all-extras web-router-mcp
 ```
 
-or put your keys in the user config directory's `.env` (copy
-[`.env.example`](../.env.example) and fill in the ones you hold) and register
-the server with no variable at all. For a client configured by file, the
-variable goes in its `env` block:
+For a client configured by file, the variable goes in the block's `env`:
+`"env": {"WEB_ROUTER_ENV_FILE": "/Users/you/work/.env"}`. The `env` block can
+carry the keys themselves too — `"TAVILY_API_KEY": "tvly-..."` — and a variable
+the client exports always keeps its value over any file's.
 
-```json
-{
-  "mcpServers": {
-    "web-router": {
-      "command": "uv",
-      "args": ["run", "--project", "/path/to/webrouter", "--all-extras", "web-router-mcp"],
-      "env": {
-        "WEB_ROUTER_ENV_FILE": "/Users/you/work/.env"
-      }
-    }
-  }
-}
-```
-
-The `env` block can carry the keys themselves too — `"TAVILY_API_KEY": "tvly-..."`
-— and a variable the client exports always keeps its value over any file's.
-
-Whichever file it is, only the provider credentials the package reads are taken
-from it — the variables every `*_ENV_BY_PROVIDER` table in `constants.py`
-names, listed in `.env.example` and in the configuration table in
-[README.md](../README.md). A switch such as `WEB_ROUTER_MCP_ALLOW_FILE_URLS` or
-`CHROME_PATH` in a file is ignored, because a server registered at user scope
-starts in any workspace and a workspace's file is not its operator; `${...}` is
-not expanded, so a file cannot copy another secret into a provider's key. The
-server never writes a credential anywhere, never sends one to anything but the
-backend it belongs to, and never reports one back to the model.
+Whichever file it is, only the provider credentials listed in
+[`.env.example`](../.env.example) are taken from it. A switch such as
+`WEB_ROUTER_MCP_ALLOW_FILE_URLS` or `CHROME_PATH` in a file is ignored, because
+a server registered at user scope starts in any workspace and that workspace's
+file is not whoever runs the server; `${...}` is not expanded, so a file cannot
+copy another secret into a provider's key. The server never writes a
+credential anywhere, never sends one to anything but the backend it belongs to,
+and never reports one back to the model.
 
 ### Loading keys mid-conversation: `load_env`
 
@@ -136,9 +149,11 @@ new `provider` enums. Browser sessions already open, and research or browse
 jobs still being polled, carry on where they started.
 
 `remember: true` records the path — the path, not a copy of the keys — in
-`env-path` in the user config directory, read before that directory's own
-`.env`. Delete that file to forget it. A key rotated in the original file takes
-effect on the next start.
+`env-path` in the user config directory, read after that directory's own
+`.env`, so it too can only add keys. Delete that file to forget it. A key
+rotated in the original file takes effect on the next start. The tool's
+description tells the model to call it only with a path you gave and to set
+`remember` only when you ask.
 
 A key already set is never replaced, so a load can only add backends. That is
 also its one risk: a model steered by a page it read could call `load_env` on a
@@ -155,25 +170,25 @@ backend lists:
 "env": {
   "searched": [
     {"source": "WEB_ROUTER_ENV_FILE", "path": "/Users/you/wrong/.env", "status": "missing"},
-    {"source": "working directory", "path": "/Users/you/project/.env", "status": "no credentials"},
-    {"source": "user config", "path": "/Users/you/Library/Application Support/web-router/.env", "status": "used"}
+    {"source": "user config", "path": "/Users/you/Library/Application Support/web-router/.env", "status": "used"},
+    {"source": "working directory", "path": "/Users/you/project/.env", "status": "no credentials"}
   ],
-  "file": "/Users/you/Library/Application Support/web-router/.env",
+  "loaded": {"TAVILY_API_KEY": "/Users/you/Library/Application Support/web-router/.env"},
   "explicit_file_missing": true,
-  "loaded": ["TAVILY_API_KEY"],
   "from_environment": ["NIMBLE_API_KEY"],
   "loaded_at_runtime": []
 }
 ```
 
 — every place it looked, in order, and what it found there (`used`, `missing`,
-`unreadable` with a `reason`, `no credentials`, or `not read` after an earlier
-one was used); the file it loaded; whether `WEB_ROUTER_ENV_FILE` named a file
-that is not there; the variables loaded from that file and those the client
-already exported, by name; and each `load_env` since. With no provider key at
+`unreadable` with a `reason`, `no credentials`, or `nothing new` when an earlier
+place had set everything it holds); each variable loaded at startup and the
+file it came from; whether `WEB_ROUTER_ENV_FILE` named a file that is not
+there; the variables the client already exported, by name; and each `load_env`
+since. With no provider key at
 all it also carries a `hint` saying how to add one, the server's instructions
-and the `search` description say no keys were found and that the model can ask
-for a `.env` path and call `load_env` — or carry on keyless — and every other
+say no keys were found and that the model can ask for a `.env` path and call
+`load_env` — or carry on keyless — and every other
 place the server reports keys says the same thing: names and paths, never
 values.
 
@@ -210,18 +225,25 @@ the client's `env` block or a file the server already read takes a restart.
 | `browser_read` | The page as it is now, as text or HTML, shaped like `extract`. | about a second |
 | `browser_close` | End the session and stop paying for it. | about a second |
 
-The descriptions the model reads say the same thing, because with twenty-four tools in
-front of it the model *is* the router: what it needs to choose on is what each
-tool is for, what it costs and how long it takes.
+Each tool also carries a `title` and MCP's behaviour hints (`readOnlyHint`,
+`destructiveHint`, `idempotentHint`, `openWorldHint`), so a client can let a
+free lookup through and ask before a billed run or a click on a live page.
 
-Arguments mirror the library's own, name for name — `query`, `max_results`,
-`search_depth`, `include_domains`, `exclude_domains`, `country`, `locale`,
-`urls`, `format`, `template`, `inputs`, `name`, `limit`, `offset`,
-`output_schema`, `records`, `effort`, `task`, `start_url`,
-`max_steps`, `allowed_domains`, `provider`, and for the browser tools the
-handle's own — `url`, `wait_until`, `ref`, `selector`, `text`, `submit`, `key`,
-`full_page`, `format`, `timeout`. Anything the library refuses, this refuses in
-the library's own words.
+The descriptions the model reads say what each tool is for, what it costs and
+how long it takes: that is what the model chooses on.
+
+Arguments are the library's own names; each tool's schema lists them. Anything
+the library refuses, this refuses in the library's own words, and an argument a
+tool does not declare -- a typo, a guessed option -- is refused before anything
+runs, with the names it takes.
+
+`search` offers an option only when a backend reachable from here maps it, and
+`search_depth` only at the levels one serves, as `browser_open` narrows
+`stealth`. With no key the keyless tier between them (You.com MCP, Exa MCP,
+Tavily keyless, Keenable) maps every search option. The tool's description
+tells the model that `search_depth` is how much text comes back per result and
+`effort` how hard the backend looks, and that higher effort costs more and
+takes longer, so it leaves `effort` unset unless needed.
 
 Over MCP the model chooses `max_results`, not you. Its description steers it
 away from a single result, but the choice stays the model's. A host that wants
@@ -253,7 +275,8 @@ if its own `time_limit_s` or the budget has less left, and then hands back a
 handle for `research_status` or `browse_status`. The other tools are
 unchanged: `search`, `extract` and the rest never ask the router.
 
-The router is set by the operator, once, when the server starts:
+The router is set by the operator -- whoever starts the server and sets its
+environment -- once, when the server starts:
 
 - unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
   with an `http(s)` URL is read with `extract`, anything else searched;
@@ -269,8 +292,12 @@ or a `.env` file. Set empty, it stops the server from starting.
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
 loopback, private or cloud-metadata host is not sent to a backend as a URL.
 It is a check of the host as written: it resolves no DNS and follows no
-redirect. It holds for `web_run`'s plans only. The direct `extract`
-and `browse` tools send the URLs the agent passes as they are, and the browser
+redirect. The same check holds for the URLs an agent passes the direct tools:
+`extract`'s `urls`, `browse`'s `start_url` and any URL among `run_template`'s
+`inputs` that is not a public `http(s)` one -- `file:`, loopback, private,
+metadata -- refuses the call before anything is sent, naming the URL's scheme
+and host and why. So a page that steers the model cannot have your keyed
+account hand a vendor an intranet or metadata URL. The browser
 tools have their own guard ([Where the browser may go](#where-the-browser-may-go)),
 which checks DNS answers and redirects but refuses only cloud metadata hosts
 and the browser's debugging port: other loopback and private hosts are
@@ -335,14 +362,15 @@ starting rather than leaving the connection without the ceiling you meant. The c
 all of it under `routing`: the router (`rules`, `operator` for yours -- never
 its `<module>:<attribute>` -- or `off`), where it runs (`router_runs`: `in_process` for the built-in router or
 none, `operator` with a `router_note` for yours), a `prompt_note` saying the
-prompt goes to the backend, the `url_policy` with a `url_policy_note` saying it
-holds for `web_run` alone, the ceiling, and the budget in
+prompt goes to the backend, the `url_policy` with a `url_policy_note` saying
+where it holds, the ceiling, and the budget in
 force (`null` with none).
 
 ### A browse result never carries its session
 
 A browse task's payload can include the session the agent ran in — a live view
-that controls the browser without a key, a CDP URL with the account key in its
+that controls the browser without a key, a CDP (Chrome DevTools Protocol) URL
+with the account key in its
 query string. So every browse output — the shaped result, `browse_status`,
 `fetch_raw` on a browse handle — and every tool's error message, whatever the
 tool (a vendor's HTTP error body can ride on any method's failure) — replaces
@@ -557,24 +585,18 @@ remote-debugging-port` finds it).
 ## The tools describe *your* install, not the package
 
 Every install holds a different set of keys, so the `provider` argument's enum
-is generated when the client lists the tools, from
-`configured_providers()` / `configured_extract_providers()` /
-`configured_research_providers()` / `configured_answer_providers()`. Hold only a Tavily key and that is what the
-enum says; the model is never shown thirteen backends it cannot reach, and
-cannot pick one that is certain to throw.
-
-With nothing configured at all the enums read:
-
-```
-search   ["auto", "you-mcp"]     # keyless
-extract  ["auto", "jina", "max"] # keyless; max races whatever auto would try
-template []                      # no keyless tier and no auto: a template's name belongs to one vendor
-research ["auto"]                # every research backend bills, so nothing here can run
-answer   []                      # every answer backend bills, and there is no auto yet
-```
-
-and the `research`, `answer` and template tools' own descriptions say so, in as many
-words, rather than pretending to be tools that work.
+is generated when the client lists the tools, from the backends this machine
+holds keys for. Hold only a Tavily key and that is what the enum says; the
+model is never shown thirteen backends it cannot reach, and cannot pick one
+that is certain to throw. With no key at all, search and extract offer `auto`
+and the keyless backends the README lists in
+[Working with no credentials](../README.md#working-with-no-credentials) (and
+extract also `max`, which races them); research and browse offer only `auto`,
+which has nothing to run on; and the template tools and `answer` offer nothing,
+since every backend bills. Once a key is set, `answer` with no `provider` tries
+the configured answer backends in ranked order. A tool with nothing to run on
+says so in its own description, in as many words, rather than pretending to
+work.
 
 The resource `web-router://capabilities` carries the same lists as JSON, plus `browse` and `browser`
 -- the three template tools under one `template` key --
@@ -599,7 +621,9 @@ So a shaped result:
   enough, and never drops the last one;
 - **never inlines `raw`**;
 - says in the result itself that it was shortened, and which handle gets the
-  rest.
+  rest;
+- comes back as JSON text and, for a client that reads it, the same object as
+  `structuredContent`.
 
 Every result carries a `handle`. `fetch_raw` takes it and returns the backend's
 untouched payload, uncapped — nothing is lost, it is just not spent on the
@@ -608,11 +632,15 @@ handles and evicts the oldest, so a long conversation stays bounded.
 
 Everything else — parameter names, provider selection, error messages — is a
 thin projection of the library. A failure comes back as a tool error carrying
-the library's own message, which already names the environment variable to set:
+the library's own message, which names the environment variable to set; where
+the library would also offer `provider_config`, which is code, the server says
+how to add the key through MCP instead:
 
 ```
-[tavily] No API key for provider 'tavily'. Set the TAVILY_API_KEY environment
-variable, or pass provider_config={'tavily': {'api_key': ...}} ...
+No API key for provider 'tavily'. Set the TAVILY_API_KEY environment variable.
+Through this server: the user puts the key in their .env, and you call
+`load_env` with the path they give; or it is set where the server starts, and
+the server is restarted.
 ```
 
 ## Environment variables the server itself reads
@@ -622,58 +650,8 @@ variable, or pass provider_config={'tavily': {'api_key': ...}} ...
 | `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
-| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, or `off`. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
-| `WEB_ROUTER_MCP_MAX_COST_USD` | unset | The ceiling on what one connection may spend, in US dollars at estimated list prices. |
-| `WEB_ROUTER_MCP_TIME_LIMIT_S` | unset | The ceiling on how long one connection may run billed calls, in seconds from its start. |
+| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
+| `WEB_ROUTER_MCP_MAX_COST_USD` | unset | The ceiling on what one connection may spend, in US dollars at estimated list prices. An empty value stops the server from starting. |
+| `WEB_ROUTER_MCP_TIME_LIMIT_S` | unset | The ceiling on how long one connection may run billed calls, in seconds from its start. An empty value stops the server from starting. |
 
 Everything else it reads is a provider credential, and belongs to the provider.
-
-## Sharing it with your team
-
-Three ways, and only the middle one asks a colleague to type anything.
-
-### They work in this repo: nothing to install
-
-`.mcp.json` at the repo root is committed, so a colleague who clones this
-repository and opens Claude Code in it is offered the server straight away and
-approves it once. No install command, no config file to write: the committed
-command is `uv run --all-extras web-router-mcp`, and `--all-extras` is what lets
-it work before anyone has run `make setup` -- a bare `uv run` on a fresh
-clone syncs only the base dependencies, and the server's SDK arrives with the
-`mcp` extra.
-
-The server's entry point loads the gitignored `.env` from the directory it is
-launched in -- the repo root, when `.mcp.json` starts it -- so keys put there
-reach it without being exported in anyone's shell; it is the second place of
-the [four it looks](#then-add-whichever-keys-you-have). The library itself
-never reads dotfiles: this happens in `web-router-mcp`'s `main()` and its
-`load_env` tool alone. A variable already exported wins over the file, and a
-missing file is a no-op, so someone who has just cloned and has no `.env` yet
-still gets the keyless chain. Only provider credentials are read -- a server
-registered at user scope can be started from any workspace, and a workspace's
-`.env` must not be able to flip a policy switch like
-`WEB_ROUTER_MCP_ALLOW_FILE_URLS` or point `CHROME_PATH` somewhere; those come
-from the real environment, set by whoever runs the server.
-
-### They want the tools everywhere: one command
-
-`.mcp.json` only applies inside this repository. To reach the tools from any
-project on their machine, a colleague registers it once at user scope:
-
-```bash
-claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
-```
-
-### Keys for a server started anywhere
-
-Their keys then come from `WEB_ROUTER_ENV_FILE` in that block's `env`, from a
-`.env` in their user config directory, or from `load_env` in a conversation —
-see [Then add whichever keys you have](#then-add-whichever-keys-you-have).
-
-### What cannot be shared
-
-Each person supplies their own credentials. There is no central key store and
-there cannot be one -- that is what "self-hosted" buys: nobody hands anyone else
-their Tavily or Exa key, and no key leaves the machine it was set on. The
-install friction is removable; the credential friction is not, and only applies
-to the paid backends. Search and extract work on the first run with nothing set.

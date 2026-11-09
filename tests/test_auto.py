@@ -16,7 +16,6 @@ from web_router.constants import (
     AUTO_CLIENT_PROVIDERS,
     AUTO_EXTRACT_APPENDED,
     AUTO_EXTRACT_DEFAULT_FORMAT,
-    AUTO_EXTRACT_FORMATS,
     AUTO_EXTRACT_KEYLESS,
     AUTO_EXTRACT_PREFERRED,
     AUTO_KEYLESS,
@@ -330,8 +329,8 @@ async def test_the_chain_works_the_same_way_async(chain_members: _Recorder) -> N
     assert response.provider == "second"
 
 
-def test_auto_declares_exactly_what_some_member_maps() -> None:
-    """The union, so no member's filters are lost to the weakest one -- and no more than that.
+def test_auto_declares_every_option_some_member_maps() -> None:
+    """Exactly the union, so no member's filters are lost to the weakest one, and no option goes unmapped.
 
     Safe because a member is passed over for any option it does not map; see
     `test_a_member_that_does_not_map_an_option_is_passed_over_unbuilt`.
@@ -465,17 +464,17 @@ def test_a_depth_request_skips_the_members_without_depth_for_the_keyless_tier(
     assert set(passed_over._members) == {2}, "perplexity and brave were never built"
 
 
-def test_a_depth_request_only_depthless_members_could_take_names_each(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_depth_request_no_member_serves_names_each_ones_reason(monkeypatch: pytest.MonkeyPatch) -> None:
     for env_var in _EVERY_SEARCH_KEY:
         monkeypatch.delenv(env_var, raising=False)
 
-    router = WebRouter(provider_config={"auto": {"chain": [PROVIDER_PERPLEXITY, PROVIDER_BRAVE]}})
+    router = WebRouter(provider_config={"auto": {"chain": [PROVIDER_PERPLEXITY, PROVIDER_PARALLEL_MCP]}})
     with router, pytest.raises(UnsupportedParameterError) as caught:
         router.search("hi", search_depth="deep")
 
     message = str(caught.value)
-    assert "perplexity (does not map 'search_depth')" in message
-    assert "brave (does not map 'search_depth')" in message
+    assert "perplexity (will not serve search_depth='deep')" in message
+    assert "parallel-mcp (does not map 'search_depth')" in message
     assert "nothing was searched" in message
 
 
@@ -559,16 +558,18 @@ def _extract_member(
     *,
     formats: frozenset[ExtractFormat] = frozenset({"markdown", "html", "text"}),
     blank: frozenset[str] = frozenset(),
+    supported: frozenset[str] = EXTRACT_PARAMETERS,
 ) -> type:
     """Register a fake extract chain member that answers, or fails in a given way, returning ``formats``.
 
-    A URL in ``blank`` comes back as a document with no text.
+    A URL in ``blank`` comes back as a document with no text; ``supported`` is what it maps.
     """
     from tests.conftest import FakeExtractProvider
 
     class Member(FakeExtractProvider):  # type: ignore[misc, valid-type]
         name = member_name
         supported_formats = formats
+        supported_parameters = supported
         default_format = sorted(formats)[0]
 
         def _respond(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
@@ -668,17 +669,6 @@ async def test_the_extract_chain_works_the_same_way_async(extract_chain_members:
 
     assert extract_chain_members.called == ["first", "second"]
     assert response.provider == "second"
-
-
-def test_auto_offers_exactly_the_formats_some_extract_member_returns() -> None:
-    """The union: a format is routed to a member that returns it, so none has to be given up for the weakest."""
-    members = [name for name, _ in AUTO_EXTRACT_KEYLESS] + list(AUTO_EXTRACT_PREFERRED) + list(AUTO_EXTRACT_APPENDED)
-    offered = frozenset().union(*(get_extract_provider_class(name).supported_formats for name in members))
-
-    assert offered == AUTO_EXTRACT_FORMATS
-    for name in members:
-        mapped = get_extract_provider_class(name).supported_parameters
-        assert mapped >= EXTRACT_PARAMETERS, f"{name} cannot honour everything auto accepts"
 
 
 def test_a_text_extract_skips_to_a_member_that_returns_text(extract_chain_members: _Recorder) -> None:

@@ -13,9 +13,9 @@ stays ``None``.
 A budget, the part of it still left, then prefilters them. Under a cost cap a
 candidate whose price is unknown, or whose estimate is over what is left, is
 dropped. Research is priced at the ``effort`` the caller set, else at the
-one :func:`~web_router.routing.params.map_effort` picks for that backend under
-the budget -- the backend's default when there is no cap -- so it is offered at
-the effort it would run with. A request carrying ``provider_options`` may be
+one effort :func:`~web_router.routing.params.shared_effort` picks for the
+whole call, over every eligible backend -- each backend's default when there
+is no cap -- so it is offered at the effort it would run with. A request carrying ``provider_options`` may be
 billed at another mode than its row, and a floor row bills more on top, so
 their price is unknown, and under a cost cap dropped; so is a search asking
 for more results than its row's price assumes (``results_assumed``), charged

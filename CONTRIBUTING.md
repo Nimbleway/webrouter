@@ -3,6 +3,9 @@
 Thanks for helping out. This project is pre-1.0 and moving fast — open an issue
 before starting anything large so we can agree on the shape first.
 
+Contributions are accepted under the Apache License 2.0, the same license as the
+project ([LICENSE](LICENSE)).
+
 Read [STYLE_GUIDE.md](STYLE_GUIDE.md) before your first PR. It describes the
 standards code is reviewed against here, several of which are not obvious and
 are enforced by review rather than by tooling.
@@ -116,12 +119,12 @@ vendor's own pricing page (`unknown` if it publishes none), and run
 2. Map the provider's payload onto `SearchResponse`; keep anything unmapped in
    `SearchResult.extra` and `SearchResponse.raw`. Don't invent values the
    provider didn't return — no synthesized scores or dates.
-3. Start with `supported_parameters = {"max_results"}`, plus `search_depth` if
-   the API has a content-depth control — Brave, Exa, Parallel and Perplexity
-   have none. That is the minimum a search needs; send the provider nothing
-   else. Anything outside the set raises `UnsupportedParameterError` rather than
-   being dropped, which is the point: a query must never quietly run without a filter the caller asked
-   for, and the error names the two ways forward.
+3. Start with `supported_parameters = {"max_results"}`; each shared option is
+   added on its own, where the API documents a field or query operator for it
+   (see [Promoting a provider option](#promoting-a-provider-option)). Anything
+   outside the set raises `UnsupportedParameterError` rather than being dropped,
+   which is the point: a query must never quietly run without a filter the
+   caller asked for, and the error names the two ways forward.
 4. Wrap SDK failures in `ProviderError` so callers can handle every backend the
    same way.
 5. Add the SDK to the extra for each method the provider serves in
@@ -217,29 +220,28 @@ Commit `uv.lock` and the regenerated requirements files together. Never edit
 **This is the contribution we most want**, and the fastest way to make
 web-router represent your API properly.
 
-Each provider is deliberately called with the minimum the method needs — the
-query, `max_results` and `search_depth` for a search; the URLs and `format` for
-an extract. Their APIs can all do far more, and today those extras are only
-reachable through `provider_options`, untranslated and provider-specific.
-Mapping one properly makes it work the same way across every backend, for every
-user.
+A provider is called with the options it maps and nothing else; whatever else
+its API can do is reachable only through `provider_options`, untranslated and
+provider-specific. Mapping one properly makes it work the same way across every
+backend, for every user.
 
-The clearest gaps right now: `country` and the domain filters are mapped by
-Nimble alone on the search side, and on the extract side nobody maps JS
-rendering or geo-targeting even though most of those backends support both.
+The clearest gaps right now: `locale` on Exa and Parallel and `recency` on WebIQ
+on the search side (the README support table lists the rest), and on the extract
+side nobody maps JS rendering or geo-targeting even though most of those
+backends support both.
 
 ### Mapping an existing option to a provider (the common case)
 
-`SearchRequest` already has `include_domains`, `exclude_domains`, `country` and
-`locale`. Nimble maps them; no other provider does yet.
-To add one:
+`SearchRequest` already has `search_depth`, `include_domains`,
+`exclude_domains`, `country`, `locale`, `recency` and `effort`; most search
+providers map most of them. To add one:
 
 1. Add the normalized name to that provider's mapping table, in
    `constants_<provider>.py` or, for an older provider, `constants.py` (for
    example `TAVILY_PARAM_NAMES`), pointing at the provider's own field name.
 2. On every provider that would be gaining an option, `supported_parameters` is
-   derived from that table, so it updates itself. (Nimble declares the whole
-   normalized set directly, because it already maps all of it.)
+   derived from that table, so it updates itself; an option the provider
+   translates rather than renames is added to the set beside the table.
 3. Add a unit test for the mapping, and extend the provider's parametrized
    rejection test so the option is no longer listed as unmapped.
 4. Run `make contracts`, and move the option out of the contract's
@@ -249,7 +251,27 @@ To add one:
 Watch for options that mean the same thing but take a different form. Tavily's
 `country`, for instance, wants a lowercase country name and rejects the ISO
 codes the shared surface uses — so mapping it means translating it, not just
-renaming it. That translation belongs in the provider.
+renaming it. That translation belongs in the provider. Reuse the shared
+helpers rather than writing another: `providers/_clock.recency_start` for a
+start date, `providers/_utils.site_operators` for `site:` operators in the
+query, and `providers/_language` for a locale's language or a fixed language
+list.
+
+A backend that maps an option but cannot serve every value of it refuses the
+value on the class, before anything is sent, so `auto` passes it over keyless
+and a router's default drops it:
+
+- **`search_depth` levels**: set `depth_levels` to the levels it serves. Each
+  level is a size (README's [Search depth](README.md#search-depth)); one whose
+  longest body is short of a page lists no `deep`.
+- **Any other value** (a country off its list, both domain lists at once):
+  override the classmethod `refused_options` to return each refused option and
+  its value, and give each option a sentence in `refusal_reasons`.
+  `perplexity.py` and `parallel_search.py` are the examples.
+
+A field the vendor documents but its SDK's signature lacks, and that the SDK
+still forwards into the body from `**kwargs`, goes in `SDK_FORWARDED` in
+`tests/test_contract.py`, with the SDK source that shows it.
 
 ### Adding a new option to the shared surface
 

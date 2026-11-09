@@ -35,6 +35,14 @@ AGENTCORE_DOMAIN_FIELDS = {"include_domains": "include", "exclude_domains": "exc
 
 AGENTCORE_FILTERS_FIELD = "filters"
 AGENTCORE_DOMAIN_FILTER_FIELD = "domainFilter"
+AGENTCORE_DATE_FILTER_FIELD = "publishedDateFilter"
+AGENTCORE_DATE_FROM_FIELD = "from"
+AGENTCORE_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
+"""``publishedDateFilter.from`` is an inclusive ISO-8601 UTC date-time; ``recency`` sets it to its window's first day.
+
+The form a live date-range search used (2026-10-26, through ``provider_options``);
+``recency`` itself has not been run against a gateway.
+"""
 AGENTCORE_SETUP_DOC = "docs/agentcore-setup.md"
 
 MSG_AGENTCORE_BAD_URL = (
@@ -63,7 +71,8 @@ MSG_AGENTCORE_TOO_MANY_RESULTS = (
     "AgentCore Web Search returns at most {limit} results; max_results={value} was asked for."
 )
 MSG_AGENTCORE_FILTER_CLASH = (
-    "provider_options['filters'] sets {keys}, which include_domains or exclude_domains already set. Set each once."
+    "provider_options['filters'] sets {keys}, which include_domains, exclude_domains or recency already set. "
+    "Set each once."
 )
 
 ENV_AWS_REGION = "AWS_REGION"

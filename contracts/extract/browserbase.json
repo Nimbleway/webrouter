@@ -1,0 +1,61 @@
+{
+  "provider": "browserbase",
+  "method": "extract",
+  "class": "web_router.providers.browserbase_extract.BrowserbaseExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.browserbase.com",
+    "paths": {
+      "extract_path": "/v1/fetch"
+    },
+    "method": "POST",
+    "auth_header": "X-BB-API-Key"
+  },
+  "credentials": [
+    "BROWSERBASE_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.format": "markdown",
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "body.format": "raw"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    },
+    "profile": {
+      "sample": {
+        "body.contextId": "profile-id"
+      }
+    }
+  },
+  "not_mapped": [],
+  "default_format": "html",
+  "batches_urls": false,
+  "source": [
+    "https://docs.browserbase.com/features/fetch",
+    "https://www.browserbase.com/blog/introducing-authenticated-fetch"
+  ],
+  "verified": {
+    "format": "live: tests/providers/test_browserbase_extract.py::test_live_fetch_returns_markdown_and_html",
+    "profile": "live: tests/providers/test_browserbase_extract.py::test_live_a_cookie_saved_in_a_session_rides_along_on_a_fetch_naming_its_context"
+  },
+  "vendor_options": {
+    "allowRedirects": {
+      "status": "passthrough",
+      "note": "Boolean, off by default; with it off a redirect comes back as the target's own status_code."
+    },
+    "proxies": {
+      "status": "passthrough",
+      "note": "Boolean; routes the fetch through Browserbase's proxies."
+    }
+  }
+}

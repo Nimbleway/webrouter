@@ -1,9 +1,16 @@
 """Parallel provider over its hosted Search MCP, which needs no credential.
 
-A different route from :mod:`web_router.providers.parallel`: Parallel's REST
+A different route from :mod:`web_router.providers.parallel_search`: Parallel's REST
 search answers 401 without a key, while ``search.parallel.ai/mcp`` is documented
-as free without one. Its ``web_search`` tool returns the REST ``/v1beta/search``
+as free without one. Its ``web_search`` tool returns the REST ``/v1/search``
 payload as JSON text, so normalization is :class:`ParallelProvider`'s.
+
+It maps no option but ``max_results``. Its mode and source settings are set
+only through a connection header that needs an API key, which this keyless
+route does not send; the tool's own arguments are the queries, a session id
+and the caller's model name. Its schema allows ``site:`` with a bare domain
+inside a query, which steers the search but is not documented as a filter, so
+``include_domains`` stays refused rather than mapped onto it.
 
 The tool takes no result count -- asked for 3 it returned 10, checked live -- so
 ``max_results`` is honoured here by keeping the first that many results, in the
@@ -25,7 +32,7 @@ from web_router.constants import (
 )
 from web_router.providers._mcp import McpSearchMixin
 from web_router.providers._utils import build_payload
-from web_router.providers.parallel import ParallelProvider
+from web_router.providers.parallel_search import ParallelProvider
 from web_router.types import SearchRequest, SearchResponse
 
 

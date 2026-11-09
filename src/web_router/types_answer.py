@@ -6,18 +6,17 @@ never imports this module, so this module imports it, never the other way round.
 
 from __future__ import annotations
 
-from typing import Annotated, Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from web_router.types import Citation, NormalizedRequest, ResearchOutcome
 from web_router.types_decision import DECISION_DESCRIPTION, DecisionRecord
 from web_router.types_meta import META_DESCRIPTION, ResponseMeta
+from web_router.types_options import RECENCY_DESCRIPTION
+from web_router.types_options import Recency as Recency
 
 __all__ = ["ANSWER_ALWAYS_SENT", "ANSWER_PARAMETERS", "AnswerRequest", "AnswerResponse", "Recency"]
-
-Recency = Literal["day", "week", "month", "year"]
-"""How recent a source must be: published within the last day, week, month or year."""
 
 
 class AnswerRequest(NormalizedRequest):
@@ -34,7 +33,7 @@ class AnswerRequest(NormalizedRequest):
     exclude_domains: list[str] | None = Field(default=None, description="Keep these domains out of the sources.")
     country: str | None = Field(default=None, description="Country code for geo-targeting, e.g. 'US'.")
     locale: str | None = Field(default=None, description="Language code, e.g. 'en'.")
-    recency: Recency | None = Field(default=None, description="Only sources from the last day, week, month or year.")
+    recency: Recency | None = Field(default=None, description=RECENCY_DESCRIPTION)
 
 
 ANSWER_ALWAYS_SENT = AnswerRequest.always_sent

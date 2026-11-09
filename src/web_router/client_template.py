@@ -52,7 +52,7 @@ class _TemplateLookup:
             return self._template_instances[key]
 
 
-class SyncTemplates(_TemplateLookup):
+class SyncTemplate(_TemplateLookup):
     def templates(
         self,
         *,
@@ -119,7 +119,7 @@ class SyncTemplates(_TemplateLookup):
         return plan.stamp(response)
 
 
-class AsyncTemplates(_TemplateLookup):
+class AsyncTemplate(_TemplateLookup):
     async def templates(
         self,
         *,

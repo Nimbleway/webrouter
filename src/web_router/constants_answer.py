@@ -12,6 +12,7 @@ from typing import Any, get_args
 
 from web_router._chains import chain as _chain
 from web_router.types_answer import Recency
+from web_router.types_options import RECENCY_DESCRIPTION
 
 __all__ = [
     "ANSWER_MARKER",
@@ -68,18 +69,16 @@ MCP_ANSWER_PROPERTIES: dict[str, dict[str, Any]] = {
     "recency": {
         "type": "string",
         "enum": list(get_args(Recency)),
-        "description": "Only sources from the last day, week, month or year.",
+        "description": RECENCY_DESCRIPTION,
     },
 }
 
 MCP_DESC_ANSWER = (
-    "Answer one question: the backend searches and writes a short answer itself, and it comes back "
-    "with the sources it rests on. Returns in a few seconds and bills one call. Use it for a closed "
-    "question whose answer is a sentence or two; use `search` when you need the pages themselves, "
-    "`extract` when you have the URL, and `research` for a question that needs an investigation. "
-    "The answer is the backend's own, unedited -- check it against the sources when it matters. A "
-    "source the answer cites inline carries that marker (e.g. '[2]') in its `field`. Leave `provider` "
-    "unset to try the configured backends in ranked order; one that fails is passed over, and each one tried bills."
+    "Answer one question: the backend searches and writes a short answer itself, returned with the sources "
+    "it rests on. A few seconds, and bills one call. Use it for a closed question whose answer is a sentence "
+    "or two; `search` returns the pages themselves. The answer is the backend's own, unedited: check it "
+    "against the sources when it matters. A source cited inline carries its marker (e.g. '[2]') in `field`. "
+    "Unset, `provider` tries the configured backends in ranked order, each one tried billing."
 )
 
 # answer()'s `auto`: the configured answer backends, in the order route-eval ranked them.

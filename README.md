@@ -2,10 +2,10 @@
 
 **One interface over many web search, extraction, answer, research and browser APIs.**
 
-> **Alpha.** You have early access to `web-router` under your agreement with
-> Nimble. Please don't share the code or this repository. Issues and pull
-> requests are welcome here.
+> **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
 
+[![CI](https://github.com/WebContextLayer/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WebContextLayer/webrouter/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -77,9 +77,20 @@ dropped** — so a call never runs under weaker constraints than you asked for.
 
 ## Install
 
-`web-router` is installed from this repository, not from PyPI. The one
-prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/),
-which fetches the right Python itself.
+Install the package from PyPI, with the extras you need:
+
+```bash
+pip install "web-router[all]"         # any virtualenv
+uv add "web-router[all]"              # a uv project
+pip install "web-router[mcp,browser]" # the MCP server with its browser tools
+```
+
+Then put the keys you hold in your environment or a `.env` file; none is
+required. [`.env.example`](.env.example) names each variable.
+
+**From source**, for contributors or to track `main`: the one prerequisite is
+[uv](https://docs.astral.sh/uv/getting-started/installation/), which fetches
+the right Python itself.
 
 ```bash
 git clone https://github.com/WebContextLayer/webrouter.git
@@ -89,17 +100,11 @@ cp .env.example .env    # then fill in only the keys you hold; none is required
 ```
 
 Using a coding agent? Tell it *"clone https://github.com/WebContextLayer/webrouter
-and set it up"*. [CLAUDE.md](CLAUDE.md) walks it through the rest.
-
-**From your own project**, install the clone in editable mode, so a `git pull`
-in the clone is the whole update:
-
-```bash
-uv add --editable "/path/to/webrouter[all]"     # a uv project
-pip install -e "/path/to/webrouter[all]"        # any other virtualenv
-```
-
-To pick up a new release: `git pull && make setup` in the clone.
+and set it up"*. [CLAUDE.md](CLAUDE.md) walks it through the rest. To use the
+clone from another project, install it in editable mode
+(`uv add --editable "/path/to/webrouter[all]"` or
+`pip install -e "/path/to/webrouter[all]"`), so `git pull && make setup` in the
+clone is the whole update.
 
 You can install fewer extras by naming them in place of `all`:
 
@@ -206,7 +211,7 @@ uv run --env-file .env python examples/main.py
 A provider name serves the methods it serves and no others: `brave` searches
 and cannot extract, `oxylabs` extracts and cannot search, `nimble` searches,
 extracts, runs templates and researches, and `browserbase` opens
-sessions and runs browse tasks.
+sessions, runs browse tasks and extracts.
 Ask a method for another's backend and it says so, naming the backends that
 method does serve.
 
@@ -218,35 +223,28 @@ and what `response.provider` and `configured_providers()` report back.
 
 | Pass | Name | Provider | Backed by | Options mapped |
 | --- | --- | --- | --- | --- |
-| `Provider.NIMBLE` | `nimble` | [Nimble](https://nimbleway.com) | `nimble-python` | all of them |
-| `Provider.TAVILY` | `tavily` | [Tavily](https://tavily.com) | `tavily-python` | `max_results`, `search_depth` |
-| `Provider.YOU` | `you` | [You.com](https://you.com/platform) | direct HTTP | `max_results`, `search_depth` |
-| `Provider.BRAVE` | `brave` | [Brave](https://brave.com/search/api/) | direct HTTP | `max_results` |
-| `Provider.EXA` | `exa` | [Exa](https://exa.ai) | direct HTTP | `max_results` |
-| `Provider.PARALLEL` | `parallel` | [Parallel](https://parallel.ai) | direct HTTP | `max_results` |
-| `Provider.PERPLEXITY` | `perplexity` | [Perplexity](https://docs.perplexity.ai) | direct HTTP | `max_results` |
-| `Provider.LINKUP` | `linkup` | [Linkup](https://www.linkup.so) | direct HTTP | `max_results`, `include_domains`, `exclude_domains` |
-| `Provider.WEBIQ` | `webiq` | [WebIQ](https://api.microsoft.ai) (Microsoft AI Web Search) | direct HTTP | `max_results` |
-| `Provider.KEENABLE` | `keenable` | [Keenable](https://docs.keenable.ai) | direct HTTP; keyless with `allow_keyless=True` (rate-limited per IP) | `max_results` |
-| `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Search](https://api-docs.deepseek.com/guides/search) | direct HTTP | `max_results` (at most 50), `include_domains`, `exclude_domains`, `locale`, the last three sent inside the query, which must fit 128 characters. `content` is DeepSeek's summary unless `provider_options={"need_content": True}` |
-| `Provider.AGENTCORE` | `agentcore` | [AWS AgentCore Web Search](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html), through your own AgentCore Gateway ([setup](docs/agentcore-setup.md)) | MCP over HTTP, SigV4 via `botocore` (`[aws]`) | `max_results` (at most 25), `include_domains`, `exclude_domains` (connector 1.2.0 or later). A date range is AgentCore's own `provider_options={"filters": {"publishedDateFilter": {"from": ..., "to": ...}}}`. Queries up to 200 characters. AWS's terms: show each result's citation, and do not store results in bulk |
-| `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | `max_results`, `search_depth` |
-| `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp) | direct HTTP, **no key** | `max_results` |
+| `Provider.NIMBLE` | `nimble` | [Nimble](https://nimbleway.com) | `nimble-python` | all but `effort` |
+| `Provider.TAVILY` | `tavily` | [Tavily](https://tavily.com) | `tavily-python` | all but `effort` |
+| `Provider.YOU` | `you` | [You.com](https://you.com/platform) | direct HTTP | all but `effort` |
+| `Provider.BRAVE` | `brave` | [Brave](https://brave.com/search/api/) | direct HTTP | all but `effort`; `search_depth` at `lite` only |
+| `Provider.EXA` | `exa` | [Exa](https://exa.ai) | direct HTTP | all but `locale` |
+| `Provider.PARALLEL` | `parallel` | [Parallel](https://parallel.ai) | direct HTTP (`/v1/search`, `mode=fast` unless `effort` sets it) | all but `locale`; `search_depth` at `lite` and `fast` |
+| `Provider.PERPLEXITY` | `perplexity` | [Perplexity](https://docs.perplexity.ai) | direct HTTP | all of them; `search_depth` at `lite` and `fast` |
+| `Provider.LINKUP` | `linkup` | [Linkup](https://www.linkup.so) | direct HTTP | `max_results`, `include_domains`, `exclude_domains`, `recency`, `effort` |
+| `Provider.WEBIQ` | `webiq` | [WebIQ](https://api.microsoft.ai) (Microsoft AI Web Search) | direct HTTP | all but `recency` and `effort` |
+| `Provider.KEENABLE` | `keenable` | [Keenable](https://docs.keenable.ai) | direct HTTP; keyless with `allow_keyless=True` (rate-limited per IP) | `max_results`, `search_depth` (`lite`, `fast`), `include_domains` (one), `recency`, `effort` |
+| `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Search](https://api-docs.deepseek.com/guides/search) | direct HTTP | `max_results` (at most 50), `search_depth` (`lite`, `deep`), `include_domains`, `exclude_domains`, `locale`, `recency`, the last four sent inside the query, which must fit 128 characters |
+| `Provider.AGENTCORE` | `agentcore` | [AWS AgentCore Web Search](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html), through your own AgentCore Gateway ([setup](docs/agentcore-setup.md)) | MCP over HTTP, SigV4 via `botocore` (`[aws]`) | `max_results` (at most 25), `include_domains`, `exclude_domains`, `recency` (connector 1.2.0 or later). An end date is AgentCore's own `provider_options={"filters": {"publishedDateFilter": {"to": ...}}}`. Queries up to 200 characters. AWS's terms: show each result's citation, and do not store results in bulk |
+| `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | all but `effort` |
+| `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp), its `web_search_advanced_exa` tool | direct HTTP, **no key** | all but `locale` |
 | `Provider.PARALLEL_MCP` | `parallel-mcp` | [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/quickstart) | direct HTTP, **no key** | `max_results` (applied to the response: the tool ignores a count) |
 | `Provider.AUTO` *(default)* | `auto` | — | every backend you hold a key for, in the order the frozen benchmark results rank them, then the keyless ones — so a key held only for research serves searches too, and those calls bill; see [Working with no credentials](#working-with-no-credentials) | every option some member maps, each request routed to a member that maps what it sets |
 
-Every provider but Nimble and Linkup is called with the minimum a search needs. Their APIs
-can all do much more; mapping one of those options properly is a small PR and
-the most useful thing to contribute — see
+A backend maps an option only where its API has a documented field or query
+operator for it; [Search options](#search-options) says how each one does, and
+`contracts/search/<name>.json` holds the exact fields sent. Mapping another is a
+small PR and the most useful thing to contribute — see
 [CONTRIBUTING.md](CONTRIBUTING.md#promoting-a-provider-option).
-
-> Brave, Exa, Parallel and Perplexity were added to broaden the catalogue and
-> are intentionally minimal. Brave maps no `search_depth` because its API has no
-> content-depth control at all. Perplexity's response mapping was verified live
-> on 2026-11-03. For **Exa the endpoint and auth are verified, but the response
-> mapping is taken from documentation and has not been confirmed against a real
-> response** — no working key was available. Its integration tests exist and skip
-> themselves until one is.
 
 ### Extract
 
@@ -266,7 +264,8 @@ which ones this environment can use.
 | `Provider.KEENABLE` | `keenable` | [Keenable Fetch](https://docs.keenable.ai/api-reference/fetch) | `KEENABLE_API_KEY`, or keyless with `allow_keyless=True` (rate-limited per IP) | `markdown` |
 | `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Fetch](https://api-docs.deepseek.com/guides/search) | `DEEPSEEK_API_KEY` | `markdown` |
 | `Provider.JINA` | `jina` | [Jina Reader](https://jina.ai/reader) | **none** (`JINA_API_KEY` raises the rate limit) | `markdown`, `html`, `text` |
-| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable and DeepSeek | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it |
+| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Fetch](https://docs.browserbase.com/features/fetch) — a plain fetch, never a rendered page; the one backend that maps `profile` | `BROWSERBASE_API_KEY` | `markdown`, `html` |
+| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable, DeepSeek and Browserbase | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it; `profile` routed to one that maps it |
 | `Provider.MAX` | `max` | — | the same members as `auto`, **all at once**; the first document back wins, and every fetch started is paid for -- see [The fastest answer any backend can give](#the-fastest-answer-any-backend-can-give-max) | as `auto` |
 
 Two need more than a key. Oxylabs authenticates with the username and password
@@ -275,10 +274,35 @@ and Bright Data needs the zone that routes the request beside its token. Neither
 has a default worth guessing, so a missing one is an error naming the variable
 to set.
 
-> Nimble, Tavily, Jina, Linkup, Firecrawl, Oxylabs and Bright Data were verified
-> live — the last two on 2026-11-03. **Exa's extract mapping is taken from
-> documentation** and has not been confirmed against a real response; its
-> integration tests skip themselves until a working key is available.
+> Nimble, Tavily, Jina, Linkup, Firecrawl, Oxylabs, Bright Data and Browserbase
+> were verified live — Oxylabs and Bright Data on 2026-11-03, Browserbase (both
+> formats, and `profile` through the whole flow) by hand on 2026-10-29 and by
+> the automated live tests on 2026-11-08. **Exa's extract
+> mapping is taken from documentation** and has not been confirmed against a
+> real response; its integration tests skip themselves until a working key is
+> available.
+
+#### Reading a page behind a login
+
+`profile` is the extract side of the browser's `profile`: a saved identity on
+the backend — its cookies and storage — whose cookies are sent with each fetch.
+Log in once in a browser session that persists to it, release the session, and
+the fetches that name the same id read the page as that user:
+
+```python
+with router.open_browser(provider="browserbase", profile=context_id, persist_profile=True) as browser:
+    browser.goto("https://example.com/login")
+    ...  # type the credentials, submit
+
+response = router.extract("https://example.com/account/orders", provider="browserbase", profile=context_id)
+```
+
+The fetch never writes cookies back, so an expired login means another
+session. Browserbase is the one backend that maps it, through its Contexts; a
+backend without saved profiles raises `UnsupportedParameterError` rather than
+fetching anonymously, and `auto` and `max` pass such members over. The MCP
+server never offers it: a logged-in identity is set in code, not from a
+conversation.
 
 ### Templates
 
@@ -421,9 +445,10 @@ you have a key for first — a credential in the environment says which one you
 want — and falls back to the anonymous tiers when there is none: Tavily keyless,
 then You.com's, Exa's and Parallel's open MCP servers, then Keenable's keyless tier for a search; Tavily keyless,
 Jina Reader, Firecrawl's keyless tier, then Keenable's for an extract; `local` for a browser
-session. Research and browse have no
-anonymous tier, because every run bills; with no key they raise, naming the
-variables that would fix it. `response.provider` names whichever one served it,
+session. Research, browse, `answer()` and templates have no
+anonymous tier, because every call bills; with no key they raise, naming the
+variables that would fix it. This is the one list of keyless backends; the MCP
+server and `.env.example` point here. `response.provider` names whichever one served it,
 never `"auto"`, so you can always tell. The anonymous tiers are rate-limited, which is
 why it is a chain: when one is throttled, the next answers.
 
@@ -432,7 +457,7 @@ Every backend you hold a key for is a candidate, in a fixed order:
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
 | `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore |
-| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek |
+| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
 Search's keyed order is generated, not hand-written: `make chains` ranks the
@@ -452,21 +477,22 @@ unmeasured and hand-ordered.
 To choose your own order, pass a `chain`.
 
 **`auto` routes each request to a member that can serve it.** It accepts every
-option some member maps — the domain, country and locale filters through
-Nimble, the domain filters through Linkup, the domain and locale filters through DeepSeek — and before trying a member it reads
-that member's class, which costs no credential and sends nothing. A member that
-does not map an option you set is passed over for that call: ask for
-`search_depth` with keys for only Perplexity and Brave, neither of which has a
-depth control, and the search goes to the keyless tier. When no member is left
+option some member maps, and before trying a member it reads that member's
+class, which costs no credential and sends nothing. A member that does not map
+an option you set, or refuses the value (a `search_depth` level it lacks, a
+country off its list), is passed over for that call: ask for
+`search_depth="deep"` with keys for only Perplexity and Brave, neither of which
+returns whole pages, and the search goes to the keyless tier, where Exa MCP does.
+The keyless tier between them maps every search option. When no member is left
 it raises, naming what each one lacked, rather than running the query without
 the option:
 
 ```python
 router = WebRouter(provider_config={"auto": {"chain": {"search": ["perplexity", "brave"]}}})
 router.search("...", search_depth="deep")
-# UnsupportedParameterError: Provider 'auto' does not map 'search_depth'. No backend in
-# its chain maps it, so nothing was searched: perplexity (does not map 'search_depth'),
-# brave (does not map 'search_depth'). ...
+# UnsupportedParameterError: Provider 'auto' does not support search_depth='deep'. No backend
+# in its chain maps it, so nothing was searched: perplexity (will not serve
+# search_depth='deep'), brave (will not serve search_depth='deep'). ...
 ```
 
 Among the members that can serve the call, a failure — a missing key, a refused
@@ -575,8 +601,8 @@ or cannot return the `format` you asked for — it says so instead of quietly
 doing something weaker:
 
 ```python
-WebRouter(Provider.TAVILY).search("...", country="US")
-# UnsupportedParameterError: Provider 'tavily' does not map 'country'. Pass it
+WebRouter(Provider.LINKUP).search("...", country="US")
+# UnsupportedParameterError: Provider 'linkup' does not map 'country'. Pass it
 # through provider_options if the underlying API supports it, or add the
 # mapping -- see CONTRIBUTING.md.
 ```
@@ -601,28 +627,41 @@ response = router.search(
     exclude_domains=["example.com"],
     country="US",
     locale="en",
+    recency="week",  # "day" | "week" | "month" | "year"
+    effort="low",  # "low" | "medium" | "high" | "max"
 )
 ```
 
 Every option except `query` is optional. Which ones a given provider maps is in
 the support table above; setting one it does not map raises rather than being
-ignored.
+ignored, and so does a value it cannot serve — a depth level it lacks, a country
+off its list — before anything is sent, so `auto` passes that backend over.
 
 That is the whole surface. It is deliberately small: these are the options that
 mean the same thing on every backend, so code written against them keeps working
-when you switch providers.
+when you switch providers. `search_depth` is how much text comes back per
+result; `effort` is how hard the backend looks. The exact field each backend
+sends is in its `contracts/search/<name>.json`.
 
 ### Search depth
 
-`search_depth` is the one option worth understanding, because providers describe
-content richness in incompatible vocabularies. web-router reduces it to three
-levels and maps each onto the backend's own knobs:
+Three levels, each defined by size, mapped onto each backend's own knobs. A
+backend whose longest body is short of a page refuses `deep` rather than serving
+less under its name.
 
-| Depth | What you get | Nimble | Tavily | You.com | You.com MCP |
-| --- | --- | --- | --- | --- | --- |
-| `lite` | Title, URL, snippet | `lite` | `basic` | no extraction | `none` |
-| `fast` | A truncated page body | `standard` | `advanced` | `highlights` | `highlights` |
-| `deep` | Full page content | `standard` + `full_content` | `advanced` + raw content | `full_page` | `full_page` |
+| Depth | What you get | Nimble | Tavily | You.com, You.com MCP | Exa, Exa MCP | WebIQ | Parallel | Perplexity | Keenable | Brave | DeepSeek |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `lite` | A snippet, up to about 500 characters | `lite` | `basic`, cut to 500 | no extraction, cut to 500 | highlights ≤ 500, cut to 500 | passage ≤ 500 | excerpts ≤ 500, cut to 500 | 100 tokens a page | snippet ≤ 500 | its snippets, cut to 500 | its default |
+| `fast` | A truncated body, a few thousand characters | `standard` | `advanced` | `highlights` | text ≤ 3,000 | passage ≤ 3,000 | excerpts ≤ 3,000 | 1,024 tokens a page | snippet ≤ 3,000 | refused | refused |
+| `deep` | The whole page | `standard` + `full_content` | `advanced` + raw content | `full_page` | whole text | `text` | refused | refused | refused | refused | `need_content` |
+
+Linkup, AgentCore and Parallel MCP do not map it. Where a vendor's size setting
+does not bind (Tavily's `basic` returns up to three chunks of about 500
+characters, You.com's snippets can run past 500, Exa's highlights cap,
+Parallel's excerpt cap and Perplexity's token budget are soft, DeepSeek's default carries its whole
+summary, and Brave has no size setting at all), web-router cuts `lite` to a snippet of about 500
+characters itself; the vendor's full text stays in `raw`.
+Unset, Exa asks for the whole text and Exa MCP for highlights, as before.
 
 `result.content` always holds the fullest text available. Some backends return
 the body in the field others use for the snippet; that is normalized away, so
@@ -634,14 +673,61 @@ returns the page body and no snippet, so `description` holds that body and is
 identical to `content`. Read `description` when you want the short form and
 have checked your backend supplies one; read `content` when you want text.
 
-**Linkup refuses `search_depth`**: its own `depth` is how hard it works to
-retrieve, not how much of a page it returns. Measured live on 2026-09-30, its
-`flash`, `fast`, `standard` and `deep` all answered with snippets of the same size
-per result, `flash` in about half a second and `deep` in six to sixteen, and its
-docs bill `deep` at ten times the others ($0.05 a search against $0.005). Mapping
-`search_depth="deep"` onto it would charge ten times more for no more text, so a
-search sends Linkup's recommended `fast` and its depths are reachable as
-`provider_options={"depth": "flash" | "standard" | "deep"}`.
+### Effort
+
+`effort` is anchored on each backend's own tiers: `medium` is what it does
+unset, `low` its fastest tier, `max` its most thorough, and `high` between them
+or the same as `max`. A backend with fewer tiers serves several levels with one
+setting rather than raising. **Higher effort costs more and takes longer, by a
+vendor-specific amount; leave it unset unless needed.**
+
+| Effort | Exa | Exa MCP | Linkup | Parallel | Perplexity | Keenable |
+| --- | --- | --- | --- | --- | --- | --- |
+| `low` | `lite` | `lite` | `flash` | `turbo` | `fast` | `realtime` |
+| `medium` | its default | its default | `fast` | `fast` | its default | its default |
+| `high` | `deep-lite` | its default | `standard` | `advanced` | its default | `pro` |
+| `max` | `deep` | its default | `deep` | `advanced` | its default | `pro` |
+
+Linkup bills `deep` at ten times its other depths, and Parallel `advanced` at
+five times `fast`. Parallel refuses `low` beside a domain filter with a path,
+which its turbo mode cannot take. The other backends have no search tier and
+refuse `effort`.
+
+### Recency
+
+`recency` keeps to sources the backend dates within the last day, week, month
+or year — by publication date where it has one. A backend that takes a start
+date gets today (UTC) minus 1, 7, 30 or 365 days.
+
+| Backend | Sent as |
+| --- | --- |
+| Nimble | `time_range` |
+| Tavily | `time_range` with `filter_by_published_date`, so pages it cannot date are dropped |
+| You.com, You.com MCP | `freshness` |
+| Brave | `freshness`, by the date Brave holds for a page (published or last modified) |
+| Perplexity | `search_recency_filter` |
+| Exa, Exa MCP, Linkup, Parallel, AgentCore | a start date (`startPublishedDate`, `fromDate`, `after_date`, `publishedDateFilter.from`) |
+| Keenable | `published_after` (`1d`, `7d`, `1mo`, `1y`) |
+| DeepSeek | `after:YYYY-MM-DD` in the query |
+
+WebIQ and Parallel MCP do not map it.
+
+### Values a backend refuses
+
+Each of these raises `UnsupportedParameterError` before anything is sent (a
+query too long for its operators raises `ProviderError`), and `auto` moves on:
+
+| Backend | Refused |
+| --- | --- |
+| You.com, You.com MCP | a `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once |
+| Brave | a `country` off its 37 codes; a `locale` off the same language list; a query past 600 characters or 75 words with its `site:` operators |
+| Tavily | a `country` off the 166 it names, or with a `topic` other than general (`country` is a ranking boost there; `locale` is a filter) |
+| Parallel | a `country` off its 37 codes; both domain lists at once; more than 200 domains |
+| Perplexity | both domain lists at once; more than 20 domains; a `locale` that is not a bare two-letter language (`en`, not `en-US`) |
+| WebIQ | a `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters with its `site:` operators |
+| Keenable | more than one `include_domains` entry |
+| DeepSeek | a query past 128 characters with its operators |
+| Brave, WebIQ, DeepSeek, You.com MCP | a domain filter that is not a host name (optionally with a path), since it goes into the query as `site:` (for You.com MCP, `include_domains` only; `exclude_domains` is a tool argument) |
 
 ## Extracting page contents
 
@@ -668,11 +754,11 @@ in the order you asked for them.
 `format` is the extract equivalent of `search_depth`: three names for what the
 page should come back as, mapped onto each backend's own vocabulary.
 
-| Format | What you get | Nimble | Tavily | Firecrawl | Oxylabs | Bright Data | Jina | Linkup |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `markdown` | Structure kept, markup dropped | `formats: [markdown]` | `format: markdown` | `formats: [markdown]` | `markdown: true` | `data_format: markdown` | `X-Return-Format: markdown` | always returned |
-| `html` | The page's HTML as fetched | `formats: [html]` | — | `formats: [html]` | default (`type: raw`) | default | `X-Return-Format: html` | `includeRawContent: true` |
-| `text` | Visible text, no markup | — | `format: text` | — | — | — | `X-Return-Format: text` | — |
+| Format | What you get | Nimble | Tavily | Firecrawl | Oxylabs | Bright Data | Jina | Linkup | Browserbase |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `markdown` | Structure kept, markup dropped | `formats: [markdown]` | `format: markdown` | `formats: [markdown]` | `markdown: true` | `data_format: markdown` | `X-Return-Format: markdown` | always returned | `format: markdown` |
+| `html` | The page's HTML as fetched | `formats: [html]` | — | `formats: [html]` | default (`type: raw`) | default | `X-Return-Format: html` | `includeRawContent: true` | `format: raw` (the body as served) |
+| `text` | Visible text, no markup | — | `format: text` | — | — | — | `X-Return-Format: text` | — | — |
 
 Exa is left out of the table because it has one row to give: its Contents API
 returns `text` and nothing else, asked for as `text: true`. WebIQ is left out
@@ -848,7 +934,7 @@ the pages, and `research()`, a job of minutes.
 
 Three steps to a first answer:
 
-1. Install with the `answer` extra: `pip install -e "/path/to/webrouter[answer]"`
+1. Install with the `answer` extra: `pip install "web-router[answer]"`
    (`make setup` in a clone installs every extra).
 2. Set one answer backend's key in your environment or `.env`, for example
    `PERPLEXITY_API_KEY` -- the [answer table](#answer) lists each one's variable.
@@ -1485,8 +1571,8 @@ A preset's values count as the call's own, so a router never replaces them,
 and a budget maps research's effort only when neither the call nor a preset
 sets one. A preset's `provider`, unless it is `auto`, pins the backend, so no
 router is asked. A
-preset's `provider_options` can leave a cost-capped call's price unknown, and
-then the budget refuses the call with `BudgetExceededError`, which names the
+preset's `provider_options`, or a search `effort` other than `medium`, can leave
+a cost-capped call's price unknown, and then the budget refuses the call with `BudgetExceededError`, which names the
 presets and those of their settings it prices a call by: `provider`,
 `provider_options`, `search_depth`, `max_results` and `effort`.
 
@@ -1499,110 +1585,28 @@ not a string are refused at load. [`examples/presets.py`](examples/presets.py) r
 ## The MCP server
 
 The package ships a **self-hosted stdio MCP server**, so an agent can call these
-methods as tools -- `search`, `extract`, `templates` / `template` /
-`run_template`, `answer` and `research` -- plus `browse` / `browse_status` for a hosted browser
-agent's task, shaped like `research` / `research_status`: the tool waits 25
-seconds, then hands back a handle to poll; and `web_run`, `budget_start` and `budget_status`
-for [smart routing](#smart-routing-experimental). It runs in your own process and reads your own keys from
-your own environment — each key goes only to the backend it belongs to, which is
-the whole reason it is self-hosted rather than a service someone runs for you.
+methods as tools: `search`, `extract`, the templates, `answer`, `research`,
+`browse`, the `browser_*` tools for driving a browser itself, and `web_run`,
+`budget_start` and `budget_status` for [smart routing](#smart-routing-experimental).
+It runs in your own process and sends each key only to the backend it belongs to.
 
-Inside the clone, the committed `.mcp.json` already starts it. To add it to
-**any** project, or to every project with `--scope user`:
+Inside the clone, the committed `.mcp.json` already starts it. To use it from
+every project, register it once at user scope:
 
 ```bash
 claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
 ```
 
-For Claude Desktop, Cursor or another client, the same command as a config block:
+It works with **no API key at all**: search and extract run on the keyless
+backends above. Every key you add unlocks more backends and fallbacks, and
+research, browse and cloud browsers need one. Put your keys in a `.env` in your
+user config directory, or point `WEB_ROUTER_ENV_FILE` at one; a project's
+`.env` can add keys but never replace yours.
 
-```jsonc
-{
-  "mcpServers": {
-    "web-router": {
-      "command": "uv",
-      "args": ["run", "--project", "/path/to/webrouter", "--all-extras", "web-router-mcp"]
-    }
-  }
-}
-```
-
-`--project` keeps the working directory your client started the server in, so
-a `.env` in your own project is the one it reads.
-
-That works with **no API key at all**: the keyless `auto` chain gives you search
-and extract on first run, and keys are the upgrade path rather than the entry
-fee. **Every key you add unlocks more**: the more backends you hold keys for,
-the more methods, backends and fallbacks the tools can use. All of them gives
-you every capability.
-
-### Giving an installed server your keys
-
-Started from another project, the server runs in whatever directory your client
-picks, so it looks for a `.env` in this order and loads the first one that sets
-a provider key:
-
-1. the file `WEB_ROUTER_ENV_FILE` names;
-2. `.env` in its working directory — the repo root, when this repo's `.mcp.json`
-   starts it;
-3. the file a `load_env` call with `remember: true` recorded;
-4. `.env` in your user config directory: `~/.config/web-router/.env` on Linux
-   (under `$XDG_CONFIG_HOME` when that is set), `~/Library/Application Support/web-router/.env`
-   on macOS, `%APPDATA%\web-router\.env` on Windows.
-
-So either point the server at a `.env` you already have:
-
-```bash
-claude mcp add --scope user web-router -e WEB_ROUTER_ENV_FILE="$HOME/work/.env" -- uv run --project /path/to/webrouter --all-extras web-router-mcp
-```
-
-— for Claude Desktop, the same variable goes in the config block's `"env"`:
-`"env": {"WEB_ROUTER_ENV_FILE": "/Users/you/work/.env"}` — or put the `.env` in
-your user config directory and register the server with no variable at all.
-Only provider credentials are read from any of these files, a variable your
-client already exports keeps its value, and with no file anywhere the server
-runs keyless.
-
-Keys can also arrive mid-conversation. The `load_env` tool takes the **path** of
-a `.env` file — the model asks you for it and never for a key — loads its
-provider credentials without a restart, and with `remember: true` has the
-server read that file on every start. The `web-router://capabilities` resource
-says where the server looked, which file it used and which variables it loaded,
-by name only; with no key at all it says how to add one.
-
-See [docs/mcp.md](docs/mcp.md) for the tools, their latency budgets, and how
-results are shaped for a context window. A browse output never carries the
-session the agent ran in: shaped results, `fetch_raw` on a browse handle and
-browse errors replace with `[redacted]` every value under a credential-named
-field (`token`, `apiKey`, `signingKey`, `password`, `cookie`, `authorization`
-and the like), every URL under a live-view, debugger, CDP, websocket or connect
-field, and any `ws(s)://` URL, URL with a username, URL with `devtools`,
-`cdp`, `live` or `debug` in its host or path, or URL carrying a `token`,
-`apiKey`, `jwt`, `key`, `signature` or similar query parameter. See
-[docs/mcp.md](docs/mcp.md#a-browse-result-never-carries-its-session) for the
-full list.
-
-The `browser_*` tools, installed with `web-router[mcp,browser]`, let the model
-drive a browser itself: `browser_open` returns a `session_id`, and
-`browser_goto`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_press`, `browser_screenshot` (returned as an image) and
-`browser_read` act through it until `browser_close`. The **server holds the
-session and the model holds only that id** — one the server minted, never the
-backend's — so the CDP URL, the backend's session id and any live-view URL
-never enter the transcript. With no key at all, `local` runs a headless browser
-on your machine. The server releases a session left unused for five minutes,
-refuses a fourth concurrent one, and releases every session when it exits,
-whether the client hangs up or it is sent SIGTERM; every session is opened
-with a lifetime of at most ten minutes, and SIGKILL can still orphan a `local`
-Chrome. `browser_open` does not accept `provider_options` or saved profiles, so
-a conversation cannot set Chrome switches. Like every tool's options, `stealth`,
-`proxy_country` and `solve_captchas` are offered only when a configured backend
-maps them — `stealth` only at the levels one serves — so a keyless install
-offers none of them; where they are offered, asking for one with no `provider`
-routes past `local` to a billed vendor. The browser opens only `http(s)` pages:
-`file:` (unless the operator sets `WEB_ROUTER_MCP_ALLOW_FILE_URLS=1`), browser-internal schemes, cloud
-metadata addresses and the session's own debugging endpoint are refused, and a
-page that lands on one is sent back to `about:blank`. See
-[docs/mcp.md](docs/mcp.md#driving-a-browser).
+[docs/mcp.md](docs/mcp.md) covers the rest: Claude Desktop and Cursor setup,
+where keys are read from and `load_env`, the tools and their costs, how
+results are shaped and redacted, the browser tools' guards, and routing and
+budgets.
 
 ## Integrating a framework
 
@@ -2079,7 +2083,8 @@ failed attempt still counts.
   (Brave's answer, Browser Use's browse, Anchor's browser) counts as unknown,
   and so does a search asking for more results than its price assumes
   (Nimble's and You.com's deep search, Exa's search), and any request with
-  `provider_options`, which can change what is billed. With no cost cap it
+  `provider_options` or a search `effort` other than `medium`, either of which
+  can change what is billed. With no cost cap it
   runs.
 - **Free tiers.** The keyless MCP search endpoints (`you-mcp`, `exa-mcp`,
   `parallel-mcp`) are priced $0, so a cost cap does not skip them. Keyless
@@ -2503,7 +2508,7 @@ Keys are read from the environment, or passed explicitly through
 A key set once serves every method of a provider that has several. See
 [`.env.example`](.env.example). The library reads the environment only; the
 MCP server is the one place a `.env` is read for you — see
-[Giving an installed server your keys](#giving-an-installed-server-your-keys).
+[docs/mcp.md](docs/mcp.md#then-add-whichever-keys-you-have).
 `configured_providers()` and
 `configured_extract_providers()` — and `configured_research_providers()`,
 `configured_browser_providers()` and `configured_browse_providers()` — report
@@ -2550,7 +2555,7 @@ make test-browser
 
 ## License
 
-`web-router` is proprietary and shared with alpha users under their agreement
-with Nimble; no open-source license applies to this repository. The SimpleQA
-grader prompt vendored at `src/web_router/evals/prompts/` keeps its own MIT
-license, in `LICENSE-simple-evals` beside it.
+web-router is licensed under the [Apache License 2.0](LICENSE).
+
+The SimpleQA grader prompt vendored at `src/web_router/evals/prompts/` keeps
+its own MIT license, in `LICENSE-simple-evals` beside it.

@@ -19,7 +19,8 @@ from web_router.evals.datasets import Dataset, Question
 from web_router.evals.judge import Judge, OpenAIJudge
 from web_router.evals.types import EvaluationReport, EvaluationRow, FailedAt, Grade, ProviderScore
 from web_router.exceptions import ProviderError, describe
-from web_router.types import BenchmarkRun, Provider, SearchDepth, SearchResult
+from web_router.types import Provider, SearchDepth, SearchResult
+from web_router.types_benchmark import BenchmarkRun
 
 if TYPE_CHECKING:
     from web_router.client import AsyncWebRouter, WebRouter

@@ -28,13 +28,16 @@
   },
   "not_mapped": [
     "country",
+    "effort",
     "exclude_domains",
     "include_domains",
     "locale",
+    "recency",
     "search_depth"
   ],
   "source": [
-    "https://docs.parallel.ai/search/search-mcp"
+    "https://docs.parallel.ai/search/search-mcp",
+    "https://search.parallel.ai/mcp tools/list (web_search inputSchema, checked 2026-11-09)"
   ],
   "verified": {
     "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound"
@@ -42,19 +45,23 @@
   "vendor_options": {
     "session_id": {
       "status": "passthrough",
-      "note": "Conversation id, up to 100 characters, reused across related calls."
+      "note": "Conversation id, up to 100 characters in the tool's live schema (tools/list, 2026-11-09), reused across related calls; used for free-tier rate limiting."
     },
     "mode": {
       "status": "not_supported",
-      "note": "A connection-level override set in the server URL or a header, and ignored on anonymous calls."
+      "note": "Set only through the x-parallel-mcp-config connection header, which needs an API key or OAuth sign-in; a keyless call carrying it answers 401, and this route is keyless."
     },
     "source_policy": {
       "status": "not_supported",
-      "note": "A connection-level override set in the server URL or a header, and ignored on anonymous calls."
+      "note": "Set only through the x-parallel-mcp-config connection header, which needs an API key or OAuth sign-in; a keyless call carrying it answers 401, and this route is keyless."
     },
     "advanced_settings": {
       "status": "not_supported",
-      "note": "A connection-level override set in the server URL or a header, and ignored on anonymous calls."
+      "note": "Set only through the x-parallel-mcp-config connection header, which needs an API key or OAuth sign-in; a keyless call carrying it answers 401, and this route is keyless."
+    },
+    "model_name": {
+      "status": "passthrough",
+      "note": "The calling model's exact name, up to 100 characters; analytics only, per the tool's live schema (tools/list, 2026-11-09)."
     }
   }
 }

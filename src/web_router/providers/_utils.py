@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable, Mapping
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
@@ -17,7 +17,6 @@ from web_router.constants import (
     MSG_BROWSER_OPTION_CONFLICT,
     MSG_BROWSER_OPTION_CONFLICT_ASIDES,
     MSG_OPTION_VALUE,
-    SNIPPET_LIMIT,
 )
 from web_router.exceptions import ConfigurationError
 from web_router.types import (
@@ -28,6 +27,9 @@ from web_router.types import (
     FieldPath,
     NormalizedRequest,
 )
+
+_K = TypeVar("_K")
+_V = TypeVar("_V")
 
 
 def resolve_api_key(api_key: str | None, *, env_var: str, provider: str) -> str:
@@ -235,6 +237,11 @@ def error_detail(error: Any) -> str | None:
     return str(error)
 
 
+def mapped(table: Mapping[_K, _V], key: _K | None) -> _V | None:
+    """``table``'s entry for ``key``; ``None`` when ``key`` is unset or the table leaves it out."""
+    return None if key is None else table.get(key)
+
+
 def compact(mapping: dict[str, Any]) -> dict[str, Any]:
     """Drop ``None`` values so unset parameters never reach the provider."""
     return {key: value for key, value in mapping.items() if value is not None}
@@ -250,17 +257,3 @@ def best_text(body: str | None, description: str | None) -> str:
     whichever backend served the query.
     """
     return body or description or ""
-
-
-def as_snippet(text: str) -> str:
-    """Shorten body text to something the size of a snippet.
-
-    For providers that return page content but no summary, so ``description``
-    means the same thing everywhere. Breaks on whitespace to avoid cutting a
-    word in half.
-    """
-    if len(text) <= SNIPPET_LIMIT:
-        return text
-    head = text[:SNIPPET_LIMIT]
-    cut = head.rfind(" ")
-    return (head[:cut] if cut > 0 else head).rstrip() + "\u2026"

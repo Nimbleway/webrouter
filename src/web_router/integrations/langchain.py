@@ -49,6 +49,8 @@ from web_router.types import (
     ExtractFormat,
     ExtractResponse,
     Provider,
+    Recency,
+    ResearchEffort,
     SearchDepth,
     SearchResponse,
 )
@@ -73,6 +75,8 @@ class WebRouterSearch(_WebRouterTool):
     exclude_domains: list[str] | None = None
     country: str | None = None
     locale: str | None = None
+    recency: Recency | None = None
+    effort: ResearchEffort | None = None
     provider_options: dict[str, Any] | None = None
     result_chars: int = INTEGRATION_RESULT_CHARS
     """Characters of each result's text the model reads; the artifact keeps the whole of it."""
@@ -86,6 +90,8 @@ class WebRouterSearch(_WebRouterTool):
             "exclude_domains": self.exclude_domains,
             "country": self.country,
             "locale": self.locale,
+            "recency": self.recency,
+            "effort": self.effort,
             "provider_options": self.provider_options,
         }
 

@@ -1,36 +1,30 @@
 """The router facade.
 
-:class:`WebRouter` and :class:`AsyncWebRouter` hide which API is behind a call.
-Point them at a provider name and call :meth:`WebRouter.search` or
-:meth:`WebRouter.extract`; swapping backends is a one-word change at
-construction, or a per-call ``provider=`` override.
+:class:`WebRouter` and :class:`AsyncWebRouter` hide which API is behind a call. Point them at a provider name and
+call :meth:`WebRouter.search` or :meth:`WebRouter.extract`; swapping backends is a one-word change at construction,
+or a per-call ``provider=`` override.
 
-A name does not imply every method: most search backends do not extract, and
-some extract backends do not search. Each method resolves the name against its
-own registry, so asking one for a backend that only serves another reports it
-as unknown and lists the ones that method does serve.
+A name does not imply every method: most search backends do not extract, and some extract backends do not search.
+Each method resolves the name against its own registry, so asking one for a backend that only serves another
+reports it as unknown and lists the ones that method does serve.
 
-:meth:`WebRouter.run_template` runs one of a vendor's templates -- a saved,
-site-specific extraction that turns one page into a record -- and
-:meth:`WebRouter.templates` and :meth:`WebRouter.template` list and describe
-the catalogue it is picked from; the three share one registry, and all three
-need ``provider`` named, since a template's name belongs to one vendor.
+:meth:`WebRouter.run_template` runs one of a vendor's templates -- a saved, site-specific extraction that turns one
+page into a record -- and :meth:`WebRouter.templates` and :meth:`WebRouter.template` list and describe the
+catalogue it is picked from; the three share one registry, and all three need ``provider`` named, since a
+template's name belongs to one vendor.
 
-:meth:`WebRouter.research` behaves differently (:meth:`WebRouter.answer`, one
-cited answer, does not): an agentic run takes minutes rather than milliseconds, so it waits
-for the answer -- or hands back a :class:`~web_router.ResearchJob` through
-:meth:`WebRouter.submit_research` when you would rather not sit on it.
-:meth:`WebRouter.browse` and :meth:`WebRouter.submit_browse` are the same shape
-with a hosted browser agent in place of a search index.
+:meth:`WebRouter.research` behaves differently (:meth:`WebRouter.answer`, one cited answer, does not): an agentic
+run takes minutes rather than milliseconds, so it waits for the answer -- or hands back a
+:class:`~web_router.ResearchJob` through :meth:`WebRouter.submit_research` when you would rather not sit on it.
+:meth:`WebRouter.browse` and :meth:`WebRouter.submit_browse` are the same shape with a hosted browser agent in
+place of a search index.
 
-:meth:`WebRouter.open_browser` returns no answer but a handle on a cloud browser the caller
-drives over CDP; the router releases every handle still open when it is closed.
+:meth:`WebRouter.open_browser` returns no answer but a handle on a cloud browser the caller drives over CDP; the
+router releases every handle still open when it is closed.
 
-:meth:`WebRouter.benchmark` is not a method of its own kind but a consumer of
-:meth:`WebRouter.search`: the same query fanned out across several backends,
-each row measured around the public call, so what is compared is what a
-caller gets. :meth:`WebRouter.benchmark_extract` is the same consumer of
-:meth:`WebRouter.extract`, the same URLs fanned out the same way.
+:meth:`WebRouter.benchmark` is not a method of its own kind but a consumer of :meth:`WebRouter.search`: the same
+query fanned out across several backends, each row measured around the public call, so what is compared is what a
+caller gets. :meth:`WebRouter.benchmark_extract` is the same consumer of :meth:`WebRouter.extract`.
 """
 
 from __future__ import annotations
@@ -56,7 +50,7 @@ from web_router.client_requests import (
     build_research_request,
     build_search_request,
 )
-from web_router.client_templates import AsyncTemplates, SyncTemplates
+from web_router.client_template import AsyncTemplate, SyncTemplate
 from web_router.constants import (
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
@@ -89,6 +83,7 @@ from web_router.types import (
     ExtractFormat,
     ExtractResponse,
     Provider,
+    Recency,
     ResearchEffort,
     ResearchResponse,
     SearchDepth,
@@ -147,30 +142,26 @@ class _BaseRouter(ProviderLookup, RouterSetup, Generic[_HandleT]):
             raise ProviderNotFoundError(name, known)
 
         self.default_provider = name
-        # Normalized on the way in so a config key matches the lookup in
-        # get_provider, whichever form -- enum, or odd casing -- it was given in.
+        # Normalized on the way in so a config key matches get_provider's lookup, whatever form it was given in.
         self._config: dict[str, dict[str, Any]] = {
             provider_name(key): dict(config) for key, config in (provider_config or {}).items()
         }
         self.presets = PresetRegistry(client=preset, default_provider=name, provider_config=self._config)
         """The presets this router can use. Load definitions with :meth:`~web_router.PresetRegistry.load`."""
         self._instances: dict[str, SearchProvider] = {}
-        # Keyed separately from the search instances: one name resolves to a
-        # different class per method, and a vendor serving all three is three
-        # objects here.
+        # Keyed separately from the search instances: one name resolves to a different class per method, and a
+        # vendor serving all three is three objects here.
         self._extract_instances: dict[str, ExtractProvider] = {}
         self._template_instances: dict[str, TemplateProvider] = {}
         self._research_instances: dict[str, ResearchProvider] = {}
         self._answer_instances: dict[str, AnswerProvider] = {}
         self._browser_instances: dict[str, BrowserProvider] = {}
         self._browse_instances: dict[str, BrowseProvider] = {}
-        # Every session this router opened that has not been seen released, so
-        # close() can end the ones a caller lost track of rather than leave them
-        # billing until the backend times them out.
+        # Every session this router opened that has not been seen released, so close() can end the ones a caller
+        # lost track of rather than leave them billing until the backend times them out.
         self._browser_handles: list[_HandleT] = []
-        # A threading lock on both routers: the async one is as easily shared
-        # across threads, each with its own loop, and nothing awaits while it
-        # is held, so it can never stall an event loop.
+        # A threading lock on both routers: the async one is as easily shared across threads, each with its own
+        # loop, and nothing awaits while it is held, so it can never stall an event loop.
         self._handles_lock = threading.Lock()
         # One lock for the instance caches: evaluate() calls benchmark()
         # from worker threads, so two rows can race the same check-then-create
@@ -217,7 +208,7 @@ class _BaseRouter(ProviderLookup, RouterSetup, Generic[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncTemplates, SyncBenchmark, SyncPlan, SyncBudget):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan, SyncBudget, SyncTemplate):
     """Synchronous router.
 
     Example:
@@ -270,6 +261,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncTemplates, SyncBench
         exclude_domains: list[str] | None = None,
         country: str | None = None,
         locale: str | None = None,
+        recency: Recency | None = None,
+        effort: ResearchEffort | None = None,
         provider_options: dict[str, Any] | None = None,
         budget: Budget | None = None,
         preset: str | Preset | None = None,
@@ -288,6 +281,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncTemplates, SyncBench
             exclude_domains=exclude_domains,
             country=country,
             locale=locale,
+            recency=recency,
+            effort=effort,
             provider_options=provider_options,
         )
         request = build_search_request(query, **plan.options)
@@ -302,6 +297,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncTemplates, SyncBench
         *,
         provider: str | Provider | ExtractProvider | None = None,
         format: ExtractFormat | None = None,
+        profile: str | None = None,
         provider_options: dict[str, Any] | None = None,
         budget: Budget | None = None,
         preset: str | Preset | None = None,
@@ -311,16 +307,14 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncTemplates, SyncBench
         Several URLs can partly succeed: what came back is in
         :attr:`~web_router.ExtractResponse.documents` and everything that did
         not is in :attr:`~web_router.ExtractResponse.failures`. A call where
-        nothing came back raises instead.
+        nothing came back raises instead. ``profile`` names a saved identity on
+        the backend -- the one a browser session logged into -- whose cookies
+        are sent with each fetch; a backend without saved profiles refuses it.
 
         ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
         plan = self.presets.resolve(
-            "extract",
-            preset,
-            provider=provider,
-            format=format,
-            provider_options=provider_options,
+            "extract", preset, provider=provider, format=format, profile=profile, provider_options=provider_options
         )
         request = build_extract_request(urls, **plan.options)
         chain = self.get_extract_provider(plan.provider)
@@ -598,7 +592,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncTemplates, SyncBench
 
 
 class AsyncWebRouter(
-    _BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncTemplates, AsyncBenchmark, AsyncPlan, AsyncBudget
+    _BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncPlan, AsyncBudget, AsyncTemplate
 ):
     """Asynchronous router.
 
@@ -618,6 +612,8 @@ class AsyncWebRouter(
         exclude_domains: list[str] | None = None,
         country: str | None = None,
         locale: str | None = None,
+        recency: Recency | None = None,
+        effort: ResearchEffort | None = None,
         provider_options: dict[str, Any] | None = None,
         budget: Budget | None = None,
         preset: str | Preset | None = None,
@@ -636,6 +632,8 @@ class AsyncWebRouter(
             exclude_domains=exclude_domains,
             country=country,
             locale=locale,
+            recency=recency,
+            effort=effort,
             provider_options=provider_options,
         )
         request = build_search_request(query, **plan.options)
@@ -650,6 +648,7 @@ class AsyncWebRouter(
         *,
         provider: str | Provider | ExtractProvider | None = None,
         format: ExtractFormat | None = None,
+        profile: str | None = None,
         provider_options: dict[str, Any] | None = None,
         budget: Budget | None = None,
         preset: str | Preset | None = None,
@@ -658,16 +657,13 @@ class AsyncWebRouter(
 
         Backends that take one URL per call are fanned out concurrently. As on
         the sync router, a partly successful call returns its failures and one
-        where nothing came back raises.
+        where nothing came back raises, and ``profile`` is the saved identity
+        whose cookies each fetch carries.
 
         ``preset`` applies a saved configuration to this call: see :mod:`web_router.presets`.
         """
         plan = self.presets.resolve(
-            "extract",
-            preset,
-            provider=provider,
-            format=format,
-            provider_options=provider_options,
+            "extract", preset, provider=provider, format=format, profile=profile, provider_options=provider_options
         )
         request = build_extract_request(urls, **plan.options)
         chain = self.get_extract_provider(plan.provider)

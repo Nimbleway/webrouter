@@ -3,9 +3,11 @@ name = "web-router"
 dynamic = ["version"]
 description = "A provider-agnostic router for web search and page-extraction APIs (Nimble, Exa, Tavily, Brave, Oxylabs, Bright Data, ...)"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "src/web_router/evals/prompts/LICENSE-simple-evals"]
 requires-python = ">=3.10"
 authors = [
-    { name = "Nimble", email = "support@nimbleway.com" },
+    { name = "Nimble" },
 ]
 keywords = [
     "search",
@@ -106,7 +108,7 @@ browser = [
 # `web-router[mcp,browser]` is what turns them on.
 mcp = [
     "web-router[search,extract,research,answer]",
-    "mcp>=1.2",
+    "mcp>=2.2,<3",
     # The server's entry point loads the project .env, so keys reach it
     # without being exported; the library itself never reads dotfiles.
     "python-dotenv>=1.0",
@@ -169,7 +171,7 @@ agent-bench = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 # The one place the version lives: RELEASING.md bumps _version.py and the

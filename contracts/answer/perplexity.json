@@ -1,7 +1,7 @@
 {
   "provider": "perplexity",
   "method": "answer",
-  "class": "web_router.providers.perplexity.PerplexityAnswerProvider",
+  "class": "web_router.providers.perplexity_answer.PerplexityAnswerProvider",
   "transport": {
     "kind": "http",
     "base_url": "https://api.perplexity.ai",

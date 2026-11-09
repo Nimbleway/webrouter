@@ -80,9 +80,16 @@ _CONDITIONS: tuple[tuple[str, str], ...] = (
 )
 """The class-level checks a backend may declare and the issue each reports. The call makes them before it bills."""
 
+_REFUSALS = frozenset({"refused_values", "refused_options"})
+"""A search backend's ``refused_values`` already holds its ``refused_options``: one refusal is one issue."""
+
 
 def _condition_issues(
-    component: PresetComponent, backend: type[Any], provider: str, settings: Mapping[str, Any]
+    component: PresetComponent,
+    backend: type[Any],
+    provider: str,
+    settings: Mapping[str, Any],
+    unmapped: frozenset[str],
 ) -> builtins.list[PresetIssue]:
     """What the backend's class refuses beyond an option it does not map, through its own checks; never a value."""
     model = PRESET_REQUEST_MODELS[component]
@@ -90,10 +97,15 @@ def _condition_issues(
     # Built without validation: the values were checked already, and the native inputs are not in a preflight.
     request = model.model_construct(**fields)
     issues: builtins.list[PresetIssue] = []
+    refused = set(unmapped)
     for method, template in _CONDITIONS:
         check = getattr(backend, method, None)
         found = check(request) if check is not None else {}
         for option in sorted(found):
+            if method in _REFUSALS:
+                if option in refused:
+                    continue
+                refused.add(option)
             partners = ", ".join(sorted(found[option])) if method == "unmet_requirements" else ""
             issues.append(
                 PresetIssue(field=option, message=template.format(provider=provider, field=option, partners=partners))
@@ -269,7 +281,8 @@ def _backend_issues(
         message = MSG_PRESET_UNSUPPORTED_FORMAT.format(provider=name, format=requested, supported=supported)
         issues.append(PresetIssue(field="format", message=message))
     if conditions:
-        issues.extend(_condition_issues(component, backend, name, settings))
+        unmapped = frozenset(issue.field for issue in issues)
+        issues.extend(_condition_issues(component, backend, name, settings, unmapped))
     return name, issues
 
 

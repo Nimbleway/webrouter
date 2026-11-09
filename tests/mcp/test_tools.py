@@ -7,6 +7,7 @@ handlers call, against the in-memory fakes from `tests/conftest.py`.
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ from tests.mcp.conftest import FAKE
 from tests.providers._answer_stub import stub_answer_api
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
+    AUTO_KEYLESS,
     ENV_BRAVE_API_KEY,
     ENV_BROWSER_USE_API_KEY,
     ENV_HYPERBROWSER_API_KEY,
@@ -60,6 +62,7 @@ from web_router.mcp.server import call_tool, list_resources, list_tools, read_re
 from web_router.mcp.tools import WebRouterTools
 from web_router.registry import (
     get_browser_provider_class,
+    get_provider_class,
     register_browse_provider,
     register_research_provider,
     unregister_browse_provider,
@@ -77,7 +80,7 @@ def _payload(result: Any) -> dict[str, Any]:
     return dict(json.loads(result.content[0].text))
 
 
-def test_serves_exactly_twenty_four_tools(tools: WebRouterTools) -> None:
+def test_serves_every_tool_in_order(tools: WebRouterTools) -> None:
     assert [tool.name for tool in list_tools(tools).tools] == [
         MCP_TOOL_SEARCH,
         MCP_TOOL_EXTRACT,
@@ -112,7 +115,7 @@ def test_provider_enum_offers_only_configured_backends(tools: WebRouterTools, no
 
 def test_the_extract_schema_reads_max_as_the_members_it_would_race(no_keys: None) -> None:
     """``max`` declares every option as ``auto`` does, so it is read as its chain, never as its own class."""
-    from web_router.mcp.tools import _serving
+    from web_router.mcp.schema import serving as _serving
     from web_router.providers.max import MaxExtractProvider
 
     router = AsyncWebRouter(PROVIDER_MAX)
@@ -134,13 +137,12 @@ def test_a_router_whose_default_is_max_still_lists_every_tool(no_keys: None) -> 
     assert _tool(session, MCP_TOOL_BROWSER_OPEN).input_schema["properties"]
 
 
-def test_a_method_with_only_delegating_providers_configured_is_not_usable(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_method_with_only_delegating_providers_configured_is_not_usable() -> None:
     """``max`` needs no key of its own any more than ``auto`` does, so neither counts as a backend that can run."""
-    from web_router.mcp import tools as module
+    from web_router.mcp import methods
 
-    monkeypatch.setitem(module._CONFIGURED, MCP_TOOL_EXTRACT, lambda: [PROVIDER_AUTO, PROVIDER_MAX])
-
-    assert not module._usable(MCP_TOOL_EXTRACT)
+    method = replace(methods.METHODS[MCP_TOOL_EXTRACT], configured=lambda: [PROVIDER_AUTO, PROVIDER_MAX])
+    assert not methods.usable(method)
 
 
 def test_the_extract_tool_says_what_max_costs(tools: WebRouterTools) -> None:
@@ -158,20 +160,17 @@ def test_a_key_appears_in_the_enum_for_every_method_it_serves(
 
 
 def test_an_option_no_configured_route_maps_is_not_advertised(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    # Search `auto` declares every filter Nimble maps, but routes each request
-    # to a member that maps it, so it is read as the chain it would try: with
-    # no key the domain, country and locale filters would each come back as an
-    # UnsupportedParameterError from the default route.
+    # Search `auto` is read as the chain it would try: keyless, its members' options and no other.
     tools = WebRouterTools(AsyncWebRouter(), research_wait=0.0, browse_wait=0.0)
     search = set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
     research = set(_tool(tools, MCP_TOOL_RESEARCH).input_schema["properties"])
-
-    assert search == {"query", "max_results", "search_depth", "provider"}
+    keyless = set().union(*(get_provider_class(name).supported_parameters for name, _ in AUTO_KEYLESS))
+    assert search == {"query", "provider", *keyless}
     assert {"include_domains", "exclude_domains", "records"}.isdisjoint(research)
 
-    # A backend that maps them brings them back, for the model to name through `provider`.
+    # A backend that maps it brings it back, for the model to name through `provider`.
     monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
-    assert {"include_domains", "country"} <= set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
+    assert {"include_domains", "locale"} <= set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
     assert "include_domains" in _tool(tools, MCP_TOOL_RESEARCH).input_schema["properties"]
 
 
@@ -431,7 +430,7 @@ async def test_a_library_error_comes_back_as_a_tool_error_with_its_own_message(
     result = await call_tool(tools, MCP_TOOL_SEARCH, {"query": "hello", "provider": PROVIDER_TAVILY})
 
     assert result.is_error
-    # The library already names the variable to set; this layer must not rewrite it.
+    # The library names the variable to set; this layer keeps it, and swaps only provider_config for load_env.
     assert ENV_TAVILY_API_KEY in result.content[0].text
 
 
@@ -487,13 +486,11 @@ def test_a_keyless_backends_optional_key_is_not_a_configured_key(
 def test_with_no_key_search_and_the_instructions_say_so(
     tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    search = _tool(tools, MCP_TOOL_SEARCH).description
-    assert "No API keys were found" in search and MCP_TOOL_LOAD_ENV in search
-    assert "No API keys were found" in tools.instructions()
+    # Said once, in the instructions: not repeated in every listed tool.
+    assert "No API keys were found" in tools.instructions() and MCP_TOOL_LOAD_ENV in tools.instructions()
+    assert "No API keys were found" not in _tool(tools, MCP_TOOL_SEARCH).description
 
     monkeypatch.setenv(ENV_BRAVE_API_KEY, "x")
-
-    assert "No API keys were found" not in _tool(tools, MCP_TOOL_SEARCH).description
     assert "No API keys were found" not in tools.instructions()
 
 
@@ -839,7 +836,7 @@ def test_the_server_steers_an_interactive_page_to_a_browser_the_user_agrees_to(t
     assert "provider='local' and headless=false" in instructions
     assert "never ask for a password" in instructions
     described = {tool.name: tool.description for tool in tools.list_tools()}
-    assert "browser_open" in described["search"] and "browser_open" in described["extract"]
+    assert "browser_open" in described["extract"]
     opener = described.get("browser_open")
     if opener is not None:  # listed only where Playwright imports
         assert "logins, forms, multi-step portals" in opener and "headless=false" in opener

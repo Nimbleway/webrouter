@@ -5,9 +5,8 @@ web-router uses a handful of fields of these APIs, which an SDK dependency would
 not simplify. Install with the ``search``, ``research`` or ``answer`` extra. Reads ``PARALLEL_API_KEY`` unless a key
 is passed explicitly.
 
-Search is slim by design: only ``max_results`` is mapped. Everything else is
-reachable through ``provider_options``; mapping one properly is a welcome PR --
-see CONTRIBUTING.md.
+Search lives in :mod:`web_router.providers.parallel_search`; its provider is
+imported here too, so ``ParallelProvider`` keeps its import path.
 """
 
 from __future__ import annotations
@@ -18,13 +17,11 @@ from web_router.constants import (
     ENV_PARALLEL_API_KEY,
     PARALLEL_API_KEY_HEADER,
     PARALLEL_BASE_URL,
-    PARALLEL_PARAM_NAMES,
     PARALLEL_RESEARCH_DEFAULT_EFFORT,
     PARALLEL_RESEARCH_JSON_OUTPUT,
     PARALLEL_RESEARCH_PROCESSORS,
     PARALLEL_RESEARCH_STATES,
     PARALLEL_RESEARCH_TEXT_OUTPUT,
-    PARALLEL_SEARCH_PATH,
     PARALLEL_TASK_RESULT_PATH,
     PARALLEL_TASK_RUN_PATH,
     PARALLEL_TASK_STATUS_PATH,
@@ -40,21 +37,18 @@ from web_router.constants_parallel import (
     PARALLEL_ANSWER_TRUNCATED,
     PARALLEL_ANSWER_WHOLE_FIELD,
 )
-from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, build_payload
+from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider
+from web_router.providers._utils import build_payload
+from web_router.providers.parallel_search import ParallelProvider as ParallelProvider
 from web_router.types import (
     Citation,
     ResearchProgress,
     ResearchRequest,
     ResearchResponse,
     ResearchState,
-    SearchRequest,
-    SearchResponse,
-    SearchResult,
 )
 from web_router.types_answer import AnswerRequest, AnswerResponse
 
-_MAPPED_RESULT_FIELDS = frozenset({"url", "title", "excerpts", "publish_date"})
 _MAPPED_BASIS_FIELDS = frozenset({"field", "citations"})
 
 
@@ -91,52 +85,6 @@ def _citations_from_basis(
 
 
 _MAPPED_CITATION_FIELDS = frozenset({"url", "title", "excerpts"})
-
-
-class ParallelProvider(HttpSearchProvider):
-    """Routes searches to the Parallel Search API."""
-
-    name: ClassVar[str] = PROVIDER_PARALLEL
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(PARALLEL_PARAM_NAMES)
-
-    base_url: ClassVar[str] = PARALLEL_BASE_URL
-    search_path: ClassVar[str] = PARALLEL_SEARCH_PATH
-    env_api_key: ClassVar[str | None] = ENV_PARALLEL_API_KEY
-    api_key_header: ClassVar[str] = PARALLEL_API_KEY_HEADER
-
-    def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        # Parallel is built around an objective plus the queries to run for it.
-        # With a single normalized query, both are that query.
-        return build_payload(
-            request,
-            PARALLEL_PARAM_NAMES,
-            objective=request.query,
-            search_queries=[request.query],
-        )
-
-    def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
-        return SearchResponse(
-            provider=self.name,
-            query=request.query,
-            results=[self._to_result(hit) for hit in payload.get("results") or []],
-            request_id=payload.get("search_id"),
-            raw=payload,
-        )
-
-    @staticmethod
-    def _to_result(hit: dict[str, Any]) -> SearchResult:
-        # Parallel returns ranked page excerpts rather than a snippet, and they
-        # run to thousands of characters -- so the body is all of them, and the
-        # description is the head of the first.
-        excerpts = [excerpt for excerpt in hit.get("excerpts") or [] if excerpt]
-        return SearchResult(
-            url=hit.get("url", ""),
-            title=hit.get("title") or "",
-            description=as_snippet(excerpts[0]) if excerpts else "",
-            content="\n\n".join(excerpts),
-            published_date=hit.get("publish_date"),
-            extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},
-        )
 
 
 class ParallelResearchProvider(HttpResearchProvider):

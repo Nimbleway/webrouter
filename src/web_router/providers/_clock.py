@@ -5,7 +5,12 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
+
+from web_router.types_options import Recency
+
+RECENCY_DAYS: dict[Recency, int] = {"day": 1, "week": 7, "month": 30, "year": 365}
+"""How many days back each ``recency`` window reaches, for a backend that takes a start date rather than a window."""
 
 _PINNED_TODAY: ContextVar[date | None] = ContextVar("web_router_pinned_today", default=None)
 
@@ -28,3 +33,8 @@ def pinned_today(day: date) -> Iterator[None]:
         yield
     finally:
         _PINNED_TODAY.reset(token)
+
+
+def recency_start(recency: Recency | None) -> date | None:
+    """The first day a ``recency`` window covers, counted back from :func:`today`; ``None`` when unset."""
+    return today() - timedelta(days=RECENCY_DAYS[recency]) if recency else None

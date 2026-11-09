@@ -322,13 +322,12 @@ async def test_open_offers_no_way_to_pass_browser_switches(session: WebRouterToo
 
     assert {"provider_options", "profile", "persist_profile"}.isdisjoint(properties)
     assert {"headless", "timeout", "provider"} <= set(properties)
-    assert "provider_options" in (tool.description or "")
     assert "BILLS" in (tool.description or "")
 
     message = _error(
         await call_tool(session, MCP_TOOL_BROWSER_OPEN, {"provider_options": {"remote-debugging-address": "0.0.0.0"}})
     )
-    assert "does not accept provider_options" in message
+    assert "does not take provider_options" in message
     assert _provider(session).requests == []
 
 

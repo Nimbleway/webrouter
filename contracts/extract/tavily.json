@@ -1,7 +1,7 @@
 {
   "provider": "tavily",
   "method": "extract",
-  "class": "web_router.providers.tavily.TavilyExtractProvider",
+  "class": "web_router.providers.tavily_extract.TavilyExtractProvider",
   "transport": {
     "kind": "sdk"
   },
@@ -28,7 +28,9 @@
       }
     }
   },
-  "not_mapped": [],
+  "not_mapped": [
+    "profile"
+  ],
   "default_format": "markdown",
   "batches_urls": true,
   "source": [

@@ -29,13 +29,53 @@
         "body.include_raw_content": "markdown",
         "body.search_depth": "advanced"
       }
+    },
+    "include_domains": {
+      "sample": {
+        "body.include_domains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.exclude_domains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.country": "united states"
+      }
+    },
+    "locale": {
+      "sample": {
+        "body.filter_by_language": true,
+        "body.language": "en"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.filter_by_published_date": true,
+        "body.time_range": "day"
+      },
+      "week": {
+        "body.filter_by_published_date": true,
+        "body.time_range": "week"
+      },
+      "month": {
+        "body.filter_by_published_date": true,
+        "body.time_range": "month"
+      },
+      "year": {
+        "body.filter_by_published_date": true,
+        "body.time_range": "year"
+      }
     }
   },
   "not_mapped": [
-    "country",
-    "exclude_domains",
-    "include_domains",
-    "locale"
+    "effort"
   ],
   "source": [
     "https://docs.tavily.com/documentation/api-reference/endpoint/search",
@@ -43,44 +83,25 @@
   ],
   "verified": {
     "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
-    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content"
+    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content (2026-11-09: lite, basic, 160-1,415 characters, the three chunks the README discloses)",
+    "include_domains": "live: 2026-11-09 search-options check: wikipedia.org alone came back",
+    "exclude_domains": "live: 2026-11-09 search-options check: no wikipedia.org result",
+    "country": "live: 2026-11-09 search-options check: US with locale=en and recency=week, no 400",
+    "locale": "live: 2026-11-09 search-options check: en with country=US and recency=week, no 400",
+    "recency": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search (time_range by publish or last updated date; filter_by_published_date drops undated pages). Tavily applies the filter, and its results often carry no date: live on 2026-11-09 week left 7 dated results, all inside, and year none, so web-router's results cannot always show the window"
   },
   "vendor_options": {
-    "include_domains": {
-      "status": "passthrough",
-      "note": "Same meaning as the shared include_domains; not mapped yet."
-    },
-    "exclude_domains": {
-      "status": "passthrough",
-      "note": "Same meaning as the shared exclude_domains; not mapped yet."
-    },
     "include_domains_mode": {
       "status": "passthrough",
-      "note": "restrict | prefer."
-    },
-    "country": {
-      "status": "passthrough",
-      "note": "Takes a lowercase English country name, not the ISO code the shared country option uses; mapping it needs a translation table."
-    },
-    "language": {
-      "status": "passthrough",
-      "note": "ISO 639-1 code or English name; a candidate for the shared locale option."
-    },
-    "filter_by_language": {
-      "status": "passthrough",
-      "note": "Boolean."
+      "note": "restrict | prefer. Setting it without include_domains returns a 400."
     },
     "topic": {
       "status": "passthrough",
-      "note": "general | news | finance."
-    },
-    "time_range": {
-      "status": "passthrough",
-      "note": "day | week | month | year (or d | w | m | y)."
+      "note": "general (default) | news | finance. country is refused with any topic but general, which Tavily requires."
     },
     "start_date": {
       "status": "passthrough",
-      "note": "YYYY-MM-DD."
+      "note": "YYYY-MM-DD. How it combines with time_range, which recency sends, is not documented."
     },
     "end_date": {
       "status": "passthrough",
@@ -88,15 +109,11 @@
     },
     "include_published_date": {
       "status": "passthrough",
-      "note": "Boolean."
-    },
-    "filter_by_published_date": {
-      "status": "passthrough",
-      "note": "Boolean."
+      "note": "Boolean; turned on by filter_by_published_date, which recency sends."
     },
     "chunks_per_source": {
       "status": "passthrough",
-      "note": "1-3."
+      "note": "1-3: the most chunks (about 500 characters each on basic and fast, 800 on advanced) per result, documented for basic, fast and advanced search. Not in the depth table yet: lite (basic) returns up to three chunks, and one chunk would bring it near the shared ~500-character lite; due a live re-measure."
     },
     "include_answer": {
       "status": "passthrough",
@@ -128,7 +145,11 @@
     },
     "safe_search": {
       "status": "passthrough",
-      "note": "Boolean."
+      "note": "Boolean. Not supported with the fast or ultra-fast search depths."
+    },
+    "max_age_hours": {
+      "status": "passthrough",
+      "note": "-1 to 720: the oldest cached content Tavily may return."
     }
   }
 }
