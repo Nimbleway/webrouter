@@ -74,9 +74,19 @@ def test_the_deadline_is_its_timeout_s_cut_to_the_budget() -> None:
     assert recorder.bodies[1]["budget"]["time_limit_s"] == 0.7
 
 
-def test_the_default_timeout_is_one_second() -> None:
-    with running() as server:
-        assert RemoteRouter(url=server.url).timeout_s == 1.0
+def test_with_no_timeout_s_a_slow_service_is_abandoned_at_one_second() -> None:
+    def slow(body: dict[str, Any]) -> dict[str, Any]:
+        time.sleep(2.5)
+        return reference.decide(body)
+
+    recorder = Recorder(slow)
+    with running(recorder) as server, WebRouter(router="remote", router_config=config(server)) as wr:
+        started = time.perf_counter()
+        plan = wr.plan(URL_PROMPT)
+        waited = time.perf_counter() - started
+    assert plan.decision.reason == "router_timeout"
+    assert 0.9 < waited < 1.8, "the 1 s default, not the service's 2.5 s"
+    assert recorder.bodies[0]["deadline_s"] == 1.0
 
 
 @pytest.mark.parametrize("cls", [WebRouter, AsyncWebRouter])
