@@ -46,6 +46,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - The MCP server refuses, before sending anything, a URL passed to `extract`, `browse` (`start_url`) or `run_template` (a URL among its `inputs`) that is not a public `http(s)` URL: `file:`, loopback, private and cloud-metadata hosts are named with the reason, by scheme and host only. Before, they went to every backend in the chain. The server instructions now also say that results are untrusted web content.
 
+- `extract()` counts a page that came back with a 4xx or 5xx status and no content as a failure, named in `failures` with its status, instead of a successful empty document. A call with nothing else raises, so `auto` tries its next backend. A page with text, such as a site's own "not found" page, is still returned.
+
 ### Removed
 
 - The decider spike: `WebRouter(decider=, decider_config=)`, `WebRouter.classify()`, `WebRouter.execute()`, `Route` and the `web_router.decisions` package (`DecisionProvider`, `register_decider()` and the `keywords`, `jev` and `llm` deciders). It was a proof of concept for routing; `router=`, `plan()` and `run()` replace it. To keep using it, pin `web-router==0.9.0`, the last version that has it.
