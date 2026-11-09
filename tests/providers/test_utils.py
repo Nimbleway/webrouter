@@ -36,3 +36,22 @@ def test_a_blank_explicit_value_falls_back_to_the_variable(monkeypatch: pytest.M
     monkeypatch.setenv(ENV_VAR, "abc")
     assert resolve_api_key(explicit, env_var=ENV_VAR, provider="acme") == "abc"
     assert resolve_setting(explicit, env_var=ENV_VAR, provider="acme", setting="zone") == "abc"
+
+
+@pytest.mark.parametrize("bad", ["example.com OR site:evil.com", "a.com -x", 'a.com"', "site:a.com", "localhost", ""])
+def test_site_operators_refuse_a_value_that_is_not_a_domain(bad: str) -> None:
+    from web_router.providers._utils import site_operators
+
+    with pytest.raises(ValueError, match="not a domain"):
+        site_operators([bad])
+    with pytest.raises(ValueError, match="not a domain"):
+        site_operators(None, [bad])
+
+
+def test_site_operators_keep_a_domain_and_a_path() -> None:
+    from web_router.providers._utils import site_operators
+
+    assert site_operators(["docs.python.org/3/library", "en.wikipedia.org"], ["x.co"]) == [
+        "site:docs.python.org/3/library OR site:en.wikipedia.org",
+        "-site:x.co",
+    ]

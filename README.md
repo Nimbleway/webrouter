@@ -624,11 +624,11 @@ less under its name.
 | `deep` | The whole page | `standard` + `full_content` | `advanced` + raw content | `full_page` | whole text | `text` | refused | refused | refused | refused | `need_content` |
 
 Linkup, AgentCore and Parallel MCP do not map it. Tavily's `basic` returns up to
-three chunks of about 500 characters, and DeepSeek's default carries its summary
-(about 1,800 characters at the median), both longer than `lite` promises. Exa's
-highlights cap is soft, letting a passage it will not split run past 500, and
-Brave has no size setting at all, so for `lite` web-router cuts both to a
-snippet of about 500 characters itself; the vendor's full text stays in `raw`.
+three chunks of about 500 characters, longer than `lite` promises. Where a
+vendor's size setting does not bind (Exa's highlights cap and Perplexity's token
+budget are soft, DeepSeek's default carries its whole summary, and Brave has no
+size setting at all), web-router cuts `lite` to a snippet of about 500
+characters itself; the vendor's full text stays in `raw`.
 Unset, Exa asks for the whole text and Exa MCP for highlights, as before.
 
 `result.content` always holds the fullest text available. Some backends return

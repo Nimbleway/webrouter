@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
@@ -19,7 +20,7 @@ from web_router.constants import (
     MSG_OPTION_VALUE,
     SNIPPET_LIMIT,
 )
-from web_router.constants_search import EXCLUDE_SITE_OPERATOR, SITE_OPERATOR
+from web_router.constants_search import EXCLUDE_SITE_OPERATOR, MSG_NOT_A_DOMAIN, SITE_DOMAIN_PATTERN, SITE_OPERATOR
 from web_router.exceptions import ConfigurationError
 from web_router.types import (
     REQUEST_VALUE,
@@ -285,6 +286,14 @@ def site_operators(
     joiner: str = " OR ",
     exclude_format: str = EXCLUDE_SITE_OPERATOR,
 ) -> list[str]:
-    """Domain filters as query operators: the included sites joined into one, then one per excluded site."""
+    """Domain filters as query operators: the included sites joined into one, then one per excluded site.
+
+    Raises:
+        ValueError: for a value that is not a host name (with an optional path),
+            which would otherwise add its own operators to the query.
+    """
+    for domain in [*(include or ()), *(exclude or ())]:
+        if not re.fullmatch(SITE_DOMAIN_PATTERN, domain):
+            raise ValueError(MSG_NOT_A_DOMAIN.format(value=domain))
     included = [joiner.join(SITE_OPERATOR.format(domain=domain) for domain in include)] if include else []
     return [*included, *(exclude_format.format(domain=domain) for domain in exclude or ())]

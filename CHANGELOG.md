@@ -26,7 +26,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - Search backends map the shared options their APIs document, each refusing before the call a value it cannot serve (README's [Search options](README.md#search-options) has the tables; each `contracts/search/<name>.json` the fields sent):
   - Exa and Exa MCP: every option but `locale`. Exa MCP now calls Exa's keyless `web_search_advanced_exa` tool (named in `?tools=` on the server URL) instead of `web_search_exa`, and no longer sends `objective`, which that tool refuses. Unset depth still asks Exa for the whole text and Exa MCP for highlights. Exa's highlights cap is soft, so `lite` is cut to a snippet of about 500 characters by web-router.
-  - Perplexity: every option; `search_depth` at `lite` and `fast` only, one domain list of at most 20, and `locale` as a bare two-letter language.
+  - Perplexity: every option; `search_depth` at `lite` (cut to about 500 characters by web-router) and `fast` only, one domain list of at most 20, and `locale` as a bare two-letter language.
   - Tavily: every option but `effort`. `country` becomes the country name Tavily takes (a ranking boost, general topic only); `locale` and `recency` are filters, and `recency` drops pages Tavily cannot date.
   - You.com and You.com MCP: every option but `effort`, `country` from its 36 codes and `locale` from its 51-language list (`pt` or `zh` alone refused), one domain list at a time. You.com MCP sends `site:`, `lang:` and `loc:` in the query, which its tool applies.
   - Brave: every option but `effort`, `search_depth` at `lite` alone, its description and extra snippets cut to about 500 characters by web-router, since Brave has no size setting; domains as `site:` operators (Brave marks them experimental), `country` and `locale` from its lists, and a query past 600 characters or 75 words with the operators refused.
@@ -34,7 +34,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
   - WebIQ: every option but `recency` and `effort`; domains as `site:` operators, `country` and `locale` as two-letter codes, `deep` as each page's whole text.
   - Keenable: `search_depth` at `lite` and `fast`, one `include_domains` entry, `recency` and `effort`.
   - Linkup: `recency` and `effort` (as its `depth`: `low` `flash`, `medium` `fast`, still sent when unset, `high` `standard`, `max` `deep`, which Linkup bills at ten times the others).
-  - DeepSeek: `recency` as `after:` in the query, and `search_depth` at `lite` and `deep` (the page body).
+  - DeepSeek: `recency` as `after:` in the query, and `search_depth` at `lite` (its summary cut to about 500 characters by web-router) and `deep` (the page body).
+  - A domain filter that goes into the query as `site:` (Brave, WebIQ, DeepSeek, You.com MCP) must be a host name, optionally with a path; anything else raises `ValueError` before the call, so a value cannot add its own operators.
   - AgentCore Web Search: `recency`, on connector 1.2.0 or later.
   - Nimble: `recency` as its `time_range`; it refuses `effort`, and no longer takes a new shared option unmapped.
 - Parallel search moves from `/v1beta/search` to `/v1/search`, with `mode=fast` pinned (unset, `/v1` runs `advanced`, the old `agentic`, at five times the price). `max_results` now goes under `advanced_settings`, and an `advanced_settings` object in `provider_options` is merged with it rather than replacing it. The beta-only `processor`, `excerpts` and top-level `max_chars_per_result` are rejected by `/v1`.
