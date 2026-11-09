@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from web_router.constants_mcp import MCP_MSG_KEY_HINT, MCP_PROVIDER_CONFIG_CLAUSE
+from web_router.constants_mcp import MCP_MSG_KEY_HINT, MCP_PROVIDER_CONFIG_ASIDE, MCP_PROVIDER_CONFIG_CLAUSE
 from web_router.mcp.shaping import redact, redaction_note
 
 
@@ -21,6 +21,10 @@ def error_text(exc: Exception) -> str:
 
 
 def _for_mcp(message: str) -> str:
-    """A library message as an MCP user can act on it: ``provider_config`` is code, so the ``.env`` route instead."""
+    """A library message as an MCP user can act on it: ``provider_config`` is code, so the ``.env`` route instead.
+
+    An aside beside a setting that is not a key just goes: ``load_env`` would not set it.
+    """
+    message = re.sub(MCP_PROVIDER_CONFIG_ASIDE, "", message)
     rewritten, count = re.subn(MCP_PROVIDER_CONFIG_CLAUSE, "", message)
     return rewritten + MCP_MSG_KEY_HINT if count else message

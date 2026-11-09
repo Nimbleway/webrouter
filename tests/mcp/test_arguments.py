@@ -8,18 +8,22 @@ import pytest
 
 from tests.mcp.conftest import FAKE
 from web_router.constants import (
+    ENV_LOCAL_BROWSER_PATH,
     ENV_NIMBLE_API_KEY,
     ENV_TAVILY_API_KEY,
+    LOCAL_BROWSER_PATH_OPTION,
     MCP_TOOL_LOAD_ENV,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
     MCP_TOOL_TEMPLATE,
     MCP_TOOL_TEMPLATES,
+    MSG_LOCAL_NO_BROWSER,
     PROVIDER_TAVILY,
 )
 from web_router.constants_mcp import MCP_NO_ARGUMENTS, MCP_TOOL_BUDGET_STATUS
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
+from web_router.mcp.messages import error_text
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
 
@@ -59,6 +63,16 @@ async def test_a_no_key_error_points_to_load_env_not_to_code(tools: WebRouterToo
 
     assert ENV_TAVILY_API_KEY in text and MCP_TOOL_LOAD_ENV in text
     assert "provider_config" not in text
+
+
+def test_the_no_browser_error_names_no_provider_config_over_mcp() -> None:
+    """A browser path is not a key: the ``provider_config`` aside goes, and no ``load_env`` hint replaces it."""
+    message = MSG_LOCAL_NO_BROWSER.format(env_var=ENV_LOCAL_BROWSER_PATH, option=LOCAL_BROWSER_PATH_OPTION)
+
+    text = error_text(ValueError(message))
+
+    assert "provider_config" not in text and ENV_LOCAL_BROWSER_PATH in text
+    assert MCP_TOOL_LOAD_ENV not in text
 
 
 @pytest.mark.parametrize(

@@ -147,6 +147,10 @@ MCP_PROVIDER_CONFIG_CLAUSE = (
 )
 """The library's way to hand a router a key in code, which a conversation cannot do: cut from an MCP error."""
 
+MCP_PROVIDER_CONFIG_ASIDE = r" -- or provider_config=\{.*?\}\} --"
+"""The same, as an aside beside a setting that is not a key, such as ``CHROME_PATH``: cut with no ``.env`` hint,
+since ``load_env`` reads credentials only."""
+
 MCP_MSG_KEY_HINT = (
     " Through this server: the user puts the key in their .env, and you call `load_env` with the path they give; "
     "or it is set where the server starts, and the server is restarted."
