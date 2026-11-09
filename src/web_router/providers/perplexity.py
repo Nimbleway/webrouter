@@ -57,11 +57,11 @@ from web_router.constants_perplexity import (
     PERPLEXITY_LANGUAGE_FIELD,
     PERPLEXITY_LANGUAGE_PATTERN,
     PERPLEXITY_MAX_DOMAINS,
+    PERPLEXITY_PAGE_BUDGET_BY_DEPTH,
+    PERPLEXITY_PAGE_BUDGET_FIELD,
     PERPLEXITY_SEARCH_NAMES,
     PERPLEXITY_SEARCH_TYPE_BY_EFFORT,
     PERPLEXITY_SEARCH_TYPE_FIELD,
-    PERPLEXITY_TOKENS_BY_DEPTH,
-    PERPLEXITY_TOKENS_FIELD,
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
@@ -91,7 +91,7 @@ class PerplexityProvider(HttpSearchProvider):
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
         {*PERPLEXITY_SEARCH_NAMES, "include_domains", "exclude_domains", "locale", "recency", "search_depth", "effort"}
     )
-    depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset(PERPLEXITY_TOKENS_BY_DEPTH)
+    depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset(PERPLEXITY_PAGE_BUDGET_BY_DEPTH)
     refusal_reasons: ClassVar[dict[str, str]] = {
         **dict.fromkeys(("include_domains", "exclude_domains"), MSG_PERPLEXITY_SEARCH_DOMAINS),
         "locale": MSG_PERPLEXITY_LOCALE,
@@ -131,7 +131,7 @@ class PerplexityProvider(HttpSearchProvider):
                 PERPLEXITY_ANSWER_RECENCY_FIELD: PERPLEXITY_ANSWER_RECENCY[request.recency]
                 if request.recency
                 else None,
-                PERPLEXITY_TOKENS_FIELD: PERPLEXITY_TOKENS_BY_DEPTH[request.search_depth]
+                PERPLEXITY_PAGE_BUDGET_FIELD: PERPLEXITY_PAGE_BUDGET_BY_DEPTH[request.search_depth]
                 if request.search_depth
                 else None,
                 PERPLEXITY_SEARCH_TYPE_FIELD: PERPLEXITY_SEARCH_TYPE_BY_EFFORT[request.effort]

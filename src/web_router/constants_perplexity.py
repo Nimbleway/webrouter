@@ -82,8 +82,8 @@ PERPLEXITY_LANGUAGE_PATTERN = r"^[A-Za-z]{2}$"
 
 MSG_PERPLEXITY_LOCALE = "Perplexity takes a locale as a two-letter ISO 639-1 language code, such as 'en'."
 
-PERPLEXITY_TOKENS_FIELD = "max_tokens_per_page"
-PERPLEXITY_TOKENS_BY_DEPTH: dict[SearchDepth, int] = {"lite": 100, "fast": 1024}
+PERPLEXITY_PAGE_BUDGET_FIELD = "max_tokens_per_page"
+PERPLEXITY_PAGE_BUDGET_BY_DEPTH: dict[SearchDepth, int] = {"lite": 100, "fast": 1024}
 """``max_tokens_per_page`` for each ``search_depth`` it serves.
 
 Live on 2026-11-09 a budget of 128 gave 494-707 characters, up to 5.5 a token
