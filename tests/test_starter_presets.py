@@ -36,11 +36,26 @@ AVAILABLE = {
 ROUTERS = {"auto", "max"}
 # DeepSeek maps the domain lists, but as site: operators that run past its query limit, refused only at call time.
 REFUSED_AT_CALL_TIME = {"search": {"deepseek"}}
+# Every search backend that maps both domain lists and takes these as they are, as presets/README.md names them.
+DOMAIN_SEARCH = {
+    "agentcore",
+    "brave",
+    "exa",
+    "exa-mcp",
+    "linkup",
+    "nimble",
+    "parallel",
+    "perplexity",
+    "tavily",
+    "webiq",
+    "you",
+    "you-mcp",
+}
 # The backends each preset component works on, as presets/README.md documents them.
 SERVED_BY = {
-    ("ecommerce.coupons", "search"): {"agentcore", "linkup", "nimble"},
-    ("ecommerce.product-by-gtin", "search"): {"agentcore", "linkup", "nimble"},
-    ("ecommerce.product-by-name", "search"): {"agentcore", "linkup", "nimble"},
+    ("ecommerce.coupons", "search"): DOMAIN_SEARCH,
+    ("ecommerce.product-by-gtin", "search"): DOMAIN_SEARCH,
+    ("ecommerce.product-by-name", "search"): DOMAIN_SEARCH,
     ("ecommerce.product-similarity", "answer"): {"linkup", "perplexity", "you"},
     ("ecommerce.shipping-info", "answer"): {"linkup", "perplexity", "you"},
     ("ecommerce.shipping-info", "extract"): {
