@@ -88,6 +88,8 @@ src/web_router/
 │                       types.py stops growing; it imports types, never the reverse
 ├── types_page.py       PageState/PageSnapshot/Screenshot + PageLoadState/PageFormat:
 │                       what a browser handle's page actions return; imports nothing of ours
+├── types_benchmark.py BenchmarkRun/Report + ExtractBenchmarkRun/Report: what benchmark()
+│                       and benchmark_extract() return; it imports types, never the reverse
 ├── client.py           WebRouter, AsyncWebRouter — the public facade
 │                       (search, extract, templates + template + run_template,
 │                        answer, research + submit_research,
@@ -95,6 +97,7 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
+├── client_template.py  templates(), template() and run_template(), mixed into both routers
 ├── client_plan.py      plan() and run(), prompt-level routing, mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
@@ -121,6 +124,8 @@ src/web_router/
 │                       kept apart for the same reason
 ├── constants_kernel.py Kernel's endpoints, field table and session states,
 │                       kept apart for the same reason
+├── constants_browserbase.py Browserbase's host, header, session, browse and Fetch
+│                       settings, kept apart for the same reason
 ├── prices.py           estimated list prices per (provider, method, mode), read
 │                       from data/prices.json; PRICING.md's tables are made from it
 ├── prices_latency.py   the check a row's measured latency passes, apart from
@@ -264,6 +269,8 @@ src/web_router/
     │                   the caller's `chain`, what a member's failure means
     ├── _chain_deadline.py a one-call chain out of time: the first empty
     │                   answer it holds, else the deadline naming each reason
+    ├── _auto_extract.py which members of extract `auto` can serve a request: the
+    │                   format and every option it sets; apart so auto.py stops growing
     ├── auto.py         the default for search, extract, research, browser and
     │                   browse: keyed backends, then keyless (research and browse
     │                   have no keyless tier, so their chains end there; a browser

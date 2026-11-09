@@ -132,10 +132,9 @@ _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoResearchProvider", AUTO_EXTRA),
 }
 
-# Opening a session needs only httpx, which `all` installs, so the vendors name
-# `all` rather than `browser`: that extra is Playwright, for the handle's page
-# actions, and opening a session does not need it. `local` needs only the
-# standard library, so its column is never quoted.
+# Opening a session needs only httpx, which `all` installs, so the vendors name `all` rather
+# than `browser`, which is Playwright for the handle's page actions and not needed to open one.
+# `local` needs only the standard library, so its column is never quoted.
 _BUILTIN_BROWSER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_STEEL: ("web_router.providers.steel", "SteelBrowserProvider", EXTRA_ALL),
     PROVIDER_BROWSERBASE: ("web_router.providers.browserbase", "BrowserbaseBrowserProvider", EXTRA_ALL),

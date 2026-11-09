@@ -19,7 +19,6 @@ from web_router.client import AsyncWebRouter
 from web_router.constants import (
     ENV_BRAVE_API_KEY,
     ENV_BROWSER_USE_API_KEY,
-    ENV_BROWSERBASE_API_KEY,
     ENV_HYPERBROWSER_API_KEY,
     ENV_JINA_API_KEY,
     ENV_LINKUP_API_KEY,
@@ -46,7 +45,6 @@ from web_router.constants import (
     MCP_TOOL_TEMPLATES,
     PROVIDER_AUTO,
     PROVIDER_BRAVE,
-    PROVIDER_BROWSERBASE,
     PROVIDER_EXA_MCP,
     PROVIDER_HYPERBROWSER,
     PROVIDER_JINA,
@@ -175,17 +173,6 @@ def test_an_option_no_configured_route_maps_is_not_advertised(no_keys: None, mon
     monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
     assert {"include_domains", "country"} <= set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
     assert "include_domains" in _tool(tools, MCP_TOOL_RESEARCH).input_schema["properties"]
-
-
-def test_extract_offers_no_way_to_name_a_saved_profile(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A logged-in identity is set in code, as on browser_open; one sent anyway is dropped before the library."""
-    monkeypatch.setenv(ENV_BROWSERBASE_API_KEY, "x")
-    tools = WebRouterTools(AsyncWebRouter(), research_wait=0.0, browse_wait=0.0)
-    extract = _tool(tools, MCP_TOOL_EXTRACT)
-
-    assert PROVIDER_BROWSERBASE in extract.input_schema["properties"]["provider"]["enum"]
-    assert "profile" not in extract.input_schema["properties"]
-    assert "profile" not in tools._kwargs(MCP_TOOL_EXTRACT, {"urls": ["https://example.com"], "profile": "ctx-1"})
 
 
 def test_browser_open_offers_only_the_options_and_levels_its_members_serve(

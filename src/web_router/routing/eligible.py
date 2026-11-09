@@ -28,7 +28,7 @@ from web_router.exceptions import (
     UnsupportedParameterError,
 )
 from web_router.routing.contract import Plan, ToolName, candidate_id
-from web_router.types import ExtractRequest, NormalizedRequest
+from web_router.types import NormalizedRequest
 
 _NO_MEMBER_LEFT = (UnsupportedParameterError, UnsupportedFormatError, MissingParameterError, NoAnswerProviderError)
 """What an ``auto``'s ``_eligible`` raises when no member can serve the request: no candidates, not a failure."""
@@ -71,9 +71,9 @@ def _built(auto: Any) -> tuple[list[int], dict[str, str]]:
     a member that is not configured -- no credential and no keyless tier, a
     setting missing -- or whose extra is not installed, refuses to be built and
     is no candidate; so is one that is no backend of this method, and one that
-    raises anything else, dropped with the class of what it raised. Extract's
-    ``_eligible`` reads only the format, so its other options are checked
-    against the built member.
+    raises anything else, dropped with the class of what it raised. ``_eligible``
+    reads the members' classes, so the options are checked again against the
+    built member.
     """
     built: list[int] = []
     unbuilt: dict[str, str] = {}

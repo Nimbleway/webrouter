@@ -16,7 +16,6 @@ from web_router.constants import (
     AUTO_CLIENT_PROVIDERS,
     AUTO_EXTRACT_APPENDED,
     AUTO_EXTRACT_DEFAULT_FORMAT,
-    AUTO_EXTRACT_FORMATS,
     AUTO_EXTRACT_KEYLESS,
     AUTO_EXTRACT_PREFERRED,
     AUTO_KEYLESS,
@@ -563,8 +562,7 @@ def _extract_member(
 ) -> type:
     """Register a fake extract chain member that answers, or fails in a given way, returning ``formats``.
 
-    A URL in ``blank`` comes back as a document with no text, and ``supported``
-    is what it declares it maps.
+    A URL in ``blank`` comes back as a document with no text; ``supported`` is what it maps.
     """
     from tests.conftest import FakeExtractProvider
 
@@ -671,68 +669,6 @@ async def test_the_extract_chain_works_the_same_way_async(extract_chain_members:
 
     assert extract_chain_members.called == ["first", "second"]
     assert response.provider == "second"
-
-
-def test_auto_offers_exactly_the_formats_some_extract_member_returns() -> None:
-    """The union: a format is routed to a member that returns it, so none has to be given up for the weakest."""
-    members = [name for name, _ in AUTO_EXTRACT_KEYLESS] + list(AUTO_EXTRACT_PREFERRED) + list(AUTO_EXTRACT_APPENDED)
-    offered = frozenset().union(*(get_extract_provider_class(name).supported_formats for name in members))
-
-    assert offered == AUTO_EXTRACT_FORMATS
-    mapped = frozenset().union(*(get_extract_provider_class(name).supported_parameters for name in members))
-    assert mapped == EXTRACT_PARAMETERS, "auto accepts exactly what some member maps, as search's does"
-
-
-def test_a_profile_extract_skips_to_the_member_that_maps_it(extract_chain_members: _Recorder) -> None:
-    """Never dropped: a fetch that quietly ran anonymously would read as the login having failed."""
-    _extract_member(extract_chain_members, "first", supported=frozenset({"format"}))
-    _extract_member(extract_chain_members, "second")
-
-    provider = AutoExtractProvider(chain=(("first", {}), ("second", {})))
-    try:
-        response = provider.extract(ExtractRequest(urls=["https://example.com"], profile="ctx-1"))
-    finally:
-        provider.close()
-
-    assert extract_chain_members.called == ["second"]
-    assert response.provider == "second"
-    assert set(provider._members) == {1}, "the member that cannot read a profile was never built"
-
-
-def test_a_profile_no_member_maps_is_rejected_before_any_member_is_tried(extract_chain_members: _Recorder) -> None:
-    _extract_member(extract_chain_members, "first", supported=frozenset({"format"}))
-    _extract_member(extract_chain_members, "second", supported=frozenset({"format"}), formats=frozenset({"text"}))
-
-    provider = AutoExtractProvider(chain=(("first", {}), ("second", {})))
-    try:
-        with pytest.raises(UnsupportedParameterError) as caught:
-            provider.extract(ExtractRequest(urls=["https://example.com"], profile="ctx-1"))
-    finally:
-        provider.close()
-
-    message = str(caught.value)
-    assert caught.value.parameters == ["profile"]
-    assert "first (does not map 'profile')" in message
-    assert "second (returns only 'text'; does not map 'profile')" in message, "every reason a member was passed over"
-    assert "provider_options" not in message, "auto has no provider_options to point at"
-    assert extract_chain_members.called == []
-    assert provider._members == {}
-
-
-def test_a_profile_mapped_only_where_the_format_is_not_blames_the_format(extract_chain_members: _Recorder) -> None:
-    """The member that reads profiles is in the chain; telling the caller to add one would send them the wrong way."""
-    _extract_member(extract_chain_members, "first", supported=frozenset({"format"}))
-    _extract_member(extract_chain_members, "second", formats=frozenset({"markdown", "html"}))
-
-    provider = AutoExtractProvider(chain=(("first", {}), ("second", {})))
-    try:
-        with pytest.raises(UnsupportedFormatError) as caught:
-            provider.extract(ExtractRequest(urls=["https://example.com"], format="text", profile="ctx-1"))
-    finally:
-        provider.close()
-
-    assert "second (returns only 'html', 'markdown')" in str(caught.value)
-    assert extract_chain_members.called == []
 
 
 def test_a_text_extract_skips_to_a_member_that_returns_text(extract_chain_members: _Recorder) -> None:

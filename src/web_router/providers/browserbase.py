@@ -61,6 +61,10 @@ import httpx
 from pydantic import SecretStr, TypeAdapter, ValidationError
 
 from web_router.constants import (
+    ENV_BROWSERBASE_API_KEY,
+    PROVIDER_BROWSERBASE,
+)
+from web_router.constants_browserbase import (
     BROWSERBASE_API_KEY_HEADER,
     BROWSERBASE_BASE_URL,
     BROWSERBASE_BROWSE_RUN_PATH,
@@ -77,8 +81,6 @@ from web_router.constants import (
     BROWSERBASE_SESSION_PATH,
     BROWSERBASE_SESSION_STATES,
     BROWSERBASE_STEALTH,
-    ENV_BROWSERBASE_API_KEY,
-    PROVIDER_BROWSERBASE,
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpBrowseProvider, HttpBrowserProvider, ReleaseMethod

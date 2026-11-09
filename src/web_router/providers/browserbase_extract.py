@@ -25,6 +25,10 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 from web_router.constants import (
+    ENV_BROWSERBASE_API_KEY,
+    PROVIDER_BROWSERBASE,
+)
+from web_router.constants_browserbase import (
     BROWSERBASE_API_KEY_HEADER,
     BROWSERBASE_BASE_URL,
     BROWSERBASE_EXTRACT_DEFAULT_FORMAT,
@@ -33,10 +37,8 @@ from web_router.constants import (
     BROWSERBASE_FETCH_BINARY_ENCODING,
     BROWSERBASE_HTML_CONTENT_TYPES,
     BROWSERBASE_PROFILE_FIELD,
-    ENV_BROWSERBASE_API_KEY,
     MSG_BROWSERBASE_FETCH_NO_TEXT,
     MSG_BROWSERBASE_FETCH_NOT_FORMAT,
-    PROVIDER_BROWSERBASE,
 )
 from web_router.providers._http import HttpExtractProvider
 from web_router.providers._utils import build_payload

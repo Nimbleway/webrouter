@@ -30,15 +30,8 @@ from web_router.registry import (
     configured_extract_providers,
     configured_providers,
 )
-from web_router.types import (
-    BenchmarkReport,
-    BenchmarkRun,
-    ExtractBenchmarkReport,
-    ExtractBenchmarkRun,
-    ExtractFormat,
-    Provider,
-    SearchDepth,
-)
+from web_router.types import ExtractFormat, Provider, SearchDepth
+from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
 
 if TYPE_CHECKING:
     from web_router.client import AsyncWebRouter, WebRouter

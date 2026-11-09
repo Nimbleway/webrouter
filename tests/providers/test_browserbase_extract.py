@@ -29,7 +29,7 @@ from tests.providers._browserbase_fetch import (
     recorded_fetch,
 )
 from web_router import WebRouter
-from web_router.constants import BROWSERBASE_API_KEY_HEADER, BROWSERBASE_BASE_URL
+from web_router.constants_browserbase import BROWSERBASE_API_KEY_HEADER, BROWSERBASE_BASE_URL
 from web_router.types import ExtractRequest
 
 COOKIE_ECHO = "https://httpbin.org/cookies"

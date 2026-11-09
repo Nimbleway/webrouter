@@ -36,7 +36,7 @@ caller gets. :meth:`WebRouter.benchmark_extract` is the same consumer of
 from __future__ import annotations
 
 import threading
-from collections.abc import Collection, Mapping
+from collections.abc import Collection
 from contextlib import AsyncExitStack, ExitStack, suppress
 from types import TracebackType
 from typing import Any, Generic, TypeVar
@@ -55,6 +55,7 @@ from web_router.client_requests import (
     build_research_request,
     build_search_request,
 )
+from web_router.client_template import AsyncTemplate, SyncTemplate
 from web_router.constants import (
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
@@ -103,10 +104,6 @@ from web_router.types import (
     SearchDepth,
     SearchResponse,
     StealthLevel,
-    Template,
-    TemplatePage,
-    TemplateRequest,
-    TemplateResponse,
     Viewport,
     provider_name,
 )
@@ -340,7 +337,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan, SyncBudget):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan, SyncBudget, SyncTemplate):
     """Synchronous router.
 
     Example:
@@ -430,61 +427,6 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
         return self._routed(chain, request, budget, chain.extract)
-
-    def templates(
-        self,
-        *,
-        provider: str | Provider | TemplateProvider,
-        limit: int | None = None,
-        offset: int | None = None,
-    ) -> TemplatePage:
-        """List one page of the templates ``provider`` holds.
-
-        A template is a vendor's saved, site-specific extraction: run on one
-        page of the site it was built for, it returns a record with fixed
-        fields. Names, inputs and fields are the vendor's own, which is why
-        ``provider`` has no default. The page says where in the catalogue it
-        sits and, when the backend reports it, how many templates there are
-        in all; ``limit`` and ``offset`` left unset leave the paging to the
-        backend.
-        """
-        return self.get_template_provider(provider).templates(limit=limit, offset=offset)
-
-    def template(
-        self,
-        name: str,
-        *,
-        provider: str | Provider | TemplateProvider,
-    ) -> Template:
-        """Describe one template: the inputs a run takes and the record it returns, as JSON Schema."""
-        return self.get_template_provider(provider).template(name)
-
-    def run_template(
-        self,
-        template: str,
-        inputs: Mapping[str, Any] | None = None,
-        *,
-        provider: str | Provider | TemplateProvider,
-        format: ExtractFormat | None = None,
-        provider_options: dict[str, Any] | None = None,
-    ) -> TemplateResponse:
-        """Run one of ``provider``'s templates on one page and return its record.
-
-        ``inputs`` are the template's own, named by its
-        :attr:`~web_router.Template.input_schema` -- a URL for some
-        templates, an id, a slug or a search term for others. ``format`` asks
-        for the page beside the record; unset, the record comes back alone.
-        A run the backend could not complete raises rather than coming back
-        with an empty record, and an unknown name raises
-        :class:`~web_router.TemplateNotFoundError`. One call is one page and
-        one set of inputs: a backend whose templates run as jobs over many
-        inputs would answer through its synchronous endpoint, under that
-        endpoint's own time cap.
-        """
-        request = TemplateRequest(
-            template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
-        )
-        return self.get_template_provider(provider).run(request)
 
     def research(
         self,
@@ -716,7 +658,9 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         self.close()
 
 
-class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncPlan, AsyncBudget):
+class AsyncWebRouter(
+    _BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncPlan, AsyncBudget, AsyncTemplate
+):
     """Asynchronous router.
 
     Example:
@@ -772,44 +716,6 @@ class AsyncWebRouter(_BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmar
         request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
         return await self._arouted(chain, request, budget, chain.aextract)
-
-    async def templates(
-        self,
-        *,
-        provider: str | Provider | TemplateProvider,
-        limit: int | None = None,
-        offset: int | None = None,
-    ) -> TemplatePage:
-        """List one page of the templates ``provider`` holds."""
-        return await self.get_template_provider(provider).atemplates(limit=limit, offset=offset)
-
-    async def template(
-        self,
-        name: str,
-        *,
-        provider: str | Provider | TemplateProvider,
-    ) -> Template:
-        """Describe one template: the inputs a run takes and the record it returns, as JSON Schema."""
-        return await self.get_template_provider(provider).atemplate(name)
-
-    async def run_template(
-        self,
-        template: str,
-        inputs: Mapping[str, Any] | None = None,
-        *,
-        provider: str | Provider | TemplateProvider,
-        format: ExtractFormat | None = None,
-        provider_options: dict[str, Any] | None = None,
-    ) -> TemplateResponse:
-        """Run one of ``provider``'s templates on one page and return its record.
-
-        As on the sync router: ``inputs`` are the template's own, and
-        ``format`` asks for the page beside the record.
-        """
-        request = TemplateRequest(
-            template=template, inputs=dict(inputs or {}), format=format, provider_options=provider_options or {}
-        )
-        return await self.get_template_provider(provider).arun(request)
 
     async def research(
         self,
