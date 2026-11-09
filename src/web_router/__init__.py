@@ -42,6 +42,7 @@ holding it ends:
 
 from web_router._version import __version__
 from web_router.client import AsyncWebRouter, WebRouter
+from web_router.client_scope import AsyncBudgetScope, BudgetScope
 from web_router.constants import DEFAULT_PROVIDER
 from web_router.exceptions import (
     BenchmarkTimeoutError,
@@ -59,12 +60,14 @@ from web_router.exceptions import (
     ProviderNotFoundError,
     ProviderNotInstalledError,
     ResearchTimeoutError,
+    RouterError,
     StaleElementError,
     TemplateNotFoundError,
     UnsupportedFormatError,
     UnsupportedParameterError,
     WebRouterError,
 )
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -110,6 +113,8 @@ from web_router.registry_answer import (
     register_answer_provider,
     unregister_answer_provider,
 )
+from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, RouterLike, ToolName
+from web_router.routing.pool_status import BudgetStatus
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -135,10 +140,6 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
-    PageFormat,
-    PageLoadState,
-    PageSnapshot,
-    PageState,
     Provider,
     ResearchEffort,
     ResearchOutcome,
@@ -146,7 +147,6 @@ from web_router.types import (
     ResearchRequest,
     ResearchResponse,
     ResearchState,
-    Screenshot,
     SearchDepth,
     SearchRequest,
     SearchResponse,
@@ -160,6 +160,8 @@ from web_router.types import (
     Viewport,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
+from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
+from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 __all__ = [
     "ANSWER_PARAMETERS",
@@ -174,6 +176,7 @@ __all__ = [
     "AnswerRequest",
     "AnswerResponse",
     "AsyncBrowserHandle",
+    "AsyncBudgetScope",
     "AsyncWebRouter",
     "BenchmarkReport",
     "BenchmarkRun",
@@ -193,9 +196,17 @@ __all__ = [
     "BrowserRequest",
     "BrowserSession",
     "BrowserState",
+    "Budget",
+    "BudgetExceededError",
+    "BudgetScope",
+    "BudgetStatus",
+    "Candidate",
     "Citation",
     "ConfigurationError",
     "DeadlineExceededError",
+    "DecisionAttempt",
+    "DecisionHop",
+    "DecisionRecord",
     "ElementNotFoundError",
     "ExtractBenchmarkReport",
     "ExtractBenchmarkRun",
@@ -213,6 +224,7 @@ __all__ = [
     "PageLoadState",
     "PageSnapshot",
     "PageState",
+    "Plan",
     "Provider",
     "ProviderError",
     "ProviderNotFoundError",
@@ -227,6 +239,10 @@ __all__ = [
     "ResearchResponse",
     "ResearchState",
     "ResearchTimeoutError",
+    "RouteDecision",
+    "RouteRequest",
+    "RouterError",
+    "RouterLike",
     "Screenshot",
     "SearchDepth",
     "SearchProvider",
@@ -242,6 +258,7 @@ __all__ = [
     "TemplateRequest",
     "TemplateResponse",
     "TemplateSample",
+    "ToolName",
     "UnsupportedFormatError",
     "UnsupportedParameterError",
     "Viewport",

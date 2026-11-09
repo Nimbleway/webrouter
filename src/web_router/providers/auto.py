@@ -60,11 +60,7 @@ from web_router.constants import (
     AUTO_BROWSE_JOB_SEPARATOR,
     AUTO_BROWSE_PREFERRED,
     AUTO_BROWSE_SUPPORTED_PARAMETERS,
-    AUTO_BROWSER_KEYLESS,
-    AUTO_BROWSER_PREFERRED,
-    AUTO_BROWSER_STEALTH_LEVELS,
     AUTO_CHAIN_BROWSE,
-    AUTO_CHAIN_BROWSER,
     AUTO_CHAIN_EXTRACT,
     AUTO_CHAIN_RESEARCH,
     AUTO_CHAIN_SEARCH,
@@ -88,16 +84,6 @@ from web_router.constants import (
     MSG_AUTO_BROWSE_SKIPPED,
     MSG_AUTO_BROWSE_UNKNOWN_JOB,
     MSG_AUTO_BROWSE_UNMAPPED,
-    MSG_AUTO_BROWSER_EXHAUSTED,
-    MSG_AUTO_BROWSER_NEEDS,
-    MSG_AUTO_BROWSER_NO_ELIGIBLE,
-    MSG_AUTO_BROWSER_NO_ELIGIBLE_MISSING,
-    MSG_AUTO_BROWSER_NO_PROFILE,
-    MSG_AUTO_BROWSER_NO_PROVIDER_OPTIONS,
-    MSG_AUTO_BROWSER_OWNS_NOTHING,
-    MSG_AUTO_BROWSER_SKIPPED,
-    MSG_AUTO_BROWSER_UNMAPPED,
-    MSG_AUTO_BROWSER_UNSUPPORTED,
     MSG_AUTO_EXTRACT_NO_MEMBER,
     MSG_AUTO_EXTRACT_UNMAPPED,
     MSG_AUTO_RESEARCH_NEEDS,
@@ -125,12 +111,9 @@ from web_router.providers._chain import (
     _ChainSpec,
     _empty_extract,
     _empty_search,
-    _exhausted,
-    _held_or_late,
     _held_or_raise,
     _keyed_chain,
     _keyless_after,
-    _late_answer,
     _member_options,
     _members_and_chain,
     _no_backend,
@@ -138,24 +121,21 @@ from web_router.providers._chain import (
     _quoted,
     _valued,
 )
+from web_router.providers._chain_deadline import _held_or_late, _late_answer
+from web_router.providers.auto_browser import AutoBrowserProvider as AutoBrowserProvider
 from web_router.providers.base import (
-    AsyncBrowserHandle,
     BrowseJob,
     BrowseProvider,
-    BrowserHandle,
-    BrowserProvider,
     ExtractProvider,
     ResearchJob,
     ResearchProvider,
     SearchProvider,
 )
+from web_router.routing.attempts import admitted, failed, in_call_order
 from web_router.types import (
-    BROWSER_PARAMETERS,
     EXTRACT_PARAMETERS,
     BrowseProgress,
     BrowseRequest,
-    BrowserRequest,
-    BrowserSession,
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
@@ -163,7 +143,6 @@ from web_router.types import (
     ResearchRequest,
     SearchRequest,
     SearchResponse,
-    StealthLevel,
 )
 
 
@@ -242,15 +221,17 @@ class AutoProvider(SearchProvider):
     def _search(self, request: SearchRequest) -> SearchResponse:
         failures: dict[str, WebRouterError] = {}
         held: SearchResponse | None = None
-        for position, provider_name in self._eligible(request):
+        for position, provider_name in in_call_order("search", self._eligible(request)):
             if (late := _late_answer(held, self.name, failures)) is not None:
                 return late
+            if not admitted("search", provider_name, request):
+                continue
             try:
                 response = self._member(position).search(request)
             except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name)
+                return _held_or_late(held, self.name, failures, exc, provider_name, "search")
             except _RECOVERABLE as exc:
-                failures[provider_name] = exc
+                failed(failures, "search", provider_name, exc)
                 continue
             if not (self.fallback_on_empty and _empty_search(response)):
                 return response
@@ -261,15 +242,17 @@ class AutoProvider(SearchProvider):
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
         failures: dict[str, WebRouterError] = {}
         held: SearchResponse | None = None
-        for position, provider_name in self._eligible(request):
+        for position, provider_name in in_call_order("search", self._eligible(request)):
             if (late := _late_answer(held, self.name, failures)) is not None:
                 return late
+            if not admitted("search", provider_name, request):
+                continue
             try:
                 response = await self._member(position).asearch(request)
             except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name)
+                return _held_or_late(held, self.name, failures, exc, provider_name, "search")
             except _RECOVERABLE as exc:
-                failures[provider_name] = exc
+                failed(failures, "search", provider_name, exc)
                 continue
             if not (self.fallback_on_empty and _empty_search(response)):
                 return response
@@ -395,15 +378,17 @@ class AutoExtractProvider(ExtractProvider):
         delegated = self._delegated(request, urls)
         failures: dict[str, WebRouterError] = {}
         held: ExtractResponse | None = None
-        for position, provider_name in self._eligible(request):
+        for position, provider_name in in_call_order("extract", self._eligible(request)):
             if (late := _late_answer(held, self.name, failures)) is not None:
                 return late
+            if not admitted("extract", provider_name, delegated):
+                continue
             try:
                 response = self._member(position).extract(delegated)
             except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name)
+                return _held_or_late(held, self.name, failures, exc, provider_name, "extract")
             except _RECOVERABLE as exc:
-                failures[provider_name] = exc
+                failed(failures, "extract", provider_name, exc)
                 continue
             if not (self.fallback_on_empty and _empty_extract(response)):
                 return response
@@ -414,15 +399,17 @@ class AutoExtractProvider(ExtractProvider):
         delegated = self._delegated(request, urls)
         failures: dict[str, WebRouterError] = {}
         held: ExtractResponse | None = None
-        for position, provider_name in self._eligible(request):
+        for position, provider_name in in_call_order("extract", self._eligible(request)):
             if (late := _late_answer(held, self.name, failures)) is not None:
                 return late
+            if not admitted("extract", provider_name, delegated):
+                continue
             try:
                 response = await self._member(position).aextract(delegated)
             except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name)
+                return _held_or_late(held, self.name, failures, exc, provider_name, "extract")
             except _RECOVERABLE as exc:
-                failures[provider_name] = exc
+                failed(failures, "extract", provider_name, exc)
                 continue
             if not (self.fallback_on_empty and _empty_extract(response)):
                 return response
@@ -548,7 +535,9 @@ class AutoResearchProvider(ResearchProvider):
     def _start(self, request: ResearchRequest) -> ResearchProgress:
         eligible = self._eligible(request)
         failures: dict[str, WebRouterError] = {}
-        for position, provider_name in eligible:
+        for position, provider_name in in_call_order("research", eligible):
+            if not admitted("research", provider_name, request):
+                continue
             try:
                 job = self._member(position).submit(request)
             except _RECOVERABLE as exc:
@@ -558,7 +547,7 @@ class AutoResearchProvider(ResearchProvider):
                 # from the moment it was accepted.
                 if not _nothing_started(exc):
                     raise
-                failures[provider_name] = exc
+                failed(failures, "research", provider_name, exc)
                 continue
             # Registered from the start progress, with no poll first: a poll
             # that failed here would leave a billed run with no handle to it.
@@ -568,13 +557,15 @@ class AutoResearchProvider(ResearchProvider):
     async def _astart(self, request: ResearchRequest) -> ResearchProgress:
         eligible = self._eligible(request)
         failures: dict[str, WebRouterError] = {}
-        for position, provider_name in eligible:
+        for position, provider_name in in_call_order("research", eligible):
+            if not admitted("research", provider_name, request):
+                continue
             try:
                 job = await self._member(position).asubmit(request)
             except _RECOVERABLE as exc:
                 if not _nothing_started(exc):
                     raise
-                failures[provider_name] = exc
+                failed(failures, "research", provider_name, exc)
                 continue
             return self._took(provider_name, job)
         raise _no_backend(self.name, failures)
@@ -690,195 +681,6 @@ class AutoResearchProvider(ResearchProvider):
             await member.aclose()
 
 
-class AutoBrowserProvider(BrowserProvider):
-    """Opens a session through the first backend that will, credentialed ones first, then ``local``.
-
-    Each member is checked against the request on its class before anything is
-    opened, as ``auto`` research does: ``stealth="low"`` passes over ``local``,
-    which has none, ``idle_timeout`` passes over every backend without an idle
-    limit, and a member is passed over too for a stealth level it lacks, a
-    country it has no proxy in, or an option it serves only beside one the
-    request left unset. The :data:`~web_router.constants.BROWSER_TIMEOUT` default does
-    not count, because it is ours rather than the caller's: counted, it would
-    pass over every backend with no lifetime limit on behalf of an option
-    nobody set. The member still applies it for itself, exactly as it would if
-    the caller had named it.
-
-    ``provider_options`` is refused rather than passed on. It is one backend's
-    own fields, untranslated, so it cannot mean the same thing to whichever
-    member happens to answer -- to ``local`` it is Chrome command-line
-    switches -- and a caller who wrote it for one backend should name it.
-    ``profile`` and ``persist_profile`` are refused for the same reason: a
-    profile is saved on one backend, under that backend's own id or name.
-
-    The handle returned is the member's own: it reports that member as its
-    provider, and its release and status go straight to it.
-    """
-
-    name: ClassVar[str] = PROVIDER_AUTO
-    # Everything some backend could honour; whether one in *this* chain can is
-    # decided per request, by eligibility.
-    supported_parameters: ClassVar[frozenset[str]] = BROWSER_PARAMETERS
-    stealth_levels: ClassVar[frozenset[StealthLevel]] = AUTO_BROWSER_STEALTH_LEVELS
-
-    def __init__(
-        self,
-        *,
-        chain: _ChainSpec | None = None,
-        members_config: Mapping[str, Mapping[str, Any]] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """
-        Args:
-            chain: Backends to try, in order, as on :class:`AutoProvider`; keyed
-                by method, this reads the ``"browser"`` entry.
-            **kwargs: Ignored, as on :class:`AutoProvider`.
-        """
-        super().__init__(**kwargs)
-        self._members_config, self._chain = _members_and_chain(
-            chain, members_config, AUTO_CHAIN_BROWSER, self.default_chain
-        )
-        self._members: dict[int, BrowserProvider] = {}
-
-    @staticmethod
-    def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
-        """The backends you hold credentials for, in preference order, then ``local``."""
-        from web_router.registry import configured_browser_providers
-
-        return (
-            _keyed_chain(AUTO_BROWSER_PREFERRED, set(configured_browser_providers()) | set(in_code))
-            + AUTO_BROWSER_KEYLESS
-        )
-
-    @property
-    def members(self) -> tuple[str, ...]:
-        """The backends this instance would try, in order: its ``chain``, or the default it resolved at construction."""
-        return tuple(provider_name for provider_name, _ in self._chain)
-
-    def _member(self, position: int) -> BrowserProvider:
-        """Build and cache one member. Imported here so the chain stays lazy."""
-        from web_router.registry import create_browser_provider
-
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_browser_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
-
-    def _opened(self, request: BrowserRequest) -> BrowserHandle:
-        failures: dict[str, WebRouterError] = {}
-        for position, provider_name in self._eligible(request):
-            try:
-                # Returned as it is: the first session opened is the only one.
-                return self._member(position).open(request)
-            except _RECOVERABLE as exc:
-                if not _nothing_started(exc):
-                    raise
-                failures[provider_name] = exc
-        raise _exhausted(self.name, failures, MSG_AUTO_BROWSER_EXHAUSTED)
-
-    async def _aopened(self, request: BrowserRequest) -> AsyncBrowserHandle:
-        failures: dict[str, WebRouterError] = {}
-        for position, provider_name in self._eligible(request):
-            try:
-                return await self._member(position).aopen(request)
-            except _RECOVERABLE as exc:
-                if not _nothing_started(exc):
-                    raise
-                failures[provider_name] = exc
-        raise _exhausted(self.name, failures, MSG_AUTO_BROWSER_EXHAUSTED)
-
-    def _eligible(self, request: BrowserRequest) -> list[tuple[int, str]]:
-        """The chain members that can serve every option the caller set, as it was set, in order.
-
-        A member is passed over for an option it does not map, a value of one it
-        cannot serve, or an option it serves only beside one the request left
-        unset -- each read from its class, through the checks its own
-        ``validate`` makes, so nothing is spent finding out.
-
-        Raises:
-            MissingParameterError: if no member qualifies and one of them would
-                but for a partner option left unset -- setting it is the fix.
-            UnsupportedParameterError: for ``provider_options`` and a profile,
-                and when no member qualifies otherwise. Either message names why each
-                member was passed over.
-        """
-        from web_router.registry import get_browser_provider_class
-
-        if request.provider_options:
-            raise UnsupportedParameterError(
-                self.name, {"provider_options"}, detail=MSG_AUTO_BROWSER_NO_PROVIDER_OPTIONS
-            )
-        profile_options = {name for name in ("profile", "persist_profile") if getattr(request, name) is not None}
-        if profile_options:
-            raise UnsupportedParameterError(self.name, profile_options, detail=MSG_AUTO_BROWSER_NO_PROFILE)
-
-        wanted = request.specified_parameters()
-        eligible: list[tuple[int, str]] = []
-        skipped: list[str] = []
-        unmapped: set[str] = set()
-        refused: dict[str, Any] = {}
-        missing: set[str] = set()
-        for position, (provider_name, _) in enumerate(self._chain):
-            member_cls = get_browser_provider_class(provider_name)
-            lacks = wanted - member_cls.supported_parameters
-            refuses = member_cls.refused_values(request)
-            needs = member_cls.unmet_requirements(request)
-            if not lacks and not refuses and not needs:
-                eligible.append((position, provider_name))
-                continue
-            partners = frozenset().union(*needs.values())
-            reasons = [MSG_AUTO_BROWSER_UNMAPPED.format(names=_quoted(lacks))] if lacks else []
-            if refuses:
-                reasons.append(MSG_AUTO_BROWSER_UNSUPPORTED.format(values=_valued(refuses)))
-            if needs:
-                beside = {option: getattr(request, option) for option in needs}
-                reasons.append(MSG_AUTO_BROWSER_NEEDS.format(names=_quoted(partners), values=_valued(beside)))
-            skipped.append(MSG_AUTO_BROWSER_SKIPPED.format(name=provider_name, reasons=" and ".join(reasons)))
-            unmapped |= lacks
-            refused.update(refuses)
-            if not lacks and not refuses:
-                missing |= partners
-
-        if eligible or not skipped:
-            return eligible
-        if missing:
-            raise MissingParameterError(
-                self.name, missing, detail=MSG_AUTO_BROWSER_NO_ELIGIBLE_MISSING.format(skipped="; ".join(skipped))
-            )
-        raise UnsupportedParameterError(
-            self.name,
-            unmapped | set(refused),
-            values=refused,
-            detail=MSG_AUTO_BROWSER_NO_ELIGIBLE.format(skipped="; ".join(skipped)),
-        )
-
-    def _open(self, request: BrowserRequest) -> BrowserSession:
-        # Unreachable: open() goes through _opened, which returns a member's
-        # handle, and a session unwrapped from it here would have no owner.
-        raise NotImplementedError  # pragma: no cover
-
-    async def _aopen(self, request: BrowserRequest) -> BrowserSession:
-        raise NotImplementedError  # pragma: no cover
-
-    def _release(self, session_id: str) -> None:
-        # Reached only by calling release() on this provider directly, since no
-        # handle it returned points back here.
-        raise ProviderError(self.name, MSG_AUTO_BROWSER_OWNS_NOTHING.format(session_id=session_id))
-
-    async def _arelease(self, session_id: str) -> None:
-        self._release(session_id)
-
-    def close(self) -> None:
-        for member in self._members.values():
-            member.close()
-
-    async def aclose(self) -> None:
-        for member in self._members.values():
-            await member.aclose()
-
-
 class AutoBrowseProvider(BrowseProvider):
     """Runs a browse task through the first backend that takes it. Every member needs a credential.
 
@@ -935,7 +737,9 @@ class AutoBrowseProvider(BrowseProvider):
 
     def _start(self, request: BrowseRequest) -> BrowseProgress:
         failures: dict[str, WebRouterError] = {}
-        for position, provider_name in self._eligible(request):
+        for position, provider_name in in_call_order("browse", self._eligible(request)):
+            if not admitted("browse", provider_name, request):
+                continue
             try:
                 job = self._member(position).submit(request)
             except _RECOVERABLE as exc:
@@ -944,7 +748,7 @@ class AutoBrowseProvider(BrowseProvider):
                 # nothing started may try the next member.
                 if not _nothing_started(exc):
                     raise
-                failures[provider_name] = exc
+                failed(failures, "browse", provider_name, exc)
                 continue
             # Registered from the start progress, with no poll first: a poll
             # that failed here would leave a billed task with no handle to it.
@@ -953,13 +757,15 @@ class AutoBrowseProvider(BrowseProvider):
 
     async def _astart(self, request: BrowseRequest) -> BrowseProgress:
         failures: dict[str, WebRouterError] = {}
-        for position, provider_name in self._eligible(request):
+        for position, provider_name in in_call_order("browse", self._eligible(request)):
+            if not admitted("browse", provider_name, request):
+                continue
             try:
                 job = await self._member(position).asubmit(request)
             except _RECOVERABLE as exc:
                 if not _nothing_started(exc):
                     raise
-                failures[provider_name] = exc
+                failed(failures, "browse", provider_name, exc)
                 continue
             return self._took(provider_name, job)
         raise self._no_backend(failures)
@@ -1059,20 +865,3 @@ class AutoBrowseProvider(BrowseProvider):
     async def aclose(self) -> None:
         for member in self._members.values():
             await member.aclose()
-
-
-def resolve_default_chains(config: Mapping[str, Any]) -> dict[str, tuple[tuple[str, dict[str, Any]], ...]]:
-    """Each method's chain as an ``auto`` built with ``config`` would resolve it, a configured ``chain`` included.
-
-    ``config`` is what the router hands ``auto``: its ``chain`` and ``members_config``.
-    """
-    defaults = {
-        AUTO_CHAIN_SEARCH: AutoProvider.default_chain,
-        AUTO_CHAIN_EXTRACT: AutoExtractProvider.default_chain,
-        AUTO_CHAIN_RESEARCH: AutoResearchProvider.default_chain,
-        AUTO_CHAIN_BROWSE: AutoBrowseProvider.default_chain,
-    }
-    return {
-        method: _members_and_chain(config.get("chain"), config.get("members_config"), method, default)[1]
-        for method, default in defaults.items()
-    }

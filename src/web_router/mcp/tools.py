@@ -1,4 +1,4 @@
-"""The twenty-one tools, and the session state they share.
+"""The twenty-four tools, and the session state they share.
 
 Everything here is a thin projection of :class:`~web_router.AsyncWebRouter`:
 each tool's arguments are the library's own keyword names, passed through
@@ -19,6 +19,7 @@ there.
 
 from __future__ import annotations
 
+import functools
 import os
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AsyncExitStack
@@ -76,7 +77,6 @@ from web_router.constants import (
     MCP_MSG_UNKNOWN_TOOL,
     MCP_PROVIDER_DESCRIPTION,
     MCP_RESEARCH_WAIT,
-    MCP_SERVER_INSTRUCTIONS,
     MCP_TOOL_ANSWER,
     MCP_TOOL_BROWSE,
     MCP_TOOL_BROWSE_STATUS,
@@ -105,6 +105,7 @@ from web_router.constants import (
     RESEARCH_ENV_BY_PROVIDER,
     TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.constants_mcp import MCP_SERVER_INSTRUCTIONS
 from web_router.exceptions import (
     BrowseTimeoutError,
     ProviderNotFoundError,
@@ -112,7 +113,11 @@ from web_router.exceptions import (
     ResearchTimeoutError,
 )
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
+from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
+from web_router.mcp.chains import CHAIN_OF
 from web_router.mcp.env import EnvSources, user_config_dir
+from web_router.mcp.routing import ROUTING_TOOLS
+from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.shaping import (
     HandleStore,
     Record,
@@ -129,8 +134,6 @@ from web_router.mcp.shaping import (
     shape_search,
 )
 from web_router.mcp.shaping_templates import shape_template, shape_template_run, shape_templates
-from web_router.providers.auto import AutoBrowserProvider, AutoExtractProvider, AutoProvider
-from web_router.providers.auto_answer import AutoAnswerProvider
 from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
 from web_router.registry import (
     configured_browse_providers,
@@ -156,10 +159,10 @@ from web_router.types import (
     TEMPLATE_PARAMETERS,
     ExtractFormat,
     ExtractResponse,
-    PageState,
     StealthLevel,
 )
 from web_router.types_answer import ANSWER_PARAMETERS
+from web_router.types_page import PageState
 
 _CONFIGURED: dict[str, Callable[[], list[str]]] = {
     MCP_TOOL_SEARCH: configured_providers,
@@ -200,54 +203,6 @@ _CLASS_OF: dict[str, Callable[[str], type[_BaseProvider]]] = {
 }
 """Each provider-picking tool's class lookup, which reads ``supported_parameters`` without a credential."""
 
-
-def _search_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
-    """The members the router's own search ``name`` would try, read as :func:`_browser_chain` reads its own."""
-    provider = router.get_provider(name)
-    return provider.members if isinstance(provider, AutoProvider) else ()
-
-
-def _answer_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
-    """The members the router's own answer ``name`` would try, read as :func:`_search_chain` reads its own."""
-    provider = router.get_answer_provider(name)
-    return provider.members if isinstance(provider, AutoAnswerProvider) else ()
-
-
-def _extract_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
-    """The members the router's own extract ``name`` would try, read as :func:`_browser_chain` reads its own.
-
-    ``max`` subclasses ``auto``, so this reads the members it would race the
-    same way.
-    """
-    provider = router.get_extract_provider(name)
-    return provider.members if isinstance(provider, AutoExtractProvider) else ()
-
-
-def _browser_chain(router: AsyncWebRouter, name: str) -> tuple[str, ...]:
-    """The members the router's own browser ``name`` would try.
-
-    Read from the instance the router serves ``open_browser`` with, so a
-    ``chain`` in ``provider_config`` is honoured exactly as a request honours
-    it. Building it costs no credential: members are created only when tried.
-    """
-    provider = router.get_browser_provider(name)
-    return provider.members if isinstance(provider, AutoBrowserProvider) else ()
-
-
-_CHAIN_OF: dict[str, Callable[[AsyncWebRouter, str], tuple[str, ...]]] = {
-    MCP_TOOL_SEARCH: _search_chain,
-    MCP_TOOL_EXTRACT: _extract_chain,
-    MCP_TOOL_ANSWER: _answer_chain,
-    MCP_TOOL_BROWSER_OPEN: _browser_chain,
-}
-"""The tools whose delegating providers declare what some member serves, and how each one's members are read.
-
-A delegating provider's own declaration says nothing about what can be served
-here -- search ``auto`` declares every filter Nimble maps, whether or not this
-machine holds a Nimble key, and extract's ``max`` declares every option as
-``auto`` does -- so each stands for the chain it would try instead. Research
-``auto`` declares a fixed surface, and is read as it is.
-"""
 
 _OPTIONS: dict[str, frozenset[str]] = {
     MCP_TOOL_SEARCH: NORMALIZED_PARAMETERS,
@@ -290,13 +245,13 @@ class WebRouterTools:
         browse_wait: float = MCP_BROWSE_WAIT,
         browsers: BrowserSessions | None = None,
         env: EnvSources | None = None,
-        router_factory: Callable[[], AsyncWebRouter] = AsyncWebRouter,
+        router_factory: Callable[[], AsyncWebRouter] | None = None,
+        routing: McpRouting | None = None,
     ) -> None:
         """
         Args:
-            router: The router to serve calls with. Built by ``router_factory``
-                when omitted, which is what reads the user's own environment
-                for their own keys.
+            router: The router to serve calls with. Built by ``router_factory`` when omitted, which
+                is what reads the user's own environment for their own keys.
             store: Where handles are kept. Bounded; a fresh one per session.
             research_wait: Seconds ``research`` waits before handing back a
                 handle instead of an answer.
@@ -307,11 +262,15 @@ class WebRouterTools:
                 capabilities resource and added to by ``load_env``. The entry
                 point passes what its startup lookup found.
             router_factory: Builds the router that takes over once
-                ``load_env`` has configured a backend. The package defaults
-                unless given; pass one whenever ``router`` is not those.
+                ``load_env`` has configured a backend. The package defaults, with
+                ``routing``'s router attached, unless given.
+            routing: The operator's router and ceiling (:mod:`web_router.mcp.routing_config`), read
+                from the process environment when omitted. The ceiling bounds :attr:`budget`.
         """
-        self._router_factory = router_factory
-        self.router = router if router is not None else router_factory()
+        self.routing = routing if routing is not None else McpRouting.from_environ()
+        self.budget = ConnectionBudget(self.routing.ceiling)
+        self._router_factory = router_factory or self.routing.build
+        self.router = router if router is not None else self._router_factory()
         # Routers load_env replaced: still serving every browser session and
         # job they started, and closed with the rest in aclose().
         self._retired: list[AsyncWebRouter] = []
@@ -335,6 +294,7 @@ class WebRouterTools:
             MCP_TOOL_BROWSE_STATUS: self._browse_status,
             MCP_TOOL_FETCH_RAW: self._fetch_raw,
             MCP_TOOL_LOAD_ENV: self._load_env,
+            **{name: functools.partial(handler, self) for name, handler in ROUTING_TOOLS.items()},
             MCP_TOOL_BROWSER_OPEN: self._browser_open,
             MCP_TOOL_BROWSER_GOTO: self._browser_goto,
             MCP_TOOL_BROWSER_SNAPSHOT: self._browser_snapshot,
@@ -381,7 +341,12 @@ class WebRouterTools:
             "default_provider": self.router.default_provider,
             "env": env,
             "unlock": _unlock(),
+            "routing": self.capabilities_routing(),
         }
+
+    def capabilities_routing(self) -> dict[str, Any]:
+        """The resource's ``routing`` section: the router, where prompts go, ``url_policy``, ceiling and budget."""
+        return self.routing.capabilities(self.budget.status())
 
     def keyed(self) -> bool:
         """Whether any backend is configured here that needed a credential to be."""
@@ -407,7 +372,8 @@ class WebRouterTools:
         handler = self._handlers.get(name)
         if handler is None:
             raise ValueError(MCP_MSG_UNKNOWN_TOOL.format(name=name, tools=", ".join(self._handlers)))
-        return await handler(arguments)
+        with self.budget.bound():
+            return await handler(arguments)
 
     async def aclose(self) -> None:
         """Release every browser session still open, then close every provider every router built."""
@@ -420,44 +386,46 @@ class WebRouterTools:
             stack.push_async_callback(self.browsers.aclose)
 
     async def _search(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        response = await self.router.search(**self._kwargs(MCP_TOOL_SEARCH, arguments))
+        response = await self.router.search(**self.arguments(MCP_TOOL_SEARCH, arguments))
         record = self.store.add(MCP_TOOL_SEARCH, raw=response.raw)
         return shape_search(response, record.handle, budget=max_response_chars())
 
     async def _extract(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        response = await self.router.extract(**self._kwargs(MCP_TOOL_EXTRACT, arguments))
+        response = await self.router.extract(**self.arguments(MCP_TOOL_EXTRACT, arguments))
         record = self.store.add(MCP_TOOL_EXTRACT, raw=response.raw)
         return shape_extract(response, record.handle, budget=max_response_chars())
 
     async def _templates(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        page = await self.router.templates(**self._kwargs(MCP_TOOL_TEMPLATES, arguments))
+        page = await self.router.templates(**self.arguments(MCP_TOOL_TEMPLATES, arguments))
         record = self.store.add(MCP_TOOL_TEMPLATES, raw=page.raw)
         return shape_templates(page, record.handle, budget=max_response_chars())
 
     async def _template(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        template = await self.router.template(**self._kwargs(MCP_TOOL_TEMPLATE, arguments))
+        template = await self.router.template(**self.arguments(MCP_TOOL_TEMPLATE, arguments))
         record = self.store.add(MCP_TOOL_TEMPLATE, raw=template.raw)
         return shape_template(template, record.handle, budget=max_response_chars())
 
     async def _run_template(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        response = await self.router.run_template(**self._kwargs(MCP_TOOL_RUN_TEMPLATE, arguments))
+        kwargs = self.arguments(MCP_TOOL_RUN_TEMPLATE, arguments)
+        with template_charged(self.router, kwargs):
+            response = await self.router.run_template(**kwargs)
         record = self.store.add(MCP_TOOL_RUN_TEMPLATE, raw=response.raw)
         return shape_template_run(response, record.handle, budget=max_response_chars())
 
     async def _answer(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        response = await self.router.answer(**self._kwargs(MCP_TOOL_ANSWER, arguments))
+        response = await self.router.answer(**self.arguments(MCP_TOOL_ANSWER, arguments))
         record = self.store.add(MCP_TOOL_ANSWER, raw=response.raw)
         return shape_answer(response, record.handle, budget=max_response_chars())
 
     async def _research(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        job = await self.router.submit_research(**self._kwargs(MCP_TOOL_RESEARCH, arguments))
+        job = await self.router.submit_research(**self.arguments(MCP_TOOL_RESEARCH, arguments))
         try:
-            response = await job.aresult(timeout=self.research_wait)
+            response = await job.aresult(timeout=(waited := wait_left(self.research_wait)))
         except ResearchTimeoutError:
             # Not a failure: the run is still going, and a stdio session cannot
             # be held open for the ten minutes it may take.
             handle = self.store.add(MCP_TOOL_RESEARCH, job=job).handle
-            return shape_pending(job, handle, wait=self.research_wait, note=MCP_MSG_RESEARCH_PENDING)
+            return shape_pending(job, handle, wait=waited, note=MCP_MSG_RESEARCH_PENDING)
         record = self.store.add(MCP_TOOL_RESEARCH, raw=response.raw, job=job)
         return shape_research(response, record.handle, budget=max_response_chars())
 
@@ -472,13 +440,13 @@ class WebRouterTools:
         return shape_research(progress.response, record.handle, budget=max_response_chars())
 
     async def _browse(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        job = await self.router.submit_browse(**self._kwargs(MCP_TOOL_BROWSE, arguments))
+        job = await self.router.submit_browse(**self.arguments(MCP_TOOL_BROWSE, arguments))
         try:
-            response = await job.aresult(timeout=self.browse_wait)
+            response = await job.aresult(timeout=(waited := wait_left(self.browse_wait)))
         except BrowseTimeoutError:
             # As for research: the task is still going, and is polled rather than waited on.
             handle = self.store.add(MCP_TOOL_BROWSE, job=job).handle
-            return shape_pending(job, handle, wait=self.browse_wait, note=MCP_MSG_BROWSE_PENDING)
+            return shape_pending(job, handle, wait=waited, note=MCP_MSG_BROWSE_PENDING)
         record = self.store.add(MCP_TOOL_BROWSE, raw=response.raw, job=job)
         return shape_browse(response, record.handle, budget=max_response_chars())
 
@@ -514,7 +482,7 @@ class WebRouterTools:
         return payload
 
     async def _load_env(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        kwargs = self._kwargs(MCP_TOOL_LOAD_ENV, arguments)
+        kwargs = self.arguments(MCP_TOOL_LOAD_ENV, arguments)
         path, remember = kwargs[MCP_ARG_PATH], kwargs.get(MCP_ARG_REMEMBER, False)
         if not isinstance(path, str) or not isinstance(remember, bool):
             raise ValueError(MCP_MSG_ENV_BAD_ARGUMENTS)
@@ -553,7 +521,7 @@ class WebRouterTools:
         undeclared = sorted(name for name in arguments if name not in allowed)
         if undeclared:
             raise ValueError(MCP_MSG_BROWSER_UNDECLARED.format(names=", ".join(undeclared), allowed=", ".join(allowed)))
-        kwargs = self._kwargs(MCP_TOOL_BROWSER_OPEN, arguments)
+        kwargs = self.arguments(MCP_TOOL_BROWSER_OPEN, arguments)
         # Sent unset, and never past the library's own default, so a session a
         # conversation forgets still ends on the backend's side whatever happens
         # to this process -- but only to a backend that maps a lifetime, or a
@@ -565,7 +533,8 @@ class WebRouterTools:
         for name in ("timeout", "idle_timeout"):
             _lower(kwargs, name, MCP_BROWSER_SESSION_TIMEOUT_LIMIT, lowered)
         require_playwright()
-        session_id = await self.browsers.open(lambda: self.router.open_browser(**kwargs))
+        with browser_charged(self.router, kwargs):
+            session_id = await self.browsers.open(lambda: self.router.open_browser(**kwargs))
         return {
             MCP_ARG_SESSION_ID: session_id,
             "provider": self.browsers.provider_of(session_id),
@@ -636,7 +605,7 @@ class WebRouterTools:
         return {MCP_ARG_SESSION_ID: session_id, **self._scrubbed(shaped, count, lowered)}
 
     async def _browser_close(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        session_id = str(self._kwargs(MCP_TOOL_BROWSER_CLOSE, arguments)[MCP_ARG_SESSION_ID])
+        session_id = str(self.arguments(MCP_TOOL_BROWSER_CLOSE, arguments)[MCP_ARG_SESSION_ID])
         ended = await self.browsers.close(session_id, MCP_BROWSER_END_CLOSED)
         payload: dict[str, Any] = {MCP_ARG_SESSION_ID: session_id, "state": "released"}
         if ended is not None:
@@ -645,7 +614,7 @@ class WebRouterTools:
 
     def _session_kwargs(self, tool: str, arguments: Mapping[str, Any]) -> tuple[str, dict[str, Any], list[str]]:
         """The session id, the action's keyword arguments, and a note for each one lowered to its limit."""
-        kwargs = self._kwargs(tool, arguments)
+        kwargs = self.arguments(tool, arguments)
         lowered: list[str] = []
         # An action holds its session's lock, and a held session is never reaped.
         _lower(kwargs, "timeout", MCP_BROWSER_ACTION_TIMEOUT_LIMIT, lowered)
@@ -676,13 +645,13 @@ class WebRouterTools:
         )
 
     def _record(self, tool: str, arguments: Mapping[str, Any]) -> Record:
-        handle = str(self._kwargs(tool, arguments)[MCP_ARG_HANDLE])
+        handle = str(self.arguments(tool, arguments)[MCP_ARG_HANDLE])
         record = self.store.get(handle)
         if record is None:
             raise ValueError(MCP_MSG_UNKNOWN_HANDLE.format(handle=handle, limit=self.store.limit))
         return record
 
-    def _kwargs(self, tool: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    def arguments(self, tool: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
         """The library call's keyword arguments, taken straight from the tool's own.
 
         The tool's parameter names *are* the library's, so there is no mapping
@@ -762,10 +731,10 @@ def _serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[ty
     """
     names: list[str] = []
     for provider in providers:
-        if provider in DELEGATING_PROVIDERS and tool in _CHAIN_OF:
+        if provider in DELEGATING_PROVIDERS and tool in CHAIN_OF:
             # Not every delegating name is every method's: ``max`` is extract's alone.
             try:
-                names.extend(_CHAIN_OF[tool](router, provider))
+                names.extend(CHAIN_OF[tool](router, provider))
             except (ProviderNotFoundError, ProviderNotInstalledError):
                 continue
         else:

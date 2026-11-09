@@ -143,7 +143,7 @@ _BUILTIN_BROWSER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_ANCHOR: ("web_router.providers.anchor", "AnchorBrowserProvider", EXTRA_ALL),
     PROVIDER_KERNEL: ("web_router.providers.kernel", "KernelBrowserProvider", EXTRA_ALL),
     PROVIDER_LOCAL: ("web_router.providers.local", "LocalBrowserProvider", EXTRA_ALL),
-    PROVIDER_AUTO: ("web_router.providers.auto", "AutoBrowserProvider", AUTO_EXTRA),
+    PROVIDER_AUTO: ("web_router.providers.auto_browser", "AutoBrowserProvider", AUTO_EXTRA),
 }
 
 # Task backends are plain httpx, which `all` installs, as for the browser table.

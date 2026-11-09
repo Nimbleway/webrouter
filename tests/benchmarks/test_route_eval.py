@@ -85,7 +85,10 @@ def test_a_custom_router_gets_the_prompt_from_a_joined_folder_and_is_fit_on_the_
     module = tmp_path / "my_router.py"
     module.write_text(
         "seen = []\nfitted = []\n"
-        "def pick(prompt, candidates):\n    seen.append((prompt, list(candidates)))\n    return ['nimble']\n"
+        "from web_router import RouteDecision\n"
+        "def pick(request):\n"
+        "    seen.append((request.prompt, [c.id for c in request.candidates], request.pinned_tool))\n"
+        "    return RouteDecision(providers={'search': ['nimble']})\n"
         "def _fit(train):\n    fitted.append(len(train))\n"
         "pick.fit = _fit\n"
     )
@@ -95,7 +98,9 @@ def test_a_custom_router_gets_the_prompt_from_a_joined_folder_and_is_fit_on_the_
 
     assert summary["prompts"]
     assert my_router.fitted == [10]
-    assert all(p.startswith("question ") and c == ["nimble", "perplexity"] for p, c in my_router.seen)
+    assert len(my_router.seen) == 20
+    expected = ["search:nimble", "search:perplexity"]
+    assert all(p.startswith("question ") and c == expected and t == "search" for p, c, t in my_router.seen)
     assert summary["routers"]["my_router:pick"]["held_out"]["accuracy"] is not None
     sys.modules.pop("my_router", None)
 
@@ -151,7 +156,9 @@ def test_the_report_shows_n_a_for_numbers_an_empty_score_cannot_have(route_eval:
         "static_order": [],
         "routers": {"static": {"in_sample": empty, "held_out": empty, "verdict": "baseline"}},
         "backends": {},
+        "noise_floor": {"value": 0.01, "measured_on": None, "rerun": [], "fallback": False},
         "recommended_order": [],
+        "too_few_questions": [],
     }
     assert "| n/a | baseline |" in route_eval.markdown([summary], 0.01, {})
 
@@ -160,9 +167,7 @@ def test_a_router_that_raises_is_counted_apart_and_its_first_error_printed_once(
     route_eval: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _tiny_set(tmp_path / "frozen")
-    (tmp_path / "broken_router.py").write_text(
-        "def pick(prompt, candidates):\n    raise ValueError('model unreachable')\n"
-    )
+    (tmp_path / "broken_router.py").write_text("def pick(request):\n    raise ValueError('model unreachable')\n")
     monkeypatch.syspath_prepend(str(tmp_path))
     summary = route_eval.evaluate_set("tiny", ["broken_router:pick"], floor=0.05, folder=tmp_path / "frozen")
     sys.modules.pop("broken_router", None)

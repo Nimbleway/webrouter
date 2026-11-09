@@ -1,14 +1,11 @@
 """Provider-agnostic request and response models.
 
-Every provider maps its own payload onto these types, so swapping Nimble for
-Tavily or You.com does not change the shape of what callers get back. Anything a
-provider returns that has no home here is preserved verbatim under
-``SearchResult.extra`` / ``SearchResponse.raw`` for a search, and under
-``ExtractedDocument.extra`` / ``ExtractResponse.raw`` for an extract, and under
-``TemplateResponse.extra`` / ``TemplateResponse.raw`` for an Extract Template run.
-
-A browser session is the exception to "a call returns an answer": it returns a
-:class:`BrowserSession` describing a browser the caller then drives itself.
+Every provider maps its own payload onto these types, so swapping Nimble for Tavily or You.com does not change the
+shape of what callers get back. Anything a provider returns that has no home here is preserved verbatim under
+``SearchResult.extra`` / ``SearchResponse.raw`` for a search, ``ExtractedDocument.extra`` / ``ExtractResponse.raw``
+for an extract, and ``TemplateResponse.extra`` / ``TemplateResponse.raw`` for an Extract Template run. A browser
+session is the exception to "a call returns an answer": it returns a :class:`BrowserSession` describing a browser the
+caller then drives itself.
 """
 
 from __future__ import annotations
@@ -21,6 +18,16 @@ from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Generic, Literal, TypeVar, cast
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_serializer, model_validator
+
+from web_router.types_decision import DECISION_DESCRIPTION
+from web_router.types_decision import DecisionAttempt as DecisionAttempt
+from web_router.types_decision import DecisionHop as DecisionHop
+from web_router.types_decision import DecisionRecord as DecisionRecord
+from web_router.types_page import PageFormat as PageFormat
+from web_router.types_page import PageLoadState as PageLoadState
+from web_router.types_page import PageSnapshot as PageSnapshot
+from web_router.types_page import PageState as PageState
+from web_router.types_page import Screenshot as Screenshot
 
 SearchDepth = Literal["lite", "fast", "deep"]
 """How much page content to retrieve per result.
@@ -251,6 +258,7 @@ class SearchResponse(BaseModel):
     answer: str | None = Field(default=None, description="Synthesized answer, when the provider returned one.")
     request_id: str | None = None
     raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
     def __len__(self) -> int:
         return len(self.results)
@@ -324,6 +332,7 @@ class ExtractResponse(BaseModel):
             "backend that takes every URL at once, one per URL for a backend that does not."
         ),
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
     def __len__(self) -> int:
         return len(self.documents)
@@ -706,10 +715,7 @@ class Citation(BaseModel):
 
     url: str
     title: str = Field(default="", description="The cited page's title, when the provider returned one.")
-    snippet: str = Field(
-        default="",
-        description="The passage the backend quoted from the page, when it quoted one.",
-    )
+    snippet: str = Field(default="", description="The passage the backend quoted from the page, when it quoted one.")
     field: str | None = Field(
         default=None,
         description=(
@@ -753,6 +759,7 @@ class ResearchResponse(BaseModel):
         default=None,
         description="The provider's untouched payloads, one per call the run took.",
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
     @property
     def urls(self) -> list[str]:
@@ -947,12 +954,10 @@ class BrowserSession(BaseModel):
 BrowseOutcome = Literal["complete", "partial"]
 """Whether a finished browse task did all it was asked, or said it stopped early.
 
-``partial`` only when the backend itself said so, as for research. None of the
-built-in task backends reports an early stop that can be told apart from a
-finished run -- Skyvern's ``timed_out`` cannot distinguish its step limit from
-its clock, and Browser Use's ``isSuccess`` is its agent's opinion of its own
-answer -- so each of them answers ``complete``. Reading either signal as
-``partial`` would be the router inventing a verdict the backend did not give.
+``partial`` only when the backend itself said so, as for research. None of the built-in task backends reports an
+early stop that can be told apart from a finished run -- Skyvern's ``timed_out`` cannot distinguish its step limit
+from its clock, and Browser Use's ``isSuccess`` is its agent's opinion of its own answer -- so each of them answers
+``complete``. Reading either signal as ``partial`` would be the router inventing a verdict the backend did not give.
 """
 
 
@@ -1058,6 +1063,7 @@ class BrowseResponse(BaseModel):
             "it is never serialized."
         ),
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
 
 class BrowseProgress(BaseModel):
@@ -1080,61 +1086,3 @@ class BrowseProgress(BaseModel):
     def is_terminal(self) -> bool:
         """Whether this task has stopped, one way or another."""
         return self.state not in ("queued", "running")
-
-
-PageLoadState = Literal["commit", "domcontentloaded", "load", "networkidle"]
-"""How far a page must get before ``goto`` returns. Left unset, Playwright waits for ``load``."""
-
-PageFormat = Literal["text", "html"]
-"""What :meth:`BrowserHandle.read <web_router.BrowserHandle.read>` returns: the rendered text, or the DOM as HTML."""
-
-
-class PageState(BaseModel):
-    """Where the page is after an action."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    title: str = ""
-    status_code: int | None = Field(
-        default=None,
-        description=(
-            "The HTTP status of the response a navigation produced. Set by ``goto`` only, and ``None`` when "
-            "the navigation produced no response -- a same-document jump, or a page with no HTTP behind it."
-        ),
-    )
-
-
-class PageSnapshot(BaseModel):
-    """The page as an agent reads it: its accessibility tree, each element tagged with a ref.
-
-    :attr:`tree` is Playwright's ``aria_snapshot(mode="ai")`` YAML, with unnamed
-    wrapper containers and link-URL lines dropped to keep it short. Pass a ref
-    back unchanged -- ``click(ref="e14")`` -- and treat it as opaque: its shape
-    is not stable. A ref is good until the next snapshot or navigation, and one
-    used after that raises :class:`~web_router.exceptions.StaleElementError`.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    title: str = ""
-    tree: str = Field(description='One element per line, e.g. ``- button "Submit" [ref=e11]``.')
-    truncated: bool = Field(
-        default=False,
-        description=(
-            "Whether :attr:`tree` was cut at a line boundary to fit ``max_chars``. Refs past the cut "
-            "were never offered, and using one raises StaleElementError."
-        ),
-    )
-
-
-class Screenshot(BaseModel):
-    """A PNG capture of the page. In JSON, :attr:`png` is base64, both ways."""
-
-    model_config = ConfigDict(extra="forbid", ser_json_bytes="base64", val_json_bytes="base64")
-
-    png: bytes = Field(repr=False, description="The image, as PNG bytes.")
-    width: int = Field(description="Width of the image in pixels.")
-    height: int = Field(description="Height of the image in pixels.")
-    url: str = Field(description="The page it was taken of.")

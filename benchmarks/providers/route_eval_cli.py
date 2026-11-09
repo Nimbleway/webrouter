@@ -68,7 +68,6 @@ def run(
             args.routers,
             seed=args.seed,
             test_fraction=args.test_fraction,
-            floor=floor,
             joined=args.joined,
             skip_absent=not args.sets,  # the default sets mix backends and paths; a named set is held to its own
         )
