@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "A router's answer. Every field is optional, and ``None`` means no opinion on it.\n\nA router that answers with fewer fields than a later version reads keeps\nworking: what it leaves out is decided the way it would be with no router.",
+  "properties": {
+    "schema": {
+      "type": "integer",
+      "const": 1,
+      "description": "The wire format's major version."
+    },
+    "tools": {
+      "anyOf": [
+        {
+          "items": {
+            "enum": [
+              "search",
+              "extract",
+              "answer",
+              "research",
+              "browse"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The methods to use, best first.",
+      "title": "Tools"
+    },
+    "providers": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "propertyNames": {
+            "enum": [
+              "search",
+              "extract",
+              "answer",
+              "research",
+              "browse"
+            ]
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Per method, the backends to try, best first.",
+      "title": "Providers"
+    },
+    "exclude": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Candidates never to try, by id, each with the reason.",
+      "title": "Exclude",
+      "type": "object"
+    },
+    "params": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "propertyNames": {
+            "enum": [
+              "search",
+              "extract",
+              "answer",
+              "research",
+              "browse"
+            ]
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Per method, options to call it with, such as research's ``effort``.",
+      "title": "Params"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "How sure the router is, from 0 to 1.",
+      "title": "Confidence"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Why, in a few words, for the decision record.",
+      "title": "Reason"
+    }
+  },
+  "title": "web-router RouteDecision, wire schema v1",
+  "type": "object",
+  "required": [
+    "schema"
+  ]
+}
