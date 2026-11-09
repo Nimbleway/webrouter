@@ -58,7 +58,7 @@ class PinnedJobMeta(PinnedMeta):
         response = getattr(progress, "response", None)
         if self._meta is None or response is None or not isinstance(progress, BaseModel):
             return progress
-        return cast("_T", progress.model_copy(update={"response": self._with_meta(response)}))
+        return progress.model_copy(update={"response": self._with_meta(response)})
 
     def _with_meta(self, response: _T) -> _T:
         """``response`` with the pinned metadata, its checks ``passed``; as it is when nothing was pinned."""
