@@ -73,6 +73,7 @@ def test_the_fetched_page_is_normalized(fetch: Fetch) -> None:
         "encoding": "utf-8",
     }, "everything Fetch said beyond the mapped fields is kept"
     assert response.raw == [FETCHED]
+    assert fetch.calls[0][:2] == ("POST", "/v1/fetch"), "the endpoint, which only the live tests checked before"
     assert fetch.headers[0]["x-bb-api-key"] == KEY, "the key goes in Browserbase's own header"
     assert "authorization" not in fetch.headers[0]
 
