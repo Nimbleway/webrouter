@@ -60,7 +60,12 @@ def _route_tools(route_tools: Collection[ToolName] | None, router: object = None
         message = MSG_ROUTER_ROUTE_TOOLS
     if route_tools is None:
         return _ALL_TOOLS
-    if isinstance(route_tools, str) or not isinstance(route_tools, Collection) or not set(route_tools) <= _ALL_TOOLS:
+    if (
+        isinstance(route_tools, str)
+        or not isinstance(route_tools, Collection)
+        or not all(isinstance(tool, str) for tool in route_tools)  # an unhashable member never reaches set()
+        or not set(route_tools) <= _ALL_TOOLS
+    ):
         known = ", ".join(get_args(ToolName))
         raise ConfigurationError(message.format(known=known, got=route_tools))
     return frozenset(route_tools)

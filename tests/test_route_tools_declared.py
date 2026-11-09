@@ -76,7 +76,9 @@ def test_a_router_function_may_declare_route_tools(tool: Tool, called: list[str]
 
 
 @pytest.mark.parametrize("cls", [WebRouter, AsyncWebRouter])
-@pytest.mark.parametrize("declared", ["search", ["search", "open_browser"], 3], ids=["str", "unknown", "int"])
+@pytest.mark.parametrize(
+    "declared", ["search", ["search", "open_browser"], 3, [["search"]]], ids=["str", "unknown", "int", "unhashable"]
+)
 def test_a_router_s_route_tools_take_only_the_five_tools(cls: type, declared: Any) -> None:
     with pytest.raises(ConfigurationError, match="router's route_tools"):
         cls(router=Declaring(declared))
