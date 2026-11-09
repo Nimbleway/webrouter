@@ -40,6 +40,10 @@ record the source promises, so the run is a failure.
 MSG_LIVE_DATA_NO_RECORD: Final = "the backend fetched the page but answered without a record for source {source!r}"
 """Stands in when a fetched page carries no parsed record and no reason."""
 
+MSG_LIVE_DATA_BAD_PAGE: Final = (
+    "a page needs a limit and an offset of 0 or more, not limit={limit!r}, offset={offset!r}"
+)
+
 MSG_LIVE_DATA_DEPRECATED_FIELD: Final = "`{old}` is deprecated and will be removed: use `{new}`."
 
 MSG_LIVE_DATA_DEPRECATED_NAME: Final = (

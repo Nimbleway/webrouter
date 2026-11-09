@@ -93,7 +93,8 @@ class ApifyLiveDataProvider(HttpLiveDataProvider):
 
     @staticmethod
     def _run_params(request: LiveDataRequest) -> dict[str, Any]:
-        return {"format": APIFY_ITEMS_FORMAT, **request.provider_options}
+        # The request's own fields last, so an option can never change what is run or how it answers.
+        return {**request.provider_options, "format": APIFY_ITEMS_FORMAT}
 
     def _to_response(self, request: LiveDataRequest, items: Any) -> LiveDataResponse:
         records = [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
@@ -153,7 +154,7 @@ class ApifyLiveDataProvider(HttpLiveDataProvider):
             description=data.get("description") or data.get("title") or "",
             input_schema=_input_schema(built),
             samples=[LiveDataSample(input=sample_input)] if sample_input else [],
-            version=built.get("buildNumber") if isinstance(built.get("buildNumber"), int) else None,
+            version=built.get("buildNumber") if isinstance(built.get("buildNumber"), (int, str)) else None,
             published=bool(built),
             extra={
                 "title": data.get("title"),

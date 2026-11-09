@@ -123,7 +123,10 @@ class LiveDataSource(BaseModel):
         default_factory=list,
         description="Runs the backend recorded, each an input and what it returned; empty when it has none.",
     )
-    version: int | None = Field(default=None, description="The published version's number, when there is one.")
+    version: int | str | None = Field(
+        default=None,
+        description="The published version, as the backend numbers it (Apify's build numbers are strings).",
+    )
     published: bool = Field(default=False, description="Whether a version is published, so the source can be run.")
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -150,7 +153,17 @@ class LiveDataSourcePage(BaseModel):
     total: int | None = Field(default=None, description="How many sources the backend holds, when it says.")
     offset: int | None = Field(default=None, description="How many sources precede this page, when it says.")
     limit: int | None = Field(default=None, description="The page size the backend applied, when it says.")
-    raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
+    raw: Any = Field(default=None, description="The provider's untouched response payload, object or array.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _templates_is_sources(cls, values: Any) -> Any:
+        # A custom provider written against the old names still builds TemplatePage(templates=[...]).
+        if isinstance(values, dict) and "templates" in values and "sources" not in values:
+            _deprecated("templates", "sources")
+            values = {**values, "sources": values["templates"]}
+            del values["templates"]
+        return values
 
     def __len__(self) -> int:
         return len(self.sources)

@@ -25,13 +25,18 @@ from __future__ import annotations
 from base64 import b64encode
 from typing import Any, ClassVar
 
-from web_router.constants import ENV_OXYLABS_PASSWORD, ENV_OXYLABS_USERNAME, OXYLABS_BASE_URL, PROVIDER_OXYLABS
+from web_router.constants import (
+    ENV_OXYLABS_PASSWORD,
+    ENV_OXYLABS_USERNAME,
+    OXYLABS_BASE_URL,
+    OXYLABS_EXTRACT_PATH,
+    PROVIDER_OXYLABS,
+)
 from web_router.constants_live_data_vendors import (
     MSG_OXYLABS_NOT_FETCHED,
     MSG_OXYLABS_NOT_PARSED,
     OXYLABS_DOCS_URL,
     OXYLABS_FAILED_FETCH_FLOOR,
-    OXYLABS_LIVE_DATA_PATH,
     OXYLABS_PARSE_OK,
     OXYLABS_SOURCES,
 )
@@ -55,7 +60,7 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
     name: ClassVar[str] = PROVIDER_OXYLABS
     supported_parameters: ClassVar[frozenset[str]] = LIVE_DATA_PARAMETERS
 
-    run_path: ClassVar[str] = OXYLABS_LIVE_DATA_PATH
+    run_path: ClassVar[str] = OXYLABS_EXTRACT_PATH
     base_url: ClassVar[str] = OXYLABS_BASE_URL
     env_api_key: ClassVar[str] = ENV_OXYLABS_PASSWORD
 
@@ -79,14 +84,13 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
         return self._to_response(request, self._send("POST", self.run_path, json=self._build_payload(request)))
 
     async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
-        return self._to_response(
-            request, await self._asend("POST", OXYLABS_LIVE_DATA_PATH, json=self._build_payload(request))
-        )
+        return self._to_response(request, await self._asend("POST", self.run_path, json=self._build_payload(request)))
 
     @staticmethod
     def _build_payload(request: LiveDataRequest) -> dict[str, Any]:
-        # The source's own inputs as given, parsing on; provider_options last, as on every backend.
-        return {**dict(request.inputs), "source": request.source, "parse": True, **request.provider_options}
+        # Inputs and options as given, then the fields that name the source and turn parsing on, so that
+        # neither can be overridden into running a different scraper than the response is attributed to.
+        return {**dict(request.inputs), **request.provider_options, "source": request.source, "parse": True}
 
     def _to_response(self, request: LiveDataRequest, payload: dict[str, Any]) -> LiveDataResponse:
         records: list[dict[str, Any]] = []
@@ -121,8 +125,7 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
     # -- catalogue ----------------------------------------------------------
 
     def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
-        start = offset or 0
-        names = OXYLABS_SOURCES[start:] if limit is None else OXYLABS_SOURCES[start : start + limit]
+        names, start = self._local_page(OXYLABS_SOURCES, limit=limit, offset=offset)
         return LiveDataSourcePage(
             provider=self.name,
             sources=[self._source(name) for name in names],

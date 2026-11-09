@@ -148,3 +148,40 @@ def test_live_describe_and_run() -> None:
         assert source.input_schema
         response = router.live_data(DATASET, {"url": "https://www.amazon.com/dp/B0CHX1W1XY"}, provider="brightdata")
         assert response.records
+
+
+def test_options_cannot_name_a_different_dataset() -> None:
+    provider, api = _provider(lambda request: httpx.Response(200, json=[{"title": "x"}]))
+    provider.run(LiveDataRequest(source=DATASET, inputs={"url": URL}, provider_options={"dataset_id": "gd_other"}))
+    assert api.last.url.params["dataset_id"] == DATASET
+
+
+def test_a_zone_from_the_shared_provider_config_is_accepted_and_unused() -> None:
+    api = Api(lambda request: httpx.Response(200, json=[{"title": "x"}]))
+    provider = wire(BrightDataLiveDataProvider(api_key="bd-token", zone="web_unlocker1"), api)
+    assert provider.run(LiveDataRequest(source=DATASET, inputs={"url": URL})).records == [{"title": "x"}]
+    assert "zone" not in api.last.url.params
+
+
+def test_samples_published_as_a_list_are_each_a_sample() -> None:
+    method = {"sample_input": [{"url": URL}, {"url": URL + "2"}], "sample_output": [{"title": "a"}, {"title": "b"}]}
+    scraper = {**SCRAPER, "scrapers": {"collect_by_url": method}}
+    provider, _ = _provider(lambda request: httpx.Response(200, json=[scraper]))
+    source = provider.live_data_source(DATASET)
+    assert [(s.input, s.output) for s in source.samples] == [
+        ({"url": URL}, {"title": "a"}),
+        ({"url": URL + "2"}, {"title": "b"}),
+    ]
+
+
+def test_the_catalogue_keeps_the_vendor_payload_and_a_description_keeps_listing_fields() -> None:
+    provider, _ = _provider(lambda request: httpx.Response(200, json=[SCRAPER]))
+    assert provider.live_data_sources().raw == [SCRAPER]
+    assert provider.live_data_source(DATASET).extra["scraper_type"] == "pdp"
+
+
+@pytest.mark.parametrize(("limit", "offset"), [(-1, None), (None, -1)])
+def test_a_negative_page_is_refused(limit: int | None, offset: int | None) -> None:
+    provider, _ = _provider(lambda request: httpx.Response(200, json=[SCRAPER]))
+    with pytest.raises(ProviderError, match="0 or more"):
+        provider.live_data_sources(limit=limit, offset=offset)

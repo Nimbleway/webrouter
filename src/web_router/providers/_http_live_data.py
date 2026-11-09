@@ -10,17 +10,19 @@ A subclass is left with the vendor's own paths, payloads and shapes.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeVar
 
 import httpx
 
-from web_router.constants_live_data import LIVE_DATA_HTTP_TIMEOUT
+from web_router.constants_live_data import LIVE_DATA_HTTP_TIMEOUT, MSG_LIVE_DATA_BAD_PAGE
 from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
 from web_router.providers._http import _HttpProvider
 from web_router.providers._utils import compact
 from web_router.providers.base import LiveDataProvider
+
+_T = TypeVar("_T")
 
 
 class HttpLiveDataProvider(_HttpProvider, LiveDataProvider):
@@ -53,6 +55,18 @@ class HttpLiveDataProvider(_HttpProvider, LiveDataProvider):
     def _decoded(self, response: httpx.Response) -> Any:
         self._raise_for_status(response)
         return response.json() if response.content else None
+
+    @staticmethod
+    def _local_page(items: Sequence[_T], *, limit: int | None, offset: int | None) -> tuple[list[_T], int]:
+        """One page of a catalogue the vendor answered with whole; a negative ``limit`` or ``offset`` is refused.
+
+        Python's slicing would read ``offset=-1`` as "the last one" and ``limit=-1``
+        as "all but the last", neither of which is a page.
+        """
+        if (limit is not None and limit < 0) or (offset is not None and offset < 0):
+            raise ValueError(MSG_LIVE_DATA_BAD_PAGE.format(limit=limit, offset=offset))
+        start = offset or 0
+        return list(items[start:] if limit is None else items[start : start + limit]), start
 
     @contextmanager
     def _named(self, source: str) -> Iterator[None]:

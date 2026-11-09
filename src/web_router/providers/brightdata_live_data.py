@@ -30,10 +30,14 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from web_router.constants import ENV_BRIGHTDATA_API_KEY, PROVIDER_BRIGHTDATA
+from web_router.constants import (
+    BRIGHTDATA_API_KEY_PREFIX,
+    BRIGHTDATA_BASE_URL,
+    ENV_BRIGHTDATA_API_KEY,
+    PROVIDER_BRIGHTDATA,
+)
 from web_router.constants_live_data_vendors import (
     BRIGHTDATA_DEFAULT_METHOD,
-    BRIGHTDATA_LIVE_DATA_BASE_URL,
     BRIGHTDATA_PENDING_STATUS,
     BRIGHTDATA_SCRAPE_PATH,
     BRIGHTDATA_SCRAPERS_PATH,
@@ -66,6 +70,21 @@ def _fields_schema(fields: Any) -> dict[str, Any] | None:
     return {"type": "object", "properties": {name: {} for name in names}} if names else None
 
 
+def _samples(inputs: Any, outputs: Any) -> list[LiveDataSample]:
+    """Bright Data's samples: an input object or, as its management API shows them, a list of them.
+
+    A list of outputs pairs with the inputs by position when the lengths match;
+    otherwise each sample carries its input alone rather than a guessed output.
+    """
+    if isinstance(inputs, dict):
+        return [LiveDataSample(input=inputs, output=outputs)]
+    if not isinstance(inputs, list):
+        return []
+    rows = [row for row in inputs if isinstance(row, dict)]
+    paired = isinstance(outputs, list) and len(outputs) == len(rows)
+    return [LiveDataSample(input=row, output=outputs[n] if paired else None) for n, row in enumerate(rows)]
+
+
 class BrightDataLiveDataProvider(HttpLiveDataProvider):
     """Runs Bright Data's ready-made scrapers as live data sources."""
 
@@ -73,9 +92,20 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
     supported_parameters: ClassVar[frozenset[str]] = LIVE_DATA_PARAMETERS
 
     run_path: ClassVar[str] = BRIGHTDATA_SCRAPE_PATH
-    base_url: ClassVar[str] = BRIGHTDATA_LIVE_DATA_BASE_URL
+    base_url: ClassVar[str] = BRIGHTDATA_BASE_URL
     env_api_key: ClassVar[str] = ENV_BRIGHTDATA_API_KEY
-    api_key_prefix: ClassVar[str] = "Bearer "
+    api_key_prefix: ClassVar[str] = BRIGHTDATA_API_KEY_PREFIX
+
+    def __init__(self, *, zone: str | None = None, **kwargs: Any) -> None:
+        """
+        Args:
+            zone: Accepted and unused: it is the Web Unlocker zone the extract
+                provider reads, from the same ``provider_config["brightdata"]``
+                entry; a scraper runs without one.
+            **kwargs: As :class:`~web_router.providers._http_live_data.HttpLiveDataProvider`.
+        """
+        del zone
+        super().__init__(**kwargs)
 
     # -- run ----------------------------------------------------------------
 
@@ -91,7 +121,8 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
 
     @staticmethod
     def _scrape(request: LiveDataRequest) -> dict[str, Any]:
-        params = {"dataset_id": request.source, "format": "json", "include_errors": "true", **request.provider_options}
+        # Options first, then the request's own fields: an option can never name a different dataset.
+        params = {**request.provider_options, "dataset_id": request.source, "format": "json", "include_errors": "true"}
         return {"params": params, "json": BrightDataLiveDataProvider._build_payload(request)}
 
     @staticmethod
@@ -132,15 +163,14 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
     def _to_page(self, payload: Any, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         """One page of the catalogue. Bright Data answers with all of it, so the paging is done here."""
         scrapers = [item for item in payload if isinstance(item, dict)] if isinstance(payload, list) else []
-        start = offset or 0
-        page = scrapers[start:] if limit is None else scrapers[start : start + limit]
+        page, start = self._local_page(scrapers, limit=limit, offset=offset)
         return LiveDataSourcePage(
             provider=self.name,
             sources=[self._listed(item) for item in page],
             total=len(scrapers),
             offset=start,
             limit=limit,
-            raw={"count": len(scrapers)},
+            raw=payload,
         )
 
     def _listed(self, item: dict[str, Any]) -> LiveDataSource:
@@ -173,15 +203,13 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
         methods: dict[str, Any] = found if isinstance(found, dict) else {}
         method_name = BRIGHTDATA_DEFAULT_METHOD if BRIGHTDATA_DEFAULT_METHOD in methods else next(iter(methods), None)
         method: dict[str, Any] = (methods.get(method_name) or {}) if method_name else {}
-        sample = method.get("sample_input")
-        return self._listed(item).model_copy(
+        listed = self._listed(item)
+        return listed.model_copy(
             update={
                 "input_schema": _fields_schema(method.get("input_schema")),
                 "output_schema": _fields_schema(method.get("output_fields")),
-                "samples": [LiveDataSample(input=sample, output=method.get("sample_output"))]
-                if isinstance(sample, dict)
-                else [],
-                "extra": {"collection_method": method_name, "collection_methods": sorted(methods)},
+                "samples": _samples(method.get("sample_input"), method.get("sample_output")),
+                "extra": {**listed.extra, "collection_method": method_name, "collection_methods": sorted(methods)},
                 "raw": item,
             }
         )

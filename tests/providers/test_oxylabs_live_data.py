@@ -15,7 +15,6 @@ import pytest
 
 from tests.providers._live_data_http import Api, wire
 from web_router import WebRouter
-from web_router.constants_live_data_vendors import OXYLABS_SOURCES
 from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
 from web_router.providers.oxylabs_live_data import OxylabsLiveDataProvider
 from web_router.types_live_data import LiveDataRequest
@@ -99,8 +98,8 @@ def test_the_catalogue_is_the_documented_parser_list(monkeypatch: pytest.MonkeyP
     page = provider.live_data_sources(limit=3, offset=2)
 
     assert api.requests == [], "listing calls nothing: Oxylabs has no listing endpoint"
-    assert [s.name for s in page.sources] == list(OXYLABS_SOURCES[2:5])
-    assert page.total == len(OXYLABS_SOURCES)
+    assert [s.name for s in page.sources] == ["amazon_product", "amazon_pricing", "amazon_bestsellers"]
+    assert page.total == 31, "the dedicated parsers Oxylabs' docs list on 2026-11-09"
     assert provider.live_data_source("amazon_product").input_schema is None
     with pytest.raises(LiveDataSourceNotFoundError):
         provider.live_data_source("nowhere_product")
@@ -121,3 +120,17 @@ def test_live_amazon_product() -> None:
     with WebRouter() as router:
         response = router.live_data("amazon_product", {"query": "B07FZ8S74R"}, provider="oxylabs")
         assert response.records and response.records[0].get("title")
+
+
+def test_options_cannot_change_the_source_or_turn_parsing_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    provider, api = _provider(lambda request: httpx.Response(200, json={"results": [_result()]}), monkeypatch)
+    options = {"source": "google_search", "parse": False, "render": "html"}
+    provider.run(LiveDataRequest(source="amazon_product", inputs={"query": "x"}, provider_options=options))
+    assert api.body()["source"] == "amazon_product" and api.body()["parse"] is True
+    assert api.body()["render"] == "html"
+
+
+def test_a_negative_page_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    provider, _ = _provider(lambda request: httpx.Response(500), monkeypatch)
+    with pytest.raises(ProviderError, match="0 or more"):
+        provider.live_data_sources(offset=-1)

@@ -10,8 +10,6 @@ from typing import Final
 
 # -- Bright Data ------------------------------------------------------------
 
-BRIGHTDATA_LIVE_DATA_BASE_URL: Final = "https://api.brightdata.com"
-
 BRIGHTDATA_SCRAPE_PATH: Final = "/datasets/v3/scrape"
 """A synchronous scrape: ``dataset_id`` in the query, ``{"input": [...]}`` in the body, records back.
 
@@ -35,9 +33,6 @@ MSG_BRIGHTDATA_PENDING: Final = (
 MSG_BRIGHTDATA_ALL_FAILED: Final = "every input failed on {source!r}: {errors}"
 
 # -- Oxylabs ----------------------------------------------------------------
-
-OXYLABS_LIVE_DATA_PATH: Final = "/v1/queries"
-"""The Realtime endpoint, the same one Oxylabs' extract uses; the connection stays open up to 150 s."""
 
 OXYLABS_DOCS_URL: Final = (
     "https://developers.oxylabs.io/scraping-solutions/web-scraper-api/features/result-processing-and-storage/"

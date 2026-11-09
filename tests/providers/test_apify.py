@@ -159,3 +159,19 @@ def test_live_store_describe_and_run() -> None:
             provider="apify",
         )
         assert response.records
+
+
+def test_options_cannot_change_the_answer_format() -> None:
+    provider, api = _provider(lambda request: httpx.Response(201, json=ITEMS))
+    provider.run(LiveDataRequest(source=ACTOR, inputs={}, provider_options={"format": "csv"}))
+    assert api.last.url.params["format"] == "json"
+
+
+def test_a_string_build_number_is_the_version() -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/builds/default"):
+            return httpx.Response(200, json={"data": {"buildNumber": "0.1.1", "actorDefinition": {"input": SCHEMA}}})
+        return httpx.Response(200, json={"data": {"title": "T"}})
+
+    provider, _ = _provider(respond)
+    assert provider.live_data_source(ACTOR).version == "0.1.1"
