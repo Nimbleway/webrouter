@@ -2450,7 +2450,7 @@ except WebRouterError as exc:
 | --- | --- | --- |
 | `ConfigurationError` | No API key for a provider you named | Set the variable it names, or pass `provider_config` |
 | `ProviderNotInstalledError` | The extra carrying the provider's SDK is not installed | `make setup` in the clone installs every extra; the message names the one missing |
-| `ProviderNotFoundError` | Unknown provider name, or one that does not serve the method you called | The message lists every name that method does serve |
+| `ProviderNotFoundError` | Unknown provider name, or one that does not serve the method you called; `answer()` with no backend to choose raises its subclass `NoAnswerProviderError` | The message lists every name that method does serve |
 | `UnsupportedParameterError` | The provider does not map an option you set | Use `provider_options`, or add the mapping |
 | `UnsupportedFormatError` | The extract or template backend cannot return the `format` you asked for | Ask for one it can — the message lists them — or name another backend |
 | `TemplateNotFoundError` | A template run or describe named a template the vendor does not have | A `ProviderError`; list the vendor's templates with `templates()` — names are the vendor's own |
@@ -2461,13 +2461,14 @@ except WebRouterError as exc:
 | `BrowserActionError` | A page action on a browser handle failed; subclasses say how — see [Driving the page](#driving-the-page) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
 | `BudgetExceededError` | Nothing the call could run fits its `Budget` (experimental, see [Budgets](#budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
 | `DeadlineExceededError` | A search, extract, template run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
-| `PresetError` | A preset could not be used: `PresetNotFoundError` when no preset is loaded under that exact `id@version`, `PresetCompatibilityError` when a per-call preset does not apply to the method, `PresetValidationError` when a definition or value is wrong or a call replaces a locked setting; all raised before the backend is called | Load the definition, pass a preset that applies or fix the field each `issues` entry names; see [Presets](#presets) |
+| `PresetError` | A preset could not be used: `PresetNotFoundError` when no preset is loaded under that exact `id@version`, `PresetCompatibilityError` when a per-call preset does not apply to the method, `PresetValidationError` when a definition or value is wrong or a call replaces a locked setting, all raised before the backend is called; `PresetError` itself when `load()` cannot read or parse a file, needs PyYAML for a YAML one or finds no preset file in a directory | Load the definition, pass a preset that applies or fix the field each `issues` entry names (for `load()`, the file or path the message names); see [Presets](#presets) |
 | `RouterError` | With `fail_on_router_error=True`, the attached router raised, ran out of time or answered something other than a `RouteDecision` (experimental) | Fix the router, or raise its `timeout_s`; `code` says which, and what it raised is on `__cause__` |
 
 These are **siblings, not a hierarchy**, apart from the families the table
 names: the page-action errors subclass `BrowserActionError`,
-`TemplateNotFoundError` subclasses `ProviderError` and the three preset errors
-subclass `PresetError`. `ProviderNotInstalledError` is not a subclass of
+`TemplateNotFoundError` subclasses `ProviderError`, `NoAnswerProviderError`
+subclasses `ProviderNotFoundError` and the three preset errors subclass
+`PresetError`. `ProviderNotInstalledError` is not a subclass of
 `ConfigurationError`, so `except ConfigurationError` will not catch a missing
 extra. Catch `WebRouterError` unless you mean one specific case.
 
