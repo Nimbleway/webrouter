@@ -87,7 +87,7 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_YOU: ("web_router.providers.you", "YouProvider", EXTRA_SEARCH),
     PROVIDER_BRAVE: ("web_router.providers.brave", "BraveProvider", EXTRA_SEARCH),
     PROVIDER_EXA: ("web_router.providers.exa", "ExaProvider", EXTRA_SEARCH),
-    PROVIDER_PARALLEL: ("web_router.providers.parallel", "ParallelProvider", EXTRA_SEARCH),
+    PROVIDER_PARALLEL: ("web_router.providers.parallel_search", "ParallelProvider", EXTRA_SEARCH),
     PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityProvider", EXTRA_SEARCH),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupProvider", EXTRA_SEARCH),
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQProvider", EXTRA_SEARCH),

@@ -4,7 +4,6 @@ import os
 
 import pytest
 
-from web_router.exceptions import UnsupportedParameterError
 from web_router.types import SearchRequest
 
 pytest.importorskip("httpx", reason="you extra not installed")
@@ -22,33 +21,14 @@ def test_only_the_query_is_sent_when_nothing_else_is_set(provider: YouProvider) 
     assert provider._build_payload(SearchRequest(query="hi")) == {"query": "hi"}
 
 
-def test_the_minimal_surface_is_query_max_results_and_depth(provider: YouProvider) -> None:
-    assert provider.supported_parameters == {"max_results", "search_depth"}
-
-
 def test_max_results_maps_onto_the_you_count_field(provider: YouProvider) -> None:
     assert provider._build_payload(SearchRequest(query="hi", max_results=5)) == {"query": "hi", "count": 5}
 
 
-@pytest.mark.parametrize("parameter", ["include_domains", "exclude_domains", "country", "locale"])
-def test_unmapped_parameters_are_rejected_not_dropped(provider: YouProvider, parameter: str) -> None:
-    """You.com is called with the minimum. Anything else must fail loudly, never silently."""
-    values = {"include_domains": ["a.com"], "exclude_domains": ["a.com"], "country": "US", "locale": "en"}
-    request = SearchRequest(query="hi", **{parameter: values.get(parameter, True)})
-    with pytest.raises(UnsupportedParameterError, match=parameter):
-        provider.validate(request)
-
-
-def test_the_rejection_points_at_the_way_forward(provider: YouProvider) -> None:
-    """The message is the contribution prompt, so it must name both routes."""
-    with pytest.raises(UnsupportedParameterError, match=r"provider_options.*CONTRIBUTING"):
-        provider.validate(SearchRequest(query="hi", country="US"))
-
-
 def test_provider_options_reach_the_api_untranslated(provider: YouProvider) -> None:
     """The escape hatch for anything You.com supports that we do not map."""
-    body = provider._build_payload(SearchRequest(query="hi", provider_options={"country": "FR"}))
-    assert body["country"] == "FR"
+    body = provider._build_payload(SearchRequest(query="hi", provider_options={"safesearch": "off"}))
+    assert body["safesearch"] == "off"
 
 
 @pytest.mark.parametrize(

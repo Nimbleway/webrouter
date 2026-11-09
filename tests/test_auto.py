@@ -329,8 +329,8 @@ async def test_the_chain_works_the_same_way_async(chain_members: _Recorder) -> N
     assert response.provider == "second"
 
 
-def test_auto_declares_exactly_what_some_member_maps() -> None:
-    """The union, so no member's filters are lost to the weakest one -- and no more than that.
+def test_auto_declares_every_option_some_member_maps() -> None:
+    """Exactly the union, so no member's filters are lost to the weakest one, and no option goes unmapped.
 
     Safe because a member is passed over for any option it does not map; see
     `test_a_member_that_does_not_map_an_option_is_passed_over_unbuilt`.
@@ -464,17 +464,17 @@ def test_a_depth_request_skips_the_members_without_depth_for_the_keyless_tier(
     assert set(passed_over._members) == {2}, "perplexity and brave were never built"
 
 
-def test_a_depth_request_only_depthless_members_could_take_names_each(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_depth_request_no_member_serves_names_each_ones_reason(monkeypatch: pytest.MonkeyPatch) -> None:
     for env_var in _EVERY_SEARCH_KEY:
         monkeypatch.delenv(env_var, raising=False)
 
-    router = WebRouter(provider_config={"auto": {"chain": [PROVIDER_PERPLEXITY, PROVIDER_BRAVE]}})
+    router = WebRouter(provider_config={"auto": {"chain": [PROVIDER_PERPLEXITY, PROVIDER_PARALLEL_MCP]}})
     with router, pytest.raises(UnsupportedParameterError) as caught:
         router.search("hi", search_depth="deep")
 
     message = str(caught.value)
-    assert "perplexity (does not map 'search_depth')" in message
-    assert "brave (does not map 'search_depth')" in message
+    assert "perplexity (will not serve search_depth='deep')" in message
+    assert "parallel-mcp (does not map 'search_depth')" in message
     assert "nothing was searched" in message
 
 

@@ -24,6 +24,17 @@
         "body.count": 3
       }
     },
+    "search_depth": {
+      "lite": {
+        "unchanged": "no wire change"
+      },
+      "fast": {
+        "refused": "UnsupportedParameterError"
+      },
+      "deep": {
+        "body.need_content": true
+      }
+    },
     "include_domains": {
       "sample": {
         "body.query": "probe query site:example.com"
@@ -38,11 +49,25 @@
       "sample": {
         "body.query": "probe query lang:en"
       }
+    },
+    "recency": {
+      "day": {
+        "body.query": "probe query after:2026-01-14"
+      },
+      "week": {
+        "body.query": "probe query after:2026-01-08"
+      },
+      "month": {
+        "body.query": "probe query after:2025-12-16"
+      },
+      "year": {
+        "body.query": "probe query after:2025-01-15"
+      }
     }
   },
   "not_mapped": [
     "country",
-    "search_depth"
+    "effort"
   ],
   "source": [
     "https://api-docs.deepseek.com/api/search",
@@ -52,13 +77,11 @@
     "max_results": "live: tests/providers/test_deepseek.py::test_live_search_returns_results",
     "include_domains": "live: tests/providers/test_deepseek.py::test_live_site_operators_joined_by_or_keep_every_result_on_those_sites",
     "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back",
-    "locale": "live: tests/providers/test_deepseek.py::test_live_lang_operator_changes_the_language_of_the_results"
+    "locale": "live: tests/providers/test_deepseek.py::test_live_lang_operator_changes_the_language_of_the_results",
+    "search_depth": "live: 2026-11-09 search-options check: deep (need_content) up to 21,354 characters; lite 1,065-5,830, longer than lite promises, as the README says",
+    "recency": "live: 2026-11-09 search-options check: week (after:), 10 of 10 results dated inside the window"
   },
   "vendor_options": {
-    "need_content": {
-      "status": "passthrough",
-      "note": "Boolean; without it each result's content is empty."
-    },
     "ori_question": {
       "status": "passthrough",
       "note": "The user's original question, up to 128 characters."

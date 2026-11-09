@@ -5,11 +5,11 @@ the ``search`` extra or ``[extract]``. Both read
 ``TAVILY_API_KEY`` unless a key is passed explicitly, and both can run keyless
 against Tavily's anonymous tier -- see ``allow_keyless``.
 
-web-router sends Tavily the minimum each method needs: the query,
-``max_results`` and ``search_depth`` for a search, the URLs and ``format`` for
-an extract. Everything else its API offers is reachable through
-``provider_options``, and mapping one properly is a welcome PR -- see
-CONTRIBUTING.md.
+Search maps every shared option but ``effort``: Tavily's latency tiers share
+the ``search_depth`` field our depth uses. ``country`` reaches the country names
+Tavily lists, ``locale`` a strict language filter and ``recency`` a time range
+that drops undated pages. An extract sends the URLs and ``format``. Everything
+else its API offers is reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -26,14 +26,25 @@ from web_router.constants import (
     TAVILY_EXTRACT_FORMATS,
     TAVILY_EXTRACT_MIN_TIMEOUT,
     TAVILY_EXTRACT_RESULT_FIELD,
-    TAVILY_PARAM_NAMES,
     TAVILY_PARAMS_BY_DEPTH,
     TAVILY_SDK_EXTRACT_TIMEOUT,
     TAVILY_SDK_SEARCH_TIMEOUT,
 )
+from web_router.constants_tavily import (
+    MSG_TAVILY_COUNTRY,
+    TAVILY_COUNTRIES,
+    TAVILY_GENERAL_TOPIC,
+    TAVILY_LANGUAGE_FILTER,
+    TAVILY_PARAM_NAMES,
+    TAVILY_RECENCY_FILTER,
+    TAVILY_SEARCH_PARAMETERS,
+    TAVILY_TIME_RANGE,
+)
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._deadline import call_budget, current_deadline
-from web_router.providers._utils import best_text, build_payload, compact, resolve_api_key
+from web_router.providers._language import language_code
+from web_router.providers._search_text import lite_body
+from web_router.providers._utils import best_text, build_payload, compact, mapped, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
     EXTRACT_FORMAT_ONLY,
@@ -86,7 +97,8 @@ class TavilyProvider(SearchProvider):
     """Routes searches to the Tavily Search API."""
 
     name: ClassVar[str] = PROVIDER_TAVILY
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(TAVILY_PARAM_NAMES) | {"search_depth"}
+    supported_parameters: ClassVar[frozenset[str]] = TAVILY_SEARCH_PARAMETERS
+    refusal_reasons: ClassVar[dict[str, str]] = {"country": MSG_TAVILY_COUNTRY}
 
     def __init__(
         self,
@@ -133,30 +145,44 @@ class TavilyProvider(SearchProvider):
     async def aclose(self) -> None:
         await self._async_client.close()
 
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        """A ``country`` Tavily does not list, or one asked for on a topic other than general."""
+        topic = request.provider_options.get("topic", TAVILY_GENERAL_TOPIC)
+        if request.country and (request.country.upper() not in TAVILY_COUNTRIES or topic != TAVILY_GENERAL_TOPIC):
+            return {"country": request.country}
+        return {}
+
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``search()`` keyword arguments."""
-        depth = TAVILY_PARAMS_BY_DEPTH.get(request.search_depth) if request.search_depth else None
+        depth = mapped(TAVILY_PARAMS_BY_DEPTH, request.search_depth)
         payload = build_payload(
             request,
             TAVILY_PARAM_NAMES,
             query=request.query,
             timeout=self._timeout,
+            country=TAVILY_COUNTRIES[request.country.upper()] if request.country else None,
+            # The language alone, as the ISO 639-1 code Tavily documents.
+            language=language_code(request.locale) if request.locale else None,
+            time_range=mapped(TAVILY_TIME_RANGE, request.recency),
             **(depth or {}),
+            **(TAVILY_LANGUAGE_FILTER if request.locale else {}),
+            **(TAVILY_RECENCY_FILTER if request.recency else {}),
         )
         return _clamped(payload, TAVILY_SDK_SEARCH_TIMEOUT)
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         results = []
         for item in payload.get("results") or []:
-            # Tavily's `content` is the matched snippet; the full page, when
-            # asked for, arrives separately as `raw_content`.
+            # Tavily's `content` is the matched snippet, up to three chunks at
+            # `basic`; the full page, when asked for, arrives as `raw_content`.
             snippet = item.get("content") or ""
             results.append(
                 SearchResult(
                     url=item.get("url", ""),
                     title=item.get("title") or "",
-                    description=snippet,
-                    content=best_text(item.get("raw_content"), snippet),
+                    description=lite_body(snippet, request.search_depth),
+                    content=lite_body(best_text(item.get("raw_content"), snippet), request.search_depth),
                     score=item.get("score"),
                     published_date=item.get("published_date"),
                     extra={k: v for k, v in item.items() if k not in _MAPPED_RESULT_FIELDS},

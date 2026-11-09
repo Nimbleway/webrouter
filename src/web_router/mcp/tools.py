@@ -134,7 +134,7 @@ from web_router.mcp.shaping import (
     shape_search,
 )
 from web_router.mcp.shaping_templates import shape_template, shape_template_run, shape_templates
-from web_router.providers.base import BrowseJob, BrowserProvider, ResearchJob, TemplateProvider, _BaseProvider
+from web_router.providers.base import BrowseJob, ResearchJob, TemplateProvider, _BaseProvider
 from web_router.registry import (
     configured_browse_providers,
     configured_browser_providers,
@@ -159,6 +159,7 @@ from web_router.types import (
     TEMPLATE_PARAMETERS,
     ExtractFormat,
     ExtractResponse,
+    SearchDepth,
     StealthLevel,
 )
 from web_router.types_answer import ANSWER_PARAMETERS
@@ -690,13 +691,11 @@ class WebRouterTools:
     def _schema(self, tool: str) -> dict[str, Any]:
         """The tool's input schema, offering only what some backend reachable from here maps.
 
-        An option no configured backend and not the router's default declares
-        would fail on every route the model can pick, so it is left out rather
-        than advertised; so is a stealth level none of them serves. A search,
-        extract or browser ``auto`` counts as the members it would try, because
-        it declares what any member maps. A model that sends one anyway still reaches the
-        library and its :class:`~web_router.exceptions.UnsupportedParameterError`,
-        never a silent drop.
+        An option no configured backend and not the router's default declares would fail on every route the model
+        can pick, so it is left out rather than advertised; so is a stealth or depth level none of them serves. A
+        search, extract or browser ``auto`` counts as the members it would try, because it declares what any member
+        maps. A model that sends one anyway still reaches the library and its
+        :class:`~web_router.exceptions.UnsupportedParameterError`, never a silent drop.
         """
         properties: dict[str, Any] = dict(MCP_TOOL_PROPERTIES[tool])
         providers = _CONFIGURED[tool]() if tool in _CONFIGURED else []
@@ -704,8 +703,8 @@ class WebRouterTools:
             serving = _serving(tool, [*providers, self.router.default_provider], self.router)
             mapped = frozenset().union(*(cls.supported_parameters for cls in serving))
             properties = {name: spec for name, spec in properties.items() if name not in _OPTIONS[tool] - mapped}
-            if MCP_ARG_STEALTH in properties and tool == MCP_TOOL_BROWSER_OPEN:
-                _offer_levels(properties, serving)
+            if tool in _LEVELS and _LEVELS[tool][0] in properties:
+                _offer_levels(properties, serving, tool)
             if MCP_ARG_FORMAT in properties and tool == MCP_TOOL_RUN_TEMPLATE:
                 _offer_formats(properties, serving)
         if providers:
@@ -748,28 +747,29 @@ def _serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[ty
     return classes
 
 
-def _offer_levels(properties: dict[str, Any], serving: list[type[_BaseProvider]]) -> None:
-    """Narrow ``stealth`` to the levels some backend serving here has, as the options are narrowed.
+_LEVELS: dict[str, tuple[str, Any, str]] = {
+    MCP_TOOL_BROWSER_OPEN: (MCP_ARG_STEALTH, StealthLevel, "stealth_levels"),
+    MCP_TOOL_SEARCH: ("search_depth", SearchDepth, "depth_levels"),
+}
 
-    A level none of them serves would be refused on every route, so it is not
-    offered; with none at all the option goes too.
+
+def _offer_levels(properties: dict[str, Any], serving: list[type[_BaseProvider]], tool: str) -> None:
+    """Narrow the tool's option in :data:`_LEVELS` to the levels some backend serving here that maps it has.
+
+    A level none of them serves would be refused on every route, so it is not offered; with none the option goes too.
     """
-    served = frozenset().union(*(cls.stealth_levels for cls in serving if issubclass(cls, BrowserProvider)))
-    levels = [level for level in get_args(StealthLevel) if level in served]
+    arg, kind, attr = _LEVELS[tool]
+    served = frozenset().union(*(getattr(cls, attr) for cls in serving if arg in cls.supported_parameters))
+    levels = [level for level in get_args(kind) if level in served]
     if levels:
-        properties[MCP_ARG_STEALTH] = {**properties[MCP_ARG_STEALTH], "enum": levels}
+        properties[arg] = {**properties[arg], "enum": levels}
     else:
-        del properties[MCP_ARG_STEALTH]
+        del properties[arg]
 
 
 def _offer_formats(properties: dict[str, Any], serving: list[type[_BaseProvider]]) -> None:
-    """Narrow a template run's ``format`` to the page formats some backend serving here returns.
-
-    Every template backend maps the option; what differs is which formats it
-    can return beside the record. A format none of them returns would be
-    refused on every route, so it is not offered, and with none at all the
-    option goes too -- as :func:`_offer_levels` narrows ``stealth``.
-    """
+    """Narrow a template run's ``format`` to the page formats some backend serving here returns, as
+    :func:`_offer_levels` narrows a level: every template backend maps the option, not every format."""
     served = frozenset().union(*(cls.supported_formats for cls in serving if issubclass(cls, TemplateProvider)))
     formats = [body_format for body_format in get_args(ExtractFormat) if body_format in served]
     if formats:

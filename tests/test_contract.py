@@ -53,7 +53,13 @@ SAMPLE_VALUES: dict[str, object] = {
     "exclude_domains": ["b.com"],
     "country": "US",
     "locale": "en",
+    "recency": "week",
+    "effort": "low",
 }
+
+SDK_FORWARDED: dict[str, set[str]] = {"tavily": {"filter_by_published_date"}}
+"""Fields the vendor documents for this endpoint that the SDK's ``search`` does not declare yet but writes into the
+request body from ``**kwargs`` (tavily-python's ``_search``: ``data.update(kwargs)``). Only such fields belong here."""
 
 ENV_VARS = (
     "NIMBLE_API_KEY",
@@ -172,23 +178,25 @@ def test_unset_options_are_never_sent(name: str, monkeypatch: pytest.MonkeyPatch
 
 @pytest.mark.parametrize("name", [n for n in TRANSLATING if _maps_depth(n)])
 def test_every_depth_level_is_a_distinct_request(name: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A provider that maps search_depth must build a different request per level.
+    """A provider that maps search_depth must build a different request per level it serves.
 
     Two levels that build the same payload are a mapping bug, not a design
     choice: the caller pays for `deep` and gets `lite`, and nothing fails.
-    Nimble was sent our own vocabulary verbatim until it was.
+    Nimble was sent our own vocabulary verbatim until it was. A level outside
+    `depth_levels` is refused before any payload is built.
     """
     for env_var in ENV_VARS:
         monkeypatch.setenv(env_var, "test-key")
 
     provider = get_provider_class(name)(api_key="test-key")
+    served = [depth for depth in DEPTHS if depth in provider.depth_levels]
     try:
-        payloads = {depth: provider._build_payload(SearchRequest(query="hi", search_depth=depth)) for depth in DEPTHS}
+        payloads = {depth: provider._build_payload(SearchRequest(query="hi", search_depth=depth)) for depth in served}
     finally:
         provider.close()
 
     distinct = {depth: repr(sorted(payload.items())) for depth, payload in payloads.items()}
-    assert len(set(distinct.values())) == len(DEPTHS), f"{name} builds the same request for two depths: {payloads}"
+    assert len(set(distinct.values())) == len(served), f"{name} builds the same request for two depths: {payloads}"
 
 
 @pytest.mark.parametrize("name", sorted(SDK_BACKED))
@@ -218,7 +226,7 @@ def test_every_mapped_key_is_a_parameter_the_sdk_declares(name: str, monkeypatch
     finally:
         provider.close()
 
-    sent = {key for payload in payloads for key in payload}
+    sent = {key for payload in payloads for key in payload} - SDK_FORWARDED.get(name, set())
     assert sent <= declared, f"{name} sends {sorted(sent - declared)}, which {class_name}.search does not declare"
 
 

@@ -58,3 +58,14 @@ def test_provider_options_make_the_p90_unknown_as_well_as_the_price() -> None:
     optioned = Attempt(tool="search", provider="nimble", request=SearchRequest(query="q", provider_options={"x": 1}))
     assert attempt_p90(plain) is not None
     assert attempt_p90(optioned) is None
+
+
+@pytest.mark.parametrize(("effort", "known"), [(None, True), ("medium", True), ("low", False), ("max", False)])
+def test_a_search_effort_that_picks_a_tier_is_an_unknown_price(effort: str | None, known: bool) -> None:
+    """Linkup's ``max`` sends ``deep`` at ten times the default row: past ``medium`` the list cannot say which tier."""
+    from web_router.routing.pricing import attempt_cost
+
+    attempt = Attempt(tool="search", provider="linkup", request=SearchRequest(query="q", effort=effort))
+    assert (attempt_cost(attempt) is not None) is known
+    if not known:
+        assert attempt_p90(attempt) is None

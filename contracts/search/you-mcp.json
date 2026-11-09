@@ -32,13 +32,46 @@
       "deep": {
         "body.params.arguments.extraction": "full_page"
       }
+    },
+    "include_domains": {
+      "sample": {
+        "body.params.arguments.query": "probe query site:example.com"
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.params.arguments.exclude_domains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.params.arguments.query": "probe query loc:US"
+      }
+    },
+    "locale": {
+      "sample": {
+        "body.params.arguments.query": "probe query lang:EN"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.params.arguments.freshness": "day"
+      },
+      "week": {
+        "body.params.arguments.freshness": "week"
+      },
+      "month": {
+        "body.params.arguments.freshness": "month"
+      },
+      "year": {
+        "body.params.arguments.freshness": "year"
+      }
     }
   },
   "not_mapped": [
-    "country",
-    "exclude_domains",
-    "include_domains",
-    "locale"
+    "effort"
   ],
   "source": [
     "https://you.com/docs/agents/mcp-server",
@@ -46,28 +79,25 @@
   ],
   "verified": {
     "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
-    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content"
+    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content",
+    "include_domains": "live: tests/providers/test_you_mcp.py::test_live_inline_operators_are_taken_out_of_the_query",
+    "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back",
+    "country": "live: tests/providers/test_you_mcp.py::test_live_inline_operators_are_taken_out_of_the_query (accepted and stripped; on 2026-11-09 loc:DE and loc:US shared 59% of their results for 'best football club', so it moves results rather than filtering them)",
+    "locale": "live: tests/providers/test_you_mcp.py::test_live_inline_operators_are_taken_out_of_the_query (accepted and stripped; on 2026-11-09 lang:DE left 90% of the results the same as no lang, so it barely filters)",
+    "recency": "live: tests/test_integration_surface.py::test_recency_keeps_dated_results_near_the_window (freshness: if the query names a timeframe, the broader of the two wins)"
   },
   "vendor_options": {
-    "exclude_domains": {
-      "status": "passthrough",
-      "note": "Same meaning as the shared exclude_domains (up to 500); not mapped yet."
-    },
-    "freshness": {
-      "status": "passthrough",
-      "note": "day | week | month | year, or a YYYY-MM-DDtoYYYY-MM-DD range."
-    },
     "offset": {
       "status": "passthrough",
       "note": "0-9, in multiples of count."
     },
     "safesearch": {
       "status": "passthrough",
-      "note": "off | moderate | strict."
+      "note": "off | moderate | strict; unset, the API's moderate applies."
     },
     "knowledge": {
       "status": "passthrough",
-      "note": "core; knowledge results stay in raw."
+      "note": "core, the only mode and the default; knowledge results stay in raw."
     },
     "extraction_source": {
       "status": "passthrough",
@@ -79,7 +109,7 @@
     },
     "include_domains": {
       "status": "not_supported",
-      "note": "Host-only: set under params._meta or an X-Search-* header, which provider_options cannot reach."
+      "note": "Not an argument of you-search; the shared include_domains is sent as inline site: operators in the query, which the tool maps to it and strips (seen keyless on 2026-11-09, two sites both kept). It cannot be combined with exclude_domains, so the pair is refused."
     },
     "boost_domains": {
       "status": "not_supported",
@@ -87,11 +117,11 @@
     },
     "country": {
       "status": "not_supported",
-      "note": "Host-only: set under params._meta or an X-Search-* header, which provider_options cannot reach."
+      "note": "Not an argument of you-search; the shared country is sent as an inline loc: operator. The tool strips any loc: value, unknown ones too (loc:ZZ answered normally), so the REST API's 36 codes are enforced before the call."
     },
     "language": {
       "status": "not_supported",
-      "note": "Host-only: set under params._meta or an X-Search-* header, which provider_options cannot reach."
+      "note": "Not an argument of you-search; the shared locale is sent as an inline lang: operator with the REST API's tag (lang:PT-BR was stripped and answered). Values off the REST list are refused before the call."
     }
   }
 }

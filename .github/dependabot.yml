@@ -1,0 +1,12 @@
+# Weekly GitHub Actions updates in one grouped pull request. Python
+# dependencies are updated by hand, since `make requirements` must run with them.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "skip-changelog"]
+    groups:
+      github-actions:
+        patterns: ["*"]

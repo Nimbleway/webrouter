@@ -7,8 +7,8 @@ backend in the order, since any of them may run it: the request is priced with
 the option applied, by the attempt rule
 (:func:`~web_router.routing.pricing.fit_reason`). Every backend in the order
 must take the option -- the request always sends it, or the backend's
-``supported_parameters`` declares it -- since a backend that does not would
-refuse the call. A URL needs a URL
+``supported_parameters`` declares it and its ``refused_values`` keeps the
+value -- since a backend that does not would refuse the call. A URL needs a URL
 policy that allows it, and is never written into a note or a record whole:
 :func:`web_router._urls.host_of` keeps its scheme and host.
 """
@@ -26,6 +26,7 @@ from web_router.constants_merge import (
     MSG_PARAM_NO_URL_POLICY,
     MSG_PARAM_NOT_ALLOWED,
     MSG_PARAM_PRICED,
+    MSG_PARAM_REFUSED,
     MSG_PARAM_UNCHECKED,
     MSG_PARAM_UNDECLARED,
     MSG_PARAM_URL_REFUSED,
@@ -116,18 +117,27 @@ def _refusal(tool: str, key: str, value: Any, caller_set: Collection[str], url_c
     return _url_refusal(key, value, url_check) if key in URL_KEYS else None
 
 
-def _undeclared(tool: str, key: str, providers: Sequence[str]) -> str | None:
-    """Why one of ``providers`` would refuse ``key``: it neither always sends it nor declares it."""
+def _untaken(
+    tool: str, key: str, with_it: NormalizedRequest, without: NormalizedRequest, providers: Sequence[str]
+) -> str | None:
+    """Why one of ``providers`` would refuse ``key`` as ``with_it`` sets it: it neither always sends nor declares
+    it, or its ``refused_values`` refuses something ``without`` it was not refused (a search backend's depth
+    levels, say, or a value it names under another key that ``key`` now conflicts with)."""
     request_class, class_of = DECLARED[tool]
     if key in request_class.always_sent:
         return None
     for provider in providers:
         try:
-            declared = class_of(provider).supported_parameters
+            cls = class_of(provider)
         except (ProviderNotFoundError, ProviderNotInstalledError) as exc:  # not registered, or its SDK is missing
             return MSG_PARAM_UNCHECKED.format(tool=tool, provider=provider, key=key, error=type(exc).__name__)
-        if key not in declared:
+        if key not in cls.supported_parameters:
             return MSG_PARAM_UNDECLARED.format(tool=tool, provider=provider, key=key)
+        refused = cls.refused_values(with_it) if hasattr(cls, "refused_values") else {}
+        before = cls.refused_values(without) if refused else {}
+        if any(name not in before or before[name] != value for name, value in refused.items()):
+            value = _shown_value(key, getattr(with_it, key))
+            return MSG_PARAM_REFUSED.format(tool=tool, provider=provider, key=key, value=value)
     return None
 
 
@@ -155,9 +165,11 @@ def checked_params(
     asked: Mapping[Any, Mapping[str, Any]] = decision.params or {}
     kept: dict[str, Any] = {}
     for key, value in asked.get(tool, {}).items():
-        why = _refusal(tool, key, value, caller_set, url_check) or _undeclared(tool, key, providers)
+        without = request.model_copy(update=kept)
+        with_it = without.model_copy(update={key: value})
+        why = _refusal(tool, key, value, caller_set, url_check) or _untaken(tool, key, with_it, without, providers)
         if why is None and budget is not None:
-            why = _misfit(tool, key, value, request.model_copy(update=kept), providers, budget)
+            why = _misfit(tool, key, value, without, providers, budget)
         if why is None:
             kept[key] = list(value) if key == "urls" else value
         else:
