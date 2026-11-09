@@ -257,6 +257,10 @@ def test_an_error_ranks_above_every_answer_like_a_timeout(latency: ModuleType) -
         ["--e2e", "0"],
         ["--remote-rtt-ms", "-5"],
         ["--remote-rtt-ms", "inf"],
+        ["--deadline-s", "0"],
+        ["--deadline-s", "nan"],
+        ["--share", "nan"],
+        ["--share", "1.5"],
     ],
 )
 def test_a_negative_count_or_a_bad_price_is_refused(latency: ModuleType, args: list[str]) -> None:

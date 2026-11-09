@@ -72,6 +72,8 @@ MSG_REPEATED = "each router is timed once per run; named more than once: {names}
 MSG_COUNT = "a count of calls is 0 or more; got {value}"
 MSG_POSITIVE = "--e2e is 1 or more: the added wall time needs a timed call; got {value}"
 MSG_RTT = "--remote-rtt-ms is a finite number of milliseconds, 0 or more; got {value!r}"
+MSG_SECONDS = "--deadline-s is a finite number of seconds above 0; got {value!r}"
+MSG_SHARE = "--share is a fraction above 0 and at most 1; got {value!r}"
 MSG_NO_QUESTIONS = "the chosen sets give no questions to route: {sets}"
 MSG_USD = "a price is a finite number of USD, 0 or more; got {value!r}"
 MSG_MISSING_PROMPTS = "{name}: {count} questions have no text in {folder}; run frozen.py join again"
@@ -98,6 +100,28 @@ def _rtt(text: str) -> float:
         return _usd(text)
     except argparse.ArgumentTypeError:
         raise argparse.ArgumentTypeError(MSG_RTT.format(value=text)) from None
+
+
+def _seconds(text: str) -> float:
+    """A deadline: a finite number of seconds above 0."""
+    try:
+        value = float(text)
+    except ValueError:
+        value = math.nan
+    if not math.isfinite(value) or value <= 0:
+        raise argparse.ArgumentTypeError(MSG_SECONDS.format(value=text))
+    return value
+
+
+def _share(text: str) -> float:
+    """The rule's share of a tool's p50: above 0, at most 1."""
+    try:
+        value = float(text)
+    except ValueError:
+        value = math.nan
+    if not 0 < value <= 1:  # False for NaN too
+        raise argparse.ArgumentTypeError(MSG_SHARE.format(value=text))
+    return value
 
 
 def _price(text: str) -> tuple[float, float]:
@@ -131,11 +155,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     p.add_argument("--warmup", type=_count, default=DEFAULT_WARMUP, help="calls dropped after the first")
     p.add_argument("--cold", type=_count, default=DEFAULT_COLD, help="calls each on a freshly built router")
     p.add_argument("--e2e", type=_positive, default=DEFAULT_E2E, help="stubbed searches, routed against unrouted")
-    p.add_argument("--deadline-s", type=float, default=None, help="every call's deadline (default: each router's)")
+    p.add_argument("--deadline-s", type=_seconds, default=None, help="every call's deadline (default: each router's)")
     p.add_argument("--async", dest="use_async", action="store_true", help="call from an event loop, as acall")
     p.add_argument("--seed", type=int, default=DEFAULT_SEED, help="the prompt sample's and call order's seed")
     p.add_argument("--chain", choices=CHAINS, default=CHAIN_ALL, help="auto's order: every key, or the keys here")
-    p.add_argument("--share", type=float, default=SHARE, help="the rule's share of the tool's p50")
+    p.add_argument("--share", type=_share, default=SHARE, help="the rule's share of the tool's p50")
     p.add_argument("--llm-model", default=None, help="the llm router's model (default: $LLM_ROUTER_MODEL)")
     p.add_argument("--llm-price", type=_price, default=None, help="IN,OUT USD per million tokens, for the estimate")
     p.add_argument("--jev-price", type=_usd, default=None, help="USD per Jev call, for the estimate")

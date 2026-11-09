@@ -634,6 +634,10 @@ simulated 40 ms round trip. The run cost about $0.10.
 | remote, loopback | 3.17 | 4.1 | 0% | 56 | 3.75 | consult (1.0%) | consult (0.17%) |
 | remote, 40 ms RTT (simulated) | 47 | 48 | 0% | 135 | 47 | consult (15%) | consult (2.5%) |
 
+The 25% share held: no router sits near it. The nearest are a 40 ms link on
+search (15%) and the LLM router on answer (65%), so any share from 16% to 64%
+gives these same verdicts.
+
 What the examples declare from it: search and answer as measured, extract,
 research and browse by judgement, since they take seconds to minutes. The
 rules and sklearn routers pass every measured tool and declare no
