@@ -1,8 +1,8 @@
 """A preset's definition, and the report :meth:`~web_router.PresetRegistry.validate` returns.
 
-Kept apart so ``types.py`` stops growing. It imports ``types``, never the other way
-round; what a response carries about the presets that applied, :class:`~web_router.PresetMeta`,
-lives in ``types.py`` because every response model names it.
+Kept apart so ``types.py`` stops growing. It imports only ``types_meta``, which imports
+nothing of ours; what a response carries about the presets that applied,
+:class:`~web_router.PresetMeta`, lives there because every response model names it.
 
 A preset is saved configuration for one or more components, and nothing else:
 the definition is data that runs no code and calls nothing, and its settings are
@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from web_router.types import PresetComponent, ResolvedPreset
+from web_router.types_meta import PresetComponent, ResolvedPreset
 
 __all__ = ["PRESET_ID_PATTERN", "PRESET_VERSION_PATTERN", "ComponentSettings", "Preset", "PresetCheck", "PresetIssue"]
 

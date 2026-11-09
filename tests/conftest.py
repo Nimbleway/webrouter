@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import io
 from collections.abc import Iterator
 from contextlib import contextmanager
 from http import HTTPStatus
@@ -78,7 +77,7 @@ if _ENV_FILE.is_file():
 
     load_dotenv(_ENV_FILE)
 
-pytest_plugins = ["tests.benchmarks._tools_effort_fakes"]
+pytest_plugins = ["tests.benchmarks._tools_effort_fakes", "tests.presets_helpers"]
 """The tool and effort runner's fixtures, kept beside its tests rather than in ``tests/benchmarks/conftest.py``."""
 
 
@@ -149,22 +148,6 @@ class FakeExtractProvider(ExtractProvider):
 
     async def aclose(self) -> None:
         self.closed = True
-
-
-class RecordingExtract(FakeExtractProvider):
-    """The extract fake, keeping each request as the other fakes do, so a test can read what reached it."""
-
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        self.requests: list[Any] = []
-
-    def _extract(self, request: Any, urls: list[str]) -> Any:
-        self.requests.append(request)
-        return super()._extract(request, urls)
-
-    async def _aextract(self, request: Any, urls: list[str]) -> Any:
-        self.requests.append(request)
-        return await super()._aextract(request, urls)
 
 
 @pytest.fixture
@@ -562,17 +545,13 @@ def fake_browse_provider() -> Any:
     unregister_browse_provider("fake")
 
 
-def jpeg(width: int, height: int) -> bytes:
-    """A real JPEG of the given size, as some vendors' browsers return for a PNG screenshot."""
-    image = pytest.importorskip("PIL.Image")
-    out = io.BytesIO()
-    image.new("RGB", (width, height), "white").save(out, format="JPEG")
-    return out.getvalue()
-
-
 @pytest.fixture
 def clock(monkeypatch: pytest.MonkeyPatch) -> Any:
     """A fake clock for the deadline tests; imported here so a bare conftest load stays light."""
     from tests.deadline_helpers import install_clock
 
     return install_clock(monkeypatch)
+
+
+from tests.image_helpers import jpeg as jpeg  # noqa: E402  imported from here by the screenshot tests
+from tests.routing_helpers import called, priced, research_backends, tool  # noqa: E402, F401  the router fixtures

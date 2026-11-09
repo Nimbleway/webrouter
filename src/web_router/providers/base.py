@@ -38,7 +38,7 @@ from collections.abc import Awaitable, Callable, Iterator, Mapping
 from types import MappingProxyType, TracebackType
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, Protocol, TypeVar, cast
 
-from pydantic import BaseModel, SecretStr
+from pydantic import SecretStr
 
 from web_router.constants import (
     BROWSE_TIMEOUT,
@@ -90,6 +90,7 @@ from web_router.exceptions import (
 )
 from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_window, current_deadline
 from web_router.providers._page import AsyncPage, SyncPage
+from web_router.providers._pinned import PinnedJobMeta, PinnedMeta
 from web_router.types import (
     BrowseProgress,
     BrowseRequest,
@@ -104,15 +105,9 @@ from web_router.types import (
     ExtractResponse,
     JobState,
     NormalizedRequest,
-    PageFormat,
-    PageLoadState,
-    PageSnapshot,
-    PageState,
     ResearchProgress,
     ResearchRequest,
     ResearchResponse,
-    ResponseMeta,
-    Screenshot,
     SearchRequest,
     SearchResponse,
     StealthLevel,
@@ -121,6 +116,7 @@ from web_router.types import (
     TemplateRequest,
     TemplateResponse,
 )
+from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 if TYPE_CHECKING:
     from playwright.async_api import Page as AsyncPlaywrightPage
@@ -136,7 +132,7 @@ _UNASKED = _Unasked.UNASKED
 """A handle's control URL before the backend was asked for it: not the ``None`` of a backend that has none."""
 _StateT = TypeVar("_StateT", bound=str)
 _RequestT = TypeVar("_RequestT", bound=NormalizedRequest)
-_ResponseT = TypeVar("_ResponseT", bound=BaseModel)
+_ResponseT = TypeVar("_ResponseT")
 _ResponseT_co = TypeVar("_ResponseT_co", covariant=True)
 
 
@@ -794,7 +790,7 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
         return await self._awrapped(awaitable, self._failed_message)
 
 
-class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
+class Job(PinnedJobMeta, Generic[_RequestT, _ProgressT, _ResponseT]):
     """A run in progress, and the handle you wait on.
 
     Polling backs off as the run goes on, so a job that takes an hour is not
@@ -826,32 +822,6 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         self._provider = provider
         self._request = request
         self._progress = progress
-        self._meta: ResponseMeta | None = None
-
-    @property
-    def meta(self) -> ResponseMeta | None:
-        """The presets this run was started under, pinned when it was submitted; ``None`` when none applied.
-
-        Their checks read ``pending`` until the run has completed and ``passed``
-        after: a run the backend accepted is not yet a run that finished.
-        """
-        if self._meta is None:
-            return None
-        return self._meta.at("passed" if self._progress.state == "completed" else "pending")
-
-    def _pin(self, meta: ResponseMeta | None) -> None:
-        self._meta = meta
-
-    def _stamped(self, progress: _ProgressT) -> _ProgressT:
-        """A copy of ``progress`` with the pinned metadata on its answer, so a caller polling sees it too.
-
-        Stamped on every read rather than once, so changing what one read
-        returned cannot change the next.
-        """
-        if self._meta is None or progress.response is None or not isinstance(progress, BaseModel):
-            return progress
-        response = progress.response.model_copy(update={"meta": self._meta.at("passed")})
-        return cast("_ProgressT", progress.model_copy(update={"response": response}))
 
     @property
     def job_id(self) -> str:
@@ -879,11 +849,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         return self._provider.resumable
 
     def status(self) -> _ProgressT:
-        """Ask the backend where the run is now.
-
-        A run that has already finished is not asked about again: its last
-        progress is returned as it stands.
-        """
+        """Ask the backend where the run is now; a finished run is not asked again, and its last progress stands."""
         if not self._progress.is_terminal:
             self._progress = self._provider.poll(self._request, self.job_id)
         return self._stamped(self._progress)
@@ -902,9 +868,8 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
                 ``None`` to wait as long as the run takes.
 
         Raises:
-            WebRouterError: whatever the method's :meth:`JobProvider._timed_out`
-                says, if ``timeout`` elapses first. The run is left alone; call
-                this again to keep waiting.
+            WebRouterError: whatever the method's :meth:`JobProvider._timed_out` says, if ``timeout``
+                elapses first. The run is left alone; call this again to keep waiting.
             ProviderError: if the run failed or was cancelled.
         """
         wait = self._timeout(timeout)
@@ -932,18 +897,16 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         already spent: it has been paid for, and throwing the answer away to
         report a timeout would be the one outcome nobody wants.
 
-        A poll whose request timed out once the deadline has passed raises the
-        method's timeout, with the failure as its cause; any other failure, an
-        auth error or an unrecognized status, is raised as it is. Every call
-        inside the run is clamped to what the caller has left, so a status
-        request that stalls fails exactly as the deadline arrives; raised as the
-        backend's read timeout, it would lose the job id the caller needs to
-        come back to a run that is still going, and billing.
+        A poll that timed out past the deadline, or that the deadline cut off, raises the method's timeout,
+        with the failure as its cause and the job id the caller needs to come back to a run still going,
+        and billing; any other failure, an auth error or an unrecognized status, is raised as it is. Every
+        call inside the run is clamped to what the caller has left, so a status request that stalls fails
+        exactly as the deadline arrives.
         """
         for delay in self._poll_delays():
             try:
                 progress = self.status()
-            except ProviderError as exc:
+            except (ProviderError, DeadlineExceededError) as exc:
                 self._expire(exc, deadline, timeout)
             if progress.is_terminal:
                 return self._answer(progress)
@@ -955,16 +918,16 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         for delay in self._poll_delays():
             try:
                 progress = await self.astatus()
-            except ProviderError as exc:
+            except (ProviderError, DeadlineExceededError) as exc:
                 self._expire(exc, deadline, timeout)
             if progress.is_terminal:
                 return self._answer(progress)
             await asyncio.sleep(self._wait(delay, deadline, timeout))
         raise AssertionError  # pragma: no cover -- _poll_delays never ends
 
-    def _expire(self, exc: ProviderError, deadline: float | None, timeout: float | None) -> NoReturn:
-        """Raise the method's timeout for a poll that timed out past the deadline, else ``exc`` as it is."""
-        if _passed(deadline) and _is_timeout(exc):
+    def _expire(self, exc: WebRouterError, deadline: float | None, timeout: float | None) -> NoReturn:
+        """Raise the method's timeout, with this run's id, for a poll the deadline cut off; else ``exc`` as it is."""
+        if not isinstance(exc, ProviderError) or (_passed(deadline) and _is_timeout(exc)):  # the deadline cut it off
             raise self._provider._timed_out(self.job_id, timeout or 0.0) from exc
         raise exc
 
@@ -1002,11 +965,11 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         if progress.state == "cancelled":
             raise ProviderError(self.provider, MSG_JOB_CANCELLED)
         if progress.state == "failed" or response is None:
-            detail = progress.detail or MSG_JOB_NO_DETAIL
-            raise ProviderError(self.provider, MSG_JOB_RUN_FAILED.format(detail=detail))
-        if self._meta is not None:
-            return response.model_copy(update={"meta": self._meta.at("passed")})
-        return response
+            raise ProviderError(self.provider, MSG_JOB_RUN_FAILED.format(detail=progress.detail or MSG_JOB_NO_DETAIL))
+        if self.decision is not None and cast(Any, response).decision is not self.decision:  # copied once, then kept
+            response = cast(Any, response).model_copy(update={"decision": self.decision})
+            self._progress = cast(Any, progress).model_copy(update={"response": response})
+        return self._with_meta(response)
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__} provider={self.provider!r} job_id={self.job_id!r} state={self.state!r}>"
@@ -1533,7 +1496,7 @@ class BrowserProvider(_BaseProvider):
             raise self._failure(exc) from exc
 
 
-class _Handle:
+class _Handle(PinnedMeta):
     """What the sync and async handles share: the session, and the warning if it leaks."""
 
     def __init__(self, provider: BrowserProvider, session: BrowserSession) -> None:
@@ -1541,15 +1504,6 @@ class _Handle:
         self._session = session
         self._released = False
         self._asked_control_url: SecretStr | _Unasked | None = _UNASKED
-        self._meta: ResponseMeta | None = None
-
-    @property
-    def meta(self) -> ResponseMeta | None:
-        """A copy of the presets this session was opened under, pinned when it opened; ``None`` when none applied."""
-        return None if self._meta is None else self._meta.at("passed")
-
-    def _pin(self, meta: ResponseMeta | None) -> None:
-        self._meta = meta
 
     @property
     def session(self) -> BrowserSession:

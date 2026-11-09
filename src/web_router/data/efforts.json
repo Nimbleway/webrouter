@@ -1,0 +1,108 @@
+{
+  "generated_by": "make efforts (benchmarks/providers/efforts.py); do not edit by hand",
+  "rule": "Under a budget with a cost or time cap, research runs at the cheapest effort whose accuracy is within the noise floor of the most accurate measured effort that fits what is left: an accuracy gap smaller than a rerun's spread does not tell two efforts apart, so cost decides, then p90 latency, then the lower effort. An effort fits when its list price is known and within the cost cap and its p90 is within the time cap; an unknown p90 fits unless the budget is strict. A backend with fewer than two measured efforts keeps its default, and so does a call whose caller set the effort.",
+  "set": "tools-effort-60",
+  "questions": 60,
+  "min_questions": 20,
+  "noise_floor": {
+    "value": 0.011811,
+    "measured_on": "search",
+    "rerun": [
+      "sealqa-hard-254",
+      "sealqa-hard-254-twin"
+    ],
+    "fallback": true
+  },
+  "research": {
+    "linkup": {
+      "measured": {
+        "low": {
+          "accuracy": 0.833333,
+          "correct": 50,
+          "questions": 60,
+          "rate_limit_or_quota_left_out": 0,
+          "latency_p50_s": 117.598,
+          "latency_p90_s": 283.16
+        }
+      },
+      "too_few_questions": [],
+      "no_row_served": []
+    },
+    "nimble": {
+      "measured": {
+        "low": {
+          "accuracy": 0.85,
+          "correct": 51,
+          "questions": 60,
+          "rate_limit_or_quota_left_out": 0,
+          "latency_p50_s": 43.433,
+          "latency_p90_s": 58.376
+        },
+        "medium": {
+          "accuracy": 0.833333,
+          "correct": 50,
+          "questions": 60,
+          "rate_limit_or_quota_left_out": 0,
+          "latency_p50_s": 73.894,
+          "latency_p90_s": 135.728
+        },
+        "high": {
+          "accuracy": 0.866667,
+          "correct": 52,
+          "questions": 60,
+          "rate_limit_or_quota_left_out": 0,
+          "latency_p50_s": 88.7105,
+          "latency_p90_s": 180.653
+        }
+      },
+      "too_few_questions": [],
+      "no_row_served": []
+    },
+    "parallel": {
+      "measured": {
+        "low": {
+          "accuracy": 0.783333,
+          "correct": 47,
+          "questions": 60,
+          "rate_limit_or_quota_left_out": 0,
+          "latency_p50_s": 17.684,
+          "latency_p90_s": 43.197
+        },
+        "medium": {
+          "accuracy": 0.816667,
+          "correct": 49,
+          "questions": 60,
+          "rate_limit_or_quota_left_out": 0,
+          "latency_p50_s": 28.3585,
+          "latency_p90_s": 73.907
+        },
+        "high": {
+          "accuracy": 0.833333,
+          "correct": 50,
+          "questions": 60,
+          "rate_limit_or_quota_left_out": 0,
+          "latency_p50_s": 27.8785,
+          "latency_p90_s": 43.143
+        },
+        "max": {
+          "accuracy": 0.833333,
+          "correct": 50,
+          "questions": 60,
+          "rate_limit_or_quota_left_out": 0,
+          "latency_p50_s": 28.0825,
+          "latency_p90_s": 43.306
+        }
+      },
+      "too_few_questions": [],
+      "no_row_served": []
+    },
+    "perplexity": {
+      "measured": {},
+      "too_few_questions": [
+        "low",
+        "medium"
+      ],
+      "no_row_served": []
+    }
+  }
+}

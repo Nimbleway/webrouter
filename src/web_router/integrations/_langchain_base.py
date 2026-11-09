@@ -58,7 +58,7 @@ class _WebRouterTool(BaseTool):
     """Serves the async calls when given; without one they run the sync router on a worker thread."""
 
     provider: str | None = None
-    """The backend every call goes to; unset, the router's default -- ``auto`` unless it was built with one."""
+    """The backend every call goes to; unset, the router preset's, else the router's default (``auto`` unless set)."""
 
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 

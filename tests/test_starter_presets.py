@@ -10,7 +10,8 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import FakeProvider, RecordingExtract
+from tests.conftest import FakeProvider
+from tests.presets_helpers import RecordingExtract
 from web_router import WebRouter, available_answer_providers, available_extract_providers, available_providers
 from web_router.constants_deepseek import DEEPSEEK_QUERY_LIMIT
 from web_router.constants_presets import PRESET_FILE_SUFFIXES

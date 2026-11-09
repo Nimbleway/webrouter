@@ -1,8 +1,8 @@
 """Presets' component table, field tables, reference format and messages.
 
 Kept apart so ``constants.py`` stops growing; import them from here by name. Imports
-``types``, ``types_answer`` and ``types_presets`` only: AGENTS.md lets a ``constants_*``
-module import the models, and ``types_presets`` imports only ``types``, as ``types_answer`` does.
+``types``, ``types_answer``, ``types_presets`` and ``types_meta`` only: AGENTS.md lets a
+``constants_*`` module import the models, and ``types_presets`` imports only ``types_meta``, a leaf.
 """
 
 from __future__ import annotations
@@ -16,12 +16,12 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     NormalizedRequest,
-    PresetComponent,
     ResearchRequest,
     SearchRequest,
     TemplateRequest,
 )
 from web_router.types_answer import AnswerRequest
+from web_router.types_meta import PresetComponent
 from web_router.types_presets import PRESET_ID_PATTERN, PRESET_VERSION_PATTERN
 
 __all__ = [
@@ -64,6 +64,7 @@ __all__ = [
     "MSG_PRESET_UNSUPPORTED_FORMAT",
     "MSG_PRESET_UNSUPPORTED_PARAMETER",
     "MSG_PRESET_VERSIONS",
+    "MSG_PRESET_YAML_INVALID",
     "MSG_PRESET_YAML_MISSING",
     "MSG_PRESET_YAML_UNBUILT",
     "PRESET_ARGUMENT",
@@ -73,6 +74,7 @@ __all__ = [
     "PRESET_FILE_SUFFIXES",
     "PRESET_FORMATS",
     "PRESET_NATIVE_INPUTS",
+    "PRESET_PRICED_FIELDS",
     "PRESET_PROVIDER_FIELD",
     "PRESET_REF_PATTERN",
     "PRESET_REQUEST_MODELS",
@@ -137,11 +139,19 @@ a second edit. A research or browse call's ``timeout`` is how long the caller
 waits, not part of the request, and is not here.
 """
 
+_WAITS = frozenset({"research", "browse"})
+_BUDGETED = frozenset({"search", "extract", "answer", "research", "browse"})
+
 PRESET_CALL_ARGUMENTS: dict[PresetComponent, frozenset[str]] = {
-    component: frozenset({"timeout"}) if component in {"research", "browse"} else frozenset()
+    component: frozenset({"timeout"} if component in _WAITS else ())
+    | frozenset({"budget"} if component in _BUDGETED else ())
     for component in PRESET_REQUEST_MODELS
 }
-"""Arguments a method takes that are about the call, not the request -- how long to wait -- so no preset holds them."""
+"""Arguments a method takes that are about the call, not the request, so no preset holds them.
+
+A research or browse ``timeout`` is how long to wait, and a ``budget`` caps
+what the call may spend and how long it may take.
+"""
 
 PRESET_CASE_BLIND: dict[PresetComponent, frozenset[str]] = {
     component: frozenset({"proxy_country"}) if component == "browser" else frozenset()
@@ -151,6 +161,12 @@ PRESET_CASE_BLIND: dict[PresetComponent, frozenset[str]] = {
 
 PRESET_FORMATS: frozenset[str] = frozenset(get_args(ExtractFormat))
 """Every format there is. :meth:`~web_router.PresetRegistry.validate` checks a backend's formats only for these."""
+
+PRESET_PRICED_FIELDS = frozenset({PRESET_PROVIDER_FIELD, "provider_options", "search_depth", "max_results", "effort"})
+"""The settings a budget prices a call by (:mod:`web_router.routing.pricing`): the backend, its mode, its size.
+
+A budget's refusal names those of them a preset supplied, and no other.
+"""
 
 PRESET_WITHHELD_FIELDS = frozenset({"provider_options"})
 """Settings metadata shows by their keys alone and errors never show by value: a backend's options can hold a key."""
@@ -184,6 +200,8 @@ MSG_PRESET_DEFINED_TWICE = (
 MSG_PRESET_GIVEN_TWICE = "the preset is given both as an argument and in the request"
 MSG_PRESET_BAD_ARGUMENT = "the call's {field} is not valid: {error}"
 MSG_PRESET_YAML_UNBUILT = "a value PyYAML could not build ({kind})"
+MSG_PRESET_YAML_INVALID = "YAML that does not parse ({kind})"
+"""Names PyYAML's error class, never its text, which can repeat a value from the file."""
 MSG_PRESET_NOT_JSON = (
     "it holds a value JSON cannot represent, such as a set or bytes; a preset holds only what JSON can"
 )

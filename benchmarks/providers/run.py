@@ -70,7 +70,7 @@ from _questions import (
     question_args,
     question_tags,
 )
-from _recommended import recommendation
+from _recommended import ranking_stats, recommendation
 from _recommended import recommended_order as recommended_order
 from _report_tables import breakdown, breakdown_tables, search_score
 
@@ -140,6 +140,7 @@ def summarize(rows: list[dict[str, Any]], setup: dict[str, Any]) -> dict[str, An
     return {
         "setup": setup,
         "overall": overall,
+        "ranking": ranking_stats(rows, setup),
         **{f"by_{key}": breakdown(rows, key, providers) for key, _ in breakdowns(setup)},
     }
 

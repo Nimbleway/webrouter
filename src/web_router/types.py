@@ -1,26 +1,38 @@
 """Provider-agnostic request and response models.
 
-Every provider maps its own payload onto these types, so swapping Nimble for
-Tavily or You.com does not change the shape of what callers get back. Anything a
-provider returns that has no home here is preserved verbatim under
-``SearchResult.extra`` / ``SearchResponse.raw`` for a search, and under
-``ExtractedDocument.extra`` / ``ExtractResponse.raw`` for an extract, and under
-``TemplateResponse.extra`` / ``TemplateResponse.raw`` for an Extract Template run.
-
-A browser session is the exception to "a call returns an answer": it returns a
-:class:`BrowserSession` describing a browser the caller then drives itself.
+Every provider maps its own payload onto these types, so swapping Nimble for Tavily or You.com does not change the
+shape of what callers get back. Anything a provider returns that has no home here is preserved verbatim under
+``SearchResult.extra`` / ``SearchResponse.raw`` for a search, ``ExtractedDocument.extra`` / ``ExtractResponse.raw``
+for an extract, and ``TemplateResponse.extra`` / ``TemplateResponse.raw`` for an Extract Template run. A browser
+session is the exception to "a call returns an answer": it returns a :class:`BrowserSession` describing a browser the
+caller then drives itself.
 """
 
 from __future__ import annotations
 
 import time
-from collections.abc import Mapping, Sized
-from dataclasses import dataclass
+from collections.abc import Sized
 from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Generic, Literal, TypeVar, cast
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_serializer, model_validator
+
+from web_router.types_browser import REQUEST_VALUE as REQUEST_VALUE
+from web_router.types_browser import BrowserField as BrowserField
+from web_router.types_browser import BrowserFieldRow as BrowserFieldRow
+from web_router.types_browser import FieldPath as FieldPath
+from web_router.types_decision import DECISION_DESCRIPTION
+from web_router.types_decision import DecisionAttempt as DecisionAttempt
+from web_router.types_decision import DecisionHop as DecisionHop
+from web_router.types_decision import DecisionRecord as DecisionRecord
+from web_router.types_meta import META_DESCRIPTION
+from web_router.types_meta import ResponseMeta as ResponseMeta
+from web_router.types_page import PageFormat as PageFormat
+from web_router.types_page import PageLoadState as PageLoadState
+from web_router.types_page import PageSnapshot as PageSnapshot
+from web_router.types_page import PageState as PageState
+from web_router.types_page import Screenshot as Screenshot
 
 SearchDepth = Literal["lite", "fast", "deep"]
 """How much page content to retrieve per result.
@@ -29,8 +41,7 @@ SearchDepth = Literal["lite", "fast", "deep"]
 - ``fast``: a truncated page body, enough for most agent reasoning.
 - ``deep``: full page content; slowest and most expensive.
 
-Providers express this differently; each one maps these three levels onto its
-own vocabulary.
+Providers express this differently; each one maps these three levels onto its own vocabulary.
 """
 
 
@@ -143,97 +154,6 @@ class NormalizedRequest(BaseModel):
         return {name for name in self.normalized_parameters() if getattr(self, name) is not None}
 
 
-PresetComponent = Literal["search", "extract", "templates", "research", "browse", "browser", "answer"]
-"""A part of the router a preset can configure, one per method: ``templates`` is
-``run_template``, ``browse`` is ``browse`` and ``submit_browse``, ``browser`` is
-``open_browser``, ``research`` is ``research`` and ``submit_research``."""
-
-PresetSource = Literal["request", "client"]
-"""Where a preset came from: ``preset=`` on the call, or ``preset=`` on the router."""
-
-PresetValidationState = Literal["pending", "passed", "partial"]
-"""How far a call's preset checks have got.
-
-``pending`` while a job has been accepted but has not finished: acceptance is
-not completion. ``passed`` once the call returned under the preset's settings.
-``partial`` is reserved for completion checks a preset declares and the result
-did not meet; no preset can declare one yet, so nothing returns it today.
-"""
-
-
-class ResolvedPreset(BaseModel):
-    """One preset that applied to a call: where it came from, and which exact version."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    source: PresetSource
-    id: str
-    version: str
-
-    @property
-    def ref(self) -> str:
-        """The exact reference, ``id@version``."""
-        return f"{self.id}@{self.version}"
-
-
-class PresetValidation(BaseModel):
-    """The state of a call's preset checks, and any requirement left unmet."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    state: PresetValidationState
-    issues: list[str] = Field(default_factory=list)
-
-
-class PresetMeta(BaseModel):
-    """What presets did to one call: which applied, and the settings they supplied.
-
-    :attr:`effective` holds only what a preset supplied and the call kept; a
-    value the caller passed is never copied here. A preset's
-    ``provider_options`` appears by its keys alone, since a backend's own
-    options can hold a key. :attr:`overridden` names the preset settings the
-    caller's own arguments replaced.
-    """
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    component: PresetComponent
-    resolved: list[ResolvedPreset] = Field(
-        default_factory=list, description="Every preset that applied, the per-call one first, then the client's."
-    )
-    effective: dict[str, Any] = Field(
-        default_factory=dict, description="The settings the presets supplied that this call used."
-    )
-    overridden: list[str] = Field(
-        default_factory=list, description="Preset settings the call's own arguments replaced, by name."
-    )
-    validation: PresetValidation
-
-
-class ResponseMeta(BaseModel):
-    """What the router adds about a call beside the backend's answer. Only presets so far."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    preset: PresetMeta | None = None
-
-    def at(self, state: PresetValidationState) -> ResponseMeta:
-        """A deep copy of this metadata with the preset checks at ``state`` -- a job's, once it has finished.
-
-        A copy every time, so a caller who changes what it was handed cannot
-        change what the job or session it came from reports next.
-        """
-        if self.preset is None:
-            return self.model_copy(deep=True)
-        validation = PresetValidation(state=state)
-        return self.model_copy(
-            deep=True, update={"preset": self.preset.model_copy(deep=True, update={"validation": validation})}
-        )
-
-
-META_DESCRIPTION = "What the router adds about the call: the presets that applied. None when no preset did."
-
-
 MAX_RESULTS_DESCRIPTION = (
     "How many results to return; unset, the backend's own default. For an agent: 5 to 10 for most questions,"
     " more for news or a question with several parts, and 1 only when the user asked for a single link."
@@ -334,6 +254,7 @@ class SearchResponse(BaseModel):
     request_id: str | None = None
     meta: ResponseMeta | None = Field(default=None, description=META_DESCRIPTION)
     raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
     def __len__(self) -> int:
         return len(self.results)
@@ -408,6 +329,7 @@ class ExtractResponse(BaseModel):
             "backend that takes every URL at once, one per URL for a backend that does not."
         ),
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
     def __len__(self) -> int:
         return len(self.documents)
@@ -791,10 +713,7 @@ class Citation(BaseModel):
 
     url: str
     title: str = Field(default="", description="The cited page's title, when the provider returned one.")
-    snippet: str = Field(
-        default="",
-        description="The passage the backend quoted from the page, when it quoted one.",
-    )
+    snippet: str = Field(default="", description="The passage the backend quoted from the page, when it quoted one.")
     field: str | None = Field(
         default=None,
         description=(
@@ -839,6 +758,7 @@ class ResearchResponse(BaseModel):
         default=None,
         description="The provider's untouched payloads, one per call the run took.",
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
     @property
     def urls(self) -> list[str]:
@@ -942,50 +862,6 @@ BROWSER_ALWAYS_SENT = BrowserRequest.always_sent
 BROWSER_PARAMETERS: frozenset[str] = BrowserRequest.normalized_parameters()
 """Every optional parameter a browser provider may declare support for."""
 
-FieldPath = tuple[str, ...]
-"""Where a field sits in a JSON body: one key for a top-level field, one per level for a nested one."""
-
-
-class _RequestValue(Enum):
-    REQUEST_VALUE = "request-value"
-
-
-REQUEST_VALUE = _RequestValue.REQUEST_VALUE
-"""Stands for the request's own value inside a :class:`BrowserField`, wherever in the field it goes."""
-
-
-@dataclass(frozen=True)
-class BrowserField:
-    """Every field one option sets in a browser API's body, for an option a single path cannot carry.
-
-    A browser provider's field table maps each option it sends to one of three
-    rows, and ``build_browser_payload`` places what each produces:
-
-    - a path, ``("session", "timeout")``: the request's value goes there;
-    - a lookup, ``{"low": {("useStealth",): True}, ...}``: the value picks the
-      fields to set, and a value the lookup does not list is never sent;
-    - a :class:`BrowserField`, which sets every field in :attr:`sets` --
-      ``{("useProxy",): True, ("proxyCountry",): REQUEST_VALUE}`` turns a proxy
-      on and names its country in one row.
-    """
-
-    sets: Mapping[FieldPath, Any]
-    """Path -> what goes there: a literal, or :data:`REQUEST_VALUE`, alone or at any depth in a dict, list or tuple.
-
-    Each value is placed whole, so no two paths may meet: one path inside
-    another, or the same path twice across rows, is a table bug and raises.
-    """
-
-    case: Literal["upper", "lower"] | None = None
-    """The case a text value is sent in -- a country code, say, for an API that takes one case only.
-
-    Only for an option whose value is text; set on any other, it raises rather than being skipped.
-    """
-
-
-BrowserFieldRow = FieldPath | Mapping[Any, Mapping[FieldPath, Any]] | BrowserField
-"""One option's row in a browser provider's field table: a path, a lookup, or a :class:`BrowserField`."""
-
 
 class BrowserSession(BaseModel):
     """One open browser session, as the backend described it.
@@ -1033,12 +909,10 @@ class BrowserSession(BaseModel):
 BrowseOutcome = Literal["complete", "partial"]
 """Whether a finished browse task did all it was asked, or said it stopped early.
 
-``partial`` only when the backend itself said so, as for research. None of the
-built-in task backends reports an early stop that can be told apart from a
-finished run -- Skyvern's ``timed_out`` cannot distinguish its step limit from
-its clock, and Browser Use's ``isSuccess`` is its agent's opinion of its own
-answer -- so each of them answers ``complete``. Reading either signal as
-``partial`` would be the router inventing a verdict the backend did not give.
+``partial`` only when the backend itself said so, as for research. None of the built-in task backends reports an
+early stop that can be told apart from a finished run -- Skyvern's ``timed_out`` cannot distinguish its step limit
+from its clock, and Browser Use's ``isSuccess`` is its agent's opinion of its own answer -- so each of them answers
+``complete``. Reading either signal as ``partial`` would be the router inventing a verdict the backend did not give.
 """
 
 
@@ -1145,6 +1019,7 @@ class BrowseResponse(BaseModel):
             "it is never serialized."
         ),
     )
+    decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
 
 
 class BrowseProgress(BaseModel):
@@ -1167,61 +1042,3 @@ class BrowseProgress(BaseModel):
     def is_terminal(self) -> bool:
         """Whether this task has stopped, one way or another."""
         return self.state not in ("queued", "running")
-
-
-PageLoadState = Literal["commit", "domcontentloaded", "load", "networkidle"]
-"""How far a page must get before ``goto`` returns. Left unset, Playwright waits for ``load``."""
-
-PageFormat = Literal["text", "html"]
-"""What :meth:`BrowserHandle.read <web_router.BrowserHandle.read>` returns: the rendered text, or the DOM as HTML."""
-
-
-class PageState(BaseModel):
-    """Where the page is after an action."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    title: str = ""
-    status_code: int | None = Field(
-        default=None,
-        description=(
-            "The HTTP status of the response a navigation produced. Set by ``goto`` only, and ``None`` when "
-            "the navigation produced no response -- a same-document jump, or a page with no HTTP behind it."
-        ),
-    )
-
-
-class PageSnapshot(BaseModel):
-    """The page as an agent reads it: its accessibility tree, each element tagged with a ref.
-
-    :attr:`tree` is Playwright's ``aria_snapshot(mode="ai")`` YAML, with unnamed
-    wrapper containers and link-URL lines dropped to keep it short. Pass a ref
-    back unchanged -- ``click(ref="e14")`` -- and treat it as opaque: its shape
-    is not stable. A ref is good until the next snapshot or navigation, and one
-    used after that raises :class:`~web_router.exceptions.StaleElementError`.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    title: str = ""
-    tree: str = Field(description='One element per line, e.g. ``- button "Submit" [ref=e11]``.')
-    truncated: bool = Field(
-        default=False,
-        description=(
-            "Whether :attr:`tree` was cut at a line boundary to fit ``max_chars``. Refs past the cut "
-            "were never offered, and using one raises StaleElementError."
-        ),
-    )
-
-
-class Screenshot(BaseModel):
-    """A PNG capture of the page. In JSON, :attr:`png` is base64, both ways."""
-
-    model_config = ConfigDict(extra="forbid", ser_json_bytes="base64", val_json_bytes="base64")
-
-    png: bytes = Field(repr=False, description="The image, as PNG bytes.")
-    width: int = Field(description="Width of the image in pixels.")
-    height: int = Field(description="Height of the image in pixels.")
-    url: str = Field(description="The page it was taken of.")
