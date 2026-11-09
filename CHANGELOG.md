@@ -1,10 +1,14 @@
 # Changelog
 
-All notable changes to `web-router` are recorded here, newest first. Versions
+All notable changes to WebRouter are recorded here, newest first. Versions
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 `0.x`, a breaking change bumps the minor version.
 
 ## [Unreleased]
+
+### Changed
+
+- The package description, GitHub About line and README title now read "WebRouter is an open source standard that connects your agent to the web". The import (`web_router`) and the `web-router-mcp` command are unchanged.
 
 ### Added
 
