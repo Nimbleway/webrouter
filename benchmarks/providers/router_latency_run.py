@@ -55,9 +55,11 @@ class Series:
             self.errors[outcome.failure] = self.errors.get(outcome.failure, 0) + 1
 
     def stats(self) -> dict[str, Any]:
-        """p50 and p90 with every timeout ranked above every answer; ``None`` where that rank is a timeout."""
+        """p50 and p90 with every timeout and error ranked above every answer; ``None`` where that rank is one."""
         calls = len(self.samples_ms) + self.censored + sum(self.errors.values())
-        ranked = sorted(self.samples_ms) + [math.inf] * self.censored
+        # A timeout or an error gave no answer: each ranks above every answer, so a router that mostly
+        # fails has no p50 to weigh, however fast its few answers were.
+        ranked = sorted(self.samples_ms) + [math.inf] * (self.censored + sum(self.errors.values()))
         p50, p90 = (_pct(ranked, f) for f in (P50, P90))
         return {
             "calls": calls,
@@ -140,19 +142,23 @@ def cold_builds(
     calls: dict[str, Series] = {name: Series() for name in builders}
     builds: dict[str, list[float]] = {name: [] for name in builders}
 
-    def built(name: str, req: RouteRequest) -> tuple[Any, AttachedRouter, RouteRequest]:
+    def built(name: str) -> Any:
         started = time.perf_counter()
         router = builders[name]()
         builds[name].append((time.perf_counter() - started) * 1000)
-        attached = AttachedRouter(router)
-        return router, attached, replace(req, deadline_s=_deadline(attached, deadline_s))
+        return router
+
+    def ready(router: Any, req: RouteRequest) -> tuple[AttachedRouter, RouteRequest]:
+        attached = AttachedRouter(router)  # inside the caller's try: a router it refuses is still closed
+        return attached, replace(req, deadline_s=_deadline(attached, deadline_s))
 
     order = list(_rounds(random.Random(seed), list(builders), len(plan)))
 
     async def arun() -> None:
         for i, name in order:
-            router, attached, req = built(name, plan[i])
+            router = built(name)
             try:
+                attached, req = ready(router, plan[i])
                 calls[name].add(await attached.acall(req))
             finally:
                 close(router)
@@ -161,8 +167,9 @@ def cold_builds(
         asyncio.run(arun())
     else:
         for i, name in order:
-            router, attached, req = built(name, plan[i])
+            router = built(name)
             try:
+                attached, req = ready(router, plan[i])
                 calls[name].add(attached.call(req))
             finally:
                 close(router)

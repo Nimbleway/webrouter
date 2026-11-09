@@ -9,6 +9,7 @@ import time
 from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import pytest
 
@@ -203,3 +204,63 @@ def test_the_dry_run_counts_calls_and_prices_the_llm_without_calling(
 def test_a_real_run_needs_the_question_text(latency: ModuleType, tmp_path: Path) -> None:
     with pytest.raises(SystemExit, match=r"frozen\.py join"):
         latency.requests(["tools-effort-60"], tmp_path, need_prompts=True)
+
+
+# Refusals and cleanup
+
+
+def test_an_error_ranks_above_every_answer_like_a_timeout(latency: ModuleType) -> None:
+    series = _module("router_latency_run").Series(samples_ms=[1.0], errors={"router_error": 3})
+    assert series.stats()["p50_ms"] is None, "one fast answer among failures is no p50"
+
+
+@pytest.mark.parametrize(
+    "args", [["-n", "-1"], ["--llm-price", "-1,1"], ["--llm-price", "nan,1"], ["--jev-price", "inf"]]
+)
+def test_a_negative_count_or_a_bad_price_is_refused(latency: ModuleType, args: list[str]) -> None:
+    with pytest.raises(SystemExit):
+        latency.parse_args(args)
+
+
+def test_a_joined_file_missing_questions_is_refused(latency: ModuleType, tmp_path: Path) -> None:
+    (tmp_path / "tools-effort-60.jsonl").write_text('{"question_id": "nope", "question": "q"}\n', encoding="utf-8")
+    with pytest.raises(SystemExit, match="have no text"):
+        latency.requests(["tools-effort-60"], tmp_path, need_prompts=True)
+
+
+class _Closing:
+    def __init__(self, log: list[str], name: str) -> None:
+        self.log, self.name = log, name
+
+    def route(self, req: RouteRequest) -> RouteDecision:
+        return RouteDecision()
+
+    def close(self) -> None:
+        self.log.append(self.name)
+
+
+def test_a_failing_build_still_closes_the_routers_built_before_it(latency: ModuleType) -> None:
+    routers = _module("router_latency_routers")
+    log: list[str] = []
+
+    def broken() -> Any:
+        raise RuntimeError("no key")
+
+    specs = [routers.RouterSpec("a", "a", lambda: _Closing(log, "a")), routers.RouterSpec("b", "b", broken)]
+    args = latency.parse_args(["-n", "1", "--warmup", "0", "--cold", "0", "--e2e", "0"])
+    with pytest.raises(RuntimeError):
+        latency.run(args, specs, [_req()])
+    assert log == ["a"]
+
+
+def test_a_freshly_built_router_the_library_refuses_is_closed(latency: ModuleType) -> None:
+    log: list[str] = []
+
+    def refused() -> Any:
+        router = _Closing(log, "bad")
+        router.timeout_s = -1  # type: ignore[attr-defined]
+        return router
+
+    with pytest.raises(Exception, match="timeout_s"):
+        _module("router_latency_run").cold_builds({"bad": refused}, [_req()], deadline_s=None, seed=0, use_async=False)
+    assert log == ["bad"]

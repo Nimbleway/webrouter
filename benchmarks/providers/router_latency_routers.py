@@ -111,11 +111,6 @@ def _sklearn() -> Any:
         return classifier.ClassifierRouter(joblib.load(path))
 
 
-def remote_router(url: str) -> Any:
-    """The library's ``remote`` router for ``url``, as ``router="remote"`` builds it, at its default timeout."""
-    return RemoteRouter(url=url)
-
-
 class DelayedRouter:
     """A router behind a simulated link: ``rtt_ms`` slept before each call, :data:`HANDSHAKE_RTTS` times on the first.
 
@@ -202,10 +197,10 @@ def _remote(spec: str, rtt_ms: float) -> RouterSpec:
     url = spec.removeprefix(REMOTE)
     shown = REMOTE + host_of(url)  # never the path, query or credentials: they may carry a token
     if not rtt_ms:
-        name, build = shown, lambda: remote_router(url)
+        name, build = shown, lambda: RemoteRouter(url=url)
         link = "as the URL lies (loopback: no network)"
     else:
-        name, build = f"{shown} +{rtt_ms:g}ms", lambda: DelayedRouter(remote_router(url), rtt_ms)
+        name, build = f"{shown} +{rtt_ms:g}ms", lambda: DelayedRouter(RemoteRouter(url=url), rtt_ms)
         link = f"plus a simulated {rtt_ms:g} ms RTT ({HANDSHAKE_RTTS} RTTs on a new connection)"
     return RouterSpec(
         name,

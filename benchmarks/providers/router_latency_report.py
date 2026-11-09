@@ -104,8 +104,8 @@ def markdown(results: Mapping[str, Any], tools: Mapping[str, ToolLatency]) -> st
         results["definition"],
         "",
         "A call that reached its deadline is censored: counted as a timeout, ranked above every answer, never "
-        "used as a value; a p50 or p90 that falls on one reads n/a. Errors and timeouts both fall back to the "
-        "static order.",
+        "used as a value; an error ranks the same way. A p50 or p90 that falls on either reads n/a. Errors and "
+        "timeouts both fall back to the static order.",
         "",
     ]
     body = [

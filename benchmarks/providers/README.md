@@ -600,7 +600,8 @@ timed in the same session, interleaved in a seeded random order: a first
 call, reported apart, then `--warmup` calls dropped, then `-n` timed calls
 (200 by default). A call that reaches the router's deadline (its `timeout_s`,
 or `--deadline-s`) is censored: it counts toward the timeout rate and ranks
-above every answer, never as a value. `--cold` calls each build the router
+above every answer, never as a value; an error ranks the same way, so a router
+that mostly fails has no p50 to weigh. `--cold` calls each build the router
 anew, and `--e2e` stubbed searches through `auto`, routed and with
 `route_tools=()`, give the wall time routing adds, candidates and the thread
 hop included. `--dry-run` prints each router's calls, the variables it needs

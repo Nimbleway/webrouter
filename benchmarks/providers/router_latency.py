@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import importlib.metadata
 import json
+import math
 import os
 import platform
 import random
@@ -68,6 +69,8 @@ MSG_NOT_JOINED = (
 )
 MSG_REPEATED = "each router is timed once per run; named more than once: {names}"
 MSG_COUNT = "a count of calls is 0 or more; got {value}"
+MSG_USD = "a price is a finite number of USD, 0 or more; got {value!r}"
+MSG_MISSING_PROMPTS = "{name}: {count} questions have no text in {folder}; run frozen.py join again"
 MSG_PRICE = "--llm-price takes IN,OUT: USD per million input and output tokens, as 0.15,0.60"
 
 
@@ -83,9 +86,20 @@ def _price(text: str) -> tuple[float, float]:
     if len(parts) != 2:
         raise argparse.ArgumentTypeError(MSG_PRICE)
     try:
-        return float(parts[0]), float(parts[1])
-    except ValueError:
+        return _usd(parts[0]), _usd(parts[1])
+    except argparse.ArgumentTypeError:
         raise argparse.ArgumentTypeError(MSG_PRICE) from None
+
+
+def _usd(text: str) -> float:
+    """A price: a finite number of 0 or more."""
+    try:
+        value = float(text)
+    except ValueError:
+        value = math.nan
+    if not math.isfinite(value) or value < 0:
+        raise argparse.ArgumentTypeError(MSG_USD.format(value=text))
+    return value
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
@@ -105,7 +119,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     p.add_argument("--share", type=float, default=SHARE, help="the rule's share of the tool's p50")
     p.add_argument("--llm-model", default=None, help="the llm router's model (default: $LLM_ROUTER_MODEL)")
     p.add_argument("--llm-price", type=_price, default=None, help="IN,OUT USD per million tokens, for the estimate")
-    p.add_argument("--jev-price", type=float, default=None, help="USD per Jev call, for the estimate")
+    p.add_argument("--jev-price", type=_usd, default=None, help="USD per Jev call, for the estimate")
     p.add_argument("--remote-rtt-ms", type=float, action="append", default=[], help="also time remote over this RTT")
     p.add_argument("--out", type=Path, default=None, help="results file (default: results/router-latency/<time>)")
     p.add_argument("--dry-run", action="store_true", help="print what would run and its cost; call nothing")
@@ -120,6 +134,9 @@ def requests(sets: Sequence[str], joined: Path, *, need_prompts: bool) -> tuple[
         if need_prompts and not (joined / f"{name}.jsonl").is_file():
             raise SystemExit(MSG_NOT_JOINED.format(name=name, folder=joined))
         _, questions = load_set(name, joined=joined if have and (joined / f"{name}.jsonl").is_file() else None)
+        missing = sum(1 for q in questions if not q.prompt)
+        if need_prompts and missing:
+            raise SystemExit(MSG_MISSING_PROMPTS.format(name=name, count=missing, folder=joined))
         out += [request_for(q) for q in questions]
     return out, all(r.prompt for r in out)
 
