@@ -81,7 +81,11 @@ _CONDITIONS: tuple[tuple[str, str], ...] = (
 """The class-level checks a backend may declare and the issue each reports. The call makes them before it bills."""
 
 _REFUSALS = frozenset({"refused_values", "refused_options"})
-"""A search backend's ``refused_values`` already holds its ``refused_options``: one refusal is one issue."""
+"""A search backend's ``refused_values`` already holds its ``refused_options``: one refusal is one issue.
+
+An option already reported as unmapped is not reported again, because a subclass can inherit ``refused_options``
+for options it does not map (Parallel MCP inherits Parallel's).
+"""
 
 
 def _condition_issues(
