@@ -39,7 +39,7 @@ JsonSchema = dict[str, Any] | type[BaseModel]
 def build_search_request(
     query: str, *, provider_options: dict[str, Any] | None, **options: Unpack[SearchOptions]
 ) -> SearchRequest:
-    """Every search option goes through by name, so a new one is added to the request model and the signatures only."""
+    """Every search option goes through by name: a new one goes in the request model, signatures and SearchOptions."""
     return SearchRequest(query=query, provider_options=provider_options or {}, **options)
 
 
