@@ -1973,7 +1973,22 @@ class SlowRouter:
 Which tools a router of each kind should declare is measured by
 [`router_latency.py`](benchmarks/providers/README.md#router-latency-which-tools-a-router-should-order):
 a tool asks the router only when the router's p50 is below a quarter of the
-tool's.
+tool's p50, the p50 of the first backend in its `auto` chain. Measured on
+2026-11-09 (Apple M4 Pro, Python 3.12.13, async), against search's 316 ms and
+answer's 1874 ms:
+
+| Router | p50 ms | p90 ms | Search | Answer | Example declares |
+|---|--:|--:|---|---|---|
+| rules (built in) | 0.375 | 0.553 | consult | consult | nothing: all five |
+| scikit-learn classifier | 2.07 | 2.61 | consult | consult | nothing: all five |
+| LLM, `gpt-4.1-mini` | 1223 | 1714 | skip | skip | `("research", "browse")` |
+| Jev, `jev-1.14.0` | 242 | 271 | skip | consult | `("answer", "extract", "research", "browse")` |
+| `remote`, loopback | 3.17 | 4.1 | consult | consult | -- |
+| `remote`, 40 ms round trip (simulated) | 47 | 48 | consult | consult | -- |
+
+Extract, research and browse have no measured p50; they take seconds to
+minutes, so the examples keep them by judgement. Latency moves with the model,
+the network and the hour: rerun the script for your own router.
 
 ### `plan()` and `run()`
 

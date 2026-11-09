@@ -87,6 +87,13 @@ class TestLLM:
         assert list(plan.providers["search"]) == offered[::-1]
         assert plan.decision.reason == "reversed"
 
+    def test_it_orders_research_and_browse_only_unless_the_caller_says_otherwise(self) -> None:
+        router, _ = _llm(lambda kwargs: {"ranked": [], "reason": ""})
+        with WebRouter(router=router) as client:
+            assert client._route_tools == {"research", "browse"}
+        with WebRouter(router=router, route_tools=("search",)) as client:
+            assert client._route_tools == {"search"}
+
     def test_without_a_key_it_says_what_to_set(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:

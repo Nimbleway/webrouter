@@ -6,7 +6,9 @@ method, estimated cost and p90 latency. Jev answers with a probability for
 every candidate; the router ranks them by it, and the ranking becomes the
 decision's `tools` and `providers`, its reason naming the first and its
 probability. It is async, and declares `timeout_s = 1.0`: past that, the call
-runs on the static order.
+runs on the static order. It also declares `route_tools`, every tool but
+search: a plain search runs in `auto`'s order without waiting on Jev; `plan()`
+always asks it.
 
 **This router sends each prompt to TypeSafe.**
 
@@ -94,9 +96,10 @@ class JevRouter:
     """Ranks the candidates by Jev's probability for each."""
 
     timeout_s = 1.0
-    # PLACEHOLDER until benchmarks/providers/router_latency.py's paid run: the tools this router is consulted
-    # on when the caller passes no route_tools. None means all five, as today; the run's per-tool verdicts set it.
-    route_tools: tuple[str, ...] | None = None
+    # The tools it orders when the caller passes no route_tools (benchmarks/providers/router_latency.py,
+    # 2026-11-09). Search and answer were measured: at a p50 of 0.24 s it fits answer (13% of its p50) and not
+    # search (76%). Extract, research and browse are judgement: they take seconds to minutes.
+    route_tools = ("answer", "extract", "research", "browse")
 
     def __init__(self, client: httpx.AsyncClient | None = None, api_key: str | None = None) -> None:
         """``client``: one you open and close yourself; without it, each call opens its own and closes it."""

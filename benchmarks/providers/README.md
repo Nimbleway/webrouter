@@ -607,11 +607,16 @@ hop included. `--dry-run` prints each router's calls, the variables it needs
 and an estimated cost, and calls nothing. Each run writes a JSON file and its
 table to `results/router-latency/`.
 
-**Results.** 2026-11-09 on an Apple M4 Pro (12 CPUs), macOS 26.6, Python
-3.12.13, scikit-learn 1.9.1, web-router 0.10.0; sync calls, 200 timed per
-router after a first call and 5 warm-up; the sklearn router is the example's
-toy-trained pipeline. Called from an event loop (`--async`) both add about
-0.05 ms. The LLM, Jev and remote rows are placeholders until their runs.
+**Results.** 2026-11-09 14:44 UTC, one async run (`--async`) from one host:
+an Apple M4 Pro (12 CPUs), macOS 26.6.2, Python 3.12.13, web-router 0.10.0,
+scikit-learn 1.9.1, openai 3.45.0, httpx 0.28.1. Each router was called 200
+times after a first call and 5 warm-up calls, interleaved in a seeded random
+order, on `tools-effort-60` and `simpleqa-300-v2`. The LLM router is
+`examples/router_llm.py` on OpenAI's `gpt-4.1-mini`; Jev is
+`examples/router_jev.py` on `jev-1.14.0`; the sklearn router is the example's
+toy-trained pipeline; remote is the built-in `remote` router asking
+`examples/router_remote_server.py` on loopback, then the same behind a
+simulated 40 ms round trip. The run cost about $0.10.
 
 | Tool | First backend in `auto` | p50 s | p90 s |
 |---|---|--:|--:|
@@ -621,17 +626,23 @@ toy-trained pipeline. Called from an event loop (`--async`) both add about
 
 | Router | p50 ms | p90 ms | Timeouts | First call ms | Added wall time p50 ms | search | answer |
 |---|--:|--:|--:|--:|--:|---|---|
-| rules | 0.034 | 0.044 | 0% | 0.093 | 0.21 | consult (0.01%) | consult (0.002%) |
-| sklearn | 0.23 | 0.24 | 0% | 0.34 | 0.41 | consult (0.07%) | consult (0.01%) |
-| llm (`<model>`) | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |
-| jev (`jev-1.14.0`) | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |
-| remote, loopback | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |
-| remote, `<rtt>` ms RTT | `<p50>` | `<p90>` | `<rate>` | `<first>` | `<added>` | `<verdict>` | `<verdict>` |
+| rules | 0.375 | 0.553 | 0% | 0.23 | 0.98 | consult (0.12%) | consult (0.02%) |
+| sklearn | 2.07 | 2.61 | 0% | 1.9 | 2.5 | consult (0.65%) | consult (0.11%) |
+| llm (`gpt-4.1-mini`) | 1223 | 1714 | 0% | 2084 | 1389 | skip (387%) | skip (65%) |
+| jev (`jev-1.14.0`) | 242 | 271 | 0.5% | 278 | 237 | skip (76%) | consult (13%) |
+| remote, loopback | 3.17 | 4.1 | 0% | 56 | 3.75 | consult (1.0%) | consult (0.17%) |
+| remote, 40 ms RTT (simulated) | 47 | 48 | 0% | 135 | 47 | consult (15%) | consult (2.5%) |
 
-The rules and sklearn routers fit every measured tool by three orders of
-magnitude and declare no `route_tools`. Extract, research and browse take
-seconds to minutes, so any router measured here fits them by judgement.
-Experimental until 1.0, like the router contract.
+What the examples declare from it: search and answer as measured, extract,
+research and browse by judgement, since they take seconds to minutes. The
+rules and sklearn routers pass every measured tool and declare no
+`route_tools`. The LLM router declares `("research", "browse")` (it never picks
+extract with no URL in the prompt), and Jev `("answer", "extract", "research",
+"browse")`. A remote service declares its own through `router_config`; at the
+latencies above, loopback and a 40 ms link both fit search and answer. A
+`plan()` always asks the router. Router latency moves with the model, the hour
+and the network, so rerun it for yours. Experimental until 1.0, like the
+router contract.
 
 ## Keeping results
 
