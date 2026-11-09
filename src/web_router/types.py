@@ -336,6 +336,18 @@ class ExtractResponse(BaseModel):
         return [document.url for document in self.documents]
 
 
+_BENCHMARK_MODELS = frozenset({"BenchmarkRun", "BenchmarkReport", "ExtractBenchmarkRun", "ExtractBenchmarkReport"})
+
+
+def __getattr__(name: str) -> Any:
+    """The benchmark models' old path: ``types_benchmark`` imports this module, so it cannot be imported at the top."""
+    if name in _BENCHMARK_MODELS:
+        from web_router import types_benchmark
+
+        return getattr(types_benchmark, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 class TemplateRequest(NormalizedRequest):
     """A normalized Extract Template run.
 
