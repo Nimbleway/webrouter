@@ -40,5 +40,6 @@ ROUTER_NAME_ATTR = "router_name"
 
 MSG_ROUTER_NAME = "A router's name must be a non-empty string; got {name!r}."
 MSG_ROUTER_FACTORY = "register_router({name!r}, ...) takes a callable that builds a router; got {kind}."
+MSG_ROUTER_BUILT_NONE = "router={name!r}: its registered factory returned None, not a router."
 MSG_ROUTER_UNKNOWN = "router={name!r} names no registered router; register_router() adds one. Known: {known}."
 MSG_ROUTER_CONFIG_UNNAMED = "router_config= configures a router named by string, router='name'; pass it with one."

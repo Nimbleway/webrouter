@@ -77,6 +77,16 @@ def test_registering_remote_overrides_the_built_in_until_unregistered() -> None:
         WebRouter(router="remote")
 
 
+def test_a_factory_that_returns_none_is_refused_by_name() -> None:
+    register_router(NAME, lambda **config: None)  # type: ignore[arg-type]
+    try:
+        for cls in (WebRouter, AsyncWebRouter):
+            with pytest.raises(ConfigurationError, match=f"router='{NAME}'.*returned None"):
+                cls(router=NAME)
+    finally:
+        unregister_router(NAME)
+
+
 @pytest.mark.parametrize("name", ["", "   ", 7])
 def test_a_name_must_be_a_non_empty_string(name: Any) -> None:
     with pytest.raises(ConfigurationError, match="non-empty string"):
