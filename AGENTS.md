@@ -85,6 +85,8 @@ src/web_router/
 │                       call can route and on Plan; types re-exports it, it imports nothing
 ├── types_answer.py     AnswerRequest/Response + Recency: answer()'s contract, apart so
 │                       types.py stops growing; it imports types, never the reverse
+├── types_options.py    SearchDepth / ResearchEffort / Recency and their descriptions;
+│                       types re-exports them, it imports nothing of ours
 ├── types_page.py       PageState/PageSnapshot/Screenshot + PageLoadState/PageFormat:
 │                       what a browser handle's page actions return; imports nothing of ours
 ├── types_browser.py    BrowserField / FieldPath / REQUEST_VALUE: a browser field table's

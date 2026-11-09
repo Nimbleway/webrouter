@@ -2461,11 +2461,15 @@ except WebRouterError as exc:
 | `BrowserActionError` | A page action on a browser handle failed; subclasses say how — see [Driving the page](#driving-the-page) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
 | `BudgetExceededError` | Nothing the call could run fits its `Budget` (experimental, see [Budgets](#budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
 | `DeadlineExceededError` | A search, extract, template run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
+| `PresetError` | A preset could not be used: `PresetNotFoundError` when no preset is loaded under that exact `id@version`, `PresetCompatibilityError` when a per-call preset does not apply to the method, `PresetValidationError` when a definition or value is wrong or a call replaces a locked setting; all raised before the backend is called | Load the definition, pass a preset that applies or fix the field each `issues` entry names; see [Presets](#presets) |
 | `RouterError` | With `fail_on_router_error=True`, the attached router raised, ran out of time or answered something other than a `RouteDecision` (experimental) | Fix the router, or raise its `timeout_s`; `code` says which, and what it raised is on `__cause__` |
 
-These are **siblings, not a hierarchy**: `ProviderNotInstalledError` is not a
-subclass of `ConfigurationError`, so `except ConfigurationError` will not catch
-a missing extra. Catch `WebRouterError` unless you mean one specific case.
+These are **siblings, not a hierarchy**, apart from the families the table
+names: the page-action errors subclass `BrowserActionError`,
+`TemplateNotFoundError` subclasses `ProviderError` and the three preset errors
+subclass `PresetError`. `ProviderNotInstalledError` is not a subclass of
+`ConfigurationError`, so `except ConfigurationError` will not catch a missing
+extra. Catch `WebRouterError` unless you mean one specific case.
 
 ## Configuration
 
