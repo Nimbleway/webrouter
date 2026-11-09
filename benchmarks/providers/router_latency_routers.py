@@ -217,7 +217,7 @@ def _llm(model: str | None, price: tuple[float, float] | None) -> RouterSpec:
     shown = model or f"${LLM_MODEL_ENV}"
     note = (
         f"{price[0]:g}/{price[1]:g} USD per 1M input/output tokens (--llm-price), tokens estimated at "
-        f"{CHARS_PER_TOKEN} characters each"
+        f"{CHARS_PER_TOKEN} characters each; the stubbed searches priced as sampled requests, an approximation"
         if price
         else "unknown: pass --llm-price IN,OUT (USD per 1M tokens) for the model"
     )

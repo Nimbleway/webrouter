@@ -67,7 +67,15 @@ MSG_NOT_JOINED = (
     "first, or --dry-run to see the plan without it"
 )
 MSG_REPEATED = "each router is timed once per run; named more than once: {names}"
+MSG_COUNT = "a count of calls is 0 or more; got {value}"
 MSG_PRICE = "--llm-price takes IN,OUT: USD per million input and output tokens, as 0.15,0.60"
+
+
+def _count(text: str) -> int:
+    value = int(text)
+    if value < 0:
+        raise argparse.ArgumentTypeError(MSG_COUNT.format(value=value))
+    return value
 
 
 def _price(text: str) -> tuple[float, float]:
@@ -86,10 +94,10 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
                    f"module:attr or path/file.py:attr (default: {', '.join(DEFAULT_ROUTERS)})")  # fmt: skip
     p.add_argument("--set", dest="sets", action="append", help=f"frozen set (default: {', '.join(DEFAULT_SETS)})")
     p.add_argument("--joined", type=Path, default=JOINED_DIR, help="frozen.py join's output, the question text")
-    p.add_argument("-n", type=int, default=DEFAULT_N, help="timed calls per router, after the warm-up")
-    p.add_argument("--warmup", type=int, default=DEFAULT_WARMUP, help="calls dropped after the first")
-    p.add_argument("--cold", type=int, default=DEFAULT_COLD, help="calls each on a freshly built router")
-    p.add_argument("--e2e", type=int, default=DEFAULT_E2E, help="stubbed searches, routed against unrouted")
+    p.add_argument("-n", type=_count, default=DEFAULT_N, help="timed calls per router, after the warm-up")
+    p.add_argument("--warmup", type=_count, default=DEFAULT_WARMUP, help="calls dropped after the first")
+    p.add_argument("--cold", type=_count, default=DEFAULT_COLD, help="calls each on a freshly built router")
+    p.add_argument("--e2e", type=_count, default=DEFAULT_E2E, help="stubbed searches, routed against unrouted")
     p.add_argument("--deadline-s", type=float, default=None, help="every call's deadline (default: each router's)")
     p.add_argument("--async", dest="use_async", action="store_true", help="call from an event loop, as acall")
     p.add_argument("--seed", type=int, default=DEFAULT_SEED, help="the prompt sample's and call order's seed")
@@ -185,8 +193,10 @@ def run(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[Ro
     """Every router timed interleaved, then built fresh for each cold call, then routed against unrouted."""
     tools = tool_latencies(args.chain)
     plan = sample(pool, 1 + args.warmup + args.n, args.seed)
-    built = {s.name: s.build() for s in specs}
+    built: dict[str, Any] = {}
     try:
+        for s in specs:
+            built[s.name] = s.build()  # inside the try: one that fails still closes those built before it
         measured = interleaved(
             built, plan, warmup=args.warmup, deadline_s=args.deadline_s, seed=args.seed, use_async=args.use_async
         )
