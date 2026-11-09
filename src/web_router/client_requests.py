@@ -48,6 +48,7 @@ def build_extract_request(
     *,
     format: ExtractFormat | None,
     provider_options: dict[str, Any] | None,
+    profile: str | None = None,
 ) -> ExtractRequest:
     return ExtractRequest(
         # One URL is the common case and reads better unwrapped; the
@@ -55,6 +56,7 @@ def build_extract_request(
         # and providers that do not see the same shape.
         urls=[urls] if isinstance(urls, str) else list(urls),
         format=format,
+        profile=profile,
         provider_options=provider_options or {},
     )
 

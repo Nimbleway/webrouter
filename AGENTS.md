@@ -13,10 +13,12 @@ Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus the keyless
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
-Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, the keyless Jina
-Reader, `auto` again, and `max`, which sends the request to every member
-`auto` would try at once and returns the first document back -- the fastest
-answer any backend can give, at one fetch per member, so never the default.
+Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, Browserbase,
+the keyless Jina Reader, `auto` again, and `max`, which sends the request to
+every member `auto` would try at once and returns the first document back -- the
+fastest answer any backend can give, at one fetch per member, so never the
+default. `profile` names a saved identity on the backend, the one a browser
+session logged into, whose cookies ride along; only Browserbase maps it.
 
 **`run_template`** — a vendor's template: a saved, site-specific extraction
 (Nimble's Extract Templates, Oxylabs' sources, Bright Data's scrapers, Apify's
@@ -59,8 +61,8 @@ has no keyless tier, because every task bills.
 
 A name does not imply every method. `brave` searches and cannot extract,
 `oxylabs` extracts and cannot search, `nimble` searches, extracts, runs
-templates and researches through four classes, and `browserbase` both opens
-sessions and runs browse tasks through two. Each method has its own registry,
+templates and researches through four classes, and `browserbase` opens
+sessions, runs browse tasks and extracts through three. Each method has its own registry,
 and asking one for another's backend reports it as unknown.
 
 It is pre-1.0 and in alpha. Assume every change is read by people outside the team.
@@ -85,6 +87,8 @@ src/web_router/
 │                       types.py stops growing; it imports types, never the reverse
 ├── types_page.py       PageState/PageSnapshot/Screenshot + PageLoadState/PageFormat:
 │                       what a browser handle's page actions return; imports nothing of ours
+├── types_benchmark.py BenchmarkRun/Report + ExtractBenchmarkRun/Report: what benchmark()
+│                       and benchmark_extract() return; it imports types, never the reverse
 ├── client.py           WebRouter, AsyncWebRouter — the public facade
 │                       (search, extract, templates + template + run_template,
 │                        answer, research + submit_research,
@@ -92,6 +96,7 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
+├── client_template.py  templates(), template() and run_template(), mixed into both routers
 ├── client_plan.py      plan() and run(), prompt-level routing, mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
@@ -118,6 +123,8 @@ src/web_router/
 │                       kept apart for the same reason
 ├── constants_kernel.py Kernel's endpoints, field table and session states,
 │                       kept apart for the same reason
+├── constants_browserbase.py Browserbase's host, header, session, browse and Fetch
+│                       settings, kept apart for the same reason
 ├── prices.py           estimated list prices per (provider, method, mode), read
 │                       from data/prices.json; PRICING.md's tables are made from it
 ├── prices_latency.py   the check a row's measured latency passes, apart from
@@ -274,6 +281,8 @@ src/web_router/
     │                   the caller's `chain`, what a member's failure means
     ├── _chain_deadline.py a one-call chain out of time: the first empty
     │                   answer it holds, else the deadline naming each reason
+    ├── _auto_extract.py which members of extract `auto` can serve a request: the
+    │                   format and every option it sets; apart so auto.py stops growing
     ├── auto.py         the default for search, extract, research, browser and
     │                   browse: keyed backends, then keyless (research and browse
     │                   have no keyless tier, so their chains end there; a browser
@@ -295,7 +304,9 @@ src/web_router/
     ├── brightdata.py   extract, via httpx — needs a zone beside its token
     ├── jina.py         extract, keyless — Jina Reader
     ├── steel.py        browser, via httpx — the CDP URL carries the key
-    ├── browserbase.py  browser + browse, via httpx — Sessions and Agents APIs
+    ├── browserbase.py  browser + browse + extract, via httpx — Sessions, Agents
+    │                   and Fetch APIs; one Context serves `profile` on sessions
+    │                   and Fetch (browse tasks do not map it)
     ├── hyperbrowser.py browser, via httpx — stops with a PUT
     ├── anchor.py       browser, via httpx — timeouts in whole minutes
     ├── kernel.py       browser, via httpx — an idle limit and no lifetime
@@ -627,8 +638,11 @@ default option is held to the same two checks on every backend in the order
 (`routing/merge_params.py`). Extract `auto`
 declares the union of their `supported_formats` and passes over a member that
 cannot return the format asked for, the pinned `markdown` default included, so
-Exa serves only `text`. With no member left, search raises
-`UnsupportedParameterError` and extract `UnsupportedFormatError`, each naming
+Exa serves only `text`; it checks `supported_parameters` too, so `profile`
+passes over every member but Browserbase, and `max` races only the members that
+pass. With no member left, search raises
+`UnsupportedParameterError` and extract `UnsupportedFormatError` (`UnsupportedParameterError` for an
+option no member maps), each naming
 what every member lacked; among the members that can serve the call, a failure
 falls through as it always has, and so does an empty answer (no results and no
 answer, or every document blank) unless `fallback_on_empty=False`; when every

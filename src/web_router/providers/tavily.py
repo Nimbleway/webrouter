@@ -47,7 +47,7 @@ from web_router.providers._search_text import lite_body
 from web_router.providers._utils import best_text, build_payload, compact, mapped, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
-    EXTRACT_PARAMETERS,
+    EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
     ExtractFailure,
     ExtractFormat,
@@ -203,7 +203,7 @@ class TavilyExtractProvider(ExtractProvider):
     """Fetches page contents through the Tavily Extract API."""
 
     name: ClassVar[str] = PROVIDER_TAVILY
-    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(TAVILY_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = TAVILY_EXTRACT_DEFAULT_FORMAT
     batches_urls: ClassVar[bool] = True

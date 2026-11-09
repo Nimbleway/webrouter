@@ -112,6 +112,7 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_KEENABLE: ("web_router.providers.keenable", "KeenableExtractProvider", EXTRA_EXTRACT),
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekExtractProvider", EXTRA_EXTRACT),
     PROVIDER_JINA: ("web_router.providers.jina", "JinaExtractProvider", EXTRA_EXTRACT),
+    PROVIDER_BROWSERBASE: ("web_router.providers.browserbase_extract", "BrowserbaseExtractProvider", EXTRA_EXTRACT),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoExtractProvider", AUTO_EXTRA),
     PROVIDER_MAX: ("web_router.providers.max", "MaxExtractProvider", AUTO_EXTRA),
 }
@@ -131,10 +132,9 @@ _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoResearchProvider", AUTO_EXTRA),
 }
 
-# Opening a session needs only httpx, which `all` installs, so the vendors name
-# `all` rather than `browser`: that extra is Playwright, for the handle's page
-# actions, and opening a session does not need it. `local` needs only the
-# standard library, so its column is never quoted.
+# Opening a session needs only httpx, which `all` installs, so the vendors name `all` rather
+# than `browser`, which is Playwright for the handle's page actions and not needed to open one.
+# `local` needs only the standard library, so its column is never quoted.
 _BUILTIN_BROWSER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_STEEL: ("web_router.providers.steel", "SteelBrowserProvider", EXTRA_ALL),
     PROVIDER_BROWSERBASE: ("web_router.providers.browserbase", "BrowserbaseBrowserProvider", EXTRA_ALL),

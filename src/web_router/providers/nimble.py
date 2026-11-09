@@ -49,7 +49,7 @@ from web_router.providers._deadline import current_deadline, research_budget
 from web_router.providers._utils import best_text, build_payload, compact, mapped, model_to_dict, resolve_api_key
 from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider, _BaseProvider
 from web_router.types import (
-    EXTRACT_PARAMETERS,
+    EXTRACT_FORMAT_ONLY,
     RESEARCH_PARAMETERS,
     Citation,
     ExtractedDocument,
@@ -218,7 +218,7 @@ class NimbleExtractProvider(_NimbleClients, ExtractProvider):
     """Fetches page contents through the Nimble Extract API."""
 
     name: ClassVar[str] = PROVIDER_NIMBLE
-    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(NIMBLE_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = NIMBLE_EXTRACT_DEFAULT_FORMAT
 
