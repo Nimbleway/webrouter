@@ -141,11 +141,25 @@
     }
   },
   "parallel": {
-    "processor-pro": {
+    "turbo": {
       "provider_options": {
-        "processor": "pro"
+        "mode": "turbo"
       },
-      "note": "The legacy v1beta tier selector web-router's endpoint takes. Parallel's current turbo/fast/basic/advanced modes are on /v1 only, which web-router doesn't call yet.",
+      "note": "Parallel's fastest /v1 mode, $1 per 1k; English and Japanese only. Unset, web-router sends fast.",
+      "verified": false
+    },
+    "basic": {
+      "provider_options": {
+        "mode": "basic"
+      },
+      "note": "Longer excerpts at about a second, $5 per 1k: Parallel's nearest /v1 mode to the beta's one-shot output.",
+      "verified": false
+    },
+    "advanced": {
+      "provider_options": {
+        "mode": "advanced"
+      },
+      "note": "/v1's own default and the beta's agentic tier: more retrieval and compression, about 3s, $5 per 1k.",
       "verified": false
     }
   },

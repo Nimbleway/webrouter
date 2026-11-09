@@ -10,6 +10,7 @@ import abc
 from web_router.constants_answer import ANSWER_MARKER, MSG_ANSWER_FAILED
 from web_router.exceptions import UnsupportedParameterError
 from web_router.providers.base import _BaseProvider
+from web_router.types import SearchRequest
 from web_router.types_answer import AnswerRequest, AnswerResponse
 
 __all__ = ["AnswerProvider"]
@@ -52,7 +53,7 @@ class AnswerProvider(_BaseProvider):
         self._reject_unmapped(request)
 
 
-def refuse_domain_pair(provider: str, request: AnswerRequest, detail: str) -> None:
+def refuse_domain_pair(provider: str, request: AnswerRequest | SearchRequest, detail: str) -> None:
     """Raise :class:`UnsupportedParameterError` when ``request`` sets both domain lists.
 
     For a backend that takes one list or the other, never both; ``detail`` says so in its words.

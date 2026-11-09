@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 import pytest
 
-from web_router.exceptions import ProviderError
+from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.you_mcp import YouMcpProvider
 from web_router.types import SearchRequest
 
@@ -52,6 +52,37 @@ def test_depth_maps_onto_the_bare_extraction_enum(provider: YouMcpProvider, dept
 def test_lite_says_none_rather_than_staying_silent(provider: YouMcpProvider) -> None:
     """This endpoint extracts highlights by default, so lite has to opt out explicitly."""
     assert provider._build_payload(SearchRequest(query="hi", search_depth="lite"))["extraction"] == "none"
+
+
+def test_filters_go_inline_or_as_tool_arguments(provider: YouMcpProvider) -> None:
+    """you-search has no country, language or include_domains argument: it maps loc:, lang: and site: itself."""
+    request = SearchRequest(
+        query="hi", include_domains=["a.com", "b.org"], locale="pt-BR", country="br", recency="month"
+    )
+    assert provider._build_payload(request) == {
+        "query": "hi site:a.com site:b.org lang:PT-BR loc:BR",
+        "freshness": "month",
+    }
+    assert provider._build_payload(SearchRequest(query="hi", exclude_domains=["b.com"])) == {
+        "query": "hi",
+        "exclude_domains": ["b.com"],
+    }
+
+
+def test_values_the_rest_api_refuses_are_refused_here_too(
+    provider: YouMcpProvider, transport: httpx.MockTransport, sent: list[httpx.Request]
+) -> None:
+    """The tool drops an unknown loc: or lang: in silence, so the REST lists hold here, before anything is sent."""
+    provider = YouMcpProvider(transport=transport)
+    for request in (
+        SearchRequest(query="hi", country="ZZ"),
+        SearchRequest(query="hi", locale="pt"),
+        SearchRequest(query="hi", include_domains=["a.com"], exclude_domains=["b.com"]),
+        SearchRequest(query="hi", effort="max"),
+    ):
+        with pytest.raises(UnsupportedParameterError):
+            provider.search(request)
+    assert not sent
 
 
 def test_the_payload_is_unwrapped_from_the_event_stream(provider: YouMcpProvider) -> None:
@@ -140,3 +171,18 @@ def test_live_keyless_search_returns_results() -> None:
     assert response.results
     assert all(result.url for result in response.results)
     assert response.results[0].content
+
+
+@pytest.mark.integration
+def test_live_inline_operators_are_taken_out_of_the_query() -> None:
+    """Look at raw metadata.query: site:, lang: and loc: must be gone from it, and every result on the site."""
+    from web_router import WebRouter
+
+    with WebRouter("you-mcp") as router:
+        response = router.search(
+            "asyncio tutorial", max_results=5, include_domains=["docs.python.org"], locale="en", country="US"
+        )
+
+    assert response.results
+    assert all("docs.python.org" in result.url for result in response.results)
+    assert response.raw["metadata"]["query"] == "asyncio tutorial"

@@ -14,26 +14,22 @@ backend is the last thing that should be a coin flip. The chain still delivers
 what a random pick was reaching for: when one anonymous tier is rate-limited,
 the next one answers.
 
-``SearchResponse.provider`` and ``ExtractResponse.provider`` name the backend
-that actually served the call, never ``"auto"``, so a caller can always tell who
-answered.
+``SearchResponse.provider`` and ``ExtractResponse.provider`` name the backend that actually served the call, never
+``"auto"``, so a caller can always tell who answered.
 
-Every chain routes per request. ``auto`` declares what some member maps -- for
-search every option Nimble does, for extract every format -- and before trying a
-member reads its class, which costs no credential and sends nothing: a member
-that does not map an option the request set, or cannot return the format it
-asks for, is passed over for that request. When none is left the call raises,
-naming why each one was, rather than running under weaker terms than asked.
+Every chain routes per request. ``auto`` declares what some member may serve -- for search every shared option,
+for extract every format -- and before trying a member reads its class, which costs no credential and sends nothing:
+a member that does not map an option the request set, serves it only at other values (a ``search_depth`` level
+outside its ``depth_levels``), or cannot return the format asked for, is passed over for that request. When none is
+left the call raises, naming why each one was, rather than running under weaker terms than asked.
 
-An answer with nothing in it falls through too: a search with no results and
-no answer, or an extract whose every document is blank, moves on to the next
-member as a failure would. When every member answers empty, the first empty
-answer is returned rather than an error, since an empty result is still an
-answer. ``fallback_on_empty=False`` returns the first answer, empty or not.
+An answer with nothing in it falls through too: a search with no results and no answer, or an extract whose every
+document is blank, moves on to the next member as a failure would. When every member answers empty, the first empty
+answer is returned rather than an error, since an empty result is still an answer. ``fallback_on_empty=False``
+returns the first answer, empty or not.
 
-``chain`` replaces the default order, as a list for every method's ``auto`` or
-keyed by method for one alone -- ``provider_config={"auto": {"chain":
-{"search": ["perplexity", "nimble"]}}}`` on the router.
+``chain`` replaces the default order, as a list for every method's ``auto`` or keyed by method for one alone --
+``provider_config={"auto": {"chain": {"search": ["perplexity", "nimble"]}}}`` on the router.
 
 Research is the exception to the fallback: there is no keyless tier after the
 credentialed ones, because every research backend bills for the run. It is also
@@ -96,6 +92,7 @@ from web_router.constants import (
     MSG_AUTO_UNMAPPED,
     PROVIDER_AUTO,
 )
+from web_router.constants_search import MSG_AUTO_REFUSES
 from web_router.exceptions import (
     DeadlineExceededError,
     MissingParameterError,
@@ -187,8 +184,8 @@ class AutoProvider(SearchProvider):
             chain, members_config, AUTO_CHAIN_SEARCH, self.default_chain
         )
         self.fallback_on_empty = fallback_on_empty
-        # Keyed by position, not by name: the same provider can appear twice on
-        # different terms -- Tavily keyed, then Tavily keyless.
+        # Keyed by position, not by name: the same provider can appear twice on different terms -- Tavily keyed, then
+        # Tavily keyless.
         self._members: dict[int, SearchProvider] = {}
 
     @staticmethod
@@ -259,14 +256,14 @@ class AutoProvider(SearchProvider):
         return _held_or_raise(held, self.name, failures)
 
     def _eligible(self, request: SearchRequest) -> list[tuple[int, str]]:
-        """The chain members that map every option this request sets, in order.
+        """The chain members that map every option this request sets, at the value it is set to, in order.
 
-        A member whose extra is not installed cannot be read, and is kept:
-        trying it fails as a missing extra always has, and the chain moves on.
+        A member whose extra is not installed cannot be read, and is kept: trying it fails as a missing extra always
+        has, and the chain moves on.
 
         Raises:
-            UnsupportedParameterError: if no member maps everything set, naming
-                what each one lacked. Nothing has been searched.
+            UnsupportedParameterError: if no member serves everything set, naming what each one lacked or refused.
+                Nothing has been searched.
         """
         from web_router.registry import get_provider_class
 
@@ -275,27 +272,33 @@ class AutoProvider(SearchProvider):
         skipped: list[str] = []
         unmapped: frozenset[str] = frozenset()
         widest: frozenset[str] = frozenset()
+        refused: dict[str, Any] = {}
         for position, (provider_name, _) in enumerate(self._chain):
             try:
-                supported = get_provider_class(provider_name).supported_parameters
+                member_cls = get_provider_class(provider_name)
             except ProviderNotInstalledError:
                 eligible.append((position, provider_name))
                 continue
-            widest |= supported
-            lacks = wanted - supported
-            if not lacks:
+            widest |= member_cls.supported_parameters
+            lacks = wanted - member_cls.supported_parameters
+            refuses = {} if lacks else member_cls.refused_values(request)
+            if not lacks and not refuses:
                 eligible.append((position, provider_name))
                 continue
-            skipped.append(
-                MSG_AUTO_SKIPPED.format(name=provider_name, reasons=MSG_AUTO_UNMAPPED.format(names=_quoted(lacks)))
-            )
+            if lacks:
+                reason = MSG_AUTO_UNMAPPED.format(names=_quoted(lacks))
+            else:
+                reason = MSG_AUTO_REFUSES.format(values=_valued(refuses))
+            skipped.append(MSG_AUTO_SKIPPED.format(name=provider_name, reasons=reason))
             unmapped |= lacks
+            refused.update(refuses)
 
         if eligible or not skipped:
             return eligible
         detail = MSG_AUTO_SEARCH_NO_MEMBER.format(skipped=", ".join(dict.fromkeys(skipped)))
-        # As for browse: name what no member maps at all when there is such a
-        # thing, since that is the option to drop.
+        if refused and not unmapped:
+            raise UnsupportedParameterError(self.name, refused, detail=detail, values=refused)
+        # As for browse: name what no member maps at all when there is such a thing, since that is the option to drop.
         raise UnsupportedParameterError(self.name, (wanted - widest) or unmapped, detail=detail)
 
     def close(self) -> None:
@@ -320,8 +323,8 @@ class AutoExtractProvider(ExtractProvider):
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
     supported_formats: ClassVar[frozenset[ExtractFormat]] = AUTO_EXTRACT_FORMATS
     default_format: ClassVar[ExtractFormat] = AUTO_EXTRACT_DEFAULT_FORMAT
-    # The members each batch as their own API allows, so there is nothing to
-    # split up here: one delegated call carries the whole request.
+    # The members each batch as their own API allows, so there is nothing to split up here: one delegated call carries
+    # the whole request.
     batches_urls: ClassVar[bool] = True
 
     def __init__(
@@ -490,9 +493,8 @@ class AutoResearchProvider(ResearchProvider):
             chain, members_config, AUTO_CHAIN_RESEARCH, self.default_chain
         )
         self._members: dict[int, ResearchProvider] = {}
-        # A run belongs to the backend that accepted it: its id means nothing to
-        # the others, so the member that answered is kept and every later poll
-        # goes back to it rather than re-entering the chain.
+        # A run belongs to the backend that accepted it: its id means nothing to the others, so the member that answered
+        # is kept and every later poll goes back to it rather than re-entering the chain.
         self._jobs: dict[str, ResearchJob] = {}
 
     @staticmethod
@@ -522,16 +524,15 @@ class AutoResearchProvider(ResearchProvider):
             try:
                 job = self._member(position).submit(request)
             except _RECOVERABLE as exc:
-                # A 5xx, a read timeout or an unreadable answer may come after
-                # the backend created the run, so only a failure that proves
-                # nothing started may try the next member -- a run is billed
-                # from the moment it was accepted.
+                # A 5xx, a read timeout or an unreadable answer may come after the backend created the run, so only a
+                # failure that proves nothing started may try the next member -- a run is billed from the moment it was
+                # accepted.
                 if not _nothing_started(exc):
                     raise
                 failed(failures, "research", provider_name, exc)
                 continue
-            # Registered from the start progress, with no poll first: a poll
-            # that failed here would leave a billed run with no handle to it.
+            # Registered from the start progress, with no poll first: a poll that failed here would leave a billed run
+            # with no handle to it.
             return self._took(provider_name, job)
         raise _no_backend(self.name, failures)
 
@@ -597,8 +598,8 @@ class AutoResearchProvider(ResearchProvider):
         if not eligible and refused:
             raise UnsupportedParameterError(self.name, refused, detail=", ".join(skipped), values=refused)
         if not eligible and skipped:
-            # Every option may be mapped by some member and yet no single member
-            # map them all; then the whole set is what nothing could take.
+            # Every option may be mapped by some member and yet no single member map them all; then the whole set is
+            # what nothing could take.
             detail = MSG_AUTO_RESEARCH_NO_CAPABLE_BACKEND.format(skipped=", ".join(skipped))
             raise UnsupportedParameterError(self.name, (wanted - self._widest()) or wanted, detail=detail)
         return eligible
@@ -694,8 +695,8 @@ class AutoBrowseProvider(BrowseProvider):
             chain, members_config, AUTO_CHAIN_BROWSE, self.default_chain
         )
         self._members: dict[int, BrowseProvider] = {}
-        # As for research: a task id means nothing to a backend that did not
-        # issue it, so every later poll goes back to the member that took it.
+        # As for research: a task id means nothing to a backend that did not issue it, so every later poll goes back to
+        # the member that took it.
         self._jobs: dict[str, BrowseJob] = {}
 
     @staticmethod
@@ -724,15 +725,14 @@ class AutoBrowseProvider(BrowseProvider):
             try:
                 job = self._member(position).submit(request)
             except _RECOVERABLE as exc:
-                # A 5xx, a read timeout or an unreadable answer may come after
-                # the vendor created the task, so only a failure that proves
-                # nothing started may try the next member.
+                # A 5xx, a read timeout or an unreadable answer may come after the vendor created the task, so only a
+                # failure that proves nothing started may try the next member.
                 if not _nothing_started(exc):
                     raise
                 failed(failures, "browse", provider_name, exc)
                 continue
-            # Registered from the start progress, with no poll first: a poll
-            # that failed here would leave a billed task with no handle to it.
+            # Registered from the start progress, with no poll first: a poll that failed here would leave a billed task
+            # with no handle to it.
             return self._took(provider_name, job)
         raise self._no_backend(failures)
 
@@ -807,8 +807,8 @@ class AutoBrowseProvider(BrowseProvider):
             raise MissingParameterError(self.name, missing, detail=detail)
         if refused:
             raise UnsupportedParameterError(self.name, refused, detail=detail, values=refused)
-        # Name what no member maps at all when there is such a thing: that is the
-        # option to drop. Otherwise each is mapped somewhere, just never together.
+        # Name what no member maps at all when there is such a thing: that is the option to drop. Otherwise each is
+        # mapped somewhere, just never together.
         raise UnsupportedParameterError(self.name, (wanted - widest) or unmapped, detail=detail)
 
     def _took(self, provider_name: str, job: BrowseJob) -> BrowseProgress:

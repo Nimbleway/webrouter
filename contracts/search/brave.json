@@ -23,30 +23,70 @@
       "sample": {
         "query.count": 3
       }
+    },
+    "search_depth": {
+      "lite": {
+        "unchanged": "no wire change"
+      },
+      "fast": {
+        "refused": "UnsupportedParameterError"
+      },
+      "deep": {
+        "refused": "UnsupportedParameterError"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "query.q": "probe query site:example.com"
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "query.q": "probe query NOT site:example.org"
+      }
+    },
+    "country": {
+      "sample": {
+        "query.country": "US"
+      }
+    },
+    "locale": {
+      "sample": {
+        "query.search_lang": "en"
+      }
+    },
+    "recency": {
+      "day": {
+        "query.freshness": "pd"
+      },
+      "week": {
+        "query.freshness": "pw"
+      },
+      "month": {
+        "query.freshness": "pm"
+      },
+      "year": {
+        "query.freshness": "py"
+      }
     }
   },
   "not_mapped": [
-    "country",
-    "exclude_domains",
-    "include_domains",
-    "locale",
-    "search_depth"
+    "effort"
   ],
   "source": [
-    "https://api-dashboard.search.brave.com/api-reference/web/search/get"
+    "https://api-dashboard.search.brave.com/api-reference/web/search/get",
+    "https://api-dashboard.search.brave.com/documentation/resources/search-operators"
   ],
   "verified": {
-    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound"
+    "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
+    "search_depth": "docs: https://api-dashboard.search.brave.com/api-reference/web/search/get (no page body; lite alone, fast and deep refused). Live on 2026-11-09 the description and extra snippets joined ran 264-2,025 characters with no setting to narrow them, so lite is cut to a snippet in the provider",
+    "include_domains": "live: 2026-11-09 search-options check: site:a OR site:b, every result on the two sites; Brave reported both operators applied (query.search_operators)",
+    "exclude_domains": "live: 2026-11-09 search-options check: NOT site:, no wikipedia.org result",
+    "country": "live: 2026-11-09 search-options check: BR with locale=pt-BR accepted",
+    "locale": "live: 2026-11-09 search-options check: pt-BR with country=BR accepted",
+    "recency": "live: 2026-11-09 search-options check: week, 18 of 18 results dated inside the window (page_age)"
   },
   "vendor_options": {
-    "country": {
-      "status": "passthrough",
-      "note": "Uppercase ISO code from a fixed list, or ALL; a candidate for the shared country option."
-    },
-    "search_lang": {
-      "status": "passthrough",
-      "note": "Language code from a fixed list; a candidate for the shared locale option."
-    },
     "ui_lang": {
       "status": "passthrough",
       "note": "Language-country code, such as en-US."
@@ -62,10 +102,6 @@
     "spellcheck": {
       "status": "passthrough",
       "note": "Boolean."
-    },
-    "freshness": {
-      "status": "passthrough",
-      "note": "pd | pw | pm | py, or a YYYY-MM-DDtoYYYY-MM-DD range."
     },
     "text_decorations": {
       "status": "passthrough",
@@ -89,7 +125,7 @@
     },
     "extra_snippets": {
       "status": "passthrough",
-      "note": "Boolean; the extra snippets fill SearchResult.content when returned."
+      "note": "Boolean; up to five extra excerpts fill SearchResult.content when returned. Not mapped to a depth: excerpts are not a truncated body (search_depth serves lite alone)."
     },
     "summary": {
       "status": "passthrough",
@@ -105,7 +141,7 @@
     },
     "operators": {
       "status": "passthrough",
-      "note": "Boolean; whether search operators in q are applied."
+      "note": "Boolean, default true; whether search operators in q are applied. include_domains and exclude_domains are sent as site: operators, so setting it false through provider_options turns them off."
     },
     "x-loc-lat": {
       "status": "not_supported",
@@ -138,6 +174,10 @@
     "x-loc-postal-code": {
       "status": "not_supported",
       "note": "A request header; provider_options sets query parameters only."
+    },
+    "operators_fallback": {
+      "status": "passthrough",
+      "note": "Boolean, default false: try relaxed operator matching first, falling back to the original results. query.search_operators.applied in raw says whether every result matched the operators."
     }
   }
 }

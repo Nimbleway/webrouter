@@ -5,11 +5,11 @@ route is the OpenAI SDK, which covers its models and not these tools. Install
 with the ``search`` or ``extract`` extra. Both read ``DEEPSEEK_API_KEY`` unless a
 key is passed explicitly.
 
-Search filters by domain and language through operators in the query rather
-than fields, so ``include_domains``, ``exclude_domains`` and ``locale`` are
-appended to it, and the whole query must fit DeepSeek's 128 characters.
-``need_content``, ``ori_question`` and ``localization`` are reachable through
-``provider_options``.
+Search filters by domain, language and date through operators in the query
+rather than fields, so ``include_domains``, ``exclude_domains``, ``locale`` and
+``recency`` are appended to it, and the whole query must fit DeepSeek's 128
+characters. ``search_depth`` serves ``lite`` and ``deep``, the page body.
+``ori_question`` and ``localization`` are reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -18,13 +18,13 @@ from typing import Any, ClassVar
 
 from web_router.constants import ENV_DEEPSEEK_API_KEY, MSG_EXTRACT_UNSUCCESSFUL, PROVIDER_DEEPSEEK
 from web_router.constants_deepseek import (
+    DEEPSEEK_AFTER,
     DEEPSEEK_API_KEY_PREFIX,
     DEEPSEEK_BASE_URL,
-    DEEPSEEK_EXCLUDE_DOMAIN,
+    DEEPSEEK_DEEP,
+    DEEPSEEK_DEPTH_LEVELS,
     DEEPSEEK_FETCH_INTERVAL,
     DEEPSEEK_FETCH_PATH,
-    DEEPSEEK_INCLUDE_DOMAIN,
-    DEEPSEEK_INCLUDE_JOINER,
     DEEPSEEK_LANGUAGE,
     DEEPSEEK_MAX_COUNT,
     DEEPSEEK_QUERY_LIMIT,
@@ -32,9 +32,13 @@ from web_router.constants_deepseek import (
     DEEPSEEK_SEARCH_PATH,
     MSG_DEEPSEEK_QUERY_TOO_LONG,
 )
+from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.exceptions import ProviderError
+from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, best_text, build_payload
+from web_router.providers._language import language_code
+from web_router.providers._search_text import as_snippet, lite_body, site_operators, unsited_domains
+from web_router.providers._utils import best_text, build_payload
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,
@@ -42,6 +46,7 @@ from web_router.types import (
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
+    SearchDepth,
     SearchRequest,
     SearchResponse,
     SearchResult,
@@ -62,11 +67,17 @@ class DeepSeekProvider(HttpSearchProvider):
 
     name: ClassVar[str] = PROVIDER_DEEPSEEK
     supported_parameters: ClassVar[frozenset[str]] = DEEPSEEK_SEARCH_PARAMETERS
+    depth_levels: ClassVar[frozenset[SearchDepth]] = DEEPSEEK_DEPTH_LEVELS
+    refusal_reasons: ClassVar[dict[str, str]] = dict.fromkeys(("include_domains", "exclude_domains"), MSG_SITE_DOMAINS)
 
     base_url: ClassVar[str] = DEEPSEEK_BASE_URL
     search_path: ClassVar[str] = DEEPSEEK_SEARCH_PATH
     env_api_key: ClassVar[str] = ENV_DEEPSEEK_API_KEY
     api_key_prefix: ClassVar[str] = DEEPSEEK_API_KEY_PREFIX
+
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        return unsited_domains(request)
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         query = self._query(request)
@@ -78,32 +89,29 @@ class DeepSeekProvider(HttpSearchProvider):
             request,
             query=query,
             count=min(request.max_results, DEEPSEEK_MAX_COUNT) if request.max_results else None,
+            **(DEEPSEEK_DEEP if request.search_depth == "deep" else {}),
         )
 
     @staticmethod
     def _query(request: SearchRequest) -> str:
-        operators = []
-        if request.include_domains:
-            operators.append(
-                DEEPSEEK_INCLUDE_JOINER.join(DEEPSEEK_INCLUDE_DOMAIN.format(domain=d) for d in request.include_domains)
-            )
-        operators.extend(DEEPSEEK_EXCLUDE_DOMAIN.format(domain=d) for d in request.exclude_domains or ())
+        operators = site_operators(request.include_domains, request.exclude_domains)
         if request.locale:
             # lang: takes bare language codes, so en-US and en_us both send lang:en.
-            language = request.locale.replace("_", "-").split("-")[0].lower()
-            operators.append(DEEPSEEK_LANGUAGE.format(language=language))
+            operators.append(DEEPSEEK_LANGUAGE.format(language=language_code(request.locale)))
+        if since := recency_start(request.recency):
+            operators.append(DEEPSEEK_AFTER.format(day=since.isoformat()))
         return " ".join([request.query, *operators])
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         return SearchResponse(
             provider=self.name,
             query=request.query,
-            results=[self._to_result(hit) for hit in payload.get("results") or []],
+            results=[self._to_result(hit, request.search_depth) for hit in payload.get("results") or []],
             raw=payload,
         )
 
     @staticmethod
-    def _to_result(hit: dict[str, Any]) -> SearchResult:
+    def _to_result(hit: dict[str, Any], depth: SearchDepth | None = None) -> SearchResult:
         snippet = hit.get("snippet") or ""
         summary = hit.get("summary") or ""
         score = hit.get("rerank_score")
@@ -116,7 +124,7 @@ class DeepSeekProvider(HttpSearchProvider):
             url=hit.get("url", ""),
             title=hit.get("title") or "",
             description=snippet or as_snippet(summary),
-            content=best_text(hit.get("content"), summary or snippet),
+            content=lite_body(best_text(hit.get("content"), summary or snippet), depth),
             score=float(score) if isinstance(score, (int, float)) else None,
             published_date=published if isinstance(published, str) and published else None,
             extra=extra,

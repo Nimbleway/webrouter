@@ -6,10 +6,10 @@ background task; :class:`YouAnswerProvider` answers one question in one call.
 Install with the ``search``, ``research`` or ``answer`` extra.
 Reads ``YOU_API_KEY`` unless a key is passed explicitly.
 
-web-router sends You.com the minimum a search needs: the query, ``max_results``
-and ``search_depth``. Everything else its API offers is reachable through
-``provider_options``, and mapping one properly is a welcome PR -- see
-CONTRIBUTING.md.
+Search maps every shared option but ``effort``, which You.com has no tier for.
+``country`` and ``locale`` reach fixed lists of 36 countries and 51 languages,
+and a value off them is refused before the call. Everything else its API offers
+is reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -24,32 +24,39 @@ from web_router.constants import (
     YOU_BASE_URL,
     YOU_EXTRACTION_BY_DEPTH,
     YOU_KNOWLEDGE_ANSWER_TYPE,
-    YOU_PARAM_NAMES,
     YOU_RESULT_SECTIONS,
     YOU_SEARCH_PATH,
 )
 from web_router.constants_you import (
     MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE,
-    YOU_ANSWER_FRESHNESS_FIELD,
+    MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE,
+    MSG_YOU_SEARCH_VALUES,
     YOU_ANSWER_MARKER,
     YOU_ANSWER_PARAM_NAMES,
     YOU_ANSWER_PATH,
-    YOU_ANSWER_RECENCY,
+    YOU_COUNTRIES,
+    YOU_FRESHNESS_FIELD,
+    YOU_RECENCY,
     YOU_RESEARCH_BACKGROUND,
     YOU_RESEARCH_BASE_URL,
     YOU_RESEARCH_EFFORTS,
     YOU_RESEARCH_PATH,
     YOU_RESEARCH_STATES,
     YOU_RESEARCH_STATUS_PATH,
+    YOU_SEARCH_PARAM_NAMES,
+    YOU_SEARCH_PARAMETERS,
 )
 from web_router.providers._http import HttpAnswerProvider, HttpPolledResearchProvider, HttpSearchProvider
-from web_router.providers._utils import best_text, build_payload
+from web_router.providers._language import language_tag, off_the_lists
+from web_router.providers._search_text import lite_body, refused_domains
+from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.providers.answer import refuse_domain_pair
 from web_router.types import (
     Citation,
     ResearchRequest,
     ResearchResponse,
     ResearchState,
+    SearchDepth,
     SearchRequest,
     SearchResponse,
     SearchResult,
@@ -64,7 +71,11 @@ class YouProvider(HttpSearchProvider):
     """Routes searches to the You.com Search API."""
 
     name: ClassVar[str] = PROVIDER_YOU
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(YOU_PARAM_NAMES) | {"search_depth"}
+    supported_parameters: ClassVar[frozenset[str]] = YOU_SEARCH_PARAMETERS
+    refusal_reasons: ClassVar[dict[str, str]] = {
+        **dict.fromkeys(("country", "locale"), MSG_YOU_SEARCH_VALUES),
+        **dict.fromkeys(("include_domains", "exclude_domains"), MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE),
+    }
 
     base_url: ClassVar[str] = YOU_BASE_URL
     search_path: ClassVar[str] = YOU_SEARCH_PATH
@@ -73,18 +84,33 @@ class YouProvider(HttpSearchProvider):
     env_api_key: ClassVar[str | None] = ENV_YOU_API_KEY
     api_key_header: ClassVar[str] = YOU_API_KEY_HEADER
 
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        """Both domain lists at once, or a ``country`` or ``locale`` off its lists; the MCP tool is held to them too."""
+        return {**refused_domains(request), **off_the_lists(request, YOU_COUNTRIES)}
+
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         # A depth of None, or "lite" which needs no extraction, both map to None
         # here and are dropped rather than sent.
-        extraction = YOU_EXTRACTION_BY_DEPTH.get(request.search_depth) if request.search_depth else None
-        return build_payload(request, YOU_PARAM_NAMES, query=request.query, extraction=extraction)
+        extraction = mapped(YOU_EXTRACTION_BY_DEPTH, request.search_depth)
+        return build_payload(
+            request,
+            YOU_SEARCH_PARAM_NAMES,
+            query=request.query,
+            extraction=extraction,
+            country=request.country.upper() if request.country else None,
+            language=language_tag(request.locale) if request.locale else None,
+            **{YOU_FRESHNESS_FIELD: mapped(YOU_RECENCY, request.recency)},
+        )
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         sections = payload.get("results") or {}
         metadata = payload.get("metadata") or {}
 
         results = [
-            self._to_result(hit, section) for section in YOU_RESULT_SECTIONS for hit in sections.get(section) or []
+            self._to_result(hit, section, request.search_depth)
+            for section in YOU_RESULT_SECTIONS
+            for hit in sections.get(section) or []
         ]
 
         return SearchResponse(
@@ -97,7 +123,7 @@ class YouProvider(HttpSearchProvider):
         )
 
     @staticmethod
-    def _to_result(hit: dict[str, Any], section: str) -> SearchResult:
+    def _to_result(hit: dict[str, Any], section: str, depth: SearchDepth | None) -> SearchResult:
         contents = hit.get("contents") or {}
         description = hit.get("description") or ""
         # Page body if extraction ran, else the snippets the API always returns.
@@ -106,7 +132,7 @@ class YouProvider(HttpSearchProvider):
             url=hit.get("url", ""),
             title=hit.get("title") or "",
             description=description,
-            content=best_text(body, description),
+            content=lite_body(best_text(body, description), depth),
             published_date=hit.get("page_age"),
             extra={"section": section, **{k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS}},
         )
@@ -152,7 +178,7 @@ class YouResearchProvider(HttpPolledResearchProvider):
     job_id_fields: ClassVar[tuple[str, ...]] = ("task_id", "id")
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
-        effort = YOU_RESEARCH_EFFORTS[request.effort] if request.effort else None
+        effort = mapped(YOU_RESEARCH_EFFORTS, request.effort)
         return build_payload(request, input=request.query, research_effort=effort, background=YOU_RESEARCH_BACKGROUND)
 
     def _to_response(self, request: ResearchRequest, payload: dict[str, Any]) -> ResearchResponse:
@@ -209,7 +235,7 @@ class YouAnswerProvider(HttpAnswerProvider):
             request,
             YOU_ANSWER_PARAM_NAMES,
             query=request.query,
-            **{YOU_ANSWER_FRESHNESS_FIELD: YOU_ANSWER_RECENCY[request.recency] if request.recency else None},
+            **{YOU_FRESHNESS_FIELD: mapped(YOU_RECENCY, request.recency)},
         )
 
     def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:

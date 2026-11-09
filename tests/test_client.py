@@ -239,7 +239,7 @@ async def test_async_context_manager_closes_both_methods_providers(
 # -- Research ----------------------------------------------------------------
 
 
-def test_run_template_normalizes_arguments_into_the_request(fake_live_data_provider: type) -> None:
+def test_live_data_normalizes_arguments_into_the_request(fake_live_data_provider: type) -> None:
     router = WebRouter("fake")
     response = router.live_data("books_pdp", {"url": "https://example.com/page"}, provider="fake", format="markdown")
 
@@ -251,7 +251,7 @@ def test_run_template_normalizes_arguments_into_the_request(fake_live_data_provi
     assert response.data["inputs"] == {"url": "https://example.com/page"}
 
 
-def test_run_template_with_no_inputs_sends_none(fake_live_data_provider: type) -> None:
+def test_live_data_with_no_inputs_sends_none(fake_live_data_provider: type) -> None:
     router = WebRouter("fake")
     router.live_data("fixed_page", provider="fake")
 
@@ -272,7 +272,7 @@ def test_templates_and_template_reach_the_same_cached_provider(fake_live_data_pr
     assert template.input_schema is not None
 
 
-def test_run_template_accepts_an_already_constructed_provider(fake_live_data_provider: type) -> None:
+def test_live_data_accepts_an_already_constructed_provider(fake_live_data_provider: type) -> None:
     instance = fake_live_data_provider()
     router = WebRouter("fake")
 
@@ -308,7 +308,7 @@ def test_a_backend_without_templates_is_reported_with_the_ones_that_have_them(fa
     assert "tavily" not in caught.value.available
 
 
-async def test_async_run_template_and_catalogue(fake_live_data_provider: type) -> None:
+async def test_async_live_data_and_catalogue(fake_live_data_provider: type) -> None:
     async with AsyncWebRouter("fake") as router:
         response = await router.live_data("books_pdp", {"url": "https://example.com/page"}, provider="fake")
         page = await router.live_data_sources(provider="fake")

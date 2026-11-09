@@ -23,23 +23,15 @@ from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
 from web_router.types_decision import DecisionRecord as DecisionRecord
+from web_router.types_options import RECENCY_DESCRIPTION, SEARCH_DEPTH_DESCRIPTION, SEARCH_EFFORT_DESCRIPTION
+from web_router.types_options import Recency as Recency
+from web_router.types_options import ResearchEffort as ResearchEffort
+from web_router.types_options import SearchDepth as SearchDepth
 from web_router.types_page import PageFormat as PageFormat
 from web_router.types_page import PageLoadState as PageLoadState
 from web_router.types_page import PageSnapshot as PageSnapshot
 from web_router.types_page import PageState as PageState
 from web_router.types_page import Screenshot as Screenshot
-
-SearchDepth = Literal["lite", "fast", "deep"]
-"""How much page content to retrieve per result.
-
-- ``lite``: title, URL and description only — cheapest, best at high volume.
-- ``fast``: a truncated page body, enough for most agent reasoning.
-- ``deep``: full page content; slowest and most expensive.
-
-Providers express this differently; each one maps these three levels onto its
-own vocabulary.
-"""
-
 
 ExtractFormat = Literal["markdown", "html", "text"]
 """Which representation of a page to return.
@@ -167,11 +159,13 @@ class SearchRequest(NormalizedRequest):
 
     query: Annotated[str, Field(min_length=1, description="The search query.")]
     max_results: Annotated[int | None, Field(default=None, ge=1, description=MAX_RESULTS_DESCRIPTION)] = None
-    search_depth: SearchDepth | None = Field(default=None, description="How much page content to retrieve.")
+    search_depth: SearchDepth | None = Field(default=None, description=SEARCH_DEPTH_DESCRIPTION)
     include_domains: list[str] | None = Field(default=None, description="Restrict results to these domains.")
     exclude_domains: list[str] | None = Field(default=None, description="Drop results from these domains.")
     country: str | None = Field(default=None, description="Country code for geo-targeting, e.g. 'US'.")
     locale: str | None = Field(default=None, description="Language code, e.g. 'en'.")
+    recency: Recency | None = Field(default=None, description=RECENCY_DESCRIPTION)
+    effort: ResearchEffort | None = Field(default=None, description=SEARCH_EFFORT_DESCRIPTION)
 
 
 ALWAYS_SENT = SearchRequest.always_sent
@@ -476,20 +470,6 @@ class ExtractBenchmarkReport(BaseModel, _BenchmarkRows[ExtractBenchmarkRun]):
     urls: list[str]
     runs: list[ExtractBenchmarkRun] = Field(default_factory=list)
 
-
-ResearchEffort = Literal["low", "medium", "high", "max"]
-"""How much work a research run should do before answering.
-
-- ``low``: a quick pass, closest in cost to a deep search.
-- ``medium``: the default shape of an agentic run.
-- ``high``: several rounds of gathering and cross-checking.
-- ``max``: everything the backend will spend on one question.
-
-Backends name these tiers differently -- processors, effort levels, reasoning
-budgets -- and some offer fewer than four. Each one maps these onto its own
-vocabulary, and a backend with coarser tiers maps more than one level onto the
-same setting rather than inventing a distinction it does not have.
-"""
 
 JobState = Literal["queued", "running", "completed", "failed", "cancelled"]
 """Where a job -- work the backend carries on with after the call that started it -- currently is.
