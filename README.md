@@ -2206,9 +2206,12 @@ field may be left out or `null`):
   `reason` and `exclude` reasons are cut to 300 characters.
 - **The URLs it may set.** The URLs a service sets for extract or browse are
   held to `url_policy="public_only"` even when you set no `url_policy`: a
-  service cannot point a backend at loopback, private or metadata hosts. A
+  service cannot name a loopback, private or metadata address. A
   refused URL is set aside in the record's `ignored`. Your own `url_policy`
-  applies when you set one.
+  applies when you set one. `public_only` checks the hostname as written and
+  does not resolve it, so a service could name a host whose DNS points at a
+  private address; that matters only for backends that fetch from your
+  machine, such as the `local` browser.
 - **What is shown.** The decision record names it `remote(<scheme>://<host>)`:
   never the URL's path, and never the key.
 
