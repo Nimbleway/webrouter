@@ -62,5 +62,6 @@ class Preset(BaseModel):
     def _params_the_tool_takes(cls, data: Any) -> Any:
         # Checked before the fields, as the tool's own model: its errors then name the param, not `params`.
         if isinstance(data, dict) and data.get("tool") in PRESET_TOOLS:
-            return {**data, "params": preset_params(data["tool"], data.get("params") or {})}
+            # Only a missing `params` is none: `[]`, `""` or `false` is a malformed one, refused as such.
+            return {**data, "params": preset_params(data["tool"], data.get("params", {}))}
         return data

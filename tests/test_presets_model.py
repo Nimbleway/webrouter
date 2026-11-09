@@ -145,3 +145,23 @@ def test_a_tool_takes_every_optional_argument_its_method_does_but_budget(tool: s
     }
 
     assert set(tool_params(tool)) == optional
+
+
+@pytest.mark.parametrize("params", [[], "", False, None])
+def test_params_that_are_not_a_mapping_are_refused_not_read_as_none(params: Any) -> None:
+    with pytest.raises(ValidationError):
+        Preset.model_validate({"name": "p", "tool": "search", "params": params})
+
+
+def test_a_start_url_with_a_trailing_newline_is_refused() -> None:
+    assert [e["loc"][0] for e in _refused(name="p", tool="browse", params={"start_url": "https://e.com\n"})] == [
+        "start_url"
+    ]
+
+
+def test_a_schema_json_cannot_encode_is_refused_at_its_field() -> None:
+    schema = {"type": "object", "title": "\ud800"}
+
+    assert [e["loc"] for e in _refused(name="p", tool="research", params={"output_schema": schema})] == [
+        ("output_schema",)
+    ]

@@ -62,7 +62,8 @@ def _schema_kept_as_json(schema: dict[str, Any]) -> dict[str, Any]:
 def _url(url: str) -> str:
     if "\x00" in url:
         raise ValueError(MSG_PRESET_NUL)
-    if not re.match(PRESET_URL_PATTERN, url):
+    # fullmatch, not match: `$` alone also matches before a trailing newline, which would then be sent.
+    if not re.fullmatch(PRESET_URL_PATTERN, url):
         raise ValueError(MSG_PRESET_URL)
     return url
 
