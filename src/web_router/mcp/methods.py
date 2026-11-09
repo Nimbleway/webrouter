@@ -249,13 +249,16 @@ def offer_formats(properties: dict[str, Any], serving: list[type[_BaseProvider]]
 
 
 def tool_annotations(tool: str) -> ToolAnnotations:
-    """``tool``'s title and behaviour hints, from :data:`MCP_TOOL_HINTS`."""
-    title, read_only, destructive, idempotent, open_world = MCP_TOOL_HINTS[tool]
+    """``tool``'s behaviour hints, from :data:`MCP_TOOL_HINTS`; its title rides on the tool itself.
+
+    Destructive and idempotent mean something only for a tool that is not
+    read-only, so a read-only tool leaves them out of the list every turn pays for.
+    """
+    _, read_only, destructive, idempotent, open_world = MCP_TOOL_HINTS[tool]
     return ToolAnnotations(
-        title=title,
         read_only_hint=read_only,
-        destructive_hint=destructive,
-        idempotent_hint=idempotent,
+        destructive_hint=None if read_only else destructive,
+        idempotent_hint=None if read_only else idempotent,
         open_world_hint=open_world,
     )
 
