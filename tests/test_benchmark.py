@@ -12,7 +12,8 @@ from web_router import AsyncWebRouter, BenchmarkTimeoutError, WebRouter, configu
 from web_router.constants import ENV_BY_PROVIDER
 from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
 from web_router.registry import register_provider, unregister_provider
-from web_router.types import NORMALIZED_PARAMETERS, BenchmarkReport, BenchmarkRun, SearchRequest, SearchResponse
+from web_router.types import NORMALIZED_PARAMETERS, SearchRequest, SearchResponse
+from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport
 
 
 class _Registered:
@@ -407,8 +408,6 @@ def test_two_threads_asking_for_one_provider_build_it_once(registered: _Register
 
 def test_a_report_serializes_what_names_the_comparison_before_its_rows() -> None:
     """The order callers saw before the two reports shared anything: `query` then `runs`, `urls` then `runs`."""
-    from web_router.types import ExtractBenchmarkReport
-
     assert list(BenchmarkReport(query="q").model_dump()) == ["query", "runs"]
     assert list(ExtractBenchmarkReport(urls=["https://a.test"]).model_dump()) == ["urls", "runs"]
     assert list(BenchmarkReport.model_fields) == ["query", "runs"]

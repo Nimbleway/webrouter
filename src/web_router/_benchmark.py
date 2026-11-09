@@ -21,7 +21,8 @@ from typing import Any, TypeVar
 from web_router.constants import MSG_BENCHMARK_ROW_FAILED
 from web_router.exceptions import BenchmarkTimeoutError, ProviderError, WebRouterError
 from web_router.providers.base import ExtractProvider, SearchProvider
-from web_router.types import BenchmarkRun, ExtractBenchmarkRun, ExtractResponse, Provider, SearchResponse, provider_name
+from web_router.types import ExtractResponse, Provider, SearchResponse, provider_name
+from web_router.types_benchmark import BenchmarkRun, ExtractBenchmarkRun
 
 _MemberT = TypeVar("_MemberT", bound="SearchProvider | ExtractProvider")
 _AnswerT = TypeVar("_AnswerT", bound="SearchResponse | ExtractResponse")

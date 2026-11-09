@@ -63,7 +63,7 @@ from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import build_payload, error_detail, mapped
 from web_router.providers.answer import cited_marker
 from web_router.types import (
-    EXTRACT_PARAMETERS,
+    EXTRACT_FORMAT_ONLY,
     Citation,
     ExtractedDocument,
     ExtractFailure,
@@ -155,7 +155,7 @@ class LinkupExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_LINKUP
-    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(LINKUP_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = LINKUP_EXTRACT_DEFAULT_FORMAT
 
