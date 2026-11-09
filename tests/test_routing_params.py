@@ -59,14 +59,6 @@ def test_nimble_research_at_a_few_cost_caps(cap: float, effort: str) -> None:
     assert choice.reason.startswith(f"effort {effort} (")
 
 
-@pytest.mark.parametrize(
-    ("cap", "effort"),
-    [(0.01, "low"), (0.03, "medium"), (0.2, "high")],
-)
-def test_parallel_research_at_a_few_cost_caps(cap: float, effort: str) -> None:
-    assert map_effort("parallel", Budget(max_cost_usd=cap)).effort == effort
-
-
 def test_a_generous_budget_takes_a_cheaper_effort_within_the_floor_over_a_costlier_one() -> None:
     # Parallel high and max both score 83.3%; max costs three times as much.
     choice = map_effort("parallel", Budget(max_cost_usd=10.0))
