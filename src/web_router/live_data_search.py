@@ -70,15 +70,15 @@ def search_live_data_sources(
         page = provider._wrapped(
             lambda: native._search(query, limit=limit, offset=offset), MSG_LIVE_DATA_SOURCES_FAILED
         )
-        return _tagged(page, query, LIVE_DATA_SEARCH_NATIVE)
-    sources: list[LiveDataSource] = []
-    complete = False
-    while len(sources) < LIVE_DATA_SEARCH_MAX_SOURCES:
-        page = provider.live_data_sources(limit=LIVE_DATA_SEARCH_PAGE, offset=len(sources))
-        sources.extend(page.sources)
-        if complete := _last_page(page, read=len(sources)):
+        return page.model_copy(update={"query": query, "search": LIVE_DATA_SEARCH_NATIVE})
+    pages: list[LiveDataSourcePage] = []
+    read, complete = 0, False
+    while read < LIVE_DATA_SEARCH_MAX_SOURCES:
+        pages.append(page := provider.live_data_sources(limit=LIVE_DATA_SEARCH_PAGE, offset=read))
+        read += len(page.sources)
+        if complete := _last_page(page, read=read):
             break
-    return _matched(provider.name, sources, query, limit=limit, offset=offset, complete=complete)
+    return _matched(provider.name, pages, query, limit=limit, offset=offset, complete=complete)
 
 
 async def asearch_live_data_sources(
@@ -90,15 +90,15 @@ async def asearch_live_data_sources(
         page = await provider._awrapped(
             provider._asearch(query, limit=limit, offset=offset), MSG_LIVE_DATA_SOURCES_FAILED
         )
-        return _tagged(page, query, LIVE_DATA_SEARCH_NATIVE)
-    sources: list[LiveDataSource] = []
-    complete = False
-    while len(sources) < LIVE_DATA_SEARCH_MAX_SOURCES:
-        page = await provider.alive_data_sources(limit=LIVE_DATA_SEARCH_PAGE, offset=len(sources))
-        sources.extend(page.sources)
-        if complete := _last_page(page, read=len(sources)):
+        return page.model_copy(update={"query": query, "search": LIVE_DATA_SEARCH_NATIVE})
+    pages: list[LiveDataSourcePage] = []
+    read, complete = 0, False
+    while read < LIVE_DATA_SEARCH_MAX_SOURCES:
+        pages.append(page := await provider.alive_data_sources(limit=LIVE_DATA_SEARCH_PAGE, offset=read))
+        read += len(page.sources)
+        if complete := _last_page(page, read=read):
             break
-    return _matched(provider.name, sources, query, limit=limit, offset=offset, complete=complete)
+    return _matched(provider.name, pages, query, limit=limit, offset=offset, complete=complete)
 
 
 def matches(source: LiveDataSource, query: str) -> bool:
@@ -123,22 +123,35 @@ def _named_by(source: LiveDataSource, words: list[str]) -> bool:
 
 
 def _last_page(page: LiveDataSourcePage, *, read: int) -> bool:
-    """Whether the catalogue has been read through: an empty or short page, or the count the backend gave."""
-    if not page.sources or len(page.sources) < LIVE_DATA_SEARCH_PAGE:
+    """Whether the catalogue has been read through.
+
+    An empty page always ends it. Where the backend counts its catalogue, the
+    count decides, so a backend that caps its pages below what was asked is
+    still read to the end. Without a count, a page shorter than the backend's
+    own page size -- or the size asked for, when it reports none -- is the last.
+    """
+    if not page.sources:
         return True
-    return page.total is not None and read >= page.total
+    if page.total is not None:
+        return read >= page.total
+    return len(page.sources) < (page.limit or LIVE_DATA_SEARCH_PAGE)
 
 
 def _matched(
     provider: str,
-    sources: list[LiveDataSource],
+    pages: list[LiveDataSourcePage],
     query: str,
     *,
     limit: int | None,
     offset: int | None,
     complete: bool,
 ) -> LiveDataSourcePage:
-    """One page of the local matches: name and site matches first, then the rest, each in catalogue order."""
+    """One page of the local matches: name and site matches first, then the rest, each in catalogue order.
+
+    ``raw`` holds the backend's untouched listing payloads the search read, in
+    order, so a raw handle shows what the vendor answered, not what matched.
+    """
+    sources = [source for page in pages for source in page.sources]
     if not complete:
         logger.warning(MSG_LIVE_DATA_SEARCH_CAPPED.format(provider=provider, query=query, read=len(sources)))
     words = query.casefold().split()
@@ -146,7 +159,7 @@ def _matched(
     found.sort(key=lambda source: not _named_by(source, words))  # stable, so catalogue order holds within each
     start = offset or 0
     page = found[start:] if limit is None else found[start : start + limit]
-    raw: list[Any] = [source.raw for source in page if source.raw is not None]
+    raw: list[Any] = [listing.raw for listing in pages if listing.raw is not None]
     return LiveDataSourcePage(
         provider=provider,
         sources=page,
@@ -157,10 +170,6 @@ def _matched(
         search=LIVE_DATA_SEARCH_LOCAL,
         raw=raw or None,
     )
-
-
-def _tagged(page: LiveDataSourcePage, query: str, mode: str) -> LiveDataSourcePage:
-    return page.model_copy(update={"query": query, "search": mode})
 
 
 def _check_page(limit: int | None, offset: int | None) -> None:

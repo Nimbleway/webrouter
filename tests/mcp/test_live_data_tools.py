@@ -35,6 +35,9 @@ async def test_live_data_sources_searches_by_query_and_says_how(tools: WebRouter
     assert [row["name"] for row in found["sources"]] == ["jobs_listing"]
     assert found["query"] == "jobs" and found["search"] == "local"
     assert "query" in _tool(tools, MCP_TOOL_LIVE_DATA_SOURCES).input_schema["properties"]
+    # The handle holds the listing the vendor answered, so the search is traceable to it.
+    raw = _payload(await call_tool(tools, MCP_TOOL_FETCH_RAW, {"handle": found["handle"]}))
+    assert raw["raw"] == [{"items": ["books_pdp", "jobs_listing"]}]
 
 
 async def test_live_data_sources_lists_the_catalogue_and_live_data_source_describes_one(tools: WebRouterTools) -> None:

@@ -57,7 +57,13 @@ class PagedProvider(LiveDataProvider):
         self.listed.append((limit, offset))
         start = offset or 0
         page = self.catalogue[start:] if limit is None else self.catalogue[start : start + limit]
-        return LiveDataSourcePage(provider=self.name, sources=page, total=len(self.catalogue), offset=start)
+        return LiveDataSourcePage(
+            provider=self.name,
+            sources=page,
+            total=len(self.catalogue),
+            offset=start,
+            raw={"offset": start, "names": [source.name for source in page]},
+        )
 
     async def _alist(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         return self._list(limit=limit, offset=offset)
@@ -84,7 +90,8 @@ def test_a_local_search_reads_the_whole_catalogue_and_ranks_name_and_site_matche
     assert page.names == ["amazon_product", "amazon_search", "shop_reviews"]
     assert page.search == "local" and page.query == "Amazon"
     assert page.total == 3 and page.offset == 0
-    assert page.raw == [{"name": name} for name in page.names]
+    # The vendor's listing pages the search read, untouched, not the matched sources.
+    assert [listing["offset"] for listing in page.raw] == [0, 100, 200]
 
 
 def test_every_word_of_the_query_must_match() -> None:
@@ -125,6 +132,43 @@ def test_a_catalogue_past_the_cap_is_searched_in_part_and_says_so(
     assert page.names == ["shop_reviews"], "only the first page was read"
     assert page.total is None, "a count of a catalogue read in part would be wrong"
     assert "stopped after 100 sources" in caplog.text
+
+
+class SmallPages(PagedProvider):
+    """A backend that caps its pages below what was asked, and counts its catalogue."""
+
+    page_cap: ClassVar[int] = 20
+
+    def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
+        return super()._list(limit=min(limit or self.page_cap, self.page_cap), offset=offset)
+
+
+def test_a_backend_that_pages_smaller_than_asked_is_still_read_to_its_count() -> None:
+    provider = SmallPages()
+    page = search_live_data_sources(provider, "amazon")
+
+    assert len(provider.listed) == -(-len(CATALOGUE) // SmallPages.page_cap), "every short page, up to the count"
+    assert page.names == ["amazon_product", "amazon_search", "shop_reviews"]
+    assert page.total == 3
+
+
+async def test_a_backend_that_pages_smaller_than_asked_is_read_through_async_too() -> None:
+    page = await AsyncWebRouter().live_data_sources(provider=SmallPages(), query="amazon")
+
+    assert page.names == ["amazon_product", "amazon_search", "shop_reviews"]
+
+
+def test_without_a_count_a_short_page_against_the_backends_own_size_ends_the_read() -> None:
+    class Uncounted(SmallPages):
+        def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
+            page = super()._list(limit=limit, offset=offset)
+            return page.model_copy(update={"total": None, "limit": self.page_cap})
+
+    provider = Uncounted()
+    page = search_live_data_sources(provider, "amazon")
+
+    assert page.names == ["amazon_product", "amazon_search", "shop_reviews"], "full pages of 20 did not stop it"
+    assert provider.listed[-1][1] == 220, "the short last page did"
 
 
 async def test_the_async_router_searches_the_same_way() -> None:
