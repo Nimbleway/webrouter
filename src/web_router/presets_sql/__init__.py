@@ -78,7 +78,9 @@ class SqlPresetStore:
         current, head = backend.current_revision(self._engine), backend.head_revision()
         if current != head:
             self._engine.dispose()
-            raise PresetStoreOutdatedError(current, head)
+            raise PresetStoreOutdatedError(
+                current, head, newer=current is not None and not backend.known_revision(current)
+            )
         self._tables = backend.tables(self._engine)
 
     def get(self, name: str) -> Preset | None:

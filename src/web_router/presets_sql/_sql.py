@@ -18,6 +18,7 @@ from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
+from alembic.util import CommandError
 from sqlalchemy import Engine, MetaData, Table, create_engine, insert, select
 from sqlalchemy.exc import IntegrityError
 
@@ -62,6 +63,14 @@ def head_revision() -> str:
     return head
 
 
+def known_revision(revision: str) -> bool:
+    """Whether this version ships ``revision``: one it does not was written by a newer web-router."""
+    try:
+        return ScriptDirectory.from_config(_config()).get_revision(revision) is not None
+    except CommandError:
+        return False
+
+
 def current_revision(engine: Engine) -> str | None:
     """The revision ``engine``'s database is at; ``None`` when no migration has run there."""
     with engine.connect() as connection:
@@ -84,10 +93,24 @@ def upgrade(url: str) -> str:
         engine.dispose()
 
 
-def _params_by_id(connection: Any, table: Table, ids: Iterable[int]) -> dict[int, dict[str, Any]]:
-    rows = connection.execute(select(table).where(table.c.id.in_(list(ids)))).mappings()
-    # NULL is a param left unset: left out, so it reads back unset.
+def _params_by_id(connection: Any, table: Table, ids: Iterable[int]) -> dict[int, dict[str, Any] | None]:
+    """Each params row by id, NULLs left out so they read back unset; ``None`` for one whose JSON does not decode."""
+    wanted = list(ids)
+    try:
+        rows = list(connection.execute(select(table).where(table.c.id.in_(wanted))).mappings())
+    except ValueError:
+        # One row's malformed JSON -- possible on SQLite, which keeps JSON as text -- fails the whole fetch, so
+        # read the rows one by one and mark only that one unreadable.
+        return {row_id: _one(connection, table, row_id) for row_id in wanted}
     return {row["id"]: {key: value for key, value in row.items() if key != "id" and value is not None} for row in rows}
+
+
+def _one(connection: Any, table: Table, row_id: int) -> dict[str, Any] | None:
+    try:
+        row = connection.execute(select(table).where(table.c.id == row_id)).mappings().first()
+    except ValueError:
+        return None
+    return None if row is None else {key: value for key, value in row.items() if key != "id" and value is not None}
 
 
 def read(engine: Engine, schema: Tables, name: str | None = None) -> list[dict[str, Any]]:
@@ -97,7 +120,7 @@ def read(engine: Engine, schema: Tables, name: str | None = None) -> list[dict[s
         query = query.where(schema.presets.c.name == name)
     with engine.connect() as connection:
         rows = [dict(row) for row in connection.execute(query).mappings()]
-        params: dict[str, dict[int, dict[str, Any]]] = {}
+        params: dict[str, dict[int, dict[str, Any] | None]] = {}
         for tool, table in schema.params.items():
             ids = [row[PRESETS_PARAMS_ID.format(tool=tool)] for row in rows if row["tool"] == tool]
             params[tool] = _params_by_id(connection, table, ids) if ids else {}
@@ -106,7 +129,9 @@ def read(engine: Engine, schema: Tables, name: str | None = None) -> list[dict[s
             "name": row["name"],
             "tool": row["tool"],
             "description": row["description"],
-            "params": params.get(row["tool"], {}).get(row[PRESETS_PARAMS_ID.format(tool=row["tool"])], {}),
+            # A params row that is missing or cannot be decoded reads as None, which no preset accepts: the preset
+            # is unreadable, never silently a preset with no settings.
+            "params": params.get(row["tool"], {}).get(row[PRESETS_PARAMS_ID.format(tool=row["tool"])]),
         }
         for row in rows
     ]

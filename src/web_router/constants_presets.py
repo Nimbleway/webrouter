@@ -49,6 +49,10 @@ MSG_PRESET_STORE_OUTDATED = (
     "The presets database schema is at revision {current}, behind this version's {head}. Run `{command}` "
     "(or web_router.presets_sql.upgrade(url)) to bring it up to date."
 )
+MSG_PRESET_STORE_NEWER = (
+    "The presets database schema is at revision {current}, which this version of web-router does not know: a "
+    "newer web-router wrote it. Upgrade web-router to use it; its own head here is {head}."
+)
 PRESET_STORE_EMPTY_REVISION = "none"
 PRESETS_CLI_PROG = "python -m web_router.presets_sql"
 PRESETS_CLI_DESCRIPTION = "Manage the schema of a SqlPresetStore database."

@@ -19,6 +19,7 @@ from web_router.constants_presets import (
     MSG_PRESET_NAME_TAKEN,
     MSG_PRESET_NOT_FOUND,
     MSG_PRESET_OF_ANOTHER_TOOL,
+    MSG_PRESET_STORE_NEWER,
     MSG_PRESET_STORE_OUTDATED,
     MSG_PRESET_UNREADABLE,
     PRESET_STORE_EMPTY_REVISION,
@@ -65,17 +66,22 @@ class PresetUnreadableError(PresetError):
 
 
 class PresetStoreOutdatedError(PresetError):
-    """The presets database is behind the schema this version ships: run its migrations first.
+    """The presets database is not at the schema this version ships: behind it, or written by a newer version.
 
     The store never upgrades a database on its own, since a schema change is the
     database owner's call; :func:`web_router.presets_sql.upgrade` does it.
     """
 
-    def __init__(self, current: str | None, head: str) -> None:
+    def __init__(self, current: str | None, head: str, *, newer: bool = False) -> None:
+        """
+        Args:
+            newer: The database is at a revision this version does not ship: a newer web-router wrote it, and
+                the fix is to upgrade web-router, not the database.
+        """
         self.current = current
         self.head = head
+        self.newer = newer
+        message = MSG_PRESET_STORE_NEWER if newer else MSG_PRESET_STORE_OUTDATED
         super().__init__(
-            MSG_PRESET_STORE_OUTDATED.format(
-                current=current or PRESET_STORE_EMPTY_REVISION, head=head, command=PRESETS_UPGRADE_COMMAND
-            )
+            message.format(current=current or PRESET_STORE_EMPTY_REVISION, head=head, command=PRESETS_UPGRADE_COMMAND)
         )

@@ -111,15 +111,17 @@ def test_a_database_never_upgraded_is_refused_with_the_command_to_run(url: str) 
     assert _tables(url) == set()
 
 
-def test_a_database_behind_the_shipped_head_is_refused(url: str) -> None:
+def test_a_database_a_newer_version_wrote_is_refused_as_newer_not_behind(url: str) -> None:
     upgrade(url)
     engine = sqlalchemy.create_engine(url)
     with engine.begin() as connection:
         connection.execute(sqlalchemy.text("UPDATE web_router_presets_alembic_version SET version_num = 'older'"))
     engine.dispose()
 
-    with pytest.raises(PresetStoreOutdatedError, match="at revision older, behind this version's 0001"):
+    with pytest.raises(PresetStoreOutdatedError, match="at revision older, which this version") as refused:
         SqlPresetStore(url)
+    assert refused.value.newer is True
+    assert "Upgrade web-router" in str(refused.value)
 
 
 def test_a_row_this_version_cannot_read_is_refused_by_get_and_skipped_by_list(
@@ -166,3 +168,32 @@ def test_without_the_sql_extra_the_store_says_which_extra_to_install(url: str, m
 
     with pytest.raises(ProviderNotInstalledError, match="--extra sql"):
         SqlPresetStore(url)
+
+
+def _broken(url: str, statement: str) -> SqlPresetStore:
+    upgrade(url)
+    store = SqlPresetStore(url)
+    store.create(Preset(name="good", tool="search", params={"max_results": 3}))
+    store.create(Preset(name="bad", tool="research", params={"output_schema": {"type": "object"}}))
+    engine = sqlalchemy.create_engine(url)
+    with engine.begin() as connection:
+        connection.execute(sqlalchemy.text(statement))
+    engine.dispose()
+    return store
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "DELETE FROM web_router_research_params",
+        "UPDATE web_router_research_params SET output_schema = '{not json'",
+    ],
+    ids=["missing params row", "malformed json"],
+)
+def test_a_preset_whose_params_cannot_be_read_is_unreadable_not_empty(url: str, statement: str) -> None:
+    store = _broken(url, statement)
+
+    assert [preset.name for preset in store.list()] == ["good"]
+    with pytest.raises(PresetUnreadableError, match="preset 'bad'"):
+        store.get("bad")
+    store.close()
