@@ -72,6 +72,7 @@ from web_router.constants_remote import (
     REMOTE_CONTENT_TYPE,
     REMOTE_CONTENT_TYPE_HEADER,
     REMOTE_DISPLAY_NAME,
+    REMOTE_EXCLUDE_FIELD,
     REMOTE_HTTP_OK,
     REMOTE_IDENTITY_ENCODING,
     REMOTE_JSON_TYPE,
@@ -154,15 +155,26 @@ def _why(exc: BaseException) -> str:
     return REMOTE_WHY_CLOSE_SLOW.format(wait=REMOTE_CLOSE_WAIT_S) if late else type(exc).__name__
 
 
-def _unechoed(value: Any, key: str) -> Any:
-    """``value`` with ``key`` redacted from every string and mapping key in it: no record or model sees an echo."""
+def _unechoed(value: Any, key: str, *, names: bool = False) -> Any:
+    """``value`` with ``key`` redacted from every string in it, and from mapping keys when ``names``.
+
+    Only ``exclude``'s keys -- candidate ids -- reach a record as text; every other mapping key is a field or a
+    tool name, so it is left whole: a key spelled like one cannot turn a valid decision into an invalid one.
+    """
     if isinstance(value, str):
         return value.replace(key, REMOTE_KEY_REDACTED)
     if isinstance(value, list):
         return [_unechoed(item, key) for item in value]
     if isinstance(value, dict):
-        return {_unechoed(name, key): _unechoed(item, key) for name, item in value.items()}
+        return {(_unechoed(n, key) if names else n): _unechoed(item, key) for n, item in value.items()}
     return value  # a number, a bool or null is the decision's own
+
+
+def _unechoed_decision(data: Any, key: str) -> Any:
+    """A decision's JSON with ``key`` redacted from its text and from the candidate ids ``exclude`` names."""
+    if not isinstance(data, dict):
+        return data
+    return {n: _unechoed(item, key, names=n == REMOTE_EXCLUDE_FIELD) for n, item in data.items()}
 
 
 _CLOSING: set[asyncio.Task[None]] = set()
@@ -340,7 +352,7 @@ class RemoteRouter:
         except (ValueError, RecursionError):  # a reply nested deeper than Python parses is no decision either
             raise RemoteRouterInvalid(self.host, REMOTE_WHY_NOT_JSON) from None
         try:
-            return decision_from_wire(_unechoed(data, self._key) if self._key else data)
+            return decision_from_wire(_unechoed_decision(data, self._key) if self._key else data)
         except WireError as exc:
             raise RemoteRouterInvalid(self.host, str(exc)) from None
         except WireVersionError as exc:  # well formed, of another version: a mismatch, so a router error

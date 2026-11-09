@@ -147,6 +147,9 @@ def test_an_escaped_echo_is_redacted_and_a_numeric_key_changes_no_number() -> No
     with canned(Canned(body=b'{"schema": 1, "tools": ["search"]}')) as base:
         plan = WebRouter(router="remote", router_config={"url": base + "/route", "api_key": "1"}).plan("solar news")
     assert plan.decision.reason != "router_invalid", "a key of 1 leaves the schema version alone"
+    with canned(Canned(body=b'{"schema": 1, "tools": ["search"]}')) as base:
+        plan = WebRouter(router="remote", router_config={"url": base + "/route", "api_key": "schema"}).plan("x")
+    assert plan.decision.reason != "router_invalid", "a key spelled like a field leaves the field names alone"
 
 
 def test_a_redirect_is_a_router_error_and_the_key_never_follows_it() -> None:
