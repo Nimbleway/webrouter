@@ -7,7 +7,7 @@ imports nothing of the package's, so any other module may import it.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, TypedDict
 
 SearchDepth = Literal["lite", "fast", "deep"]
 """How much page text comes back per result, by size.
@@ -68,3 +68,19 @@ SEARCH_EFFORT_DESCRIPTION = (
     "by a vendor-specific amount; leave it unset unless needed."
 )
 """What search's ``effort`` means, anchored so a level means the same on every backend that maps it."""
+
+
+class SearchOptions(TypedDict, total=False):
+    """The shared search options, by name: what a router method forwards to its request builder.
+
+    Typed so a misspelled option fails the type check where the options are forwarded.
+    """
+
+    max_results: int | None
+    search_depth: SearchDepth | None
+    include_domains: list[str] | None
+    exclude_domains: list[str] | None
+    country: str | None
+    locale: str | None
+    recency: Recency | None
+    effort: ResearchEffort | None

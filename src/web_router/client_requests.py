@@ -9,7 +9,7 @@ sync router's check of its ``provider_config``, lives here for the same reason.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
@@ -27,11 +27,18 @@ from web_router.types import (
     provider_name,
 )
 
+if TYPE_CHECKING:
+    from typing_extensions import Unpack
+
+    from web_router.types_options import SearchOptions
+
 JsonSchema = dict[str, Any] | type[BaseModel]
 """A schema for a structured answer: JSON Schema, or the pydantic model to take one from."""
 
 
-def build_search_request(query: str, *, provider_options: dict[str, Any] | None, **options: Any) -> SearchRequest:
+def build_search_request(
+    query: str, *, provider_options: dict[str, Any] | None, **options: Unpack[SearchOptions]
+) -> SearchRequest:
     """Every search option goes through by name, so a new one is added to the request model and the signatures only."""
     return SearchRequest(query=query, provider_options=provider_options or {}, **options)
 
