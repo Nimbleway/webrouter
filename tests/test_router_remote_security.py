@@ -131,8 +131,20 @@ def test_a_service_echoing_its_key_in_its_reasons_has_it_redacted() -> None:
 
     with running(echo) as server, WebRouter(router="remote", router_config=config(server)) as wr:
         plan = wr.plan("solar news")
-    assert plan.decision.reason is not None
-    assert KEY not in plan.decision.model_dump_json() and "[redacted]" in plan.decision.model_dump_json()
+    record = plan.decision.model_dump_json()
+    assert KEY not in record and "[redacted]" in record
+
+
+def test_an_escaped_echo_is_redacted_and_a_numeric_key_changes_no_number() -> None:
+    escaped = KEY.replace("r", "\\u0072")  # the key, JSON-escaped: decoded, it is the key again
+    body = f'{{"schema": 1, "tools": ["search"], "reason": "key {escaped}"}}'.encode()
+    with canned(Canned(body=body)) as base:
+        plan = WebRouter(router="remote", router_config={"url": base + "/route", "api_key": KEY}).plan("solar news")
+    record = plan.decision.model_dump_json()
+    assert KEY not in record and "[redacted]" in record
+    with canned(Canned(body=b'{"schema": 1, "tools": ["search"]}')) as base:
+        plan = WebRouter(router="remote", router_config={"url": base + "/route", "api_key": "1"}).plan("solar news")
+    assert plan.decision.reason != "router_invalid", "a key of 1 leaves the schema version alone"
 
 
 def test_a_redirect_is_a_router_error_and_the_key_never_follows_it() -> None:

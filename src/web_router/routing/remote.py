@@ -151,6 +151,17 @@ def _why(exc: BaseException) -> str:
     return REMOTE_WHY_CLOSE_SLOW.format(wait=REMOTE_CLOSE_WAIT_S) if late else type(exc).__name__
 
 
+def _unechoed(value: Any, key: str) -> Any:
+    """``value`` with ``key`` redacted from every string in it: an echo reaches no reason a record or a model shows."""
+    if isinstance(value, str):
+        return value.replace(key, REMOTE_KEY_REDACTED)
+    if isinstance(value, list):
+        return [_unechoed(item, key) for item in value]
+    if isinstance(value, dict):
+        return {name: _unechoed(item, key) for name, item in value.items()}
+    return value  # a number, a bool or null is the decision's own
+
+
 _CLOSING: set[asyncio.Task[None]] = set()
 """Pool closes ``close()`` started as tasks on the pool's own running loop, until each is done."""
 
@@ -183,7 +194,7 @@ class RemoteRouter:
         self.timeout_s = _checked_timeout(timeout_s)
         key = _key(api_key)
         self._request_headers = _auth_headers(key)
-        self._key_bytes = None if key is None else key.encode()
+        self._key = key
         self._lock = threading.Lock()
         self._closed = False
         self._pool: httpx.AsyncClient | None = None
@@ -318,14 +329,12 @@ class RemoteRouter:
         """The decision ``body`` carries, or the router error: ``failed`` names the transport's error class."""
         if failed is not None:
             raise RemoteRouterError(self.host, REMOTE_WHY_TRANSPORT.format(kind=failed))
-        if self._key_bytes:  # a service echoing its own key puts it in no reason a record or a model shows
-            body = body.replace(self._key_bytes, REMOTE_KEY_REDACTED)
         try:
             data = json.loads(body)
         except (ValueError, RecursionError):  # a reply nested deeper than Python parses is no decision either
             raise RemoteRouterInvalid(self.host, REMOTE_WHY_NOT_JSON) from None
         try:
-            return decision_from_wire(data)
+            return decision_from_wire(_unechoed(data, self._key) if self._key else data)
         except WireError as exc:
             raise RemoteRouterInvalid(self.host, str(exc)) from None
         except WireVersionError as exc:  # well formed, of another version: a mismatch, so a router error
