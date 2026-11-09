@@ -4,6 +4,7 @@ import os
 
 import pytest
 
+from web_router.constants import SNIPPET_LIMIT
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.brave import BraveProvider
 from web_router.types import SearchRequest
@@ -64,6 +65,17 @@ def test_a_value_off_the_lists_is_refused_unsent(
     with pytest.raises(UnsupportedParameterError, match=rf"{option}='{value}'"):
         provider.search(SearchRequest(query="hi", **{option: value}))
     assert BraveProvider.refused_values(SearchRequest(query="hi", **{option: value})) == {option: value}
+
+
+@pytest.mark.parametrize("depth", [None, "lite"])
+def test_lite_cuts_the_description_and_extra_snippets_to_a_snippet(provider: BraveProvider, depth: str | None) -> None:
+    """Joined, they ran to 2,000 characters live; Brave has no size setting, so lite is cut here."""
+    hit = {"url": "https://a.com", "description": "a <strong>b</strong>", "extra_snippets": ["word " * 100] * 3}
+    payload = {"web": {"results": [hit]}}
+    result = provider._to_response(SearchRequest(query="hi", search_depth=depth), payload).results[0]  # type: ignore[arg-type]
+    assert result.description == "a b"
+    assert result.content.startswith("a b\n\n")
+    assert len(result.content) <= SNIPPET_LIMIT + 1 if depth == "lite" else len(result.content) > 1500
 
 
 def test_effort_is_refused(provider: BraveProvider) -> None:

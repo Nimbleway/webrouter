@@ -7,7 +7,9 @@ sells them as separate plans -- unless a key is passed explicitly.
 
 Search maps every shared option but ``effort``, which Brave has no tier for.
 ``search_depth`` serves ``lite`` alone: the endpoint returns a description and
-at most a few extra snippets, never a page body. The domain filters travel in
+at most a few extra snippets, never a page body. Joined they ran to 2,000
+characters live, and Brave has no size setting, so ``lite`` is cut to a snippet
+here; unset, the content is every snippet Brave returned. The domain filters travel in
 the query as ``site:`` operators, which Brave marks experimental. Everything else
 is reachable through ``provider_options``.
 """
@@ -52,7 +54,7 @@ from web_router.constants_brave import (
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider, HttpSearchProvider
 from web_router.providers._language import language_tag, off_the_lists
-from web_router.providers._utils import as_snippet, build_payload, site_operators
+from web_router.providers._utils import as_snippet, build_payload, lite_body, site_operators
 from web_router.types import Citation, SearchDepth, SearchRequest, SearchResponse, SearchResult
 from web_router.types_answer import AnswerRequest, AnswerResponse
 
@@ -77,7 +79,7 @@ class BraveProvider(HttpSearchProvider):
 
     name: ClassVar[str] = PROVIDER_BRAVE
     supported_parameters: ClassVar[frozenset[str]] = BRAVE_SEARCH_PARAMETERS
-    # A description and at most five extra snippets: a snippet, never a truncated body or a page.
+    # A description and at most five extra snippets, cut to a snippet for lite: never a body or a page.
     depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset({"lite"})
     refusal_reasons: ClassVar[dict[str, str]] = dict.fromkeys(("country", "locale"), MSG_BRAVE_SEARCH_VALUES)
 
@@ -123,12 +125,12 @@ class BraveProvider(HttpSearchProvider):
         return SearchResponse(
             provider=self.name,
             query=request.query,
-            results=[self._to_result(hit) for hit in hits],
+            results=[self._to_result(hit, request) for hit in hits],
             raw=payload,
         )
 
     @staticmethod
-    def _to_result(hit: dict[str, Any]) -> SearchResult:
+    def _to_result(hit: dict[str, Any], request: SearchRequest) -> SearchResult:
         description = _unmark(hit.get("description") or "")
         # Brave has no full-text mode; the extra snippets are the most body it offers.
         snippets = [_unmark(snippet) for snippet in hit.get("extra_snippets") or []]
@@ -136,7 +138,7 @@ class BraveProvider(HttpSearchProvider):
             url=hit.get("url", ""),
             title=_unmark(hit.get("title") or ""),
             description=description,
-            content="\n\n".join([description, *snippets]).strip(),
+            content=lite_body("\n\n".join([description, *snippets]).strip(), request.search_depth),
             published_date=hit.get("page_age"),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},
         )

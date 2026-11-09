@@ -46,7 +46,10 @@ EXA_CONTENTS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
 
 Highlights are the passages Exa picks for the query, capped at a snippet's
 size; ``fast`` caps the page text; ``text: true`` is, in Exa's words, "full page
-text with default settings".
+text with default settings". The highlights cap is soft -- a passage Exa will not
+split comes back whole, 995 characters live on 2026-11-09 against the 500 asked
+for, and a lower cap does not prevent it -- so the provider cuts ``lite`` to a
+snippet itself.
 """
 
 EXA_TYPE_FIELD = "type"
@@ -122,7 +125,10 @@ EXA_MCP_CONTENTS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
 
 ``deep`` sends none: "page text is the full page by default", and live it came
 back at 10,000-14,000 characters a result. Highlights without a cap ran to about
-4,000 characters, so ``lite`` caps them at a snippet's size.
+4,000 characters, so ``lite`` caps them at a snippet's size. The tool documents
+the cap as the total across a URL's highlights, but one highlight it will not
+split overshoots it (2,830 characters keyless on 2026-11-09, and 966 at a cap of
+300), so the provider cuts ``lite`` to a snippet as well.
 """
 
 EXA_MCP_TYPE_BY_EFFORT: dict[ResearchEffort, str | None] = {

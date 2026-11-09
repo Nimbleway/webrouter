@@ -70,6 +70,18 @@ def test_the_text_head_becomes_the_description_when_there_is_no_summary(provider
     assert len(result.content) == 4000
 
 
+@pytest.mark.parametrize("depth", [None, "lite", "fast"])
+def test_lite_is_cut_to_a_snippet_when_a_highlight_overshoots_the_cap(provider: ExaProvider, depth: str | None) -> None:
+    """Exa returned a 995-character highlight against a 500 cap live, so lite is cut here; other depths are not."""
+    payload = {"results": [{"url": URL, "highlights": ["word " * 199]}]}
+    result = provider._to_response(SearchRequest(query="hi", search_depth=depth), payload).results[0]  # type: ignore[arg-type]
+    if depth == "lite":
+        assert len(result.content) <= SNIPPET_LIMIT + 1
+        assert len(result.description) <= SNIPPET_LIMIT + 1
+    else:
+        assert len(result.content) == len("word " * 199)
+
+
 @pytest.mark.integration
 @pytest.mark.skipif(not os.getenv("EXA_API_KEY"), reason="EXA_API_KEY not set")
 def test_live_search_returns_results() -> None:

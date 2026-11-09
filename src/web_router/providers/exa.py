@@ -41,7 +41,7 @@ from web_router.constants_exa import (
 )
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, best_text, build_payload
+from web_router.providers._utils import as_snippet, best_text, build_payload, lite_body
 from web_router.providers.answer import cited_marker
 from web_router.types import (
     EXTRACT_PARAMETERS,
@@ -91,13 +91,13 @@ class ExaProvider(HttpSearchProvider):
         return SearchResponse(
             provider=self.name,
             query=request.query,
-            results=[self._to_result(hit) for hit in payload.get("results") or []],
+            results=[self._to_result(hit, request) for hit in payload.get("results") or []],
             request_id=payload.get("requestId"),
             raw=payload,
         )
 
     @staticmethod
-    def _to_result(hit: dict[str, Any]) -> SearchResult:
+    def _to_result(hit: dict[str, Any], request: SearchRequest) -> SearchResult:
         # Exa returns no snippet field; its summary, else the head of the text,
         # is the closest equivalent to what other providers call a description.
         text = hit.get("text") or ""
@@ -105,8 +105,10 @@ class ExaProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
-            description=summary or as_snippet(text),
-            content=best_text(text, summary),
+            description=lite_body(summary, request.search_depth) or as_snippet(text),
+            # lite's highlights cap is soft: Exa keeps a passage it will not split whole, up to ~2,800
+            # characters live against a 500 cap, so lite is cut to a snippet here.
+            content=lite_body(best_text(text, summary), request.search_depth),
             score=hit.get("score"),
             published_date=hit.get("publishedDate"),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},

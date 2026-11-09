@@ -28,6 +28,7 @@ from web_router.types import (
     BrowserRequest,
     FieldPath,
     NormalizedRequest,
+    SearchDepth,
 )
 
 
@@ -265,6 +266,16 @@ def as_snippet(text: str) -> str:
     head = text[:SNIPPET_LIMIT]
     cut = head.rfind(" ")
     return (head[:cut] if cut > 0 else head).rstrip() + "\u2026"
+
+
+def lite_body(text: str, depth: SearchDepth | None) -> str:
+    """``text`` cut to a snippet when ``lite`` was asked for, else unchanged.
+
+    For a backend whose own size setting does not bind -- a cap the vendor
+    overshoots, or no setting at all -- so ``lite`` keeps its size whoever
+    served it. The vendor's full text stays in ``raw``.
+    """
+    return as_snippet(text) if depth == "lite" else text
 
 
 def site_operators(
