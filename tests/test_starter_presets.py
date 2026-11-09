@@ -13,10 +13,12 @@ import pytest
 from tests.conftest import FakeProvider
 from tests.presets_helpers import RecordingExtract
 from web_router import WebRouter, available_answer_providers, available_extract_providers, available_providers
+from web_router.constants import ENV_BY_PROVIDER
 from web_router.constants_deepseek import DEEPSEEK_QUERY_LIMIT
 from web_router.constants_presets import PRESET_FILE_SUFFIXES
 from web_router.providers.deepseek import DeepSeekProvider
 from web_router.registry import get_extract_provider_class, register_extract_provider
+from web_router.routing.eligible import eligible_members
 from web_router.types import SearchRequest
 
 STARTER = Path(__file__).resolve().parents[1] / "presets"
@@ -116,6 +118,24 @@ def test_deepseek_cannot_take_a_starter_search_presets_domain_lists(file: Path) 
         pytest.skip("no search component")
     defaults = preset.components["search"].defaults
     assert len(DeepSeekProvider._query(SearchRequest(query="q", **defaults))) > DEEPSEEK_QUERY_LIMIT
+
+
+@pytest.mark.parametrize("file", FILES, ids=lambda file: file.stem)
+def test_keyless_auto_serves_each_starter_search_preset_in_the_order_its_readme_gives(
+    file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """presets/README.md: with no key, ``auto`` tries Tavily's keyless tier, then You.com MCP and Exa MCP."""
+    for variable in ENV_BY_PROVIDER.values():
+        if variable:
+            monkeypatch.delenv(variable, raising=False)
+    with WebRouter() as router:
+        (preset,) = router.presets.load(file)
+        if "search" not in preset.applies_to:
+            pytest.skip("no search component")
+        request = SearchRequest(query="q", **preset.components["search"].defaults)
+        members, _ = eligible_members(router, "search", request)
+
+    assert [name for name, _ in members] == ["tavily", "you-mcp", "exa-mcp"]
 
 
 def test_a_calls_empty_domain_list_replaces_the_presets_and_none_keeps_it(fake_provider: Any) -> None:
