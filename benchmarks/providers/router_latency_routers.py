@@ -3,10 +3,8 @@
 ``rules`` is the library's built-in router, the one the MCP server attaches.
 ``sklearn``, ``llm`` and ``jev`` are the example routers in ``examples/``,
 loaded from their files as route-eval loads a ``path/file.py:attr`` router.
-``remote:<url>`` posts each request to a router service in the wire format,
-schema 1: through the library's own remote router when the installed
-``web_router`` has one, else through :class:`WireRouter` here, which speaks the
-same format to any server. Any other ``module:attr`` or ``path/file.py:attr``
+``remote:<url>`` is the library's own ``remote`` router, posting each request
+to a router service in the wire format, schema 1. Any other ``module:attr`` or ``path/file.py:attr``
 names a router of your own. Imported as a sibling, by name, as ``_common`` is.
 
 Experimental until 1.0, like the router contract it measures.
@@ -14,6 +12,7 @@ Experimental until 1.0, like the router contract it measures.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import importlib.util
 import json
@@ -21,7 +20,6 @@ import math
 import os
 import sys
 import tempfile
-import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from functools import cache
@@ -29,10 +27,11 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from pydantic import TypeAdapter
-
 from web_router._urls import host_of
+from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY
 from web_router.routing.contract import RouteDecision, RouteRequest
+from web_router.routing.registry import discard_router
+from web_router.routing.remote import RemoteRouter
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 
@@ -41,13 +40,6 @@ KNOWN = (RULES, SKLEARN, LLM, JEV, REMOTE + "<url>")
 
 LLM_KEY_ENV, LLM_MODEL_ENV, LLM_BASE_URL_ENV = "OPENAI_API_KEY", "LLM_ROUTER_MODEL", "OPENAI_BASE_URL"
 JEV_KEY_ENV = "TYPESAFE_API_KEY"
-REMOTE_KEY_ENV = "WEB_ROUTER_REMOTE_ROUTER_API_KEY"
-"""The variable the library's remote router reads its bearer key from; this script's fallback reads it too."""
-REMOTE_MODULE, REMOTE_CLASS = "web_router.routing.remote", "RemoteRouter"
-"""The library's remote router, used when the installed ``web_router`` ships it."""
-WIRE_SCHEMA_KEY, WIRE_SCHEMA_VERSION = "schema", 1
-REMOTE_TIMEOUT_S = 1.0
-HTTP_OK = 200
 HANDSHAKE_RTTS = 3
 """Round trips a new connection's first call pays on a simulated link: TCP, TLS 1.3, then the request."""
 
@@ -60,7 +52,6 @@ MTOK = 1_000_000
 MSG_BAD_ROUTER = "{spec!r}: a router is one of {known}, or module:attr / path/file.py:attr"
 MSG_NO_SKLEARN = "the sklearn router needs scikit-learn: uv run --all-extras --with scikit-learn python ..."
 MSG_LINK_TIMEOUT = "the simulated round trip took the whole deadline"
-MSG_WIRE = "the router service answered {why}"
 
 
 @dataclass(frozen=True)
@@ -120,49 +111,9 @@ def _sklearn() -> Any:
         return classifier.ClassifierRouter(joblib.load(path))
 
 
-class WireRouter:
-    """A router service asked over HTTP in the wire format, schema 1, for a ``web_router`` without its own.
-
-    One POST per call on one kept-alive connection, no redirect followed; the
-    bearer key comes from ``WEB_ROUTER_REMOTE_ROUTER_API_KEY`` when set. A
-    status other than 200, or an answer of another schema, is a router error.
-    """
-
-    timeout_s = REMOTE_TIMEOUT_S
-
-    def __init__(self, url: str, transport: Any = None) -> None:
-        """``transport``: an httpx transport in place of the network, for tests."""
-        import httpx
-
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        if key := os.environ.get(REMOTE_KEY_ENV):
-            headers["Authorization"] = f"Bearer {key}"
-        self.url = url
-        self._client = httpx.Client(headers=headers, follow_redirects=False, transport=transport)
-        self._request = TypeAdapter(RouteRequest)
-        self._decision = TypeAdapter(RouteDecision)
-
-    def route(self, req: RouteRequest) -> RouteDecision:
-        body = {WIRE_SCHEMA_KEY: WIRE_SCHEMA_VERSION, **self._request.dump_python(req, mode="json")}
-        response = self._client.post(self.url, json=body, timeout=req.deadline_s)
-        if response.status_code != HTTP_OK:
-            raise ValueError(MSG_WIRE.format(why=f"HTTP {response.status_code}"))
-        data = response.json()
-        if not isinstance(data, dict) or data.get(WIRE_SCHEMA_KEY) != WIRE_SCHEMA_VERSION:
-            raise ValueError(MSG_WIRE.format(why="something other than a schema-1 decision"))
-        payload = {k: v for k, v in data.items() if k != WIRE_SCHEMA_KEY and v is not None}
-        return self._decision.validate_python(payload)
-
-    def close(self) -> None:
-        self._client.close()
-
-
 def remote_router(url: str) -> Any:
-    """The library's remote router when installed, else :class:`WireRouter`; either speaks schema 1 to ``url``."""
-    if importlib.util.find_spec(REMOTE_MODULE) is not None:
-        library = importlib.import_module(REMOTE_MODULE)
-        return getattr(library, REMOTE_CLASS)(url=url, timeout_s=REMOTE_TIMEOUT_S)
-    return WireRouter(url)
+    """The library's ``remote`` router for ``url``, as ``router="remote"`` builds it, at its default timeout."""
+    return RemoteRouter(url=url)
 
 
 class DelayedRouter:
@@ -175,25 +126,20 @@ class DelayedRouter:
     def __init__(self, inner: Any, rtt_ms: float) -> None:
         self.inner = inner
         self.rtt_s = rtt_ms / 1000
-        self.timeout_s = getattr(inner, "timeout_s", REMOTE_TIMEOUT_S)
+        self.timeout_s = inner.timeout_s
         self._first = True
 
-    def route(self, req: RouteRequest) -> RouteDecision:
+    async def aroute(self, req: RouteRequest) -> RouteDecision:
         slept = self.rtt_s * (HANDSHAKE_RTTS if self._first else 1)
         self._first = False
         if slept >= req.deadline_s:
-            time.sleep(req.deadline_s)
+            await asyncio.sleep(req.deadline_s)
             raise TimeoutError(MSG_LINK_TIMEOUT)
-        time.sleep(slept)
-        return self.inner.route(replace(req, deadline_s=req.deadline_s - slept))  # type: ignore[no-any-return]
+        await asyncio.sleep(slept)
+        return await self.inner.aroute(replace(req, deadline_s=req.deadline_s - slept))  # type: ignore[no-any-return]
 
     def close(self) -> None:
         close(self.inner)
-
-
-def remote_client() -> str:
-    """Which client ``remote:<url>`` runs on here, for the results file."""
-    return "library" if importlib.util.find_spec(REMOTE_MODULE) is not None else "script (wire schema 1)"
 
 
 def llm_tokens(req: RouteRequest) -> tuple[int, int]:
@@ -263,9 +209,9 @@ def _remote(spec: str, rtt_ms: float) -> RouterSpec:
         link = f"plus a simulated {rtt_ms:g} ms RTT ({HANDSHAKE_RTTS} RTTs on a new connection)"
     return RouterSpec(
         name,
-        f"remote router at {host_of(url)}, client: {remote_client()}, link {link}",
+        f"web_router.routing.remote.RemoteRouter at {host_of(url)}, link {link}",
         build,
-        optional_env=(REMOTE_KEY_ENV,),
+        optional_env=(ENV_REMOTE_ROUTER_API_KEY,),
         cost_note="free to the caller: the service's own cost is not counted",
     )
 
@@ -306,10 +252,8 @@ def router_spec(
 
 
 def close(router: Any) -> None:
-    """Close what a built router holds open, when it has a ``close()``."""
-    closer = getattr(router, "close", None)
-    if callable(closer):
-        closer()
+    """Close what a built router holds open: its ``close()``, else its ``aclose()``, as the library does."""
+    discard_router(router)
 
 
 def plan_cost(spec: RouterSpec, requests: Sequence[RouteRequest]) -> float | None:

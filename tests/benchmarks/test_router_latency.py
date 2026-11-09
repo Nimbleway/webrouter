@@ -1,17 +1,15 @@
-"""router-latency, offline: the yardstick, the rule, censoring, the timing, the wire client and the dry run."""
+"""router-latency, offline: the yardstick, the rule, censoring, the timing, the remote router and the dry run."""
 
 from __future__ import annotations
 
-import json
+import asyncio
 import random
 import sys
 import time
 from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
-from typing import Any
 
-import httpx
 import pytest
 
 from scripts.benchmark_loader import load_script
@@ -131,31 +129,18 @@ def test_the_async_timing_runs_from_an_event_loop(latency: ModuleType) -> None:
     assert out["a"]["warm"]["answered"] == 1
 
 
-# The wire client
+# The remote router
 
 
-def test_the_wire_client_posts_schema_one_and_reads_the_decision(latency: ModuleType) -> None:
-    seen: list[dict[str, Any]] = []
+def test_remote_is_the_library_s_own_remote_router(latency: ModuleType) -> None:
+    from web_router.routing.remote import RemoteRouter
 
-    def answer(request: httpx.Request) -> httpx.Response:
-        seen.append(json.loads(request.content))
-        return httpx.Response(200, json={"schema": 1, "tools": ["search"], "reason": None, "extra": 1})
-
-    router = _module("router_latency_routers").WireRouter("http://127.0.0.1:1/route", httpx.MockTransport(answer))
-    decision = router.route(_req())
-    router.close()
-    assert seen[0]["schema"] == 1 and seen[0]["prompt"] == "who won"
-    assert list(decision.tools or ()) == ["search"]
-
-
-@pytest.mark.parametrize(
-    ("status", "body"), [(500, {"schema": 1}), (200, {"schema": 2, "tools": ["search"]}), (200, [1])]
-)
-def test_the_wire_client_refuses_another_status_or_schema(latency: ModuleType, status: int, body: Any) -> None:
-    transport = httpx.MockTransport(lambda request: httpx.Response(status, json=body))
-    router = _module("router_latency_routers").WireRouter("http://127.0.0.1:1/route", transport)
-    with pytest.raises(ValueError, match="router service"):
-        router.route(_req())
+    routers = _module("router_latency_routers")
+    router = routers.router_specs("remote:http://127.0.0.1:1/route")[0].build()
+    try:
+        assert isinstance(router, RemoteRouter)
+    finally:
+        routers.close(router)
 
 
 def test_a_stated_rtt_adds_a_simulated_remote_beside_loopback(latency: ModuleType) -> None:
@@ -170,14 +155,16 @@ def test_a_simulated_link_keeps_the_call_within_its_deadline(latency: ModuleType
     seen: list[float] = []
 
     class Inner:
-        def route(self, req: RouteRequest) -> RouteDecision:
+        timeout_s = 1.0
+
+        async def aroute(self, req: RouteRequest) -> RouteDecision:
             seen.append(req.deadline_s)
             return RouteDecision()
 
-    routers.DelayedRouter(Inner(), 10.0).route(_req())  # first call: three round trips, 30 ms of 1 s
+    asyncio.run(routers.DelayedRouter(Inner(), 10.0).aroute(_req()))  # first call: three round trips, 30 ms of 1 s
     assert seen and seen[0] == pytest.approx(0.97)
     with pytest.raises(TimeoutError):
-        routers.DelayedRouter(Inner(), 400.0).route(_req())
+        asyncio.run(routers.DelayedRouter(Inner(), 400.0).aroute(_req()))
 
 
 def test_a_router_named_twice_is_refused(latency: ModuleType) -> None:

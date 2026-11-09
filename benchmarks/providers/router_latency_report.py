@@ -124,7 +124,8 @@ def dry_run(rows: Sequence[Mapping[str, Any]], settings: Mapping[str, Any], prom
     lines = [
         f"Dry run: nothing is built or called. Sets {', '.join(settings['sets'])} "
         f"({settings['requests']} requests pooled; prompts {'joined' if prompts_joined else 'NOT joined'}).",
-        f"Per router: 1 first call + {settings['warmup']} warm-up + {settings['n']} timed (interleaved), "
+        f"Per router, {'async' if settings['async'] else 'sync'}: 1 first call + {settings['warmup']} warm-up + "
+        f"{settings['n']} timed (interleaved), "
         f"{settings['cold']} fresh builds, {settings['warmup'] + settings['e2e']} routed stubbed searches.",
         "",
     ]
