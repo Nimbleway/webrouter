@@ -14,6 +14,8 @@ from tests.merge_helpers import merge_with
 from web_router import Budget, Candidate, RouteDecision, RouteRequest
 from web_router.constants_merge import MSG_PARAM_NOT_ALLOWED
 from web_router.routing.merge import merge
+from web_router.routing.merge_params import _untaken
+from web_router.types import SearchRequest
 
 
 def _private(url: str) -> str | None:
@@ -165,3 +167,13 @@ def test_rule_5_a_search_depth_must_fit_the_time_cap_too(
     decision = RouteDecision(params={"search": {"search_depth": "deep"}}, exclude=NO_DEEP)
     merged = merge_with(decision, pinned="search", budget=budget)
     assert ("search_depth" in merged.params) is kept
+
+
+@pytest.mark.parametrize(("caller", "kept"), [({"exclude_domains": ["b.com"]}, False), ({}, True)])
+def test_rule_5_an_option_that_makes_a_backend_refuse_another_is_untaken(caller: dict[str, Any], kept: bool) -> None:
+    """Parallel names ``exclude_domains`` once ``include_domains`` joins it, yet the added key is what it refuses."""
+    without = SearchRequest(query="q", **caller)
+    with_it = without.model_copy(update={"include_domains": ["a.com"]})
+    why = _untaken("search", "include_domains", with_it, without, ["parallel"])
+    assert (why is None) is kept
+    assert kept or why == "search:parallel will not serve include_domains=['a.com']"
