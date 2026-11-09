@@ -72,6 +72,20 @@ def _resolve_key(api_key: str | None, *, allow_keyless: bool, provider: str) -> 
         return None
 
 
+def _clients(
+    key: str | None, api_base_url: str | None, kwargs: dict[str, Any]
+) -> tuple[TavilyClient, AsyncTavilyClient]:
+    """The sync and async SDK clients, each handed the one transport argument it takes."""
+    shared = compact({"api_base_url": api_base_url, **kwargs})
+    session, client = shared.pop("session", None), shared.pop("client", None)
+    # api_key=None is what puts the SDK in keyless mode; it is not the same
+    # as omitting the argument, so pass it through either way.
+    return (
+        TavilyClient(api_key=key, **shared, **compact({"session": session})),
+        AsyncTavilyClient(api_key=key, **shared, **compact({"client": client})),
+    )
+
+
 def _clamped(payload: dict[str, Any], sdk_default: float, minimum: float = 0.0) -> dict[str, Any]:
     """``payload`` with its ``timeout`` clamped to the time a deadline in force leaves.
 
@@ -119,17 +133,15 @@ class TavilyProvider(SearchProvider):
             api_base_url: Override the API host.
             timeout: Per-request timeout in seconds. Tavily takes this per call
                 rather than on the client, so it is applied to every search.
-            **kwargs: Forwarded to both Tavily clients.
+            **kwargs: Forwarded to both Tavily clients, but ``session`` (a
+                ``requests.Session``) only to the sync one and ``client`` (an
+                ``httpx.AsyncClient``) only to the async one.
         """
         key = _resolve_key(api_key, allow_keyless=allow_keyless, provider=self.name)
         super().__init__(api_key=key, api_base_url=api_base_url, **kwargs)
 
         self._timeout = timeout
-        client_kwargs = compact({"api_base_url": api_base_url, **kwargs})
-        # api_key=None is what puts the SDK in keyless mode; it is not the same
-        # as omitting the argument, so pass it through either way.
-        self._client = TavilyClient(api_key=key, **client_kwargs)
-        self._async_client = AsyncTavilyClient(api_key=key, **client_kwargs)
+        self._client, self._async_client = _clients(key, api_base_url, kwargs)
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         payload = self._client.search(**self._build_payload(request))
@@ -226,17 +238,15 @@ class TavilyExtractProvider(ExtractProvider):
             api_base_url: Override the API host.
             timeout: Per-request timeout in seconds. Tavily takes this per call
                 rather than on the client, so it is applied to every extract.
-            **kwargs: Forwarded to both Tavily clients.
+            **kwargs: Forwarded to both Tavily clients, but ``session`` (a
+                ``requests.Session``) only to the sync one and ``client`` (an
+                ``httpx.AsyncClient``) only to the async one.
         """
         key = _resolve_key(api_key, allow_keyless=allow_keyless, provider=self.name)
         super().__init__(api_key=key, api_base_url=api_base_url, **kwargs)
 
         self._timeout = timeout
-        client_kwargs = compact({"api_base_url": api_base_url, **kwargs})
-        # api_key=None is what puts the SDK in keyless mode; it is not the same
-        # as omitting the argument, so pass it through either way.
-        self._client = TavilyClient(api_key=key, **client_kwargs)
-        self._async_client = AsyncTavilyClient(api_key=key, **client_kwargs)
+        self._client, self._async_client = _clients(key, api_base_url, kwargs)
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         payload = self._client.extract(**self._build_payload(request, urls))

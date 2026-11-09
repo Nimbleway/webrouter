@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 
+import httpx
 import pytest
 
 from web_router.constants import SNIPPET_LIMIT
@@ -78,14 +79,15 @@ def test_every_recency_is_a_time_range_that_drops_undated_pages(provider: Tavily
         SearchRequest(query="hi", country="US", provider_options={"topic": "news"}),
     ],
 )
-def test_a_country_tavily_cannot_boost_is_refused_unsent(
-    provider: TavilyProvider, monkeypatch: pytest.MonkeyPatch, request_: SearchRequest
+async def test_a_country_tavily_cannot_boost_is_refused_unsent(
+    transport: httpx.MockTransport, sent: list[httpx.Request], request_: SearchRequest
 ) -> None:
     """Only the 166 countries it names, and only on topic general."""
-    monkeypatch.setattr(provider._client.session, "post", lambda *_, **__: pytest.fail("sent"))
+    provider = TavilyProvider(api_key="test-key", client=httpx.AsyncClient(transport=transport))
     with pytest.raises(UnsupportedParameterError, match="country=") as caught:
-        provider.search(request_)
+        await provider.asearch(request_)
     assert caught.value.values == {"country": request_.country}
+    assert sent == []
     assert TavilyProvider.refused_values(request_) == {"country": request_.country}
 
 
