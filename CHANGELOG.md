@@ -8,6 +8,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+### Fixed
+
+## [0.10.0] - 2026-11-09
+
+### Added
+
 - `extract(profile=...)`: a saved identity on the backend whose cookies are sent with each fetch, the same `profile` a browser session starts from, so a login made in a session serves the fetches that follow. `browserbase` is the first extract backend to map it, through a new `BrowserbaseExtractProvider` over the Fetch API (`POST /v1/fetch`, a plain fetch that never renders the page; `markdown` and `html`, the latter Fetch's `raw`), with `profile` sent as `contextId`; it joins extract `auto` and `max` last, after DeepSeek, so no call that was already being served moves. Verified live by hand on 2026-10-29, and by the automated live tests on 2026-11-08: a cookie set in a persisting session came back from a fetch naming the same Context, and from none without it. A backend without saved profiles refuses `profile` rather than fetching anonymously, and extract `auto` and `max` now pass over a member that does not map an option the request sets, as search `auto` does, raising `UnsupportedParameterError` when none is left. The MCP `extract` tool never offers `profile`, as `browser_open` never has.
 - web-router is open source under the Apache License 2.0: `LICENSE` at the root, and `license = "Apache-2.0"` in the package metadata.
 - Routers (experimental): `router=` on `WebRouter` and `AsyncWebRouter` attaches your own router, `RouteRequest -> RouteDecision`: a function, method, partial or coroutine function, or an object with `route` or `aroute` (one that is only callable is refused) (typed as `RouterLike`, exported from `web_router`). It is shown the prompt and its priced, timed candidates, and answers the method and the order of `auto`'s backends. `route_tools=` limits the methods it orders; a router that fails leaves the static order, or with `fail_on_router_error=True` raises `RouterError`. An extract you did not pin, left with no URL to read, searches instead when a search backend is offered, and otherwise `plan()` raises `MissingParameterError`. With no router nothing changes. See the README's [Smart routing](README.md#smart-routing-experimental).
