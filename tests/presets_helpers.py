@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import FakeProvider, FakeResearchProvider
+from tests.conftest import FakeExtractProvider, FakeProvider, FakeResearchProvider
 from web_router import (
     WebRouter,
 )
@@ -61,3 +61,19 @@ class SlowResearch(FakeResearchProvider):
 
 REF = "acme.research@1.0.0"
 """The reference :func:`definition` builds by default."""
+
+
+class RecordingExtract(FakeExtractProvider):
+    """The extract fake, keeping each request as the other fakes do, so a test can read what reached it."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.requests: list[Any] = []
+
+    def _extract(self, request: Any, urls: list[str]) -> Any:
+        self.requests.append(request)
+        return super()._extract(request, urls)
+
+    async def _aextract(self, request: Any, urls: list[str]) -> Any:
+        self.requests.append(request)
+        return await super()._aextract(request, urls)

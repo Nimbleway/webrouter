@@ -1,0 +1,24 @@
+{
+  "spec_version": 1,
+  "id": "ecommerce.product-similarity",
+  "version": "1.0.0",
+  "title": "Answer without Pinterest, Facebook, TikTok or Instagram as sources, for comparing products",
+  "applies_to": [
+    "answer"
+  ],
+  "components": {
+    "answer": {
+      "defaults": {
+        "exclude_domains": [
+          "pinterest.com",
+          "facebook.com",
+          "tiktok.com",
+          "instagram.com"
+        ]
+      },
+      "overridable": [
+        "exclude_domains"
+      ]
+    }
+  }
+}

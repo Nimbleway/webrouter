@@ -1,0 +1,28 @@
+{
+  "spec_version": 1,
+  "id": "ecommerce.shipping-info",
+  "version": "1.0.0",
+  "title": "Answer only from sources of the past year, or read a page as Markdown, for shipping and returns questions",
+  "applies_to": [
+    "answer",
+    "extract"
+  ],
+  "components": {
+    "answer": {
+      "defaults": {
+        "recency": "year"
+      },
+      "overridable": [
+        "recency"
+      ]
+    },
+    "extract": {
+      "defaults": {
+        "format": "markdown"
+      },
+      "overridable": [
+        "format"
+      ]
+    }
+  }
+}

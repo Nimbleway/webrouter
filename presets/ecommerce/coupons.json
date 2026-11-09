@@ -1,0 +1,29 @@
+{
+  "spec_version": 1,
+  "id": "ecommerce.coupons",
+  "version": "1.0.0",
+  "title": "Search only coupon sites, for a store's or product's promo codes",
+  "applies_to": [
+    "search"
+  ],
+  "components": {
+    "search": {
+      "defaults": {
+        "max_results": 10,
+        "include_domains": [
+          "retailmenot.com",
+          "coupons.com",
+          "couponfollow.com",
+          "couponbirds.com",
+          "knoji.com",
+          "dealspotr.com",
+          "joinhoney.com"
+        ]
+      },
+      "overridable": [
+        "max_results",
+        "include_domains"
+      ]
+    }
+  }
+}

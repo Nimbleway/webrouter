@@ -1,0 +1,29 @@
+{
+  "spec_version": 1,
+  "id": "ecommerce.product-by-gtin",
+  "version": "1.0.0",
+  "title": "Search only barcode databases and large retailers, for a GTIN, UPC, EAN or barcode number",
+  "applies_to": [
+    "search"
+  ],
+  "components": {
+    "search": {
+      "defaults": {
+        "max_results": 5,
+        "include_domains": [
+          "upcitemdb.com",
+          "barcodelookup.com",
+          "go-upc.com",
+          "ean-search.org",
+          "amazon.com",
+          "walmart.com",
+          "target.com"
+        ]
+      },
+      "overridable": [
+        "max_results",
+        "include_domains"
+      ]
+    }
+  }
+}
