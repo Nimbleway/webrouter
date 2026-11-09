@@ -48,6 +48,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - `extract()` counts a page that came back with a 4xx or 5xx status and no content as a failure, named in `failures` with its status, instead of a successful empty document. A call with nothing else raises, so `auto` tries its next backend. A page with text, such as a site's own "not found" page, is still returned.
 
+- MCP errors for a missing key no longer tell the model to pass `provider_config`, which a conversation cannot do; they say to put the key in the user's `.env` and call `load_env`. With no template backend configured, `templates`, `template` and `run_template` say which key would add one, instead of asking for a `provider` argument their schema does not offer.
+
 ### Removed
 
 - The decider spike: `WebRouter(decider=, decider_config=)`, `WebRouter.classify()`, `WebRouter.execute()`, `Route` and the `web_router.decisions` package (`DecisionProvider`, `register_decider()` and the `keywords`, `jev` and `llm` deciders). It was a proof of concept for routing; `router=`, `plan()` and `run()` replace it. To keep using it, pin `web-router==0.9.0`, the last version that has it.

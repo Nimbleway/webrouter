@@ -24,7 +24,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AsyncExitStack
 from typing import Any
 
-from mcp_types import Tool, ToolAnnotations
+from mcp_types import Tool
 
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
@@ -93,6 +93,7 @@ from web_router.constants import (
     MCP_TOOL_WAITS,
 )
 from web_router.constants_mcp import (
+    MCP_MSG_NOTHING_CONFIGURED,
     MCP_MSG_UNKNOWN_ARGUMENTS,
     MCP_SERVER_INSTRUCTIONS,
     MCP_TOOL_HINTS,
@@ -223,7 +224,7 @@ class WebRouterTools:
                 title=MCP_TOOL_HINTS[name][0],
                 description=self._description(name),
                 input_schema=self._schema(name),
-                annotations=_annotations(name),
+                annotations=methods.tool_annotations(name),
             )
             for name in self._handlers
             if name not in hidden
@@ -275,7 +276,7 @@ class WebRouterTools:
         handler = self._handlers.get(name)
         if handler is None:
             raise ValueError(MCP_MSG_UNKNOWN_TOOL.format(name=name, tools=", ".join(self._handlers)))
-        if unknown := sorted(set(arguments) - set(allowed := _argument_names(name))):
+        if unknown := sorted(set(arguments) - set(allowed := methods.argument_names(name))):
             names, allowed_text = ", ".join(unknown), ", ".join(allowed) or "no arguments"
             raise ValueError(MCP_MSG_UNKNOWN_ARGUMENTS.format(tool=name, names=names, allowed=allowed_text))
         with self.budget.bound():
@@ -563,10 +564,14 @@ class WebRouterTools:
         table to drift. :meth:`call` has already refused a name the tool does not
         declare; one left unset stays unset rather than being sent as a default of ours.
         """
-        names = _argument_names(tool)
+        names = methods.argument_names(tool)
         # `is None`, not truthiness: browser_type's required `text` may be ""
         # -- the way a field is cleared -- and supplied-but-empty is not missing.
         missing = [name for name in MCP_TOOL_REQUIRED[tool] if arguments.get(name) is None]
+        if MCP_ARG_PROVIDER in missing and not (method := METHODS[tool]).configured():
+            # The schema offers no `provider` when there is none: say what would add one, not that it is missing.
+            env_vars = ", ".join(methods.env_vars(method))
+            raise ValueError(MCP_MSG_NOTHING_CONFIGURED.format(tool=tool, env_vars=env_vars))
         if missing:
             raise ValueError(MCP_MSG_MISSING_ARGUMENT.format(tool=tool, name=missing[0]))
         return {name: arguments[name] for name in names if arguments.get(name) is not None}
@@ -622,22 +627,6 @@ class WebRouterTools:
             "required": [name for name in MCP_TOOL_REQUIRED[tool] if name in properties],
             "additionalProperties": False,
         }
-
-
-def _annotations(tool: str) -> ToolAnnotations:
-    title, read_only, destructive, idempotent, open_world = MCP_TOOL_HINTS[tool]
-    return ToolAnnotations(
-        title=title,
-        read_only_hint=read_only,
-        destructive_hint=destructive,
-        idempotent_hint=idempotent,
-        open_world_hint=open_world,
-    )
-
-
-def _argument_names(tool: str) -> list[str]:
-    """Every argument ``tool`` declares, not only this install's schema: the library refuses what none here maps."""
-    return [*MCP_TOOL_PROPERTIES.get(tool, {}), *([MCP_ARG_PROVIDER] if tool in METHODS else [])]
 
 
 def _lower(kwargs: dict[str, Any], name: str, limit: float, lowered: list[str]) -> None:

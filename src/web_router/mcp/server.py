@@ -29,6 +29,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import signal
 from collections.abc import Mapping
 from functools import partial
@@ -67,7 +68,7 @@ from web_router.constants import (
     MCP_SHUTDOWN_SIGNALS,
     MCP_SIGNAL_EXIT_BASE,
 )
-from web_router.constants_mcp import MCP_RESOURCE_NOT_FOUND
+from web_router.constants_mcp import MCP_MSG_KEY_HINT, MCP_PROVIDER_CONFIG_CLAUSE, MCP_RESOURCE_NOT_FOUND
 from web_router.exceptions import WebRouterError
 from web_router.mcp.env import EnvSources
 from web_router.mcp.shaping import ToolOutput, redact, redaction_note, render
@@ -83,9 +84,9 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
     """Run one tool, reporting a failure as a tool error rather than a transport one.
 
     A missing key or an unmappable parameter is something the model can act on
-    -- the library's message already names the environment variable to set --
-    so it comes back as content the model reads, not as a JSON-RPC error it
-    never sees.
+    -- the library's message names the environment variable to set, and the
+    ``provider_config`` route it also offers is swapped for ``load_env`` -- so it
+    comes back as content the model reads, not as a JSON-RPC error it never sees.
     """
     try:
         payload = await tools.call(name, arguments)
@@ -96,7 +97,7 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
         # no failure path can miss it: a browse backend's own error can quote
         # the session URL, and a vendor's HTTP error body rides on any method's
         # message. An ordinary message passes through untouched.
-        message, count = redact(str(exc))
+        message, count = redact(_for_mcp(str(exc)))
         message += redaction_note(count)
         return CallToolResult(content=[TextContent(text=message)], is_error=True)
     output = payload if isinstance(payload, ToolOutput) else ToolOutput(payload=payload)
@@ -109,6 +110,12 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
     # The same object as the first text block, for a client that reads structured results; parsed back from the
     # text so it holds exactly what the model read, every value JSON.
     return CallToolResult(content=content, structured_content=json.loads(text))
+
+
+def _for_mcp(message: str) -> str:
+    """A library message as an MCP user can act on it: ``provider_config`` is code, so the ``.env`` route instead."""
+    rewritten, count = re.subn(MCP_PROVIDER_CONFIG_CLAUSE, "", message)
+    return rewritten + MCP_MSG_KEY_HINT if count else message
 
 
 def list_resources() -> ListResourcesResult:

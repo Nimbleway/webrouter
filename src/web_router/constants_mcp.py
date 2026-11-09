@@ -170,6 +170,23 @@ MCP_DESC_BUDGET_STATUS = (
     "seconds elapsed and left; and the operator's ceiling, if one is set. Free: it calls nothing."
 )
 
+MCP_MSG_NOTHING_CONFIGURED = (
+    "{tool} has nothing to run on here: no backend for it has a key. A key in one of {env_vars} turns it on: "
+    "the user puts it in their .env, and you call `load_env` with the path they give."
+)
+"""A tool whose required ``provider`` has no value to offer, rather than asking for an argument its schema lacks."""
+
+MCP_PROVIDER_CONFIG_CLAUSE = (
+    r",? or pass (?:one through )?provider_config(?:=\{.*?\}\})?(?: when constructing the router| to the router)?"
+)
+"""The library's way to hand a router a key in code, which a conversation cannot do: cut from an MCP error."""
+
+MCP_MSG_KEY_HINT = (
+    " Through this server: the user puts the key in their .env, and you call `load_env` with the path they give; "
+    "or it is set where the server starts, and the server is restarted."
+)
+"""Said instead, once, after a library error that named ``provider_config``."""
+
 MCP_RESOURCE_NOT_FOUND = -32002
 """The JSON-RPC error code MCP gives a read of a resource the server does not have."""
 

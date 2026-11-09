@@ -7,7 +7,17 @@ from typing import Any
 import pytest
 
 from tests.mcp.conftest import FAKE
-from web_router.constants import MCP_TOOL_RESEARCH, MCP_TOOL_SEARCH
+from web_router.constants import (
+    ENV_NIMBLE_API_KEY,
+    ENV_TAVILY_API_KEY,
+    MCP_TOOL_LOAD_ENV,
+    MCP_TOOL_RESEARCH,
+    MCP_TOOL_RUN_TEMPLATE,
+    MCP_TOOL_SEARCH,
+    MCP_TOOL_TEMPLATE,
+    MCP_TOOL_TEMPLATES,
+    PROVIDER_TAVILY,
+)
 from web_router.constants_mcp import MCP_TOOL_BUDGET_STATUS, MCP_TOOL_HINTS, MCP_TOOL_WEB_RUN
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
@@ -48,3 +58,26 @@ def test_every_listed_tool_carries_a_title_and_behaviour_hints(tools: WebRouterT
     # A client auto-approves a free lookup and asks before a billed run.
     assert listed[MCP_TOOL_SEARCH].annotations.read_only_hint is True  # type: ignore[union-attr]
     assert listed[MCP_TOOL_RESEARCH].annotations.idempotent_hint is False  # type: ignore[union-attr]
+
+
+async def test_a_no_key_error_points_to_load_env_not_to_code(tools: WebRouterTools, no_keys: None) -> None:
+    """``provider_config`` is a Python argument: over MCP, the way in is a ``.env`` and ``load_env``."""
+    text = (await call_tool(tools, MCP_TOOL_SEARCH, {"query": "x", "provider": PROVIDER_TAVILY})).content[0].text
+
+    assert ENV_TAVILY_API_KEY in text and MCP_TOOL_LOAD_ENV in text
+    assert "provider_config" not in text
+
+
+@pytest.mark.parametrize(
+    ("tool", "arguments"),
+    [(MCP_TOOL_TEMPLATES, {}), (MCP_TOOL_TEMPLATE, {"name": "t"}), (MCP_TOOL_RUN_TEMPLATE, {"template": "t"})],
+)
+async def test_a_template_tool_with_nothing_configured_says_what_would_add_one(
+    no_keys: None, tool: str, arguments: dict[str, Any]
+) -> None:
+    """Keyless, the schema has no ``provider`` to offer, so the error must not ask for one."""
+    result = await call_tool(WebRouterTools(), tool, arguments)
+
+    text = result.content[0].text
+    assert result.is_error and ENV_NIMBLE_API_KEY in text and MCP_TOOL_LOAD_ENV in text
+    assert "needs a 'provider'" not in text

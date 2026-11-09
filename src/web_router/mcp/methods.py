@@ -12,6 +12,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any, get_args
 
+from mcp_types import ToolAnnotations
+
 from web_router.constants import (
     ANSWER_ENV_BY_PROVIDER,
     BROWSE_ENV_BY_PROVIDER,
@@ -20,6 +22,7 @@ from web_router.constants import (
     ENV_BY_PROVIDER,
     EXTRACT_ENV_BY_PROVIDER,
     MCP_ARG_FORMAT,
+    MCP_ARG_PROVIDER,
     MCP_ARG_STEALTH,
     MCP_METHOD_BROWSER,
     MCP_METHOD_TEMPLATE,
@@ -27,6 +30,7 @@ from web_router.constants import (
     MCP_TOOL_BROWSE,
     MCP_TOOL_BROWSER_OPEN,
     MCP_TOOL_EXTRACT,
+    MCP_TOOL_PROPERTIES,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
@@ -35,6 +39,7 @@ from web_router.constants import (
     RESEARCH_ENV_BY_PROVIDER,
     TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.constants_mcp import MCP_TOOL_HINTS
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.mcp.chains import CHAIN_OF
 from web_router.mcp.env import env_names
@@ -241,3 +246,20 @@ def offer_formats(properties: dict[str, Any], serving: list[type[_BaseProvider]]
         properties[MCP_ARG_FORMAT] = {**properties[MCP_ARG_FORMAT], "enum": formats}
     else:
         del properties[MCP_ARG_FORMAT]
+
+
+def tool_annotations(tool: str) -> ToolAnnotations:
+    """``tool``'s title and behaviour hints, from :data:`MCP_TOOL_HINTS`."""
+    title, read_only, destructive, idempotent, open_world = MCP_TOOL_HINTS[tool]
+    return ToolAnnotations(
+        title=title,
+        read_only_hint=read_only,
+        destructive_hint=destructive,
+        idempotent_hint=idempotent,
+        open_world_hint=open_world,
+    )
+
+
+def argument_names(tool: str) -> list[str]:
+    """Every argument ``tool`` declares, not only this install's schema: the library refuses what none here maps."""
+    return [*MCP_TOOL_PROPERTIES.get(tool, {}), *([MCP_ARG_PROVIDER] if tool in METHODS else [])]

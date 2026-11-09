@@ -431,7 +431,7 @@ async def test_a_library_error_comes_back_as_a_tool_error_with_its_own_message(
     result = await call_tool(tools, MCP_TOOL_SEARCH, {"query": "hello", "provider": PROVIDER_TAVILY})
 
     assert result.is_error
-    # The library already names the variable to set; this layer must not rewrite it.
+    # The library names the variable to set; this layer keeps it, and swaps only provider_config for load_env.
     assert ENV_TAVILY_API_KEY in result.content[0].text
 
 

@@ -623,11 +623,15 @@ handles and evicts the oldest, so a long conversation stays bounded.
 
 Everything else — parameter names, provider selection, error messages — is a
 thin projection of the library. A failure comes back as a tool error carrying
-the library's own message, which already names the environment variable to set:
+the library's own message, which names the environment variable to set; where
+the library would also offer `provider_config`, which is code, the server says
+how to add the key through MCP instead:
 
 ```
-[tavily] No API key for provider 'tavily'. Set the TAVILY_API_KEY environment
-variable, or pass provider_config={'tavily': {'api_key': ...}} ...
+No API key for provider 'tavily'. Set the TAVILY_API_KEY environment variable.
+Through this server: the user puts the key in their .env, and you call
+`load_env` with the path they give; or it is set where the server starts, and
+the server is restarted.
 ```
 
 ## Environment variables the server itself reads
