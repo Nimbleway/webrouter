@@ -225,7 +225,8 @@ Arguments mirror the library's own, name for name — `query`, `max_results`,
 `max_steps`, `allowed_domains`, `provider`, and for the browser tools the
 handle's own — `url`, `wait_until`, `ref`, `selector`, `text`, `submit`, `key`,
 `full_page`, `format`, `timeout`. Anything the library refuses, this refuses in
-the library's own words.
+the library's own words, and an argument a tool does not declare -- a typo, a
+guessed option -- is refused before anything runs, with the names it takes.
 
 Over MCP the model chooses `max_results`, not you. Its description steers it
 away from a single result, but the choice stays the model's. A host that wants

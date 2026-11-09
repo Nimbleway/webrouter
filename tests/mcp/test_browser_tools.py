@@ -328,7 +328,7 @@ async def test_open_offers_no_way_to_pass_browser_switches(session: WebRouterToo
     message = _error(
         await call_tool(session, MCP_TOOL_BROWSER_OPEN, {"provider_options": {"remote-debugging-address": "0.0.0.0"}})
     )
-    assert "does not accept provider_options" in message
+    assert "does not take provider_options" in message
     assert _provider(session).requests == []
 
 

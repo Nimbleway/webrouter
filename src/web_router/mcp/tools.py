@@ -60,7 +60,6 @@ from web_router.constants import (
     MCP_MSG_BROWSER_ALREADY_ENDED,
     MCP_MSG_BROWSER_LOWERED,
     MCP_MSG_BROWSER_OPENED,
-    MCP_MSG_BROWSER_UNDECLARED,
     MCP_MSG_ENV_BAD_ARGUMENTS,
     MCP_MSG_ENV_HINT,
     MCP_MSG_ENV_NOTHING_NEW,
@@ -106,7 +105,7 @@ from web_router.constants import (
     RESEARCH_ENV_BY_PROVIDER,
     TEMPLATE_ENV_BY_PROVIDER,
 )
-from web_router.constants_mcp import MCP_SERVER_INSTRUCTIONS
+from web_router.constants_mcp import MCP_MSG_UNKNOWN_ARGUMENTS, MCP_SERVER_INSTRUCTIONS
 from web_router.exceptions import (
     BrowseTimeoutError,
     ProviderNotFoundError,
@@ -382,6 +381,9 @@ class WebRouterTools:
         handler = self._handlers.get(name)
         if handler is None:
             raise ValueError(MCP_MSG_UNKNOWN_TOOL.format(name=name, tools=", ".join(self._handlers)))
+        if unknown := sorted(set(arguments) - set(allowed := _argument_names(name))):
+            names, allowed_text = ", ".join(unknown), ", ".join(allowed) or "no arguments"
+            raise ValueError(MCP_MSG_UNKNOWN_ARGUMENTS.format(tool=name, names=names, allowed=allowed_text))
         with self.budget.bound():
             return await handler(arguments)
 
@@ -524,13 +526,6 @@ class WebRouterTools:
         self._tools_changed = True
 
     async def _browser_open(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        # Refused rather than dropped, unlike elsewhere: the undeclared argument
-        # a model is likeliest to send here is `provider_options`, and it should
-        # learn that it cannot, not that it silently did not.
-        allowed = [*MCP_TOOL_PROPERTIES[MCP_TOOL_BROWSER_OPEN], MCP_ARG_PROVIDER]
-        undeclared = sorted(name for name in arguments if name not in allowed)
-        if undeclared:
-            raise ValueError(MCP_MSG_BROWSER_UNDECLARED.format(names=", ".join(undeclared), allowed=", ".join(allowed)))
         kwargs = self.arguments(MCP_TOOL_BROWSER_OPEN, arguments)
         # Sent unset, and never past the library's own default, so a session a
         # conversation forgets still ends on the backend's side whatever happens
@@ -665,12 +660,10 @@ class WebRouterTools:
         """The library call's keyword arguments, taken straight from the tool's own.
 
         The tool's parameter names *are* the library's, so there is no mapping
-        table to drift: an argument the schema does not declare is dropped, and
-        one left unset stays unset rather than being sent as a default of ours.
+        table to drift. :meth:`call` has already refused a name the tool does not
+        declare; one left unset stays unset rather than being sent as a default of ours.
         """
-        names = list(MCP_TOOL_PROPERTIES[tool])
-        if tool in _METHODS:
-            names.append(MCP_ARG_PROVIDER)
+        names = _argument_names(tool)
         # `is None`, not truthiness: browser_type's required `text` may be ""
         # -- the way a field is cleared -- and supplied-but-empty is not missing.
         missing = [name for name in MCP_TOOL_REQUIRED[tool] if arguments.get(name) is None]
@@ -733,6 +726,11 @@ class WebRouterTools:
             "required": [name for name in MCP_TOOL_REQUIRED[tool] if name in properties],
             "additionalProperties": False,
         }
+
+
+def _argument_names(tool: str) -> list[str]:
+    """Every argument ``tool`` declares, not only this install's schema: the library refuses what none here maps."""
+    return [*MCP_TOOL_PROPERTIES.get(tool, {}), *([MCP_ARG_PROVIDER] if tool in _METHODS else [])]
 
 
 def _serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[type[_BaseProvider]]:

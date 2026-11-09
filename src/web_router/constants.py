@@ -4504,11 +4504,6 @@ MCP_MSG_BROWSER_NO_PLAYWRIGHT = (
     "No session was opened."
 )
 
-MCP_MSG_BROWSER_UNDECLARED = (
-    "browser_open does not accept {names}. Backend-specific options such as `provider_options` and "
-    "saved profiles are set in code, never from a conversation. It takes: {allowed}."
-)
-
 MCP_MSG_BROWSER_TOO_MANY = (
     "{open} browser sessions are already open, the most this server allows. Call browser_close on "
     "one you are done with -- open: {session_ids} -- then open another."

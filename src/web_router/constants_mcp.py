@@ -143,6 +143,9 @@ MCP_DESC_BUDGET_STATUS = (
     "seconds elapsed and left; and the operator's ceiling, if one is set. Free: it calls nothing."
 )
 
+MCP_MSG_UNKNOWN_ARGUMENTS = "{tool} does not take {names}, so nothing was run. It takes: {allowed}."
+"""An argument the tool does not declare -- a typo, a guessed option -- refused rather than dropped."""
+
 MCP_MSG_ROUTER_SPEC = "{env_var}={value!r} names no router: expected <module>:<attribute>, or 'off'."
 MCP_MSG_ROUTER_IMPORT = "{env_var}={value!r}: {error}"
 MCP_MSG_CEILING_VALUE = "{env_var}={value!r} is not a positive number."
