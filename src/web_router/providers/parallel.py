@@ -35,6 +35,7 @@ from web_router.constants_parallel import (
     MSG_PARALLEL_TURBO_PATHS,
     PARALLEL_ADVANCED_NAMES,
     PARALLEL_ADVANCED_SETTINGS,
+    PARALLEL_AFTER_DATE,
     PARALLEL_ANSWER_API_KEY_HEADER,
     PARALLEL_ANSWER_API_KEY_PREFIX,
     PARALLEL_ANSWER_BASIS_EXTRA,
@@ -45,11 +46,16 @@ from web_router.constants_parallel import (
     PARALLEL_ANSWER_WHOLE_FIELD,
     PARALLEL_DOMAIN_LIMIT,
     PARALLEL_EXCERPT_CHARS,
+    PARALLEL_EXCERPT_MAX,
+    PARALLEL_EXCERPT_SETTINGS,
+    PARALLEL_LOCATION,
     PARALLEL_LOCATIONS,
     PARALLEL_MODE_BY_EFFORT,
     PARALLEL_SEARCH_MODE,
     PARALLEL_SEARCH_PARAMETERS,
     PARALLEL_SEARCH_PATH,
+    PARALLEL_SOURCE_FIELDS,
+    PARALLEL_SOURCE_POLICY,
 )
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
@@ -164,18 +170,17 @@ class ParallelProvider(HttpSearchProvider):
         since = recency_start(request.recency)
         source_policy = compact(
             {
-                "include_domains": request.include_domains,
-                "exclude_domains": request.exclude_domains,
-                "after_date": since.isoformat() if since else None,
+                **{theirs: getattr(request, ours) for ours, theirs in PARALLEL_SOURCE_FIELDS.items()},
+                PARALLEL_AFTER_DATE: since.isoformat() if since else None,
             }
         )
         excerpts = PARALLEL_EXCERPT_CHARS.get(request.search_depth) if request.search_depth else None
         return compact(
             {
                 **{theirs: getattr(request, ours) for ours, theirs in PARALLEL_ADVANCED_NAMES.items()},
-                "source_policy": source_policy or None,
-                "excerpt_settings": {"max_chars_per_result": excerpts} if excerpts else None,
-                "location": request.country.lower() if request.country else None,
+                PARALLEL_SOURCE_POLICY: source_policy or None,
+                PARALLEL_EXCERPT_SETTINGS: {PARALLEL_EXCERPT_MAX: excerpts} if excerpts else None,
+                PARALLEL_LOCATION: request.country.lower() if request.country else None,
             }
         )
 

@@ -28,6 +28,14 @@ migration guide sends both it and the beta's ``fast`` to ``fast``.
 
 PARALLEL_ADVANCED_SETTINGS = "advanced_settings"
 """The object /v1/search nests its result count, source policy, excerpt settings and location under."""
+PARALLEL_SOURCE_POLICY = "source_policy"
+PARALLEL_SOURCE_FIELDS = {"include_domains": "include_domains", "exclude_domains": "exclude_domains"}
+PARALLEL_AFTER_DATE = "after_date"
+PARALLEL_EXCERPT_SETTINGS = "excerpt_settings"
+PARALLEL_EXCERPT_MAX = "max_chars_per_result"
+PARALLEL_LOCATION = "location"
+"""The fields under ``advanced_settings`` that the shared options fill: domains and ``recency`` in the source
+policy, ``search_depth`` as the excerpt cap, ``country`` as the location."""
 
 PARALLEL_ADVANCED_NAMES: dict[str, str] = {"max_results": "max_results"}
 """Normalized parameter -> its field under :data:`PARALLEL_ADVANCED_SETTINGS`, sent as the caller set it.
