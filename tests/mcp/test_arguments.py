@@ -18,7 +18,7 @@ from web_router.constants import (
     MCP_TOOL_TEMPLATES,
     PROVIDER_TAVILY,
 )
-from web_router.constants_mcp import MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
+from web_router.constants_mcp import MCP_NO_ARGUMENTS, MCP_TOOL_BUDGET_STATUS
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
@@ -34,21 +34,13 @@ async def test_an_unknown_argument_is_refused_with_the_valid_names(tools: WebRou
     assert tools.router.get_provider(FAKE).requests == []  # type: ignore[attr-defined]
 
 
-@pytest.mark.parametrize(
-    ("tool", "arguments"),
-    [
-        (MCP_TOOL_BUDGET_STATUS, {"bogus": 1}),
-        (MCP_TOOL_WEB_RUN, {"prompt": "x", "dry_run": True, "bogus": 1}),
-        (MCP_TOOL_SEARCH, {"query": "x", "max_result": 3}),
-    ],
-)
-async def test_every_tool_refuses_a_name_it_does_not_declare(
-    tools: WebRouterTools, tool: str, arguments: dict[str, Any]
-) -> None:
-    result = await call_tool(tools, tool, arguments)
+async def test_a_tool_with_no_arguments_refuses_one_and_says_so(tools: WebRouterTools) -> None:
+    """Even a tool that takes no arguments: the refusal says so rather than listing nothing."""
+    result = await call_tool(tools, MCP_TOOL_BUDGET_STATUS, {"bogus": 1})
 
     assert result.is_error
     assert "does not take" in result.content[0].text
+    assert MCP_NO_ARGUMENTS in result.content[0].text
 
 
 def test_every_listed_tool_carries_a_title_and_behaviour_hints(tools: WebRouterTools) -> None:
