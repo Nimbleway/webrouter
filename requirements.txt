@@ -21,7 +21,7 @@ attrs==26.1.0
     #   referencing
 botocore==1.43.117
     # via web-router
-certifi==2026.7.22
+certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
@@ -101,7 +101,7 @@ nimble-python==1.6.0
     # via web-router
 openai==3.45.0
     # via web-router
-opentelemetry-api==1.44.0
+opentelemetry-api==1.45.2
     # via mcp
 orjson==3.12.0 ; platform_python_implementation != 'PyPy'
     # via langsmith
@@ -135,7 +135,7 @@ pydantic-core==2.46.5
     # via pydantic
 pyee==13.0.1
     # via playwright
-pyjwt==2.14.0
+pyjwt==2.15.1
     # via mcp
 python-dateutil==2.9.0.post0
     # via botocore
