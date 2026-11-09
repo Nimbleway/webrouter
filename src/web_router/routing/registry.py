@@ -14,9 +14,10 @@ as a provider passed in is.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import inspect
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
 from web_router.constants_invoke import (
@@ -36,6 +37,9 @@ _BUILTIN_ROUTERS: dict[str, tuple[str, str]] = {REMOTE_ROUTER_NAME: ("web_router
 """Built-in name -> (module, factory), imported on first use so ``import web_router`` pulls in none of them."""
 
 _CUSTOM_ROUTERS: dict[str, RouterFactory] = {}
+
+_CLOSING: set[asyncio.Task[None]] = set()
+"""The ``aclose()`` calls :func:`discard_router` scheduled on a running loop, until each is done."""
 
 
 def _checked_name(name: object) -> str:
@@ -97,6 +101,29 @@ def close_router(router: RouterLike | None) -> None:
     close = getattr(router, "close", None)
     if callable(close):
         close()
+
+
+def discard_router(router: RouterLike | None) -> None:
+    """Close a router built here that cannot be used: its ``close()``, else its ``aclose()``, run here or scheduled."""
+    if callable(getattr(router, "close", None)):
+        close_router(router)
+        return
+    aclose = getattr(router, "aclose", None)
+    result = aclose() if callable(aclose) else None
+    if not inspect.isawaitable(result):
+        return
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(_awaited(result))
+    else:
+        task = loop.create_task(_awaited(result))
+        _CLOSING.add(task)  # held until done: the loop keeps only a weak reference to a task
+        task.add_done_callback(_CLOSING.discard)
+
+
+async def _awaited(result: Awaitable[Any]) -> None:
+    await result
 
 
 async def aclose_router(router: RouterLike | None) -> None:

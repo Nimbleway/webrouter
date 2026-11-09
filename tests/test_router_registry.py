@@ -158,3 +158,35 @@ async def test_a_router_passed_in_is_the_callers_to_close() -> None:
     async with AsyncWebRouter(router=mine):
         pass
     assert (mine.closed, mine.aclosed) == (0, 0)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"provider": "no-such-backend"}, {"provider_config": {"exa": {"async_client": object()}}}],
+    ids=["unknown-provider", "sync-router-async-client"],
+)
+def test_a_router_that_fails_to_construct_closes_the_router_it_built(built: list[Closable], kwargs: Any) -> None:
+    with pytest.raises(Exception, match=r"no-such-backend|async_client"):
+        WebRouter(router=NAME, **kwargs)
+    assert all(router.closed == 1 for router in built), "built only after the provider checks, or closed by them"
+
+
+def test_a_refused_async_only_router_is_closed_with_aclose() -> None:
+    made: list[Any] = []
+
+    class AsyncOnly:
+        timeout_s = -1  # refused when attached
+
+        async def aroute(self, req: RouteRequest) -> RouteDecision:
+            return RouteDecision()
+
+        async def aclose(self) -> None:
+            made.append("aclosed")
+
+    register_router(NAME, AsyncOnly)
+    try:
+        with pytest.raises(ConfigurationError, match="timeout_s"):
+            WebRouter(router=NAME)
+    finally:
+        unregister_router(NAME)
+    assert made == ["aclosed"]

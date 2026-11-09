@@ -14,7 +14,7 @@ from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY
 from web_router.exceptions import ConfigurationError
 from web_router.routing.remote import RemoteRouter
 
-PROVIDER_KEY = "tvly-provider-secret-value-42"
+PROVIDER_KEY = "fake-provider-secret-value-42"
 
 
 @pytest.mark.parametrize(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from typing import Any
 
@@ -145,3 +146,24 @@ def test_nothing_listening_is_a_router_error_without_a_retry() -> None:
     req = request_from_wire({"schema": 1, "prompt": "x", "candidates": [], "deadline_s": 0.5})
     with pytest.raises(RemoteRouterError, match="no answer"):
         router.route(req)
+
+
+def test_closing_hands_an_async_pool_to_the_loop_it_runs_on() -> None:
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    try:
+        with running() as server:
+            router = RemoteRouter(**config(server))
+            asyncio.run_coroutine_threadsafe(router.aroute(request_from_wire(_sample())), loop).result(5)
+            pool = router._aclient
+            assert pool is not None and not pool.is_closed
+            router.close()
+            deadline = time.monotonic() + 5
+            while not pool.is_closed and time.monotonic() < deadline:
+                time.sleep(0.01)
+        assert pool.is_closed and router._aclient is None
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(5)
+        loop.close()

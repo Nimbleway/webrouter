@@ -121,6 +121,12 @@ def _auth_headers(api_key: object) -> dict[str, str]:
     return {**REMOTE_CONTENT_TYPE, **({REMOTE_AUTH_HEADER: REMOTE_AUTH_VALUE.format(key=key)} if key else {})}
 
 
+def _retire(client: httpx.AsyncClient | None, loop: asyncio.AbstractEventLoop | None) -> None:
+    """Close an async pool on the loop it belongs to, when that loop still runs; a closed loop took it along."""
+    if client is not None and loop is not None and loop.is_running() and not loop.is_closed():
+        asyncio.run_coroutine_threadsafe(client.aclose(), loop)
+
+
 class RemoteRouter:
     """A router that asks an HTTP router service: what ``router="remote"`` builds from ``router_config``."""
 
@@ -176,10 +182,12 @@ class RemoteRouter:
         return self._decision(b"".join(chunks), failed)
 
     def close(self) -> None:
-        """Close the sync connection pool; the async one is dropped, since only its own loop may close it."""
+        """Close the sync connection pool, and hand the async one to its own loop to close while that loop runs."""
         with self._lock:
             client, self._client = self._client, None
+            aclient, loop = self._aclient, self._aloop
             self._aclient = self._aloop = None
+        _retire(aclient, loop)
         if client is not None:
             client.close()
 
@@ -201,10 +209,14 @@ class RemoteRouter:
         """This loop's pool: an async client is bound to the loop it first ran on, so another loop gets its own."""
         loop = asyncio.get_running_loop()
         with self._lock:
-            if self._aclient is None or self._aloop is not loop:
-                self._aclient = self._httpx.AsyncClient(headers=self._request_headers, follow_redirects=False)
-                self._aloop = loop
-            return self._aclient
+            if self._aclient is not None and self._aloop is loop:
+                return self._aclient
+            stale = (self._aclient, self._aloop)
+            self._aclient = self._httpx.AsyncClient(headers=self._request_headers, follow_redirects=False)
+            self._aloop = loop
+            fresh = self._aclient
+        _retire(*stale)
+        return fresh
 
     def _capped(self, status: int, chunks: Any) -> bytes:
         self._check_status(status)

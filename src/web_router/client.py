@@ -125,17 +125,15 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         Args:
             provider: Name of the default provider, e.g. ``"nimble"`` or
                 :attr:`Provider.NIMBLE`. Omit it to let ``auto`` choose.
-            provider_config: Constructor kwargs per provider, keyed by provider
-                name -- ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is
-                the only place credentials are passed explicitly; everything
-                else comes from the environment.
+            provider_config: Constructor kwargs per provider, keyed by provider name --
+                ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is the only place
+                credentials are passed explicitly; everything else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
                 ask it (all five by default) and whether its failure raises (experimental) -- see
                 :mod:`web_router.routing.invoke`. A name such as ``"remote"`` builds a registered router from
                 ``router_config``, and closing this router closes it -- see :mod:`web_router.routing.registry`.
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
         """
-        self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config)
         name = provider_name(provider)
         # Either registry is enough to name a default: a router defaulted to a
         # search-only backend still extracts through `provider=`, and the
@@ -172,6 +170,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         # Rows the sync benchmark() gave up on whose calls still run; close()
         # waits for them so it never shuts a provider under a live search.
         self._stragglers = Stragglers()
+        self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config)
 
     def _config_for(self, key: str) -> dict[str, Any]:
         """Constructor kwargs for one backend: see :func:`~web_router.client_config.config_for`."""
@@ -345,6 +344,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         )
         async_only = sorted(async_client_holders(self._config))
         if async_only:
+            self._close_router()  # built by name above, and this router is never returned to close it
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
 
     def search(

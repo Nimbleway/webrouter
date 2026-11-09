@@ -59,12 +59,19 @@
       "title": "Providers"
     },
     "exclude": {
-      "additionalProperties": {
-        "type": "string"
-      },
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "Candidates never to try, by id, each with the reason.",
-      "title": "Exclude",
-      "type": "object"
+      "title": "Exclude"
     },
     "params": {
       "anyOf": [
@@ -95,7 +102,9 @@
     "confidence": {
       "anyOf": [
         {
-          "type": "number"
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
         },
         {
           "type": "null"

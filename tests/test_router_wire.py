@@ -58,6 +58,10 @@ def test_the_schemas_carry_the_version_and_the_contract_field_names() -> None:
     assert "answer" in request["$defs"]["Candidate"]["properties"]["tool"]["enum"]
     assert set(response["properties"]) == {"schema", "tools", "providers", "exclude", "params", "confidence", "reason"}
     assert "additionalProperties" not in response, "a service may add fields; the client ignores them"
+    assert {"type": "number", "minimum": 0, "maximum": 1} in response["properties"]["confidence"]["anyOf"]
+    assert all(
+        {"type": "null"} in response["properties"][name]["anyOf"] for name in response["properties"] if name != "schema"
+    )
 
 
 def test_a_request_round_trips_through_json() -> None:

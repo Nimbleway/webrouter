@@ -30,6 +30,7 @@ from web_router.constants_remote import (
     REMOTE_WHY_DECISION,
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_SCHEMA,
+    WIRE_CONFIDENCE_RANGE,
     WIRE_JSON_SCHEMA_DIALECT,
     WIRE_REQUEST_FILE,
     WIRE_REQUEST_TITLE,
@@ -127,8 +128,22 @@ def request_schema() -> dict[str, Any]:
 
 
 def response_schema() -> dict[str, Any]:
-    """The JSON Schema of a decision, generated from :class:`RouteDecision`."""
-    return _schema(_decision_adapter(), WIRE_RESPONSE_TITLE, "validation")
+    """The JSON Schema of a decision, generated from :class:`RouteDecision`, with what the types cannot say.
+
+    ``confidence`` is held to 0..1, as the merge rule holds it, and every field may be ``null`` -- unset, as
+    :func:`decision_from_wire` reads it -- ``exclude`` included, whose type has no ``None``.
+    """
+    schema = _schema(_decision_adapter(), WIRE_RESPONSE_TITLE, "validation")
+    fields = schema["properties"]
+    for option in fields["confidence"]["anyOf"]:
+        if option.get("type") == "number":
+            option.update(WIRE_CONFIDENCE_RANGE)
+    exclude = fields["exclude"]
+    fields["exclude"] = {
+        "anyOf": [{k: v for k, v in exclude.items() if k in ("type", "additionalProperties")}, {"type": "null"}],
+        **{k: v for k, v in exclude.items() if k not in ("type", "additionalProperties")},
+    }
+    return schema
 
 
 def rendered() -> dict[str, str]:

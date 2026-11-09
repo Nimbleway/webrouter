@@ -44,6 +44,9 @@ WIRE_SCHEMA_VERSION = 1
 WIRE_SCHEMA_DIR = ("data", "schemas", "router", "v1")
 """Where the JSON Schema files live inside the package, under ``web_router``."""
 
+WIRE_CONFIDENCE_RANGE = {"minimum": 0, "maximum": 1}
+"""What the response schema adds to ``confidence``: the merge rule sets aside a decision outside 0..1."""
+
 WIRE_REQUEST_FILE = "request.json"
 WIRE_RESPONSE_FILE = "response.json"
 WIRE_JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"

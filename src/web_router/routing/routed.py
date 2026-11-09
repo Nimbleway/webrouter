@@ -37,7 +37,7 @@ from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
-from web_router.routing.registry import aclose_router, close_router, resolve_router
+from web_router.routing.registry import aclose_router, close_router, discard_router, resolve_router
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -78,7 +78,8 @@ class RouterSetup:
         url_policy: UrlPolicy | None = None,
         router_config: Mapping[str, Any] | None = None,
     ) -> None:
-        """
+        """Attach the router; called last in a constructor, since a router built by name is the caller's to close.
+
         Raises:
             ConfigurationError: for a ``router`` in neither form nor a registered name, ``router_config`` without a
                 name, a ``route_tools`` naming something else, or an unknown ``url_policy``.
@@ -89,7 +90,7 @@ class RouterSetup:
         try:
             self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
         except BaseException:
-            close_router(owned)  # built here and refused: nothing else would close it
+            discard_router(owned)  # built here and refused: nothing else would close it
             raise
         self._owned_router = owned
 
