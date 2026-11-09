@@ -75,6 +75,7 @@ MSG_AUTO_REFUSES = "will not serve {values}"
 
 SITE_OPERATOR = "site:{domain}"
 EXCLUDE_SITE_OPERATOR = "-site:{domain}"
+"""A domain filter as the query operators Brave, WebIQ, DeepSeek and You.com MCP read (Brave excludes with ``NOT``)."""
 _LABEL = r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?"
 SITE_DOMAIN_PATTERN = rf"{_LABEL}(?:\.{_LABEL})+(?:/[A-Za-z0-9._~%/-]*)?"
 """A host name, optionally with a path: what a domain filter may hold when it goes into the query as ``site:``."""
@@ -82,6 +83,6 @@ MSG_NOT_A_DOMAIN = (
     "{value!r} is not a domain; a domain filter goes into the query as site:,"
     " so it must be a host name, optionally with a path."
 )
-"""A domain filter as the query operators Brave, WebIQ, DeepSeek and You.com MCP read (Brave excludes with ``NOT``)."""
+"""The ``ValueError`` ``site_operators`` raises, its last guard, for a value :data:`SITE_DOMAIN_PATTERN` refuses."""
 MSG_SITE_DOMAINS = "A domain filter goes into the query as site:, so each must be a host name, optionally with a path."
 """Why a backend that searches by ``site:`` refuses a domain filter :data:`SITE_DOMAIN_PATTERN` does not match."""

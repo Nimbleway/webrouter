@@ -30,11 +30,9 @@ less. Unset, passages run to WebIQ's default of 10,000 characters.
 WEBIQ_QUERY_LIMIT = 1000
 """The longest query WebIQ accepts, operators included; a longer one is refused before it is sent."""
 
-"""WebIQ filters by domain through ``site:`` and ``-site:`` operators in the query, its only domain filter.
-
-Several included sites are joined with ``OR``, so a result may come from any of them.
-"""
-
+# WebIQ filters by domain through site: and -site: operators in the query, its
+# only domain filter. Several included sites are joined with OR, so a result may
+# come from any of them.
 WEBIQ_SEARCH_PARAMETERS = frozenset(
     {"max_results", "search_depth", "include_domains", "exclude_domains", "country", "locale"}
 )
