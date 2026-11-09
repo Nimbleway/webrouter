@@ -29,6 +29,7 @@ from web_router.constants_presets import EXTRA_SQL, PRESET_SQL_STORE, PRESETS_SQ
 from web_router.exceptions import ProviderNotInstalledError
 from web_router.exceptions_presets import PresetStoreOutdatedError, PresetUnreadableError
 from web_router.presets.model import Preset
+from web_router.presets.params import problems
 from web_router.presets.store import readable
 
 if TYPE_CHECKING:
@@ -99,4 +100,6 @@ def _preset(row: dict[str, object]) -> Preset:
     try:
         return Preset.model_validate(row)
     except ValidationError as exc:
-        raise PresetUnreadableError(PRESETS_SQL_WHERE.format(table=PRESETS_TABLE, name=row["name"]), str(exc)) from exc
+        raise PresetUnreadableError(
+            PRESETS_SQL_WHERE.format(table=PRESETS_TABLE, name=row["name"]), problems(exc)
+        ) from exc

@@ -194,3 +194,12 @@ async def test_the_async_router_opens_and_tracks_a_preset_session(arouter: Async
 async def test_the_async_router_refuses_a_preset_of_another_method(arouter: AsyncWebRouter) -> None:
     with pytest.raises(PresetOfAnotherToolError):
         await arouter.extract("https://example.com", preset="news")
+
+
+def test_the_echo_shows_provider_options_by_key_never_by_value(router: WebRouter) -> None:
+    router.presets.create(Preset(name="keyed", tool="search", params={"provider_options": {"api_key": "SEKRIT"}}))
+
+    response = router.search("q", preset="keyed")
+
+    assert response.preset == PresetApplied(name="keyed", params={"provider_options": {"api_key": "[redacted]"}})
+    assert router.get_provider().requests[0].provider_options == {"api_key": "SEKRIT"}  # type: ignore[attr-defined]

@@ -17,6 +17,7 @@ overrides it.
 from __future__ import annotations
 
 import inspect
+import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
@@ -35,7 +36,16 @@ from web_router.client_requests import (
     build_search_request,
     build_template_request,
 )
-from web_router.constants_presets import MSG_PRESET_NUL, MSG_PRESET_UNKNOWN_PARAM
+from web_router.constants_presets import (
+    MSG_PRESET_NUL,
+    MSG_PRESET_UNKNOWN_PARAM,
+    PRESET_PARSE_PROBLEM,
+    PRESET_PROBLEM,
+    PRESET_PROBLEM_ROOT,
+    PRESET_PROBLEM_SEPARATOR,
+    PRESET_REDACTED,
+    PRESET_SECRET_PARAMS,
+)
 from web_router.presets.limits import LIMITS, Text
 from web_router.types import (
     BrowseRequest,
@@ -171,3 +181,32 @@ def _without_nul(tool: str, params: dict[str, Any]) -> None:
                 for key in bad
             ],
         )
+
+
+def shown(params: dict[str, Any]) -> dict[str, Any]:
+    """``params`` as safe to show -- in a response, a listing, a tool result: ``provider_options`` by key alone.
+
+    Its values are a vendor's own fields and may carry a credential, which a
+    preset's reader or a response's has no use for.
+    """
+    return {
+        key: {option: PRESET_REDACTED for option in value}
+        if key in PRESET_SECRET_PARAMS and isinstance(value, dict)
+        else value
+        for key, value in params.items()
+    }
+
+
+def problems(exc: BaseException) -> str:
+    """What is wrong with an unreadable preset, without the values: each field's location and the kind of error.
+
+    A stored value can be a secret pasted in the wrong place; the message goes to logs and tool results.
+    """
+    if isinstance(exc, ValidationError):
+        return PRESET_PROBLEM_SEPARATOR.join(
+            PRESET_PROBLEM.format(where=".".join(map(str, error["loc"])) or PRESET_PROBLEM_ROOT, kind=error["type"])
+            for error in exc.errors()
+        )
+    if isinstance(exc, json.JSONDecodeError):
+        return PRESET_PARSE_PROBLEM.format(msg=exc.msg, line=exc.lineno, column=exc.colno)
+    return type(exc).__name__

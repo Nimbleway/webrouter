@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from pydantic_core import to_jsonable_python
 
 from web_router.exceptions_presets import PresetNotFoundError, PresetOfAnotherToolError
-from web_router.presets.params import tool_params
+from web_router.presets.params import shown, tool_params
 from web_router.types_preset import PresetApplied
 
 P = ParamSpec("P")
@@ -47,8 +47,8 @@ def _merged(
     arguments = {key: value for key, value in preset.params.items() if key in signature.parameters}
     arguments.update(given)
     optional = set(tool_params(tool))
-    shown = {key: value for key, value in arguments.items() if key in optional}
-    return self, arguments, PresetApplied(name=name, params=to_jsonable_python(shown, fallback=str))
+    echo = {key: value for key, value in arguments.items() if key in optional}
+    return self, arguments, PresetApplied(name=name, params=shown(to_jsonable_python(echo, fallback=str)))
 
 
 def _echoed(result: Any, applied: PresetApplied) -> Any:

@@ -70,3 +70,12 @@ MSG_PRESET_SCHEMA_TOO_DEEP = "nested deeper than {levels} levels"
 MSG_PRESET_SCHEMA_UNENCODABLE = "holds NaN or Infinity, or a lone UTF-16 surrogate, which JSON cannot represent"
 MSG_PRESET_SCHEMA_TOO_LARGE = "larger than {kb} KB as JSON"
 LOG_PRESET_SKIPPED = "Left a preset out of the listing: %s"
+
+PRESET_SECRET_PARAMS = frozenset({"provider_options"})
+"""Params whose values may hold a vendor credential: shown by key only, with each value as PRESET_REDACTED."""
+PRESET_REDACTED = "[redacted]"
+PRESET_PROBLEM = "{where}: {kind}"
+"""One validation problem as an unreadable preset reports it: where and what kind, never the value."""
+PRESET_PROBLEM_SEPARATOR = "; "
+PRESET_PROBLEM_ROOT = "(preset)"
+PRESET_PARSE_PROBLEM = "{msg} at line {line}, column {column}"

@@ -191,3 +191,12 @@ async def test_a_browser_presets_timeout_is_lowered_and_echoed_as_it_ran(session
 
     assert session.router.get_browser_provider("fake").requests[-1].timeout == BROWSER_TIMEOUT  # type: ignore[attr-defined]
     assert opened["preset"] == {"name": "long_session", "params": {"timeout": BROWSER_TIMEOUT, "headless": True}}
+
+
+async def test_listing_and_reading_a_preset_never_show_provider_options_values(tools: WebRouterTools) -> None:
+    tools.router.presets.create(Preset(name="keyed", tool="search", params={"provider_options": {"api_key": "SEKRIT"}}))
+
+    listed = await _call(tools, MCP_TOOL_LIST_PRESETS, {})
+    read = await _call(tools, MCP_TOOL_GET_PRESET, {"name": "keyed"})
+
+    assert listed["presets"][0]["params"] == read["params"] == {"provider_options": {"api_key": "[redacted]"}}

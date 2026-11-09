@@ -60,7 +60,7 @@ def test_a_missing_directory_reads_empty_and_is_made_by_the_first_create(tmp_pat
     [
         ("{not json", "Expecting property name"),
         (json.dumps({"name": "p", "tool": "search", "params": {"max_results": "lots"}}), "max_results"),
-        (json.dumps({"name": "p", "tool": "search", "params": {"depth": "deep"}}), "`depth` is not a search param"),
+        (json.dumps({"name": "p", "tool": "search", "params": {"depth": "deep"}}), "depth: unknown_param"),
     ],
 )
 def test_a_preset_this_version_cannot_read_is_skipped_by_list_and_raised_by_get(
@@ -116,3 +116,18 @@ def test_a_file_that_is_not_utf8_is_one_bad_entry_not_a_broken_store(tmp_path: P
         store.get("bad")
     store.create(Preset(name="fresh", tool="extract"))
     assert store.get("fresh") == Preset(name="fresh", tool="extract")
+
+
+def test_an_unreadable_presets_error_names_the_field_never_its_value(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    secret = "sk-live-SEKRIT"
+    (tmp_path / "p.json").write_text(json.dumps({"name": "p", "tool": "search", "params": {"api_key": secret}}))
+    store = FilePresetStore(tmp_path)
+
+    assert store.list() == []
+    with pytest.raises(PresetUnreadableError) as refused:
+        store.get("p")
+    assert "api_key: unknown_param" in str(refused.value)
+    assert secret not in str(refused.value)
+    assert secret not in caplog.text

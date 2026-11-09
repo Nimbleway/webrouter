@@ -21,6 +21,7 @@ from web_router.constants_presets import (
 from web_router.exceptions import ProviderNotInstalledError
 from web_router.exceptions_presets import PresetNameTakenError, PresetUnreadableError
 from web_router.presets.model import Preset
+from web_router.presets.params import problems
 from web_router.presets.store import readable
 
 
@@ -100,14 +101,14 @@ def _presets_in(path: Path) -> list[tuple[str, Preset | PresetUnreadableError]]:
         text = path.read_text(encoding=PRESET_FILE_ENCODING)
         document = json.loads(text) if yaml is None else yaml.safe_load(text)
     except unparsable as exc:
-        return [(path.stem, PresetUnreadableError(path, str(exc)))]
+        return [(path.stem, PresetUnreadableError(path, problems(exc)))]
     entries: list[tuple[str, Preset | PresetUnreadableError]] = []
     for each in document if isinstance(document, list) else [document]:
         name = each.get("name") if isinstance(each, dict) else None
         try:
             preset = Preset.model_validate(each)
         except ValidationError as exc:
-            entries.append((str(name) if name is not None else path.stem, PresetUnreadableError(path, str(exc))))
+            entries.append((str(name) if name is not None else path.stem, PresetUnreadableError(path, problems(exc))))
         else:
             entries.append((preset.name, preset))
     return entries

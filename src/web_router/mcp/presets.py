@@ -31,6 +31,7 @@ from web_router.constants_mcp_presets import (
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_presets import PresetNotFoundError, PresetOfAnotherToolError
 from web_router.presets import FilePresetStore, InMemoryPresetStore, Preset, PresetStore, tool_params
+from web_router.presets.params import shown
 from web_router.presets_sql import SqlPresetStore
 from web_router.types_preset import PresetApplied
 
@@ -108,12 +109,12 @@ def echoed(result: _R) -> _R:
         return result
     name, method, sent = ran
     params = {key: sent[key] for key in tool_params(method) if key in sent}
-    applied = PresetApplied(name=name, params=to_jsonable_python(params, fallback=str))
+    applied = PresetApplied(name=name, params=shown(to_jsonable_python(params, fallback=str)))
     return cast(_R, {**result, MCP_ARG_PRESET: applied.model_dump()})
 
 
 async def list_presets(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
-    return {"presets": [preset.model_dump(exclude_none=True) for preset in tools.router.presets.list()]}
+    return {"presets": [_safe(preset) for preset in tools.router.presets.list()]}
 
 
 async def get_preset(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -121,13 +122,18 @@ async def get_preset(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dic
     preset = tools.router.presets.get(name)
     if preset is None:
         raise PresetNotFoundError(name)
-    return preset.model_dump(exclude_none=True)
+    return _safe(preset)
 
 
 async def create_preset(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
     preset = Preset.model_validate(tools.arguments(MCP_TOOL_CREATE_PRESET, arguments))
     tools.router.presets.create(preset)
-    return preset.model_dump(exclude_none=True)
+    return _safe(preset)
+
+
+def _safe(preset: Preset) -> dict[str, Any]:
+    """The preset as a tool returns it: ``provider_options`` by key alone, since a stored value may be a key."""
+    return {**preset.model_dump(exclude_none=True), "params": shown(preset.params)}
 
 
 PRESET_TOOLS: dict[str, Callable[[WebRouterTools, Mapping[str, Any]], Awaitable[dict[str, Any]]]] = {
