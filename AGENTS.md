@@ -9,7 +9,7 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus two that need no credential: `you-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
@@ -605,9 +605,12 @@ offers a wider surface than its weakest member, so a member is checked against
 the request before it is tried, on the class, which costs no credential, sends
 nothing and starts no billed run. Narrowing the shared surface to the weakest
 member instead would cost the others a real capability. Search `auto` declares
-the union of its members' `supported_parameters` — `AUTO_SUPPORTED_PARAMETERS`,
-which a test holds equal to it — and passes over a member that does not map an
-option the request set: Perplexity and Brave for `search_depth`. Extract `auto`
+every shared option — `AUTO_SUPPORTED_PARAMETERS`, which a test holds at least
+the union of its members' — and passes over a member that does not map an
+option the request set, or whose `refused_values` refuses the value: Linkup for
+`search_depth`, Perplexity and Brave for `search_depth="deep"`. A router's
+default option is held to the same two checks on every backend in the order
+(`routing/merge_params.py`). Extract `auto`
 declares the union of their `supported_formats` and passes over a member that
 cannot return the format asked for, the pinned `markdown` default included, so
 Exa serves only `text`. With no member left, search raises
@@ -712,13 +715,18 @@ be told from a finished run — Skyvern's `timed_out` mixes its step limit with
 its clock, and Browser Use's `isSuccess` is its agent's opinion of its answer,
 not a report that it stopped.
 
-**Send providers the minimum.** A search provider is called with the query,
-`max_results` and `search_depth`; an extract provider with the URLs and
-`format` — nothing else, however much the API accepts. Do not widen a
-provider's mapping as a side effect of another task, and do not add machinery
-for an option nobody maps (a 166-entry country lookup for an unmapped parameter
-was written and removed here once already). Mapping an option is its own change,
-with live evidence.
+**Send providers the minimum.** A search provider is called with the query and
+the shared options it maps — `max_results`, `search_depth`, `include_domains`,
+`exclude_domains`, `country`, `locale`, `recency`, `effort` — and an extract
+provider with the URLs and `format`; nothing else, however much the API
+accepts. The one kind of value sent unasked is a pin that keeps a vendor's
+default from moving under us (Parallel's `mode=fast`, Linkup's required
+`depth`), recorded in the contract's `always_sent`. Do not widen a provider's
+mapping as a side effect of another task, and do not add machinery for an
+option nobody maps. Mapping an option is its own change, from the vendor's
+documentation, with the live check that would confirm it listed. A value the
+backend cannot serve is refused through `depth_levels` or `refused_options`
+on the class, never sent to be ignored or swapped for a weaker one.
 
 **A format a provider cannot return raises, it is not substituted.** Each
 extract provider declares `supported_formats` from its own mapping table —

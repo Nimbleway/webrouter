@@ -216,12 +216,20 @@ tool is for, what it costs and how long it takes.
 
 Arguments mirror the library's own, name for name — `query`, `max_results`,
 `search_depth`, `include_domains`, `exclude_domains`, `country`, `locale`,
-`urls`, `format`, `template`, `inputs`, `name`, `limit`, `offset`,
+`recency`, `urls`, `format`, `template`, `inputs`, `name`, `limit`, `offset`,
 `output_schema`, `records`, `effort`, `task`, `start_url`,
 `max_steps`, `allowed_domains`, `provider`, and for the browser tools the
 handle's own — `url`, `wait_until`, `ref`, `selector`, `text`, `submit`, `key`,
 `full_page`, `format`, `timeout`. Anything the library refuses, this refuses in
 the library's own words.
+
+`search` offers an option only when a backend reachable from here maps it, and
+`search_depth` only at the levels one serves, as `browser_open` narrows
+`stealth`. With no key the keyless tier between them (You.com MCP, Exa MCP,
+Tavily keyless, Keenable) maps every search option. The tool's description
+tells the model that `search_depth` is how much text comes back per result and
+`effort` how hard the backend looks, and that higher effort costs more and
+takes longer, so it leaves `effort` unset unless needed.
 
 Over MCP the model chooses `max_results`, not you. Its description steers it
 away from a single result, but the choice stays the model's. A host that wants
@@ -566,7 +574,7 @@ cannot pick one that is certain to throw.
 With nothing configured at all the enums read:
 
 ```
-search   ["auto", "you-mcp"]     # keyless
+search   ["auto", "exa-mcp", "parallel-mcp", "you-mcp"]  # keyless
 extract  ["auto", "jina", "max"] # keyless; max races whatever auto would try
 template []                      # no keyless tier and no auto: a template's name belongs to one vendor
 research ["auto"]                # every research backend bills, so nothing here can run
