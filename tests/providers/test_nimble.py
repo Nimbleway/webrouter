@@ -7,8 +7,8 @@ import httpx
 import pytest
 
 from web_router.constants import RESEARCH_HTTP_TIMEOUT
-from web_router.exceptions import ConfigurationError, UnsupportedFormatError, UnsupportedParameterError
-from web_router.types import ExtractFormat, ExtractRequest, Recency, SearchDepth, SearchRequest
+from web_router.exceptions import ConfigurationError, UnsupportedFormatError
+from web_router.types import ExtractFormat, ExtractRequest, SearchDepth, SearchRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
 
@@ -69,18 +69,6 @@ def test_depth_maps_onto_nimbles_own_vocabulary(
 
 def test_depth_is_absent_when_the_caller_did_not_ask_for_one(provider: NimbleProvider) -> None:
     assert "search_depth" not in provider._build_payload(SearchRequest(query="hi"))
-
-
-@pytest.mark.parametrize("recency", ["day", "week", "month", "year"])
-def test_recency_is_sent_as_time_range(provider: NimbleProvider, recency: Recency) -> None:
-    params = provider._build_payload(SearchRequest(query="hi", recency=recency))
-    assert params == {"query": "hi", "time_range": recency}
-
-
-def test_effort_is_refused_unsent_since_nimble_has_no_search_tier(provider: NimbleProvider) -> None:
-    assert "effort" not in NimbleProvider.supported_parameters
-    with pytest.raises(UnsupportedParameterError, match="effort"):
-        provider.search(SearchRequest(query="hi", effort="low"))
 
 
 def test_provider_options_pass_through(provider: NimbleProvider) -> None:

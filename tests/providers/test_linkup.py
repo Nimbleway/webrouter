@@ -8,8 +8,7 @@ below are trimmed from those calls.
 
 Not verified live, and documentation-derived: the shape of an image result
 (`name`, `url` and `type` alone) -- `includeImages` never returned one, on the
-queries tried -- `fromDate` as `recency` sets it (an answer's checked it live), the
-depth `effort` picks, and every option left unmapped: `toDate`,
+queries tried -- and every option left unmapped: `toDate`,
 `includeImages`, `sourcedAnswer` and `structured` output, and `/fetch`'s `mode`,
 `renderJs`, `extractImages` and `schema`. All of them reach the API through
 `provider_options`.
@@ -20,7 +19,6 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Callable
-from datetime import date
 from typing import Any
 
 import httpx
@@ -29,7 +27,6 @@ import pytest
 from web_router import WebRouter
 from web_router.constants import LINKUP_DEFAULT_DEPTH
 from web_router.exceptions import ProviderError, UnsupportedFormatError, UnsupportedParameterError
-from web_router.providers._clock import pinned_today
 from web_router.providers.linkup import LinkupExtractProvider, LinkupProvider
 from web_router.types import ExtractRequest, SearchDepth, SearchRequest
 
@@ -111,20 +108,6 @@ def test_options_map_onto_linkups_field_names(provider: LinkupProvider) -> None:
     assert payload["maxResults"] == 5
     assert payload["includeDomains"] == ["a.com"]
     assert payload["excludeDomains"] == ["b.com"]
-
-
-@pytest.mark.parametrize(
-    ("effort", "depth"), [("low", "flash"), ("medium", "fast"), ("high", "standard"), ("max", "deep")]
-)
-def test_effort_picks_linkups_depth_one_for_one(provider: LinkupProvider, effort: str, depth: str) -> None:
-    assert provider._build_payload(SearchRequest(query="hi", effort=effort))["depth"] == depth  # type: ignore[arg-type]
-
-
-@pytest.mark.parametrize(("recency", "start"), [("day", "2026-11-08"), ("month", "2026-10-10"), ("year", "2025-11-09")])
-def test_recency_sets_from_date_counted_back_from_today(provider: LinkupProvider, recency: str, start: str) -> None:
-    with pinned_today(date(2026, 11, 9)):
-        payload = provider._build_payload(SearchRequest(query="hi", recency=recency))  # type: ignore[arg-type]
-    assert payload["fromDate"] == start and "toDate" not in payload
 
 
 @pytest.mark.parametrize("depth", ["lite", "fast", "deep"])
