@@ -129,7 +129,13 @@ def test_no_key_value_reaches_the_service_the_record_or_a_failure(monkeypatch: p
 
 def test_a_service_echoing_its_key_in_its_reasons_has_it_redacted() -> None:
     def echo(body: dict[str, Any]) -> dict[str, Any]:
-        return {"schema": 1, "tools": ["search"], "reason": f"key {KEY}", "exclude": {"search:exa": KEY, KEY: "x"}}
+        return {
+            "schema": 1,
+            "tools": ["search"],
+            "reason": f"key {KEY}",
+            "exclude": {"search:exa": KEY, KEY: "x"},
+            "params": {"search": {KEY: 1}},
+        }
 
     with running(echo) as server, WebRouter(router="remote", router_config=config(server)) as wr:
         plan = wr.plan("solar news")
@@ -276,3 +282,14 @@ def test_the_example_server_closes_connections_past_its_worker_limit(monkeypatch
                     return
             time.sleep(0.05)
         pytest.fail("the slots were never given back")
+
+
+def test_the_example_server_serves_ipv6_loopback() -> None:
+    server = reference.serve("::1", 0)
+    try:
+        assert server.url.startswith("http://[::1]:")
+        plan = WebRouter(router="remote", router_config={"url": server.url}).plan("read https://example.com")
+        assert plan.decision.reason != "router_error" and plan.tool == "extract"
+    finally:
+        server.shutdown()
+        server.server_close()

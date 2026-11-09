@@ -35,6 +35,7 @@ import argparse
 import hmac
 import json
 import os
+import socket
 import threading
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -69,6 +70,7 @@ class RouterServer(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(self, address: tuple[str, int], *, api_key: str | None = None, decide: Decide = decide) -> None:
+        self.address_family = socket.AF_INET6 if ":" in address[0] else socket.AF_INET
         super().__init__(address, _Handler)
         self.api_key = api_key
         self.decide = decide
@@ -91,16 +93,22 @@ class RouterServer(ThreadingHTTPServer):
         finally:
             self._slots.release()
 
+    address_family = socket.AF_INET  # set per instance below: AF_INET6 for an IPv6 host such as ::1
+
+    @property
+    def authority(self) -> str:
+        """``host:port`` as a URL and a ``Host`` header write it: an IPv6 address in brackets."""
+        host, port = self.server_address[:2]
+        return f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
+
     @property
     def hosts(self) -> set[str]:
         """The ``Host`` headers it answers: the address it is bound to, and ``localhost`` on the same port."""
-        host, port = self.server_address[:2]
-        return {f"{host}:{port}", f"localhost:{port}"}
+        return {self.authority, f"localhost:{self.server_address[1]}"}
 
     @property
     def url(self) -> str:
-        host, port = self.server_address[:2]
-        return f"http://{host}:{port}{PATH}"
+        return f"http://{self.authority}{PATH}"
 
 
 class _Handler(BaseHTTPRequestHandler):

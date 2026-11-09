@@ -52,6 +52,7 @@ import threading
 import warnings
 import weakref
 from collections.abc import Awaitable
+from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import AbstractAsyncContextManager, nullcontext
 from typing import TYPE_CHECKING, Any
@@ -73,6 +74,7 @@ from web_router.constants_remote import (
     REMOTE_CONTENT_TYPE_HEADER,
     REMOTE_DISPLAY_NAME,
     REMOTE_EXCLUDE_FIELD,
+    REMOTE_PARAMS_FIELD,
     REMOTE_HTTP_OK,
     REMOTE_IDENTITY_ENCODING,
     REMOTE_JSON_TYPE,
@@ -156,25 +158,31 @@ def _why(exc: BaseException) -> str:
 
 
 def _unechoed(value: Any, key: str, *, names: bool = False) -> Any:
-    """``value`` with ``key`` redacted from every string in it, and from mapping keys when ``names``.
-
-    Only ``exclude``'s keys -- candidate ids -- reach a record as text; every other mapping key is a field or a
-    tool name, so it is left whole: a key spelled like one cannot turn a valid decision into an invalid one.
-    """
+    """``value`` with ``key`` redacted from every string in it, and, when ``names``, from every mapping key too."""
     if isinstance(value, str):
         return value.replace(key, REMOTE_KEY_REDACTED)
     if isinstance(value, list):
-        return [_unechoed(item, key) for item in value]
+        return [_unechoed(item, key, names=names) for item in value]
     if isinstance(value, dict):
-        return {(_unechoed(n, key) if names else n): _unechoed(item, key) for n, item in value.items()}
+        return {(_unechoed(n, key) if names else n): _unechoed(item, key, names=names) for n, item in value.items()}
     return value  # a number, a bool or null is the decision's own
 
 
 def _unechoed_decision(data: Any, key: str) -> Any:
-    """A decision's JSON with ``key`` redacted from its text and from the candidate ids ``exclude`` names."""
+    """A decision's JSON with ``key`` redacted from its text and every name a record can show.
+
+    Field names and the tool names keying ``providers`` and ``params`` stay whole, so a key spelled like one
+    cannot turn a valid decision invalid; ``exclude``'s candidate ids and each tool's option names are redacted.
+    """
     if not isinstance(data, dict):
         return data
-    return {n: _unechoed(item, key, names=n == REMOTE_EXCLUDE_FIELD) for n, item in data.items()}
+    out = {}
+    for field, item in data.items():
+        if field == REMOTE_PARAMS_FIELD and isinstance(item, dict):
+            out[field] = {tool: _unechoed(options, key, names=True) for tool, options in item.items()}
+        else:
+            out[field] = _unechoed(item, key, names=field == REMOTE_EXCLUDE_FIELD)
+    return out
 
 
 _CLOSING: set[asyncio.Task[None]] = set()
@@ -262,10 +270,9 @@ class RemoteRouter:
             _CLOSING.add(task)  # held until done: a loop keeps only a weak reference to a task
             task.add_done_callback(self._closed_task)
             return
-        if not loop.is_running():
-            _close_failed(self.host, REMOTE_WHY_CLOSE_LOOP)
+        closing = self._submit(pool, loop)
+        if closing is None:
             return
-        closing = asyncio.run_coroutine_threadsafe(pool.aclose(), loop)
         try:
             closing.result(REMOTE_CLOSE_WAIT_S)
         except Exception as exc:
@@ -277,13 +284,13 @@ class RemoteRouter:
         pool, loop = self._shut()
         if pool is None or loop is None or loop.is_closed():
             return
-        if loop is not asyncio.get_running_loop() and not loop.is_running():
-            _close_failed(self.host, REMOTE_WHY_CLOSE_LOOP)
-            return
         if loop is asyncio.get_running_loop():
             closing: Awaitable[None] = pool.aclose()
         else:
-            closing = asyncio.wrap_future(asyncio.run_coroutine_threadsafe(pool.aclose(), loop))
+            submitted = self._submit(pool, loop)
+            if submitted is None:
+                return
+            closing = asyncio.wrap_future(submitted)
         try:
             await asyncio.wait_for(closing, REMOTE_CLOSE_WAIT_S)  # cancels the close, on its own loop, when late
         except asyncio.CancelledError:
@@ -291,6 +298,17 @@ class RemoteRouter:
             raise
         except Exception as exc:
             _close_failed(self.host, _why(exc))
+
+    def _submit(self, pool: httpx.AsyncClient, loop: asyncio.AbstractEventLoop) -> Future[None] | None:
+        """The pool's close, started on its own loop from another thread; ``None``, said once, when that loop stopped."""
+        if loop.is_running():
+            coro = pool.aclose()
+            try:
+                return asyncio.run_coroutine_threadsafe(coro, loop)
+            except RuntimeError:  # the loop closed between the check and the hand-over
+                coro.close()
+        _close_failed(self.host, REMOTE_WHY_CLOSE_LOOP)
+        return None
 
     def _shut(self) -> tuple[httpx.AsyncClient | None, asyncio.AbstractEventLoop | None]:
         """Mark the router closed and take its pool, with the loop it belongs to: no call after this opens one."""

@@ -106,6 +106,8 @@ REMOTE_WHY_VERSION = "a wire schema version other than {expected}, the one this 
 REMOTE_WHY_CLOSED = "this router is closed"
 REMOTE_EXCLUDE_FIELD = "exclude"
 """The decision field whose mapping keys, candidate ids, are text a record shows."""
+REMOTE_PARAMS_FIELD = "params"
+"""The decision field whose option names, under each tool, a record shows when it ignores one."""
 REMOTE_KEY_REDACTED = "[redacted]"
 """What an echo of the service's own bearer key in its answer's text becomes, before the answer is read."""
 MSG_REMOTE_CLOSE_FAILED = "The router service at {host}: its connection pool did not close ({why}) and is dropped."
