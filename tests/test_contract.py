@@ -20,6 +20,7 @@ from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.base import SearchProvider
 from web_router.registry import available_providers, configured_providers, get_provider_class
 from web_router.types import ALWAYS_SENT, NORMALIZED_PARAMETERS, SearchDepth, SearchRequest, SearchResponse
+from web_router.types_options import SearchOptions
 
 ROUTER_ONLY_ARGUMENTS = {"self", "query", "provider", "budget"}
 
@@ -74,9 +75,10 @@ ENV_VARS = (
 
 @pytest.mark.parametrize("method", [WebRouter.search, AsyncWebRouter.search], ids=["sync", "async"])
 def test_router_search_exposes_every_shared_option(method: object) -> None:
-    """The two search signatures restate SearchRequest's fields, so guard the copies."""
+    """The two search signatures and SearchOptions restate SearchRequest's fields, so guard the copies."""
     exposed = set(inspect.signature(method).parameters) - ROUTER_ONLY_ARGUMENTS
     assert exposed == NORMALIZED_PARAMETERS | ALWAYS_SENT - {"query"}
+    assert set(SearchOptions.__annotations__) == NORMALIZED_PARAMETERS
 
 
 def test_every_provider_declares_where_its_credential_comes_from() -> None:

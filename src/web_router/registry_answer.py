@@ -34,9 +34,9 @@ _BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_PERPLEXITY: ("web_router.providers.perplexity_answer", "PerplexityAnswerProvider", EXTRA_ANSWER),
     PROVIDER_PARALLEL: ("web_router.providers.parallel", "ParallelAnswerProvider", EXTRA_ANSWER),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupAnswerProvider", EXTRA_ANSWER),
-    PROVIDER_YOU: ("web_router.providers.you", "YouAnswerProvider", EXTRA_ANSWER),
-    PROVIDER_EXA: ("web_router.providers.exa", "ExaAnswerProvider", EXTRA_ANSWER),
-    PROVIDER_BRAVE: ("web_router.providers.brave", "BraveAnswerProvider", EXTRA_ANSWER),
+    PROVIDER_YOU: ("web_router.providers.you_answer", "YouAnswerProvider", EXTRA_ANSWER),
+    PROVIDER_EXA: ("web_router.providers.exa_answer", "ExaAnswerProvider", EXTRA_ANSWER),
+    PROVIDER_BRAVE: ("web_router.providers.brave_answer", "BraveAnswerProvider", EXTRA_ANSWER),
 }
 
 _CUSTOM_ANSWER_PROVIDERS: dict[str, type[AnswerProvider]] = {}
