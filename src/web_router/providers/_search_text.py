@@ -12,6 +12,8 @@ from web_router.types import SearchDepth, SearchRequest
 DOMAIN_LISTS = ("include_domains", "exclude_domains")
 """The two domain filters a search request carries."""
 
+_SITE_DOMAIN = re.compile(SITE_DOMAIN_PATTERN)
+
 
 def as_snippet(text: str) -> str:
     """Shorten body text to something the size of a snippet.
@@ -51,14 +53,10 @@ def site_operators(
             which would otherwise add its own operators to the query.
     """
     for domain in [*(include or ()), *(exclude or ())]:
-        if not _is_site_domain(domain):
+        if not _SITE_DOMAIN.fullmatch(domain):
             raise ValueError(MSG_NOT_A_DOMAIN.format(value=domain))
     included = [joiner.join(SITE_OPERATOR.format(domain=domain) for domain in include)] if include else []
     return [*included, *(exclude_format.format(domain=domain) for domain in exclude or ())]
-
-
-def _is_site_domain(domain: str) -> bool:
-    return re.fullmatch(SITE_DOMAIN_PATTERN, domain) is not None
 
 
 def refused_domains(
@@ -78,4 +76,4 @@ def refused_domains(
 def unsited_domains(request: SearchRequest, names: Sequence[str] = DOMAIN_LISTS) -> dict[str, list[str]]:
     """Each of ``names`` holding a value :func:`site_operators` would refuse, for a ``refused_options`` to report."""
     lists = {name: getattr(request, name) or [] for name in names}
-    return {name: domains for name, domains in lists.items() if not all(map(_is_site_domain, domains))}
+    return {name: domains for name, domains in lists.items() if not all(map(_SITE_DOMAIN.fullmatch, domains))}
