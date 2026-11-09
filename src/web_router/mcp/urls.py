@@ -8,7 +8,8 @@ keyed account hand a vendor a ``file:``, loopback, private or metadata URL.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import re
+from collections.abc import Iterable, Mapping
 
 from web_router._urls import host_of
 from web_router.constants import MCP_BROWSER_REFUSED_SCHEMES
@@ -20,35 +21,46 @@ from web_router.routing.url_policy import public_only
 def screen(tool: str, urls: object) -> None:
     """Refuse the call before anything is sent when a URL in ``urls`` is not a public http(s) one.
 
-    A string is one URL -- the library takes ``urls="https://..."`` as a list of one.
-    Anything that is not a string is left for the library's validation.
+    A string is one URL -- the library takes ``urls="https://..."`` as a list
+    of one -- and any other iterable is read as the library reads it, a
+    mapping by its keys. A value that is not a string is left for the library's
+    validation.
     """
-    candidates = [urls] if isinstance(urls, str) else urls if isinstance(urls, list) else []
+    candidates = [urls] if isinstance(urls, str) else list(urls) if isinstance(urls, Iterable) else []
     refused = [f"{host_of(url)} ({why})" for url in candidates if isinstance(url, str) and (why := public_only(url))]
     if refused:
         raise ValueError(MCP_MSG_URL_REFUSED.format(tool=tool, refused="; ".join(refused)))
 
 
 def url_values(inputs: object) -> list[str]:
-    """Every URL among a template's inputs, however deep -- an id, a slug or a search term is not screened.
+    """Every URL among a template's inputs, however deep, and inside free text: ids, slugs and words pass.
 
-    A URL is a value with ``://`` in it, a scheme-relative ``//host/...``, or
-    one word that starts with a scheme a browser reads without ``//``:
-    ``file:/etc/passwd``, ``http:/127.0.0.1/``, ``javascript:``.
+    A browser drops tabs and line breaks from a URL, so they are dropped first;
+    then every word that is a URL is screened on its own: one with ``://``, a
+    scheme-relative ``//host``, a scheme followed by ``/`` (``gopher:/host``,
+    ``http:/127.0.0.1``), or a scheme the browser guard names (``javascript:``).
     """
     if isinstance(inputs, Mapping):
         return [url for value in inputs.values() for url in url_values(value)]
     if isinstance(inputs, list):
         return [url for value in inputs for url in url_values(value)]
-    return [inputs] if isinstance(inputs, str) and _looks_like_url(inputs) else []
+    if not isinstance(inputs, str):
+        return []
+    return [word for word in inputs.translate(_DROPPED).split() if _is_url(word)]
 
 
-def _looks_like_url(value: str) -> bool:
-    """``://`` anywhere, ``//host``, or one word opening with a scheme a browser reads without ``//``."""
-    scheme, sep, _ = value.strip().partition(":")
-    one_word = bool(sep) and not any(ch.isspace() for ch in value.strip())
-    return "://" in value or value.lstrip().startswith("//") or (one_word and scheme.lower() in _SCHEMES)
+def _is_url(word: str) -> bool:
+    if "://" in word or word.startswith("//"):
+        return True
+    scheme = _SCHEME.match(word)
+    if scheme is None or not (rest := word[scheme.end() :]):
+        # "http:" on its own -- a word in a search term -- names no address.
+        return False
+    return rest.startswith("/") or scheme.group(1).lower() in MCP_BROWSER_REFUSED_SCHEMES | URL_SCHEMES
 
 
-_SCHEMES = MCP_BROWSER_REFUSED_SCHEMES | URL_SCHEMES
-"""A search term such as ``http: 404`` has a space in it, so it is not taken for one of these."""
+_DROPPED = {ord(ch): None for ch in "\t\n\r"}
+"""What a browser strips from anywhere in a URL before reading it."""
+
+_SCHEME = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*):")
+"""A URL's scheme, at the start of a word."""
