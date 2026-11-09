@@ -3,6 +3,9 @@
 Thanks for helping out. This project is pre-1.0 and moving fast — open an issue
 before starting anything large so we can agree on the shape first.
 
+Contributions are accepted under the Apache License 2.0, the same license as the
+project ([LICENSE](LICENSE)).
+
 Read [STYLE_GUIDE.md](STYLE_GUIDE.md) before your first PR. It describes the
 standards code is reviewed against here, several of which are not obvious and
 are enforced by review rather than by tooling.
