@@ -8,6 +8,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- route-eval (experimental): each set's report adds, held out, every router's cost-weighted tool confusion matrix -- the tool its choice ran against the best tool, the oracle's, each cell weighed by the extra dollars and seconds over the oracle's choice -- with the misroutes' count, extra cost, overspend and cost per question, and a comparison of each router with `static` and with any router named by the new `--against`: where their served paths and tools differ, which alone was right, and each one's held-out accuracy and mean cost. `--json` keeps each router's held-out choices. See the benchmarks README's [Tool confusion and comparing routers](benchmarks/providers/README.md#tool-confusion-and-comparing-routers).
+
 ### Fixed
 
 ## [0.10.0] - 2026-11-09

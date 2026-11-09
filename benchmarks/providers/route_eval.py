@@ -36,6 +36,7 @@ from frozen import FROZEN_DIR
 from route_eval_cli import DEFAULT_ROUTERS, DEFAULT_SEED, DEFAULT_TEST_FRACTION, run, skip_absent_specs
 from route_eval_cli import DEFAULT_SETS as DEFAULT_SETS
 from route_eval_floor import Floor, floor_for
+from route_eval_matrix import choices, comparisons, matrices
 from route_eval_paths import DEFAULT_PATH_ROUTERS, MIXED, research_by_effort
 from route_eval_rank import KEYLESS as KEYLESS
 from route_eval_rank import backend_stats, recommended, too_few
@@ -139,7 +140,10 @@ def _score_router(
     first = next((o.router_error for part in outcomes.values() for o in part if o.router_error), None)
     if first is not None:
         print(MSG_ROUTER_RAISED.format(spec=spec, set_name=name, error=first), file=sys.stderr)
-    return {part: score(found) for part, found in outcomes.items()}
+    return {
+        **{part: score(found) for part, found in outcomes.items()},
+        "choices": choices(test, outcomes["held_out"], method),
+    }
 
 
 def _add_regret(routers: dict[str, dict[str, Any]], floor: float) -> None:
@@ -167,6 +171,7 @@ def evaluate_set(
     folder: Path = FROZEN_DIR,
     joined: Path | None = None,
     skip_absent: bool = False,
+    against: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Every router in ``specs``, with ``static`` and ``oracle``, scored in-sample and held out on one set.
 
@@ -174,6 +179,8 @@ def evaluate_set(
     :data:`~route_eval_paths.DEFAULT_PATH_ROUTERS`. With ``skip_absent``, an ``always:`` router whose
     choice is not a candidate here is skipped, with a note, instead of refused: a backend is no path.
     ``floor`` of ``None`` ranks and judges with the method's own floor (:func:`~route_eval_floor.floor_for`).
+    Each router is compared, held out, with ``static`` and every router in ``against``, which are scored too
+    (:mod:`route_eval_matrix`), and has its cost-weighted tool confusion matrix against the oracle.
     """
     method, questions = load_set(name, folder, joined)
     ranked_with = floor_for(method) if floor is None else Floor(method, floor, None)
@@ -182,12 +189,13 @@ def evaluate_set(
     train, test = split(questions, seed, test_fraction)
     _check_split(name, test_fraction, len(questions), len(train), len(test))
     candidates = sorted({p for q in questions for p in q.rows})
-    skipped = skip_absent_specs(specs, candidates) if skip_absent else []
+    skipped = skip_absent_specs([*specs, *against], candidates) if skip_absent else []
     for spec in skipped:
         print(MSG_SKIPPED.format(spec=spec, set_name=name), file=sys.stderr)
-    names = list(dict.fromkeys((STATIC, ORACLE, *(s for s in specs if s not in skipped))))
+    names = list(dict.fromkeys((STATIC, ORACLE, *(s for s in (*specs, *against) if s not in skipped))))
     routers = {spec: _score_router(spec, method, name, train, test, candidates) for spec in names}
     _add_regret(routers, ranked_with.value)
+    bases = [STATIC, *(s for s in against if s not in skipped)]
     stats = backend_stats(questions)  # nothing is fit to the order, so it ranks on every question
     return {
         "set": name,
@@ -200,6 +208,8 @@ def evaluate_set(
         "prompts": all(q.prompt is not None for q in questions),
         "static_order": static_router(method)(Question("", None, {p: {} for p in candidates})),
         "routers": routers,
+        "confusion": matrices(routers, ORACLE),
+        "comparisons": comparisons(routers, bases, ORACLE),
         "backends": stats,
         "noise_floor": ranked_with.as_json(),
         "recommended_order": recommended(stats, ranked_with.value),

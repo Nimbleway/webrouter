@@ -158,6 +158,8 @@ ROUTE_EVAL_SIBLINGS = (
     "route_eval_merge",
     "route_eval_replay",
     "route_eval_routers",
+    "route_eval_matrix",
+    "route_eval_report_matrix",
     "route_eval_report",
     "route_eval_cli",
 )

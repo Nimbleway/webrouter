@@ -562,6 +562,54 @@ fewer than 20 questions is listed as *too few questions*, not ranked: today
 `research:perplexity:medium` (19).
 A set that mixes methods other than these paths is refused by name.
 
+### Tool confusion and comparing routers
+
+Every set's report also has, held out, each router's **cost-weighted tool
+confusion matrix** and **where routers disagree**
+(`route_eval_matrix.py`, rendered by `route_eval_report_matrix.py`).
+
+- **The matrix** counts each held-out question by the tool the router's
+  choice ran (rows; `unserved` when nothing served it) against the best tool
+  (columns): the tool of the oracle's path, the one that got the question
+  right, cheapest then fastest, or *none right* when no path did. Each cell
+  reads *questions (right), extra cost, extra time*: the router's cost and
+  latency minus the oracle's on those questions, as the replay charged them.
+  The extra is signed: a cheaper wrong choice is negative, and pays in
+  accuracy instead. A wrong `search` moves a cell by cents, a wrong `research`
+  by dollars, so the dear mistakes stand out. An extra with either side unknown
+  is left out of the sum and counted unknown, as cost is everywhere.
+- **Misroutes** are the questions some path got right, served by another tool
+  than the best. Above the matrices, one row per router gives how many, how
+  many of those were still right, their extra cost (signed) and overspend (only
+  the dearer choices), the same per held-out question, their extra time, and
+  the router's extra cost over the oracle on every question. On a one-method
+  set every path is one tool, so the matrix is one row: the router's extra cost
+  over the oracle.
+- **The comparison** sets each router beside `static` and beside every router
+  named with `--against` (scored too), each pair once, on the same held-out
+  questions: how often the served path differs (another backend of the same
+  tool counts) and how often the tool does, which of the two alone was right
+  there, and each one's held-out accuracy and mean cost per question. Each
+  pair's disagreements follow by tool pair. `--json` keeps every router's
+  held-out choices (`choices`) and each pair's disagreeing questions.
+
+One command reproduces the numbers. It reads only the committed frozen rows, so
+it calls nothing and costs $0; `frozen.py join` (once) puts the question text
+back from the public sets, for a router that reads the prompt, such as the
+rules router in `examples/router_rules.py`:
+
+```bash
+uv run --all-extras python benchmarks/providers/frozen.py join
+uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60 \
+    --router path/to/your_router.py:route --against examples/router_rules.py:route \
+    --joined benchmarks/providers/results/frozen-joined
+```
+
+That scores your router, the rules router, `static` and `oracle`, and compares
+your router with the rules router and with the static order, and the rules
+router with the static order. Your router loads as any route-eval router does:
+`module:attr` or `path/file.py:attr`.
+
 ## Keeping results
 
 Each run of either scan writes `rows.jsonl`, `summary.json` and `report.md` to
