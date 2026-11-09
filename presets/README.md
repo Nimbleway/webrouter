@@ -5,9 +5,9 @@ Presets for common tasks, to use as they are or copy and change. Load a folder, 
 ```python
 from web_router import WebRouter
 
-with WebRouter() as router:  # auto, for search and answers
-    router.presets.load("presets/ecommerce")  # relative to the root of the clone
-    results = router.search("UPC 049000028911", preset="ecommerce.product-by-gtin@1.0.0")
+router = WebRouter()  # auto, for search and answers
+router.presets.load("presets/ecommerce")  # relative to the root of the clone
+results = router.search("UPC 049000028911", preset="ecommerce.product-by-gtin@1.0.0")
 ```
 
 Every setting a starter preset fixes can be overridden on the call, so treat each one as a starting point. Settings a preset leaves out work as usual.
