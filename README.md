@@ -2113,32 +2113,102 @@ wr = WebRouter(
 
 Each routed call posts its `RouteRequest` as JSON and reads a `RouteDecision`
 back, both carrying `"schema": 1`, the wire format's major version, with the
-contract types' own field names (`budget.time_limit_s`, `pinned_tool`,
-candidate `id`s). The JSON Schema files ship in the package, generated from
-those types: `web_router/data/schemas/router/v1/request.json` and
-`response.json`; `web_router.routing.wire` reads and writes both sides. A
+contract types' own field names. The JSON Schema files ship in the package,
+generated from those types: `web_router/data/schemas/router/v1/request.json`
+and `response.json`; `web_router.routing.wire` reads and writes both sides. A
 service ignores request fields it does not know, and the router ignores
-decision fields it does not know.
+decision fields it does not know. A request, and a decision (every decision
+field may be left out or `null`):
 
-- **What the service is sent.** What any router is shown: the prompt, its
-  URLs, the budget and the candidates. Candidate ids (`search:tavily`) name the
-  backends you have configured; that is by design. No key value is ever sent:
-  the one credential is the service's own bearer key, `api_key` in
-  `router_config` or `WEB_ROUTER_REMOTE_ROUTER_API_KEY`, never logged.
+```json
+{
+  "schema": 1,
+  "prompt": "read https://example.com/pricing",
+  "candidates": [
+    {
+      "tool": "extract",
+      "provider": "jina",
+      "est_cost_usd": 0.0,
+      "est_latency_s": 2.1,
+      "id": "extract:jina"
+    },
+    {
+      "tool": "search",
+      "provider": "tavily",
+      "est_cost_usd": 0.008,
+      "est_latency_s": 1.2,
+      "id": "search:tavily"
+    }
+  ],
+  "deadline_s": 1.0,
+  "urls": [
+    "https://example.com/pricing"
+  ],
+  "budget": {
+    "max_cost_usd": 0.05,
+    "time_limit_s": 30.0,
+    "strict": false
+  },
+  "pinned_tool": null
+}
+```
+
+```json
+{
+  "schema": 1,
+  "tools": [
+    "extract"
+  ],
+  "providers": {
+    "extract": [
+      "jina"
+    ]
+  },
+  "exclude": {
+    "search:tavily": "the prompt names a URL"
+  },
+  "params": null,
+  "confidence": 0.9,
+  "reason": "the prompt names a URL"
+}
+```
+
+- **What the service is sent.** What any router is shown: the prompt and the
+  URLs in it, whole, query strings included, the budget and the candidates.
+  Candidate ids (`search:tavily`) name the backends you have configured; that
+  is by design. No key value is ever sent: the one credential is the service's
+  own bearer key, `api_key` in `router_config` or
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY` (read once, when the router is built),
+  never logged.
 - **Transport.** httpx (`pip install "web-router[remote]"`, or any method
-  extra), imported only when the router is built. One request, never retried,
-  no redirect followed. The URL must be `https`, or `http` to a loopback host;
-  anything else is refused when the router is built.
-- **Failures.** An error, a timeout, a status other than 200, a body that is
-  not a JSON object or a decision of another major version is a router error:
-  the static order runs, the record's `reason` says why, and
-  `fail_on_router_error=True` raises `RouterError` instead.
+  extra), imported only when the router is built. The router is async only,
+  on one connection pool, so a call past its time is cancelled rather than
+  left running, from sync and async code alike. One request, never retried; no
+  redirect is followed, and no proxy or other setting is read from the
+  environment. The URL must be `https`, or `http` to `localhost`, 127.0.0.0/8
+  or `::1` (not `*.localhost`, not `0.0.0.0`); a URL with credentials, a query
+  or a fragment, or one a browser could read two ways, is refused when the
+  router is built, and the error does not echo it.
+- **Failures.** A transport error, a timeout or a status other than 200 is a
+  router error; an answer that is not an `application/json` schema-1 decision
+  of at most 64 KiB, with at most 64 entries in any one list or mapping -- a
+  `schema` that is missing or not 1 included -- is `router_invalid`. Either
+  way the static order runs, the record's `reason` says which, and
+  `fail_on_router_error=True` raises `RouterError` instead. The service's
+  `reason` and `exclude` reasons are cut to 300 characters.
+- **The URLs it may set.** The URLs a service sets for extract or browse are
+  held to `url_policy="public_only"` even when you set no `url_policy`: a
+  service cannot point a backend at loopback, private or metadata hosts. A
+  refused URL is set aside in the record's `ignored`. Your own `url_policy`
+  applies when you set one.
 - **What is shown.** The decision record names it `remote(<scheme>://<host>)`:
-  never the URL's path, query or credentials.
+  never the URL's path, and never the key.
 
 [`examples/router_remote_server.py`](examples/router_remote_server.py) is a
 reference service in the standard library: the wire format around the
-built-in rules router, to run beside your code or port.
+built-in rules router, to run beside your code or port. It binds 127.0.0.1,
+answers only a `Host` naming it, checks the bearer key in constant time and
+caps a request at 1 MB.
 
 `remote` is a registered name. `register_router(name, factory)` adds your own
 (`unregister_router(name)` removes it, bringing back a built-in of that name),
@@ -2147,7 +2217,8 @@ and `WebRouter(router=name, router_config={...})` builds one by calling
 close: `close()` calls the router's `close()`, and `aclose()` its `aclose()`
 (else `close()`). A router passed in is yours to close, as a provider is. A
 router names itself in the record with a `router_name` attribute; without
-one, its qualified name is used.
+one, its qualified name is used, and with a `min_url_policy` attribute
+(`"public_only"`) holds the URLs it sets to that policy when you set none.
 
 ## Routing and extending
 

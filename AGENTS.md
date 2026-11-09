@@ -172,7 +172,9 @@ src/web_router/
 │   ├── wire.py         the JSON wire format, schema 1: a RouteRequest out, a
 │   │                   RouteDecision back, and the JSON Schema files made from them
 │   ├── remote.py       RemoteRouter, router="remote": a router service over httpx,
-│   │                   https only (loopback aside), one try, scheme and host shown
+│   │                   async only, one try, 64 KiB answers, scheme and host shown
+│   ├── remote_url.py   its URL check: https, or http to localhost or a loopback
+│   │                   literal, parsed as httpx parses it, nothing secret in it
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it

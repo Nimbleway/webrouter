@@ -284,9 +284,10 @@ environment -- once, when the server starts:
   installed -- any form `router=` takes on the library;
 - `WEB_ROUTER_MCP_ROUTER=remote` asks your router service over HTTP, the
   library's built-in [`remote` router](../README.md#a-router-service-routerremote):
-  `WEB_ROUTER_REMOTE_ROUTER_URL` is its URL (`https`, or `http` to a loopback
-  host) and `WEB_ROUTER_REMOTE_ROUTER_API_KEY` its optional bearer key, both
-  read from the same process environment;
+  `WEB_ROUTER_REMOTE_ROUTER_URL` is its URL (`https`, or `http` to
+  `localhost` or a loopback address; no credentials or query) and
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY` its optional bearer key, both read once
+  from the same process environment at startup;
 - `WEB_ROUTER_MCP_ROUTER=off` attaches none: `web_run` then plans the static
   order, which is `search`.
 
@@ -311,7 +312,7 @@ itself goes to the backend that serves it, as its search query or browse task, a
 would through `search`. The built-in router runs in the server's process and
 sends nothing out; an operator's router runs there too, but it is your code,
 and may send the prompt on, to a model's server for instance. The `remote`
-router sends each `web_run` prompt, the URLs in it, the budget and the
+router sends each `web_run` prompt, the URLs in it whole, the budget and the
 candidate ids (`tool:provider`, which name the backends configured here) to
 your service, and never a key value; a service that fails or runs past its
 time leaves `web_run` on the static order.
