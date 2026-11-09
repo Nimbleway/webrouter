@@ -29,7 +29,8 @@ from web_router.constants_vendors import (
     VENDOR_CATALOG_DIR,
     VENDOR_ENV_CATALOG_DIR,
 )
-from web_router.exceptions import ConfigurationError, VendorNotFoundError
+from web_router.exceptions import ConfigurationError
+from web_router.exceptions_vendors import VendorNotFoundError
 from web_router.vendors.schema import Vendor, VendorEndpoint
 
 _WORD = re.compile(r"[a-z0-9]+")

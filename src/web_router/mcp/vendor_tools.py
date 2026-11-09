@@ -10,8 +10,8 @@ well as the call's) and how much of an answer fits.
 from __future__ import annotations
 
 import os
-from collections.abc import Mapping
-from typing import Any
+from collections.abc import Awaitable, Callable, Mapping
+from typing import TYPE_CHECKING, Any
 
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_MSG_MISSING_ARGUMENT
@@ -19,10 +19,11 @@ from web_router.constants_vendors import (
     MCP_MSG_VENDOR_CALL_ARGS,
     MCP_TOOL_CALL_VENDOR,
     MCP_TOOL_VENDOR_ENDPOINT,
+    MCP_TOOL_VENDORS,
     MSG_VENDOR_MCP_WRITE_REFUSED,
     VENDOR_ENV_ALLOW_WRITES,
 )
-from web_router.exceptions import VendorWriteRefusedError
+from web_router.exceptions_vendors import VendorWriteRefusedError
 from web_router.mcp.shaping import HandleStore, max_response_chars
 from web_router.mcp.shaping_vendors import (
     shape_endpoint,
@@ -31,6 +32,9 @@ from web_router.mcp.shaping_vendors import (
     shape_vendor_response,
 )
 from web_router.vendors.catalog import get_catalog
+
+if TYPE_CHECKING:
+    from web_router.mcp.tools import WebRouterTools
 
 
 async def vendors_tool(router: AsyncWebRouter, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -85,3 +89,23 @@ async def call_vendor_tool(router: AsyncWebRouter, store: HandleStore, arguments
     # The router already masked every credential the vendor echoed; fetch_raw redacts again on the way out.
     record = store.add(MCP_TOOL_CALL_VENDOR, raw=response.model_dump())
     return shape_vendor_response(response, record.handle, budget=max_response_chars())
+
+
+async def _vendors(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    return await vendors_tool(tools.router, arguments)
+
+
+async def _vendor_endpoint(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    return await vendor_endpoint_tool(tools.router, arguments)
+
+
+async def _call_vendor(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    return await call_vendor_tool(tools.router, tools.store, arguments)
+
+
+TOOLS: dict[str, Callable[[WebRouterTools, Mapping[str, Any]], Awaitable[dict[str, Any]]]] = {
+    MCP_TOOL_VENDORS: _vendors,
+    MCP_TOOL_VENDOR_ENDPOINT: _vendor_endpoint,
+    MCP_TOOL_CALL_VENDOR: _call_vendor,
+}
+"""The three vendor tools, each a handler taking the session's tools, as :class:`WebRouterTools` registers them."""

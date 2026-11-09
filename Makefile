@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts prices vendors latency chains check build clean
+.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts prices vendors latency chains efforts shape-baseline check build clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -45,17 +45,23 @@ test-browser: ## Run tests that launch a real local browser (skip when none is i
 contracts: ## Regenerate the committed contracts; PROVIDER=search/brave starts a new one
 	uv run python -m scripts.contracts $(if $(PROVIDER),--new $(PROVIDER))
 
-prices: ## Regenerate PRICING.md's price tables from src/web_router/data/prices.json
-	uv run python -m scripts.prices
-
 vendors: ## Regenerate VENDORS.md and the vendor section of .env.example from src/web_router/data/vendors
 	uv run python -m scripts.vendors
+
+prices: ## Regenerate PRICING.md's price tables from src/web_router/data/prices.json
+	uv run python -m scripts.prices
 
 latency: ## Rewrite prices.json's latency fields from the frozen benchmark results
 	uv run python -m scripts.latency
 
 chains: ## Regenerate src/web_router/data/chains.json, the default auto orders, from the frozen results
 	uv run --all-extras python benchmarks/providers/chains.py
+
+efforts: ## Regenerate src/web_router/data/efforts.json, the research effort table, from the frozen results
+	uv run --all-extras python benchmarks/providers/efforts.py
+
+shape-baseline: ## Rewrite tests/shape_baseline.json after a grandfathered file shrank; it refuses new or grown entries
+	uv run python -m scripts.shape
 
 cov: ## Unit tests with a coverage report
 	uv run pytest -m "not integration and not browser" --cov --cov-report=term-missing

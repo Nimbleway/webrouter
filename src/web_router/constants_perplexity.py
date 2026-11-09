@@ -1,4 +1,4 @@
-"""Perplexity answer: its effort level, the web_search tool's fields and the recency table.
+"""Perplexity search and answer: the search options' fields, the answer's effort level, tool fields and recency table.
 
 Kept apart from :mod:`web_router.constants`, which every other provider's
 settings share, so that file stops growing. Perplexity's host, auth header,
@@ -9,6 +9,7 @@ settings.
 from __future__ import annotations
 
 from web_router.types_answer import Recency
+from web_router.types_options import ResearchEffort, SearchDepth
 
 # Verified live on 2026-11-01. An answer is POST /v1/responses with no
 # `background`, so the call returns the finished response: `status`
@@ -58,3 +59,47 @@ PERPLEXITY_ANSWER_STOPPED = frozenset({"failed", "cancelled"})
 """Statuses that end an answer with nothing to return, raised as an error rather than read as an empty answer."""
 
 MSG_PERPLEXITY_ANSWER_STOPPED = "the answer {status}: {detail}"
+
+
+# The Search API's options, per docs.perplexity.ai/api-reference/search-post
+# (checked 2026-11-09; not yet run live with these fields).
+# `search_domain_filter` holds up to 20 domains, an excluded one prefixed `-`
+# as the answer's filter does; `country` is ISO 3166-1 alpha-2;
+# `search_language_filter` a list of up to 20 two-letter ISO 639-1 codes;
+# `search_recency_filter` hour | day | week | month | year.
+
+PERPLEXITY_SEARCH_NAMES = {"max_results": "max_results", "country": "country"}
+"""Normalized parameter -> Perplexity search field, sent as the caller set it."""
+
+PERPLEXITY_MAX_DOMAINS = 20
+MSG_PERPLEXITY_SEARCH_DOMAINS = (
+    f"Perplexity search filters on one domain list, not both, of at most {PERPLEXITY_MAX_DOMAINS} domains."
+)
+
+PERPLEXITY_LANGUAGE_FIELD = "search_language_filter"
+PERPLEXITY_LANGUAGE_PATTERN = r"[A-Za-z]{2}"
+"""A ``locale`` Perplexity can take: a bare two-letter language code. ``en-US`` is refused, not cut to ``en``."""
+
+MSG_PERPLEXITY_LOCALE = "Perplexity takes a locale as a two-letter ISO 639-1 language code, such as 'en'."
+
+PERPLEXITY_PAGE_BUDGET_FIELD = "max_tokens_per_page"
+PERPLEXITY_PAGE_BUDGET_BY_DEPTH: dict[SearchDepth, int] = {"lite": 100, "fast": 1024}
+"""``max_tokens_per_page`` for each ``search_depth`` it serves.
+
+Live on 2026-11-09 a budget of 128 gave 494-707 characters, up to 5.5 a token
+rather than the four assumed, so ``lite`` asks for 100: about 550 characters
+at that rate. Perplexity documents no default and no whole-page setting, and
+8,192 tokens still came back under 3,500 characters, so ``deep`` stays refused.
+"""
+
+PERPLEXITY_SEARCH_TYPE_FIELD = "search_type"
+PERPLEXITY_SEARCH_TYPE_BY_EFFORT: dict[ResearchEffort, str | None] = {
+    "low": "fast",
+    "medium": None,
+    "high": None,
+    "max": None,
+}
+"""``search_type`` for each ``effort``: ``web``, the default, is also its most thorough, so only low sends one.
+
+``people`` is a vertical, not a tier, and stays in ``provider_options``.
+"""

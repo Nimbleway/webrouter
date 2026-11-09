@@ -1,0 +1,2 @@
+# Parallel pull requests each add a CHANGELOG line; union-merge them instead of conflicting.
+CHANGELOG.md merge=union

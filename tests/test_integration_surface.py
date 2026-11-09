@@ -11,12 +11,14 @@ Needs credentials; skips without them. Run with: make test-integration
 from __future__ import annotations
 
 import os
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
 from tests.conftest import billing_aware
 from web_router import WebRouter
 from web_router.constants import ENV_BY_PROVIDER, EXTRACT_ENV_BY_PROVIDER
+from web_router.exceptions import UnsupportedParameterError
 from web_router.registry import (
     available_extract_providers,
     available_providers,
@@ -67,8 +69,12 @@ def test_max_results_is_an_upper_bound(provider: str) -> None:
 @pytest.mark.parametrize("provider", _providers("search_depth"))
 @pytest.mark.parametrize("depth", ["lite", "fast", "deep"])
 def test_every_depth_returns_content(provider: str, depth: str) -> None:
-    """`content` must never be empty when results came back -- see best_text()."""
+    """`content` must never be empty when results came back -- see best_text(). A level it refuses is refused unsent."""
     with WebRouter(provider) as router, billing_aware(provider):
+        if depth not in get_provider_class(provider).depth_levels:
+            with pytest.raises(UnsupportedParameterError):
+                router.search(QUERY, max_results=3, search_depth=depth)
+            return
         response = router.search(QUERY, max_results=3, search_depth=depth)
 
     assert response.results
@@ -120,6 +126,45 @@ def test_locale_is_accepted_as_a_language_code(provider: str) -> None:
     """The shared surface is a language code; a provider wanting another form must translate."""
     with WebRouter(provider) as router, billing_aware(provider):
         response = router.search("coffee", max_results=3, locale="en")
+    assert response.results
+
+
+@pytest.mark.parametrize("provider", _providers("recency"))
+@pytest.mark.parametrize("recency", ["day", "year"])
+def test_recency_is_accepted_at_its_narrowest_and_widest(provider: str, recency: str) -> None:
+    with WebRouter(provider) as router, billing_aware(provider):
+        response = router.search("technology news", max_results=3, recency=recency)
+    assert response.results
+
+
+@pytest.mark.parametrize("provider", _providers("recency"))
+def test_recency_keeps_dated_results_near_the_window(provider: str) -> None:
+    """A week's window: three in four of the results the backend dates are at most two weeks old.
+
+    Not all: a section front can carry a stale date and still pass a backend's filter (You.com MCP returned a
+    2014-dated hub page among nine recent ones). Look here when it fails: a backend that ignores the window, or
+    dates by discovery or last update rather than publication.
+    """
+    with WebRouter(provider) as router, billing_aware(provider):
+        response = router.search("technology news", max_results=10, recency="week")
+    oldest = datetime.now(timezone.utc).date() - timedelta(days=14)
+    dated = [(result.url, day) for result in response.results if (day := _day(result.published_date))]
+    assert sum(day >= oldest for _, day in dated) >= 0.75 * len(dated), f"{provider}: {dated}"
+
+
+def _day(published: str | None) -> date | None:
+    try:
+        return date.fromisoformat(published[:10]) if published else None
+    except ValueError:
+        return None
+
+
+@pytest.mark.parametrize("provider", _providers("effort"))
+@pytest.mark.parametrize("effort", ["low", "medium", "high", "max"])
+def test_every_effort_level_is_served(provider: str, effort: str) -> None:
+    """A backend with fewer tiers serves several levels with one setting; none is refused."""
+    with WebRouter(provider) as router, billing_aware(provider):
+        response = router.search(QUERY, max_results=3, effort=effort)
     assert response.results
 
 

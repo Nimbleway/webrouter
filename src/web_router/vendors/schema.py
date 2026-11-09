@@ -277,6 +277,12 @@ class Vendor(_Strict):
 
     @model_validator(mode="after")
     def _consistent(self) -> Vendor:
+        self._check_hosts()
+        self._check_references()
+        self._check_endpoints()
+        return self
+
+    def _check_hosts(self) -> None:
         for base in (self.base_url, *self.hosts.values()):
             if not base.startswith("https://"):
                 raise ValueError(MSG_VENDOR_CATALOG_SCHEME.format(url=base))
@@ -286,6 +292,8 @@ class Vendor(_Strict):
                 # A free-form host would let a misconfigured variable carry the credential anywhere.
                 if not self.settings[name].choices:
                     raise ValueError(MSG_VENDOR_CATALOG_SETTING_CHOICES.format(name=name))
+
+    def _check_references(self) -> None:
         known = set(self.auth.credentials) | set(self.settings)
         if self.auth.oauth2 is not None:
             known.add(ACCESS_TOKEN)
@@ -295,6 +303,8 @@ class Vendor(_Strict):
                     raise ValueError(MSG_VENDOR_CATALOG_ACCESS_TOKEN)
                 if name not in known:
                     raise ValueError(MSG_VENDOR_CATALOG_UNKNOWN_REF.format(name=name))
+
+    def _check_endpoints(self) -> None:
         seen: set[str] = set()
         prefix = f"{self.vendor}."
         for endpoint in self.endpoints:
@@ -308,7 +318,6 @@ class Vendor(_Strict):
             if endpoint.id in seen:
                 raise ValueError(MSG_VENDOR_CATALOG_DUPLICATE_ENDPOINT.format(endpoint=endpoint.id))
             seen.add(endpoint.id)
-        return self
 
     def base_for(self, host: str | None) -> str:
         """The API base a call goes to: ``base_url``, or the named host."""

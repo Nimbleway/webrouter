@@ -7,7 +7,7 @@ import pytest
 
 from tests.vendors.conftest import Recorder
 from web_router import AsyncWebRouter, WebRouter
-from web_router.exceptions import VendorNotFoundError, VendorWriteRefusedError
+from web_router.exceptions_vendors import VendorNotFoundError, VendorWriteRefusedError
 from web_router.vendors.caller import VendorCaller
 
 DATADOG = {"datadog": {"api_key": "dd-api", "app_key": "dd-app"}}

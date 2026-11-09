@@ -14,10 +14,12 @@ import pytest
 
 from tests.vendors.conftest import CREDENTIALS, Recorder
 from tests.vendors.test_caller import MakeCaller, _call
-from web_router.exceptions import ConfigurationError, ProviderError, VendorWriteRefusedError
-from web_router.vendors.caller import VendorCaller, plan_endpoint, plan_raw
+from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.exceptions_vendors import VendorWriteRefusedError
+from web_router.vendors.caller import VendorCaller
 from web_router.vendors.catalog import VendorCatalog
 from web_router.vendors.credentials import TokenCache, mask, mask_answer, token_request
+from web_router.vendors.plan import plan_endpoint, plan_raw
 
 # -- guarantees -------------------------------------------------------------
 

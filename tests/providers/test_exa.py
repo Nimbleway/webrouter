@@ -12,7 +12,7 @@ import os
 import pytest
 
 from web_router.constants import SNIPPET_LIMIT
-from web_router.exceptions import UnsupportedFormatError, UnsupportedParameterError
+from web_router.exceptions import UnsupportedFormatError
 from web_router.providers.exa import ExaExtractProvider, ExaProvider
 from web_router.types import ExtractRequest, SearchRequest
 
@@ -34,11 +34,6 @@ def test_text_contents_are_always_requested(provider: ExaProvider) -> None:
 def test_max_results_maps_onto_num_results(provider: ExaProvider) -> None:
     body = provider._build_payload(SearchRequest(query="hi", max_results=5))
     assert body["numResults"] == 5
-
-
-def test_depth_is_rejected_until_someone_maps_it(provider: ExaProvider) -> None:
-    with pytest.raises(UnsupportedParameterError, match="search_depth"):
-        provider.validate(SearchRequest(query="hi", search_depth="deep"))
 
 
 def test_summary_is_preferred_over_the_text_head_for_the_description(provider: ExaProvider) -> None:
@@ -73,6 +68,18 @@ def test_the_text_head_becomes_the_description_when_there_is_no_summary(provider
     result = provider._to_response(SearchRequest(query="hi"), payload).results[0]
     assert len(result.description) <= SNIPPET_LIMIT + 1
     assert len(result.content) == 4000
+
+
+@pytest.mark.parametrize("depth", [None, "lite", "fast"])
+def test_lite_is_cut_to_a_snippet_when_a_highlight_overshoots_the_cap(provider: ExaProvider, depth: str | None) -> None:
+    """Exa returned a 995-character highlight against a 500 cap live, so lite is cut here; other depths are not."""
+    payload = {"results": [{"url": URL, "highlights": ["word " * 199]}]}
+    result = provider._to_response(SearchRequest(query="hi", search_depth=depth), payload).results[0]  # type: ignore[arg-type]
+    if depth == "lite":
+        assert len(result.content) <= SNIPPET_LIMIT + 1
+        assert len(result.description) <= SNIPPET_LIMIT + 1
+    else:
+        assert len(result.content) == len("word " * 199)
 
 
 @pytest.mark.integration

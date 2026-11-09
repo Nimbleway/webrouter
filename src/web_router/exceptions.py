@@ -15,6 +15,7 @@ handle failures uniformly regardless of which backend served the request:
     ├── BrowseTimeoutError          a browse task outlasted the time allowed for it
     ├── BenchmarkTimeoutError       one benchmark row outlasted the comparison's timeout
     ├── DeadlineExceededError       a call outlasted its per-call deadline
+    ├── RouterError                 an attached router failed, under fail_on_router_error=True
     ├── ProviderError               the backend itself failed
     ├── VendorNotFoundError         no vendor, or no endpoint, under that name in the vendor catalog
     ├── VendorWriteRefusedError     a vendor call would change data and allow_writes was not given
@@ -55,6 +56,7 @@ from web_router.constants import (
     MSG_UNSUPPORTED_VALUES,
 )
 from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
+from web_router.constants_invoke import MSG_ROUTER_FAILED
 
 
 def describe(exc: BaseException) -> str:
@@ -287,6 +289,21 @@ class DeadlineExceededError(WebRouterError):
         super().__init__(message + (MSG_DEADLINE_TRIED.format(failures=tried) if tried else ""))
 
 
+class RouterError(WebRouterError):
+    """An attached router raised, ran out of time or answered something other than a ``RouteDecision``.
+
+    Experimental. Raised only with ``fail_on_router_error=True``; otherwise the
+    call runs on the static order. ``code`` is ``router_error``,
+    ``router_timeout`` or ``router_invalid``; what the router raised is on
+    ``__cause__``.
+    """
+
+    def __init__(self, router: str, code: str) -> None:
+        self.router = router
+        self.code = code
+        super().__init__(MSG_ROUTER_FAILED.format(router=router, code=code))
+
+
 class ProviderError(WebRouterError):
     """A provider failed while serving a request.
 
@@ -312,32 +329,6 @@ class TemplateNotFoundError(ProviderError):
     def __init__(self, provider: str, template: str, *, original: BaseException | None = None) -> None:
         self.template = template
         super().__init__(provider, MSG_TEMPLATE_NOT_FOUND.format(name=template), original=original)
-
-
-class VendorNotFoundError(WebRouterError):
-    """A vendor call named a vendor or an endpoint the catalog does not hold.
-
-    Its own class rather than :class:`ProviderNotFoundError`: vendors are not
-    providers of a method, and the message lists what the catalog does hold.
-    """
-
-    def __init__(self, name: str, message: str) -> None:
-        self.name = name
-        super().__init__(message)
-
-
-class VendorWriteRefusedError(WebRouterError):
-    """A vendor call would change data on the vendor's side, and was not allowed to.
-
-    Raised before anything is sent. A read never raises it; a catalog endpoint
-    marked ``write``, or a raw request with a method other than GET, HEAD or
-    OPTIONS, does until the call passes ``allow_writes=True``.
-    """
-
-    def __init__(self, vendor: str, target: str, message: str) -> None:
-        self.vendor = vendor
-        self.target = target
-        super().__init__(message)
 
 
 class BrowserActionError(WebRouterError):

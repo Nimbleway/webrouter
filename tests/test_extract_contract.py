@@ -31,7 +31,7 @@ from web_router.types import (
     ExtractResponse,
 )
 
-ROUTER_ONLY_ARGUMENTS = {"self", "urls", "provider"}
+ROUTER_ONLY_ARGUMENTS = {"self", "urls", "provider", "budget"}
 
 FORMATS: tuple[ExtractFormat, ...] = get_args(ExtractFormat)
 
@@ -438,17 +438,9 @@ def _body(url: str) -> str:
 
 
 _STUB_PAYLOADS: dict[str, Any] = {
-    "nimble": lambda urls: {
-        "url": urls[0],
-        "status": "success",
-        "data": {"markdown": _body(urls[0])},
-    },
-    "tavily": lambda urls: {
-        "results": [{"url": url, "raw_content": _body(url)} for url in urls],
-    },
-    "exa": lambda urls: {
-        "results": [{"id": url, "url": url, "text": _body(url)} for url in urls],
-    },
+    "nimble": lambda urls: {"url": urls[0], "status": "success", "data": {"markdown": _body(urls[0])}},
+    "tavily": lambda urls: {"results": [{"url": url, "raw_content": _body(url)} for url in urls]},
+    "exa": lambda urls: {"results": [{"id": url, "url": url, "text": _body(url)} for url in urls]},
     "firecrawl": lambda urls: {
         "success": True,
         "data": {"markdown": _body(urls[0]), "metadata": {"sourceURL": urls[0]}},
@@ -466,6 +458,7 @@ _STUB_PAYLOADS: dict[str, Any] = {
     "webiq": lambda urls: {"url": urls[0], "title": "", "content": _body(urls[0]), "traceId": "t"},
     "keenable": lambda urls: {"url": urls[0], "title": "", "content": _body(urls[0]), "description": ""},
     "deepseek": lambda urls: {"title": "", "content": _body(urls[0])},
+    "browserbase": lambda urls: {"statusCode": 200, "content": _body(urls[0]), "contentType": "text/html"},
 }
 """The shape each backend really answers with, trimmed to what is mapped.
 
@@ -483,9 +476,9 @@ def test_every_backend_is_stubbed_for_the_multi_url_guarantees(name: str) -> Non
 def test_each_document_is_labelled_with_the_url_its_own_call_asked_for(name: str, credentialed: None) -> None:
     """A backend called once per URL must not label every document with the first one.
 
-    Bright Data's envelope carries no URL at all, so before `_to_response` was
-    handed its own batch it labelled document two with URL one -- two documents,
-    the same `url`, different bodies, and no way for a caller to tell which.
+    Bright Data's envelope carries no URL at all (nor does Browserbase Fetch's), so
+    before `_to_response` was handed its own batch it labelled document two with URL
+    one -- two documents, the same `url`, different bodies, and no way to tell which.
     """
     provider = _build(name)
     try:

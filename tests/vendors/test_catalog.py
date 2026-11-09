@@ -13,7 +13,8 @@ from pydantic import ValidationError
 
 from tests.vendors.conftest import ACME, OAUTH
 from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_ENV_CATALOG_DIR
-from web_router.exceptions import ConfigurationError, VendorNotFoundError
+from web_router.exceptions import ConfigurationError
+from web_router.exceptions_vendors import VendorNotFoundError
 from web_router.vendors.catalog import VendorCatalog, get_catalog, load_vendor_file, reload_catalog
 from web_router.vendors.schema import Vendor
 

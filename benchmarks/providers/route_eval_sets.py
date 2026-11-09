@@ -19,6 +19,10 @@ from route_eval_paths import MIXED, is_mixed, path_id
 
 TWIN_SETS = ("sealqa-hard-254", "sealqa-hard-254-twin")
 """The same questions run twice: their spread is the noise floor."""
+RERUNS = {"search": TWIN_SETS}
+"""Each method's rerun: the same questions of that method run twice. Search's is the only one frozen today."""
+FALLBACK_FLOOR = "search"
+"""The method whose floor ranks a method with no rerun of its own (``answer``, a mixed set)."""
 
 MSG_UNKNOWN_SET = "{name}: no frozen set by that name (there are: {known})"
 MSG_MIXED_SET = (

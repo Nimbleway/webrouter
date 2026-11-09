@@ -9,14 +9,16 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus two that need no credential: `you-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
-Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, the keyless Jina
-Reader, `auto` again, and `max`, which sends the request to every member
-`auto` would try at once and returns the first document back -- the fastest
-answer any backend can give, at one fetch per member, so never the default.
+Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, Browserbase,
+the keyless Jina Reader, `auto` again, and `max`, which sends the request to
+every member `auto` would try at once and returns the first document back -- the
+fastest answer any backend can give, at one fetch per member, so never the
+default. `profile` names a saved identity on the backend, the one a browser
+session logged into, whose cookies ride along; only Browserbase maps it.
 
 **`run_template`** — a vendor's template: a saved, site-specific extraction
 (Nimble's Extract Templates, Oxylabs' sources, Bright Data's scrapers, Apify's
@@ -67,12 +69,11 @@ JSON file each in `src/web_router/data/vendors/`, read by vendor-blind code in
 
 A name does not imply every method. `brave` searches and cannot extract,
 `oxylabs` extracts and cannot search, `nimble` searches, extracts, runs
-templates and researches through four classes, and `browserbase` both opens
-sessions and runs browse tasks through two. Each method has its own registry,
+templates and researches through four classes, and `browserbase` opens
+sessions, runs browse tasks and extracts through three. Each method has its own registry,
 and asking one for another's backend reports it as unknown.
 
-It is pre-1.0 and in alpha: shared with alpha users from this repository, not
-published to PyPI. Assume every change is read by people outside the team.
+It is pre-1.0 and in alpha. Assume every change is read by people outside the team.
 
 The whole value of the package is that **a call behaves the same whichever
 backend serves it**. Changes that leak provider-specific behavior into callers
@@ -88,8 +89,14 @@ src/web_router/
 │                       BrowserRequest/Session/State + Viewport,
 │                       BrowseRequest/Response/Progress + BrowseStep
 │                       — the normalized contract, one request model per method
+├── types_decision.py   DecisionRecord + DecisionHop/DecisionAttempt, on every response a
+│                       call can route and on Plan; types re-exports it, it imports nothing
 ├── types_answer.py     AnswerRequest/Response + Recency: answer()'s contract, apart so
 │                       types.py stops growing; it imports types, never the reverse
+├── types_page.py       PageState/PageSnapshot/Screenshot + PageLoadState/PageFormat:
+│                       what a browser handle's page actions return; imports nothing of ours
+├── types_benchmark.py BenchmarkRun/Report + ExtractBenchmarkRun/Report: what benchmark()
+│                       and benchmark_extract() return; it imports types, never the reverse
 ├── client.py           WebRouter, AsyncWebRouter — the public facade
 │                       (search, extract, templates + template + run_template,
 │                        answer, research + submit_research,
@@ -97,6 +104,18 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
+├── client_template.py  templates(), template() and run_template(), mixed into both routers
+├── client_vendors.py   call_vendor(), vendor_request() and the catalog lookups, mixed into
+│                       both routers
+├── client_handles.py   the browser sessions a router hands out, tracked for close()
+├── client_plan.py      plan() and run(), prompt-level routing, mixed into both routers
+├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
+│                       both routers
+├── client_budget.py    budget(), mixed into both routers
+├── client_scope.py     the BudgetScope / AsyncBudgetScope budget() returns
+├── client_requests.py  the routers' request builders: a method's arguments in, its
+│                       normalized request out; JsonSchema; the sync router's
+│                       async_client check
 ├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
@@ -115,13 +134,89 @@ src/web_router/
 │                       kept apart for the same reason
 ├── constants_kernel.py Kernel's endpoints, field table and session states,
 │                       kept apart for the same reason
+├── constants_browserbase.py Browserbase's host, header, session, browse and Fetch
+│                       settings, kept apart for the same reason
 ├── prices.py           estimated list prices per (provider, method, mode), read
 │                       from data/prices.json; PRICING.md's tables are made from it
 ├── prices_latency.py   the check a row's measured latency passes, apart from
 │                       prices.py so it stays small; it never imports Price
 ├── data/prices.json    the price list itself (experimental), shipped in the wheel
+├── data/chains.json    search's and answer's default `auto` orders (`make chains`)
+├── data/efforts.json   each research effort's accuracy and p90 (`make efforts`)
 ├── _chains.py          reads data/chains.json: search's and answer's default
 │                       `auto` orders, generated by `make chains`, never by hand
+├── constants_routing.py routing's candidate-id separator and messages
+├── constants_budget.py a budget's skip reasons and BudgetExceededError's message
+├── constants_candidates.py the candidate builder's getters and drop reasons,
+│                       kept apart so constants_routing.py stays small
+├── constants_invoke.py a router's default timeout and messages
+├── routing/            the router contract (experimental): what a router is shown
+│   │                   and what it may answer, one module per part
+│   ├── contract.py     ToolName, Budget, Candidate, RouteRequest, RouteDecision, Plan
+│   ├── attempts.py     the seam in auto's fallback loops: a per-call order and
+│   │                   a hook before each attempt, held in a context variable
+│   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,
+│   │                   the check before each attempt, BudgetExceededError, the record
+│   ├── ledger.py       one budgeted or routed call's ledger: what each attempt is charged,
+│   │                   the spend, the position that ran
+│   ├── trail.py        the hop trail: every candidate a call moved past, skipped,
+│   │                   failed or empty, by attempt
+│   ├── pool.py         a shared budget: reservations under one lock, its clock, status()
+│   ├── pool_bind.py    which shared budgets are in force here: bind, unbind, current_pool
+│   ├── pool_status.py  BudgetStatus, where a shared budget stands
+│   ├── record.py       the record's own fields: decision_id, the prompt's hash, a failure's code
+│   ├── pricing.py      the one cost and p90 rule: price list, floor, provider_options and
+│   │                   results past a row's price unknown, research's p90 from the effort table
+│   ├── invoke.py       router=: the two forms a router takes, called sync or async on
+│   │                   its own thread or loop within its timeout, and the failure policy
+│   ├── _runner.py      the worker thread and private loop a router runs on, the wait
+│   │                   within its deadline, and the cleanup of what it leaves behind
+│   ├── _forms.py       a router's sync and async sides and its declared timeout_s
+│   ├── routed.py       the routers' mixin every routable call runs through: whether
+│   │                   to ask the router (route_tools, auto only), its candidates, and
+│   │                   the budget's scope around it
+│   ├── submitted.py    submitted(): a job's start (submit_research, submit_browse)
+│   │                   held to the shared budget in force, at the effort it maps
+│   ├── decide.py       decided(): candidates and a router's outcome merged into the
+│   │                   method, order, options and record a call runs with, pure
+│   ├── params.py       map_effort(): the research effort a budget picks, from
+│   │                   the effort table and the price list
+│   ├── effort_table.py reads data/efforts.json (`make efforts`): measured
+│   │                   efforts, the noise floor, an effort's p90
+│   ├── candidates.py   build_candidates(): every (tool, provider) a call's `auto`
+│   │                   chains can serve, priced, timed and prefiltered by the budget
+│   ├── candidates_priced.py one method's members priced, timed, and dropped when the
+│   │                   budget leaves them out
+│   ├── effort_call.py  choose_effort(): the one research effort a call sends, chosen
+│   │                   before its candidates are priced or a router is asked; a call
+│   │                   no router orders runs at it too
+│   ├── eligible.py     eligible_members(): the members of a method's `auto` that
+│   │                   can serve a request, and the ones it cannot build, with why
+│   ├── merge.py        merge(): a router's decision and the static order made into
+│   │                   one method, one order and checked options, pure
+│   ├── merge_types.py  Merged, MergeNotes and FallbackReason: what the merge answers
+│   ├── merge_shape.py  whether a router's answer is a well-formed decision that
+│   │                   decides something
+│   ├── merge_params.py the merge's check on a router's options: allowlist, values,
+│   │                   the caller's own, the budget, the URL policy
+│   ├── merge_extract.py rule 7: extract with no URL left to read searches instead,
+│   │                   when a search backend is offered
+│   ├── merge_urls.py   a router's words with every URL cut to its scheme and host
+│   ├── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
+│   │                   check before dispatch (no DNS, no redirects)
+│   └── rules.py        rules(): the built-in keyless router, URL to extract, else search
+├── constants_params.py the effort mapping's data path, rule and reasons
+├── constants_merge.py  the options a router may set, and the merge's reasons and notes
+├── constants_mcp.py    the MCP server's instructions, and its routing tools' names, schemas,
+│                       descriptions, environment variables and messages
+├── constants_mcp_hints.py each MCP tool's title and behaviour hints
+├── _urls.py            urls_in(): the URLs written in a query's prose; host_of(): a
+│                       URL shown as its scheme and host only
+├── _hosts.py           a URL host's kind -- loopback, cloud metadata, private -- in
+│                       the spellings a browser reads; shared by the MCP navigation
+│                       guard and url_policy
+├── constants_urls.py   the punctuation stripped from a URL found in prose, and the
+│                       metadata, loopback and legacy-IPv4 host lists
 ├── constants_prices.py the price list's data path, unit divisors, messages and
 │                       PRICING.md wording, kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
@@ -129,8 +224,30 @@ src/web_router/
 ├── registry_answer.py  the answer backends' table, and the backend an
 │                       unnamed answer() uses
 ├── exceptions.py       WebRouterError and subclasses
+├── exceptions_vendors.py VendorNotFoundError and VendorWriteRefusedError, apart on the
+│                       terms exceptions_budget.py is
+├── vendors/            call_vendor's vendor-blind code: schema.py (the catalog file's
+│                       models), catalog.py, credentials.py, plan.py (inputs placed),
+│                       caller.py (credentials placed, sent, masked), types.py
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
+│   ├── methods.py      the library method behind each provider-picking tool: its
+│   │                   registry, classes, options and env table, in one table
+│   ├── schema.py       a tool's schema narrowed to the backends serving it here,
+│   │                   its declared arguments and its behaviour hints
+│   ├── env_credentials.py which variables are provider credentials, and how a
+│   │                   file's values join the environment
+│   ├── messages.py     a failed tool call's message: provider_config swapped for
+│   │                   load_env, then redacted
+│   ├── urls.py         public_only on the URLs extract, browse and run_template
+│   │                   are given, refused before anything is sent
+│   ├── routing_config.py the operator's router and ceiling, read once at startup
+│   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
+│   ├── vendor_tools.py vendors, vendor_endpoint and call_vendor
+│   ├── session_tools.py the routing and vendor tools, registered after the methods' own
+│   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
+│   │                   the charge for run_template and browser_open
+│   └── chains.py       the members a delegating provider would try, per tool
 ├── integrations/       agent-framework adapters, one module each
 │   ├── _render.py      what a model reads back, one layout for every framework
 │   ├── _options.py     which backend each tool calls, fixed when it is built
@@ -155,6 +272,8 @@ src/web_router/
     │                   HttpBrowserProvider — for APIs with no SDK
     ├── _utils.py       payload assembly, key and setting resolution, dict
     │                   coercion, body selection
+    ├── _search_text.py a body cut to a snippet; domain filters as site:
+    │                   operators, and the domain lists a backend refuses
     ├── _deadline.py    the per-call deadline, its budgets, and the mixin
     │                   that holds a provider's call to it
     ├── _clamp.py       a transport's own timeout, clamped to the deadline's time left
@@ -171,20 +290,28 @@ src/web_router/
     ├── _mcp.py         the keyless MCP search transport: one JSON-RPC tools/call
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
-    ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel.py
+    ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel_search.py
     ├── max.py          extract's parallel chain: auto's members all at once,
     │                   the first document wins, with an optional hedge
     ├── _race.py        max's bookkeeping: the calls of one race, sync or async,
     │                   handed back in the order they finished
     ├── _chain.py       what every auto chain is made of: resolving the members,
     │                   the caller's `chain`, what a member's failure means
+    ├── _chain_deadline.py a one-call chain out of time: the first empty
+    │                   answer it holds, else the deadline naming each reason
+    ├── _auto_extract.py which members of extract `auto` can serve a request: the
+    │                   format and every option it sets; apart so auto.py stops growing
     ├── auto.py         the default for search, extract, research, browser and
     │                   browse: keyed backends, then keyless (research and browse
     │                   have no keyless tier, so their chains end there; a browser
     │                   chain ends with `local`)
+    ├── auto_browser.py the browser chain's `auto`, apart so auto.py stops growing;
+    │                   auto.py re-exports it
     ├── brave.py        search, via httpx
-    ├── parallel.py     search + research, via httpx
-    ├── perplexity.py   search + research, via httpx
+    ├── parallel.py     research + answer, via httpx; re-exports parallel_search.py
+    ├── parallel_search.py  search, via httpx
+    ├── perplexity.py   search + research, via httpx; re-exports perplexity_answer.py
+    ├── perplexity_answer.py  answer, and the answer text and sources research reads
     ├── linkup.py       search + extract + research, via httpx
     ├── webiq.py        search, via httpx — Microsoft AI's Web Search API
     ├── keenable.py     search + extract, via httpx — keyless on its /public twins
@@ -195,7 +322,9 @@ src/web_router/
     ├── brightdata.py   extract, via httpx — needs a zone beside its token
     ├── jina.py         extract, keyless — Jina Reader
     ├── steel.py        browser, via httpx — the CDP URL carries the key
-    ├── browserbase.py  browser + browse, via httpx — Sessions and Agents APIs
+    ├── browserbase.py  browser + browse + extract, via httpx — Sessions, Agents
+    │                   and Fetch APIs; one Context serves `profile` on sessions
+    │                   and Fetch (browse tasks do not map it)
     ├── hyperbrowser.py browser, via httpx — stops with a PUT
     ├── anchor.py       browser, via httpx — timeouts in whole minutes
     ├── kernel.py       browser, via httpx — an idle limit and no lifetime
@@ -204,8 +333,11 @@ src/web_router/
     └── skyvern.py      browse, via httpx — tasks on Skyvern Cloud
 tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         tests/mcp/ the server, tests/max_extract/ the race
-                        (its conftest holds the fake members). test_contract.py,
-                        test_extract_contract.py, test_template_contract.py,
+                        (its conftest holds the fake members), tests/budget/
+                        the per-call and shared budgets (its conftest the priced chain).
+                        routing_helpers.py holds the router tests' fake members,
+                        wr(), Ranker and the tool, called and priced fixtures.
+                        test_contract.py, test_extract_contract.py, test_template_contract.py,
                         test_research_contract.py, test_answer_contract.py,
                         test_browse_contract.py and
                         test_browser_contract.py guard the seven shared
@@ -217,9 +349,13 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         fixtures/browser/; test_auto_browser.py and
                         test_auto_browse.py the two billed `auto` chains;
                         providers/test_http_base.py guards the HTTP plumbing,
-                        and providers/_browser_live.py is the live browser
-                        tests' shared check
-examples/               runnable scripts, indexed by examples/README.md
+                        providers/_browser_live.py is the live browser
+                        tests' shared check, and test_shape.py the file
+                        length limit, against shape_baseline.json
+examples/               runnable scripts, indexed by examples/README.md;
+                        router_*.py the example routers (rules, a
+                        scikit-learn classifier, an OpenAI-compatible
+                        model, Jev), tested offline in tests/examples/
 benchmarks/agent/       one agent over FRAMES on its platform's built-in web
                         search and on web-router — Claude on Managed Agents or
                         OpenAI on the Responses API; a script, not a method;
@@ -235,10 +371,15 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         route_eval.py: a router replayed over them and
                         scored against the static order, its ranking in
                         route_eval_rank.py, tool and effort paths in
-                        route_eval_paths.py, its command line in
-                        route_eval_cli.py; chains.py (`make chains`): the
+                        route_eval_paths.py, a decision merged by the
+                        library's merge rule in route_eval_merge.py, one
+                        question walked in route_eval_replay.py, its
+                        command line in route_eval_cli.py; chains.py (`make chains`): the
                         default auto orders ranked from them into
-                        data/chains.json — scripts; each
+                        data/chains.json; efforts.py (`make efforts`): each
+                        research effort's accuracy and p90 into
+                        data/efforts.json, both written or checked by
+                        _emit.py — scripts; each
                         run's report stays under results/
 ```
 
@@ -395,8 +536,10 @@ names the judge and has no cost column. Its recommended order alone reads list
 prices from `web_router.prices`, as estimates, to break ties. That order is
 route-eval's ranking (`route_eval_rank.py`), so the repository suggests only one
 order. `route_eval.py` replays a router over the frozen results offline and
-scores it against the static order, held out and in-sample, against the twin
-run's noise floor; an unknown price stays unknown there, never $0. `--combine` merges scans only when
+scores it against the static order through the library's own merge rule
+(`web_router.routing.merge`), held out and in-sample, against each
+method's noise floor (its own rerun's, else search's twin run) and ranks a
+backend only on 20 counted questions or more; an unknown price stays unknown there, never $0. `--combine` merges scans only when
 their questions, search size and judge match. Keep a scan's report to compare
 the next one against: only runs graded by the same judge compare. `extract.py`
 beside it is the extract scan: every configured extract backend through
@@ -426,17 +569,20 @@ reads to estimate a call's cost before it runs: edit the JSON, never a table,
 and run `make prices`; its prose is hand-written. A price comes only from the
 vendor's own page, cited in `source_url` and dated in `checked`; one the vendor
 does not publish is `unknown` and one billed by tokens is `token_billed`, never
-estimated. The library still never puts a price in a response.
+estimated. The library still never puts a price in a response outside
+`DecisionRecord`, where an estimate says so in `cost_is_estimate`.
 
-**`constants.py` imports `types.py`, so `types.py` imports nothing of ours.**
+**`constants.py` imports `types.py`, so `types.py` imports nothing of ours**
+but `types_decision`, a leaf that imports nothing of ours either.
 The import graph is `types` ← `constants` ← `exceptions` ← everything else. A
 model that needs an exception type or a message template cannot live in
 `types.py` — put it in a subpackage's own `types.py` (as `evals/types.py`
 does) or annotate the field as `Exception` and say why in its docstring (as
 `BenchmarkRun.error` does). Do not "fix" this by importing lazily inside a
 validator. A `constants_<provider>.py` sits at the same level as `constants`:
-it may import `types` (and `types_answer`, which imports only `types`) and
-nothing else of ours.
+it may import `types` (and `types_answer`, which imports only `types` and
+`types_decision`, and `types_page` and `types_decision`, which import nothing
+of ours) and nothing else of ours.
 
 **Never override the public method in a provider.** `search`/`asearch`,
 `extract`/`aextract`, `run`/`templates`/`template`, `answer`/`aanswer`,
@@ -502,13 +648,19 @@ offers a wider surface than its weakest member, so a member is checked against
 the request before it is tried, on the class, which costs no credential, sends
 nothing and starts no billed run. Narrowing the shared surface to the weakest
 member instead would cost the others a real capability. Search `auto` declares
-the union of its members' `supported_parameters` — `AUTO_SUPPORTED_PARAMETERS`,
-which a test holds equal to it — and passes over a member that does not map an
-option the request set: Perplexity and Brave for `search_depth`. Extract `auto`
+every shared option — `AUTO_SUPPORTED_PARAMETERS`, which a test holds at least
+the union of its members' — and passes over a member that does not map an
+option the request set, or whose `refused_values` refuses the value: Linkup for
+`search_depth`, Perplexity and Brave for `search_depth="deep"`. A router's
+default option is held to the same two checks on every backend in the order
+(`routing/merge_params.py`). Extract `auto`
 declares the union of their `supported_formats` and passes over a member that
 cannot return the format asked for, the pinned `markdown` default included, so
-Exa serves only `text`. With no member left, search raises
-`UnsupportedParameterError` and extract `UnsupportedFormatError`, each naming
+Exa serves only `text`; it checks `supported_parameters` too, so `profile`
+passes over every member but Browserbase, and `max` races only the members that
+pass. With no member left, search raises
+`UnsupportedParameterError` and extract `UnsupportedFormatError` (`UnsupportedParameterError` for an
+option no member maps), each naming
 what every member lacked; among the members that can serve the call, a failure
 falls through as it always has, and so does an empty answer (no results and no
 answer, or every document blank) unless `fallback_on_empty=False`; when every
@@ -609,13 +761,18 @@ be told from a finished run — Skyvern's `timed_out` mixes its step limit with
 its clock, and Browser Use's `isSuccess` is its agent's opinion of its answer,
 not a report that it stopped.
 
-**Send providers the minimum.** A search provider is called with the query,
-`max_results` and `search_depth`; an extract provider with the URLs and
-`format` — nothing else, however much the API accepts. Do not widen a
-provider's mapping as a side effect of another task, and do not add machinery
-for an option nobody maps (a 166-entry country lookup for an unmapped parameter
-was written and removed here once already). Mapping an option is its own change,
-with live evidence.
+**Send providers the minimum.** A search provider is called with the query and
+the shared options it maps — `max_results`, `search_depth`, `include_domains`,
+`exclude_domains`, `country`, `locale`, `recency`, `effort` — and an extract
+provider with the URLs and `format`; nothing else, however much the API
+accepts. The one kind of value sent unasked is a pin that keeps a vendor's
+default from moving under us (Parallel's `mode=fast`, Linkup's required
+`depth`), recorded in the contract's `always_sent`. Do not widen a provider's
+mapping as a side effect of another task, and do not add machinery for an
+option nobody maps. Mapping an option is its own change, from the vendor's
+documentation, with the live check that would confirm it listed. A value the
+backend cannot serve is refused through `depth_levels` or `refused_options`
+on the class, never sent to be ignored or swapped for a weaker one.
 
 **A format a provider cannot return raises, it is not substituted.** Each
 extract provider declares `supported_formats` from its own mapping table —
@@ -745,7 +902,7 @@ sends a lifetime clamped to `MCP_BROWSER_SESSION_TIMEOUT_LIMIT`, action
 timeouts and `max_chars` are clamped in the handlers as well as capped in the
 schemas, and the open runs shielded under `MCP_BROWSER_OPEN_TIMEOUT` and
 releases its session if the call was cancelled — never leave a billed session
-nobody holds. Where a session may go is `mcp/navigation.py`'s `UrlPolicy`:
+nobody holds. Where a session may go is `mcp/navigation.py`'s `NavigationPolicy`:
 only http(s) and `about:blank`, `file:` only under
 `WEB_ROUTER_MCP_ALLOW_FILE_URLS`, never metadata hosts or the session's own CDP
 host:port, with IPv4 read in every spelling a browser accepts. It is enforced
@@ -765,8 +922,9 @@ does not install it.
 
 **A template's inputs are the template's, never ours.** `TemplateRequest.params`
 is sent as the caller gave it, keyed by whatever the template's `input_schema`
-names; nothing here reads a URL out of it, derives one, or checks it against
-the schema -- the backend refuses inputs that do not match, in its own words.
+names; the library reads no URL out of it, derives none, and checks nothing
+against the schema -- the backend refuses inputs that do not match, in its own
+words. The MCP layer alone screens an input that is a URL (`mcp/urls.py`).
 A run is one page and one record: a page the backend could not fetch, or a
 template that failed to parse it, raises `ProviderError` with the backend's
 reason, because an empty `data` cannot be told from a record with nothing in
@@ -798,9 +956,36 @@ URL that failed in `ExtractResponse.failures`, and raises only when nothing came
 back at all. Do not move that handling into a provider — it is what makes a
 one-URL-per-call backend behave like a batching one.
 
+**Keep files and functions small.** Functions are limited by ruff, in
+`make check`: at most 50 statements (`PLR0915`) and a cyclomatic complexity of
+at most 10 (`C901`). The few functions over either today carry a
+`# noqa: C901` or `# noqa: PLR0915`; such a `noqa` may be removed once its
+function is split, but never added to new code. Files are limited by the shape
+test, `tests/test_shape.py`: a Python file under `src/web_router/`, `scripts/`,
+`benchmarks/` or `tests/` is at most 400 lines. Files already longer are
+grandfathered in `tests/shape_baseline.json` and may only shrink: after
+shrinking one, run `make shape-baseline`, which refuses to add or grow an
+entry. Never regenerate it to admit new code; split the code instead. The
+large hubs — `client.py`, `providers/auto.py`, `types.py`, `constants.py`,
+`mcp/tools.py` — are in that baseline, so none of them may gain even one line
+on net: new code goes in its own module, and a hub grows only if the same pull
+request moves at least as many lines out of it. To add a keyword argument to
+hub methods, first move something out of the hub — a helper, a group of
+methods into a mixin, as `client_answer.py` holds `answer` for `client.py` —
+to make the room. That counts registry entries too: a new provider's line in
+`constants.py`'s `*_ENV_BY_PROVIDER` tables needs an older provider's
+constants moved out to its own `constants_<provider>.py` in the same pull
+request.
+
+**Reuse before you write.** Before adding a helper, grep for an existing one
+and use it.
+
 **No hardcoded literals in logic.** Endpoints, environment variable names,
-timeouts, header names and message templates belong in `constants.py`; a
-provider's own go in its `constants_<provider>.py`.
+timeouts, header names and message templates belong in a constants module,
+but new ones never go into `constants.py` (beyond a registry entry, paid for as
+above): a provider's go in its `constants_<provider>.py`, and any others in a
+module of their own next to it named for their area, `constants_<area>.py`, as
+`constants_answer.py` and `constants_urls.py` already are.
 
 **Unset means unset.** Request fields left as `None` must not be sent to the
 provider, so each API keeps its own defaults instead of inheriting ours. Use
@@ -1148,7 +1333,7 @@ plumbing — never the network, and never `OPENAI_API_KEY` or
 - Comments explain *why*, never *what*. Do not narrate the code, leave TODOs
   about work you were asked to do, or add banner headers inside a class.
 - Docstrings on public API; skip them on self-evident private helpers.
-- Prefer a lookup table in `constants.py` over a chain of `if`.
+- Prefer a lookup table in a constants module over a chain of `if`.
 
 ## Pull requests
 
@@ -1191,8 +1376,7 @@ Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses 
 read only by its judge behind `evaluate()` (the `evals` extra) —
 `OpenAIJudge` and `AnthropicJudge` — so each appears in `.env.example` and in
 no `*_ENV_BY_PROVIDER` table, and no search, extract, research or browser call
-ever touches either. The opt-in `LLMDecider` behind `classify()` (`decider="llm"`, the `decider=`
-spike) reads `OPENAI_API_KEY` too, only when a caller asks for it and passes no `api_key`. `benchmarks/agent/` reads both too, for its agents —
+ever touches either. `benchmarks/agent/` reads both too, for its agents —
 `ANTHROPIC_API_KEY` for Claude's, `OPENAI_API_KEY` for OpenAI's; the Claude and
 OpenAI tools never read either key, because they are
 definitions the caller's own client sends. `.env` is gitignored — keep it that way. `TEMPLATE_ENV_BY_PROVIDER` is the
@@ -1206,19 +1390,21 @@ run from the repo, and the MCP server —
 its `main()` at startup and its `load_env` tool at runtime, both through
 `mcp/env.py` — because an application started by a client, often installed
 from PyPI with no repo beside it and started in whatever directory the client
-picks, has no other way to see keys nobody exports. At startup it loads the
-first file that sets a provider credential, looking in this order: the path in
-`WEB_ROUTER_ENV_FILE` (`ENV_MCP_ENV_FILE`); `MCP_ENV_FILE` in its working
-directory — the repo root when `.mcp.json` launches it; the path
-`load_env(remember=true)` recorded in `MCP_ENV_POINTER_FILE`; and
-`MCP_ENV_FILE` in `user_config_dir()` — XDG on Linux, Application Support on
+picks, has no other way to see keys nobody exports. At startup it reads
+every one of four places, in this order: the path in
+`WEB_ROUTER_ENV_FILE` (`ENV_MCP_ENV_FILE`); `MCP_ENV_FILE` in
+`user_config_dir()` — XDG on Linux, Application Support on
 macOS, `%APPDATA%` on Windows, from `MCP_USER_CONFIG_ROOT_BY_PLATFORM` rather
-than a `platformdirs` dependency the `mcp` extra does not otherwise have. A
-file that sets no credential is not "found", so a project's own `.env` does not
-hide the user's, and a `WEB_ROUTER_ENV_FILE` naming no file is reported in the
-capabilities resource's `env` object, never skipped silently. Every file, from
-wherever, is read on the same terms: only the variables the
-`*_ENV_BY_PROVIDER` tables name — a user-scoped server can be started from any
+than a `platformdirs` dependency the `mcp` extra does not otherwise have; the path
+`load_env(remember=true)` recorded in `MCP_ENV_POINTER_FILE`; and
+`MCP_ENV_FILE` in its working directory — the repo root when `.mcp.json`
+launches it. An earlier place wins per variable and a later file fills only
+what is still unset -- a two-variable credential only as a whole -- so a project's own `.env` and a remembered path can add
+keys but never replace the user's; the capabilities resource's `env` object
+names the file each variable came from, and reports a `WEB_ROUTER_ENV_FILE`
+naming no file, never skipping it silently. Every file, from
+wherever, is read on the same terms: only `credential_variables()` — every
+variable `ALL_ENV_TABLES` in `mcp/env_credentials.py` names, and Jina's optional key — a user-scoped server can be started from any
 workspace, and a foreign `.env` must not flip `WEB_ROUTER_MCP_ALLOW_FILE_URLS`
 or aim `CHROME_PATH` at its own binary; a variable already set wins; nothing is
 interpolated, so `${OTHER}` cannot copy another secret into a provider's key;

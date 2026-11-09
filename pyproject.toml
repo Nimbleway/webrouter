@@ -3,9 +3,11 @@ name = "web-router"
 dynamic = ["version"]
 description = "A provider-agnostic router for web search and page-extraction APIs (Nimble, Exa, Tavily, Brave, Oxylabs, Bright Data, ...)"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "src/web_router/evals/prompts/LICENSE-simple-evals"]
 requires-python = ">=3.10"
 authors = [
-    { name = "Nimble", email = "support@nimbleway.com" },
+    { name = "Nimble" },
 ]
 keywords = [
     "search",
@@ -98,21 +100,21 @@ browser = [
     "playwright>=1.63,<1.64",
     "pillow>=10",
 ]
-# The one extra not named after a method -- see EXTRA_MCP in constants.py. It
-# installs the stdio MCP server, which exposes the methods above to an agent
-# rather than adding one of its own.
-# Not `browser`: Playwright is a large install most MCP users never drive. The
-# server lists its browser_* tools only when it is present, so
-# `web-router[mcp,browser]` is what turns them on.
 # Not a method of one backend but a catalog of many: a vendor's own API
 # (Google Ads, Datadog, ...) called with your credentials, its answer returned
 # untouched. The catalog is JSON inside the package; sending a call is httpx.
 vendors = [
     "httpx>=0.27",
 ]
+# The one extra not named after a method -- see EXTRA_MCP in constants.py. It
+# installs the stdio MCP server, which exposes the methods above to an agent
+# rather than adding one of its own.
+# Not `browser`: Playwright is a large install most MCP users never drive. The
+# server lists its browser_* tools only when it is present, so
+# `web-router[mcp,browser]` is what turns them on.
 mcp = [
     "web-router[search,extract,research,answer,vendors]",
-    "mcp>=1.2",
+    "mcp>=2.2,<3",
     # The server's entry point loads the project .env, so keys reach it
     # without being exported; the library itself never reads dotfiles.
     "python-dotenv>=1.0",
@@ -175,7 +177,7 @@ agent-bench = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 # The one place the version lives: RELEASING.md bumps _version.py and the
@@ -199,8 +201,17 @@ target-version = "py310"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "TID", "RUF"]
+# C901 and PLR0915 bound a function's size; tests/test_shape.py bounds a file's,
+# which ruff cannot. Functions over either limit today carry a `# noqa`.
+select = ["E", "F", "I", "UP", "B", "SIM", "TID", "RUF", "C901", "PLR0915"]
 ignore = ["B008"]
+
+[tool.ruff.lint.mccabe]
+# McCabe's own threshold, and ruff's default.
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-statements = 50
 
 [tool.ruff.lint.isort]
 known-first-party = ["web_router", "scripts"]

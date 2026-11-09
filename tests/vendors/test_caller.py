@@ -16,9 +16,10 @@ from web_router.exceptions import (
     ProviderError,
     UnsupportedParameterError,
 )
-from web_router.vendors.caller import VendorCaller, plan_endpoint, plan_raw
+from web_router.vendors.caller import VendorCaller
 from web_router.vendors.catalog import VendorCatalog
 from web_router.vendors.credentials import EnvCredentials, MappingCredentials
+from web_router.vendors.plan import plan_endpoint, plan_raw
 
 MakeCaller = Callable[..., VendorCaller]
 

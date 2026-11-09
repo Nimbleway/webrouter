@@ -3,10 +3,15 @@ name: CI
 # Runs on every push and pull request. No secrets are used anywhere in this
 # workflow: integration tests are deselected, so a fork PR gets the same
 # signal as a branch on this repository.
+#
+# The full set (every supported Python, the import, hygiene and build checks)
+# runs only for main: pushes to it and pull requests into it. Anything else, such
+# as a pull request into an integration branch, runs one job, `CI`: lint, types
+# and the unit tests on the oldest supported Python, plus the credential scan.
 
 on:
   push:
-    branches: [main]
+    branches: [main, phase-2]
   pull_request:
   workflow_dispatch:
 
@@ -19,14 +24,16 @@ concurrency:
 
 env:
   UV_FROZEN: "1" # fail if uv.lock is out of date rather than silently resolving
+  FULL: ${{ github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'workflow_dispatch' }}
 
 jobs:
   lint:
     name: Lint and types
+    if: ${{ github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: true
       - run: uv sync --all-extras --dev
@@ -40,14 +47,15 @@ jobs:
 
   test:
     name: Tests (py${{ matrix.python-version }})
+    if: ${{ github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
@@ -60,17 +68,18 @@ jobs:
 
       - name: Upload coverage
         if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage
           path: coverage.xml
 
   import-without-extras:
     name: Imports with no providers installed
+    if: ${{ github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: true
 
@@ -121,10 +130,11 @@ jobs:
 
   hygiene:
     name: Repo hygiene
+    if: ${{ github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: true
       - run: uv sync --all-extras --dev
@@ -157,39 +167,15 @@ jobs:
           fi
 
       - name: No credentials in tracked files
-        # Two nets: known vendor key prefixes, and any *_API_KEY / *_TOKEN
-        # assigned a long literal. .env.example is exempt -- its values are
-        # empty by design, which the first check below enforces.
-        run: |
-          found=0
-
-          if git grep -nIE '(^|[^A-Za-z0-9])(tvly-|ydc-|sk-)[A-Za-z0-9_-]{16,}' -- . ':!.github/workflows/*'; then
-            echo "::error::A provider API key appears in a tracked file."
-            found=1
-          fi
-
-          # Constants naming a header, env var or prefix are not credentials --
-          # BRAVE_API_KEY_HEADER = "X-Subscription-Token" is a field name.
-          if git grep -nIE '[A-Z_]*(API_KEY|TOKEN|SECRET)[A-Z_]*[[:space:]]*[=:][[:space:]]*["'"'"']?[A-Za-z0-9_./+-]{16,}' \
-               -- . ':!.github/workflows/*' ':!tests/*' ':!*.md' \
-             | grep -vE '^[^:]+:[0-9]+:(ENV_|[A-Z_]*_(HEADER|PREFIX|NAME|ENV|VAR)[[:space:]]*=)'; then
-            echo "::error::A credential-shaped literal appears in a tracked file."
-            found=1
-          fi
-
-          if grep -qE '^[A-Z_]+=.+' .env.example; then
-            echo "::error::.env.example must ship empty values."
-            found=1
-          fi
-
-          exit $found
+        run: bash scripts/check_credentials.sh
 
   build:
     name: Build and verify package
+    if: ${{ github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           enable-cache: true
 
@@ -208,7 +194,7 @@ jobs:
           uv pip install --python /tmp/fresh/bin/python dist/*.whl
           /tmp/fresh/bin/python -c "import web_router; print(web_router.__version__)"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist
           path: dist/
@@ -219,12 +205,51 @@ jobs:
     needs: [lint, test, import-without-extras, hygiene, build]
     runs-on: ubuntu-latest
     steps:
-      # One stable check to mark as required in branch protection.
+      # One stable check to mark as required in branch protection. Off main it
+      # is also the whole run: lint, types and unit tests on the oldest Python.
       - name: Fail if any job failed
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: |
           echo "::error::A required job did not succeed: ${{ join(needs.*.result, ' ') }}"
           exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.FULL != 'true'
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        if: env.FULL != 'true'
+        with:
+          enable-cache: true
+          python-version: "3.10"
+      - name: Lint, types and unit tests (Python 3.10)
+        if: env.FULL != 'true'
+        run: |
+          uv sync --all-extras --dev
+          make check
+      - name: pre-commit
+        if: env.FULL != 'true'
+        env:
+          SKIP: no-commit-to-branch
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+      - name: No .env file committed
+        if: env.FULL != 'true'
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "::error::.env is tracked by git. Remove it: git rm --cached .env"
+            exit 1
+          fi
+      - name: No credentials in tracked files
+        if: env.FULL != 'true'
+        run: bash scripts/check_credentials.sh
+      - name: Lockfile and requirements files are in sync
+        if: env.FULL != 'true'
+        run: |
+          uv lock --check
+          uv export --no-hashes --no-emit-project --all-extras --no-dev -o /tmp/requirements.txt
+          uv export --no-hashes --no-emit-project --all-extras --only-dev -o /tmp/requirements-dev.txt
+          diff -u <(grep -v '^#' requirements.txt) <(grep -v '^#' /tmp/requirements.txt) \
+            || { echo "::error::requirements.txt is stale. Run: make requirements"; exit 1; }
+          diff -u <(grep -v '^#' requirements-dev.txt) <(grep -v '^#' /tmp/requirements-dev.txt) \
+            || { echo "::error::requirements-dev.txt is stale. Run: make requirements"; exit 1; }
 
       - name: All jobs succeeded
         if: ${{ !(contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}

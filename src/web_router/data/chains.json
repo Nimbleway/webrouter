@@ -1,10 +1,19 @@
 {
   "generated_by": "make chains (benchmarks/providers/chains.py); do not edit by hand",
   "rule": "Backends best first by accuracy, correct out of every question, a failed row counting as a miss. Backends whose accuracy is within the noise floor of the most accurate one not yet placed form one tier, ordered cheapest first, then by latency, then by name: an accuracy gap smaller than a rerun's spread does not tell two backends apart, so cost decides. An unknown or $0 cost sorts after every known one. The keyless backends go last, whatever they score. A backend that served nothing is left out, and so is a row that failed during the run with a rate-limit or quota error: not counted a miss, nor in that backend's total.",
-  "noise_floor": 0.011811,
+  "min_questions": 20,
   "search": {
     "set": "sealqa-hard-254",
     "questions": 254,
+    "noise_floor": {
+      "value": 0.011811,
+      "measured_on": "search",
+      "rerun": [
+        "sealqa-hard-254",
+        "sealqa-hard-254-twin"
+      ],
+      "fallback": false
+    },
     "preferred": [
       "perplexity",
       "nimble",
@@ -26,6 +35,7 @@
       "deepseek",
       "agentcore"
     ],
+    "too_few_questions": [],
     "no_row_served": [],
     "measured": {
       "perplexity": {
@@ -105,6 +115,15 @@
   "answer": {
     "set": "answer-simpleqa-300",
     "questions": 300,
+    "noise_floor": {
+      "value": 0.011811,
+      "measured_on": "search",
+      "rerun": [
+        "sealqa-hard-254",
+        "sealqa-hard-254-twin"
+      ],
+      "fallback": true
+    },
     "preferred": [
       "perplexity",
       "you",
@@ -116,6 +135,7 @@
     "unmeasured": [
       "brave"
     ],
+    "too_few_questions": [],
     "no_row_served": [],
     "measured": {
       "perplexity": {

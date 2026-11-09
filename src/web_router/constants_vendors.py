@@ -205,3 +205,24 @@ MCP_MSG_VENDOR_CALL_ARGS: Final = (
     "call_vendor needs either 'endpoint' (with 'params'), or 'vendor', 'method' and 'path' -- not both."
 )
 MCP_MSG_VENDOR_TRUNCATED: Final = "The answer was cut to fit; the whole of it is behind handle {handle!r} (fetch_raw)."
+
+EXTRA_VENDORS = "vendors"
+"""The extra that installs what a vendor call needs (httpx)."""
+
+VENDOR_MCP_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
+    MCP_TOOL_VENDORS: MCP_VENDORS_PROPERTIES,
+    MCP_TOOL_VENDOR_ENDPOINT: MCP_VENDOR_ENDPOINT_PROPERTIES,
+    MCP_TOOL_CALL_VENDOR: MCP_CALL_VENDOR_PROPERTIES,
+}
+VENDOR_MCP_REQUIRED: dict[str, tuple[str, ...]] = {
+    MCP_TOOL_VENDORS: (),
+    MCP_TOOL_VENDOR_ENDPOINT: ("endpoint",),
+    # `endpoint` or `vendor`+`method`+`path`: one-of, which a flat `required` cannot say; the tool checks it.
+    MCP_TOOL_CALL_VENDOR: (),
+}
+VENDOR_MCP_DESCRIPTIONS: dict[str, str] = {
+    MCP_TOOL_VENDORS: MCP_DESC_VENDORS,
+    MCP_TOOL_VENDOR_ENDPOINT: MCP_DESC_VENDOR_ENDPOINT,
+    MCP_TOOL_CALL_VENDOR: MCP_DESC_CALL_VENDOR,
+}
+"""The vendor tools' rows in :mod:`web_router.constants`' MCP tables, kept here so that file does not grow."""

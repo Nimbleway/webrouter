@@ -15,7 +15,7 @@ from web_router.constants_vendors import (
     MCP_TOOL_VENDORS,
     VENDOR_ENV_ALLOW_WRITES,
 )
-from web_router.exceptions import VendorWriteRefusedError
+from web_router.exceptions_vendors import VendorWriteRefusedError
 from web_router.mcp.env import credential_variables
 from web_router.mcp.shaping_vendors import shape_vendor_response
 from web_router.mcp.tools import WebRouterTools

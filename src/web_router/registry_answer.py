@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
+from web_router import registry
 from web_router.constants import (
     ANSWER_ENV_BY_PROVIDER,
     EXTRA_ANSWER,
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
 
 _BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_AUTO: ("web_router.providers.auto_answer", "AutoAnswerProvider", EXTRA_ANSWER),
-    PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityAnswerProvider", EXTRA_ANSWER),
+    PROVIDER_PERPLEXITY: ("web_router.providers.perplexity_answer", "PerplexityAnswerProvider", EXTRA_ANSWER),
     PROVIDER_PARALLEL: ("web_router.providers.parallel", "ParallelAnswerProvider", EXTRA_ANSWER),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupAnswerProvider", EXTRA_ANSWER),
     PROVIDER_YOU: ("web_router.providers.you", "YouAnswerProvider", EXTRA_ANSWER),
@@ -54,6 +55,19 @@ def unregister_answer_provider(name: str | Provider) -> None:
 def available_answer_providers() -> list[str]:
     """Every answer provider name the router knows, installed or not."""
     return sorted(set(_BUILTIN_ANSWER_PROVIDERS) | set(_CUSTOM_ANSWER_PROVIDERS))
+
+
+def every_provider_name() -> list[str]:
+    """Every backend name any method knows, installed or not: what a router's default provider may be."""
+    return (
+        registry.available_providers()
+        + registry.available_extract_providers()
+        + registry.available_template_providers()
+        + registry.available_research_providers()
+        + available_answer_providers()
+        + registry.available_browser_providers()
+        + registry.available_browse_providers()
+    )
 
 
 def configured_answer_providers() -> list[str]:

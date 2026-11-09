@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 import os
+from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -9,32 +12,24 @@ import pytest
 # Every module here drives the server, which is the mcp extra's.
 pytest.importorskip("mcp", reason="mcp extra not installed")
 
+from tests.routing_helpers import MEMBERS, TOOLS
+from tests.routing_helpers import member as _member
+from web_router import prices
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
-    ANSWER_ENV_BY_PROVIDER,
-    BROWSE_ENV_BY_PROVIDER,
-    BROWSER_ENV_BY_PROVIDER,
     ENV_APPDATA,
-    ENV_BY_PROVIDER,
     ENV_MCP_ENV_FILE,
     ENV_XDG_CONFIG_HOME,
-    EXTRACT_ENV_BY_PROVIDER,
-    RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.mcp.env_credentials import credential_variables
+from web_router.mcp.routing_config import McpRouting
+from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
+from web_router.routing import Budget
 
 FAKE = "fake"
 
-_EVERY_ENV_VAR = sorted(
-    {name for name in ENV_BY_PROVIDER.values() if name}
-    | {name for names in EXTRACT_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in TEMPLATE_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in RESEARCH_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in BROWSE_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in BROWSER_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in ANSWER_ENV_BY_PROVIDER.values() for name in names}
-)
+_EVERY_ENV_VAR = sorted(credential_variables())
 
 
 def home_variables(home: Path) -> dict[str, str]:
@@ -111,3 +106,58 @@ def tools(
     of budget.
     """
     return WebRouterTools(AsyncWebRouter(FAKE), research_wait=0.0, browse_wait=0.0)
+
+
+# -- the routing tools' session: fake members, the test's prices, and its calls --------
+
+URL = "https://example.com/report"
+CONFIG = {"auto": {"chain": list(MEMBERS)}}
+
+Table = dict[str, float | None]
+
+
+@pytest.fixture
+def members() -> Iterator[list[str]]:
+    """``first``, ``second`` and ``third`` for every method, all answering; who was called."""
+    log: list[str] = []
+    for tool in TOOLS:
+        for name in MEMBERS:
+            tool.register(name, _member(tool, name, log, fails=False))
+    yield log
+    for tool in TOOLS:
+        for name in MEMBERS:
+            tool.unregister(name)
+
+
+@pytest.fixture
+def priced(monkeypatch: pytest.MonkeyPatch) -> Table:
+    """The price the budget reads for each member by name, whatever the method; unlisted is unknown."""
+    table: Table = {}
+
+    def price(provider: str, method: str, mode: str | None = None) -> SimpleNamespace | None:
+        cost = table.get(provider)
+        return None if cost is None else SimpleNamespace(estimate_usd=cost, estimate_is_floor=False, mode=mode)
+
+    monkeypatch.setattr(prices, "price", price)
+    monkeypatch.setattr(prices, "estimate_latency", lambda *args, **kwargs: None)
+    return table
+
+
+def routed(ceiling: Budget | None = None, **environ: str) -> WebRouterTools:
+    """A session over the fake members, its router and ceiling as ``environ`` and ``ceiling`` set them."""
+    routing = McpRouting.from_environ(environ)
+    if ceiling is not None:
+        routing = McpRouting(router=routing.router, router_name=routing.router_name, ceiling=ceiling)
+    return WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=0.0)
+
+
+async def outcome(tools: WebRouterTools, name: str, **arguments: Any) -> tuple[bool, Any]:
+    result = await call_tool(tools, name, arguments)
+    text = result.content[0].text
+    return bool(result.is_error), text if result.is_error else json.loads(text)
+
+
+async def ok_on(tools: WebRouterTools, name: str, **arguments: Any) -> dict[str, Any]:
+    failed, payload = await outcome(tools, name, **arguments)
+    assert not failed, payload
+    return dict(payload)

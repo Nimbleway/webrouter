@@ -44,12 +44,19 @@ make test              # unit tests, offline, no keys needed
 
 ## Use it from the user's own project
 
-If they want the library in another project, install this clone there in
-editable mode, so a `git pull` here is the whole update:
+If they want the library in another project, install it from PyPI:
 
 ```bash
-uv add --editable "/path/to/webrouter[all]"     # their project uses uv
-pip install -e "/path/to/webrouter[all]"        # any other virtualenv
+uv add "web-router[all]"           # their project uses uv
+pip install "web-router[all]"      # any other virtualenv
+```
+
+To track `main` instead, install this clone in editable mode, so a `git pull`
+here is the whole update:
+
+```bash
+uv add --editable "/path/to/webrouter[all]"
+pip install -e "/path/to/webrouter[all]"
 ```
 
 ## Add the MCP server
@@ -69,7 +76,7 @@ call its `load_env` tool with the path of the user's `.env`.
 
 The `web-router://capabilities` resource shows which backends are configured,
 and its `unlock` map lists each backend still missing a key and the variable
-that would add it.
+that would add it: ask the model to read it.
 
 ## Update
 

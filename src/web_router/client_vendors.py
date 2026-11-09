@@ -19,7 +19,7 @@ import threading
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
-from web_router.constants import EXTRA_VENDORS
+from web_router.constants_vendors import EXTRA_VENDORS
 from web_router.exceptions import ProviderNotInstalledError
 from web_router.vendors.catalog import get_catalog
 from web_router.vendors.credentials import CredentialSource, credential_source, summarize
@@ -27,7 +27,8 @@ from web_router.vendors.schema import Vendor, VendorEndpoint
 from web_router.vendors.types import VendorResponse, VendorSummary
 
 if TYPE_CHECKING:
-    from web_router.vendors.caller import VendorCaller, _Plan
+    from web_router.vendors.caller import VendorCaller
+    from web_router.vendors.plan import _Plan
 
 VendorCredentials = CredentialSource | Mapping[str, Mapping[str, str]] | None
 """``vendor_credentials=``: a source, or ``{vendor: {name: value}}`` read before the environment."""
@@ -104,7 +105,7 @@ class _VendorLookup:
     @staticmethod
     def _endpoint_plan(endpoint: str, params: Mapping[str, Any] | None) -> _Plan:
         """The request ``call_vendor`` sends, built once for both routers."""
-        from web_router.vendors.caller import plan_endpoint
+        from web_router.vendors.plan import plan_endpoint
 
         found = get_catalog().endpoint(endpoint)
         return plan_endpoint(get_catalog().vendor(found.vendor), found, dict(params or {}))
@@ -121,7 +122,7 @@ class _VendorLookup:
         host: str | None,
     ) -> _Plan:
         """The request ``vendor_request`` sends, built once for both routers."""
-        from web_router.vendors.caller import plan_raw
+        from web_router.vendors.plan import plan_raw
 
         return plan_raw(get_catalog().vendor(vendor), method, path, query=query, body=body, headers=headers, host=host)
 
