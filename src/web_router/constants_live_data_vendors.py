@@ -23,6 +23,9 @@ BRIGHTDATA_SCRAPERS_PATH: Final = "/datasets/v3/scrapers"
 BRIGHTDATA_PENDING_STATUS: Final = 202
 
 BRIGHTDATA_DEFAULT_METHOD: Final = "collect_by_url"
+BRIGHTDATA_DISCOVER_PREFIX: Final = "discover_by_"
+BRIGHTDATA_DISCOVER_TYPE: Final = "discover_new"
+BRIGHTDATA_ID_PREFIX: Final = "gd_"
 """The collection method a scraper is described by when it has one: inputs keyed by the page's URL."""
 
 MSG_BRIGHTDATA_PENDING: Final = (

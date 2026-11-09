@@ -1,10 +1,17 @@
 """Bright Data live data: its ready-made scrapers, run synchronously on one input, records returned.
 
-A scraper is named by its dataset id (``gd_l7q7dkf244hwjntr0`` is Amazon
-products) and takes inputs keyed as it documents -- a product URL for most,
-a keyword for the discovery methods. One run sends one input to the
-synchronous scrape endpoint, which collects for this call and answers with the
-records. Pre-collected marketplace datasets are not here: they are not live.
+A scraper is called by name, like every other vendor's source:
+``amazon_products`` collects Amazon product pages by URL, and
+``amazon_products_by_keyword`` discovers them by keyword -- one source per
+scraper and collection method, named from Bright Data's own catalogue by
+:mod:`~web_router.providers.brightdata_names`. A dataset id (``gd_…``) is still
+accepted, meaning that scraper's URL method. The catalogue is read once per
+provider and kept, so a name costs one listing call, not one per run.
+
+One run sends one input to the synchronous scrape endpoint, which collects for
+this call and answers with the records; a discovery source adds Bright Data's
+``type=discover_new`` and ``discover_by`` itself. Pre-collected marketplace
+datasets are not here: they are not live.
 
 Written from https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests,
 the scraper management API (``GET /datasets/v3/scrapers``) and the error-code
@@ -21,9 +28,8 @@ An input that failed comes back as a record with ``error`` and ``error_code``;
 those are kept in ``extra["errors"]``, never counted as records, and a run
 where every input failed raises.
 
-``provider_options`` go to the scrape's query string: ``type`` and
-``discover_by`` for a discovery method, ``limit_per_input``,
-``custom_output_fields``.
+``provider_options`` go to the scrape's query string -- ``limit_per_input``,
+``custom_output_fields`` -- but never override the dataset or method a source names.
 """
 
 from __future__ import annotations
@@ -37,7 +43,8 @@ from web_router.constants import (
     PROVIDER_BRIGHTDATA,
 )
 from web_router.constants_live_data_vendors import (
-    BRIGHTDATA_DEFAULT_METHOD,
+    BRIGHTDATA_DISCOVER_TYPE,
+    BRIGHTDATA_ID_PREFIX,
     BRIGHTDATA_PENDING_STATUS,
     BRIGHTDATA_SCRAPE_PATH,
     BRIGHTDATA_SCRAPERS_PATH,
@@ -46,6 +53,7 @@ from web_router.constants_live_data_vendors import (
 )
 from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
 from web_router.providers._http_live_data import HttpLiveDataProvider
+from web_router.providers.brightdata_names import Scraper, scrapers
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
     LiveDataRequest,
@@ -106,23 +114,57 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
         """
         del zone
         super().__init__(**kwargs)
+        self._catalogue: dict[str, Scraper] | None = None
+
+    # -- names --------------------------------------------------------------
+
+    def _index(self, payload: Any) -> dict[str, Scraper]:
+        items = [item for item in payload if isinstance(item, dict)] if isinstance(payload, list) else []
+        self._catalogue = {scraper.name: scraper for scraper in scrapers(items)}
+        return self._catalogue
+
+    def _known(self) -> dict[str, Scraper]:
+        return (
+            self._catalogue if self._catalogue is not None else self._index(self._send("GET", BRIGHTDATA_SCRAPERS_PATH))
+        )
+
+    async def _aknown(self) -> dict[str, Scraper]:
+        if self._catalogue is not None:
+            return self._catalogue
+        return self._index(await self._asend("GET", BRIGHTDATA_SCRAPERS_PATH))
+
+    def _resolve(self, source: str, known: dict[str, Scraper] | None) -> Scraper:
+        """The scraper a name means; a ``gd_…`` id is its URL method, and needs no catalogue."""
+        if source.startswith(BRIGHTDATA_ID_PREFIX):
+            return Scraper(name=source, dataset_id=source, method="collect_by_url")
+        scraper = (known or {}).get(source)
+        if scraper is None:
+            raise LiveDataSourceNotFoundError(self.name, source)
+        return scraper
 
     # -- run ----------------------------------------------------------------
 
     def _run(self, request: LiveDataRequest) -> LiveDataResponse:
+        known = None if request.source.startswith(BRIGHTDATA_ID_PREFIX) else self._known()
+        scraper = self._resolve(request.source, known)
         with self._named(request.source):
-            response = self._client.post(self.run_path, **self._scrape(request), **self._clamped())
+            response = self._client.post(self.run_path, **self._scrape(request, scraper), **self._clamped())
             return self._to_response(request, response)
 
     async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
+        known = None if request.source.startswith(BRIGHTDATA_ID_PREFIX) else await self._aknown()
+        scraper = self._resolve(request.source, known)
         with self._named(request.source):
-            response = await self._async_client.post(self.run_path, **self._scrape(request), **self._clamped())
+            response = await self._async_client.post(self.run_path, **self._scrape(request, scraper), **self._clamped())
             return self._to_response(request, response)
 
     @staticmethod
-    def _scrape(request: LiveDataRequest) -> dict[str, Any]:
-        # Options first, then the request's own fields: an option can never name a different dataset.
-        params = {**request.provider_options, "dataset_id": request.source, "format": "json", "include_errors": "true"}
+    def _scrape(request: LiveDataRequest, scraper: Scraper) -> dict[str, Any]:
+        # Options first, then what the source names: an option can never pick another dataset or method.
+        params: dict[str, Any] = {**request.provider_options, "dataset_id": scraper.dataset_id}
+        if scraper.discovers:
+            params.update(type=BRIGHTDATA_DISCOVER_TYPE, discover_by=scraper.discover_by)
+        params.update(format="json", include_errors="true")
         return {"params": params, "json": BrightDataLiveDataProvider._build_payload(request)}
 
     @staticmethod
@@ -155,61 +197,72 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
     # -- catalogue ----------------------------------------------------------
 
     def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
-        return self._to_page(self._send("GET", BRIGHTDATA_SCRAPERS_PATH), limit=limit, offset=offset)
+        return self._to_page(self._known(), limit=limit, offset=offset)
 
     async def _alist(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
-        return self._to_page(await self._asend("GET", BRIGHTDATA_SCRAPERS_PATH), limit=limit, offset=offset)
+        return self._to_page(await self._aknown(), limit=limit, offset=offset)
 
-    def _to_page(self, payload: Any, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
-        """One page of the catalogue. Bright Data answers with all of it, so the paging is done here."""
-        scrapers = [item for item in payload if isinstance(item, dict)] if isinstance(payload, list) else []
-        page, start = self._local_page(scrapers, limit=limit, offset=offset)
+    def _to_page(self, known: dict[str, Scraper], *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
+        """One page of the sources. Bright Data answers with its whole catalogue, so the paging is done here."""
+        every = list(known.values())
+        page, start = self._local_page(every, limit=limit, offset=offset)
         return LiveDataSourcePage(
             provider=self.name,
-            sources=[self._listed(item) for item in page],
-            total=len(scrapers),
+            sources=[self._listed(scraper) for scraper in page],
+            total=len(every),
             offset=start,
             limit=limit,
-            raw=payload,
+            # The vendor's own entries behind this page, once each: a scraper's methods share one.
+            raw=list({scraper.dataset_id: scraper.item for scraper in page}.values()),
         )
 
-    def _listed(self, item: dict[str, Any]) -> LiveDataSource:
+    def _listed(self, scraper: Scraper) -> LiveDataSource:
+        item = scraper.item
+        how = "by URL" if not scraper.discovers else "discovered by " + scraper.discover_by.replace("_", " ")
+        title = str(item.get("name") or scraper.dataset_id)
         return LiveDataSource(
             provider=self.name,
-            name=str(item.get("id")),
-            description=" -- ".join(part for part in (item.get("name"), item.get("description")) if part),
+            name=scraper.name,
+            description=" -- ".join(part for part in (f"{title}, {how}", item.get("description")) if part),
             domain=item.get("domain"),
             entity_type=item.get("category"),
             published=True,
-            extra={key: value for key, value in item.items() if key not in _LISTED_MAPPED},
+            extra={
+                "dataset_id": scraper.dataset_id,
+                "collection_method": scraper.method,
+                **{key: value for key, value in item.items() if key not in _LISTED_MAPPED},
+            },
         )
 
     def _get(self, name: str) -> LiveDataSource:
+        scraper = self._resolve(name, None if name.startswith(BRIGHTDATA_ID_PREFIX) else self._known())
         with self._named(name):
-            payload = self._send("GET", BRIGHTDATA_SCRAPERS_PATH, params={"dataset_id": name})
-        return self._described(name, payload)
+            payload = self._send("GET", BRIGHTDATA_SCRAPERS_PATH, params={"dataset_id": scraper.dataset_id})
+        return self._described(scraper, payload)
 
     async def _aget(self, name: str) -> LiveDataSource:
+        scraper = self._resolve(name, None if name.startswith(BRIGHTDATA_ID_PREFIX) else await self._aknown())
         with self._named(name):
-            payload = await self._asend("GET", BRIGHTDATA_SCRAPERS_PATH, params={"dataset_id": name})
-        return self._described(name, payload)
+            payload = await self._asend("GET", BRIGHTDATA_SCRAPERS_PATH, params={"dataset_id": scraper.dataset_id})
+        return self._described(scraper, payload)
 
-    def _described(self, name: str, payload: Any) -> LiveDataSource:
+    def _described(self, scraper: Scraper, payload: Any) -> LiveDataSource:
         items = [item for item in payload if isinstance(item, dict)] if isinstance(payload, list) else []
-        item = next((entry for entry in items if entry.get("id") == name), None)
+        item = next((entry for entry in items if entry.get("id") == scraper.dataset_id), None)
         if item is None:
-            raise LiveDataSourceNotFoundError(self.name, name)
+            raise LiveDataSourceNotFoundError(self.name, scraper.name)
         found = item.get("scrapers")
         methods: dict[str, Any] = found if isinstance(found, dict) else {}
-        method_name = BRIGHTDATA_DEFAULT_METHOD if BRIGHTDATA_DEFAULT_METHOD in methods else next(iter(methods), None)
-        method: dict[str, Any] = (methods.get(method_name) or {}) if method_name else {}
-        listed = self._listed(item)
+        method: dict[str, Any] = methods.get(scraper.method) or {}
+        listed = self._listed(
+            Scraper(name=scraper.name, dataset_id=scraper.dataset_id, method=scraper.method, item=item)
+        )
         return listed.model_copy(
             update={
                 "input_schema": _fields_schema(method.get("input_schema")),
                 "output_schema": _fields_schema(method.get("output_fields")),
                 "samples": _samples(method.get("sample_input"), method.get("sample_output")),
-                "extra": {**listed.extra, "collection_method": method_name, "collection_methods": sorted(methods)},
+                "extra": {**listed.extra, "collection_methods": sorted(methods)},
                 "raw": item,
             }
         )

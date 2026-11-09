@@ -45,12 +45,12 @@
   },
   "vendor_options": {
     "type": {
-      "status": "passthrough",
-      "note": "Query parameter: `discover_new` for a discovery method."
+      "status": "not_supported",
+      "note": "Set by the source: a `…_by_<method>` name sends `discover_new`; an option cannot change it."
     },
     "discover_by": {
-      "status": "passthrough",
-      "note": "Query parameter: the discovery method's name without its `discover_by_` prefix, e.g. `keyword`."
+      "status": "not_supported",
+      "note": "Set by the source: `amazon_products_by_keyword` sends `keyword`; an option cannot change it."
     },
     "limit_per_input": {
       "status": "passthrough",

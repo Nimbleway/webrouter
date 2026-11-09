@@ -872,11 +872,20 @@ result.data  # the first record, for sources that answer with one
 result.fetched_at  # when the vendor says it fetched the page; None when it does not say
 ```
 
+Every backend takes the same call -- a source's name and its inputs -- so
+switching vendor changes only those two:
+
+```python
+router.live_data("amazon_products", {"url": "https://www.amazon.com/dp/B0CHX1W1XY"}, provider="brightdata")
+router.live_data("amazon_products_by_keyword", {"keyword": "earbuds"}, provider="brightdata")
+router.live_data("amazon_product", {"query": "B0CHX1W1XY", "domain": "com"}, provider="oxylabs")
+```
+
 | Backend | A source is named | Catalogue | Inputs | Notes |
 | --- | --- | --- | --- | --- |
 | `nimble` | the template's name, `walmart_pdp` | Nimble's templates, paged by Nimble | the template's own (`product_id`, `url`…) | one record per run; `format` returns the page beside it |
 | `apify` | `username~name` (or `username/name`) | the Apify Store, paged by Apify | the Actor's input, sent as the body untouched | every dataset item is a record; waits up to 300 s; `provider_options` go to the run's query (`memory`, `maxItems`, `maxTotalChargeUsd`) |
-| `brightdata` | the dataset id, `gd_l7q7dkf244hwjntr0` | every scraper, paged here (Bright Data answers with all of them) | one input object, e.g. `{"url": ...}` | waits about a minute, then raises naming the snapshot to fetch later; failed inputs land in `extra["errors"]`; `provider_options` pick a discovery method (`type`, `discover_by`) |
+| `brightdata` | the scraper's name, `amazon_products`; each discovery method is its own source, `amazon_products_by_keyword` (a `gd_…` dataset id still works, as its URL method) | every scraper and method, paged here (Bright Data answers with all of them; read once per provider) | one input object, e.g. `{"url": ...}` or `{"keyword": ...}` | waits about a minute, then raises naming the snapshot to fetch later; failed inputs land in `extra["errors"]`; `extra["dataset_id"]` names the scraper behind a source |
 | `oxylabs` | the source's own name, `amazon_product` | the sources with a dedicated parser, from Oxylabs' docs | `query` or `url`, plus the source's parameters (`domain`, `geo_location`) | run with `parse: true`; a partial parse is still a record; `created_at` stays in `extra`, as its meaning is undocumented |
 
 **A source's inputs are its own, not ours.** `inputs` is whatever its
