@@ -432,10 +432,10 @@ TAVILY_PARAMS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
     # volume is raw content, which is what `deep` asks for.
     #
     # `lite` runs long of the shared definition (a snippet of about 500
-    # characters): `basic` returns up to three chunks of about 500 each. Tavily's
-    # docs now list `chunks_per_source` (1-3) for basic, fast and advanced
-    # search; one chunk would make lite a real snippet, so it is due a live
-    # re-measure before it joins this table.
+    # characters): `basic` returns up to three chunks of about 500 each, so the
+    # provider cuts each body to a snippet with `lite_body`. Tavily's docs now
+    # list `chunks_per_source` (1-3); one chunk would make lite a real snippet
+    # on the wire, so it is due a live re-measure before it joins this table.
     "lite": {"search_depth": "basic"},
     "fast": {"search_depth": "advanced"},
     "deep": {"search_depth": "advanced", "include_raw_content": "markdown"},

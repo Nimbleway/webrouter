@@ -43,7 +43,7 @@ from web_router.constants_tavily import (
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._deadline import call_budget, current_deadline
 from web_router.providers._language import language_code
-from web_router.providers._utils import best_text, build_payload, compact, resolve_api_key
+from web_router.providers._utils import best_text, build_payload, compact, lite_body, resolve_api_key
 from web_router.providers.base import ExtractProvider, SearchProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,
@@ -181,7 +181,7 @@ class TavilyProvider(SearchProvider):
                     url=item.get("url", ""),
                     title=item.get("title") or "",
                     description=snippet,
-                    content=best_text(item.get("raw_content"), snippet),
+                    content=lite_body(best_text(item.get("raw_content"), snippet), request.search_depth),
                     score=item.get("score"),
                     published_date=item.get("published_date"),
                     extra={k: v for k, v in item.items() if k not in _MAPPED_RESULT_FIELDS},

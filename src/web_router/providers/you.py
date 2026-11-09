@@ -48,13 +48,14 @@ from web_router.constants_you import (
 )
 from web_router.providers._http import HttpAnswerProvider, HttpPolledResearchProvider, HttpSearchProvider
 from web_router.providers._language import language_tag, off_the_lists
-from web_router.providers._utils import best_text, build_payload
+from web_router.providers._utils import best_text, build_payload, lite_body
 from web_router.providers.answer import refuse_domain_pair
 from web_router.types import (
     Citation,
     ResearchRequest,
     ResearchResponse,
     ResearchState,
+    SearchDepth,
     SearchRequest,
     SearchResponse,
     SearchResult,
@@ -108,7 +109,9 @@ class YouProvider(HttpSearchProvider):
         metadata = payload.get("metadata") or {}
 
         results = [
-            self._to_result(hit, section) for section in YOU_RESULT_SECTIONS for hit in sections.get(section) or []
+            self._to_result(hit, section, request.search_depth)
+            for section in YOU_RESULT_SECTIONS
+            for hit in sections.get(section) or []
         ]
 
         return SearchResponse(
@@ -121,7 +124,7 @@ class YouProvider(HttpSearchProvider):
         )
 
     @staticmethod
-    def _to_result(hit: dict[str, Any], section: str) -> SearchResult:
+    def _to_result(hit: dict[str, Any], section: str, depth: SearchDepth | None) -> SearchResult:
         contents = hit.get("contents") or {}
         description = hit.get("description") or ""
         # Page body if extraction ran, else the snippets the API always returns.
@@ -130,7 +133,7 @@ class YouProvider(HttpSearchProvider):
             url=hit.get("url", ""),
             title=hit.get("title") or "",
             description=description,
-            content=best_text(body, description),
+            content=lite_body(best_text(body, description), depth),
             published_date=hit.get("page_age"),
             extra={"section": section, **{k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS}},
         )
