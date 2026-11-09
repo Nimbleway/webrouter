@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import builtins
 import logging
+import socket
+import time
 from typing import Any
 
 import pytest
 
-from tests.routing_remote_helpers import KEY, Canned, Recorder, canned, config, running
+from tests.routing_remote_helpers import KEY, Canned, Recorder, canned, config, reference, running
 from web_router import RouteDecision, RouteRequest, RouterError, WebRouter
 from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY
 from web_router.exceptions import ConfigurationError
@@ -127,7 +129,13 @@ def test_no_key_value_reaches_the_service_the_record_or_a_failure(monkeypatch: p
 
 def test_a_service_echoing_its_key_in_its_reasons_has_it_redacted() -> None:
     def echo(body: dict[str, Any]) -> dict[str, Any]:
-        return {"schema": 1, "tools": ["search"], "reason": f"key {KEY}", "exclude": {"search:exa": KEY, KEY: "x"}}
+        return {
+            "schema": 1,
+            "tools": ["search"],
+            "reason": f"key {KEY}",
+            "exclude": {"search:exa": KEY, KEY: "x"},
+            "params": {"search": {KEY: 1}},
+        }
 
     with running(echo) as server, WebRouter(router="remote", router_config=config(server)) as wr:
         plan = wr.plan("solar news")
@@ -145,6 +153,9 @@ def test_an_escaped_echo_is_redacted_and_a_numeric_key_changes_no_number() -> No
     with canned(Canned(body=b'{"schema": 1, "tools": ["search"]}')) as base:
         plan = WebRouter(router="remote", router_config={"url": base + "/route", "api_key": "1"}).plan("solar news")
     assert plan.decision.reason != "router_invalid", "a key of 1 leaves the schema version alone"
+    with canned(Canned(body=b'{"schema": 1, "tools": ["search"]}')) as base:
+        plan = WebRouter(router="remote", router_config={"url": base + "/route", "api_key": "schema"}).plan("x")
+    assert plan.decision.reason != "router_invalid", "a key spelled like a field leaves the field names alone"
 
 
 def test_a_redirect_is_a_router_error_and_the_key_never_follows_it() -> None:
@@ -206,7 +217,7 @@ def test_without_httpx_the_error_names_the_extra(monkeypatch: pytest.MonkeyPatch
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", no_httpx)
-    with pytest.raises(ConfigurationError, match=r"web-router\[remote\]"):
+    with pytest.raises(ConfigurationError, match=r"webrouter\[remote\]"):
         RemoteRouter(url="https://router.example.com")
 
 
@@ -251,3 +262,34 @@ def test_the_reference_server_answers_a_too_deeply_nested_body_with_400() -> Non
         assert answer.status_code == 400 and "nested" in answer.json()["error"]
         body = {"schema": 1, "prompt": "x", "candidates": [], "deadline_s": 1.0}
         assert client.post(server.url, json=body, headers=headers).status_code == 200, "the server still answers"
+
+
+def test_the_example_server_closes_connections_past_its_worker_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(reference, "MAX_WORKERS", 2)
+    with running() as server:
+        address = server.server_address[:2]
+        idle = [socket.create_connection(address) for _ in range(2)]  # hold both workers, sending nothing
+        time.sleep(0.2)
+        with socket.create_connection(address, timeout=2) as third:
+            assert third.recv(1) == b"", "a third connection is closed, not given a thread"
+        for conn in idle:
+            conn.close()
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:  # the workers notice the close and give their slots back
+            with socket.create_connection(address, timeout=2) as again:
+                again.sendall(b"POST /nowhere HTTP/1.1\r\nHost: " + f"{address[0]}:{address[1]}".encode() + b"\r\n\r\n")
+                if again.recv(12).startswith(b"HTTP/1.0 404"):
+                    return
+            time.sleep(0.05)
+        pytest.fail("the slots were never given back")
+
+
+def test_the_example_server_serves_ipv6_loopback() -> None:
+    server = reference.serve("::1", 0)
+    try:
+        assert server.url.startswith("http://[::1]:")
+        plan = WebRouter(router="remote", router_config={"url": server.url}).plan("read https://example.com")
+        assert plan.decision.reason != "router_error" and plan.tool == "extract"
+    finally:
+        server.shutdown()
+        server.server_close()

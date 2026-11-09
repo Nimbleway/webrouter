@@ -1,0 +1,167 @@
+name: Release
+run-name: Release ${{ inputs.tag }}
+
+# Builds a release tag and publishes it to PyPI through trusted publishing:
+# PyPI accepts the upload because it comes from this workflow in the `pypi`
+# environment, so no token is stored anywhere. The build job runs the source
+# and every check with no special access; the publish job runs no code but the
+# publish action, only uploads the built files, after a maintainer approves the `pypi` deployment.
+#
+# Run it on the tag itself, so the workflow file comes from the release and the
+# `pypi` environment (deployments from `v*` tags only) accepts it:
+#   gh workflow run release.yml --ref vX.Y.Z -f tag=vX.Y.Z
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, e.g. v0.10.1
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  # One release at a time, whatever the tag: a second dispatch waits, so two
+  # versions can't both pass the PyPI check and then publish out of order.
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ inputs.tag }}
+      RUN_REF: ${{ github.ref }}
+    steps:
+      - name: Tag must look like vX.Y.Z, and the run must be on that tag
+        # Plain releases only: no pre-release suffixes and no leading zeros, so
+        # the tag, __version__ and the built file names are the same string.
+        run: |
+          if ! [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::'$TAG' is not a release tag (vX.Y.Z)"
+            exit 1
+          fi
+          if [ "$RUN_REF" != "refs/tags/$TAG" ]; then
+            echo "::error::run this on the tag: gh workflow run release.yml --ref $TAG -f tag=$TAG (ran on $RUN_REF)"
+            exit 1
+          fi
+
+      # The commit the run started on, not the tag's name, so a tag moved
+      # mid-run can't change what is built.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      # These checks run before any build tool touches the checked-out code.
+      - name: Tag must still be this commit, on main
+        # Full ref names, so a tag named like a branch can't stand in for main.
+        run: |
+          tagged=$(git rev-parse "refs/tags/${TAG}^{commit}")
+          [ "$tagged" = "$GITHUB_SHA" ] \
+            || { echo "::error::$TAG now points at $tagged, not $GITHUB_SHA the run started on"; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main \
+            || { echo "::error::$TAG is not on main"; exit 1; }
+
+      - name: Tag must match __version__
+        run: |
+          version=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' src/web_router/_version.py)
+          if [ "$version" != "${TAG#v}" ]; then
+            echo "::error::$TAG does not match __version__ $version"
+            exit 1
+          fi
+          echo "Building webrouter $version"
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: false
+
+      - name: Refuse a version not above every version on PyPI
+        # Here, not in publish: the job that can publish only uploads.
+        # Compared the way PyPI orders versions (packaging), against every
+        # final and post release; pre- and dev releases don't block a final one.
+        # Fails closed: any HTTP answer but 200 or 404 (no project yet, the first
+        # release), JSON without a releases map, or a version that won't parse.
+        run: |
+          code=$(curl -sS -o "$RUNNER_TEMP/project.json" -w '%{http_code}' https://pypi.org/pypi/webrouter/json) || code=000
+          case "$code" in
+            404) echo "webrouter is not on PyPI yet: this is its first release"; exit 0 ;;
+            200) ;;
+            *) echo "::error::PyPI returned $code"; exit 1 ;;
+          esac
+          uv run --no-project --with 'packaging==24.2' python - "${TAG#v}" "$RUNNER_TEMP/project.json" <<'PY'
+          import json, sys
+          from packaging.version import Version
+          new = Version(sys.argv[1])
+          releases = json.load(open(sys.argv[2]))["releases"]
+          if not isinstance(releases, dict):
+              sys.exit("::error::PyPI JSON has no releases map")
+          published = [v for v in map(Version, releases) if not (v.is_prerelease or v.is_devrelease)]
+          if not published:
+              print("No final release on PyPI yet")
+              sys.exit(0)
+          highest = max(published)
+          print(f"Highest on PyPI: {highest}")
+          if new <= highest:
+              sys.exit(f"::error::{new} is not above {highest}")
+          PY
+
+      # The build backend and its dependencies come from a hashed list, and
+      # twine is pinned, so a bad upstream release can't change what we ship.
+      - run: uv build --build-constraints .github/build-constraints.txt --require-hashes
+      - run: uvx --from 'twine==7.0.0' twine check --strict dist/*
+
+      - name: The wheel installs on its own and imports as this version
+        # A broken wheel can't be replaced once it is on PyPI, so try it first.
+        run: |
+          uv venv "$RUNNER_TEMP/smoke"
+          uv pip install --python "$RUNNER_TEMP/smoke/bin/python" dist/webrouter-*.whl
+          got=$("$RUNNER_TEMP/smoke/bin/python" -c "import web_router; print(web_router.__version__)")
+          [ "$got" = "${TAG#v}" ] || { echo "::error::the wheel imports as $got, not ${TAG#v}"; exit 1; }
+          echo "webrouter $got installs and imports"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # Required reviewers, deployments from v* tags only. PyPI's trusted publisher
+    # for webrouter names this repository, this workflow and this environment.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/webrouter/
+    permissions:
+      id-token: write # the OIDC token PyPI checks; nothing else
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+
+      - name: Built files must be exactly this version of webrouter
+        # Reads the files only; nothing from them runs.
+        run: |
+          version="${TAG#v}"
+          sdist="dist/webrouter-$version.tar.gz"
+          wheels=(dist/webrouter-"$version"-*.whl)
+          find dist -type f -print
+          built=$(find dist -type f \( -name '*.whl' -o -name '*.tar.gz' \) | wc -l)
+          [ "$built" -eq 2 ] || { echo "::error::expected one sdist and one wheel"; exit 1; }
+          [ -f "$sdist" ] || { echo "::error::no $sdist"; exit 1; }
+          [ -f "${wheels[0]}" ] || { echo "::error::no webrouter-$version wheel"; exit 1; }
+          meta=$(unzip -p "${wheels[0]}" "webrouter-$version.dist-info/METADATA")
+          printf '%s\n' "$meta" | grep -qx "Name: webrouter" || { echo "::error::wheel is not webrouter"; exit 1; }
+          printf '%s\n' "$meta" | grep -qx "Version: $version" || { echo "::error::wheel version is not $version"; exit 1; }
+          echo "dist matches webrouter $version"
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

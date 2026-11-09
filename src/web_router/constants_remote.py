@@ -47,7 +47,14 @@ REMOTE_AUTH_VALUE = "Bearer {key}"
 REMOTE_CONTENT_TYPE_HEADER = "Content-Type"
 REMOTE_MEDIA_PARAMS = ";"
 """What separates a media type from its parameters, as ``application/json; charset=utf-8``."""
-REMOTE_CONTENT_TYPE = {"Content-Type": "application/json", "Accept": "application/json"}
+REMOTE_CONTENT_ENCODING_HEADER = "Content-Encoding"
+REMOTE_IDENTITY_ENCODING = "identity"
+"""The one coding an answer is read in: its size is counted on the wire, so nothing is decompressed past the cap."""
+REMOTE_CONTENT_TYPE = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "Accept-Encoding": REMOTE_IDENTITY_ENCODING,
+}
 
 REMOTE_DISPLAY_NAME = "remote({host})"
 """How a decision record and the MCP capabilities resource name the router: its URL's scheme and host only."""
@@ -84,7 +91,7 @@ MSG_REMOTE_HTTPS = "router_config['url'] must use https; plain http is allowed o
 MSG_REMOTE_TIMEOUT = "router_config['timeout_s'] must be a positive number of seconds; got {value!r}."
 MSG_REMOTE_KEY = "router_config['api_key'] must be a string."
 MSG_REMOTE_NO_HTTPX = (
-    "router='remote' needs httpx, which web-router's '{extra}' extra installs: pip install 'web-router[{extra}]'."
+    "router='remote' needs httpx, which web-router's '{extra}' extra installs: pip install 'webrouter[{extra}]'."
 )
 MSG_REMOTE_FAILED = "The router service at {host} failed: {why}."
 REMOTE_WHY_TRANSPORT = "no answer ({kind})"
@@ -92,10 +99,15 @@ REMOTE_WHY_STATUS = "HTTP {status}"
 REMOTE_WHY_TOO_LARGE = "an answer over {limit} bytes"
 REMOTE_WHY_NOT_JSON = "an answer that is not a JSON object"
 REMOTE_WHY_CONTENT_TYPE = "an answer that is not application/json"
+REMOTE_WHY_ENCODING = "an answer with a Content-Encoding other than identity"
 REMOTE_WHY_TOO_MANY = "a decision with more than {limit} entries in one field"
 REMOTE_WHY_SCHEMA = "a wire schema that is missing or not a number"
 REMOTE_WHY_VERSION = "a wire schema version other than {expected}, the one this client reads"
 REMOTE_WHY_CLOSED = "this router is closed"
+REMOTE_EXCLUDE_FIELD = "exclude"
+"""The decision field whose mapping keys, candidate ids, are text a record shows."""
+REMOTE_PARAMS_FIELD = "params"
+"""The decision field whose option names, under each tool, a record shows when it ignores one."""
 REMOTE_KEY_REDACTED = "[redacted]"
 """What an echo of the service's own bearer key in its answer's text becomes, before the answer is read."""
 MSG_REMOTE_CLOSE_FAILED = "The router service at {host}: its connection pool did not close ({why}) and is dropped."

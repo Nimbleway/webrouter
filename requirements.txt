@@ -3,7 +3,7 @@
 annotated-types==0.8.0
     # via pydantic
 anthropic==1.11.0
-    # via web-router
+    # via webrouter
 anyio==4.15.1
     # via
     #   anthropic
@@ -20,8 +20,8 @@ attrs==26.1.0
     #   jsonschema
     #   referencing
 botocore==1.43.117
-    # via web-router
-certifi==2026.7.22
+    # via webrouter
+certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
@@ -58,7 +58,7 @@ httpx==0.28.1
     #   langchain-core
     #   nimble-python
     #   tavily-python
-    #   web-router
+    #   webrouter
 httpx2==2.13.1
     # via
     #   anthropic
@@ -88,20 +88,20 @@ jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
     # via jsonschema
 langchain-core==1.6.5
-    # via web-router
+    # via webrouter
 langchain-protocol==0.0.19
     # via langchain-core
 langsmith==0.14.1
     # via langchain-core
 mcp==2.2.0
-    # via web-router
+    # via webrouter
 mcp-types==2.2.0
     # via mcp
 nimble-python==1.6.0
-    # via web-router
+    # via webrouter
 openai==3.45.0
-    # via web-router
-opentelemetry-api==1.44.0
+    # via webrouter
+opentelemetry-api==1.45.2
     # via mcp
 orjson==3.12.0 ; platform_python_implementation != 'PyPy'
     # via langsmith
@@ -110,15 +110,15 @@ packaging==26.3
     #   langchain-core
     #   langsmith
 pillow==12.3.0 ; python_full_version < '3.11'
-    # via web-router
+    # via webrouter
 pillow==13.0.0 ; python_full_version >= '3.11'
-    # via web-router
+    # via webrouter
 playwright==1.63.0
-    # via web-router
+    # via webrouter
 pyarrow==25.0.1 ; python_full_version < '3.11'
-    # via web-router
+    # via webrouter
 pyarrow==26.0.1 ; python_full_version >= '3.11'
-    # via web-router
+    # via webrouter
 pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
     # via cffi
 pydantic==2.13.5
@@ -130,17 +130,17 @@ pydantic==2.13.5
     #   mcp-types
     #   nimble-python
     #   openai
-    #   web-router
+    #   webrouter
 pydantic-core==2.46.5
     # via pydantic
 pyee==13.0.1
     # via playwright
-pyjwt==2.14.0
+pyjwt==2.15.1
     # via mcp
 python-dateutil==2.9.0.post0
     # via botocore
 python-dotenv==1.2.4
-    # via web-router
+    # via webrouter
 python-multipart==0.0.32
     # via mcp
 pywin32==312 ; sys_platform == 'win32'
@@ -184,7 +184,7 @@ starlette==1.6.0
     #   mcp
     #   sse-starlette
 tavily-python==0.8.4
-    # via web-router
+    # via webrouter
 tenacity==9.1.4
     # via langchain-core
 tiktoken==0.14.0
@@ -216,7 +216,7 @@ typing-extensions==4.16.0
     #   starlette
     #   typing-inspection
     #   uvicorn
-    #   web-router
+    #   webrouter
 typing-inspection==0.4.4
     # via
     #   mcp

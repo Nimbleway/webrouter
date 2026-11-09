@@ -95,7 +95,7 @@ class Candidate:
     """Its p90 latency in seconds, as measured by the provider scans. ``None`` when unmeasured."""
 
     id: str = ""
-    """``tool:provider``, the name every decision field uses. Filled in when left empty."""
+    """``tool:provider``, the name every decision field uses: filled in when left empty, refused when it differs."""
 
     def __post_init__(self) -> None:
         expected = candidate_id(self.tool, self.provider)

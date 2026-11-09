@@ -31,8 +31,8 @@ loopback address (:mod:`.remote_url`).
 
 A timeout is ``router_timeout``; a transport error, a status other than 200 or
 a decision naming a ``schema`` other than 1 is ``router_error``; an answer that
-is not an ``application/json`` decision within 64 KiB -- ``schema`` missing
-included -- is ``router_invalid``. Either way the call runs on the static
+is not an uncompressed ``application/json`` decision within 64 KiB on the
+wire -- ``schema`` missing included -- is ``router_invalid``. Either way the call runs on the static
 order and the decision record says why. Fields the service adds that this
 version does not know are ignored; its reasons are cut short, and an echo of
 its bearer key in its answer is redacted. Router-set URLs are held to
@@ -52,6 +52,7 @@ import threading
 import warnings
 import weakref
 from collections.abc import Awaitable, Collection
+from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import AbstractAsyncContextManager, nullcontext
 from typing import TYPE_CHECKING, Any
@@ -68,14 +69,18 @@ from web_router.constants_remote import (
     REMOTE_AUTH_HEADER,
     REMOTE_AUTH_VALUE,
     REMOTE_CLOSE_WAIT_S,
+    REMOTE_CONTENT_ENCODING_HEADER,
     REMOTE_CONTENT_TYPE,
     REMOTE_CONTENT_TYPE_HEADER,
     REMOTE_DISPLAY_NAME,
+    REMOTE_EXCLUDE_FIELD,
     REMOTE_HTTP_OK,
+    REMOTE_IDENTITY_ENCODING,
     REMOTE_JSON_TYPE,
     REMOTE_KEY_REDACTED,
     REMOTE_MAX_RESPONSE_BYTES,
     REMOTE_MEDIA_PARAMS,
+    REMOTE_PARAMS_FIELD,
     REMOTE_TIMEOUT_S,
     REMOTE_URL_POLICY,
     REMOTE_WHY_CLOSE_LOOP,
@@ -83,6 +88,7 @@ from web_router.constants_remote import (
     REMOTE_WHY_CLOSED,
     REMOTE_WHY_CONTENT_TYPE,
     REMOTE_WHY_DECISION,
+    REMOTE_WHY_ENCODING,
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_STATUS,
     REMOTE_WHY_TOO_LARGE,
@@ -151,15 +157,32 @@ def _why(exc: BaseException) -> str:
     return REMOTE_WHY_CLOSE_SLOW.format(wait=REMOTE_CLOSE_WAIT_S) if late else type(exc).__name__
 
 
-def _unechoed(value: Any, key: str) -> Any:
-    """``value`` with ``key`` redacted from every string and mapping key in it: no record or model sees an echo."""
+def _unechoed(value: Any, key: str, *, names: bool = False) -> Any:
+    """``value`` with ``key`` redacted from every string in it, and, when ``names``, from every mapping key too."""
     if isinstance(value, str):
         return value.replace(key, REMOTE_KEY_REDACTED)
     if isinstance(value, list):
-        return [_unechoed(item, key) for item in value]
+        return [_unechoed(item, key, names=names) for item in value]
     if isinstance(value, dict):
-        return {_unechoed(name, key): _unechoed(item, key) for name, item in value.items()}
+        return {(_unechoed(n, key) if names else n): _unechoed(item, key, names=names) for n, item in value.items()}
     return value  # a number, a bool or null is the decision's own
+
+
+def _unechoed_decision(data: Any, key: str) -> Any:
+    """A decision's JSON with ``key`` redacted from its text and every name a record can show.
+
+    Field names and the tool names keying ``providers`` and ``params`` stay whole, so a key spelled like one
+    cannot turn a valid decision invalid; ``exclude``'s candidate ids and each tool's option names are redacted.
+    """
+    if not isinstance(data, dict):
+        return data
+    out = {}
+    for field, item in data.items():
+        if field == REMOTE_PARAMS_FIELD and isinstance(item, dict):
+            out[field] = {tool: _unechoed(options, key, names=True) for tool, options in item.items()}
+        else:
+            out[field] = _unechoed(item, key, names=field == REMOTE_EXCLUDE_FIELD)
+    return out
 
 
 _CLOSING: set[asyncio.Task[None]] = set()
@@ -223,7 +246,7 @@ class RemoteRouter:
             ):
                 self._check_head(r)
                 size = 0
-                async for chunk in r.aiter_bytes():
+                async for chunk in r.aiter_raw():  # bytes as sent: identity only, so nothing grows past the cap
                     size += len(chunk)
                     if size > REMOTE_MAX_RESPONSE_BYTES:
                         raise RemoteRouterInvalid(
@@ -255,10 +278,9 @@ class RemoteRouter:
             _CLOSING.add(task)  # held until done: a loop keeps only a weak reference to a task
             task.add_done_callback(self._closed_task)
             return
-        if not loop.is_running():
-            _close_failed(self.host, REMOTE_WHY_CLOSE_LOOP)
+        closing = self._submit(pool, loop)
+        if closing is None:
             return
-        closing = asyncio.run_coroutine_threadsafe(pool.aclose(), loop)
         try:
             closing.result(REMOTE_CLOSE_WAIT_S)
         except Exception as exc:
@@ -270,13 +292,13 @@ class RemoteRouter:
         pool, loop = self._shut()
         if pool is None or loop is None or loop.is_closed():
             return
-        if loop is not asyncio.get_running_loop() and not loop.is_running():
-            _close_failed(self.host, REMOTE_WHY_CLOSE_LOOP)
-            return
         if loop is asyncio.get_running_loop():
             closing: Awaitable[None] = pool.aclose()
         else:
-            closing = asyncio.wrap_future(asyncio.run_coroutine_threadsafe(pool.aclose(), loop))
+            submitted = self._submit(pool, loop)
+            if submitted is None:
+                return
+            closing = asyncio.wrap_future(submitted)
         try:
             await asyncio.wait_for(closing, REMOTE_CLOSE_WAIT_S)  # cancels the close, on its own loop, when late
         except asyncio.CancelledError:
@@ -284,6 +306,17 @@ class RemoteRouter:
             raise
         except Exception as exc:
             _close_failed(self.host, _why(exc))
+
+    def _submit(self, pool: httpx.AsyncClient, loop: asyncio.AbstractEventLoop) -> Future[None] | None:
+        """The pool's close, started on its own loop from another thread; ``None``, warned, once that loop stopped."""
+        if loop.is_running():
+            coro = pool.aclose()
+            try:
+                return asyncio.run_coroutine_threadsafe(coro, loop)
+            except RuntimeError:  # the loop closed between the check and the hand-over
+                coro.close()
+        _close_failed(self.host, REMOTE_WHY_CLOSE_LOOP)
+        return None
 
     def _shut(self) -> tuple[httpx.AsyncClient | None, asyncio.AbstractEventLoop | None]:
         """Mark the router closed and take its pool, with the loop it belongs to: no call after this opens one."""
@@ -332,6 +365,9 @@ class RemoteRouter:
         media = header.partition(REMOTE_MEDIA_PARAMS)[0].strip().lower()
         if media != REMOTE_JSON_TYPE:
             raise RemoteRouterInvalid(self.host, REMOTE_WHY_CONTENT_TYPE)
+        coding = response.headers.get(REMOTE_CONTENT_ENCODING_HEADER, "").strip().lower()
+        if coding not in ("", REMOTE_IDENTITY_ENCODING):  # asked for identity; a compressed answer is not read
+            raise RemoteRouterInvalid(self.host, REMOTE_WHY_ENCODING)
 
     def _decision(self, body: bytes, failed: str | None) -> RouteDecision:
         """The decision ``body`` carries, or the router error: ``failed`` names the transport's error class."""
@@ -342,7 +378,7 @@ class RemoteRouter:
         except (ValueError, RecursionError):  # a reply nested deeper than Python parses is no decision either
             raise RemoteRouterInvalid(self.host, REMOTE_WHY_NOT_JSON) from None
         try:
-            return decision_from_wire(_unechoed(data, self._key) if self._key else data)
+            return decision_from_wire(_unechoed_decision(data, self._key) if self._key else data)
         except WireError as exc:
             raise RemoteRouterInvalid(self.host, str(exc)) from None
         except WireVersionError as exc:  # well formed, of another version: a mismatch, so a router error

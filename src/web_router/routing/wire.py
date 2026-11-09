@@ -190,14 +190,37 @@ def _schema(adapter: TypeAdapter[Any], title: str, mode: str) -> dict[str, Any]:
 
 
 def request_schema() -> dict[str, Any]:
-    """The JSON Schema of a request, generated from :class:`RouteRequest`."""
-    return _schema(_request_adapter(), WIRE_REQUEST_TITLE, "serialization")
+    """The JSON Schema of a request, generated from :class:`RouteRequest`, its budget caps held to 0 or more.
+
+    :class:`Budget` refuses a negative cap, so a request the schema passes is one :func:`request_from_wire` reads.
+    """
+    schema = _schema(_request_adapter(), WIRE_REQUEST_TITLE, "serialization")
+    for name in ("max_cost_usd", "time_limit_s"):
+        for option in schema["$defs"]["Budget"]["properties"][name]["anyOf"]:
+            if option.get("type") == "number":
+                option["minimum"] = 0
+    return schema
+
+
+def _cap(node: Any) -> None:
+    """Give every list and mapping under ``node`` the entry limit :func:`_bounded` holds a decision to."""
+    if isinstance(node, dict):
+        if node.get("type") == "array":
+            node["maxItems"] = WIRE_MAX_NAMES
+        elif node.get("type") == "object":
+            node["maxProperties"] = WIRE_MAX_NAMES
+        for value in node.values():
+            _cap(value)
+    elif isinstance(node, list):
+        for value in node:
+            _cap(value)
 
 
 def response_schema() -> dict[str, Any]:
     """The JSON Schema of a decision, generated from :class:`RouteDecision`, with what the types cannot say.
 
-    ``confidence`` is held to 0..1, as the merge rule holds it, and every field may be ``null`` -- unset, as
+    ``confidence`` is held to 0..1, as the merge rule holds it, every list and mapping to
+    :data:`WIRE_MAX_NAMES` entries, as :func:`_bounded` holds them, and every field may be ``null`` -- unset, as
     :func:`decision_from_wire` reads it -- ``exclude`` included, whose type has no ``None``.
     """
     schema = _schema(_decision_adapter(), WIRE_RESPONSE_TITLE, "validation")
@@ -210,6 +233,7 @@ def response_schema() -> dict[str, Any]:
         "anyOf": [{k: v for k, v in exclude.items() if k in ("type", "additionalProperties")}, {"type": "null"}],
         **{k: v for k, v in exclude.items() if k not in ("type", "additionalProperties")},
     }
+    _cap(fields)
     return schema
 
 

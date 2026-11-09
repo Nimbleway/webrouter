@@ -76,10 +76,13 @@ def canned(answer: Canned) -> Iterator[str]:
                 self.send_header(name, value)
             self.send_header("Content-Length", str(len(answer.body)))
             self.end_headers()
-            for byte in answer.body:
-                self.wfile.write(bytes([byte]))
-                self.wfile.flush()
-                time.sleep(answer.drip_s)
+            try:
+                for byte in answer.body:
+                    self.wfile.write(bytes([byte]))
+                    self.wfile.flush()
+                    time.sleep(answer.drip_s)
+            except (BrokenPipeError, ConnectionResetError):
+                pass  # the client stopped reading, as one refusing an oversized or late answer does
 
         do_POST = do_GET = _any
 

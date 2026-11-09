@@ -7,7 +7,8 @@
         "max_cost_usd": {
           "anyOf": [
             {
-              "type": "number"
+              "type": "number",
+              "minimum": 0
             },
             {
               "type": "null"
@@ -20,7 +21,8 @@
         "time_limit_s": {
           "anyOf": [
             {
-              "type": "number"
+              "type": "number",
+              "minimum": 0
             },
             {
               "type": "null"
@@ -88,7 +90,7 @@
         },
         "id": {
           "default": "",
-          "description": "``tool:provider``, the name every decision field uses. Filled in when left empty.",
+          "description": "``tool:provider``, the name every decision field uses: filled in when left empty, refused when it differs.",
           "title": "Id",
           "type": "string"
         }

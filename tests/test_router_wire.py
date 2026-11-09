@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from web_router import Budget, Candidate, RouteDecision, RouteRequest
-from web_router.constants_remote import WIRE_REQUEST_FILE, WIRE_RESPONSE_FILE
+from web_router.constants_remote import WIRE_MAX_NAMES, WIRE_REQUEST_FILE, WIRE_RESPONSE_FILE
 from web_router.routing.wire import (
     WireError,
     WireVersionError,
@@ -63,6 +63,43 @@ def test_the_schemas_carry_the_version_and_the_contract_field_names() -> None:
     assert all(
         {"type": "null"} in response["properties"][name]["anyOf"] for name in response["properties"] if name != "schema"
     )
+
+
+def _limits(node: Any) -> list[tuple[str, int | None]]:
+    """Each list and mapping in a schema, with the entry limit it publishes."""
+    found: list[tuple[str, int | None]] = []
+    if isinstance(node, dict):
+        if node.get("type") == "array":
+            found.append(("array", node.get("maxItems")))
+        elif node.get("type") == "object":
+            found.append(("object", node.get("maxProperties")))
+        for value in node.values():
+            found += _limits(value)
+    elif isinstance(node, list):
+        for value in node:
+            found += _limits(value)
+    return found
+
+
+def test_the_response_schema_publishes_the_entry_limit_the_client_holds() -> None:
+    fields = response_schema()["properties"]
+    limits = _limits(fields)
+    assert limits and all(limit == WIRE_MAX_NAMES for _, limit in limits)
+    over = {"schema": 1, "exclude": {f"search:p{i}": "why" for i in range(WIRE_MAX_NAMES + 1)}}
+    with pytest.raises(WireError, match=f"more than {WIRE_MAX_NAMES} entries"):
+        decision_from_wire(over)
+    at = {"schema": 1, "exclude": {f"search:p{i}": "why" for i in range(WIRE_MAX_NAMES)}}
+    assert len(decision_from_wire(at).exclude) == WIRE_MAX_NAMES
+
+
+def test_the_request_schema_holds_the_budget_caps_to_zero_or_more() -> None:
+    budget = request_schema()["$defs"]["Budget"]["properties"]
+    for name in ("max_cost_usd", "time_limit_s"):
+        assert {"type": "number", "minimum": 0} in budget[name]["anyOf"]
+    wire = request_to_wire(REQUEST)
+    wire["budget"]["max_cost_usd"] = -1
+    with pytest.raises(WireError):
+        request_from_wire(wire)
 
 
 def test_a_request_round_trips_through_json() -> None:

@@ -24,7 +24,8 @@ Run it with::
 Set `WEB_ROUTER_REMOTE_ROUTER_API_KEY` before starting it to require that key;
 the `remote` router reads the same variable. It binds 127.0.0.1 unless
 `--host` says otherwise, answers only a `Host` header naming that address or
-`localhost`, and caps a request at 1 MB. Plain `http` is accepted only to
+`localhost`, caps a request at 1 MB, serves at most 32 connections at once
+and drops one that sends nothing for 10 seconds. Plain `http` is accepted only to
 `localhost` or a loopback address: put a real service behind `https`.
 """
 
@@ -34,6 +35,7 @@ import argparse
 import hmac
 import json
 import os
+import socket
 import threading
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -47,6 +49,7 @@ PATH = "/route"
 MAX_BODY_BYTES = 1_000_000
 POLL_S = 0.05  # how soon shutdown() is noticed
 SOCKET_TIMEOUT_S = 10.0
+MAX_WORKERS = 32  # connections served at once; more are closed before a thread is spent on them
 PROMPTS = (
     "what is retrieval augmented generation",
     "read https://en.wikipedia.org/wiki/Web_scraping",
@@ -67,20 +70,45 @@ class RouterServer(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(self, address: tuple[str, int], *, api_key: str | None = None, decide: Decide = decide) -> None:
+        self.address_family = socket.AF_INET6 if ":" in address[0] else socket.AF_INET
         super().__init__(address, _Handler)
         self.api_key = api_key
         self.decide = decide
+        self._slots = threading.BoundedSemaphore(MAX_WORKERS)
+
+    def process_request(self, request: Any, client_address: Any) -> None:
+        """Serve a connection on its own thread while a slot is free; close it otherwise."""
+        if not self._slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._slots.release()  # no thread started, so none will give the slot back
+            raise
+
+    def process_request_thread(self, request: Any, client_address: Any) -> None:
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()
+
+    address_family = socket.AF_INET  # set per instance below: AF_INET6 for an IPv6 host such as ::1
+
+    @property
+    def authority(self) -> str:
+        """``host:port`` as a URL and a ``Host`` header write it: an IPv6 address in brackets."""
+        host, port = self.server_address[:2]
+        return f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
 
     @property
     def hosts(self) -> set[str]:
         """The ``Host`` headers it answers: the address it is bound to, and ``localhost`` on the same port."""
-        host, port = self.server_address[:2]
-        return {f"{host}:{port}", f"localhost:{port}"}
+        return {self.authority, f"localhost:{self.server_address[1]}"}
 
     @property
     def url(self) -> str:
-        host, port = self.server_address[:2]
-        return f"http://{host}:{port}{PATH}"
+        return f"http://{self.authority}{PATH}"
 
 
 class _Handler(BaseHTTPRequestHandler):

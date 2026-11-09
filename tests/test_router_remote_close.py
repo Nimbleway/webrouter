@@ -244,3 +244,23 @@ async def test_a_cancelled_aclose_leaves_the_router_closed_and_says_so() -> None
         assert router._pool is None
         with pytest.raises(RemoteRouterError, match="closed"):
             await router.aroute(_request())
+
+
+@pytest.mark.parametrize("closer", ["close", "aclose"])
+def test_a_loop_that_closes_as_the_close_is_handed_over_is_warned_not_raised(
+    monkeypatch: pytest.MonkeyPatch, closer: str
+) -> None:
+    def gone(coro: Any, loop: Any) -> Any:
+        raise RuntimeError("Event loop is closed")  # what the hand-over raises once the loop shut in between
+
+    with loop_thread() as loop, running() as server:
+        router = RemoteRouter(**config(server))
+        _on(loop, router)
+        monkeypatch.setattr(remote.asyncio, "run_coroutine_threadsafe", gone)
+        with pytest.warns(ResourceWarning, match="did not close"):
+            if closer == "close":
+                router.close()
+            else:
+                asyncio.run(router.aclose())
+        monkeypatch.undo()
+        assert router._pool is None
