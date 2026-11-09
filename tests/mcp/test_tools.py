@@ -78,7 +78,7 @@ def _payload(result: Any) -> dict[str, Any]:
     return dict(json.loads(result.content[0].text))
 
 
-def test_serves_exactly_twenty_four_tools(tools: WebRouterTools) -> None:
+def test_serves_every_tool_in_order(tools: WebRouterTools) -> None:
     assert [tool.name for tool in list_tools(tools).tools] == [
         MCP_TOOL_SEARCH,
         MCP_TOOL_EXTRACT,

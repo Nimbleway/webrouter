@@ -1,4 +1,4 @@
-"""The twenty-four tools, and the session state they share.
+"""The MCP tools, and the session state they share.
 
 Everything here is a thin projection of :class:`~web_router.AsyncWebRouter`:
 each tool's arguments are the library's own keyword names, passed through

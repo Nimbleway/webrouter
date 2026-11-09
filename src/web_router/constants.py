@@ -256,8 +256,8 @@ ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 """Which variables each answer provider needs, all of them.
 
 Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. Every answer backend bills the
-call, so there is no keyless tier, and there is no ``auto`` yet: its order
-waits on a comparison of the backends' answers.
+call, so there is no keyless tier; ``auto`` tries the configured ones in the
+order route-eval ranked them, and is not listed here since it needs no key.
 """
 
 BROWSER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -4194,8 +4194,8 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
 
 MCP_PROVIDER_DESCRIPTION = "The backend to use, of those configured here; omit it and the router picks one."
 
-# A tool description is the routing decision: the model choosing between these
-# twenty-four is the actual router (`web_run` hands it to ours), and latency and cost are what it chooses on.
+# A tool description is the routing decision: the model choosing between the tools is the actual router
+# (`web_run` hands it to ours), and latency and cost are what it chooses on.
 
 MCP_DESC_SEARCH = (
     "Search the web: ranked links with their titles, descriptions and page text. Returns in about a second, "
