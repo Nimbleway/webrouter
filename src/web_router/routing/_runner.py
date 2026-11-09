@@ -70,6 +70,13 @@ class InvalidAnswer(Exception):
     """
 
 
+class TimedOut(Exception):
+    """Raised by a router whose own transport gave up at the deadline: recorded as ``router_timeout``.
+
+    The ``remote`` router's HTTP timeout is the call's deadline, so it may fire just before the wait does.
+    """
+
+
 def _on_private_loop(awaitable: Awaitable[Any]) -> Future[Any]:
     """Await ``awaitable`` on the private loop.
 
@@ -127,6 +134,8 @@ def _classified(done: Future[Any] | asyncio.Future[Any]) -> tuple[str | None, An
     if done.cancelled():
         return ROUTER_ERROR, None
     if (error := done.exception()) is not None:
+        if isinstance(error, TimedOut):
+            return ROUTER_TIMEOUT, error
         return (ROUTER_INVALID if isinstance(error, InvalidAnswer) else ROUTER_ERROR), error
     return None, done.result()
 

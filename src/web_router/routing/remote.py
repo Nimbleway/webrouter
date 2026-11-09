@@ -23,7 +23,8 @@ retried; no redirect is followed, and no proxy or other setting is read from
 the environment. The URL must be ``https``, or ``http`` to ``localhost`` or a
 loopback address (:mod:`.remote_url`).
 
-A transport error, a timeout or a status other than 200 is a router error; an
+A timeout is ``router_timeout``; a transport error or a status other than 200
+is ``router_error``; an
 answer that is not an ``application/json`` schema-1 decision within 64 KiB --
 ``schema`` missing or not 1 included -- is ``router_invalid``. Either way the
 call runs on the static order and the decision record says why. Fields the
@@ -69,7 +70,7 @@ from web_router.constants_remote import (
     REMOTE_WHY_TRANSPORT,
 )
 from web_router.exceptions import ConfigurationError, WebRouterError
-from web_router.routing._runner import InvalidAnswer
+from web_router.routing._runner import InvalidAnswer, TimedOut
 from web_router.routing.contract import RouteDecision, RouteRequest
 from web_router.routing.remote_url import checked_url
 from web_router.routing.wire import WireError, decision_from_wire, request_to_wire
@@ -85,6 +86,10 @@ class RemoteRouterError(WebRouterError):
         self.host = host
         self.why = why
         super().__init__(MSG_REMOTE_FAILED.format(host=host, why=why))
+
+
+class RemoteRouterTimeout(RemoteRouterError, TimedOut):
+    """The service did not answer within the call's deadline: recorded as ``router_timeout``."""
 
 
 class RemoteRouterInvalid(RemoteRouterError, InvalidAnswer):
@@ -168,7 +173,7 @@ class RemoteRouter:
     async def aroute(self, req: RouteRequest) -> RouteDecision:
         """Ask the service: one POST, cancelled by the caller at ``req.deadline_s``."""
         chunks: list[bytes] = []
-        failed = None
+        failed, timed_out = None, False
         try:
             client = self._pool()
             async with client.stream("POST", self._url, json=request_to_wire(req), timeout=req.deadline_s) as r:
@@ -183,6 +188,9 @@ class RemoteRouter:
                     chunks.append(chunk)
         except self._httpx.HTTPError as exc:
             failed = type(exc).__name__  # raised below, outside this block: httpx's error names the whole URL
+            timed_out = isinstance(exc, self._httpx.TimeoutException)
+        if timed_out:
+            raise RemoteRouterTimeout(self.host, REMOTE_WHY_TRANSPORT.format(kind=failed))
         return self._decision(b"".join(chunks), failed)
 
     def close(self) -> None:
