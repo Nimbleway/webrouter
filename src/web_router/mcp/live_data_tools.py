@@ -14,6 +14,7 @@ from web_router.constants_live_data import MCP_TOOL_LIVE_DATA, MCP_TOOL_LIVE_DAT
 from web_router.mcp.budget import live_data_charged
 from web_router.mcp.shaping import max_response_chars
 from web_router.mcp.shaping_live_data import shape_live_data, shape_live_data_source, shape_live_data_sources
+from web_router.mcp.urls import screen, url_values
 
 if TYPE_CHECKING:
     from web_router.mcp.tools import WebRouterTools
@@ -36,6 +37,8 @@ async def live_data_source_tool(tools: WebRouterTools, arguments: Mapping[str, A
 async def live_data_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """One run, charged to the connection's budget, its records whole or left behind the handle."""
     kwargs = tools.arguments(MCP_TOOL_LIVE_DATA, arguments)
+    # A URL among the inputs is screened like any other tool's: no private or metadata address.
+    screen(MCP_TOOL_LIVE_DATA, url_values(kwargs.get("inputs")))
     with live_data_charged(tools.router, kwargs):
         response = await tools.router.live_data(**kwargs)
     record = tools.store.add(MCP_TOOL_LIVE_DATA, raw=response.raw)

@@ -423,9 +423,10 @@ you have a key for first — a credential in the environment says which one you
 want — and falls back to the anonymous tiers when there is none: Tavily keyless,
 then You.com's, Exa's and Parallel's open MCP servers, then Keenable's keyless tier for a search; Tavily keyless,
 Jina Reader, Firecrawl's keyless tier, then Keenable's for an extract; `local` for a browser
-session. Research and browse have no
-anonymous tier, because every run bills; with no key they raise, naming the
-variables that would fix it. `response.provider` names whichever one served it,
+session. Research, browse, `answer()` and live data have no
+anonymous tier, because every call bills; with no key they raise, naming the
+variables that would fix it. This is the one list of keyless backends; the MCP
+server and `.env.example` point here. `response.provider` names whichever one served it,
 never `"auto"`, so you can always tell. The anonymous tiers are rate-limited, which is
 why it is a chain: when one is throttled, the next answers.
 
@@ -1463,110 +1464,28 @@ the transcript is a separate endpoint this provider does not read.
 ## The MCP server
 
 The package ships a **self-hosted stdio MCP server**, so an agent can call these
-methods as tools -- `search`, `extract`, `live_data_sources` / `live_data_source` /
-`live_data`, `answer` and `research` -- plus `browse` / `browse_status` for a hosted browser
-agent's task, shaped like `research` / `research_status`: the tool waits 25
-seconds, then hands back a handle to poll; and `web_run`, `budget_start` and `budget_status`
-for [smart routing](#smart-routing-experimental). It runs in your own process and reads your own keys from
-your own environment — each key goes only to the backend it belongs to, which is
-the whole reason it is self-hosted rather than a service someone runs for you.
+methods as tools: `search`, `extract`, the live data tools, `answer`, `research`,
+`browse`, the `browser_*` tools for driving a browser itself, and `web_run`,
+`budget_start` and `budget_status` for [smart routing](#smart-routing-experimental).
+It runs in your own process and sends each key only to the backend it belongs to.
 
-Inside the clone, the committed `.mcp.json` already starts it. To add it to
-**any** project, or to every project with `--scope user`:
+Inside the clone, the committed `.mcp.json` already starts it. To use it from
+every project, register it once at user scope:
 
 ```bash
 claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
 ```
 
-For Claude Desktop, Cursor or another client, the same command as a config block:
+It works with **no API key at all**: search and extract run on the keyless
+backends above. Every key you add unlocks more backends and fallbacks, and
+research, browse and cloud browsers need one. Put your keys in a `.env` in your
+user config directory, or point `WEB_ROUTER_ENV_FILE` at one; a project's
+`.env` can add keys but never replace yours.
 
-```jsonc
-{
-  "mcpServers": {
-    "web-router": {
-      "command": "uv",
-      "args": ["run", "--project", "/path/to/webrouter", "--all-extras", "web-router-mcp"]
-    }
-  }
-}
-```
-
-`--project` keeps the working directory your client started the server in, so
-a `.env` in your own project is the one it reads.
-
-That works with **no API key at all**: the keyless `auto` chain gives you search
-and extract on first run, and keys are the upgrade path rather than the entry
-fee. **Every key you add unlocks more**: the more backends you hold keys for,
-the more methods, backends and fallbacks the tools can use. All of them gives
-you every capability.
-
-### Giving an installed server your keys
-
-Started from another project, the server runs in whatever directory your client
-picks, so it looks for a `.env` in this order and loads the first one that sets
-a provider key:
-
-1. the file `WEB_ROUTER_ENV_FILE` names;
-2. `.env` in its working directory — the repo root, when this repo's `.mcp.json`
-   starts it;
-3. the file a `load_env` call with `remember: true` recorded;
-4. `.env` in your user config directory: `~/.config/web-router/.env` on Linux
-   (under `$XDG_CONFIG_HOME` when that is set), `~/Library/Application Support/web-router/.env`
-   on macOS, `%APPDATA%\web-router\.env` on Windows.
-
-So either point the server at a `.env` you already have:
-
-```bash
-claude mcp add --scope user web-router -e WEB_ROUTER_ENV_FILE="$HOME/work/.env" -- uv run --project /path/to/webrouter --all-extras web-router-mcp
-```
-
-— for Claude Desktop, the same variable goes in the config block's `"env"`:
-`"env": {"WEB_ROUTER_ENV_FILE": "/Users/you/work/.env"}` — or put the `.env` in
-your user config directory and register the server with no variable at all.
-Only provider credentials are read from any of these files, a variable your
-client already exports keeps its value, and with no file anywhere the server
-runs keyless.
-
-Keys can also arrive mid-conversation. The `load_env` tool takes the **path** of
-a `.env` file — the model asks you for it and never for a key — loads its
-provider credentials without a restart, and with `remember: true` has the
-server read that file on every start. The `web-router://capabilities` resource
-says where the server looked, which file it used and which variables it loaded,
-by name only; with no key at all it says how to add one.
-
-See [docs/mcp.md](docs/mcp.md) for the tools, their latency budgets, and how
-results are shaped for a context window. A browse output never carries the
-session the agent ran in: shaped results, `fetch_raw` on a browse handle and
-browse errors replace with `[redacted]` every value under a credential-named
-field (`token`, `apiKey`, `signingKey`, `password`, `cookie`, `authorization`
-and the like), every URL under a live-view, debugger, CDP, websocket or connect
-field, and any `ws(s)://` URL, URL with a username, URL with `devtools`,
-`cdp`, `live` or `debug` in its host or path, or URL carrying a `token`,
-`apiKey`, `jwt`, `key`, `signature` or similar query parameter. See
-[docs/mcp.md](docs/mcp.md#a-browse-result-never-carries-its-session) for the
-full list.
-
-The `browser_*` tools, installed with `web-router[mcp,browser]`, let the model
-drive a browser itself: `browser_open` returns a `session_id`, and
-`browser_goto`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_press`, `browser_screenshot` (returned as an image) and
-`browser_read` act through it until `browser_close`. The **server holds the
-session and the model holds only that id** — one the server minted, never the
-backend's — so the CDP URL, the backend's session id and any live-view URL
-never enter the transcript. With no key at all, `local` runs a headless browser
-on your machine. The server releases a session left unused for five minutes,
-refuses a fourth concurrent one, and releases every session when it exits,
-whether the client hangs up or it is sent SIGTERM; every session is opened
-with a lifetime of at most ten minutes, and SIGKILL can still orphan a `local`
-Chrome. `browser_open` does not accept `provider_options` or saved profiles, so
-a conversation cannot set Chrome switches. Like every tool's options, `stealth`,
-`proxy_country` and `solve_captchas` are offered only when a configured backend
-maps them — `stealth` only at the levels one serves — so a keyless install
-offers none of them; where they are offered, asking for one with no `provider`
-routes past `local` to a billed vendor. The browser opens only `http(s)` pages:
-`file:` (unless the operator sets `WEB_ROUTER_MCP_ALLOW_FILE_URLS=1`), browser-internal schemes, cloud
-metadata addresses and the session's own debugging endpoint are refused, and a
-page that lands on one is sent back to `about:blank`. See
-[docs/mcp.md](docs/mcp.md#driving-a-browser).
+[docs/mcp.md](docs/mcp.md) covers the rest: Claude Desktop and Cursor setup,
+where keys are read from and `load_env`, the tools and their costs, how
+results are shaped and redacted, the browser tools' guards, and routing and
+budgets.
 
 ## Integrating a framework
 
@@ -2468,7 +2387,7 @@ Keys are read from the environment, or passed explicitly through
 A key set once serves every method of a provider that has several. See
 [`.env.example`](.env.example). The library reads the environment only; the
 MCP server is the one place a `.env` is read for you — see
-[Giving an installed server your keys](#giving-an-installed-server-your-keys).
+[docs/mcp.md](docs/mcp.md#then-add-whichever-keys-you-have).
 `configured_providers()` and
 `configured_extract_providers()` — and `configured_research_providers()`,
 `configured_browser_providers()` and `configured_browse_providers()` — report

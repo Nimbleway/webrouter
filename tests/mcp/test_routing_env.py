@@ -95,7 +95,7 @@ def test_the_capabilities_routing_section() -> None:
         "url_policy": "public_only",
     }
     assert routing["ceiling"] == {"max_cost_usd": 2.0, "time_limit_s": 600.0}
-    assert "web_run's plans only" in routing["url_policy_note"], "the direct tools take the URLs they are given"
+    assert "extract, browse and live_data" in routing["url_policy_note"], "the direct tools screen theirs too"
     assert routing["budget"]["remaining_usd"] == 2.0
 
 

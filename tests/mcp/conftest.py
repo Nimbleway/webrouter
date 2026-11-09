@@ -17,17 +17,11 @@ from tests.routing_helpers import member as _member
 from web_router import prices
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
-    ANSWER_ENV_BY_PROVIDER,
-    BROWSE_ENV_BY_PROVIDER,
-    BROWSER_ENV_BY_PROVIDER,
     ENV_APPDATA,
-    ENV_BY_PROVIDER,
     ENV_MCP_ENV_FILE,
     ENV_XDG_CONFIG_HOME,
-    EXTRACT_ENV_BY_PROVIDER,
-    RESEARCH_ENV_BY_PROVIDER,
 )
-from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
+from web_router.mcp.env_credentials import credential_variables
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
@@ -35,15 +29,7 @@ from web_router.routing import Budget
 
 FAKE = "fake"
 
-_EVERY_ENV_VAR = sorted(
-    {name for name in ENV_BY_PROVIDER.values() if name}
-    | {name for names in EXTRACT_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in LIVE_DATA_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in RESEARCH_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in BROWSE_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in BROWSER_ENV_BY_PROVIDER.values() for name in names}
-    | {name for names in ANSWER_ENV_BY_PROVIDER.values() for name in names}
-)
+_EVERY_ENV_VAR = sorted(credential_variables())
 
 
 def home_variables(home: Path) -> dict[str, str]:

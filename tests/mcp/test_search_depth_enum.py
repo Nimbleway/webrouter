@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 import pytest
 
 from web_router import AsyncWebRouter
 from web_router.constants import MCP_TOOL_SEARCH
-from web_router.mcp import tools as mcp_tools
+from web_router.mcp.methods import METHODS
 from web_router.mcp.server import list_tools
 from web_router.mcp.tools import WebRouterTools
 
@@ -16,7 +17,7 @@ from web_router.mcp.tools import WebRouterTools
 @pytest.fixture(autouse=True)
 def only_the_chain(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
     """The keyless backends serve every level, so they are taken out of what is configured here."""
-    monkeypatch.setitem(mcp_tools._CONFIGURED, MCP_TOOL_SEARCH, lambda: ["auto"])
+    monkeypatch.setitem(METHODS, MCP_TOOL_SEARCH, replace(METHODS[MCP_TOOL_SEARCH], configured=lambda: ["auto"]))
 
 
 def _search_properties(chain: list[str]) -> dict[str, Any]:
