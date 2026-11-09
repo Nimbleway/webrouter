@@ -248,11 +248,48 @@ def test_an_error_ranks_above_every_answer_like_a_timeout(latency: ModuleType) -
 
 
 @pytest.mark.parametrize(
-    "args", [["-n", "-1"], ["--llm-price", "-1,1"], ["--llm-price", "nan,1"], ["--jev-price", "inf"]]
+    "args",
+    [
+        ["-n", "-1"],
+        ["--llm-price", "-1,1"],
+        ["--llm-price", "nan,1"],
+        ["--jev-price", "inf"],
+        ["--e2e", "0"],
+        ["--remote-rtt-ms", "-5"],
+        ["--remote-rtt-ms", "inf"],
+    ],
 )
 def test_a_negative_count_or_a_bad_price_is_refused(latency: ModuleType, args: list[str]) -> None:
     with pytest.raises(SystemExit):
         latency.parse_args(args)
+
+
+def test_sets_that_give_no_questions_are_refused(latency: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(latency, "load_set", lambda name, joined: (None, []))
+    with pytest.raises(SystemExit, match="no questions"):
+        latency.requests(["tools-effort-60"], Path("nowhere"), need_prompts=False)
+
+
+def test_a_search_that_fails_mid_timing_still_closes_every_client(
+    latency: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run = _module("router_latency_run")
+    closed: list[str] = []
+
+    class Client:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def search(self, prompt: str) -> None:
+            raise RuntimeError("backend down")
+
+        def close(self) -> None:
+            closed.append(self.name)
+
+    monkeypatch.setattr(run, "_clients", lambda cls, router, chain: (Client("routed"), Client("unrouted")))
+    with pytest.raises(RuntimeError, match="backend down"):
+        run.added_wall_time({"a": None, "b": None}, ["q"] * 2, ("perplexity",), warmup=0, seed=0, loop=None)
+    assert sorted(closed) == ["routed", "routed", "unrouted", "unrouted"]
 
 
 def test_a_joined_file_missing_questions_is_refused(latency: ModuleType, tmp_path: Path) -> None:
@@ -280,7 +317,7 @@ def test_a_failing_build_still_closes_the_routers_built_before_it(latency: Modul
         raise RuntimeError("no key")
 
     specs = [routers.RouterSpec("a", "a", lambda: _Closing(log, "a")), routers.RouterSpec("b", "b", broken)]
-    args = latency.parse_args(["-n", "1", "--warmup", "0", "--cold", "0", "--e2e", "0"])
+    args = latency.parse_args(["-n", "1", "--warmup", "0", "--cold", "0", "--e2e", "1"])
     with pytest.raises(RuntimeError):
         latency.run(args, specs, [_req()])
     assert log == ["a"]

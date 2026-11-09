@@ -265,22 +265,30 @@ def _timed(clients: Mapping[str, tuple[Any, Any]], prompts: Sequence[str], paire
 
 def _e2e_sync(routers: Mapping[str, Any], prompts: Sequence[str], chain: Sequence[str], paired: _Paired,
               rng: random.Random) -> None:  # fmt: skip
-    clients = {name: _clients(WebRouter, router, chain) for name, router in routers.items()}
-    for client, prompt in _timed(clients, prompts, paired, rng):
-        client.search(prompt)
-    for both in clients.values():
-        for client in both:
-            client.close()
+    clients: dict[str, Any] = {}
+    try:  # one that fails to build or to search still closes those built before it
+        for name, router in routers.items():
+            clients[name] = _clients(WebRouter, router, chain)
+        for client, prompt in _timed(clients, prompts, paired, rng):
+            client.search(prompt)
+    finally:
+        for both in clients.values():
+            for client in both:
+                client.close()
 
 
 async def _e2e_async(routers: Mapping[str, Any], prompts: Sequence[str], chain: Sequence[str], paired: _Paired,
                      rng: random.Random) -> None:  # fmt: skip
-    clients = {name: _clients(AsyncWebRouter, router, chain) for name, router in routers.items()}
-    for client, prompt in _timed(clients, prompts, paired, rng):
-        await client.search(prompt)
-    for both in clients.values():
-        for client in both:
-            await client.aclose()
+    clients: dict[str, Any] = {}
+    try:
+        for name, router in routers.items():
+            clients[name] = _clients(AsyncWebRouter, router, chain)
+        for client, prompt in _timed(clients, prompts, paired, rng):
+            await client.search(prompt)
+    finally:
+        for both in clients.values():
+            for client in both:
+                await client.aclose()
 
 
 def added_wall_time(
