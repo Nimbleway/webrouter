@@ -44,6 +44,9 @@ REMOTE_LOOPBACK_SCHEME = "http"
 
 REMOTE_AUTH_HEADER = "Authorization"
 REMOTE_AUTH_VALUE = "Bearer {key}"
+REMOTE_CONTENT_TYPE_HEADER = "Content-Type"
+REMOTE_MEDIA_PARAMS = ";"
+"""What separates a media type from its parameters, as ``application/json; charset=utf-8``."""
 REMOTE_CONTENT_TYPE = {"Content-Type": "application/json", "Accept": "application/json"}
 
 REMOTE_DISPLAY_NAME = "remote({host})"
@@ -90,7 +93,7 @@ REMOTE_WHY_TOO_LARGE = "an answer over {limit} bytes"
 REMOTE_WHY_NOT_JSON = "an answer that is not a JSON object"
 REMOTE_WHY_CONTENT_TYPE = "an answer that is not application/json"
 REMOTE_WHY_TOO_MANY = "a decision with more than {limit} entries in one field"
-REMOTE_WHY_SCHEMA = "wire schema {got!r}; this client reads schema {expected}"
+REMOTE_WHY_SCHEMA = "a wire schema that is missing or not {expected}, the one this client reads"
 REMOTE_WHY_DECISION = "a decision that does not fit the wire schema"
 
 REMOTE_HTTP_OK = 200

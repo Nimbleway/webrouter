@@ -37,7 +37,7 @@ from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
-from web_router.routing.registry import aclose_router, close_router, discard_router, resolve_router
+from web_router.routing.registry import aclose_router, discard_router, resolve_router
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -100,7 +100,7 @@ class RouterSetup:
 
     def _close_router(self) -> None:
         """Close the router when it was built here by name; one passed in is the caller's to close."""
-        close_router(self._owned_router)
+        discard_router(self._owned_router)  # an async-only router's aclose(), run here, included
 
     async def _aclose_router(self) -> None:
         """:meth:`_close_router` from async code: the router's ``aclose()``, else its ``close()``."""

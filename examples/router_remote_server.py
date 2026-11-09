@@ -46,6 +46,7 @@ from web_router.routing.wire import WireError, decision_to_wire, request_from_wi
 PATH = "/route"
 MAX_BODY_BYTES = 1_000_000
 POLL_S = 0.05  # how soon shutdown() is noticed
+SOCKET_TIMEOUT_S = 10.0
 PROMPTS = (
     "what is retrieval augmented generation",
     "read https://en.wikipedia.org/wiki/Web_scraping",
@@ -84,6 +85,7 @@ class RouterServer(ThreadingHTTPServer):
 
 class _Handler(BaseHTTPRequestHandler):
     server: RouterServer
+    timeout = SOCKET_TIMEOUT_S  # a client that sends headers and then nothing gives up its thread
 
     def do_POST(self) -> None:
         if self.headers.get("Host") not in self.server.hosts:

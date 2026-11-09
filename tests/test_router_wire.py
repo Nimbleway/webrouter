@@ -102,11 +102,12 @@ def test_a_decision_with_nulls_or_nothing_set_is_no_opinion() -> None:
     assert decision_from_wire({"schema": 1, "exclude": None, "tools": None}) == RouteDecision()
 
 
-@pytest.mark.parametrize("version", [2, 0, "1", True, None, 1.5])
-def test_another_major_version_is_refused(version: Any) -> None:
+@pytest.mark.parametrize("version", [2, 0, "1", True, None, 1.5, "https://session.example/secret"])
+def test_another_major_version_is_refused_without_echoing_it(version: Any) -> None:
     body = {"tools": ["search"]} if version is None else {"schema": version, "tools": ["search"]}
-    with pytest.raises(WireError, match="wire schema"):
+    with pytest.raises(WireError, match="wire schema that is missing or not 1") as refused:
         decision_from_wire(body)
+    assert "secret" not in str(refused.value)
 
 
 @pytest.mark.parametrize(
@@ -117,6 +118,9 @@ def test_another_major_version_is_refused(version: Any) -> None:
         {"schema": 1, "providers": {"search": "exa"}},
         {"schema": 1, "exclude": ["search:exa"]},
         {"schema": 1, "confidence": "very"},
+        {"schema": 1, "confidence": True},
+        {"schema": 1, "confidence": "0.5"},
+        {"schema": 1, "tools": [1]},
     ],
 )
 def test_a_decision_that_breaks_the_types_is_refused(body: dict[str, Any]) -> None:

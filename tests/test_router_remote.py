@@ -49,7 +49,7 @@ async def test_the_async_router_asks_it_too_on_one_pool() -> None:
     with running() as server:
         async with AsyncWebRouter(router="remote", router_config=config(server)) as wr:
             plans = [await wr.plan(URL_PROMPT), await wr.plan(URL_PROMPT)]
-            pool = wr._owned_router._client  # type: ignore[union-attr]
+            (pool,) = wr._owned_router._pools.values()  # type: ignore[union-attr]
         assert pool is not None and pool.is_closed, "aclose() closed the router's pool"
     assert [plan.tool for plan in plans] == ["extract", "extract"]
     assert plans[1].decision.router == "remote(http://127.0.0.1)"
@@ -61,7 +61,7 @@ def test_it_is_async_only_and_the_sync_router_closes_its_pool() -> None:
         remote = wr._owned_router
         assert not hasattr(remote, "route") and hasattr(remote, "aroute")
         wr.plan("solar news")
-        pool = remote._client  # type: ignore[union-attr]
+        (pool,) = remote._pools.values()  # type: ignore[union-attr]
         wr.close()
     assert pool is not None and pool.is_closed
 
@@ -108,8 +108,8 @@ def test_a_slow_drip_answer_is_cancelled_at_the_deadline() -> None:
 @pytest.mark.parametrize(
     ("answer", "why"),
     [
-        ({"schema": 2, "tools": ["extract"]}, "wire schema 2"),
-        ({"tools": ["extract"]}, "wire schema None"),
+        ({"schema": 2, "tools": ["extract"]}, "missing or not 1"),
+        ({"tools": ["extract"]}, "missing or not 1"),
         ({"schema": 1, "tools": "extract"}, "does not fit"),
         ({"schema": 1, "tools": ["search"] * 65}, "more than 64 entries"),
     ],
@@ -189,20 +189,30 @@ def test_closing_from_another_thread_closes_the_pool_on_its_own_loop() -> None:
         with running() as server:
             router = RemoteRouter(**config(server))
             asyncio.run_coroutine_threadsafe(router.aroute(request_from_wire(_sample())), loop).result(5)
-            pool = router._client
+            (pool,) = router._pools.values()
             assert pool is not None and not pool.is_closed
             router.close()
-        assert pool.is_closed and router._client is None
+        assert pool.is_closed and not router._pools
     finally:
         loop.call_soon_threadsafe(loop.stop)
         thread.join(5)
         loop.close()
 
 
-def test_a_second_loop_gets_its_own_pool() -> None:
-    with running() as server:
-        router = RemoteRouter(**config(server))
-        first = _ask(router)
-        second = _ask(router)
-        router.close()
-    assert first.tools == second.tools == ["search"]
+def test_each_loop_gets_its_own_pool_and_one_never_closes_anothers() -> None:
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    try:
+        with running() as server:
+            router = RemoteRouter(**config(server))
+            asyncio.run_coroutine_threadsafe(router.aroute(request_from_wire(_sample())), loop).result(5)
+            (theirs,) = router._pools.values()
+            assert _ask(router).tools == ["search"], "a call on another loop"
+            assert not theirs.is_closed, "the first loop's pool is left open for its own calls"
+            router.close()
+        assert theirs.is_closed and not router._pools
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(5)
+        loop.close()

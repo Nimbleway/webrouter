@@ -190,3 +190,21 @@ def test_a_refused_async_only_router_is_closed_with_aclose() -> None:
     finally:
         unregister_router(NAME)
     assert made == ["aclosed"]
+
+
+def test_the_sync_router_runs_an_async_only_routers_aclose() -> None:
+    made: list[str] = []
+
+    class AsyncOnly:
+        async def aroute(self, req: RouteRequest) -> RouteDecision:
+            return RouteDecision()
+
+        async def aclose(self) -> None:
+            made.append("aclosed")
+
+    register_router(NAME, AsyncOnly)
+    try:
+        WebRouter(router=NAME).close()
+    finally:
+        unregister_router(NAME)
+    assert made == ["aclosed"]

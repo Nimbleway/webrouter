@@ -76,7 +76,7 @@ def _payload(data: object) -> dict[str, Any]:
         raise WireError(REMOTE_WHY_NOT_JSON)
     version = data.get(WIRE_SCHEMA_KEY)
     if isinstance(version, bool) or version != WIRE_SCHEMA_VERSION:
-        raise WireError(REMOTE_WHY_SCHEMA.format(got=version, expected=WIRE_SCHEMA_VERSION))
+        raise WireError(REMOTE_WHY_SCHEMA.format(expected=WIRE_SCHEMA_VERSION))  # never echoes the service's value
     return {key: value for key, value in data.items() if key != WIRE_SCHEMA_KEY and value is not None}
 
 
@@ -92,7 +92,7 @@ def request_from_wire(data: object) -> RouteRequest:
         WireError: for anything but a schema-1 request.
     """
     try:
-        return _request_adapter().validate_python(_payload(data))
+        return _request_adapter().validate_json(json.dumps(_payload(data)), strict=True)
     except (ValidationError, ValueError) as exc:
         raise WireError(str(exc)) from None
 
@@ -110,7 +110,8 @@ def decision_from_wire(data: object) -> RouteDecision:
     """
     payload = _payload(data)
     try:
-        decision = _decision_adapter().validate_python(payload)
+        # Strict, as JSON: a true is no confidence of 1.0, and "0.5" is no number.
+        decision = _decision_adapter().validate_json(json.dumps(payload), strict=True)
     except ValidationError:
         raise WireError(REMOTE_WHY_DECISION) from None
     return _bounded(decision)
