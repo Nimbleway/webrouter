@@ -49,17 +49,22 @@ jobs:
             exit 1
           fi
 
+      # The commit the run started on, not the tag's name, so a tag moved
+      # mid-run can't change what is built.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: refs/tags/${{ inputs.tag }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      # Both checks run before any build tool touches the checked-out code.
-      - name: Tag must point at a commit on main
+      # These checks run before any build tool touches the checked-out code.
+      - name: Tag must still be this commit, on main
         # Full ref names, so a tag named like a branch can't stand in for main.
         run: |
-          git merge-base --is-ancestor "refs/tags/${TAG}^{commit}" refs/remotes/origin/main \
+          tagged=$(git rev-parse "refs/tags/${TAG}^{commit}")
+          [ "$tagged" = "$GITHUB_SHA" ] \
+            || { echo "::error::$TAG now points at $tagged, not $GITHUB_SHA the run started on"; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main \
             || { echo "::error::$TAG is not on main"; exit 1; }
 
       - name: Tag must match __version__
