@@ -40,6 +40,7 @@ from web_router.constants_mcp import (
     MCP_MSG_ROUTER_IMPORT,
     MCP_MSG_ROUTER_SPEC,
     MCP_PROMPT_NOTE,
+    MCP_REMOTE_PROMPT_NOTE,
     MCP_ROUTER_IN_PROCESS,
     MCP_ROUTER_OFF,
     MCP_ROUTER_OPERATOR,
@@ -102,9 +103,9 @@ class McpRouting:
         url = (env.get(ENV_REMOTE_ROUTER_URL) or "").strip()
         if not url:
             raise ConfigurationError(MCP_MSG_REMOTE_URL.format(env_var=ENV_MCP_ROUTER, url_var=ENV_REMOTE_ROUTER_URL))
-        config: dict[str, Any] = {"url": url}
-        if key := env.get(ENV_REMOTE_ROUTER_API_KEY):
-            config["api_key"] = key
+        # The key is captured now, "" for none, so the router never reads the environment again: a later load_env
+        # or a change to os.environ cannot set or replace it.
+        config: dict[str, Any] = {"url": url, "api_key": env.get(ENV_REMOTE_ROUTER_API_KEY) or ""}
         name = REMOTE_DISPLAY_NAME.format(host=host_of(url))
         return cls(router=REMOTE_ROUTER_NAME, router_name=name, ceiling=ceiling, router_config=config)
 
@@ -125,7 +126,7 @@ class McpRouting:
         return {
             "router": self.router_name,
             **runs,
-            "prompt_note": MCP_PROMPT_NOTE,
+            "prompt_note": MCP_PROMPT_NOTE + (MCP_REMOTE_PROMPT_NOTE if self.router == REMOTE_ROUTER_NAME else ""),
             "url_policy": MCP_URL_POLICY,
             "url_policy_note": MCP_URL_POLICY_NOTE,
             "ceiling": {"max_cost_usd": self.ceiling.max_cost_usd, "time_limit_s": self.ceiling.time_limit_s},

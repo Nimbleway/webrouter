@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from tests.examples.helpers import load_example
@@ -47,3 +50,47 @@ def running(
 def config(server: Any, **extra: Any) -> dict[str, Any]:
     """``router_config`` for the ``remote`` router pointed at ``server``, with its key."""
     return {"url": server.url, "api_key": KEY, **extra}
+
+
+class Canned:
+    """What a hand-written server answers, and every request it was sent: path, headers."""
+
+    def __init__(
+        self, status: int = 200, body: bytes = b"{}", headers: dict[str, str] | None = None, drip_s: float = 0.0
+    ) -> None:
+        self.status, self.body, self.drip_s = status, body, drip_s
+        self.headers = {"Content-Type": "application/json", **(headers or {})}
+        self.seen: list[tuple[str, dict[str, str]]] = []
+
+
+@contextmanager
+def canned(answer: Canned) -> Iterator[str]:
+    """A server on a free loopback port that answers every request with ``answer``; yields its base URL."""
+
+    class Handler(BaseHTTPRequestHandler):
+        def _any(self) -> None:
+            answer.seen.append((self.path, dict(self.headers)))
+            self.rfile.read(int(self.headers.get("Content-Length") or 0))
+            self.send_response(answer.status)
+            for name, value in answer.headers.items():
+                self.send_header(name, value)
+            self.send_header("Content-Length", str(len(answer.body)))
+            self.end_headers()
+            for byte in answer.body:
+                self.wfile.write(bytes([byte]))
+                self.wfile.flush()
+                time.sleep(answer.drip_s)
+
+        do_POST = do_GET = _any
+
+        def log_message(self, format: str, *args: Any) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server.daemon_threads = True
+    threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}"
+    finally:
+        server.shutdown()
+        server.server_close()

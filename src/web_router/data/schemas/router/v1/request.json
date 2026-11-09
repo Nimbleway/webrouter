@@ -175,5 +175,37 @@
     "deadline_s"
   ],
   "title": "web-router RouteRequest, wire schema v1",
-  "type": "object"
+  "type": "object",
+  "examples": [
+    {
+      "schema": 1,
+      "prompt": "read https://example.com/pricing",
+      "candidates": [
+        {
+          "tool": "extract",
+          "provider": "jina",
+          "est_cost_usd": 0.0,
+          "est_latency_s": 2.1,
+          "id": "extract:jina"
+        },
+        {
+          "tool": "search",
+          "provider": "tavily",
+          "est_cost_usd": 0.008,
+          "est_latency_s": 1.2,
+          "id": "search:tavily"
+        }
+      ],
+      "deadline_s": 1.0,
+      "urls": [
+        "https://example.com/pricing"
+      ],
+      "budget": {
+        "max_cost_usd": 0.05,
+        "time_limit_s": 30.0,
+        "strict": false
+      },
+      "pinned_tool": null
+    }
+  ]
 }

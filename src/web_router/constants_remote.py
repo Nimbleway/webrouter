@@ -21,8 +21,22 @@ ENV_REMOTE_ROUTER_URL = "WEB_ROUTER_REMOTE_ROUTER_URL"
 REMOTE_TIMEOUT_S = 1.0
 """Seconds the ``remote`` router waits for its service when ``router_config`` sets no ``timeout_s``."""
 
-REMOTE_MAX_RESPONSE_BYTES = 1_000_000
-"""The largest answer read from a router service: a decision is a few hundred bytes."""
+REMOTE_MAX_RESPONSE_BYTES = 64 * 1024
+"""The largest answer read from a router service: a decision is a few hundred bytes. Past it, a router error."""
+
+REMOTE_CLOSE_WAIT_S = 2.0
+"""Seconds a close from another thread waits for the pool to close on its own loop."""
+
+REMOTE_JSON_TYPE = "application/json"
+"""The one ``Content-Type`` a decision is read from (parameters such as ``charset`` aside)."""
+
+REMOTE_LOOPBACK_NAME = "localhost"
+"""The one name plain ``http`` may reach. ``foo.localhost`` and ``0.0.0.0`` are not exempt: a resolver may send
+the first anywhere, and the second is no loopback address."""
+
+REMOTE_URL_POLICY = "public_only"
+"""The URL policy a router service's options are held to when the caller sets none: a service may not point
+extract or browse at loopback, private or metadata hosts. A caller's own policy applies when it sets one."""
 
 REMOTE_SECURE_SCHEME = "https"
 REMOTE_LOOPBACK_SCHEME = "http"
@@ -47,6 +61,13 @@ WIRE_SCHEMA_DIR = ("data", "schemas", "router", "v1")
 WIRE_CONFIDENCE_RANGE = {"minimum": 0, "maximum": 1}
 """What the response schema adds to ``confidence``: the merge rule sets aside a decision outside 0..1."""
 
+WIRE_MAX_TEXT = 300
+"""Characters kept of a decision's ``reason`` and of each ``exclude`` reason; the rest is cut."""
+
+WIRE_MAX_NAMES = 64
+"""The most entries a decision may hold in one list or mapping: ``tools``, one method's ``providers``,
+``exclude``, or one method's ``params``. Past it, the decision is refused."""
+
 WIRE_REQUEST_FILE = "request.json"
 WIRE_RESPONSE_FILE = "response.json"
 WIRE_JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
@@ -54,8 +75,9 @@ WIRE_REQUEST_TITLE = "web-router RouteRequest, wire schema v1"
 WIRE_RESPONSE_TITLE = "web-router RouteDecision, wire schema v1"
 
 MSG_REMOTE_NO_URL = "router='remote' needs router_config={{'url': ...}}, the router service's URL."
-MSG_REMOTE_URL = "router_config['url'] is not an absolute http(s) URL with a host; got one for {host}."
-MSG_REMOTE_HTTPS = "router_config['url'] must use https, or http to a loopback host only; got {host}."
+MSG_REMOTE_URL = "router_config['url'] is not an absolute http(s) URL with a host that parses one way."
+MSG_REMOTE_URL_PARTS = "router_config['url'] may not carry credentials, a query or a fragment: pass the key as api_key."
+MSG_REMOTE_HTTPS = "router_config['url'] must use https; plain http is allowed only to localhost, 127.0.0.0/8 or ::1."
 MSG_REMOTE_TIMEOUT = "router_config['timeout_s'] must be a positive number of seconds; got {value!r}."
 MSG_REMOTE_KEY = "router_config['api_key'] must be a string."
 MSG_REMOTE_NO_HTTPX = (
@@ -66,6 +88,8 @@ REMOTE_WHY_TRANSPORT = "no answer ({kind})"
 REMOTE_WHY_STATUS = "HTTP {status}"
 REMOTE_WHY_TOO_LARGE = "an answer over {limit} bytes"
 REMOTE_WHY_NOT_JSON = "an answer that is not a JSON object"
+REMOTE_WHY_CONTENT_TYPE = "an answer that is not application/json"
+REMOTE_WHY_TOO_MANY = "a decision with more than {limit} entries in one field"
 REMOTE_WHY_SCHEMA = "wire schema {got!r}; this client reads schema {expected}"
 REMOTE_WHY_DECISION = "a decision that does not fit the wire schema"
 

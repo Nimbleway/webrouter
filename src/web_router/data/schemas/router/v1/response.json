@@ -132,5 +132,24 @@
   "type": "object",
   "required": [
     "schema"
+  ],
+  "examples": [
+    {
+      "schema": 1,
+      "tools": [
+        "extract"
+      ],
+      "providers": {
+        "extract": [
+          "jina"
+        ]
+      },
+      "exclude": {
+        "search:tavily": "the prompt names a URL"
+      },
+      "params": null,
+      "confidence": 0.9,
+      "reason": "the prompt names a URL"
+    }
   ]
 }

@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import sys
 from collections.abc import Mapping
+from dataclasses import replace
 from functools import cache
 from importlib import resources
 from pathlib import Path
@@ -30,8 +31,11 @@ from web_router.constants_remote import (
     REMOTE_WHY_DECISION,
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_SCHEMA,
+    REMOTE_WHY_TOO_MANY,
     WIRE_CONFIDENCE_RANGE,
     WIRE_JSON_SCHEMA_DIALECT,
+    WIRE_MAX_NAMES,
+    WIRE_MAX_TEXT,
     WIRE_REQUEST_FILE,
     WIRE_REQUEST_TITLE,
     WIRE_RESPONSE_FILE,
@@ -40,10 +44,11 @@ from web_router.constants_remote import (
     WIRE_SCHEMA_KEY,
     WIRE_SCHEMA_VERSION,
 )
-from web_router.routing.contract import RouteDecision, RouteRequest
+from web_router.routing._runner import InvalidAnswer
+from web_router.routing.contract import Budget, Candidate, RouteDecision, RouteRequest
 
 
-class WireError(ValueError):
+class WireError(InvalidAnswer, ValueError):
     """A payload that does not fit the wire format: not an object, another major version, or ill-typed fields."""
 
 
@@ -105,9 +110,57 @@ def decision_from_wire(data: object) -> RouteDecision:
     """
     payload = _payload(data)
     try:
-        return _decision_adapter().validate_python(payload)
+        decision = _decision_adapter().validate_python(payload)
     except ValidationError:
         raise WireError(REMOTE_WHY_DECISION) from None
+    return _bounded(decision)
+
+
+def _bounded(decision: RouteDecision) -> RouteDecision:
+    """``decision`` within the wire's limits: its free text cut short, and refused when a field holds too much.
+
+    A service's words reach the decision record and, through the MCP server, a model; neither needs an essay.
+
+    Raises:
+        WireError: for a list or mapping of more than :data:`WIRE_MAX_NAMES` entries.
+    """
+    sized = [decision.tools or (), decision.exclude, *(decision.providers or {}).values()]
+    sized += list((decision.params or {}).values())
+    if any(len(entry) > WIRE_MAX_NAMES for entry in sized):
+        raise WireError(REMOTE_WHY_TOO_MANY.format(limit=WIRE_MAX_NAMES))
+    return replace(
+        decision,
+        reason=None if decision.reason is None else decision.reason[:WIRE_MAX_TEXT],
+        exclude={key: why[:WIRE_MAX_TEXT] for key, why in decision.exclude.items()},
+    )
+
+
+EXAMPLE_REQUEST = RouteRequest(
+    prompt="read https://example.com/pricing",
+    candidates=(
+        Candidate(tool="extract", provider="jina", est_cost_usd=0.0, est_latency_s=2.1),
+        Candidate(tool="search", provider="tavily", est_cost_usd=0.008, est_latency_s=1.2),
+    ),
+    deadline_s=1.0,
+    urls=("https://example.com/pricing",),
+    budget=Budget(max_cost_usd=0.05, time_limit_s=30.0),
+)
+"""The request the README and the schema file show, generated so neither can drift from the types."""
+
+EXAMPLE_DECISION = RouteDecision(
+    tools=["extract"],
+    providers={"extract": ["jina"]},
+    exclude={"search:tavily": "the prompt names a URL"},
+    confidence=0.9,
+    reason="the prompt names a URL",
+)
+"""The decision the README and the schema file show."""
+
+
+def example_json(name: str) -> str:
+    """The README's example for one schema file: its wire JSON, one field per line."""
+    wire = request_to_wire(EXAMPLE_REQUEST) if name == WIRE_REQUEST_FILE else decision_to_wire(EXAMPLE_DECISION)
+    return json.dumps(wire, indent=2)
 
 
 def _schema(adapter: TypeAdapter[Any], title: str, mode: str) -> dict[str, Any]:
@@ -147,8 +200,10 @@ def response_schema() -> dict[str, Any]:
 
 
 def rendered() -> dict[str, str]:
-    """Each schema file's name and the text it should hold."""
+    """Each schema file's name and the text it should hold, its example included."""
     files = {WIRE_REQUEST_FILE: request_schema(), WIRE_RESPONSE_FILE: response_schema()}
+    for name, schema in files.items():
+        schema["examples"] = [json.loads(example_json(name))]
     return {name: json.dumps(schema, indent=2, sort_keys=False) + "\n" for name, schema in files.items()}
 
 

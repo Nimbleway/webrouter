@@ -83,13 +83,19 @@ MCP_ROUTER_OPERATOR_NOTE = (
 
 MCP_ROUTER_REMOTE = "remote"
 MCP_ROUTER_REMOTE_NOTE = (
-    "web_run sends each prompt, the URLs in it, the budget and the candidate ids (tool:provider, which name the "
+    "web_run sends each prompt, the URLs in it whole, the budget and the candidate ids (tool:provider, which name the "
     "backends configured here) to the router service at {host}; never a key value."
 )
 """Where the ``remote`` router runs, and what it is sent: the capabilities resource names the service's host."""
 
 MCP_PROMPT_NOTE = "web_run sends the prompt to the backend that serves it, as its query or task, as search does."
 """What the capabilities resource says of the prompt whatever the router: a backend always receives it."""
+
+MCP_REMOTE_PROMPT_NOTE = (
+    " With the remote router, web_run also sends each prompt to the router service, the URLs in it whole,"
+    " query strings included, before the plan is made."
+)
+"""What the ``prompt_note`` adds with the ``remote`` router: the prompt and its URLs leave the machine whole."""
 
 MCP_TOOL_WEB_RUN = "web_run"
 MCP_TOOL_BUDGET_START = "budget_start"

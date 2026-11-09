@@ -39,15 +39,50 @@ def test_a_plain_http_url_to_another_host_stops_the_server_when_the_router_is_bu
         routing.build()
 
 
-def test_the_capabilities_name_the_service_by_scheme_and_host_and_say_what_it_is_sent() -> None:
-    routing = McpRouting.from_environ(remote_env("https://user:pw@router.example.com/v1/route?tenant=acme"))
+def test_remote_with_a_url_attaches_and_the_capabilities_name_its_scheme_and_host() -> None:
+    routing = McpRouting.from_environ(remote_env("https://router.example.com:8443/v1/route"))
+    router = routing.build()
+    assert router._router is not None and router._router.name == "remote(https://router.example.com)"
     section = routing.capabilities(None)
     assert section["router"] == "remote(https://router.example.com)"
     assert section["router_runs"] == "remote"
     assert "https://router.example.com" in section["router_note"] and "candidate ids" in section["router_note"]
+    assert "URLs in it whole" in section["prompt_note"], "prompts and their URLs go to that host as written"
     shown = str(section) + repr(routing)
-    for hidden in ("user", "pw", "v1", "tenant", "acme", KEY):
+    for hidden in ("8443", "v1", KEY):
         assert hidden not in shown
+
+
+@pytest.mark.parametrize(
+    "url", ["https://user:pw@router.example.com/route", "https://router.example.com/route?tenant=acme"]
+)
+def test_a_url_carrying_credentials_or_a_query_stops_the_server_when_the_router_is_built(url: str) -> None:
+    with pytest.raises(ConfigurationError) as refused:
+        McpRouting.from_environ(remote_env(url)).build()
+    assert "pw" not in str(refused.value) and "acme" not in str(refused.value)
+
+
+async def test_the_url_and_key_are_read_once_and_load_env_or_a_later_env_change_moves_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_home: Path, members: list[str]
+) -> None:
+    recorder = Recorder()
+    with running(recorder) as server:
+        for name, value in remote_env(server.url).items():
+            monkeypatch.setenv(name, value)
+        tools = WebRouterTools(research_wait=0.0)
+        monkeypatch.setenv(ENV_REMOTE_ROUTER_URL, "https://attacker.example/route")
+        monkeypatch.setenv(ENV_REMOTE_ROUTER_API_KEY, "changed")
+        env_file = tmp_path / "keys.env"
+        env_file.write_text(
+            f"{ENV_REMOTE_ROUTER_URL}=https://attacker.example/route\n{ENV_REMOTE_ROUTER_API_KEY}=k2\nTAVILY_API_KEY=t\n"
+        )
+        await outcome(tools, "load_env", path=str(env_file))  # rebuilds the router from what startup read
+        payload = await ok_on(tools, MCP_TOOL_WEB_RUN, prompt="read https://example.com/a", dry_run=True)
+        await tools.router.aclose()
+    assert tools.capabilities()["routing"]["router"] == "remote(http://127.0.0.1)"
+    assert payload["decision"]["router"] == "remote(http://127.0.0.1)"
+    assert payload["decision"].get("reason") != "router_error", "the startup key is still the one sent"
+    assert recorder.bodies, "the startup service was asked"
 
 
 async def test_web_run_plans_through_the_service_and_its_record_names_it(members: list[str]) -> None:

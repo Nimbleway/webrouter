@@ -31,6 +31,10 @@ MSG_ROUTER_FAILED = (
 )
 MSG_ROUTER_OTHER_LOOP = "The router answered with a future bound to another event loop, which this call cannot await."
 
+ROUTER_URL_POLICY_ATTR = "min_url_policy"
+"""The attribute a router sets to hold the URLs it sets to a ``url_policy`` when the caller sets none: the
+``remote`` router sets ``public_only``, since its answers come over the network."""
+
 ROUTER_NAME_ATTR = "router_name"
 """The attribute, on a router function or object, that names it in a decision record; its qualified name if unset."""
 

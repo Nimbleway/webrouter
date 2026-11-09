@@ -25,7 +25,7 @@ from typing import Any, TypeVar, get_args
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_invoke import MSG_ROUTE_TOOLS
+from web_router.constants_invoke import MSG_ROUTE_TOOLS, ROUTER_URL_POLICY_ATTR
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
@@ -69,6 +69,8 @@ class RouterSetup:
     _owned_router: RouterLike | None = None
     _route_tools: frozenset[ToolName] = _ALL_TOOLS
     _url_check: UrlCheck | None = None
+    _router_url_check: UrlCheck | None = None
+    """The check on the URLs a router sets: the caller's ``url_policy``, else the router's ``min_url_policy``."""
 
     def _attach_router(
         self,
@@ -89,6 +91,8 @@ class RouterSetup:
         attached, owned = resolve_router(router, router_config)
         try:
             self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
+            floor = getattr(attached, ROUTER_URL_POLICY_ATTR, None) if url_policy is None else url_policy
+            self._router_url_check = url_check(floor)
         except BaseException:
             discard_router(owned)  # built here and refused: nothing else would close it
             raise
@@ -150,7 +154,7 @@ class RouterSetup:
         req, found = routed
         caller_set = request.specified_parameters() | request.always_sent
         out = decided(
-            req, found, outcome, router=self._attached().name, caller_set=caller_set, url_check=self._url_check
+            req, found, outcome, router=self._attached().name, caller_set=caller_set, url_check=self._router_url_check
         )
         if out.params:
             request = request.model_copy(update=dict(out.params))

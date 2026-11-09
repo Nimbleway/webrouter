@@ -133,3 +133,14 @@ def test_anything_but_an_object_is_refused(body: Any) -> None:
 def test_a_service_reading_a_bad_request_gets_a_wire_error() -> None:
     with pytest.raises(WireError):
         request_from_wire({"schema": 1, "prompt": "x"})
+
+
+@pytest.mark.parametrize("name", [WIRE_REQUEST_FILE, WIRE_RESPONSE_FILE])
+def test_the_readme_and_schema_examples_are_generated_from_the_types(name: str) -> None:
+    from pathlib import Path
+
+    from web_router.routing.wire import example_json
+
+    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+    assert f"```json\n{example_json(name)}\n```" in readme, "paste wire.example_json() into the README"
+    assert json.loads(published(name))["examples"] == [json.loads(example_json(name))]

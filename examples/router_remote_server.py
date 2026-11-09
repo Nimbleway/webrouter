@@ -22,8 +22,10 @@ Run it with::
     uv run python examples/router_remote_server.py --demo     # serve, plan three prompts through it, stop
 
 Set `WEB_ROUTER_REMOTE_ROUTER_API_KEY` before starting it to require that key;
-the `remote` router reads the same variable. Plain `http` is accepted only on
-a loopback host: put a real service behind `https`.
+the `remote` router reads the same variable. It binds 127.0.0.1 unless
+`--host` says otherwise, answers only a `Host` header naming that address or
+`localhost`, and caps a request at 1 MB. Plain `http` is accepted only to
+`localhost` or a loopback address: put a real service behind `https`.
 """
 
 from __future__ import annotations
@@ -69,6 +71,12 @@ class RouterServer(ThreadingHTTPServer):
         self.decide = decide
 
     @property
+    def hosts(self) -> set[str]:
+        """The ``Host`` headers it answers: the address it is bound to, and ``localhost`` on the same port."""
+        host, port = self.server_address[:2]
+        return {f"{host}:{port}", f"localhost:{port}"}
+
+    @property
     def url(self) -> str:
         host, port = self.server_address[:2]
         return f"http://{host}:{port}{PATH}"
@@ -78,15 +86,17 @@ class _Handler(BaseHTTPRequestHandler):
     server: RouterServer
 
     def do_POST(self) -> None:
+        if self.headers.get("Host") not in self.server.hosts:
+            return self._answer(421, {"error": "unknown host"})  # a page re-pointing a DNS name here, say
         if self.path != PATH:
             return self._answer(404, {"error": "not found"})
         if not self._authorized():
             return self._answer(401, {"error": "a bearer key is required"})
-        length = int(self.headers.get("Content-Length") or 0)
-        if length > MAX_BODY_BYTES:
-            return self._answer(413, {"error": "request too large"})
+        length = self.headers.get("Content-Length", "")
+        if not length.isdigit() or int(length) > MAX_BODY_BYTES:
+            return self._answer(413, {"error": "a request needs a Content-Length of at most 1 MB"})
         try:
-            body = json.loads(self.rfile.read(length))
+            body = json.loads(self.rfile.read(int(length)))
             if not isinstance(body, dict):
                 raise WireError("not a JSON object")
             return self._answer(200, self.server.decide(body))
