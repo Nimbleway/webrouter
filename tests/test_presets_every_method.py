@@ -30,9 +30,11 @@ ARGUMENTS: dict[str, dict[str, Any]] = {
         "exclude_domains": ["b.com"],
         "country": "US",
         "locale": "en",
+        "recency": "week",
+        "effort": "high",
         "provider_options": {"x": 1},
     },
-    "extract": {"format": "text", "provider_options": {"x": 1}},
+    "extract": {"format": "text", "profile": "p1", "provider_options": {"x": 1}},
     "templates": {"format": "html", "provider_options": {"x": 1}},
     "research": {
         "output_schema": {"type": "object"},

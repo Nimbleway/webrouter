@@ -35,7 +35,9 @@
       }
     }
   },
-  "not_mapped": [],
+  "not_mapped": [
+    "profile"
+  ],
   "default_format": "html",
   "batches_urls": false,
   "source": "https://docs.brightdata.com/api-reference/rest-api/unlocker/unlock-website",

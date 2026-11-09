@@ -68,8 +68,8 @@ def test_the_key_goes_in_x_apikey_as_it_is(provider: WebIQProvider) -> None:
 
 
 def test_an_unmapped_option_is_refused_rather_than_dropped(provider: WebIQProvider) -> None:
-    with pytest.raises(UnsupportedParameterError, match="country"):
-        provider.validate(SearchRequest(query="hi", country="US"))
+    with pytest.raises(UnsupportedParameterError, match="recency"):
+        provider.validate(SearchRequest(query="hi", recency="week"))
 
 
 def test_passages_become_the_content_and_nothing_is_invented(provider: WebIQProvider) -> None:

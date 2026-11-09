@@ -53,9 +53,25 @@
       "sample": {
         "body.locale": "en"
       }
+    },
+    "recency": {
+      "day": {
+        "body.time_range": "day"
+      },
+      "week": {
+        "body.time_range": "week"
+      },
+      "month": {
+        "body.time_range": "month"
+      },
+      "year": {
+        "body.time_range": "year"
+      }
     }
   },
-  "not_mapped": [],
+  "not_mapped": [
+    "effort"
+  ],
   "source": [
     "https://docs.nimbleway.com/api-reference/search/search",
     "nimble-python Nimble.search"
@@ -66,7 +82,8 @@
     "include_domains": "live: tests/test_integration_surface.py::test_domain_filters_are_honored",
     "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back",
     "country": "live: tests/test_integration_surface.py::test_country_is_accepted_as_an_iso_code",
-    "locale": "live: tests/test_integration_surface.py::test_locale_is_accepted_as_a_language_code"
+    "locale": "live: tests/test_integration_surface.py::test_locale_is_accepted_as_a_language_code",
+    "recency": "docs: https://docs.nimbleway.com/api-reference/search/search (time_range day | week | month | year). Nimble applies the filter, and its results carry no date: live on 2026-11-09 day and year returned none dated, so web-router's results cannot show the window"
   },
   "vendor_options": {
     "focus": {
@@ -80,10 +97,6 @@
     "output_format": {
       "status": "passthrough",
       "note": "plain_text | markdown | simplified_html."
-    },
-    "time_range": {
-      "status": "passthrough",
-      "note": "hour | day | week | month | year; not with start_date or end_date."
     },
     "start_date": {
       "status": "passthrough",
@@ -99,11 +112,15 @@
     },
     "deep_search": {
       "status": "passthrough",
-      "note": "Boolean, in the nimble-python signature, not the API reference."
+      "note": "Deprecated alias for a depth with full page content, typed in nimble-python but absent from the API reference; web-router sends search_depth and full_content instead (search_depth='deep'). A content setting, not an effort tier."
     },
     "max_subagents": {
       "status": "passthrough",
-      "note": "Integer, in the nimble-python signature, not the API reference."
+      "note": "Caps the parallel subagents of the shopping, social and geo focus modes, and is ignored for general (SERP) focus; typed in nimble-python, not in the API reference. A fan-out limit, not an effort tier."
+    },
+    "safe_search": {
+      "status": "passthrough",
+      "note": "off | moderate | strict, an enum in the API reference -- a boolean answers 422 (live 2026-11-09); the response echoes the level applied. nimble-python does not type it, so it goes as provider_options={'extra_body': {'safe_search': 'strict'}}."
     }
   }
 }

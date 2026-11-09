@@ -126,17 +126,17 @@ The LLM Context endpoint (ranked page chunks for an LLM) has no stated price.
 <!-- prices: method=search provider=parallel -->
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
-| default | `parallel` | Default on `/v1beta/search` | What web-router calls today | not stated for v1beta | [parallel.ai](https://parallel.ai/pricing) | 2026-10-07 |
-| `:processor-pro` | `parallel:processor-pro` (unverified) | `processor=pro` (v1beta) | Legacy tier selector | not stated | [docs.parallel.ai](https://docs.parallel.ai/llms-full.txt) | 2026-10-07 |
-| `v1:turbo` | not reachable yet | `mode=turbo` (v1) | ~200 ms, English and Japanese only | $1 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-10-07 |
-| `v1:fast` | not reachable yet | `mode=fast` (v1) | Sub-second | $1 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-10-07 |
-| `v1:basic` | not reachable yet | `mode=basic` (v1) | Longer snippets, ~1 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-10-07 |
-| `v1:advanced` | not reachable yet | `mode=advanced` (v1, the default) | Advanced retrieval, ~3 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-10-07 |
+| default | `parallel` | `mode=fast` on `/v1/search` | What web-router calls: fast pinned, Parallel's replacement for the beta default; latency measured on /v1beta | fast lists $1 per 1k; left unknown until route-eval re-runs on /v1, since a price reorders auto's chain | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
+| `:turbo` | `parallel:turbo` (unverified) | `mode=turbo` (v1) | ~200 ms, English and Japanese only | $1 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
+| `:basic` | `parallel:basic` (unverified) | `mode=basic` (v1) | Longer snippets, ~1 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
+| `:advanced` | `parallel:advanced` (unverified) | `mode=advanced` (v1, the default) | Advanced retrieval, ~3 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
 <!-- /prices -->
 
-web-router calls `/v1beta/search`, because only it took `max_results` when it
-was mapped. Parallel's current modes are on `/v1`, where `max_results` sits
-under `advanced_settings`; testing them needs the provider moved to `/v1`.
+web-router calls `/v1/search` with `mode=fast` pinned: unset, `/v1` runs
+`advanced`, the beta's agentic tier, at five times the price. Parallel's
+migration guide maps the beta's default, `one-shot`, to `fast`. The other modes
+go through `provider_options={"mode": ...}`; the latency above was measured on
+`/v1beta`, before the move.
 Results beyond 10 are +$1 per 1k. Up to 5,000 requests a month are free,
 across Parallel's APIs rather than Search alone.
 
@@ -256,6 +256,7 @@ You.com's keyless MCP is priced in its own section above.
 | keenable | markdown, `max_chars` 500,000 | one credit per fetch, 100k requests a month free, then not published; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
 | deepseek | markdown | $0.75 per 1k; successful fetches only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
 | linkup | markdown (default) or html (`includeRawContent`), `mode=standard`, no rendering | $0.001 per request; $1 per 1k; `renderJs` or `mode=pro` $0.005, both $0.01; a `schema` adds $0.001 | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md) | 2026-10-07 |
+| browserbase | markdown | $1 per 1k; Fetch API calls past the included 1,000 (Free and Developer $20/mo); $0.50 per 1k past 10,000 on Startup ($99/mo); $4 per 1k with proxies, which web-router never turns on itself | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-11-08 |
 <!-- /prices -->
 
 ## Templates (Extract Templates)

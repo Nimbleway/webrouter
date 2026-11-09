@@ -1,10 +1,17 @@
-"""Browserbase providers: browser sessions over the Sessions API, and browse tasks over the Agents API.
+"""Browserbase providers: browser sessions over the Sessions API and browse tasks over the Agents API.
 
 Talks to the REST endpoints directly rather than through the ``browserbase``
 SDK: each method is a handful of requests, which an SDK dependency would not
-simplify. Install with the ``all`` extra. Both read
-``BROWSERBASE_API_KEY`` unless a key is passed explicitly. No project id is
-needed: Browserbase infers the project from the key.
+simplify. Install with the ``all`` extra. Both read ``BROWSERBASE_API_KEY``
+unless a key is passed explicitly. No project id is needed: Browserbase infers
+the project from the key. Extract over the Fetch API is
+:mod:`web_router.providers.browserbase_extract`.
+
+Browse tasks do not map ``profile``. A Browserbase Context holds the cookies
+and storage a session ends with, and the session provider maps ``profile``
+onto its id and ``persist_profile`` onto whether the session writes back to
+it; the extract provider over the Fetch API, which sends the same id, lives in
+:mod:`web_router.providers.browserbase_extract`.
 
 The session provider now also maps ``stealth``, ``solve_captchas`` and
 ``proxy_country`` -- all three **unverified**: taken from
@@ -54,6 +61,10 @@ import httpx
 from pydantic import SecretStr, TypeAdapter, ValidationError
 
 from web_router.constants import (
+    ENV_BROWSERBASE_API_KEY,
+    PROVIDER_BROWSERBASE,
+)
+from web_router.constants_browserbase import (
     BROWSERBASE_API_KEY_HEADER,
     BROWSERBASE_BASE_URL,
     BROWSERBASE_BROWSE_RUN_PATH,
@@ -70,8 +81,6 @@ from web_router.constants import (
     BROWSERBASE_SESSION_PATH,
     BROWSERBASE_SESSION_STATES,
     BROWSERBASE_STEALTH,
-    ENV_BROWSERBASE_API_KEY,
-    PROVIDER_BROWSERBASE,
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpBrowseProvider, HttpBrowserProvider, ReleaseMethod

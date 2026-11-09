@@ -1,3 +1,5 @@
+"""Parallel search: the request it builds and the results it returns."""
+
 from __future__ import annotations
 
 import os
@@ -16,16 +18,19 @@ def provider(monkeypatch: pytest.MonkeyPatch) -> ParallelProvider:
 
 
 def test_the_query_becomes_both_objective_and_search_query(provider: ParallelProvider) -> None:
-    """Parallel is built around an objective plus the queries to run for it."""
+    """Parallel is built around an objective plus the queries to run for it; unset options send nothing more."""
     assert provider._build_payload(SearchRequest(query="hi")) == {
         "objective": "hi",
         "search_queries": ["hi"],
+        "mode": "fast",
     }
 
 
-def test_max_results_is_passed_through(provider: ParallelProvider) -> None:
+def test_max_results_goes_under_advanced_settings(provider: ParallelProvider) -> None:
+    """/v1 rejects a top-level max_results; it takes the count under advanced_settings."""
     body = provider._build_payload(SearchRequest(query="hi", max_results=3))
-    assert body["max_results"] == 3
+    assert body["advanced_settings"] == {"max_results": 3}
+    assert "max_results" not in body
 
 
 def test_excerpts_become_the_body_and_a_snippet_sized_description(provider: ParallelProvider) -> None:

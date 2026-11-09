@@ -87,6 +87,15 @@ def test_dropping_whole_results_is_reported_with_the_count() -> None:
     assert "did not fit" in payload["note"]
 
 
+def test_text_is_cut_before_any_result_is_dropped() -> None:
+    """Every result fits at a shorter share, so all of them come back: asking for N must return N."""
+    payload = shape_search(_search_response(count=10), "search-0001", budget=MCP_MAX_RESPONSE_CHARS)
+
+    assert len(payload["results"]) == 10
+    assert len(render(payload)) <= MCP_MAX_RESPONSE_CHARS
+    assert "did not fit" not in payload["note"]
+
+
 def test_an_untruncated_result_carries_no_note() -> None:
     payload = shape_search(
         SearchResponse(provider="fake", query="q", results=[SearchResult(url="https://example.com", content="hi")]),

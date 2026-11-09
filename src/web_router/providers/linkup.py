@@ -5,19 +5,17 @@ handful of fields used here. Install with the ``search`` extra,
 ``[extract]``, ``[research]`` or ``[answer]``. Reads ``LINKUP_API_KEY`` unless a
 key is passed explicitly.
 
-Slim by design. A search maps ``max_results`` and the domain filters; an extract
-maps ``format``; a research run maps ``effort``; an answer maps the domain
-filters and ``recency``. A search refuses
+A search maps ``max_results``, the domain filters, ``recency`` (as ``fromDate``)
+and ``effort`` (as ``depth``); an extract maps ``format``; a research run maps
+``effort``; an answer maps the domain filters and ``recency``. A search refuses
 ``search_depth``, because Linkup's ``depth`` is retrieval effort rather than page
-content (see ``LINKUP_DEFAULT_DEPTH``). Everything else -- its depths, dates,
-images, a research ``mode`` -- is reachable through ``provider_options``, and mapping one properly is a welcome PR;
-see CONTRIBUTING.md.
+content (see ``LINKUP_DEFAULT_DEPTH``). Everything else -- an end date, images, a
+research ``mode`` -- is reachable through ``provider_options``.
 """
 
 from __future__ import annotations
 
 import json
-from datetime import timedelta
 from typing import Any, ClassVar
 from urllib.parse import quote
 
@@ -52,19 +50,20 @@ from web_router.constants_linkup import (
     LINKUP_ANSWER_INLINE_CITATIONS_FIELD,
     LINKUP_ANSWER_OUTPUT_TYPE,
     LINKUP_ANSWER_PARAM_NAMES,
-    LINKUP_ANSWER_RECENCY_DAYS,
+    LINKUP_DEPTH_BY_EFFORT,
 )
-from web_router.providers._clock import today
+from web_router.providers._clock import recency_start
 from web_router.providers._http import (
     HttpAnswerProvider,
     HttpExtractProvider,
     HttpResearchProvider,
     HttpSearchProvider,
 )
-from web_router.providers._utils import as_snippet, build_payload, error_detail
+from web_router.providers._search_text import as_snippet
+from web_router.providers._utils import build_payload, error_detail, mapped
 from web_router.providers.answer import cited_marker
 from web_router.types import (
-    EXTRACT_PARAMETERS,
+    EXTRACT_FORMAT_ONLY,
     Citation,
     ExtractedDocument,
     ExtractFailure,
@@ -106,7 +105,7 @@ class LinkupProvider(HttpSearchProvider):
     """
 
     name: ClassVar[str] = PROVIDER_LINKUP
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(LINKUP_PARAM_NAMES)
+    supported_parameters: ClassVar[frozenset[str]] = frozenset({*LINKUP_PARAM_NAMES, "recency", "effort"})
 
     base_url: ClassVar[str] = LINKUP_BASE_URL
     search_path: ClassVar[str] = LINKUP_SEARCH_PATH
@@ -115,12 +114,14 @@ class LinkupProvider(HttpSearchProvider):
     api_key_prefix: ClassVar[str] = LINKUP_API_KEY_PREFIX
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
+        since = recency_start(request.recency)
         return build_payload(
             request,
             LINKUP_PARAM_NAMES,
             q=request.query,
-            depth=LINKUP_DEFAULT_DEPTH,
+            depth=LINKUP_DEPTH_BY_EFFORT[request.effort] if request.effort else LINKUP_DEFAULT_DEPTH,
             outputType=LINKUP_SEARCH_OUTPUT_TYPE,
+            **{LINKUP_ANSWER_FROM_DATE_FIELD: since.strftime(LINKUP_ANSWER_DATE_FORMAT) if since else None},
         )
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
@@ -154,7 +155,7 @@ class LinkupExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_LINKUP
-    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(LINKUP_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = LINKUP_EXTRACT_DEFAULT_FORMAT
 
@@ -234,7 +235,7 @@ class LinkupResearchProvider(HttpResearchProvider):
         return self.status_path.format(research_id=quote(job_id, safe=""))
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
-        depth = LINKUP_RESEARCH_DEPTHS[request.effort] if request.effort else None
+        depth = mapped(LINKUP_RESEARCH_DEPTHS, request.effort)
         schema = request.output_schema
         return build_payload(
             request,
@@ -303,7 +304,7 @@ class LinkupAnswerProvider(HttpAnswerProvider):
     api_key_prefix: ClassVar[str] = LINKUP_API_KEY_PREFIX
 
     def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
-        since = today() - timedelta(days=LINKUP_ANSWER_RECENCY_DAYS[request.recency]) if request.recency else None
+        since = recency_start(request.recency)
         return build_payload(
             request,
             LINKUP_ANSWER_PARAM_NAMES,

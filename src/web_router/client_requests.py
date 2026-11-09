@@ -9,7 +9,7 @@ sync router's check of its ``provider_config``, lives here for the same reason.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
@@ -21,38 +21,26 @@ from web_router.types import (
     ExtractRequest,
     ResearchEffort,
     ResearchRequest,
-    SearchDepth,
     SearchRequest,
     StealthLevel,
     Viewport,
     provider_name,
 )
 
+if TYPE_CHECKING:
+    from typing_extensions import Unpack
+
+    from web_router.types_options import SearchOptions
+
 JsonSchema = dict[str, Any] | type[BaseModel]
 """A schema for a structured answer: JSON Schema, or the pydantic model to take one from."""
 
 
 def build_search_request(
-    query: str,
-    *,
-    max_results: int | None,
-    search_depth: SearchDepth | None,
-    include_domains: list[str] | None,
-    exclude_domains: list[str] | None,
-    country: str | None,
-    locale: str | None,
-    provider_options: dict[str, Any] | None,
+    query: str, *, provider_options: dict[str, Any] | None, **options: Unpack[SearchOptions]
 ) -> SearchRequest:
-    return SearchRequest(
-        query=query,
-        max_results=max_results,
-        search_depth=search_depth,
-        include_domains=include_domains,
-        exclude_domains=exclude_domains,
-        country=country,
-        locale=locale,
-        provider_options=provider_options or {},
-    )
+    """Every search option goes through by name: a new one goes in the request model, signatures and SearchOptions."""
+    return SearchRequest(query=query, provider_options=provider_options or {}, **options)
 
 
 def build_extract_request(
@@ -60,6 +48,7 @@ def build_extract_request(
     *,
     format: ExtractFormat | None,
     provider_options: dict[str, Any] | None,
+    profile: str | None = None,
 ) -> ExtractRequest:
     return ExtractRequest(
         # One URL is the common case and reads better unwrapped; the
@@ -67,6 +56,7 @@ def build_extract_request(
         # and providers that do not see the same shape.
         urls=[urls] if isinstance(urls, str) else list(urls),
         format=format,
+        profile=profile,
         provider_options=provider_options or {},
     )
 

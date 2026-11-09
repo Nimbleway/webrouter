@@ -95,7 +95,7 @@ def test_the_decision_record_says_what_the_router_did(tool: Tool, called: list[s
 
 
 @pytest.mark.parametrize("router", [lambda req: 1 / 0, lambda req: "third"], ids=["raises", "invalid"])
-def test_a_failing_router_leaves_the_staticorder(tool: Tool, called: list[str], router: Any) -> None:
+def test_a_failing_router_leaves_the_static_order(tool: Tool, called: list[str], router: Any) -> None:
     decision = _call(_router(WebRouter, router), tool).decision
     assert order(called) == list(MEMBERS)
     assert decision.reason in {"router_error", "router_invalid"}
@@ -103,7 +103,7 @@ def test_a_failing_router_leaves_the_staticorder(tool: Tool, called: list[str], 
     assert decision.ranked is None
 
 
-def test_a_router_out_of_time_leaves_the_staticorder(tool: Tool, called: list[str]) -> None:
+def test_a_router_out_of_time_leaves_the_static_order(tool: Tool, called: list[str]) -> None:
     def slow(req: RouteRequest) -> RouteDecision:
         time.sleep(0.5)
         return RouteDecision(providers={tool.name: ["third"]})  # type: ignore[dict-item]

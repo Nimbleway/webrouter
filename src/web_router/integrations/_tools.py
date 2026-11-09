@@ -33,7 +33,15 @@ from web_router.exceptions import ProviderError
 from web_router.integrations._options import answer_provider_for, extract_provider_for, tool_provider
 from web_router.integrations._render import render_answer, render_extract, render_search
 from web_router.integrations._specs import KNOWN_METHODS, TOOLS, ToolSpec
-from web_router.types import ExtractFormat, ExtractResponse, Provider, SearchDepth, SearchResponse
+from web_router.types import (
+    ExtractFormat,
+    ExtractResponse,
+    Provider,
+    Recency,
+    ResearchEffort,
+    SearchDepth,
+    SearchResponse,
+)
 from web_router.types_answer import AnswerResponse
 
 
@@ -85,6 +93,8 @@ class WebRouterTools(Generic[ResultT]):
         exclude_domains: list[str] | None = None,
         country: str | None = None,
         locale: str | None = None,
+        recency: Recency | None = None,
+        effort: ResearchEffort | None = None,
         format: ExtractFormat | None = None,
         result_chars: int = INTEGRATION_RESULT_CHARS,
         document_chars: int = INTEGRATION_DOCUMENT_CHARS,
@@ -141,6 +151,8 @@ class WebRouterTools(Generic[ResultT]):
             "exclude_domains": exclude_domains,
             "country": country,
             "locale": locale,
+            "recency": recency,
+            "effort": effort,
         }
         self.format = format
         self.result_chars = result_chars

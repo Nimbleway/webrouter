@@ -87,7 +87,7 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_YOU: ("web_router.providers.you", "YouProvider", EXTRA_SEARCH),
     PROVIDER_BRAVE: ("web_router.providers.brave", "BraveProvider", EXTRA_SEARCH),
     PROVIDER_EXA: ("web_router.providers.exa", "ExaProvider", EXTRA_SEARCH),
-    PROVIDER_PARALLEL: ("web_router.providers.parallel", "ParallelProvider", EXTRA_SEARCH),
+    PROVIDER_PARALLEL: ("web_router.providers.parallel_search", "ParallelProvider", EXTRA_SEARCH),
     PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityProvider", EXTRA_SEARCH),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupProvider", EXTRA_SEARCH),
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQProvider", EXTRA_SEARCH),
@@ -102,16 +102,17 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
 
 _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_NIMBLE: ("web_router.providers.nimble", "NimbleExtractProvider", EXTRA_EXTRACT),
-    PROVIDER_TAVILY: ("web_router.providers.tavily", "TavilyExtractProvider", EXTRA_EXTRACT),
+    PROVIDER_TAVILY: ("web_router.providers.tavily_extract", "TavilyExtractProvider", EXTRA_EXTRACT),
     PROVIDER_EXA: ("web_router.providers.exa", "ExaExtractProvider", EXTRA_EXTRACT),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupExtractProvider", EXTRA_EXTRACT),
     PROVIDER_FIRECRAWL: ("web_router.providers.firecrawl", "FirecrawlExtractProvider", EXTRA_EXTRACT),
     PROVIDER_OXYLABS: ("web_router.providers.oxylabs", "OxylabsExtractProvider", EXTRA_EXTRACT),
     PROVIDER_BRIGHTDATA: ("web_router.providers.brightdata", "BrightDataExtractProvider", EXTRA_EXTRACT),
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQExtractProvider", EXTRA_EXTRACT),
-    PROVIDER_KEENABLE: ("web_router.providers.keenable", "KeenableExtractProvider", EXTRA_EXTRACT),
+    PROVIDER_KEENABLE: ("web_router.providers.keenable_extract", "KeenableExtractProvider", EXTRA_EXTRACT),
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekExtractProvider", EXTRA_EXTRACT),
     PROVIDER_JINA: ("web_router.providers.jina", "JinaExtractProvider", EXTRA_EXTRACT),
+    PROVIDER_BROWSERBASE: ("web_router.providers.browserbase_extract", "BrowserbaseExtractProvider", EXTRA_EXTRACT),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoExtractProvider", AUTO_EXTRA),
     PROVIDER_MAX: ("web_router.providers.max", "MaxExtractProvider", AUTO_EXTRA),
 }
@@ -127,14 +128,13 @@ _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_PARALLEL: ("web_router.providers.parallel", "ParallelResearchProvider", EXTRA_RESEARCH),
     PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityResearchProvider", EXTRA_RESEARCH),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupResearchProvider", EXTRA_RESEARCH),
-    PROVIDER_YOU: ("web_router.providers.you", "YouResearchProvider", EXTRA_RESEARCH),
+    PROVIDER_YOU: ("web_router.providers.you_research", "YouResearchProvider", EXTRA_RESEARCH),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoResearchProvider", AUTO_EXTRA),
 }
 
-# Opening a session needs only httpx, which `all` installs, so the vendors name
-# `all` rather than `browser`: that extra is Playwright, for the handle's page
-# actions, and opening a session does not need it. `local` needs only the
-# standard library, so its column is never quoted.
+# Opening a session needs only httpx, which `all` installs, so the vendors name `all` rather
+# than `browser`, which is Playwright for the handle's page actions and not needed to open one.
+# `local` needs only the standard library, so its column is never quoted.
 _BUILTIN_BROWSER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_STEEL: ("web_router.providers.steel", "SteelBrowserProvider", EXTRA_ALL),
     PROVIDER_BROWSERBASE: ("web_router.providers.browserbase", "BrowserbaseBrowserProvider", EXTRA_ALL),

@@ -3,7 +3,7 @@
 Kept apart so ``client.py`` stops growing. Both routers take :class:`ProviderLookup`
 as a mixin, so ``router.get_provider`` and the other getters are where they always
 were; ``get_answer_provider`` is in :mod:`web_router.client_answer` and
-``get_template_provider`` in :mod:`web_router.client_templates`.
+``get_template_provider`` in :mod:`web_router.client_template`.
 """
 
 from __future__ import annotations

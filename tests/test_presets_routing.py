@@ -96,17 +96,22 @@ def test_a_presets_provider_pins_the_call_and_the_router_is_not_asked(searched: 
     assert asked == [] and [name for name, _ in searched] == ["first"]
 
 
-def test_a_budget_refusing_a_call_a_preset_shaped_names_the_preset(searched: list[Any], priced: Table) -> None:
-    """Every member is priced, so only the preset's ``provider_options`` leaves the call's price unknown."""
+@pytest.mark.parametrize(
+    ("setting", "value"), [("provider_options", {"mode": "x"}), ("effort", "high")], ids=["provider_options", "effort"]
+)
+def test_a_budget_refusing_a_call_a_preset_shaped_names_the_preset(
+    setting: str, value: Any, searched: list[Any], priced: Table
+) -> None:
+    """Every member is priced, so only the preset's setting -- a vendor mode or tier -- leaves the price unknown."""
     for name in MEMBERS:
         priced[name] = (0.001, 1.0)
     router = WebRouter(provider_config={"auto": {"chain": list(MEMBERS)}})
-    defaults = {"provider_options": {"mode": "x"}, "country": "US"}
+    defaults = {setting: value, "country": "US"}
     router.presets.add(definition(components={"search": {"defaults": defaults}}))
 
     router.search("q", budget=Budget(max_cost_usd=1.0))
     assert [name for name, _ in searched] == ["first"]
-    with pytest.raises(BudgetExceededError, match=rf"provider_options: set by this call's presets \({REF}\)") as caught:
+    with pytest.raises(BudgetExceededError, match=rf"{setting}: set by this call's presets \({REF}\)") as caught:
         router.search("q", budget=Budget(max_cost_usd=1.0), preset=REF)
     assert "country" not in str(caught.value), "a budget prices no country, so its refusal must not name it"
 

@@ -3,11 +3,13 @@
 Talks to the REST endpoints directly rather than through ``exa-py``: web-router
 uses a handful of fields of these APIs, which an SDK dependency would not
 simplify. Install with the ``search``, ``extract`` or ``answer`` extra. Reads ``EXA_API_KEY`` unless a key is
-passed explicitly.
+passed explicitly. :class:`ExaAnswerProvider` lives in :mod:`web_router.providers.exa_answer`
+and is re-exported here.
 
-Search is slim by design: only ``max_results`` is mapped. Everything else is
-reachable through ``provider_options``; mapping one properly is a welcome PR --
-see CONTRIBUTING.md.
+Search maps every shared option: the domain filters, ``country`` as
+``userLocation``, ``recency`` as ``startPublishedDate``, ``search_depth`` onto
+``contents`` and ``effort`` onto ``type``. Everything else is reachable through
+``provider_options``.
 
 Exa's Research API was retired upstream -- every path answers 410
 ``RESEARCH_RETIRED`` -- so there is no Exa research provider.
@@ -21,21 +23,28 @@ from web_router.constants import (
     ENV_EXA_API_KEY,
     EXA_API_KEY_HEADER,
     EXA_BASE_URL,
-    EXA_CONTENTS,
     EXA_CONTENTS_PATH,
     EXA_EXTRACT_DEFAULT_FORMAT,
     EXA_EXTRACT_FORMATS,
-    EXA_PARAM_NAMES,
     EXA_SEARCH_PATH,
     PROVIDER_EXA,
 )
-from web_router.constants_exa import EXA_ANSWER_CITATION_TEXT_FIELD, EXA_ANSWER_PATH
-from web_router.providers._http import HttpAnswerProvider, HttpExtractProvider, HttpSearchProvider
-from web_router.providers._utils import as_snippet, best_text, build_payload
-from web_router.providers.answer import cited_marker
+from web_router.constants_exa import (
+    EXA_CONTENTS,
+    EXA_CONTENTS_BY_DEPTH,
+    EXA_DATE_FORMAT,
+    EXA_PARAM_NAMES,
+    EXA_RECENCY_FIELD,
+    EXA_TYPE_BY_EFFORT,
+    EXA_TYPE_FIELD,
+)
+from web_router.providers._clock import recency_start
+from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
+from web_router.providers._search_text import as_snippet, lite_body
+from web_router.providers._utils import best_text, build_payload, mapped
+from web_router.providers.exa_answer import ExaAnswerProvider as ExaAnswerProvider
 from web_router.types import (
-    EXTRACT_PARAMETERS,
-    Citation,
+    EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
     ExtractFailure,
     ExtractFormat,
@@ -45,19 +54,16 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
 )
-from web_router.types_answer import AnswerRequest, AnswerResponse
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "text", "summary", "highlights", "score", "publishedDate"})
 _MAPPED_DOCUMENT_FIELDS = frozenset({"url", "title", "text", "publishedDate"})
-_MAPPED_SOURCE_FIELDS = frozenset({"url", "title", "snippet"})
-_MAPPED_ANSWER_FIELDS = frozenset({"url", "title", "text"})
 
 
 class ExaProvider(HttpSearchProvider):
     """Routes searches to the Exa Search API."""
 
     name: ClassVar[str] = PROVIDER_EXA
-    supported_parameters: ClassVar[frozenset[str]] = frozenset(EXA_PARAM_NAMES)
+    supported_parameters: ClassVar[frozenset[str]] = frozenset({*EXA_PARAM_NAMES, "recency", "search_depth", "effort"})
 
     base_url: ClassVar[str] = EXA_BASE_URL
     search_path: ClassVar[str] = EXA_SEARCH_PATH
@@ -65,19 +71,29 @@ class ExaProvider(HttpSearchProvider):
     api_key_header: ClassVar[str] = EXA_API_KEY_HEADER
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        return build_payload(request, EXA_PARAM_NAMES, query=request.query, contents=EXA_CONTENTS)
+        since = recency_start(request.recency)
+        return build_payload(
+            request,
+            EXA_PARAM_NAMES,
+            query=request.query,
+            contents=EXA_CONTENTS_BY_DEPTH[request.search_depth] if request.search_depth else EXA_CONTENTS,
+            **{
+                EXA_RECENCY_FIELD: since.strftime(EXA_DATE_FORMAT) if since else None,
+                EXA_TYPE_FIELD: mapped(EXA_TYPE_BY_EFFORT, request.effort),
+            },
+        )
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         return SearchResponse(
             provider=self.name,
             query=request.query,
-            results=[self._to_result(hit) for hit in payload.get("results") or []],
+            results=[self._to_result(hit, request) for hit in payload.get("results") or []],
             request_id=payload.get("requestId"),
             raw=payload,
         )
 
     @staticmethod
-    def _to_result(hit: dict[str, Any]) -> SearchResult:
+    def _to_result(hit: dict[str, Any], request: SearchRequest) -> SearchResult:
         # Exa returns no snippet field; its summary, else the head of the text,
         # is the closest equivalent to what other providers call a description.
         text = hit.get("text") or ""
@@ -85,8 +101,10 @@ class ExaProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
-            description=summary or as_snippet(text),
-            content=best_text(text, summary),
+            description=lite_body(summary, request.search_depth) or as_snippet(text),
+            # lite's highlights cap is soft: Exa keeps a passage it will not split whole, up to ~2,800
+            # characters live against a 500 cap, so lite is cut to a snippet here.
+            content=lite_body(best_text(text, summary), request.search_depth),
             score=hit.get("score"),
             published_date=hit.get("publishedDate"),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},
@@ -102,7 +120,7 @@ class ExaExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_EXA
-    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(EXA_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = EXA_EXTRACT_DEFAULT_FORMAT
     batches_urls: ClassVar[bool] = True
@@ -148,50 +166,3 @@ class ExaExtractProvider(HttpExtractProvider):
             for status in payload.get("statuses") or []
             if status.get("status") != "success"
         ]
-
-
-class ExaAnswerProvider(HttpAnswerProvider):
-    """Answers a question through Exa's Answer API, ``POST /answer``.
-
-    The answer cites inline as ``[2]``, numbering ``citations`` from 1; a
-    citation whose marker appears in the answer carries it in ``field``. A
-    cited page's ``text``, when Exa returns it, is its snippet. ``requestId``
-    is the request id, and ``costDollars`` -- the call's own stated cost --
-    stays in ``raw``.
-
-    No normalized option is mapped: Exa's Answer API documents no domain or
-    date filter, and ``userLocation`` showed no clear effect live, so
-    ``country`` is refused rather than sent to it.
-    """
-
-    name: ClassVar[str] = PROVIDER_EXA
-    supported_parameters: ClassVar[frozenset[str]] = frozenset()
-
-    base_url: ClassVar[str] = EXA_BASE_URL
-    answer_path: ClassVar[str] = EXA_ANSWER_PATH
-    env_api_key: ClassVar[str] = ENV_EXA_API_KEY
-    api_key_header: ClassVar[str] = EXA_API_KEY_HEADER
-
-    def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
-        return build_payload(request, query=request.query)
-
-    def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
-        answer = payload.get("answer")
-        text = answer if isinstance(answer, str) else ""
-        return AnswerResponse(
-            provider=self.name,
-            query=request.query,
-            answer=text,
-            citations=[
-                Citation(
-                    url=cited.get("url", ""),
-                    title=cited.get("title") or "",
-                    snippet=as_snippet(cited.get(EXA_ANSWER_CITATION_TEXT_FIELD) or ""),
-                    field=cited_marker(text, position),
-                    extra={k: v for k, v in cited.items() if k not in _MAPPED_ANSWER_FIELDS},
-                )
-                for position, cited in enumerate(payload.get("citations") or [], start=1)
-            ],
-            request_id=payload.get("requestId"),
-            raw=[payload],
-        )

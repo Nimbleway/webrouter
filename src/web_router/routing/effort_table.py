@@ -36,6 +36,11 @@ def noise_floor() -> float:
     return float(effort_table()["noise_floor"]["value"])
 
 
+def table_set() -> str:
+    """The name of the route-eval set the table was measured on."""
+    return str(effort_table()["set"])
+
+
 def measured_efforts(provider: str | Provider) -> Mapping[str, Mapping[str, Any]]:
     """``provider``'s measured research efforts, by name, each with its ``accuracy`` and latency; empty if none."""
     entry = effort_table()["research"].get(provider_name(provider), {})
