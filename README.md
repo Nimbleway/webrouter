@@ -2452,8 +2452,7 @@ make test-browser
 
 ## License
 
-The license will be added before the first public release.
-<!-- License line goes here once chosen; keep the SimpleQA note below. -->
+A license will be added once it is chosen.
 
 The SimpleQA grader prompt vendored at `src/web_router/evals/prompts/` keeps
 its own MIT license, in `LICENSE-simple-evals` beside it.
