@@ -79,12 +79,12 @@
   ],
   "verified": {
     "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
-    "search_depth": "docs: https://api-dashboard.search.brave.com/api-reference/web/search/get (no page body; lite alone, fast and deep refused)",
-    "include_domains": "docs: https://api-dashboard.search.brave.com/documentation/resources/search-operators (site: joined with OR; experimental)",
-    "exclude_domains": "docs: https://api-dashboard.search.brave.com/documentation/resources/search-operators (NOT site:; experimental)",
-    "country": "docs: https://api-dashboard.search.brave.com/api-reference/web/search/get (37 codes; any other refused before the call)",
-    "locale": "docs: https://api-dashboard.search.brave.com/api-reference/web/search/get (search_lang from its list; a locale reaches one through constants_languages.py, else refused)",
-    "recency": "docs: https://api-dashboard.search.brave.com/api-reference/web/search/get (freshness pd | pw | pm | py by page age, published or last modified)"
+    "search_depth": "docs: https://api-dashboard.search.brave.com/api-reference/web/search/get (no page body; lite alone, fast and deep refused). Live on 2026-11-09 the description and extra snippets joined ran 264-2,025 characters with no setting to narrow them, so lite is cut to a snippet in the provider",
+    "include_domains": "live: 2026-11-09 search-options check: site:a OR site:b, every result on the two sites; Brave reported both operators applied (query.search_operators)",
+    "exclude_domains": "live: 2026-11-09 search-options check: NOT site:, no wikipedia.org result",
+    "country": "live: 2026-11-09 search-options check: BR with locale=pt-BR accepted",
+    "locale": "live: 2026-11-09 search-options check: pt-BR with country=BR accepted",
+    "recency": "live: 2026-11-09 search-options check: week, 18 of 18 results dated inside the window (page_age)"
   },
   "vendor_options": {
     "ui_lang": {

@@ -79,11 +79,11 @@
     "https://docs.keenable.ai/api-reference/search"
   ],
   "verified": {
-    "max_results": "live: tests/providers/test_keenable.py::test_live_search_returns_results",
+    "max_results": "live: tests/providers/test_keenable.py::test_live_search_returns_results (keyed on 2026-11-09: 3 asked, 3 back)",
     "search_depth": "live: tests/providers/test_keenable.py::test_live_keyless_options_shape_the_results",
     "include_domains": "live: tests/providers/test_keenable.py::test_live_keyless_options_shape_the_results",
     "recency": "live: tests/providers/test_keenable.py::test_live_keyless_effort_and_recency_reach_keenable",
-    "effort": "live: tests/providers/test_keenable.py::test_live_keyless_effort_and_recency_reach_keenable"
+    "effort": "live: tests/providers/test_keenable.py::test_live_keyless_effort_and_recency_reach_keenable (keyed on 2026-11-09: all four levels answered)"
   },
   "vendor_options": {
     "acquired_after": {

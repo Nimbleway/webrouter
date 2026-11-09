@@ -83,12 +83,12 @@
   ],
   "verified": {
     "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
-    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content",
-    "include_domains": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search (up to 300)",
-    "exclude_domains": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search (up to 150)",
-    "country": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search (166 names; a boost, topic general only; others refused before the call)",
-    "locale": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search (language with filter_by_language, so a filter, not a boost)",
-    "recency": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search (time_range by publish or last updated date; filter_by_published_date drops undated pages)"
+    "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content (2026-11-09: lite, basic, 160-1,415 characters, the three chunks the README discloses)",
+    "include_domains": "live: 2026-11-09 search-options check: wikipedia.org alone came back",
+    "exclude_domains": "live: 2026-11-09 search-options check: no wikipedia.org result",
+    "country": "live: 2026-11-09 search-options check: US with locale=en and recency=week, no 400",
+    "locale": "live: 2026-11-09 search-options check: en with country=US and recency=week, no 400",
+    "recency": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search (time_range by publish or last updated date; filter_by_published_date drops undated pages). Tavily applies the filter, and its results often carry no date: live on 2026-11-09 week left 7 dated results, all inside, and year none, so web-router's results cannot always show the window"
   },
   "vendor_options": {
     "include_domains_mode": {

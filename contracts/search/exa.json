@@ -94,12 +94,12 @@
   ],
   "verified": {
     "max_results": "docs: https://exa.ai/docs/reference/search",
-    "include_domains": "docs: https://exa.ai/docs/reference/search",
-    "exclude_domains": "docs: https://exa.ai/docs/reference/search",
-    "country": "docs: https://exa.ai/docs/reference/search",
-    "recency": "docs: https://exa.ai/docs/reference/search",
-    "search_depth": "docs: https://exa.ai/docs/reference/search",
-    "effort": "docs: https://exa.ai/docs/reference/search"
+    "include_domains": "live: 2026-11-09 search-options check: wikipedia.org alone came back",
+    "exclude_domains": "live: 2026-11-09 search-options check: no wikipedia.org result",
+    "country": "docs: https://exa.ai/docs/reference/search (accepted live on 2026-11-09; GB and US shared 67% of their results for 'best football club', so it moves results rather than filtering them)",
+    "recency": "live: 2026-11-09 search-options check: month, 10 of 10 results dated inside the window",
+    "search_depth": "live: 2026-11-09 search-options check: fast at most 3,000 characters and deep past 3,000; one lite highlight ran to 995 against the 500 cap, so lite is cut to a snippet in the provider (re-checked keyless on exa-mcp: at most 500)",
+    "effort": "live: 2026-11-09 search-options check: low with every filter, high (deep-lite) and max (deep) answered"
   },
   "vendor_options": {
     "additionalQueries": {

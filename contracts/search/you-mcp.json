@@ -82,8 +82,8 @@
     "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content",
     "include_domains": "live: tests/providers/test_you_mcp.py::test_live_inline_operators_are_taken_out_of_the_query",
     "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back",
-    "country": "live: tests/providers/test_you_mcp.py::test_live_inline_operators_are_taken_out_of_the_query (accepted and stripped; its effect on results is not yet shown)",
-    "locale": "live: tests/providers/test_you_mcp.py::test_live_inline_operators_are_taken_out_of_the_query (accepted and stripped; its effect on results is not yet shown)",
+    "country": "live: tests/providers/test_you_mcp.py::test_live_inline_operators_are_taken_out_of_the_query (accepted and stripped; on 2026-11-09 loc:DE and loc:US shared 59% of their results for 'best football club', so it moves results rather than filtering them)",
+    "locale": "live: tests/providers/test_you_mcp.py::test_live_inline_operators_are_taken_out_of_the_query (accepted and stripped; on 2026-11-09 lang:DE left 90% of the results the same as no lang, so it barely filters)",
     "recency": "live: tests/test_integration_surface.py::test_recency_keeps_dated_results_near_the_window (freshness: if the query names a timeframe, the broader of the two wins)"
   },
   "vendor_options": {

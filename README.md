@@ -619,14 +619,17 @@ less under its name.
 
 | Depth | What you get | Nimble | Tavily | You.com, You.com MCP | Exa, Exa MCP | WebIQ | Parallel | Perplexity | Keenable | Brave | DeepSeek |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `lite` | A snippet, up to about 500 characters | `lite` | `basic` | no extraction | highlights ≤ 500 | passage ≤ 500 | excerpts ≤ 500 | 128 tokens a page | snippet ≤ 500 | its default | its default |
+| `lite` | A snippet, up to about 500 characters | `lite` | `basic` | no extraction | highlights ≤ 500, cut to 500 | passage ≤ 500 | excerpts ≤ 500 | 100 tokens a page | snippet ≤ 500 | its snippets, cut to 500 | its default |
 | `fast` | A truncated body, a few thousand characters | `standard` | `advanced` | `highlights` | text ≤ 3,000 | passage ≤ 3,000 | excerpts ≤ 3,000 | 1,024 tokens a page | snippet ≤ 3,000 | refused | refused |
 | `deep` | The whole page | `standard` + `full_content` | `advanced` + raw content | `full_page` | whole text | `text` | refused | refused | refused | refused | `need_content` |
 
 Linkup, AgentCore and Parallel MCP do not map it. Tavily's `basic` returns up to
 three chunks of about 500 characters, and DeepSeek's default carries its summary
-(about 1,800 characters at the median), both longer than `lite` promises. Unset,
-Exa asks for the whole text and Exa MCP for highlights, as before.
+(about 1,800 characters at the median), both longer than `lite` promises. Exa's
+highlights cap is soft, letting a passage it will not split run past 500, and
+Brave has no size setting at all, so for `lite` web-router cuts both to a
+snippet of about 500 characters itself; the vendor's full text stays in `raw`.
+Unset, Exa asks for the whole text and Exa MCP for highlights, as before.
 
 `result.content` always holds the fullest text available. Some backends return
 the body in the field others use for the snippet; that is normalized away, so

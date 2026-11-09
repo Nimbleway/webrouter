@@ -93,12 +93,12 @@
   ],
   "verified": {
     "max_results": "live: tests/providers/test_exa_mcp.py::test_live_keyless_search_returns_results",
-    "search_depth": "docs: tools/list of web_search_advanced_exa; sizes measured keyless 2026-11-09 (highlights ~1,000-4,000 characters uncapped, textMaxCharacters=3000 exactly 3,000, unset text 10,000-14,000); live: tests/providers/test_exa_mcp.py::test_live_each_depth_comes_back_at_its_size",
-    "include_domains": "docs: tools/list of web_search_advanced_exa; one keyless call on 2026-11-09 with wikipedia.org returned only wikipedia.org; live: tests/providers/test_exa_mcp.py::test_live_filters_are_honoured_at_low_effort",
+    "search_depth": "live: tests/providers/test_exa_mcp.py::test_live_each_depth_comes_back_at_its_size (2026-11-09: fast at most 3,000 characters, deep past 3,000; a lite highlight overshot the 500 cap -- 995, and 2,830 on another query -- so lite is cut to a snippet in the provider, then re-checked keyless at most 500)",
+    "include_domains": "live: tests/providers/test_exa_mcp.py::test_live_filters_are_honoured_at_low_effort (2026-11-09: wikipedia.org alone came back at effort=low)",
     "exclude_domains": "docs: tools/list of web_search_advanced_exa",
-    "country": "docs: tools/list of web_search_advanced_exa (accepted keyless 2026-11-09; effect not measured)",
-    "recency": "docs: tools/list of web_search_advanced_exa (accepted keyless 2026-11-09; effect not measured)",
-    "effort": "docs: tools/list of web_search_advanced_exa (type=lite accepted with every filter keyless 2026-11-09)"
+    "country": "docs: tools/list of web_search_advanced_exa (accepted keyless 2026-11-09; GB and US shared 67% of their results for 'best football club', so it moves results rather than filtering them)",
+    "recency": "live: 2026-11-09 search-options check: month, 10 of 10 results dated inside the window",
+    "effort": "live: 2026-11-09 search-options check: low (type=lite) with a domain filter, every result on the domain"
   },
   "vendor_options": {
     "category": {

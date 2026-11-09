@@ -83,11 +83,11 @@
   "verified": {
     "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound",
     "search_depth": "live: tests/test_integration_surface.py::test_every_depth_returns_content",
-    "include_domains": "docs: https://you.com/docs/api-reference/search/v1-search (up to 500; a strict allowlist; 422 with exclude_domains, refused before the call)",
-    "exclude_domains": "docs: https://you.com/docs/api-reference/search/v1-search (up to 5000)",
-    "country": "docs: https://you.com/docs/api-reference/search/v1-search (36 codes; any other refused before the call)",
-    "locale": "docs: https://you.com/docs/api-reference/search/v1-search (51 language tags; a locale reaches one through constants_languages.py, else refused)",
-    "recency": "docs: https://you.com/docs/api-reference/search/v1-search (freshness day | week | month | year)"
+    "include_domains": "live: 2026-11-09 search-options check: wikipedia.org alone came back",
+    "exclude_domains": "live: 2026-11-09 search-options check: no wikipedia.org result",
+    "country": "live: 2026-11-09 search-options check: BR with locale=pt-BR accepted",
+    "locale": "live: 2026-11-09 search-options check: pt-BR (sent as PT-BR) with country=BR accepted",
+    "recency": "live: 2026-11-09 search-options check: week, 10 of 10 results dated inside the window"
   },
   "vendor_options": {
     "boost_domains": {
