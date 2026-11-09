@@ -14,6 +14,8 @@ from tests.merge_helpers import merge_with
 from web_router import Budget, Candidate, RouteDecision, RouteRequest
 from web_router.constants_merge import MSG_PARAM_NOT_ALLOWED
 from web_router.routing.merge import merge
+from web_router.routing.merge_params import _untaken
+from web_router.types import SearchRequest
 
 
 def _private(url: str) -> str | None:
@@ -61,17 +63,27 @@ def test_rule_5_an_effort_must_fit_on_every_backend_in_the_order() -> None:
     assert merged.params == {"effort": "medium"}, "parallel's and nimble's medium are within $0.2"
 
 
-NO_UNDECLARED = {"search:exa": "no depth", "search:brave": "no depth"}
-"""Leaves tavily and nimble, which both take ``search_depth``."""
+NO_DEEP = {"search:brave": "lite only"}
+"""Leaves tavily, exa and nimble, which all take ``search_depth`` at every level."""
 
 
-def test_rule_5_an_option_is_kept_only_when_every_backend_in_the_order_takes_it() -> None:
+def test_rule_5_an_option_is_kept_only_when_every_backend_in_the_order_serves_its_value() -> None:
     depth = {"search": {"search_depth": "deep"}}
     merged = merge_with(RouteDecision(params=depth), pinned="search")
     assert merged.params == {}
-    assert merged.notes.ignored["params.search.search_depth"] == "search:brave does not take search_depth"
-    kept = merge_with(RouteDecision(params=depth, exclude=NO_UNDECLARED), pinned="search")
-    assert kept.providers == ("tavily", "nimble") and kept.params == {"search_depth": "deep"}
+    assert merged.notes.ignored["params.search.search_depth"] == "search:brave will not serve search_depth='deep'"
+    lite = merge_with(RouteDecision(params={"search": {"search_depth": "lite"}}), pinned="search")
+    assert lite.params == {"search_depth": "lite"}, "brave serves lite, the one level it has"
+    kept = merge_with(RouteDecision(params=depth, exclude=NO_DEEP), pinned="search")
+    assert kept.providers == ("tavily", "exa", "nimble") and kept.params == {"search_depth": "deep"}
+
+
+def test_rule_5_an_option_a_backend_does_not_declare_is_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
+    from web_router.providers.exa import ExaProvider
+
+    monkeypatch.setattr(ExaProvider, "supported_parameters", frozenset({"max_results"}))
+    merged = merge_with(RouteDecision(params={"search": {"search_depth": "lite"}}), pinned="search")
+    assert merged.notes.ignored["params.search.search_depth"] == "search:exa does not take search_depth"
 
 
 def test_rule_5_an_unknown_price_never_fits_a_cost_cap(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -79,7 +91,7 @@ def test_rule_5_an_unknown_price_never_fits_a_cost_cap(monkeypatch: pytest.Monke
 
     monkeypatch.setattr(prices, "price", lambda *_: None)
     budget = Budget(max_cost_usd=100.0)
-    decision = RouteDecision(params={"search": {"search_depth": "lite"}}, exclude=NO_UNDECLARED)
+    decision = RouteDecision(params={"search": {"search_depth": "lite"}}, exclude=NO_DEEP)
     merged = merge_with(decision, pinned="search", budget=budget)
     assert merged.params == {} and "no known price" in merged.notes.ignored["params.search.search_depth"]
 
@@ -152,6 +164,16 @@ def test_rule_5_a_search_depth_must_fit_the_time_cap_too(
     from web_router import prices
 
     monkeypatch.setattr(prices, "estimate_latency", lambda *_: latency)
-    decision = RouteDecision(params={"search": {"search_depth": "deep"}}, exclude=NO_UNDECLARED)
+    decision = RouteDecision(params={"search": {"search_depth": "deep"}}, exclude=NO_DEEP)
     merged = merge_with(decision, pinned="search", budget=budget)
     assert ("search_depth" in merged.params) is kept
+
+
+@pytest.mark.parametrize(("caller", "kept"), [({"exclude_domains": ["b.com"]}, False), ({}, True)])
+def test_rule_5_an_option_that_makes_a_backend_refuse_another_is_untaken(caller: dict[str, Any], kept: bool) -> None:
+    """Parallel names ``exclude_domains`` once ``include_domains`` joins it, yet the added key is what it refuses."""
+    without = SearchRequest(query="q", **caller)
+    with_it = without.model_copy(update={"include_domains": ["a.com"]})
+    why = _untaken("search", "include_domains", with_it, without, ["parallel"])
+    assert (why is None) is kept
+    assert kept or why == "search:parallel will not serve include_domains=['a.com']"

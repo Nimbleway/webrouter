@@ -9,7 +9,7 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus two that need no credential: `you-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
@@ -236,6 +236,8 @@ src/web_router/
     │                   HttpBrowserProvider — for APIs with no SDK
     ├── _utils.py       payload assembly, key and setting resolution, dict
     │                   coercion, body selection
+    ├── _search_text.py a body cut to a snippet; domain filters as site:
+    │                   operators, and the domain lists a backend refuses
     ├── _deadline.py    the per-call deadline, its budgets, and the mixin
     │                   that holds a provider's call to it
     ├── _clamp.py       a transport's own timeout, clamped to the deadline's time left
@@ -252,7 +254,7 @@ src/web_router/
     ├── _mcp.py         the keyless MCP search transport: one JSON-RPC tools/call
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
-    ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel.py
+    ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel_search.py
     ├── max.py          extract's parallel chain: auto's members all at once,
     │                   the first document wins, with an optional hedge
     ├── _race.py        max's bookkeeping: the calls of one race, sync or async,
@@ -268,8 +270,10 @@ src/web_router/
     ├── auto_browser.py the browser chain's `auto`, apart so auto.py stops growing;
     │                   auto.py re-exports it
     ├── brave.py        search, via httpx
-    ├── parallel.py     search + research, via httpx
-    ├── perplexity.py   search + research, via httpx
+    ├── parallel.py     research + answer, via httpx; re-exports parallel_search.py
+    ├── parallel_search.py  search, via httpx
+    ├── perplexity.py   search + research, via httpx; re-exports perplexity_answer.py
+    ├── perplexity_answer.py  answer, and the answer text and sources research reads
     ├── linkup.py       search + extract + research, via httpx
     ├── webiq.py        search, via httpx — Microsoft AI's Web Search API
     ├── keenable.py     search + extract, via httpx — keyless on its /public twins
@@ -604,9 +608,12 @@ offers a wider surface than its weakest member, so a member is checked against
 the request before it is tried, on the class, which costs no credential, sends
 nothing and starts no billed run. Narrowing the shared surface to the weakest
 member instead would cost the others a real capability. Search `auto` declares
-the union of its members' `supported_parameters` — `AUTO_SUPPORTED_PARAMETERS`,
-which a test holds equal to it — and passes over a member that does not map an
-option the request set: Perplexity and Brave for `search_depth`. Extract `auto`
+every shared option — `AUTO_SUPPORTED_PARAMETERS`, which a test holds at least
+the union of its members' — and passes over a member that does not map an
+option the request set, or whose `refused_values` refuses the value: Linkup for
+`search_depth`, Perplexity and Brave for `search_depth="deep"`. A router's
+default option is held to the same two checks on every backend in the order
+(`routing/merge_params.py`). Extract `auto`
 declares the union of their `supported_formats` and passes over a member that
 cannot return the format asked for, the pinned `markdown` default included, so
 Exa serves only `text`. With no member left, search raises
@@ -711,13 +718,18 @@ be told from a finished run — Skyvern's `timed_out` mixes its step limit with
 its clock, and Browser Use's `isSuccess` is its agent's opinion of its answer,
 not a report that it stopped.
 
-**Send providers the minimum.** A search provider is called with the query,
-`max_results` and `search_depth`; an extract provider with the URLs and
-`format` — nothing else, however much the API accepts. Do not widen a
-provider's mapping as a side effect of another task, and do not add machinery
-for an option nobody maps (a 166-entry country lookup for an unmapped parameter
-was written and removed here once already). Mapping an option is its own change,
-with live evidence.
+**Send providers the minimum.** A search provider is called with the query and
+the shared options it maps — `max_results`, `search_depth`, `include_domains`,
+`exclude_domains`, `country`, `locale`, `recency`, `effort` — and an extract
+provider with the URLs and `format`; nothing else, however much the API
+accepts. The one kind of value sent unasked is a pin that keeps a vendor's
+default from moving under us (Parallel's `mode=fast`, Linkup's required
+`depth`), recorded in the contract's `always_sent`. Do not widen a provider's
+mapping as a side effect of another task, and do not add machinery for an
+option nobody maps. Mapping an option is its own change, from the vendor's
+documentation, with the live check that would confirm it listed. A value the
+backend cannot serve is refused through `depth_levels` or `refused_options`
+on the class, never sent to be ignored or swapped for a weaker one.
 
 **A format a provider cannot return raises, it is not substituted.** Each
 extract provider declares `supported_formats` from its own mapping table —

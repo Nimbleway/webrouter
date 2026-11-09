@@ -106,15 +106,10 @@ def test_a_fitting_query_goes_out_with_the_key_and_a_longer_one_is_refused(monke
     assert len(sent) == 1, "only the query that fit went out"
 
 
-def test_an_unmapped_option_is_refused_rather_than_dropped(provider: DeepSeekProvider) -> None:
-    with pytest.raises(UnsupportedParameterError, match="country"):
-        provider.validate(SearchRequest(query="hi", country="US"))
-
-
-def test_the_page_body_is_reachable_through_provider_options(provider: DeepSeekProvider) -> None:
-    payload = provider._build_payload(SearchRequest(query="hi", provider_options={"need_content": True}))
-
-    assert payload == {"query": "hi", "need_content": True}
+@pytest.mark.parametrize("option", [{"country": "US"}, {"effort": "low"}])
+def test_an_unmapped_option_is_refused_rather_than_dropped(provider: DeepSeekProvider, option: dict) -> None:
+    with pytest.raises(UnsupportedParameterError, match=next(iter(option))):
+        provider.validate(SearchRequest(query="hi", **option))
 
 
 def test_results_map_and_nothing_is_invented(provider: DeepSeekProvider) -> None:

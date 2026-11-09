@@ -46,11 +46,10 @@ from web_router.constants import (
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._clamp import clamp_timeout
 from web_router.providers._deadline import current_deadline, research_budget
-from web_router.providers._utils import best_text, build_payload, compact, model_to_dict, resolve_api_key
+from web_router.providers._utils import best_text, build_payload, compact, mapped, model_to_dict, resolve_api_key
 from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider, _BaseProvider
 from web_router.types import (
     EXTRACT_PARAMETERS,
-    NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
     Citation,
     ExtractedDocument,
@@ -174,7 +173,7 @@ class NimbleProvider(_NimbleClients, SearchProvider):
     """Routes searches to the Nimble Search API."""
 
     name: ClassVar[str] = PROVIDER_NIMBLE
-    supported_parameters: ClassVar[frozenset[str]] = NORMALIZED_PARAMETERS
+    supported_parameters: ClassVar[frozenset[str]] = frozenset(NIMBLE_PARAM_NAMES) | {"search_depth"}
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         raw = self._within_deadline(self._sync_client).search(**self._build_payload(request))
@@ -375,7 +374,7 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
             input=request.query,
             agent_name=NIMBLE_RESEARCH_AGENT_NAMES[use_case],
             use_case=use_case,
-            effort=NIMBLE_RESEARCH_EFFORT[request.effort] if request.effort else None,
+            effort=mapped(NIMBLE_RESEARCH_EFFORT, request.effort),
             output_schema=_enrichment_schema(request) if request.records else request.output_schema,
             input_data=request.records,
             sources=_sources(request),

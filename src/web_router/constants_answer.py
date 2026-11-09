@@ -12,6 +12,7 @@ from typing import Any, get_args
 
 from web_router._chains import chain as _chain
 from web_router.types_answer import Recency
+from web_router.types_options import RECENCY_DESCRIPTION
 
 __all__ = [
     "ANSWER_MARKER",
@@ -68,7 +69,7 @@ MCP_ANSWER_PROPERTIES: dict[str, dict[str, Any]] = {
     "recency": {
         "type": "string",
         "enum": list(get_args(Recency)),
-        "description": "Only sources from the last day, week, month or year.",
+        "description": RECENCY_DESCRIPTION,
     },
 }
 

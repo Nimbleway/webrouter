@@ -24,38 +24,84 @@
       "sample": {
         "body.numResults": 3
       }
+    },
+    "search_depth": {
+      "lite": {
+        "body.contents.highlights.maxCharacters": 500,
+        "body.contents.text": "<removed>"
+      },
+      "fast": {
+        "body.contents.text": "<removed>",
+        "body.contents.text.maxCharacters": 3000
+      },
+      "deep": {
+        "unchanged": "no wire change"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.includeDomains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.excludeDomains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.userLocation": "US"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.startPublishedDate": "2026-01-14T00:00:00.000Z"
+      },
+      "week": {
+        "body.startPublishedDate": "2026-01-08T00:00:00.000Z"
+      },
+      "month": {
+        "body.startPublishedDate": "2025-12-16T00:00:00.000Z"
+      },
+      "year": {
+        "body.startPublishedDate": "2025-01-15T00:00:00.000Z"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.type": "lite"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "body.type": "deep-lite"
+      },
+      "max": {
+        "body.type": "deep"
+      }
     }
   },
   "not_mapped": [
-    "country",
-    "exclude_domains",
-    "include_domains",
-    "locale",
-    "search_depth"
+    "locale"
   ],
   "source": [
     "https://exa.ai/docs/reference/search"
   ],
   "verified": {
-    "max_results": "docs: https://exa.ai/docs/reference/search"
+    "max_results": "docs: https://exa.ai/docs/reference/search",
+    "include_domains": "live: 2026-11-09 search-options check: wikipedia.org alone came back",
+    "exclude_domains": "live: 2026-11-09 search-options check: no wikipedia.org result",
+    "country": "docs: https://exa.ai/docs/reference/search (accepted live on 2026-11-09; GB and US shared 67% of their results for 'best football club', so it moves results rather than filtering them)",
+    "recency": "live: 2026-11-09 search-options check: month, 10 of 10 results dated inside the window",
+    "search_depth": "live: 2026-11-09 search-options check: fast at most 3,000 characters and deep past 3,000; one lite highlight ran to 995 against the 500 cap, so lite is cut to a snippet in the provider (re-checked keyless on exa-mcp: at most 500)",
+    "effort": "live: 2026-11-09 search-options check: low with every filter, high (deep-lite) and max (deep) answered"
   },
   "vendor_options": {
-    "includeDomains": {
-      "status": "passthrough",
-      "note": "Same meaning as the shared include_domains; not mapped yet."
-    },
-    "excludeDomains": {
-      "status": "passthrough",
-      "note": "Same meaning as the shared exclude_domains; not mapped yet."
-    },
-    "userLocation": {
-      "status": "passthrough",
-      "note": "Two-letter ISO country code or a {country, latitude, longitude} object; a candidate for the shared country option."
-    },
-    "type": {
-      "status": "passthrough",
-      "note": "auto | lite | deep-lite | deep; a candidate for search_depth."
-    },
     "additionalQueries": {
       "status": "passthrough",
       "note": "1-10 extra queries; deep types only."
@@ -64,13 +110,9 @@
       "status": "passthrough",
       "note": "company | publication | news | personal site | financial report | people."
     },
-    "startPublishedDate": {
-      "status": "passthrough",
-      "note": "ISO 8601."
-    },
     "endPublishedDate": {
       "status": "passthrough",
-      "note": "ISO 8601."
+      "note": "ISO 8601; recency sets only the start."
     },
     "moderation": {
       "status": "passthrough",
@@ -119,6 +161,10 @@
     "context": {
       "status": "passthrough",
       "note": "Deprecated in favour of contents.highlights or contents.text."
+    },
+    "contents sub-options": {
+      "status": "passthrough",
+      "note": "contents.summary, contents.subpages, contents.livecrawl and contents.maxAgeHours, and text or highlights settings past the sizes search_depth sets; a provider_options contents object replaces the mapped one whole."
     }
   }
 }

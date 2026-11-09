@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from web_router.exceptions import UnsupportedFormatError, UnsupportedParameterError
+from web_router.exceptions import UnsupportedFormatError
 from web_router.types import ExtractFailure, ExtractRequest, SearchRequest
 
 pytest.importorskip("tavily", reason="tavily extra not installed")
@@ -24,10 +24,6 @@ def test_only_the_query_is_sent_when_nothing_else_is_set(provider: TavilyProvide
     assert provider._build_payload(SearchRequest(query="hi")) == {"query": "hi"}
 
 
-def test_the_minimal_surface_is_query_max_results_and_depth(provider: TavilyProvider) -> None:
-    assert provider.supported_parameters == {"max_results", "search_depth"}
-
-
 def test_max_results_is_passed_through(provider: TavilyProvider) -> None:
     assert provider._build_payload(SearchRequest(query="hi", max_results=5)) == {"query": "hi", "max_results": 5}
 
@@ -45,25 +41,10 @@ def test_depth_maps_onto_tavilys_two_knobs(provider: TavilyProvider, depth: str,
     assert params == {"query": "hi", **expected}
 
 
-@pytest.mark.parametrize("parameter", ["include_domains", "exclude_domains", "country", "locale"])
-def test_unmapped_parameters_are_rejected_not_dropped(provider: TavilyProvider, parameter: str) -> None:
-    """Tavily is called with the minimum. Anything else must fail loudly, never silently."""
-    values = {"include_domains": ["a.com"], "exclude_domains": ["a.com"], "country": "US", "locale": "en"}
-    request = SearchRequest(query="hi", **{parameter: values.get(parameter, True)})
-    with pytest.raises(UnsupportedParameterError, match=parameter):
-        provider.validate(request)
-
-
-def test_the_rejection_points_at_the_way_forward(provider: TavilyProvider) -> None:
-    """The message is the contribution prompt, so it must name both routes."""
-    with pytest.raises(UnsupportedParameterError, match=r"provider_options.*CONTRIBUTING"):
-        provider.validate(SearchRequest(query="hi", country="US"))
-
-
 def test_provider_options_reach_the_sdk_untranslated(provider: TavilyProvider) -> None:
     """The escape hatch for anything Tavily supports that we do not map."""
-    params = provider._build_payload(SearchRequest(query="hi", provider_options={"country": "france"}))
-    assert params["country"] == "france"
+    params = provider._build_payload(SearchRequest(query="hi", provider_options={"chunks_per_source": 1}))
+    assert params["chunks_per_source"] == 1
 
 
 def test_raw_content_becomes_the_body_and_the_snippet_the_description(provider: TavilyProvider) -> None:

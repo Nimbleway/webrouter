@@ -37,6 +37,8 @@ from web_router.types import (
     ExtractBenchmarkRun,
     ExtractFormat,
     Provider,
+    Recency,
+    ResearchEffort,
     SearchDepth,
 )
 
@@ -90,6 +92,8 @@ class SyncBenchmark(_BenchmarkMembers):
         exclude_domains: list[str] | None = None,
         country: str | None = None,
         locale: str | None = None,
+        recency: Recency | None = None,
+        effort: ResearchEffort | None = None,
     ) -> BenchmarkReport:
         """Run the same search through several providers at once and report what each did.
 
@@ -118,6 +122,8 @@ class SyncBenchmark(_BenchmarkMembers):
             exclude_domains=exclude_domains,
             country=country,
             locale=locale,
+            recency=recency,
+            effort=effort,
             provider_options=None,
         )
         members = members_of(
@@ -250,6 +256,8 @@ class AsyncBenchmark(_BenchmarkMembers):
         exclude_domains: list[str] | None = None,
         country: str | None = None,
         locale: str | None = None,
+        recency: Recency | None = None,
+        effort: ResearchEffort | None = None,
     ) -> BenchmarkReport:
         """Run the same search through several providers at once and report what each did.
 
@@ -264,6 +272,8 @@ class AsyncBenchmark(_BenchmarkMembers):
             exclude_domains=exclude_domains,
             country=country,
             locale=locale,
+            recency=recency,
+            effort=effort,
             provider_options=None,
         )
         members = members_of(
