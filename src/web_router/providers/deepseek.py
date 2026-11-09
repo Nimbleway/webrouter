@@ -36,7 +36,7 @@ from web_router.exceptions import ProviderError
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._language import language_code
-from web_router.providers._utils import as_snippet, best_text, build_payload, site_operators
+from web_router.providers._utils import as_snippet, best_text, build_payload, lite_body, site_operators
 from web_router.types import (
     EXTRACT_PARAMETERS,
     ExtractedDocument,
@@ -99,12 +99,12 @@ class DeepSeekProvider(HttpSearchProvider):
         return SearchResponse(
             provider=self.name,
             query=request.query,
-            results=[self._to_result(hit) for hit in payload.get("results") or []],
+            results=[self._to_result(hit, request.search_depth) for hit in payload.get("results") or []],
             raw=payload,
         )
 
     @staticmethod
-    def _to_result(hit: dict[str, Any]) -> SearchResult:
+    def _to_result(hit: dict[str, Any], depth: SearchDepth | None = None) -> SearchResult:
         snippet = hit.get("snippet") or ""
         summary = hit.get("summary") or ""
         score = hit.get("rerank_score")
@@ -117,7 +117,7 @@ class DeepSeekProvider(HttpSearchProvider):
             url=hit.get("url", ""),
             title=hit.get("title") or "",
             description=snippet or as_snippet(summary),
-            content=best_text(hit.get("content"), summary or snippet),
+            content=lite_body(best_text(hit.get("content"), summary or snippet), depth),
             score=float(score) if isinstance(score, (int, float)) else None,
             published_date=published if isinstance(published, str) and published else None,
             extra=extra,

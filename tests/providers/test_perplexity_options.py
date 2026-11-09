@@ -116,3 +116,13 @@ def test_live_excluded_domain_and_language_are_honoured() -> None:
     with WebRouter("perplexity") as router, billing_aware("perplexity"):
         response = router.search("café", max_results=5, exclude_domains=["wikipedia.org"], locale="fr")
     assert response.results and not any("wikipedia.org" in result.url for result in response.results)
+
+
+def test_lite_cuts_a_long_snippet_to_snippet_size() -> None:
+    from web_router.constants import SNIPPET_LIMIT
+    from web_router.providers.perplexity import PerplexityProvider
+
+    result = PerplexityProvider._to_result({"url": "https://a.example", "snippet": "word " * 300}, "lite")
+    assert len(result.content) <= SNIPPET_LIMIT + 3
+    assert len(result.description) <= SNIPPET_LIMIT + 3
+    assert len(PerplexityProvider._to_result({"snippet": "word " * 300}, "fast").content) == 1500

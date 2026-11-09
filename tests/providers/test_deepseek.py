@@ -349,3 +349,12 @@ def test_live_extract_returns_the_page() -> None:
 
     (document,) = response.documents
     assert document.format == "markdown" and "Python" in document.content
+
+
+def test_lite_cuts_the_summary_to_snippet_size() -> None:
+    from web_router.constants import SNIPPET_LIMIT
+    from web_router.providers.deepseek import DeepSeekProvider
+
+    hit = {"url": "https://a.example", "summary": "word " * 1000}
+    assert len(DeepSeekProvider._to_result(hit, "lite").content) <= SNIPPET_LIMIT + 3
+    assert len(DeepSeekProvider._to_result(hit, "deep").content) > SNIPPET_LIMIT

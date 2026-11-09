@@ -65,7 +65,7 @@ from web_router.constants_perplexity import (
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider, HttpSearchProvider
-from web_router.providers._utils import build_payload, compact, error_detail
+from web_router.providers._utils import build_payload, compact, error_detail, lite_body
 from web_router.providers.answer import cited_marker, refuse_domain_pair
 from web_router.types import (
     Citation,
@@ -144,14 +144,14 @@ class PerplexityProvider(HttpSearchProvider):
         return SearchResponse(
             provider=self.name,
             query=request.query,
-            results=[self._to_result(hit) for hit in payload.get("results") or []],
+            results=[self._to_result(hit, request.search_depth) for hit in payload.get("results") or []],
             request_id=payload.get("id"),
             raw=payload,
         )
 
     @staticmethod
-    def _to_result(hit: dict[str, Any]) -> SearchResult:
-        snippet = hit.get("snippet") or ""
+    def _to_result(hit: dict[str, Any], depth: SearchDepth | None = None) -> SearchResult:
+        snippet = lite_body(hit.get("snippet") or "", depth)
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
