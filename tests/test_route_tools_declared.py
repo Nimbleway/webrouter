@@ -82,3 +82,24 @@ def test_a_router_function_may_declare_route_tools(tool: Tool, called: list[str]
 def test_a_router_s_route_tools_take_only_the_five_tools(cls: type, declared: Any) -> None:
     with pytest.raises(ConfigurationError, match="router's route_tools"):
         cls(router=Declaring(declared))
+
+
+def test_a_router_built_by_name_declares_route_tools_from_its_config() -> None:
+    from web_router import register_router, unregister_router
+
+    register_router("test-declaring", lambda **config: Declaring(config["route_tools"]))
+    try:
+        with WebRouter(router="test-declaring", router_config={"route_tools": ["research"]}) as wr:
+            assert wr._route_tools == frozenset({"research"})
+        with WebRouter(router="test-declaring", router_config={"route_tools": ["research"]}, route_tools=()) as wr:
+            assert wr._route_tools == frozenset()
+    finally:
+        unregister_router("test-declaring")
+
+
+def test_the_remote_router_takes_route_tools_in_its_config() -> None:
+    config = {"url": "http://127.0.0.1:1/route", "route_tools": ("answer", "research")}
+    with WebRouter(router="remote", router_config=config) as wr:
+        assert wr._route_tools == frozenset({"answer", "research"})
+    with pytest.raises(ConfigurationError, match="router's route_tools"):
+        WebRouter(router="remote", router_config={**config, "route_tools": ("plan",)})

@@ -2126,6 +2126,7 @@ wr = WebRouter(
     router_config={
         "url": "https://router.example.com/route",
         "timeout_s": 1.0,  # the default; cut to the call's budget and deadline
+        "route_tools": None,  # its own route_tools: the tools it orders when you pass none; all five if None
     },
 )  # api_key=, else WEB_ROUTER_REMOTE_ROUTER_API_KEY
 ```

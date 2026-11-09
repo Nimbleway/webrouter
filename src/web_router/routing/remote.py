@@ -44,6 +44,7 @@ import math
 import os
 import threading
 import weakref
+from collections.abc import Collection
 from typing import TYPE_CHECKING, Any
 
 from web_router._urls import host_of
@@ -147,7 +148,12 @@ class RemoteRouter:
     """The URL policy this router's options are held to when the caller sets none."""
 
     def __init__(
-        self, *, url: str | None = None, api_key: str | None = None, timeout_s: float = REMOTE_TIMEOUT_S
+        self,
+        *,
+        url: str | None = None,
+        api_key: str | None = None,
+        timeout_s: float = REMOTE_TIMEOUT_S,
+        route_tools: Collection[str] | None = None,
     ) -> None:
         """
         Args:
@@ -156,6 +162,8 @@ class RemoteRouter:
             api_key: Sent as ``Authorization: Bearer <api_key>``; ``WEB_ROUTER_REMOTE_ROUTER_API_KEY``, read now,
                 when omitted, and no header when neither is set.
             timeout_s: Seconds to wait for the service, cut to what the call has left. 1 s unless set.
+            route_tools: The tools this router is consulted on when the caller passes no ``route_tools``; all
+                five unless set. Checked when it is attached.
 
         Raises:
             ConfigurationError: for httpx not installed, a URL :func:`~.remote_url.checked_url` refuses, a
@@ -166,6 +174,7 @@ class RemoteRouter:
         self.host = host_of(self._url)
         self.router_name = REMOTE_DISPLAY_NAME.format(host=self.host)
         self.timeout_s = _checked_timeout(timeout_s)
+        self.route_tools = route_tools
         self._request_headers = _auth_headers(api_key)
         self._lock = threading.Lock()
         # Weakly keyed: a loop that is gone takes its pool with it.
