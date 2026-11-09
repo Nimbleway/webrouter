@@ -174,14 +174,14 @@ class TavilyProvider(SearchProvider):
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         results = []
         for item in payload.get("results") or []:
-            # Tavily's `content` is the matched snippet; the full page, when
-            # asked for, arrives separately as `raw_content`.
+            # Tavily's `content` is the matched snippet, up to three chunks at
+            # `basic`; the full page, when asked for, arrives as `raw_content`.
             snippet = item.get("content") or ""
             results.append(
                 SearchResult(
                     url=item.get("url", ""),
                     title=item.get("title") or "",
-                    description=snippet,
+                    description=lite_body(snippet, request.search_depth),
                     content=lite_body(best_text(item.get("raw_content"), snippet), request.search_depth),
                     score=item.get("score"),
                     published_date=item.get("published_date"),

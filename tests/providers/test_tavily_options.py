@@ -28,8 +28,9 @@ def provider(monkeypatch: pytest.MonkeyPatch) -> TavilyProvider:
 def test_lite_is_cut_to_a_snippet_and_raw_keeps_the_full_text(provider: TavilyProvider, depth: str, cut: bool) -> None:
     payload = {"results": [{"url": "https://a.com", "content": BODY}]}
     response = provider._to_response(SearchRequest(query="q", search_depth=depth), payload)  # type: ignore[arg-type]
-    content = response.results[0].content
-    assert (len(content) <= SNIPPET_LIMIT + 1) is cut and (content == BODY) is not cut
+    result = response.results[0]
+    for text in (result.content, result.description):
+        assert (len(text) <= SNIPPET_LIMIT + 1) is cut and (text == BODY) is not cut
     assert response.raw["results"][0]["content"] == BODY
 
 
