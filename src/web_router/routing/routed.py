@@ -103,6 +103,8 @@ class RouterSetup:
                 or an unknown ``url_policy``.
         """
         self._url_check = url_check(url_policy)
+        if route_tools is not None:
+            _route_tools(route_tools)  # a bad value is refused before a router is built by name
         attached, owned = resolve_router(router, router_config)
         try:
             self._route_tools = _route_tools(route_tools, attached)  # the resolved router's own, by name or not

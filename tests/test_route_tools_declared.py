@@ -103,3 +103,16 @@ def test_the_remote_router_takes_route_tools_in_its_config() -> None:
         assert wr._route_tools == frozenset({"answer", "research"})
     with pytest.raises(ConfigurationError, match="router's route_tools"):
         WebRouter(router="remote", router_config={**config, "route_tools": ("plan",)})
+
+
+def test_a_bad_caller_route_tools_is_refused_before_a_router_is_built_by_name() -> None:
+    from web_router import register_router, unregister_router
+
+    built: list[object] = []
+    register_router("test-counting", lambda **config: built.append(1) or Declaring(None))
+    try:
+        with pytest.raises(ConfigurationError, match="route_tools takes"):
+            WebRouter(router="test-counting", route_tools=["plan"])
+        assert built == []
+    finally:
+        unregister_router("test-counting")
