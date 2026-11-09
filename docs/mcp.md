@@ -20,7 +20,7 @@ The default `auto` chain falls back to backends that need no key, so the first
 run needs nothing but a clone and [uv](https://docs.astral.sh/uv/):
 
 ```bash
-git clone https://github.com/WebContextLayer/webrouter.git
+git clone https://github.com/Nimbleway/webrouter.git
 cd webrouter && make setup
 uv run web-router-mcp    # a check that it starts: it waits silently for a client; Ctrl-C stops it
 ```

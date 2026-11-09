@@ -45,7 +45,7 @@ class WikipediaProvider(HttpSearchProvider):
     # No credential: no auth header is sent, and a missing key never raises.
     env_api_key: ClassVar[str | None] = None
 
-    user_agent: ClassVar[str] = "web-router-example/1.0 (https://github.com/WebContextLayer/webrouter)"
+    user_agent: ClassVar[str] = "web-router-example/1.0 (https://github.com/Nimbleway/webrouter)"
     """Wikimedia refuses requests without one, with a 403 naming its policy.
 
     A worked example of the general case: an API that needs a header beyond
