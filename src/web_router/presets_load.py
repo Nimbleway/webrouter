@@ -250,8 +250,10 @@ def _copy(preset: Preset) -> Preset:
     return preset.model_copy(deep=True)
 
 
-def _version_key(version: str) -> tuple[int, ...]:
-    return tuple(int(part) for part in version.split("."))
+def _version_key(version: str) -> tuple[tuple[int, str], ...]:
+    """Each part compared as a number without converting it, so a part of any length sorts and never raises."""
+    parts = (part.lstrip("0") or "0" for part in version.split("."))
+    return tuple((len(part), part) for part in parts)
 
 
 def _read(file: Path) -> builtins.list[Any]:

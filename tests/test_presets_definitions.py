@@ -89,3 +89,12 @@ def test_one_file_defining_a_version_twice_with_true_and_one_is_refused(tmp_path
 
     with pytest.raises(PresetValidationError, match="more than once"):
         PresetRegistry().load(path)
+
+
+def test_versions_list_in_numeric_order_whatever_their_length() -> None:
+    huge = "9" * 5000  # past Python's digit limit for int(), which a sort by int() would raise on
+    registry = PresetRegistry()
+    for version in ("1.10.0", "1.9.0", f"1.{huge}.0", "1.0.0"):
+        registry.add(definition(version=version))
+
+    assert [preset.version for preset in registry.list()] == ["1.0.0", "1.9.0", "1.10.0", f"1.{huge}.0"]

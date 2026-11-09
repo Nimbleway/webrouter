@@ -7,7 +7,7 @@ fakes in conftest, so nothing here touches the network or needs a key. A fake's
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -83,7 +83,7 @@ GETTERS = {
 }
 
 
-SYNC_CALLS: list[tuple[str, Callable[..., object]]] = [
+CALLS: list[tuple[str, Callable[..., Any]]] = [
     ("search", lambda router, **kw: router.search("q", **kw)),
     ("extract", lambda router, **kw: router.extract("https://example.com", **kw)),
     ("templates", lambda router, **kw: router.run_template("books_pdp", {"url": "u"}, provider="fake", **kw)),
@@ -94,19 +94,7 @@ SYNC_CALLS: list[tuple[str, Callable[..., object]]] = [
     ("browse", lambda router, **kw: router.submit_browse("t", **kw)),
     ("browser", lambda router, **kw: router.open_browser(**kw)),
 ]
-
-
-ASYNC_CALLS: list[tuple[str, Callable[..., Awaitable[object]]]] = [
-    ("search", lambda router, **kw: router.search("q", **kw)),
-    ("extract", lambda router, **kw: router.extract("https://example.com", **kw)),
-    ("templates", lambda router, **kw: router.run_template("books_pdp", {"url": "u"}, provider="fake", **kw)),
-    ("answer", lambda router, **kw: router.answer("q", **kw)),
-    ("research", lambda router, **kw: router.research("q", **kw)),
-    ("research", lambda router, **kw: router.submit_research("q", **kw)),
-    ("browse", lambda router, **kw: router.browse("t", **kw)),
-    ("browse", lambda router, **kw: router.submit_browse("t", **kw)),
-    ("browser", lambda router, **kw: router.open_browser(**kw)),
-]
+"""One table for both routers: each call returns a value on WebRouter and an awaitable on AsyncWebRouter."""
 
 
 ALL_FAKES = (
@@ -152,9 +140,9 @@ def test_the_argument_table_covers_every_setting_a_preset_can_hold() -> None:
 
 
 @pytest.mark.parametrize("source", ["call", "preset"])
-@pytest.mark.parametrize(("component", "call"), SYNC_CALLS)
+@pytest.mark.parametrize(("component", "call"), CALLS)
 def test_every_setting_reaches_the_request_from_the_call_or_a_preset(
-    component: str, call: Callable[..., object], source: str, every_fake: None
+    component: str, call: Callable[..., Any], source: str, every_fake: None
 ) -> None:
     """Every argument each method takes goes through resolution and arrives; none is dropped on the way."""
     section, arguments = _setup(component, source)
@@ -165,9 +153,9 @@ def test_every_setting_reaches_the_request_from_the_call_or_a_preset(
 
 
 @pytest.mark.parametrize("source", ["call", "preset"])
-@pytest.mark.parametrize(("component", "call"), ASYNC_CALLS)
+@pytest.mark.parametrize(("component", "call"), CALLS)
 async def test_every_setting_reaches_the_request_on_the_async_router(
-    component: str, call: Callable[..., Awaitable[object]], source: str, every_fake: None
+    component: str, call: Callable[..., Any], source: str, every_fake: None
 ) -> None:
     section, arguments = _setup(component, source)
     async with AsyncWebRouter("fake") as router:
