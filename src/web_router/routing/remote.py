@@ -51,6 +51,7 @@ import os
 import threading
 import warnings
 import weakref
+from collections.abc import Awaitable
 from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import AbstractAsyncContextManager, nullcontext
 from typing import TYPE_CHECKING, Any
@@ -238,18 +239,22 @@ class RemoteRouter:
             _close_failed(self.host, _why(exc))
 
     async def aclose(self) -> None:
-        """Close the pool and the router: awaited here, or on its own loop without blocking this one, 2 s at most."""
+        """Close the pool and the router, 2 s at most: awaited here, or on its own loop without blocking this one."""
         pool, loop = self._shut()
         if pool is None or loop is None or loop.is_closed():
             return
+        if loop is not asyncio.get_running_loop() and not loop.is_running():
+            _close_failed(self.host, REMOTE_WHY_CLOSE_LOOP)
+            return
+        if loop is asyncio.get_running_loop():
+            closing: Awaitable[None] = pool.aclose()
+        else:
+            closing = asyncio.wrap_future(asyncio.run_coroutine_threadsafe(pool.aclose(), loop))
         try:
-            if loop is asyncio.get_running_loop():
-                await pool.aclose()
-            elif not loop.is_running():
-                _close_failed(self.host, REMOTE_WHY_CLOSE_LOOP)
-            else:
-                closing = asyncio.wrap_future(asyncio.run_coroutine_threadsafe(pool.aclose(), loop))
-                await asyncio.wait_for(closing, REMOTE_CLOSE_WAIT_S)  # cancels the close on its loop when late
+            await asyncio.wait_for(closing, REMOTE_CLOSE_WAIT_S)  # cancels the close, on its own loop, when late
+        except asyncio.CancelledError:
+            _close_failed(self.host, asyncio.CancelledError.__name__)  # the router stays closed; say so, then go
+            raise
         except Exception as exc:
             _close_failed(self.host, _why(exc))
 
@@ -282,9 +287,8 @@ class RemoteRouter:
             owner = None if self._owner is None else self._owner()
             if self._pool is None or owner is None or owner.is_closed():
                 self._pool, self._owner, owner = self._new_client(), weakref.ref(loop), loop
-            if owner is loop:
-                return nullcontext(self._pool)
-        return self._new_client()
+            # Made under the lock, so a close that has returned is never followed by a new client.
+            return nullcontext(self._pool) if owner is loop else self._new_client()
 
     def _new_client(self) -> httpx.AsyncClient:
         # No redirect followed, so a 3xx is a router error and the key goes nowhere else; no proxy, netrc or
