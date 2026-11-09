@@ -32,6 +32,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - The MCP server now loads `BRAVE_ANSWER_API_KEY` and `JINA_API_KEY` from a `.env` file, at startup and through `load_env`. Before, both were ignored, so a Brave Answers key could not turn on `answer` the way the server's own hints said.
 
+- The MCP server reads every `.env` it finds at startup, not just the first one that sets a key: `WEB_ROUTER_ENV_FILE`, then your user config directory's `.env`, then a path `load_env(remember=true)` recorded, then the working directory's `.env`. An earlier file wins per variable and a later one only fills what is still unset, so a project's `.env` or a remembered file can add keys but never replace yours. Before, a project `.env` with any one key hid your user config `.env` entirely. The capabilities resource's `env.loaded` now maps each variable to the file it came from (it replaces `env.file`), and a file whose keys were all set already reports `nothing new`. `load_env` now tells the model to use only a path you gave and to set `remember` only when you ask.
+
 ### Removed
 
 - The decider spike: `WebRouter(decider=, decider_config=)`, `WebRouter.classify()`, `WebRouter.execute()`, `Route` and the `web_router.decisions` package (`DecisionProvider`, `register_decider()` and the `keywords`, `jev` and `llm` deciders). It was a proof of concept for routing; `router=`, `plan()` and `run()` replace it. To keep using it, pin `web-router==0.9.0`, the last version that has it.

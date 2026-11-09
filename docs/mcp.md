@@ -54,25 +54,27 @@ server does not list the browser tools at all.
 ## Then add whichever keys you have
 
 Credentials come from the environment of the process your client launches, and
-then from one `.env` file. An installed server has no repo beside it and starts
-in whatever directory the client picks, so at startup it looks in four places,
-in this order, and loads the first file that sets a provider credential:
+then from `.env` files. An installed server has no repo beside it and starts in
+whatever directory the client picks, so at startup it reads every one of four
+places, in this order:
 
 | # | Where | For |
 | --- | --- | --- |
 | 1 | the path in `WEB_ROUTER_ENV_FILE` | pointing a client's config at a `.env` you already keep somewhere |
-| 2 | `.env` in the working directory | a checkout of this repo, where `.mcp.json` starts the server at the root |
+| 2 | `.env` in the user config directory | one file for every client and every project |
 | 3 | the path `load_env` recorded with `remember: true` | a file named in a conversation, read again on every start |
-| 4 | `.env` in the user config directory | one file for every client and every project |
+| 4 | `.env` in the working directory | a checkout of this repo, where `.mcp.json` starts the server at the root |
 
-The user config directory is `~/.config/web-router` on Linux (or
+An earlier place wins, per variable; a later file only fills what is still
+unset. So a project's own `.env` and a remembered file can add keys but never
+replace yours: a repo that commits a `.env` with its owner's key does not take
+over your traffic. The capabilities resource says which file each variable came
+from. The user config directory is `~/.config/web-router` on Linux (or
 `$XDG_CONFIG_HOME/web-router`), `~/Library/Application Support/web-router` on
 macOS and `%APPDATA%\web-router` on Windows; the server never creates it except
-to record a remembered path. A file that sets no provider credential does not
-count as found — a project's own `.env`, in whatever directory a client starts
-the server in, does not hide yours — and a `WEB_ROUTER_ENV_FILE` that names
-no file is reported rather than silently skipped. With no file anywhere the
-server starts keyless.
+to record a remembered path. A `WEB_ROUTER_ENV_FILE` that names no file is
+reported rather than silently skipped. With no file anywhere the server starts
+keyless.
 
 So, from Claude Code, either name a file you already have:
 
@@ -136,9 +138,11 @@ new `provider` enums. Browser sessions already open, and research or browse
 jobs still being polled, carry on where they started.
 
 `remember: true` records the path — the path, not a copy of the keys — in
-`env-path` in the user config directory, read before that directory's own
-`.env`. Delete that file to forget it. A key rotated in the original file takes
-effect on the next start.
+`env-path` in the user config directory, read after that directory's own
+`.env`, so it too can only add keys. Delete that file to forget it. A key
+rotated in the original file takes effect on the next start. The tool's
+description tells the model to call it only with a path you gave and to set
+`remember` only when you ask.
 
 A key already set is never replaced, so a load can only add backends. That is
 also its one risk: a model steered by a page it read could call `load_env` on a
@@ -155,22 +159,22 @@ backend lists:
 "env": {
   "searched": [
     {"source": "WEB_ROUTER_ENV_FILE", "path": "/Users/you/wrong/.env", "status": "missing"},
-    {"source": "working directory", "path": "/Users/you/project/.env", "status": "no credentials"},
-    {"source": "user config", "path": "/Users/you/Library/Application Support/web-router/.env", "status": "used"}
+    {"source": "user config", "path": "/Users/you/Library/Application Support/web-router/.env", "status": "used"},
+    {"source": "working directory", "path": "/Users/you/project/.env", "status": "no credentials"}
   ],
-  "file": "/Users/you/Library/Application Support/web-router/.env",
+  "loaded": {"TAVILY_API_KEY": "/Users/you/Library/Application Support/web-router/.env"},
   "explicit_file_missing": true,
-  "loaded": ["TAVILY_API_KEY"],
   "from_environment": ["NIMBLE_API_KEY"],
   "loaded_at_runtime": []
 }
 ```
 
 — every place it looked, in order, and what it found there (`used`, `missing`,
-`unreadable` with a `reason`, `no credentials`, or `not read` after an earlier
-one was used); the file it loaded; whether `WEB_ROUTER_ENV_FILE` named a file
-that is not there; the variables loaded from that file and those the client
-already exported, by name; and each `load_env` since. With no provider key at
+`unreadable` with a `reason`, `no credentials`, or `nothing new` when an earlier
+place had set everything it holds); each variable loaded at startup and the
+file it came from; whether `WEB_ROUTER_ENV_FILE` named a file that is not
+there; the variables the client already exported, by name; and each `load_env`
+since. With no provider key at
 all it also carries a `hint` saying how to add one, the server's instructions
 and the `search` description say no keys were found and that the model can ask
 for a `.env` path and call `load_env` — or carry on keyless — and every other

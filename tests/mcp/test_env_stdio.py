@@ -125,8 +125,7 @@ def _used(env: dict[str, Any]) -> dict[str, Any]:
 def _assert_found(body: dict[str, Any], text: str, path: Path, source: str) -> None:
     assert PROVIDER_BRAVE in body[MCP_TOOL_SEARCH]
     env = body["env"]
-    assert env["file"] == str(path)
-    assert env["loaded"] == [ENV_BRAVE_API_KEY]
+    assert env["loaded"] == {ENV_BRAVE_API_KEY: str(path)}
     assert _used(env) == {"source": source, "path": str(path), "status": MCP_ENV_STATUS_USED}
     assert "hint" not in env
     assert FAKE_KEY not in text, "a key's value must never reach the model"
@@ -176,7 +175,7 @@ async def test_with_no_file_anywhere_the_model_is_told_and_can_load_one(setup: S
 
     # Keyless, and saying how to change that -- in the resource and on the tool a model reaches for first.
     assert before[MCP_TOOL_SEARCH] == [PROVIDER_AUTO, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP, PROVIDER_YOU_MCP]
-    assert before["env"]["file"] is None
+    assert before["env"]["loaded"] == {}
     assert MCP_TOOL_LOAD_ENV in before["env"]["hint"]
     assert MCP_TOOL_LOAD_ENV in (listed[MCP_TOOL_SEARCH].description or "")
 

@@ -3564,8 +3564,8 @@ MCP_ENV_STATUS_USED = "used"
 MCP_ENV_STATUS_MISSING = "missing"
 MCP_ENV_STATUS_UNREADABLE = "unreadable"
 MCP_ENV_STATUS_NO_CREDENTIALS = "no credentials"
-MCP_ENV_STATUS_NOT_READ = "not read"
-"""A place looked at after an earlier one was used: the first file that sets a credential wins."""
+MCP_ENV_STATUS_NOTHING_NEW = "nothing new"
+"""A file whose every credential an earlier place had set already: an earlier file wins, per variable."""
 
 MCP_ENV_REASON_NOT_A_FILE = "it is not a regular file"
 MCP_ENV_REASON_TOO_LARGE = "it is larger than {limit} bytes, far more than a .env holds"
@@ -3993,7 +3993,7 @@ MCP_LOAD_ENV_PROPERTIES: dict[str, dict[str, Any]] = {
     },
     MCP_ARG_REMEMBER: {
         "type": "boolean",
-        "description": "Record the path so the server reads this file again every time it starts.",
+        "description": "Read this file on every start too. Only when the user asks for that.",
     },
 }
 
@@ -4305,11 +4305,10 @@ MCP_DESC_FETCH_RAW = (
 
 MCP_DESC_LOAD_ENV = (
     "Load API keys from a .env file on this machine, so the backends they unlock work at once, without a "
-    "restart. Instant. Pass only the file's path: ask the user where their .env is, and never ask them to "
-    "paste a key into the conversation. Only the provider credentials web-router reads are taken from the "
-    "file and everything else in it is ignored; a variable already set keeps its value. The result names "
-    "the variables loaded -- never their values -- and the backends now configured per method. "
-    "`remember` has the server read the same file every time it starts."
+    "restart. Instant. Call it only with a path the user gave you: ask them where their .env is, and never ask "
+    "them to paste a key. Only the provider credentials web-router reads are taken, and a variable already set "
+    "keeps its value. The result names the variables loaded -- never their values -- and the backends now "
+    "configured. Set `remember`, which has the server read the file on every start, only when the user asks."
 )
 
 MCP_DESC_BROWSER_OPEN = (

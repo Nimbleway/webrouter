@@ -1437,16 +1437,18 @@ you every capability.
 ### Giving an installed server your keys
 
 Started from another project, the server runs in whatever directory your client
-picks, so it looks for a `.env` in this order and loads the first one that sets
-a provider key:
+picks, so it reads every one of these, an earlier file winning per variable and
+a later one filling only what is still unset:
 
 1. the file `WEB_ROUTER_ENV_FILE` names;
-2. `.env` in its working directory — the repo root, when this repo's `.mcp.json`
-   starts it;
-3. the file a `load_env` call with `remember: true` recorded;
-4. `.env` in your user config directory: `~/.config/web-router/.env` on Linux
+2. `.env` in your user config directory: `~/.config/web-router/.env` on Linux
    (under `$XDG_CONFIG_HOME` when that is set), `~/Library/Application Support/web-router/.env`
-   on macOS, `%APPDATA%\web-router\.env` on Windows.
+   on macOS, `%APPDATA%\web-router\.env` on Windows;
+3. the file a `load_env` call with `remember: true` recorded;
+4. `.env` in its working directory — the repo root, when this repo's `.mcp.json`
+   starts it.
+
+A project's `.env` and a remembered file can add keys, never replace yours.
 
 So either point the server at a `.env` you already have:
 

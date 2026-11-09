@@ -1303,19 +1303,21 @@ run from the repo, and the MCP server —
 its `main()` at startup and its `load_env` tool at runtime, both through
 `mcp/env.py` — because an application started by a client, often installed
 from PyPI with no repo beside it and started in whatever directory the client
-picks, has no other way to see keys nobody exports. At startup it loads the
-first file that sets a provider credential, looking in this order: the path in
-`WEB_ROUTER_ENV_FILE` (`ENV_MCP_ENV_FILE`); `MCP_ENV_FILE` in its working
-directory — the repo root when `.mcp.json` launches it; the path
-`load_env(remember=true)` recorded in `MCP_ENV_POINTER_FILE`; and
-`MCP_ENV_FILE` in `user_config_dir()` — XDG on Linux, Application Support on
+picks, has no other way to see keys nobody exports. At startup it reads
+every one of four places, in this order: the path in
+`WEB_ROUTER_ENV_FILE` (`ENV_MCP_ENV_FILE`); `MCP_ENV_FILE` in
+`user_config_dir()` — XDG on Linux, Application Support on
 macOS, `%APPDATA%` on Windows, from `MCP_USER_CONFIG_ROOT_BY_PLATFORM` rather
-than a `platformdirs` dependency the `mcp` extra does not otherwise have. A
-file that sets no credential is not "found", so a project's own `.env` does not
-hide the user's, and a `WEB_ROUTER_ENV_FILE` naming no file is reported in the
-capabilities resource's `env` object, never skipped silently. Every file, from
-wherever, is read on the same terms: only the variables the
-`*_ENV_BY_PROVIDER` tables name — a user-scoped server can be started from any
+than a `platformdirs` dependency the `mcp` extra does not otherwise have; the path
+`load_env(remember=true)` recorded in `MCP_ENV_POINTER_FILE`; and
+`MCP_ENV_FILE` in its working directory — the repo root when `.mcp.json`
+launches it. An earlier place wins per variable and a later file fills only
+what is still unset, so a project's own `.env` and a remembered path can add
+keys but never replace the user's; the capabilities resource's `env` object
+names the file each variable came from, and reports a `WEB_ROUTER_ENV_FILE`
+naming no file, never skipping it silently. Every file, from
+wherever, is read on the same terms: only `credential_variables()` — every
+variable `ALL_ENV_TABLES` in `mcp/env.py` names, and Jina's optional key — a user-scoped server can be started from any
 workspace, and a foreign `.env` must not flip `WEB_ROUTER_MCP_ALLOW_FILE_URLS`
 or aim `CHROME_PATH` at its own binary; a variable already set wins; nothing is
 interpolated, so `${OTHER}` cannot copy another secret into a provider's key;
