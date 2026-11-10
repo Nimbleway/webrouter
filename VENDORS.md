@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-244 vendors, 2078 endpoints.
+249 vendors, 2113 endpoints.
 
 ### advertising
 
@@ -314,10 +314,15 @@ The tables below are generated from `src/web_router/data/vendors/` by
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [Black Forest Labs (FLUX)](https://docs.bfl.ml/quick_start/introduction) `blackforestlabs` | FLUX image generation and editing (FLUX.2 [pro]/[max], FLUX1.1 [pro]) from Black Forest Labs' own API. | 5 read | key in header | `BFL_API_KEY` | docs 2026-11-09 |
 | [Creatify](https://docs.creatify.ai/introduction) `creatify` | AI video ads from a product link: scrape a URL, generate avatar-led short videos, and list avatars and voices. | 6 read | key in header | `CREATIFY_API_ID`, `CREATIFY_API_KEY` | docs 2026-11-09 |
 | [fal.ai](https://fal.ai/docs/api-reference/inference-api/index) `fal` | Hosted image, video, audio and 3D generation models run through fal's queue API, plus model search, pricing and usage. | 5 read | key in header | `FAL_KEY` | docs 2026-11-09 |
+| [Fish Audio](https://docs.fish.audio/api-reference/introduction) `fishaudio` | Text-to-speech, voice design and voice-model management from Fish Audio. | 6 read, 1 write | key in header | `FISH_API_KEY` | docs 2026-11-08 |
 | [Higgsfield](https://docs.higgsfield.ai/docs) `higgsfield` | Image and video generation (SOUL, Kling, Seedance, Wan and more) through one asynchronous request API. | 4 read, 2 write | key in header | `HF_API_KEY_ID`, `HF_API_KEY_SECRET` | docs 2026-11-09 |
 | [Ideogram](https://developer.ideogram.ai/v2/ideogram-api/api-overview) `ideogram` | Text-to-image with strong typography (Ideogram 4.5), prompt enhancement, and hosted video models. | 5 read | key in header | `IDEOGRAM_API_KEY` | docs 2026-11-09 |
+| [Phota Labs](https://docs.photalabs.com/) `photalabs` | Identity-preserving photo generation, editing, enhancement and restyling from trained person profiles (Phota API). | 6 read, 1 write | key in header | `PHOTALABS_API_KEY` | docs 2026-11-09 |
+| [Recraft](https://www.recraft.ai/docs/api-reference/introduction) `recraft` | Raster and SVG vector image generation, editing, vectorizing, background removal and upscaling. | 7 read | key in header | `RECRAFT_API_TOKEN` | docs 2026-11-09 |
+| [Replicate](https://replicate.com/docs/reference/http) `replicate` | Run open-source and official image, video, audio and language models as asynchronous predictions. | 8 read, 1 write | key in header | `REPLICATE_API_TOKEN` | docs 2026-11-08 |
 | [Runway](https://docs.dev.runwayml.com/api/) `runway` | Video, image and audio generation (Gen-4.5 and hosted third-party models) as asynchronous tasks. | 6 read, 1 write | key in header | `RUNWAYML_API_SECRET` | docs 2026-11-09 |
 | [Shotstack](https://shotstack.io/docs/api/) `shotstack` | Render videos, images and audio from a JSON timeline or saved template, generate AI assets, and inspect media. | 9 read | key in header | `SHOTSTACK_API_KEY` | docs 2026-11-09 |
 
