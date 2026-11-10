@@ -104,6 +104,18 @@ class VendorCaller:
             return set(plan.credentials)
         return {name for name, spec in plan.vendor.auth.credentials.items() if spec.required}
 
+    @staticmethod
+    def _wants_token(plan: _Plan) -> bool:
+        """Whether the call needs the vendor's OAuth token: always, unless its own credential list names none of
+        the credentials the token is minted from (a key-only endpoint on an OAuth vendor)."""
+        oauth = plan.vendor.auth.oauth2
+        if oauth is None:
+            return False
+        if plan.credentials is None:
+            return True
+        minted_from = {name for template in oauth.templates() for name in placeholders(template)}
+        return bool(set(plan.credentials) & minted_from)
+
     def _values(self, plan: _Plan) -> dict[str, str]:
         vendor = plan.vendor
         needed = self._needed(plan)
@@ -171,10 +183,13 @@ class VendorCaller:
         body = plan.body
         masked: set[str] = set()
         needed = self._needed(plan)
+        # Names an injection may lack and still be left off: the vendor's credentials, and the access
+        # token when this call mints none.
+        skippable = set(vendor.auth.credentials) | (set() if self._wants_token(plan) else {ACCESS_TOKEN})
         for injection in vendor.auth.inject:
             absent = {name for name in placeholders(injection.value) if name not in values}
             # An optional injection, or one carrying only credentials this call does not need, is left off.
-            if absent and (injection.optional or not (absent & needed or absent - set(vendor.auth.credentials))):
+            if absent and (injection.optional or not (absent & needed or absent - skippable)):
                 continue
             rendered = self._render(vendor, injection.value, values)
             if injection.location == "header":
@@ -200,9 +215,10 @@ class VendorCaller:
         secrets = [value for name, value in values.items() if name in secret_names]
         return _Prepared(plan, url, query, headers, auth, secrets, masked, body)
 
-    def _token_request(self, vendor: Vendor, values: dict[str, str]) -> TokenRequest | None:
+    def _token_request(self, plan: _Plan, values: dict[str, str]) -> TokenRequest | None:
+        vendor = plan.vendor
         oauth = vendor.auth.oauth2
-        if oauth is None:
+        if oauth is None or not self._wants_token(plan):
             return None
         for template in oauth.templates():
             self._render(vendor, template, values)
@@ -279,7 +295,7 @@ class VendorCaller:
         # Checked before anything else: a refused write should cost nothing, not even a token.
         self._check_write(plan, allow_writes=allow_writes)
         values = self._values(plan)
-        return values, self._token_request(plan.vendor, values)
+        return values, self._token_request(plan, values)
 
     def send(self, plan: _Plan, *, allow_writes: bool = False) -> VendorResponse:
         values, token = self._begin(plan, allow_writes=allow_writes)
