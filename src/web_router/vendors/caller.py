@@ -52,7 +52,7 @@ from web_router.vendors.credentials import (
     token_request,
 )
 from web_router.vendors.plan import _Plan
-from web_router.vendors.schema import ACCESS_TOKEN, Vendor, placeholders
+from web_router.vendors.schema import ACCESS_TOKEN, Vendor, VendorInjection, placeholders
 from web_router.vendors.types import VendorResponse
 
 
@@ -103,6 +103,18 @@ class VendorCaller:
         if plan.credentials is not None:
             return set(plan.credentials)
         return {name for name, spec in plan.vendor.auth.credentials.items() if spec.required}
+
+    @staticmethod
+    def _wants_token(plan: _Plan) -> bool:
+        """Whether the call needs the vendor's OAuth token: always, unless its own credential list names none of
+        the credentials the token is minted from (a key-only endpoint on an OAuth vendor)."""
+        oauth = plan.vendor.auth.oauth2
+        if oauth is None:
+            return False
+        if plan.credentials is None:
+            return True
+        minted_from = {name for template in oauth.templates() for name in placeholders(template)}
+        return bool(set(plan.credentials) & minted_from)
 
     def _values(self, plan: _Plan) -> dict[str, str]:
         vendor = plan.vendor
@@ -155,6 +167,28 @@ class VendorCaller:
             vendor = plan.vendor.vendor
             raise VendorWriteRefusedError(vendor, target, MSG_VENDOR_WRITE_REFUSED.format(target=target, vendor=vendor))
 
+    def _applied(self, plan: _Plan, values: Mapping[str, str]) -> list[VendorInjection]:
+        """The injections this call carries.
+
+        Left off: one naming a credential the endpoint's own list excludes (even when configured), an optional
+        one missing a value, and one missing only credentials this call does not need -- or the access token,
+        when this call mints none.
+        """
+        vendor = plan.vendor
+        needed = self._needed(plan)
+        excluded = set(vendor.auth.credentials) - set(plan.credentials) if plan.credentials is not None else set()
+        skippable = set(vendor.auth.credentials) | (set() if self._wants_token(plan) else {ACCESS_TOKEN})
+        applied = []
+        for injection in vendor.auth.inject:
+            names = placeholders(injection.value)
+            if names & excluded:
+                continue
+            absent = {name for name in names if name not in values}
+            if absent and (injection.optional or not (absent & needed or absent - skippable)):
+                continue
+            applied.append(injection)
+        return applied
+
     def _prepare(self, plan: _Plan, values: dict[str, str]) -> _Prepared:
         vendor = plan.vendor
         base = self._render(vendor, vendor.base_for(plan.host), values).rstrip("/")
@@ -170,12 +204,7 @@ class VendorCaller:
         query = list(plan.query)
         body = plan.body
         masked: set[str] = set()
-        needed = self._needed(plan)
-        for injection in vendor.auth.inject:
-            absent = {name for name in placeholders(injection.value) if name not in values}
-            # An optional injection, or one carrying only credentials this call does not need, is left off.
-            if absent and (injection.optional or not (absent & needed or absent - set(vendor.auth.credentials))):
-                continue
+        for injection in self._applied(plan, values):
             rendered = self._render(vendor, injection.value, values)
             if injection.location == "header":
                 headers[injection.name] = rendered
@@ -200,9 +229,10 @@ class VendorCaller:
         secrets = [value for name, value in values.items() if name in secret_names]
         return _Prepared(plan, url, query, headers, auth, secrets, masked, body)
 
-    def _token_request(self, vendor: Vendor, values: dict[str, str]) -> TokenRequest | None:
+    def _token_request(self, plan: _Plan, values: dict[str, str]) -> TokenRequest | None:
+        vendor = plan.vendor
         oauth = vendor.auth.oauth2
-        if oauth is None:
+        if oauth is None or not self._wants_token(plan):
             return None
         for template in oauth.templates():
             self._render(vendor, template, values)
@@ -216,6 +246,8 @@ class VendorCaller:
         return self._sync
 
     def _aclient(self) -> httpx.AsyncClient:
+        """The async client, built once and kept: an async router stays on the event loop it first ran on, as
+        the providers' clients do."""
         if self._async is None:
             self._async = httpx.AsyncClient(
                 timeout=self._timeout, follow_redirects=False, transport=self._async_transport
@@ -245,7 +277,6 @@ class VendorCaller:
                 status=response.status_code, method=plan.method, path=plan.path, body=body or "(empty body)"
             )
             raise ProviderError(plan.vendor.vendor, detail)
-        content_type = response.headers.get(VENDOR_CONTENT_TYPE_HEADER)
         data: Any = None
         text: str | None = None
         if response.content:
@@ -258,6 +289,10 @@ class VendorCaller:
             for key, value in response.headers.items()
             if key.lower() not in VENDOR_DROPPED_RESPONSE_HEADERS
         }
+        # From the masked headers, so a secret the vendor echoed into the content type stays masked there too.
+        content_type = next(
+            (value for key, value in headers.items() if key.lower() == VENDOR_CONTENT_TYPE_HEADER), None
+        )
         return VendorResponse(
             vendor=plan.vendor.vendor,
             endpoint=plan.endpoint,
@@ -279,7 +314,7 @@ class VendorCaller:
         # Checked before anything else: a refused write should cost nothing, not even a token.
         self._check_write(plan, allow_writes=allow_writes)
         values = self._values(plan)
-        return values, self._token_request(plan.vendor, values)
+        return values, self._token_request(plan, values)
 
     def send(self, plan: _Plan, *, allow_writes: bool = False) -> VendorResponse:
         values, token = self._begin(plan, allow_writes=allow_writes)
