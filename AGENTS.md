@@ -1325,9 +1325,9 @@ from the environment (`NIMBLE_API_KEY`, `TAVILY_API_KEY`, `YOU_API_KEY`,
 `AGENTCORE_GATEWAY_URL`, which is not a secret; its credential is the AWS one
 botocore resolves, never a key of ours. `.env.example` lists
 every one, beside `CHROME_PATH`, which is a path for `local` rather than a
-secret; `WEB_ROUTER_ENV_FILE`, the path of the `.env` the MCP server loads, is
-not a secret either and comes from the real environment only, since no file can
-set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
+secret; `WEB_ROUTER_ENV_FILE` and `WEB_ROUTER_PROJECT_ENV_FILE`, the paths of
+the `.env` files the MCP server loads, are not secrets either and come from the
+real environment only, since no file can set them. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
 `RESEARCH_ENV_BY_PROVIDER`, `ANSWER_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
 `auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
@@ -1351,20 +1351,22 @@ its `main()` at startup and its `load_env` tool at runtime, both through
 `mcp/env.py` — because an application started by a client, often installed
 from PyPI with no repo beside it and started in whatever directory the client
 picks, has no other way to see keys nobody exports. At startup it reads
-every one of three places, in this order: the path in
-`WEB_ROUTER_ENV_FILE` (`ENV_MCP_ENV_FILE`), a relative one taken from the
-working directory; `MCP_ENV_FILE` in
+every one of four places, in this order: the path in
+`WEB_ROUTER_ENV_FILE` (`ENV_MCP_ENV_FILE`); `MCP_ENV_FILE` in
 `user_config_dir()` — XDG on Linux, Application Support on
 macOS, `%APPDATA%` on Windows, from `MCP_USER_CONFIG_ROOT_BY_PLATFORM` rather
 than a `platformdirs` dependency the `mcp` extra does not otherwise have; the path
-`load_env(remember=true)` recorded in `MCP_ENV_POINTER_FILE`. A `.env` in the
-working directory is read only when `WEB_ROUTER_ENV_FILE` names it: a
-user-scoped server starts in whatever repo is open. `.mcp.json` opts the
-clone in by setting `WEB_ROUTER_ENV_FILE=.env`. An earlier place wins per variable and a later file fills only
-what is still unset -- a two-variable credential only as a whole -- so a remembered path can add
-keys but never replace the user's; the capabilities resource's `env` object
+`load_env(remember=true)` recorded in `MCP_ENV_POINTER_FILE`; the path in
+`WEB_ROUTER_PROJECT_ENV_FILE` (`ENV_MCP_PROJECT_ENV_FILE`), a relative one taken
+from the working directory. A `.env` in the working directory is read only when
+that last variable names it: a user-scoped server starts in whatever repo is
+open. `.mcp.json` opts the clone in by setting `WEB_ROUTER_PROJECT_ENV_FILE=.env`,
+so an exported `WEB_ROUTER_ENV_FILE` still loads inside the clone. An earlier place wins per variable and a later file fills only
+what is still unset -- a two-variable credential only as a whole -- so a remembered path or a project's
+`.env` can add keys but never replace the user's; the capabilities resource's `env` object
 names the file each variable came from, and reports a `WEB_ROUTER_ENV_FILE`
-naming no file, never skipping it silently. Every file, from
+naming no file, never skipping it silently (a missing project file is only
+`missing`, since a fresh clone has none). `unlock` leaves out `ENV_ONLY` variables, which no `.env` can set. Every file, from
 wherever, is read on the same terms: only `file_variables()` — every
 variable `ALL_ENV_TABLES` in `mcp/env_credentials.py` names, and Jina's optional key,
 less `ENV_ONLY` — because a file named through `load_env`, a remembered path or a
@@ -1387,7 +1389,7 @@ sends `notifications/tools/list_changed`, advertised as `tools.listChanged`;
 on the 2026-07-28 wire the SDK drops it, since this server serves no
 `subscriptions/listen`.
 `.mcp.json` launches it as `uv run --all-extras web-router-mcp`, with
-`WEB_ROUTER_ENV_FILE=.env` in its `env`, and nothing more: `--all-extras` is what makes a fresh clone work, with every tool the
+`WEB_ROUTER_PROJECT_ENV_FILE=.env` in its `env`, and nothing more: `--all-extras` is what makes a fresh clone work, with every tool the
 browser's included, because a bare `uv run` syncs no extras and the server's
 SDK lives in one; no `--env-file` (uv refuses
 a missing file) and no shell wrapper (`sh -c` broke on Linux clients).

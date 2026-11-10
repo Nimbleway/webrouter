@@ -20,8 +20,9 @@ connection until ``browser_close``, an idle timeout or shutdown releases it.
     $ uv run web-router-mcp
 
 At startup the server loads keys from ``WEB_ROUTER_ENV_FILE``, a ``.env`` in the
-user config directory or a path ``load_env`` remembered -- never from a ``.env``
-that merely sits in its working directory -- see
+user config directory, a path ``load_env`` remembered and, last, a project's
+``WEB_ROUTER_PROJECT_ENV_FILE`` -- never from a ``.env`` that merely sits in its
+working directory -- see
 :mod:`web_router.mcp.env`. See docs/mcp.md for the client configuration block.
 """
 

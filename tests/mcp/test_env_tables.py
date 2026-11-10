@@ -34,7 +34,7 @@ def test_every_credential_in_env_example_but_the_env_only_ones_loads_and_nothing
 
 
 def test_the_tools_read_the_same_tables_the_loader_does() -> None:
-    """``unlock`` and the no-backend hints read the loader's tables, env-only variables included."""
+    """``unlock`` and the no-backend hints read the loader's tables; ``unlock`` leaves out the env-only variables."""
     in_tools = {id(method.env) for method in METHODS.values()}
     assert in_tools == {id(table) for table in ALL_ENV_TABLES}
 

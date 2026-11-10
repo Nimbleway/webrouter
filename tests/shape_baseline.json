@@ -5,7 +5,7 @@
   "src/web_router/client.py": 896,
   "src/web_router/constants.py": 4331,
   "src/web_router/mcp/shaping.py": 507,
-  "src/web_router/mcp/tools.py": 634,
+  "src/web_router/mcp/tools.py": 632,
   "src/web_router/providers/_http.py": 604,
   "src/web_router/providers/_page.py": 801,
   "src/web_router/providers/auto.py": 817,

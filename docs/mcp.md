@@ -31,9 +31,9 @@ no signup — the keyless backends listed in the README's
 register it with your client, using the absolute path of your clone:
 
 - **Inside the clone**, Claude Code needs nothing: the committed `.mcp.json`
-  starts the server and sets `WEB_ROUTER_ENV_FILE=.env` so it reads the clone's
-  own `.env`; you approve it once. Until you create that `.env`, the
-  capabilities resource shows `explicit_file_missing: true`, which is harmless.
+  starts the server and sets `WEB_ROUTER_PROJECT_ENV_FILE=.env` so it also reads
+  the clone's own `.env`; you approve it once. Until you create that `.env`, the
+  capabilities resource lists it as `missing`, which is harmless.
 - **Claude Code, from every project**: register it once at user scope.
 
   ```bash
@@ -87,32 +87,30 @@ Each person brings their own keys: there is no shared key store, and no key
 leaves the machine it was set on.
 
 Credentials come from the environment of the process your client launches, and
-then from `.env` files. At startup the server reads every one of three places,
+then from `.env` files. At startup the server reads every one of four places,
 in this order:
 
 | # | Where | For |
 | --- | --- | --- |
-| 1 | the path in `WEB_ROUTER_ENV_FILE` | pointing a client's config at a `.env` you already keep somewhere; a relative path is taken from the working directory, which is how this repo's `.mcp.json` reads the clone's `.env` |
+| 1 | the path in `WEB_ROUTER_ENV_FILE` | pointing a client's config at a `.env` you already keep somewhere |
 | 2 | `.env` in the user config directory | one file for every client and every project |
 | 3 | the path `load_env` recorded with `remember: true` | a file named in a conversation, read again on every start |
+| 4 | the path in `WEB_ROUTER_PROJECT_ENV_FILE` | a project's own `.env`; a relative path is taken from the working directory, which is how this repo's `.mcp.json` reads the clone's `.env` |
 
 A `.env` in the directory the server starts in is not read unless
-`WEB_ROUTER_ENV_FILE` names it. To read a project's `.env`, set
-`WEB_ROUTER_ENV_FILE=.env` in that project's own client config, not in a
-user-scope registration, where it would apply to every project you open.
-Because the file `WEB_ROUTER_ENV_FILE` names is read first, a clone's `.env`
-wins over your user config `.env` when this repo's `.mcp.json` starts the server.
-Inside the clone, that `.mcp.json` setting also replaces a `WEB_ROUTER_ENV_FILE`
-you export.
+`WEB_ROUTER_PROJECT_ENV_FILE` names it. To read a project's `.env`, set
+`WEB_ROUTER_PROJECT_ENV_FILE=.env` in that project's own client config, not in
+a user-scope registration, where it would apply to every project you open.
 
 An earlier place wins, per variable; a later file only fills what is still
 unset, and a credential of two variables (Oxylabs' username and password,
 Bright Data's token and zone) only as a whole: a file holding half of one sets
 none of it, so it never blocks a later file holding both. So a remembered file
-can add keys but never replace or complete yours. The capabilities resource says which file each variable came
+or a project's `.env` can add keys but never replace or complete yours, and a
+`WEB_ROUTER_ENV_FILE` you export still loads inside the clone. The capabilities resource says which file each variable came
 from. The server never creates the user config directory except to record a
 remembered path. A `WEB_ROUTER_ENV_FILE` that names no file is reported rather
-than silently skipped. With no file anywhere the server starts keyless.
+than silently skipped; a missing project file is not an error. With no file anywhere the server starts keyless.
 
 To use a `.env` you already keep elsewhere, name it in `WEB_ROUTER_ENV_FILE`:
 
@@ -198,7 +196,9 @@ place had set everything it holds), with a `note` when the file sets
 file it came from; whether `WEB_ROUTER_ENV_FILE` named a file that is not
 there; the variables the client already exported, by name; and each `load_env`
 since. With no provider key at
-all it also carries a `hint` saying how to add one, the server's instructions
+all it also carries a `hint` saying how to add one (or, when `WEB_ROUTER_ENV_FILE`
+names no file, to create that file, and when it names one the server could not use, to put the keys
+there), the server's instructions
 say no keys were found and that the model can ask for a `.env` path and call
 `load_env` — or carry on keyless — and every other
 place the server reports keys says the same thing: names and paths, never
@@ -660,6 +660,7 @@ the server is restarted.
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
+| `WEB_ROUTER_PROJECT_ENV_FILE` | unset | A project's own `.env`, read last so it only adds keys; this repo's `.mcp.json` sets `.env`. Set it in a project's config, never at user scope. Read from the real environment only. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
 | `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |

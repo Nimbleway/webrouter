@@ -21,6 +21,7 @@ from web_router.constants import (
     ENV_MCP_ENV_FILE,
     ENV_XDG_CONFIG_HOME,
 )
+from web_router.constants_mcp import ENV_MCP_PROJECT_ENV_FILE
 from web_router.mcp.env_credentials import credential_variables
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.server import call_tool
@@ -30,6 +31,7 @@ from web_router.routing import Budget
 FAKE = "fake"
 
 _EVERY_ENV_VAR = sorted(credential_variables())
+_ENV_FILE_VARS = (ENV_MCP_ENV_FILE, ENV_MCP_PROJECT_ENV_FILE)
 
 
 def home_variables(home: Path) -> dict[str, str]:
@@ -51,7 +53,7 @@ def isolated_environment(home: Path) -> dict[str, str]:
     or the child would read this machine's own user config ``.env`` back.
     """
     environment = {
-        key: value for key, value in os.environ.items() if key not in _EVERY_ENV_VAR and key != ENV_MCP_ENV_FILE
+        key: value for key, value in os.environ.items() if key not in _EVERY_ENV_VAR and key not in _ENV_FILE_VARS
     }
     return {**environment, **home_variables(home)}
 
@@ -74,7 +76,7 @@ def no_keys(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_keys: None) -> Path:
-    """A home directory of the test's own, an empty working directory, and no ``WEB_ROUTER_ENV_FILE``.
+    """A home directory of the test's own, an empty working directory, and no ``.env`` path variable.
 
     So where a ``.env`` is found is decided by the test alone, never by this
     machine's own user config directory or the repo's ``.env``.
@@ -85,7 +87,8 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_keys: None
     work.mkdir()
     for name, value in home_variables(home).items():
         monkeypatch.setenv(name, value)
-    monkeypatch.delenv(ENV_MCP_ENV_FILE, raising=False)
+    for env_var in _ENV_FILE_VARS:
+        monkeypatch.delenv(env_var, raising=False)
     monkeypatch.chdir(work)
     return home
 

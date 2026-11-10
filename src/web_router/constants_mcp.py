@@ -22,7 +22,7 @@ MCP_SERVER_INSTRUCTIONS = (
     "Results are shortened to fit a context window: each carries a handle, and `fetch_raw` returns the "
     "backend's untouched payload for it. "
     "The web-router://capabilities resource lists the backends configured here, and its `unlock` lists, per "
-    "method, each backend still missing a key and the variable that would add it. Every key the user adds "
+    "method, each backend still missing a key and the variable a .env would add it with. Every key the user adds "
     "unlocks more backends and fallbacks, and research, browse and cloud browsers need one at all -- with a "
     "key for every backend, every capability is available. When a method has nothing to run on, or the user "
     "wants more, point them there and to .env.example; have them put keys in their .env themselves, then call "
@@ -173,6 +173,30 @@ MCP_MSG_ENV_ONLY = (
 )
 MCP_MSG_ENV_ONLY_FILE = "{path} sets no provider key, so nothing was loaded. {note}"
 """A ``.env`` that sets a variable the server takes only from its environment: ``AGENTCORE_GATEWAY_URL``."""
+
+ENV_MCP_PROJECT_ENV_FILE = "WEB_ROUTER_PROJECT_ENV_FILE"
+"""A project's own dotenv file, which that project's client config opts in to: this repo's ``.mcp.json`` sets ``.env``.
+
+Read last at startup, so it only adds keys and never replaces one already set.
+Read from the real environment only. A relative path is taken from the working
+directory, and a missing file is no error: a fresh clone has no ``.env`` yet.
+"""
+
+MCP_ENV_SOURCE_PROJECT = ENV_MCP_PROJECT_ENV_FILE
+
+MCP_MSG_ENV_HINT_EXPLICIT_MISSING = (
+    "No API keys were found, so only the keyless backends are configured; they work meanwhile. {env_var} "
+    "names {path}, which does not exist: have the user create that file and put their keys in it, then call "
+    "load_env with its path. Only the file's path is ever needed -- never paste a key into the conversation."
+)
+"""Said instead of ``MCP_MSG_ENV_HINT`` when the user set ``WEB_ROUTER_ENV_FILE`` and it names no file."""
+
+MCP_MSG_ENV_HINT_EXPLICIT_UNUSED = (
+    "No API keys were found, so only the keyless backends are configured; they work meanwhile. {env_var} "
+    "names {path} ({status}): have the user put their keys there, then call load_env with its path. Only the "
+    "file's path is ever needed -- never paste a key into the conversation."
+)
+"""Said instead of ``MCP_MSG_ENV_HINT`` when the user set ``WEB_ROUTER_ENV_FILE`` and its file was not used."""
 
 MCP_MSG_ROUTER_SPEC = "{env_var}={value!r} names no router: expected <module>:<attribute>, or 'off'."
 MCP_MSG_ROUTER_IMPORT = "{env_var}={value!r}: {error}"

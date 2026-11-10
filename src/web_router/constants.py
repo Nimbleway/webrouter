@@ -3378,14 +3378,14 @@ MCP_BROWSER_REF_PATTERN = r"[a-z0-9]+"
 """A ref as a tool accepts it: exactly what a snapshot prints after ``ref=``, as :data:`BROWSER_REF_PATTERN` has it."""
 
 MCP_ENV_FILE = ".env"
-"""The dotenv file's name in the server's user config directory, and the usual ``WEB_ROUTER_ENV_FILE`` value."""
+"""The dotenv file's name in the server's user config directory, and the usual project ``.env`` path."""
 
 ENV_MCP_ENV_FILE = "WEB_ROUTER_ENV_FILE"
 """An explicit path to the dotenv file the server loads at startup, looked at before anywhere else.
 
 Read from the real environment only -- a client's config sets it -- and never
 from a file, since it is not a credential and so no file can set it. A relative
-path is taken from the working directory: the repo's ``.mcp.json`` sets ``.env``.
+path is taken from the working directory. A project's own file has its own variable.
 """
 
 MCP_USER_CONFIG_DIR = "web-router"

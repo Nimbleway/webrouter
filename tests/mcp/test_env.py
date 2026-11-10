@@ -93,9 +93,9 @@ def test_the_user_config_dir_is_read_from_any_working_directory(isolated_home: P
 def test_a_file_that_sets_no_credential_does_not_hide_the_next_one(
     isolated_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # A project's own .env, named by its client config, that says nothing about web-router.
-    write(Path.cwd() / MCP_ENV_FILE, "DATABASE_URL=postgres://localhost/app\n")
-    monkeypatch.setenv(ENV_MCP_ENV_FILE, MCP_ENV_FILE)
+    # A file named by its client config that says nothing about web-router.
+    write(isolated_home / "app.env", "DATABASE_URL=postgres://localhost/app\n")
+    monkeypatch.setenv(ENV_MCP_ENV_FILE, str(isolated_home / "app.env"))
     write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
 
     sources = EnvSources.at_startup()

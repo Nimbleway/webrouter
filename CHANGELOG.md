@@ -10,7 +10,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Changed
 
-- **Breaking (MCP key lookup):** the server ignores the `.env` where it starts and `AGENTCORE_GATEWAY_URL` in any file. To read a project's `.env`, set `WEB_ROUTER_ENV_FILE=.env` in that project's own config, such as its `.mcp.json`, never at user scope. Set `AGENTCORE_GATEWAY_URL` in the server's environment (its client config's `env` or the shell that starts it).
+- **Breaking (MCP key lookup):** the server ignores the `.env` where it starts and `AGENTCORE_GATEWAY_URL` in any file. To read a project's `.env`, set `WEB_ROUTER_PROJECT_ENV_FILE=.env` in that project's own config, such as its `.mcp.json`, never at user scope; it is read last and only adds keys. Set `AGENTCORE_GATEWAY_URL` in the server's environment (its client config's `env` or the shell that starts it).
 
 ### Fixed
 

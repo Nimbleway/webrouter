@@ -3,22 +3,23 @@
 The library never reads dotfiles, but this entry point is an application. An
 MCP client starts it with the client's own environment, in a working directory
 the user rarely chose, so keys nobody exported need another way in.
-:meth:`EnvSources.at_startup` reads every one of three places, in this order:
+:meth:`EnvSources.at_startup` reads every one of four places, in this order:
 
-1. the path in ``WEB_ROUTER_ENV_FILE``, which a client's config can set -- a
-   relative one is taken from the working directory, so a project's
-   ``.mcp.json`` that sets it to ``.env`` opts in to the repo's own file;
+1. the path in ``WEB_ROUTER_ENV_FILE``, which a client's config can set;
 2. ``.env`` in the user config directory;
-3. the file ``load_env(remember=true)`` recorded in the user config directory.
+3. the file ``load_env(remember=true)`` recorded in the user config directory;
+4. the path in ``WEB_ROUTER_PROJECT_ENV_FILE``, which a project's own client
+   config sets -- this repo's ``.mcp.json`` sets ``.env``. A relative path is
+   taken from the working directory, and a missing file is no error.
 
 A ``.env`` that merely sits in the working directory is not read: a server
 registered at user scope starts in whatever repo is open.
 
 An earlier place wins, per variable: a later file fills only what is still
-unset. So a remembered file -- a path a conversation recorded -- can only add
-keys, never replace the user's. At runtime :meth:`EnvSources.load` reads one
-more, from a path the user gives the model, so only a path ever passes through
-a conversation.
+unset. So a remembered file -- a path a conversation recorded -- and a
+project's ``.env`` can only add keys, never replace the user's. At runtime
+:meth:`EnvSources.load` reads one more, from a path the user gives the model,
+so only a path ever passes through a conversation.
 
 The rules are the same wherever a file comes from. Only provider keys are
 read -- :func:`file_variables` -- because a file a model was pointed at, a
@@ -56,6 +57,7 @@ from web_router.constants import (
     MCP_ENV_STATUS_NOTHING_NEW,
     MCP_ENV_STATUS_UNREADABLE,
     MCP_ENV_STATUS_USED,
+    MCP_MSG_ENV_HINT,
     MCP_MSG_ENV_MISSING,
     MCP_MSG_ENV_NO_CREDENTIALS,
     MCP_MSG_ENV_REMEMBER_FAILED,
@@ -64,7 +66,13 @@ from web_router.constants import (
     MCP_USER_CONFIG_ROOT_BY_PLATFORM,
     MCP_USER_CONFIG_ROOT_DEFAULT,
 )
-from web_router.constants_mcp import MCP_MSG_ENV_ONLY_FILE
+from web_router.constants_mcp import (
+    ENV_MCP_PROJECT_ENV_FILE,
+    MCP_ENV_SOURCE_PROJECT,
+    MCP_MSG_ENV_HINT_EXPLICIT_MISSING,
+    MCP_MSG_ENV_HINT_EXPLICIT_UNUSED,
+    MCP_MSG_ENV_ONLY_FILE,
+)
 from web_router.mcp.env_credentials import (
     ENV_ONLY,
     EnvLoad,
@@ -175,6 +183,19 @@ class EnvSources:
             "loaded_at_runtime": [{"file": str(load.path), "loaded": list(load.loaded)} for load in self.runtime],
         }
 
+    def hint(self) -> str:
+        """How to add a key, for a capabilities resource that lists only the keyless backends."""
+        for lookup in self.searched:
+            if lookup.source != MCP_ENV_SOURCE_EXPLICIT or lookup.status == MCP_ENV_STATUS_USED:
+                continue
+            # The variable is set already: what needs fixing is the file it names.
+            if lookup.status == MCP_ENV_STATUS_MISSING:
+                return MCP_MSG_ENV_HINT_EXPLICIT_MISSING.format(env_var=ENV_MCP_ENV_FILE, path=lookup.path)
+            return MCP_MSG_ENV_HINT_EXPLICIT_UNUSED.format(
+                env_var=ENV_MCP_ENV_FILE, path=lookup.path, status=lookup.status
+            )
+        return MCP_MSG_ENV_HINT.format(env_var=ENV_MCP_ENV_FILE, user_dir=user_config_dir())
+
 
 def read_credentials(path: Path) -> tuple[dict[str, str], tuple[str, ...]]:
     """The provider keys ``path`` sets, and the :data:`ENV_ONLY` variables it set and that were left out.
@@ -238,6 +259,10 @@ def _candidates() -> list[tuple[str, Path]]:
     if remembered is not None:
         # After the user .env: a conversation recorded it, and may have been steered to.
         places.append((MCP_ENV_SOURCE_REMEMBERED, remembered))
+    project = os.environ.get(ENV_MCP_PROJECT_ENV_FILE)
+    if project:
+        # Last: the project's own file only adds keys, and never replaces the user's.
+        places.append((MCP_ENV_SOURCE_PROJECT, _absolute(project)))
     return places
 
 

@@ -47,6 +47,7 @@ from web_router.constants import (
     PROVIDER_PARALLEL_MCP,
     PROVIDER_YOU_MCP,
 )
+from web_router.constants_mcp import ENV_MCP_PROJECT_ENV_FILE, MCP_ENV_SOURCE_PROJECT
 from web_router.mcp.env import user_config_dir
 
 FAKE_KEY = "not-a-real-brave-key-0123"
@@ -161,11 +162,11 @@ async def test_a_working_directory_env_is_not_read_unless_the_client_config_name
     assert str(keys) not in text
 
     # The repo's own .mcp.json opts in with a relative path, taken from the working directory.
-    setup.env[ENV_MCP_ENV_FILE] = MCP_ENV_FILE
+    setup.env[ENV_MCP_PROJECT_ENV_FILE] = MCP_ENV_FILE
     async with _server(setup) as session:
         body, text = await _capabilities(session)
 
-    _assert_found(body, text, keys, MCP_ENV_SOURCE_EXPLICIT)
+    _assert_found(body, text, keys, MCP_ENV_SOURCE_PROJECT)
 
 
 async def test_with_no_file_anywhere_the_model_is_told_and_can_load_one(setup: Setup) -> None:
