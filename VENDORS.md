@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-117 vendors, 1160 endpoints.
+123 vendors, 1204 endpoints.
 
 ### advertising
 
@@ -152,19 +152,25 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [akta.pro](https://docs.akta.pro) `akta` | Company data, headcount, traffic, jobs, reviews, news signals and generated company lists from akta.pro. | 10 read | key in header | `AKTA_API_KEY` | docs 2026-11-08 |
 | [Ashby Job Board](https://developers.ashbyhq.com/docs/public-job-posting-api) `ashby` | A company's public Ashby job board: listed roles with descriptions, location, workplace type and optional compensation. | 1 read | none | none | docs 2026-11-09 |
 | [Aviato](https://docs.data.aviato.co) `aviato` | Company, funding, investor and people data, contact info and search through the Aviato data engine. | 33 read | key in header | `AVIATO_API_KEY` | docs 2026-11-08 |
+| [Brandfetch](https://docs.brandfetch.com) `brandfetch` | Brand data by domain, ticker, ISIN or crypto symbol: logos, colors, fonts, descriptions and company facts; plus brand-name search and brand context. | 7 read | key in header and query | `BRANDFETCH_API_KEY`, `BRANDFETCH_CLIENT_ID` | docs 2026-11-09 |
 | [BuiltWith](https://api.builtwith.com) `builtwith` | Website technology profiling: the tech stack and metadata of a domain, sites using a technology, related sites and domains for a company name. | 8 read | key in header | `BUILTWITH_API_KEY` | docs 2026-11-09 |
 | [CNPJá](https://api.cnpja.com/docs) `cnpja` | Brazilian company registry (CNPJ) data: establishments, companies with partners, Simples Nacional and Receita Federal records, and filtered searches. | 9 read | key in header | `CNPJA_API_KEY` | docs 2026-11-09 |
 | [Companies House](https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference) `companies-house` | The UK company register: company profiles, officers, filing history, persons with significant control, charges and insolvency. | 9 read | HTTP Basic | `COMPANIES_HOUSE_API_KEY` | docs 2026-11-09 |
 | [CompanyEnrich](https://docs.companyenrich.com) `companyenrich` | Company and people search, enrichment, workforce insights, lookalikes and work-email lookup from CompanyEnrich. | 25 read | key in header | `COMPANYENRICH_API_KEY` | docs 2026-11-08 |
 | [Corpo API](https://docs.corpoapi.com) `corpoapi` | Official company-register lookups by jurisdiction: profiles, officers, charges, insolvency, shareholders, financials, ownership and VAT checks. | 16 read | key in header | `CORPOAPI_API_KEY` | docs 2026-11-08 |
+| [Crunchbase](https://data.crunchbase.com/docs/using-the-api) `crunchbase` | Company, funding, investor and people data from the Crunchbase REST API (v4): entity lookup, search and autocomplete. | 6 read | key in header | `CRUNCHBASE_API_KEY` | docs 2026-11-08 |
 | [Crustdata](https://docs.crustdata.com) `crustdata` | Company and people search, enrichment, job listings and web search from Crustdata's datasets. | 11 read | key in header | `CRUSTDATA_API_KEY` | docs 2026-11-08 |
 | [Diffbot](https://www.diffbot.com/docs/) `diffbot` | Diffbot Knowledge Graph: search organizations, people and articles with DQL, and enhance records from partial data. | 4 read | key in query | `DIFFBOT_TOKEN` | docs 2026-11-08 |
+| [Extruct AI](https://docs.extruct.ai/api-reference/introduction) `extruct` | Company search by natural-language description, lookalikes of a reference company, company profiles, and async Deep Search and Deep Research tasks. | 9 read | key in header | `EXTRUCT_API_TOKEN` | docs 2026-11-09 |
 | [Fantastic.jobs](https://developer.fantastic.jobs) `fantasticjobs` | A job-postings feed from 58 ATS platforms and LinkedIn, Wellfound and Y Combinator, with AI-derived salary, seniority and remote fields and company details. | 6 read | key in header | `FANTASTICJOBS_API_KEY` | docs 2026-11-09 |
 | [Fiber AI](https://api.fiber.ai/llms.txt) `fiber-ai` | B2B company and people search, LinkedIn live enrichment, and email and phone reveal. | 13 read | key in header | `FIBER_API_KEY` | docs 2026-11-08 |
 | [Fundable](https://docs.tryfundable.ai/api-reference/introduction) `fundable` | Venture funding data: deals (rounds), startups with their latest round, investor firms and people, by filters or identifier. | 10 read | key in header | `FUNDABLE_API_KEY` | docs 2026-11-09 |
+| [GLEIF](https://documenter.getpostman.com/view/7679680/SVYrrxuU) `gleif` | The Global LEI Index: legal entity records by LEI, name, BIC or ISIN, with direct and ultimate parents and children, keyless. | 9 read | none | none | docs 2026-11-09 |
+| [Greenhouse Job Board](https://docs.greenhouse.io/job-board.html) `greenhouse` | A company's public Greenhouse job board: open roles with descriptions, departments, offices and pay ranges, keyless. | 5 read | none | none | docs 2026-11-09 |
 | [Lever Postings](https://github.com/lever/postings-api) `lever` | A company's published Lever job postings, filterable by location, team, department and commitment, keyless. | 2 read | none | none | docs 2026-11-09 |
 | [Limadata](https://limadata.com/api) `limadata` | Real-time B2B people and company enrichment, database search, contact finding and company job postings. | 4 read | key in header | `LIMADATA_API_KEY` | docs 2026-11-08 |
 | [Ocean.io](https://app.ocean.io/docs) `oceanio` | Lookalike company and people search, company and person enrichment and bulk lookups. | 15 read | key in header | `OCEAN_API_TOKEN` | docs 2026-11-08 |
+| [OpenFunnel](https://docs.openfunnel.dev) `openfunnel` | Find lookalike companies from seeds or a description, companies by the tech in their job posts, and qualify one company against criteria. | 8 read | key in header | `OPENFUNNEL_API_KEY` | docs 2026-11-09 |
 | [Origami](https://docs.origami.chat/v3/overview) `origami` | An AI agent that builds researched lead lists from a plain-English brief; read the lists and rows back. | 7 read, 2 write | key in header | `ORIGAMI_API_KEY` | docs 2026-11-09 |
 | [PredictLeads](https://docs.predictleads.com/v3/api_endpoints) `predictleads` | Company intelligence: job openings, technology detections, news and financing events, connections and more for 120M+ companies. | 26 read | key in header | `PREDICTLEADS_API_KEY`, `PREDICTLEADS_API_TOKEN` | docs 2026-11-08 |
 | [Recent Funding](https://recentfunding.com/docs/) `recentfunding` | Recently funded startups with sourced round amounts, investors, founders, acquisitions and new VC funds. | 10 read | key in header | `RECENTFUNDING_API_KEY` | docs 2026-11-09 |
