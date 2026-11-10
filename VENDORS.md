@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-123 vendors, 1204 endpoints.
+126 vendors, 1230 endpoints.
 
 ### advertising
 
@@ -152,6 +152,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [akta.pro](https://docs.akta.pro) `akta` | Company data, headcount, traffic, jobs, reviews, news signals and generated company lists from akta.pro. | 10 read | key in header | `AKTA_API_KEY` | docs 2026-11-08 |
 | [Ashby Job Board](https://developers.ashbyhq.com/docs/public-job-posting-api) `ashby` | A company's public Ashby job board: listed roles with descriptions, location, workplace type and optional compensation. | 1 read | none | none | docs 2026-11-09 |
 | [Aviato](https://docs.data.aviato.co) `aviato` | Company, funding, investor and people data, contact info and search through the Aviato data engine. | 33 read | key in header | `AVIATO_API_KEY` | docs 2026-11-08 |
+| [Context.dev](https://docs.context.dev) `branddev` | Brand and company data, natural-language company and people search, person enrichment, news, plus web scrape, crawl, map and search from Context.dev. | 14 read | key in header | `CONTEXT_DEV_API_KEY` | docs 2026-11-08 |
 | [Brandfetch](https://docs.brandfetch.com) `brandfetch` | Brand data by domain, ticker, ISIN or crypto symbol: logos, colors, fonts, descriptions and company facts; plus brand-name search and brand context. | 7 read | key in header and query | `BRANDFETCH_API_KEY`, `BRANDFETCH_CLIENT_ID` | docs 2026-11-09 |
 | [BuiltWith](https://api.builtwith.com) `builtwith` | Website technology profiling: the tech stack and metadata of a domain, sites using a technology, related sites and domains for a company name. | 8 read | key in header | `BUILTWITH_API_KEY` | docs 2026-11-09 |
 | [CNPJá](https://api.cnpja.com/docs) `cnpja` | Brazilian company registry (CNPJ) data: establishments, companies with partners, Simples Nacional and Receita Federal records, and filtered searches. | 9 read | key in header | `CNPJA_API_KEY` | docs 2026-11-09 |
@@ -175,8 +176,10 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [PredictLeads](https://docs.predictleads.com/v3/api_endpoints) `predictleads` | Company intelligence: job openings, technology detections, news and financing events, connections and more for 120M+ companies. | 26 read | key in header | `PREDICTLEADS_API_KEY`, `PREDICTLEADS_API_TOKEN` | docs 2026-11-08 |
 | [Recent Funding](https://recentfunding.com/docs/) `recentfunding` | Recently funded startups with sourced round amounts, investors, founders, acquisitions and new VC funds. | 10 read | key in header | `RECENTFUNDING_API_KEY` | docs 2026-11-09 |
 | [Signalbase](https://docs.trysignalbase.com) `signalbase` | Funding, acquisition, hiring and job-change signals, investors, companies and people. | 7 read | key in header | `SIGNALBASE_API_KEY` | docs 2026-11-09 |
+| [SmartRecruiters](https://developers.smartrecruiters.com/docs/posting-api) `smartrecruiters` | Public job postings and departments of companies hiring on SmartRecruiters (Posting API). | 3 read | key in header | `SMARTRECRUITERS_API_KEY` | docs 2026-11-09 |
 | [Sumble](https://docs.sumble.com/api/api) `sumble` | Organization, people, job post and team data: what companies use, who works there and buying signals. | 10 read | key in header | `SUMBLE_API_KEY` | docs 2026-11-08 |
 | [The Companies API](https://www.thecompaniesapi.com/api) `thecompaniesapi` | Company enrichment from a domain, email or social URL, plus segmentation search over millions of companies. | 10 read | key in header | `THECOMPANIESAPI_API_TOKEN` | docs 2026-11-08 |
+| [TheirStack](https://theirstack.com/en/docs/what-is-theirstack) `theirstack` | Job postings and company technographics: search jobs and companies by hiring signals, technologies and firmographics. | 9 read | key in header | `THEIRSTACK_API_KEY` | docs 2026-11-08 |
 | [VOYGR](https://api.voygr.tech/docs) `voygr` | Check that a business exists at an address, enrich place records (hours, contacts, socials, custom fields), and place AI phone calls to US businesses. | 8 read, 1 write | key in header | `VOYGR_API_KEY` | docs 2026-11-09 |
 
 ### developer
