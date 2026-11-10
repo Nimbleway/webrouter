@@ -53,7 +53,9 @@ LLM_CHAT_PATH = "/chat/completions"
 MODE_JSON_SCHEMA = "json_schema"
 MODE_JSON_OBJECT = "json_object"
 MODE_PROMPT = "prompt"
-"""How an ``llm`` preset asks for JSON: a strict schema, JSON mode, or only the prompt's words."""
+LLM_MODES = (MODE_JSON_SCHEMA, MODE_JSON_OBJECT, MODE_PROMPT)
+"""How the ``llm`` router asks for JSON: a strict schema, JSON mode, or only the prompt's words. A preset picks
+one, ``prompt`` for a ``base_url`` of your own; ``response_format`` in ``router_config`` overrides it."""
 
 LLM_PRESETS: dict[str, tuple[str, str, str]] = {
     "openai": ("https://api.openai.com/v1", "OPENAI_API_KEY", MODE_JSON_SCHEMA),
@@ -116,5 +118,6 @@ MSG_DECIDER_KEY_UNSET = "router={name!r}: {env} is not set; set it, or pass rout
 MSG_DECIDER_KEY_HOME = "router={name!r}: {env} is sent only to {home}; name another variable for this base_url."
 MSG_DECIDER_KEY = "router={name!r}: its key must be a string of visible ASCII characters."
 MSG_DECIDER_ENV_NAME = "router={name!r}: router_config['api_key_env'] must name an environment variable."
+MSG_DECIDER_MODE = "router={name!r}: router_config['response_format'] takes one of {known}; got {mode!r}."
 MSG_DECIDER_TEXT = "router={name!r}: router_config[{field!r}] must be a non-empty string."
 DECIDER_WHY_REPLY = "an answer that is not the decision API's JSON shape"

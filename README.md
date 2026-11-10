@@ -2310,7 +2310,8 @@ each sends the prompt off your machine only when you name it.
   JSON schema whose enum is the offered ids), `openrouter` (the same, where the
   model supports it), `deepseek` and `groq` (JSON mode). A `base_url` of your
   own asks for JSON in the prompt only, and needs `api_key_env` unless it is
-  on this machine. Either way the reply is checked as above.
+  on this machine. `response_format` (`json_schema`, `json_object` or
+  `prompt`) overrides either choice. Either way the reply is checked as above.
 
   ```python
   WebRouter(router="llm", router_config={"preset": "openai", "model": "<model>"})

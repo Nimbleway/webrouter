@@ -63,6 +63,23 @@ def test_a_local_base_url_needs_no_key_and_asks_in_the_prompt_only(monkeypatch: 
     assert str(server.requests[0].url) == "http://127.0.0.1:8000/v1/chat/completions"
 
 
+@pytest.mark.parametrize(
+    ("config", "sent"),
+    [
+        ({"base_url": "http://127.0.0.1:8000/v1", "response_format": "json_schema"}, "json_schema"),
+        ({"base_url": "http://127.0.0.1:8000/v1", "response_format": "json_object"}, "json_object"),
+        ({"preset": "openai", "api_key": TOKEN, "response_format": "prompt"}, None),
+    ],
+    ids=["local-schema", "local-object", "preset-prompt"],
+)
+def test_response_format_overrides_the_presets_choice(
+    config: dict[str, str], sent: str | None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    server = serve(monkeypatch, chat(RANKED))
+    AttachedRouter(llm_router(model="m", **config)).call(request())  # type: ignore[arg-type]
+    assert server.body().get("response_format", {}).get("type") == sent
+
+
 def test_openai_api_key_goes_only_to_api_openai_com(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", TOKEN)
     with pytest.raises(ConfigurationError, match=r"OPENAI_API_KEY is sent only to api\.openai\.com") as caught:
@@ -85,6 +102,7 @@ def test_openai_api_key_goes_only_to_api_openai_com(monkeypatch: pytest.MonkeyPa
         ({"base_url": "https://user:pw@llm.example.com/v1", "api_key": TOKEN}, "base_url"),
         ({"base_url": "https://llm.example.com/v1?key=abc", "api_key": TOKEN}, "query or a fragment"),
         ({"base_url": "https://llm.example.com/v1", "api_key": "two words"}, "visible ASCII"),
+        ({"base_url": "https://llm.example.com/v1", "api_key": TOKEN, "response_format": "xml"}, "response_format"),
     ],
 )
 def test_a_bad_setup_is_refused_when_the_router_is_built(

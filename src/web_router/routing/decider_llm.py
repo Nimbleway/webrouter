@@ -9,7 +9,8 @@ A preset fills the base URL, the key variable and how JSON is asked for:
 ids), ``openrouter`` (the same, where the model supports it), ``deepseek`` and
 ``groq`` (``json_object``). A ``base_url`` with no preset -- a local server, a
 proxy -- takes ``api_key_env`` unless it is on this machine, and asks for JSON
-in the prompt only. Either way the reply is checked strictly
+in the prompt only. ``response_format`` (``json_schema``, ``json_object`` or
+``prompt``) overrides either. Either way the reply is checked strictly
 (:mod:`.decider_reply`), and the model's own words are never used.
 
 Each call sends the model the prompt, the budget, and each option's id with its
@@ -27,6 +28,7 @@ from typing import Any
 from web_router.constants_decider import (
     DECIDER_WHY_REPLY,
     LLM_CHAT_PATH,
+    LLM_MODES,
     LLM_PRESETS,
     LLM_REPLY_FORMAT,
     LLM_ROUTE_TOOLS,
@@ -36,6 +38,7 @@ from web_router.constants_decider import (
     MODE_JSON_SCHEMA,
     MODE_PROMPT,
     MSG_DECIDER_BOTH,
+    MSG_DECIDER_MODE,
     MSG_DECIDER_NO_BASE,
     MSG_DECIDER_PRESET,
 )
@@ -61,6 +64,14 @@ def preset_of(name: str, presets: dict[str, Any], preset: object, base_url: obje
     if base_url is not None:
         raise ConfigurationError(MSG_DECIDER_BOTH.format(name=name))
     return presets[preset]
+
+
+def checked_mode(mode: object) -> str:
+    """``mode`` when it is one of ``json_schema``, ``json_object`` or ``prompt``."""
+    if not isinstance(mode, str) or mode not in LLM_MODES:
+        known = ", ".join(LLM_MODES)
+        raise ConfigurationError(MSG_DECIDER_MODE.format(name=LLM_ROUTER_NAME, known=known, mode=mode))
+    return mode
 
 
 def menu(question: DeciderQuestion) -> str:
@@ -94,11 +105,12 @@ class LLMDecider:
         api_key: str | None = None,
         timeout_s: float = LLM_TIMEOUT_S,
         route_tools: Collection[str] | None = None,
+        response_format: str | None = None,
     ) -> None:
         """
         Raises:
-            ConfigurationError: for an unknown preset, a preset and a base URL together or neither, no model, or
-                any endpoint or key :func:`~.decider_http.endpoint` refuses.
+            ConfigurationError: for an unknown preset or ``response_format``, a preset and a base URL together or
+                neither, no model, or any endpoint or key :func:`~.decider_http.endpoint` refuses.
         """
         row = preset_of(LLM_ROUTER_NAME, LLM_PRESETS, preset, base_url)
         mode = MODE_PROMPT
@@ -106,7 +118,7 @@ class LLMDecider:
             base_url, default_env, mode = row
             api_key_env = default_env if api_key_env is None else api_key_env
         self.model = text(model, LLM_ROUTER_NAME, "model")
-        self.mode = mode
+        self.mode = checked_mode(mode if response_format is None else response_format)
         self._endpoint = endpoint(
             LLM_ROUTER_NAME, base_url, LLM_CHAT_PATH, api_key=api_key, api_key_env=api_key_env, timeout_s=timeout_s
         )
@@ -153,6 +165,7 @@ def llm_router(
     api_key: str | None = None,
     timeout_s: float = LLM_TIMEOUT_S,
     route_tools: Collection[str] | None = None,
+    response_format: str | None = None,
 ) -> DeciderRouter:
     """What ``router="llm"`` builds from ``router_config``: a :class:`DeciderRouter` on an :class:`LLMDecider`."""
     decider = LLMDecider(
@@ -163,5 +176,6 @@ def llm_router(
         api_key=api_key,
         timeout_s=timeout_s,
         route_tools=route_tools,
+        response_format=response_format,
     )
     return DeciderRouter(decider)
