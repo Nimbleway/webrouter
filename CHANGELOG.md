@@ -16,6 +16,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Fixed
 
 - Nimble `research` at `effort="max"` runs again. Nimble's API refuses its own `max` tier, which is not open yet, with a 422, so `max` now sends `x-high`, the deepest tier it runs today.
+- `research(provider="auto")` no longer starts a second paid run after the first was created. A Nimble connection dropped after the request went out is no longer taken for one that never reached the backend, and a Nimble or Parallel run that finished in the start call but whose answer could not be fetched is returned as running, so the next poll reads it, instead of raised.
+- Nimble `research` no longer retries the call that starts a run. The SDK's two retries could create a second billed run after a timeout or a 5xx, and held the call for about three times its timeout.
+- `research(provider="perplexity")` and `answer(provider="perplexity")` now also cite the pages the agent opened (`fetch_url_results`), not only the ones its searches found. A page found and opened is cited once.
 
 ## [0.12.0] - 2026-11-10
 

@@ -153,6 +153,25 @@ def test_search_results_become_citations(provider: PerplexityResearchProvider) -
     assert citation.extra["date"] == "2026-01-01"
 
 
+def test_pages_the_agent_opened_are_cited_beside_the_ones_it_found(provider: PerplexityResearchProvider) -> None:
+    """``fetch_url_results`` lists the pages the agent read, under ``contents``; one it also found is cited once."""
+    opened = {
+        "type": "fetch_url_results",
+        "contents": [
+            {"url": "https://www.toureiffel.paris/en/history", "title": "History", "snippet": "Inaugurated in 1889"},
+            {"url": "https://en.wikipedia.org/wiki/Eiffel_Tower", "title": "Eiffel Tower", "snippet": "Full page"},
+        ],
+    }
+    _stub(provider, started=_run("completed", output=[*FINISHED_OUTPUT, opened], incomplete_details=None))
+    citations = provider.research(ResearchRequest(query=QUESTION)).citations
+
+    assert [citation.url for citation in citations] == [
+        "https://en.wikipedia.org/wiki/Eiffel_Tower",
+        "https://www.toureiffel.paris/en/history",
+    ]
+    assert citations[1].snippet == "Inaugurated in 1889"
+
+
 def test_a_run_perplexity_stopped_early_is_partial(provider: PerplexityResearchProvider) -> None:
     stopped = _run("incomplete", output=FINISHED_OUTPUT, incomplete_details={"reason": "max_output_tokens"})
     _stub(provider, started=stopped)
