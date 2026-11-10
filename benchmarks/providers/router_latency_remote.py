@@ -11,9 +11,9 @@ Experimental until 1.0, like the router contract it measures.
 from __future__ import annotations
 
 import asyncio
-import hashlib
 from dataclasses import replace
 from typing import Any
+from urllib.parse import urlsplit
 
 from router_latency_routers import REMOTE, RouterSpec
 
@@ -58,15 +58,23 @@ class DelayedRouter:
         await aclose_router(self.inner)
 
 
-def shown_name(url: str) -> str:
-    """``remote:`` and the URL's scheme and host, never its port, path, query or credentials: they may carry a token.
+_NAMED: dict[str, list[str]] = {}
+"""Each shown name and the URLs given it, in the order the command line named them."""
 
-    A URL with more than a bare host gets 6 hex digits of its SHA-256, so two on one host stay apart.
+
+def shown_name(url: str) -> str:
+    """``remote:`` and the URL's scheme, host and port, never its path, query or credentials: they may carry a token.
+
+    A second URL on the same host and port gets ``#2``, a third ``#3``, so two endpoints stay apart; nothing about
+    the URL itself is shown or hashed.
     """
-    host = host_of(url)
-    if url.rstrip("/") == host:
-        return REMOTE + host
-    return f"{REMOTE}{host}#{hashlib.sha256(url.encode()).hexdigest()[:6]}"
+    port = urlsplit(url).port
+    shown = REMOTE + host_of(url) + (f":{port}" if port else "")
+    urls = _NAMED.setdefault(shown, [])
+    if url not in urls:
+        urls.append(url)
+    n = urls.index(url) + 1
+    return shown if n == 1 else f"{shown}#{n}"
 
 
 def remote_spec(spec: str, rtt_ms: float) -> RouterSpec:
