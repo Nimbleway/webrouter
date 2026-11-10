@@ -84,6 +84,14 @@ YOU_RECENCY: dict[Recency, str] = {
 """You.com's own ``freshness`` values, one for one, on search, answer and the MCP tool alike. Live, on answer,
 ``week`` kept every result to the last two weeks' pages."""
 
+YOU_ANSWER_REFUSED_RECENCY: frozenset[Recency] = frozenset({"day"})
+"""Recency the answer refuses: live (2026-11-09 to 11-10), ``freshness=day`` cited pages two to five days old."""
+
+MSG_YOU_ANSWER_RECENCY = (
+    "You.com answers with recency 'day' citing pages several days old, so it is refused: ask for 'week' or wider, "
+    "or name another provider -- see the answer table in README.md."
+)
+
 YOU_ANSWER_MARKER = re.compile(r"\[\[(\d+(?:,\s*\d+)*)\]\]")
 """A citation marker in the answer: ``[[1, 2]]``, numbering ``citations`` from 1."""
 
