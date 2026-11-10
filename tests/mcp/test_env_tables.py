@@ -49,3 +49,17 @@ def test_an_answer_only_key_and_an_optional_key_load_from_a_file(isolated_home: 
     env_file.write_text(f"{name}=not-a-real-key\n", encoding="utf-8")
 
     assert EnvSources().load(str(env_file)).loaded == (name,)
+
+
+def test_a_bad_vendor_catalog_folder_does_not_stop_startup(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The env loader still knows every backend variable; the vendor tools report the bad folder when called."""
+    from web_router.constants_vendors import VENDOR_ENV_CATALOG_DIR
+    from web_router.exceptions import ConfigurationError
+
+    (tmp_path / "x.json").write_text("{not json", encoding="utf-8")
+    for folder in (tmp_path / "missing", tmp_path):
+        monkeypatch.setenv(VENDOR_ENV_CATALOG_DIR, str(folder))
+        assert "TAVILY_API_KEY" in credential_variables()
+        EnvSources()
+        with pytest.raises(ConfigurationError):
+            get_catalog()
