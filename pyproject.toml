@@ -1,7 +1,7 @@
 [project]
 name = "webrouter"
 dynamic = ["version"]
-description = "A provider-agnostic router for web search and page-extraction APIs (Nimble, Exa, Tavily, Brave, Oxylabs, Bright Data, ...)"
+description = "WebRouter is an open source standard that connects your agent to the web"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "src/web_router/evals/prompts/LICENSE-simple-evals"]

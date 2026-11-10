@@ -1,6 +1,8 @@
-# web-router
+# WebRouter
 
-**One interface over many web search, extraction, answer, research and browser APIs.**
+**WebRouter is an open source standard that connects your agent to the web.**
+
+One Python interface over search, extraction, answer, research and browser APIs, with fallback across providers and a router that can choose the method and provider for you.
 
 > **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
 
@@ -43,7 +45,7 @@ You.com, `numResults` on Exa. The page text is `content` on Tavily, `text` on
 Exa, `snippet` on Perplexity, and nested under `contents` on You.com. Swapping
 backends means rewriting the call, the options and the parsing.
 
-web-router normalizes all three:
+WebRouter normalizes all three:
 
 ```python
 response = router.search(query, max_results=5, search_depth="fast")
@@ -403,7 +405,7 @@ it.
 | `Provider.YOU` | `you` | [You.com Research API](https://you.com/docs/guides/research) | `YOU_API_KEY` | `effort` | not mapped yet |
 | `Provider.AUTO` *(default)* | `auto` | — | Nimble, Parallel, Perplexity, Linkup or You.com, whichever you hold, in that order | `effort`, `output_schema` | yes |
 
-Nimble is the only backend web-router maps the whole surface for: source
+Nimble is the only backend WebRouter maps the whole surface for: source
 guidance (`include_domains` / `exclude_domains`) and enrichment inputs
 (`records`) are mapped for it alone so far. Parallel's Task API has a
 [source policy](https://docs.parallel.ai/resources/source-policy) that is not
@@ -415,7 +417,7 @@ checked it, so neither declares `output_schema` — asking it for one raises
 `UnsupportedParameterError` rather than handing back prose under the name of a
 schema, which is the failure mode that quietly rots an agentic pipeline.
 
-**Exa's Research API has been retired upstream** — every path answers `410 RESEARCH_RETIRED` — so web-router no longer ships an Exa research provider. Exa search and extract are unaffected.
+**Exa's Research API has been retired upstream** — every path answers `410 RESEARCH_RETIRED` — so WebRouter no longer ships an Exa research provider. Exa search and extract are unaffected.
 
 How far each of the others has been verified, since it differs and the
 difference matters:
@@ -659,7 +661,7 @@ Linkup, AgentCore and Parallel MCP do not map it. Where a vendor's size setting
 does not bind (Tavily's `basic` returns up to three chunks of about 500
 characters, You.com's snippets can run past 500, Exa's highlights cap,
 Parallel's excerpt cap and Perplexity's token budget are soft, DeepSeek's default carries its whole
-summary, and Brave has no size setting at all), web-router cuts `lite` to a snippet of about 500
+summary, and Brave has no size setting at all), WebRouter cuts `lite` to a snippet of about 500
 characters itself; the vendor's full text stays in `raw`.
 Unset, Exa asks for the whole text and Exa MCP for highlights, as before.
 
@@ -766,7 +768,7 @@ too: Browse takes `contentFormat: markdown` or `text`, and its `html` is a
 simplified markup rather than the page as fetched, so `html` is refused. It
 reads WebIQ's own index, so a page WebIQ has not crawled comes back as a
 failure. Keenable is left out as well: its Fetch API has no format field and
-returns markdown alone, so `html` and `text` are refused. web-router asks it for
+returns markdown alone, so `html` and `text` are refused. WebRouter asks it for
 up to 500,000 characters, since it otherwise cuts a page at 50,000. DeepSeek is
 left out too: its Fetch API returns markdown alone.
 
@@ -1229,7 +1231,7 @@ browser.control_url()`.
 | `kernel` | a profile id | `browser_live_view_url`, for a session with `headless=False` | `POST /profiles` |
 | `local` | — | `None`: open it with `headless=False` and the window is on your screen | — |
 
-web-router takes a profile you already have; making, listing and deleting them
+WebRouter takes a profile you already have; making, listing and deleting them
 stays with each vendor's own API or dashboard. `persist_profile` without a
 `profile` raises, rather than making a new one where the vendor would (Steel).
 Each backend saves as the session ends, not at the release call, so wait a few
@@ -1322,7 +1324,7 @@ session token. It takes its lifetime in whole minutes, so `timeout` is rounded
 up, and it has no idle timeout, so `idle_timeout` raises. A session ends when
 its CDP client disconnects and when every page in it is closed; Hyperbrowser
 keeps one alive across a disconnect only with `keepAlive=true` on the connect
-URL, which web-router does not add. Its `liveUrl` lets whoever opens it drive
+URL, which WebRouter does not add. Its `liveUrl` lets whoever opens it drive
 the session, so it is `control_url()`, never `live_view_url`. `profile` and
 `persist_profile` map onto `profile.id` and `profile.persistChanges`.
 `stealth="off"` sends `useStealth: false` and `useUltraStealth: false`,
@@ -1516,10 +1518,10 @@ are the [MCP server](#the-mcp-server), [LangChain](#langchain),
 
 ### Framework checklist
 
-When integrating web-router:
+When integrating WebRouter:
 
 - [ ] Accept a `search_provider` or `extract_provider` parameter
-- [ ] Default to `"auto"` (web-router's default provider)
+- [ ] Default to `"auto"` (WebRouter's default provider)
 - [ ] Pass it to `WebRouter(search_provider)` or `AsyncWebRouter(...)`
 - [ ] Use `router.search()` or `router.extract()` in your implementation
 - [ ] Let `WebRouterError` propagate or wrap it in your own exception
@@ -1675,7 +1677,7 @@ text.
 
 [`benchmarks/agent/`](benchmarks/agent/README.md) answers the question the
 router has to win: the same Claude agent on its **built-in web search**, against
-the same agent on **web-router's tools and routing guide**. Each arm is a
+the same agent on **WebRouter's tools and routing guide**. Each arm is a
 Managed Agents agent with the same model and task prompt, run over
 [FRAMES](#evaluating-accuracy); a `:no-guide` arm keeps the tools and drops the
 guide, so the tools' share and the guide's share are measured apart. The report
@@ -1888,9 +1890,9 @@ paid for. `evaluate()` is `search` only, for the same reason `benchmark()` is.
 Everything in this section is experimental: any name in it may change before
 1.0. With no router and no budget, nothing here changes a call.
 
-A router is your code. web-router shows it a prompt and the candidates that
+A router is your code. WebRouter shows it a prompt and the candidates that
 could serve it, each priced and timed; the router picks the method and orders
-the backends; web-router checks its answer, holds the call to its budget and
+the backends; WebRouter checks its answer, holds the call to its budget and
 runs it.
 
 ```python
@@ -1970,7 +1972,7 @@ dropped them, and otherwise fails as `auto` does with no backend to try.
 `budget=Budget(max_cost_usd=, time_limit_s=, strict=)` caps one call to
 `search`, `extract`, `answer`, `research`, `browse`, `plan` or `run`; a
 limit that is not a finite number of 0 or more raises `ValueError`. Before
-each attempt web-router checks its estimate against what is left and skips it
+each attempt WebRouter checks its estimate against what is left and skips it
 if it does not fit; when nothing fits, it raises `BudgetExceededError`, naming
 each skip. Costs are estimates from the list prices in
 [`web_router.prices`](#estimated-prices-experimental), not your bill, and a
@@ -2157,7 +2159,7 @@ only the read limit to the run's budget.
 ### Estimated prices (experimental)
 
 `web_router.prices` is the price list the library ships: the published list
-price of every (provider, method, mode) web-router calls, each with the vendor
+price of every (provider, method, mode) WebRouter calls, each with the vendor
 page it comes from and the date it was checked. It is experimental and may
 change before 1.0. The figures are estimates -- pay-as-you-go list prices, not
 your plan's or a negotiated rate, and a call can bill more than its row (content
@@ -2176,7 +2178,7 @@ row = prices.price("exa", "search")  # the whole row: unit, note, source_url, ch
 `estimate()` is the cost of one request, page, run or browser-minute, and
 `None` when the vendor publishes no price (`unit="unknown"`), bills by tokens
 (`unit="token_billed"`), or the list has no row for that mode -- never another
-mode's price. A mode is web-router's own `search_depth` or `effort` value, or a
+mode's price. A mode is WebRouter's own `search_depth` or `effort` value, or a
 vendor mode sent through `provider_options` written with a leading `:`
 (`":ultra-fast"`); leave it unset for a call that sets none.
 [`PRICING.md`](benchmarks/providers/PRICING.md) shows the same list as tables,
@@ -2232,7 +2234,7 @@ not apply to them.
 
 **If you work on a search API, this is the part to change.** Promoting one of
 your options into the shared surface — so it works the same way across every
-backend — is a small, well-defined PR, and the fastest way to make web-router
+backend — is a small, well-defined PR, and the fastest way to make WebRouter
 represent your API properly. See
 [CONTRIBUTING.md](CONTRIBUTING.md#promoting-a-provider-option).
 
@@ -2412,7 +2414,7 @@ MCP server is the one place a `.env` is read for you — see
 `configured_browser_providers()` and `configured_browse_providers()` — report
 which of these the current environment actually satisfies — a backend needing two variables only when it has both.
 
-web-router does not log or store keys, and a provider's `__repr__` omits them so
+WebRouter does not log or store keys, and a provider's `__repr__` omits them so
 a stray log of a provider does not leak one. Provider clients also never follow redirects —
 `httpx` would replay the auth header to the redirect target, including one on
 another host — so a provider sending a credential rejects
@@ -2447,13 +2449,13 @@ make test-browser
 - [AGENTS.md](AGENTS.md) — conventions for AI coding agents working on this repo
 - [docs/mcp.md](docs/mcp.md) — the MCP server, for agents *using* the package
 - [docs/agent-prompt.md](docs/agent-prompt.md) — a baseline system prompt for
-  an agent whose tools are web-router's, and
+  an agent whose tools are WebRouter's, and
   [skills/web-router/SKILL.md](skills/web-router/SKILL.md), the same contract
   packaged as an agent skill
 
 ## License
 
-web-router is licensed under the [Apache License 2.0](LICENSE).
+WebRouter is licensed under the [Apache License 2.0](LICENSE).
 
 The SimpleQA grader prompt vendored at `src/web_router/evals/prompts/` keeps
 its own MIT license, in `LICENSE-simple-evals` beside it.
