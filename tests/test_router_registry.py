@@ -73,6 +73,35 @@ def test_router_config_without_a_name_is_refused(cls: type) -> None:
         cls(router=Closable().route, router_config={"url": "https://example.com"})
 
 
+@pytest.mark.parametrize("cls", [WebRouter, AsyncWebRouter])
+def test_a_router_config_key_the_factory_does_not_take_is_a_configuration_error(cls: type) -> None:
+    config = {"url": "https://r.example.com/route", "timeout": "not-echoed"}
+    with pytest.raises(ConfigurationError, match=r"router='remote' does not take .*'timeout'.*takes: url") as refused:
+        cls(router="remote", router_config=config)
+    assert "not-echoed" not in str(refused.value)
+
+
+def test_a_router_config_missing_a_key_the_factory_needs_is_a_configuration_error() -> None:
+    register_router(NAME, lambda *, url: Closable(url=url))
+    try:
+        with pytest.raises(ConfigurationError, match=r"needs the router_config key.*'url'"):
+            WebRouter(router=NAME, router_config={})
+    finally:
+        unregister_router(NAME)
+
+
+def test_a_type_error_raised_inside_a_factory_is_not_turned_into_a_configuration_error() -> None:
+    def broken(**config: Any) -> Closable:
+        raise TypeError("a bug in the factory")
+
+    register_router(NAME, broken)
+    try:
+        with pytest.raises(TypeError, match="a bug in the factory"):
+            WebRouter(router=NAME, router_config={"anything": 1})
+    finally:
+        unregister_router(NAME)
+
+
 def test_a_built_router_the_attach_refuses_is_closed_before_the_error() -> None:
     made: list[Any] = []
 

@@ -21,6 +21,8 @@ from typing import Any
 
 from web_router.constants_invoke import (
     MSG_ROUTER_BUILT_NONE,
+    MSG_ROUTER_CONFIG_MISSING,
+    MSG_ROUTER_CONFIG_UNKNOWN,
     MSG_ROUTER_CONFIG_UNNAMED,
     MSG_ROUTER_FACTORY,
     MSG_ROUTER_NAME,
@@ -78,21 +80,54 @@ def _factory(key: str) -> RouterFactory:
     raise ConfigurationError(MSG_ROUTER_UNKNOWN.format(name=key, known=", ".join(available_routers())))
 
 
+def _fitted(key: str, factory: RouterFactory, config: dict[str, Any]) -> dict[str, Any]:
+    """``config``, once it fits ``factory``'s parameters, so a misspelled key is a configuration error.
+
+    Only the arguments are checked, never the call: a ``TypeError`` raised in the factory's own body is a bug
+    and propagates. The error names the keys, never their values.
+
+    Raises:
+        ConfigurationError: for a key the factory does not take, or one it needs that is missing.
+    """
+    try:
+        signature = inspect.signature(factory)
+    except (TypeError, ValueError):  # no signature to read: the call itself decides
+        return config
+    try:
+        signature.bind(**config)
+    except TypeError:
+        named = (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        params = signature.parameters.values()
+        takes = [p.name for p in params if p.kind in named]
+        open_ended = any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params)
+        unknown = [] if open_ended else sorted(repr(name) for name in config if name not in takes)
+        needed = [repr(p.name) for p in params if p.kind in named and p.default is p.empty and p.name not in config]
+        message = (
+            MSG_ROUTER_CONFIG_UNKNOWN.format(name=key, keys=", ".join(unknown), takes=", ".join(takes) or "none")
+            if unknown
+            else MSG_ROUTER_CONFIG_MISSING.format(name=key, keys=", ".join(needed))
+        )
+        raise ConfigurationError(message) from None
+    return config
+
+
 def resolve_router(
     router: RouterLike | str | None, router_config: Mapping[str, Any] | None
 ) -> tuple[RouterLike | None, RouterLike | None]:
     """The router to attach, and the same router again when it was built here by name, so its owner closes it.
 
     Raises:
-        ConfigurationError: for a name no router is registered under, a factory that returns ``None``, or
-            ``router_config`` without a name.
+        ConfigurationError: for a name no router is registered under, a ``router_config`` key its factory does
+            not take or one it needs and is not given, a factory that returns ``None``, or ``router_config``
+            without a name.
     """
     if not isinstance(router, str):
         if router_config is not None:
             raise ConfigurationError(MSG_ROUTER_CONFIG_UNNAMED)
         return router, None
     key = _checked_name(router)
-    built = _factory(key)(**dict(router_config or {}))
+    factory = _factory(key)
+    built = factory(**_fitted(key, factory, dict(router_config or {})))
     if built is None:  # attached as is, None would turn routing off without a word
         raise ConfigurationError(MSG_ROUTER_BUILT_NONE.format(name=key))
     return built, built

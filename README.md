@@ -2226,7 +2226,9 @@ caps a request at 1 MB.
 `remote` is a registered name. `register_router(name, factory)` adds your own
 (`unregister_router(name)` removes it, bringing back a built-in of that name),
 and `WebRouter(router=name, router_config={...})` builds one by calling
-`factory(**router_config)`. A router that `WebRouter` builds by name is its to
+`factory(**router_config)`; a key the factory does not take, or one it needs
+and is not given, raises `ConfigurationError` naming the key, never its
+value. A router that `WebRouter` builds by name is its to
 close: `close()` calls the router's `close()`, and `aclose()` its `aclose()`
 (else `close()`). A router passed in is yours to close, as a provider is. A
 router names itself in the record with a `router_name` attribute; without
