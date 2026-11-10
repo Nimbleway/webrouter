@@ -175,6 +175,10 @@ src/web_router/
 │   │                   async only, one try, 64 KiB answers, scheme and host shown
 │   ├── remote_url.py   its URL check: https, or http to localhost or a loopback
 │   │                   literal, parsed as httpx parses it, nothing secret in it
+│   ├── remote_config.py its other settings: httpx, timeout_s, the bearer key, headers
+│   ├── remote_errors.py its errors: RemoteRouterError, ...Timeout and ...Invalid
+│   ├── remote_redact.py the bearer key redacted from a decision that echoes it
+│   ├── remote_close.py the pool's close on its own loop, bounded, warned when it fails
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
