@@ -11,6 +11,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from _common import _p
+from route_eval_fmt import _unknown, _usd
 
 NO_CELL = "-"
 MATRIX_INTRO = (
@@ -53,19 +54,10 @@ def _signed_usd(value: float) -> str:
     return f"{'-' if value < 0 else '+'}${abs(value):.4f}"
 
 
-def _usd(value: float | None) -> str:
-    return "unknown" if value is None else f"${value:.4f}"
-
-
 def _unknowns(cell: Mapping[str, Any]) -> str:
     keys = (("cost_unknown", "cost"), ("latency_unknown", "time"))
     shown = [f"{cell[k]} {label} unknown" for k, label in keys if cell[k]]
     return f" ({', '.join(shown)})" if shown else ""
-
-
-def _left_out(cell: Mapping[str, Any], key: str) -> str:
-    """`` (n unknown)`` after a sum that left out ``n`` questions, so a partial sum never reads as whole."""
-    return f" ({cell[key]} unknown)" if cell[key] else ""
 
 
 def cell_text(cell: Mapping[str, Any] | None) -> str:
@@ -73,7 +65,7 @@ def cell_text(cell: Mapping[str, Any] | None) -> str:
     if not cell:
         return NO_CELL
     return (
-        f"{cell['questions']} ({cell['correct']} right), ${cell['overspend_usd']:.4f}, "
+        f"{cell['questions']} ({cell['correct']} right), {_usd(cell['overspend_usd'])}, "
         f"+{cell['overtime_s']:.1f}s{_unknowns(cell)}"
     )
 
@@ -88,12 +80,12 @@ def _totals(confusion: Mapping[str, Mapping[str, Any]]) -> list[str]:
         wrong, dear, every = m["wrong_tool"], m["not_cheapest"], m["all"]
         per_q, per_s, lost = m["overspend_per_question_usd"], m["overtime_per_question_s"], m["accuracy_lost"]
         lost_text = NO_CELL if lost is None else f"{m['oracle_correct'] - every['correct']} ({_p(lost)})"
-        time_text = NO_CELL if per_s is None else f"+{per_s:.1f}s{_left_out(every, 'latency_unknown')}"
+        time_text = NO_CELL if per_s is None else _unknown(f"+{per_s:.1f}s", every["latency_unknown"])
         out.append(
             f"| `{spec}` | {every['questions']} | {wrong['questions']} | {dear['questions']} "
-            f"| ${dear['overspend_usd']:.4f}{_left_out(dear, 'cost_unknown')} "
-            f"| ${every['overspend_usd']:.4f}{_left_out(every, 'cost_unknown')} "
-            f"| {NO_CELL if per_q is None else _usd(per_q) + _left_out(every, 'cost_unknown')} "
+            f"| {_usd(dear['overspend_usd'], dear['cost_unknown'])} "
+            f"| {_usd(every['overspend_usd'], every['cost_unknown'])} "
+            f"| {NO_CELL if per_q is None else _usd(per_q, every['cost_unknown'])} "
             f"| {lost_text} | {time_text} |"
         )
     return [*out, ""]
@@ -133,9 +125,7 @@ def _pattern(c: Mapping[str, Any]) -> list[str]:
     for p in c["patterns"]:
         out.append(
             f"| {p['first_tool']} | {p['second_tool']} | {p['questions']} | {p['only_first_right']} "
-            f"| {p['only_second_right']} | {_signed_usd(p['extra_cost_usd'])}"
-            + (f" ({p['cost_unknown']} unknown)" if p["cost_unknown"] else "")
-            + " |"
+            f"| {p['only_second_right']} | {_unknown(_signed_usd(p['extra_cost_usd']), p['cost_unknown'])} |"
         )
     return [*out, ""]
 
@@ -152,7 +142,7 @@ def p_value(p: float) -> str:
 
 def _compare_row(c: Mapping[str, Any]) -> str:
     a, b = c["first"], c["second"]
-    unknown = f" ({c['cost_unknown']} unknown)" if c["cost_unknown"] else ""
+    unknown = _unknown("", c["cost_unknown"])
     return (
         f"| `{c['router']}` | `{c['against']}` | {c['questions']} | {c['disagree']} | {c['tool_disagree']} "
         f"| {c['only_first_right']} / {c['only_second_right']} | {p_value(c['mcnemar_p'])} "

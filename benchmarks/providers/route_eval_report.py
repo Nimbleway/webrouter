@@ -10,20 +10,11 @@ from typing import Any
 
 from _common import _p, _s
 from route_eval_floor import Floor
+from route_eval_fmt import _unknown, _usd
 from route_eval_paths import EFFORT_INTRO, MIXED, MIXED_INTRO
 from route_eval_rank import RANKING_RULE, TOO_FEW, TOO_FEW_RULE
 from route_eval_report_matrix import compare_section, matrix_section
 from route_eval_sets import TWIN_SETS
-
-
-def _usd(value: float | None, unknown: int = 0) -> str:
-    if value is None:
-        return f"unknown ({unknown})" if unknown else "unknown"
-    return _unknown(f"${value:.4f}", unknown)
-
-
-def _unknown(text: str, unknown: int) -> str:
-    return text + (f" ({unknown} unknown)" if unknown else "")
 
 
 def _ms(value: float | None) -> str:
