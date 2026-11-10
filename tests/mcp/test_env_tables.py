@@ -18,6 +18,7 @@ from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY, ENV_REMOTE_RO
 from web_router.mcp.env import EnvSources
 from web_router.mcp.env_credentials import ALL_ENV_TABLES, credential_variables
 from web_router.mcp.methods import METHODS
+from web_router.vendors.catalog import get_catalog
 
 ENV_EXAMPLE = Path(__file__).resolve().parents[2] / ".env.example"
 
@@ -41,7 +42,11 @@ def _example_variables() -> set[str]:
 
 
 def test_every_credential_in_env_example_loads_and_nothing_else_does() -> None:
-    assert _example_variables() - NOT_CREDENTIALS == set(credential_variables())
+    # A vendor's aliases and settings load too, but its section lists only the first name and comments settings out.
+    vendors = {name for vendor in get_catalog().all() for name in vendor.credential_variables()}
+    listed = _example_variables() - NOT_CREDENTIALS
+    assert listed - vendors == set(credential_variables()) - vendors
+    assert listed & vendors <= set(credential_variables())
 
 
 def test_the_tools_read_the_same_tables_the_loader_does() -> None:
@@ -56,3 +61,17 @@ def test_an_answer_only_key_and_an_optional_key_load_from_a_file(isolated_home: 
     env_file.write_text(f"{name}=not-a-real-key\n", encoding="utf-8")
 
     assert EnvSources().load(str(env_file)).loaded == (name,)
+
+
+def test_a_bad_vendor_catalog_folder_does_not_stop_startup(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The env loader still knows every backend variable; the vendor tools report the bad folder when called."""
+    from web_router.constants_vendors import VENDOR_ENV_CATALOG_DIR
+    from web_router.exceptions import ConfigurationError
+
+    (tmp_path / "x.json").write_text("{not json", encoding="utf-8")
+    for folder in (tmp_path / "missing", tmp_path):
+        monkeypatch.setenv(VENDOR_ENV_CATALOG_DIR, str(folder))
+        assert "TAVILY_API_KEY" in credential_variables()
+        EnvSources()
+        with pytest.raises(ConfigurationError):
+            get_catalog()

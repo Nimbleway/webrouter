@@ -1,0 +1,245 @@
+{
+  "vendor": "google-ads",
+  "name": "Google Ads",
+  "category": "advertising",
+  "summary": "Your Google Ads accounts: GAQL reports on campaigns, spend, clicks and conversions, Keyword Planner ideas and volumes, and budget changes.",
+  "docs_url": "https://developers.google.com/google-ads/api/rest/overview",
+  "pricing_url": "https://developers.google.com/google-ads/api/docs/access-levels",
+  "base_url": "https://googleads.googleapis.com/{api_version}",
+  "settings": {
+    "api_version": {
+      "env": ["GOOGLE_ADS_API_VERSION"],
+      "default": "v26",
+      "choices": ["v26", "v25", "v24", "v23"],
+      "description": "Google retires each major version about a year after release (v26: Oct 2026, sunsets Nov 2027). A sunset version answers 400 UNSUPPORTED_VERSION; pin one only to stay on it deliberately."
+    },
+    "login_customer_id": {
+      "env": ["GOOGLE_ADS_LOGIN_CUSTOMER_ID"],
+      "description": "The manager (MCC) account id, digits only, when your login reaches client accounts through a manager. Leave unset when you are a user of the client account itself."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "developer_token": {
+        "env": ["GOOGLE_ADS_DEVELOPER_TOKEN"],
+        "description": "a Google Ads developer token (manager account > Admin > API Center)"
+      },
+      "client_id": {
+        "env": ["GOOGLE_ADS_CLIENT_ID"],
+        "description": "the OAuth client id of a Google Cloud OAuth app with the Google Ads API enabled"
+      },
+      "client_secret": {
+        "env": ["GOOGLE_ADS_CLIENT_SECRET"],
+        "description": "that OAuth app's client secret"
+      },
+      "refresh_token": {
+        "env": ["GOOGLE_ADS_REFRESH_TOKEN"],
+        "description": "a refresh token for the adwords scope, minted with that OAuth app"
+      }
+    },
+    "oauth2": {
+      "grant": "refresh_token",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "refresh_token": "{refresh_token}"
+    },
+    "inject": [
+      {"in": "header", "name": "Authorization", "value": "Bearer {access_token}"},
+      {"in": "header", "name": "developer-token", "value": "{developer_token}"},
+      {"in": "header", "name": "login-customer-id", "value": "{login_customer_id}", "optional": true}
+    ]
+  },
+  "notes": [
+    "Two credentials on every call: an OAuth access token for a user with access to the account, and the developer token of an approved manager account. A missing or unapproved developer token answers DEVELOPER_TOKEN_* errors, not 401.",
+    "Google has no read-only Ads scope: the adwords scope can read and change everything the user can. Writes here are refused unless allow_writes is passed, and every mutate accepts validateOnly: true to dry-run first.",
+    "Customer ids are digits only: strip the dashes the Ads UI shows (123-456-7890 -> 1234567890).",
+    "Money is in MICROS of the account currency: divide cost_micros by 1,000,000.",
+    "A test developer token only reaches test accounts; Basic access caps daily operations (see pricing_url)."
+  ],
+  "sources": [
+    "https://developers.google.com/google-ads/api/rest/overview",
+    "https://developers.google.com/google-ads/api/rest/auth",
+    "https://developers.google.com/google-ads/api/rest/common/search",
+    "https://developers.google.com/google-ads/api/rest/examples",
+    "https://developers.google.com/google-ads/api/docs/sunset-dates",
+    "https://developers.google.com/google-ads/api/reference/rpc/v26/SearchGoogleAdsRequest",
+    "https://developers.google.com/google-ads/api/reference/rpc/v26/GenerateKeywordIdeasRequest",
+    "https://developers.google.com/google-ads/api/reference/rpc/v26/GenerateKeywordHistoricalMetricsRequest",
+    "https://developers.google.com/google-ads/api/reference/rpc/v26/MutateCampaignBudgetsRequest"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "google-ads.customers.list_accessible",
+      "name": "List the Google Ads accounts your login can reach",
+      "summary": "Resource names (customers/1234567890) of every account the authenticated user can access directly. Ids only: run a GAQL query on customer for names.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/customers:listAccessibleCustomers",
+      "notes": ["Ignores login-customer-id: it lists what the user reaches, not what a manager does."],
+      "job": "ads.accounts.list",
+      "docs_url": "https://developers.google.com/google-ads/api/rest/examples",
+      "verified": {"docs": "https://developers.google.com/google-ads/api/rest/examples"}
+    },
+    {
+      "id": "google-ads.query",
+      "name": "Run a GAQL report on a Google Ads account",
+      "summary": "A Google Ads Query Language query -- campaigns, ad groups, keywords, spend, clicks, conversions by date -- one page of up to 10,000 rows.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/customers/{customer_id}/googleAds:search",
+      "params": {
+        "customer_id": {"in": "path", "type": "string", "required": true, "description": "Digits only.", "example": "1234567890"},
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "GAQL. Metrics need a FROM resource that has them and usually a segments.date filter.",
+          "example": "SELECT campaign.name, metrics.cost_micros, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING LAST_30_DAYS ORDER BY metrics.cost_micros DESC LIMIT 50"
+        },
+        "pageToken": {"in": "body", "type": "string", "description": "nextPageToken from the previous answer; send the same query."},
+        "searchSettings": {"in": "body", "type": "object", "description": "{returnTotalResultsCount, returnSummaryRow, omitResultsDetails}."},
+        "validateOnly": {"in": "body", "type": "boolean", "description": "Check the query without running it."}
+      },
+      "notes": [
+        "A read over POST. Pages are a fixed 10,000 rows and pageSize is refused (PAGE_SIZE_NOT_SUPPORTED): bound the result with GAQL's LIMIT.",
+        "Field names in the answer are camelCase (metrics.costMicros) though the query writes them snake_case."
+      ],
+      "job": "ads.report.query",
+      "docs_url": "https://developers.google.com/google-ads/api/rest/common/search",
+      "verified": {"docs": "https://developers.google.com/google-ads/api/reference/rpc/v26/SearchGoogleAdsRequest"}
+    },
+    {
+      "id": "google-ads.query_stream",
+      "name": "Run a GAQL report and get every row at once",
+      "summary": "The same query as google-ads.query, returned whole with no paging. Suits results that fit in memory: bound it with LIMIT or a date range.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/customers/{customer_id}/googleAds:searchStream",
+      "params": {
+        "customer_id": {"in": "path", "type": "string", "required": true, "description": "Digits only.", "example": "1234567890"},
+        "query": {"in": "body", "type": "string", "required": true, "description": "GAQL."}
+      },
+      "notes": ["The answer is a JSON ARRAY of batches, each with its own results list, unlike every other call's object."],
+      "job": "ads.report.query",
+      "docs_url": "https://developers.google.com/google-ads/api/rest/common/search",
+      "verified": {"docs": "https://developers.google.com/google-ads/api/rest/common/search"}
+    },
+    {
+      "id": "google-ads.fields.search",
+      "name": "Look up GAQL fields and resources",
+      "summary": "Which fields exist, are selectable, filterable or sortable, and which resources they can be queried with -- the GAQL schema.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/googleAdsFields:search",
+      "params": {
+        "query": {"in": "body", "type": "string", "required": true, "description": "A query over the field metadata.", "example": "SELECT name, selectable, filterable, data_type WHERE name LIKE 'metrics.%'"},
+        "pageSize": {"in": "body", "type": "integer"},
+        "pageToken": {"in": "body", "type": "string"}
+      },
+      "notes": ["Needs no customer id and no login-customer-id."],
+      "job": "ads.report.schema",
+      "docs_url": "https://developers.google.com/google-ads/api/docs/query/overview",
+      "verified": {"docs": "https://developers.google.com/google-ads/api/reference/rpc/v26/GoogleAdsFieldService/SearchGoogleAdsFields?transport=rest"}
+    },
+    {
+      "id": "google-ads.keywords.ideas",
+      "name": "Get keyword ideas from Keyword Planner",
+      "summary": "Keyword ideas from seed keywords, a URL or a whole site, with average monthly searches, competition and top-of-page bid ranges.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/customers/{customer_id}:generateKeywordIdeas",
+      "params": {
+        "customer_id": {"in": "path", "type": "string", "required": true, "description": "Digits only; any account you can reach.", "example": "1234567890"},
+        "keywordSeed": {"in": "body", "type": "object", "description": "{keywords: [...]}. Exactly one seed: keywordSeed, urlSeed, keywordAndUrlSeed or siteSeed.", "example": {"keywords": ["coffee beans"]}},
+        "urlSeed": {"in": "body", "type": "object", "description": "{url: 'https://...'}."},
+        "keywordAndUrlSeed": {"in": "body", "type": "object", "description": "{url, keywords: [...]}."},
+        "siteSeed": {"in": "body", "type": "object", "description": "{site: 'example.com'}."},
+        "language": {"in": "body", "type": "string", "description": "Language resource name; English is languageConstants/1000.", "example": "languageConstants/1000"},
+        "geoTargetConstants": {"in": "body", "type": "array", "description": "Up to 10 location resource names; the US is geoTargetConstants/2840.", "example": ["geoTargetConstants/2840"]},
+        "keywordPlanNetwork": {"in": "body", "type": "string", "enum": ["GOOGLE_SEARCH", "GOOGLE_SEARCH_AND_PARTNERS"], "description": "Unset means GOOGLE_SEARCH_AND_PARTNERS."},
+        "includeAdultKeywords": {"in": "body", "type": "boolean"},
+        "historicalMetricsOptions": {"in": "body", "type": "object", "description": "{yearMonthRange: {start: {year, month}, end: {year, month}}} for a monthly series."},
+        "aggregateMetrics": {"in": "body", "type": "object"},
+        "pageSize": {"in": "body", "type": "integer", "description": "At most 10,000."},
+        "pageToken": {"in": "body", "type": "string", "description": "nextPageToken from the previous answer; send the same fields."}
+      },
+      "notes": ["Bids are in micros. Accounts with no spend history get bucketed search volumes."],
+      "job": "keywords.ideas",
+      "docs_url": "https://developers.google.com/google-ads/api/docs/keyword-planning/generate-keyword-ideas",
+      "verified": {"docs": "https://developers.google.com/google-ads/api/reference/rpc/v26/GenerateKeywordIdeasRequest"}
+    },
+    {
+      "id": "google-ads.keywords.historical_metrics",
+      "name": "Get search volume and bids for a keyword list",
+      "summary": "Average monthly searches, competition and top-of-page bid range for up to 10,000 keywords you name.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/customers/{customer_id}:generateKeywordHistoricalMetrics",
+      "params": {
+        "customer_id": {"in": "path", "type": "string", "required": true, "description": "Digits only.", "example": "1234567890"},
+        "keywords": {"in": "body", "type": "array", "required": true, "description": "Up to 10,000 keywords.", "example": ["coffee beans", "espresso machine"]},
+        "language": {"in": "body", "type": "string", "example": "languageConstants/1000"},
+        "geoTargetConstants": {"in": "body", "type": "array", "example": ["geoTargetConstants/2840"]},
+        "keywordPlanNetwork": {"in": "body", "type": "string", "enum": ["GOOGLE_SEARCH", "GOOGLE_SEARCH_AND_PARTNERS"]},
+        "includeAdultKeywords": {"in": "body", "type": "boolean"},
+        "historicalMetricsOptions": {"in": "body", "type": "object"},
+        "aggregateMetrics": {"in": "body", "type": "object"}
+      },
+      "notes": ["Close variants are merged, so fewer rows can come back than keywords were sent."],
+      "job": "keywords.volume",
+      "docs_url": "https://developers.google.com/google-ads/api/docs/keyword-planning/generate-historical-metrics",
+      "verified": {"docs": "https://developers.google.com/google-ads/api/reference/rpc/v26/GenerateKeywordHistoricalMetricsRequest"}
+    },
+    {
+      "id": "google-ads.campaign_budgets.mutate",
+      "name": "Create, change or remove campaign budgets",
+      "summary": "Change a campaign's daily budget, among other budget operations. Spends real money from the next impression.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/customers/{customer_id}/campaignBudgets:mutate",
+      "params": {
+        "customer_id": {"in": "path", "type": "string", "required": true, "description": "Digits only.", "example": "1234567890"},
+        "operations": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Each {create | update + updateMask | remove}. amountMicros is the DAILY budget in micros.",
+          "example": [{"update": {"resourceName": "customers/1234567890/campaignBudgets/111", "amountMicros": "50000000"}, "updateMask": "amountMicros"}]
+        },
+        "validateOnly": {"in": "body", "type": "boolean", "description": "true checks the operations and changes nothing. Send it first."},
+        "partialFailure": {"in": "body", "type": "boolean", "description": "Apply the valid operations even when others fail."},
+        "responseContentType": {"in": "body", "type": "string", "enum": ["RESOURCE_NAME_ONLY", "MUTABLE_RESOURCE"]}
+      },
+      "notes": ["Find a budget's resourceName first: SELECT campaign.name, campaign_budget.resource_name, campaign_budget.amount_micros FROM campaign."],
+      "job": "ads.budgets.update",
+      "docs_url": "https://developers.google.com/google-ads/api/rest/examples",
+      "verified": {"docs": "https://developers.google.com/google-ads/api/reference/rpc/v26/MutateCampaignBudgetsRequest"}
+    },
+    {
+      "id": "google-ads.campaigns.mutate",
+      "name": "Create, change, pause or remove campaigns",
+      "summary": "Campaign operations -- pause or enable one by setting status, rename, change bidding -- in one atomic request.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/customers/{customer_id}/campaigns:mutate",
+      "params": {
+        "customer_id": {"in": "path", "type": "string", "required": true, "description": "Digits only.", "example": "1234567890"},
+        "operations": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Each {create | update + updateMask | remove}.",
+          "example": [{"update": {"resourceName": "customers/1234567890/campaigns/222", "status": "PAUSED"}, "updateMask": "status"}]
+        },
+        "validateOnly": {"in": "body", "type": "boolean", "description": "true checks the operations and changes nothing. Send it first."},
+        "partialFailure": {"in": "body", "type": "boolean"},
+        "responseContentType": {"in": "body", "type": "string", "enum": ["RESOURCE_NAME_ONLY", "MUTABLE_RESOURCE"]}
+      },
+      "job": "ads.campaigns.update",
+      "docs_url": "https://developers.google.com/google-ads/api/rest/examples",
+      "verified": {"docs": "https://developers.google.com/google-ads/api/rest/examples"}
+    }
+  ]
+}
