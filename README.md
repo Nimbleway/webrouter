@@ -2109,12 +2109,16 @@ from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](benchmarks/providers/README.md#route-eval-replaying-a-router).
 
 The library ships one keyless router, `web_router.routing.rules.rules`: a
-prompt with a URL is extracted, anything else searched. Four example routers,
-tested offline: [rules](examples/router_rules.py), a
-[scikit-learn classifier](examples/router_classifier.py), an
-[OpenAI-compatible model](examples/router_llm.py) and
-[Jev](examples/router_jev.py), TypeSafe's model. The last two are model
-routers: each sends the prompt to that model's server, which bills for it. The
+prompt with a URL is extracted, anything else searched, and two model routers,
+`router="llm"` and `router="systemone"`: see
+[Decision APIs](#decision-apis-deciderrouter-routerllm-and-routersystemone).
+Five example routers, tested offline: [rules](examples/router_rules.py), a
+[scikit-learn classifier](examples/router_classifier.py), a
+[decider of your own](examples/router_decider.py), the built-in
+[`llm` router on a preset](examples/router_llm.py) and
+[Jev](examples/router_jev.py), TypeSafe's model, written out by hand. The last
+two are model routers: each sends the prompt to that model's server, which
+bills for it. The
 MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
@@ -2262,6 +2266,82 @@ close: `close()` calls the router's `close()` (else its `aclose()`), and
 router names itself in the record with a `router_name` attribute; without
 one, its qualified name is used, and with a `min_url_policy` attribute
 (`"public_only"`) holds the URLs it sets to that policy when you set none.
+
+### Decision APIs: `DeciderRouter`, `router="llm"` and `router="systemone"`
+
+A classifier, a model or a decision API answers one question: which of these
+options fits this prompt. A *decider* answers just that, and `DeciderRouter`
+does the rest. It asks the decider a `DeciderQuestion` -- the `prompt`, the
+`instructions`, and `options`, each candidate id with its method, backend,
+estimated cost and p90 latency (extract only when the prompt names a URL) --
+and reads back a `DeciderReply`: `ranked`, option ids best first, with
+optional `scores` and `confidence`, each from 0 to 1. Options it leaves out
+keep the static order. A reply naming an id not offered, an id twice, or a
+number that is not a finite 0..1 is set aside whole (`router_invalid`). The
+ranking becomes `tools` and `providers`; a `DeciderRouter` never sets options,
+exclusions or URLs, and its reason holds the decider's `name`, the first id
+and its score, never the decider's own words. A decider has `decide(question)`
+or `async adecide(question)`, and may declare `name`, `timeout_s` and
+`route_tools`, which the router declares in turn:
+
+```python
+from web_router import DeciderQuestion, DeciderReply, DeciderRouter, WebRouter, register_router
+
+
+class SearchFirst:
+    name, timeout_s = "search-first", 0.05
+
+    def decide(self, question: DeciderQuestion) -> DeciderReply:
+        return DeciderReply(ranked=[cid for cid in question.options if cid.startswith("search:")])
+
+
+register_router("search-first", lambda **config: DeciderRouter(SearchFirst(**config)))
+wr = WebRouter(router="search-first")
+```
+
+Two deciders are built in, each a registered name. Nothing is on by default:
+each sends the prompt off your machine only when you name it.
+
+- **`router="llm"`**: a chat model on any OpenAI-compatible chat-completions
+  API, posted with httpx (no SDK, so no `OPENAI_BASE_URL` or other variable is
+  read). `router_config` takes `model` and either a `preset` or a `base_url`,
+  and `api_key_env`, `api_key`, `timeout_s` (3 s) and `route_tools`
+  (research and browse unless set). Presets: `openai` and `anthropic` (a strict
+  JSON schema whose enum is the offered ids), `openrouter` (the same, where the
+  model supports it), `deepseek` and `groq` (JSON mode). A `base_url` of your
+  own asks for JSON in the prompt only, and needs `api_key_env` unless it is
+  on this machine. Either way the reply is checked as above.
+
+  ```python
+  WebRouter(router="llm", router_config={"preset": "openai", "model": "<model>"})
+  ```
+
+- **`router="systemone"`**: a System One decision API, asked one `choice`
+  question per call; its probability per option is the score, and ranks them.
+  Presets: `typesafe` (TypeSafe's Jev, `TYPESAFE_API_KEY`) and `fireworks`
+  (Fireworks' Rune, `FIREWORKS_API_KEY`), each with its model pinned; another
+  server takes `base_url`, `path`, `model` and `api_key_env`. `timeout_s` is
+  1 s, and `route_tools` every tool but search, unless set.
+
+  ```python
+  WebRouter(router="systemone", router_config={"preset": "fireworks"})
+  ```
+
+Each preset's key comes from that vendor's variable (`OPENAI_API_KEY`,
+`ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`,
+`OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `FIREWORKS_API_KEY`), read once
+when the router is built, and is sent only to that vendor's host: naming one
+for another `base_url` raises `ConfigurationError`, as does a key that is
+missing. Each call sends the server the prompt -- for an extract, its URLs
+whole, query strings included -- the budget, and the candidate ids, which name
+your configured backends, with their estimated cost and p90 latency; never a
+provider key. The transport is the `remote` router's: `https` only (plain
+`http` only to this machine), no credentials, query or fragment in the URL,
+one request, no retries, no redirects, no proxy read from the environment, and
+answers of `application/json` under 256 KiB. A failure names the error class
+or HTTP status and the host, never the URL or the key. The record names each
+`llm(<host>)` or `systemone(<host>)`. Both need httpx, which the `remote`
+extra installs. Each call bills on that server.
 
 ## Routing and extending
 

@@ -1,8 +1,10 @@
 """router-latency's routers: each one named on the command line, how it is built, what it needs and what it costs.
 
 ``rules`` is the library's built-in router, the one the MCP server attaches.
-``sklearn``, ``llm`` and ``jev`` are the example routers in ``examples/``,
-loaded from their files as route-eval loads a ``path/file.py:attr`` router.
+``llm`` is the built-in ``router="llm"``, on the preset ``$LLM_ROUTER_PRESET``
+names (``openai`` unless set). ``sklearn`` and ``jev`` are the example routers
+in ``examples/``, loaded from their files as route-eval loads a
+``path/file.py:attr`` router.
 ``remote:<url>`` is the library's own ``remote`` router, built in
 ``router_latency_remote``. Any other ``module:attr`` or ``path/file.py:attr``
 names a router of your own. Imported as a sibling, by name, as ``_common`` is.
@@ -26,19 +28,20 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from web_router.constants_decider import LLM_PRESETS, LLM_REPLY_FORMAT
 from web_router.routing.contract import RouteRequest
+from web_router.routing.decider_llm import llm_router, menu, schema
+from web_router.routing.decider_question import question_for
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 
 RULES, SKLEARN, LLM, JEV, REMOTE = "rules", "sklearn", "llm", "jev", "remote:"
 KNOWN = (RULES, SKLEARN, LLM, JEV, REMOTE + "<url>")
 
-LLM_KEY_ENV, LLM_MODEL_ENV, LLM_BASE_URL_ENV = "OPENAI_API_KEY", "LLM_ROUTER_MODEL", "OPENAI_BASE_URL"
+LLM_KEY_ENV, LLM_MODEL_ENV, LLM_PRESET_ENV = "OPENAI_API_KEY", "LLM_ROUTER_MODEL", "LLM_ROUTER_PRESET"
 JEV_KEY_ENV = "TYPESAFE_API_KEY"
 CHARS_PER_TOKEN = 4
 """A rough English-text token size, for the dry run's estimate only."""
-REASON_TOKENS = 20
-"""What a model's one-line reason adds to its answer, for the estimate."""
 MTOK = 1_000_000
 
 MSG_BAD_ROUTER = "{spec!r}: a router is one of {known}, or module:attr / path/file.py:attr"
@@ -103,16 +106,19 @@ def _sklearn() -> Any:
 
 
 def llm_tokens(req: RouteRequest) -> tuple[int, int]:
-    """Estimated input and output tokens of one LLM router call: its instructions, menu and schema; a full ranking."""
-    llm = example("router_llm.py")
-    sent = llm.INSTRUCTIONS + llm.menu(req) + json.dumps(llm.schema(req))
-    ranking = json.dumps({"ranked": [c.id for c in llm.usable(req)], "reason": ""})
-    return math.ceil(len(sent) / CHARS_PER_TOKEN), math.ceil(len(ranking) / CHARS_PER_TOKEN) + REASON_TOKENS
+    """Estimated input and output tokens of one ``llm`` router call: instructions, options and schema; a ranking."""
+    question = question_for(req)
+    sent = question.instructions + LLM_REPLY_FORMAT + menu(question) + json.dumps(schema(question))
+    ranking = json.dumps({"ranked": list(question.options), "confidence": 0.5})
+    return math.ceil(len(sent) / CHARS_PER_TOKEN), math.ceil(len(ranking) / CHARS_PER_TOKEN)
 
 
 def _llm(model: str | None, price: tuple[float, float] | None) -> RouterSpec:
+    preset = os.environ.get(LLM_PRESET_ENV) or "openai"
+    key_env = LLM_PRESETS[preset][1] if preset in LLM_PRESETS else LLM_KEY_ENV
+
     def build() -> Any:
-        return example("router_llm.py").LLMRouter(model=model)
+        return llm_router(preset=preset, model=model or os.environ[LLM_MODEL_ENV])
 
     def cost(req: RouteRequest) -> float | None:
         if price is None:
@@ -127,10 +133,8 @@ def _llm(model: str | None, price: tuple[float, float] | None) -> RouterSpec:
         if price
         else "unknown: pass --llm-price IN,OUT (USD per 1M tokens) for the model"
     )
-    env = (LLM_KEY_ENV,) if model else (LLM_KEY_ENV, LLM_MODEL_ENV)
-    return RouterSpec(
-        LLM, f"examples/router_llm.py LLMRouter, model {shown}", build, env, (LLM_BASE_URL_ENV,), cost, note
-    )
+    env = (key_env,) if model else (key_env, LLM_MODEL_ENV)
+    return RouterSpec(LLM, f'router="llm" (built in), model {shown}', build, env, (LLM_PRESET_ENV,), cost, note)
 
 
 def _jev(per_call: float | None) -> RouterSpec:

@@ -1,5 +1,11 @@
 """TypeSafe's Jev as a router: one typed choice question, answered with a probability per candidate.
 
+This is the standalone "write your own router" example, self-contained so it
+copies alone. The library ships the same in one line,
+``WebRouter(router="systemone", router_config={"preset": "typesafe"})``, and
+``DeciderRouter`` holds its glue -- the question, the reply check, the
+decision -- for any decision API: see ``examples/router_decider.py``.
+
 The router posts the prompt to Jev's System One API with one `choice` question
 whose criteria are the candidates, each `tool:provider` described by its
 method, estimated cost and p90 latency. Jev answers with a probability for
@@ -76,7 +82,6 @@ def probabilities(answer: Any, choices: dict[str, str]) -> dict[str, float]:
     return numbers
 
 
-# printable, decision and main's print loop repeat router_llm.py's on purpose: each example copies alone.
 def printable(text: str | None) -> str:
     """A server's words with control characters taken out, safe to print to a terminal."""
     return "".join(ch for ch in text or "" if ch.isprintable())
