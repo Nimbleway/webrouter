@@ -1,0 +1,195 @@
+{
+  "vendor": "helloao-bible",
+  "name": "Free Use Bible API",
+  "category": "other",
+  "summary": "Bible text in over 1,000 translations, plus commentaries and datasets (cross references, people, places, events, interlinear words, Strong's lexicon), as free static JSON.",
+  "docs_url": "https://bible.helloao.org/docs/",
+  "base_url": "https://bible.helloao.org/api",
+  "notes": [
+    "Keyless, no sign-up and no published usage limit. Every endpoint is a static .json file, so caching is safe.",
+    "Each translation keeps its own licence (public domain, CC BY, CC BY-SA, CC BY-ND, ...); check the translation's licence before reusing text.",
+    "Chapter content is a list of typed items (heading, line_break, verse, hebrew_subtitle); verse content mixes strings, formatted text and footnote references, with footnotes listed separately."
+  ],
+  "sources": [
+    "https://bible.helloao.org/docs/",
+    "https://bible.helloao.org/docs/reference/translations/",
+    "https://bible.helloao.org/docs/reference/translations/standard.html",
+    "https://bible.helloao.org/docs/reference/commentaries/",
+    "https://bible.helloao.org/docs/reference/datasets/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "helloao-bible.translations.list",
+      "name": "List translations",
+      "summary": "Every available translation with its ID, name, language and licence.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/available_translations.json",
+      "params": {},
+      "job": "texts.list",
+      "docs_url": "https://bible.helloao.org/docs/reference/translations/",
+      "verified": {
+        "docs": "https://bible.helloao.org/docs/reference/translations/"
+      }
+    },
+    {
+      "id": "helloao-bible.books.list",
+      "name": "List a translation's books",
+      "summary": "The books of one translation with their IDs and chapter counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{translation}/books.json",
+      "params": {
+        "translation": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Translation ID from translations.list.",
+          "example": "BSB"
+        }
+      },
+      "job": "texts.list",
+      "docs_url": "https://bible.helloao.org/docs/reference/translations/",
+      "verified": {
+        "docs": "https://bible.helloao.org/docs/reference/translations/"
+      }
+    },
+    {
+      "id": "helloao-bible.chapter.get",
+      "name": "Get a Bible chapter",
+      "summary": "One chapter of one translation: verses, headings, footnotes, audio links and next/previous links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{translation}/{book}/{chapter}.json",
+      "params": {
+        "translation": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Translation ID from translations.list.",
+          "example": "BSB"
+        },
+        "book": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Book ID, e.g. GEN for Genesis (from the books list).",
+          "example": "GEN"
+        },
+        "chapter": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Chapter number.",
+          "example": 1
+        }
+      },
+      "job": "texts.get",
+      "docs_url": "https://bible.helloao.org/docs/reference/translations/standard.html",
+      "verified": {
+        "docs": "https://bible.helloao.org/docs/reference/translations/standard.html"
+      }
+    },
+    {
+      "id": "helloao-bible.commentaries.list",
+      "name": "List commentaries",
+      "summary": "Every available commentary with its ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/available_commentaries.json",
+      "params": {},
+      "job": "texts.list",
+      "docs_url": "https://bible.helloao.org/docs/reference/commentaries/",
+      "verified": {
+        "docs": "https://bible.helloao.org/docs/reference/commentaries/"
+      }
+    },
+    {
+      "id": "helloao-bible.commentary.chapter",
+      "name": "Get a commentary chapter",
+      "summary": "One commentary's notes on one chapter.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/c/{commentary}/{book}/{chapter}.json",
+      "params": {
+        "commentary": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Commentary ID from commentaries.list.",
+          "example": "adam-clarke"
+        },
+        "book": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Book ID, e.g. GEN for Genesis (from the books list).",
+          "example": "GEN"
+        },
+        "chapter": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Chapter number.",
+          "example": 1
+        }
+      },
+      "job": "texts.get",
+      "docs_url": "https://bible.helloao.org/docs/reference/commentaries/",
+      "verified": {
+        "docs": "https://bible.helloao.org/docs/reference/commentaries/"
+      }
+    },
+    {
+      "id": "helloao-bible.datasets.list",
+      "name": "List datasets",
+      "summary": "Every available dataset (cross references, entities, interlinear, lexicon, verse of the day).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/available_datasets.json",
+      "params": {},
+      "job": "datasets.list",
+      "docs_url": "https://bible.helloao.org/docs/reference/datasets/",
+      "verified": {
+        "docs": "https://bible.helloao.org/docs/reference/datasets/"
+      }
+    },
+    {
+      "id": "helloao-bible.dataset.chapter",
+      "name": "Get a dataset's data for a chapter",
+      "summary": "Per-verse cross references, original-language words, or the people, places and events in one chapter, depending on the dataset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/d/{dataset}/{book}/{chapter}.json",
+      "params": {
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset ID from datasets.list, e.g. open-cross-ref, bsb-interlinear or theographic.",
+          "example": "open-cross-ref"
+        },
+        "book": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Book ID, e.g. GEN for Genesis (from the books list).",
+          "example": "GEN"
+        },
+        "chapter": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Chapter number.",
+          "example": 1
+        }
+      },
+      "job": "texts.links",
+      "docs_url": "https://bible.helloao.org/docs/reference/datasets/",
+      "verified": {
+        "docs": "https://bible.helloao.org/docs/reference/datasets/"
+      }
+    }
+  ]
+}

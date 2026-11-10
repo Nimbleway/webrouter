@@ -1,0 +1,338 @@
+{
+  "vendor": "legistar",
+  "name": "Legistar Web API",
+  "category": "other",
+  "summary": "Granicus Legistar's public Web API for city and county councils that use Legistar: legislation (matters) and their histories, meetings (events) and agenda items, votes, bodies and people, per client jurisdiction.",
+  "docs_url": "https://webapi.legistar.com/Help",
+  "base_url": "https://webapi.legistar.com",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "LEGISTAR_API_TOKEN"
+        ],
+        "required": false,
+        "description": "Only some clients require a token, issued by that client (the city or county), not by Granicus. Sent as the token query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "token",
+        "value": "{token}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Every path starts with the client name, the jurisdiction's Legistar site name (e.g. seattle, chicago, nyc); an unauthorized answer means that client requires a token.",
+    "Lists return at most 1000 items. Page and filter with OData v3 query options: $top, $skip, $filter, $orderby (e.g. $filter=EventDate ge datetime'2014-09-01').",
+    "Only items marked public on the client's site are returned. For a busy client, ordering by id and filtering on id gt the last seen id is more stable than $skip paging.",
+    "Field names are the API's, not the client's customized labels."
+  ],
+  "sources": [
+    "https://webapi.legistar.com/Help",
+    "https://webapi.legistar.com/Home/Examples"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "legistar.matters.list",
+      "name": "List matters (legislation)",
+      "summary": "Legislative matters (ordinances, resolutions, appointments) of one client, filterable with OData.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{client}/Matters",
+      "params": {
+        "client": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legistar client name.",
+          "example": "seattle"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$top",
+          "description": "OData: number of items (at most 1000).",
+          "example": 100
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$skip",
+          "description": "OData: items to skip.",
+          "example": 0
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$filter",
+          "description": "OData v3 filter expression.",
+          "example": "MatterIntroDate ge datetime'2024-01-01'"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$orderby",
+          "description": "OData sort, e.g. 'MatterId desc'.",
+          "example": "MatterId desc"
+        }
+      },
+      "job": "legislation.list",
+      "docs_url": "https://webapi.legistar.com/Help",
+      "verified": {
+        "docs": "https://webapi.legistar.com/Help"
+      }
+    },
+    {
+      "id": "legistar.matters.get",
+      "name": "Get a matter",
+      "summary": "One legislative matter by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{client}/Matters/{matter_id}",
+      "params": {
+        "client": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legistar client name.",
+          "example": "seattle"
+        },
+        "matter_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Matter id.",
+          "example": 1234
+        }
+      },
+      "job": "legislation.get",
+      "docs_url": "https://webapi.legistar.com/Help",
+      "verified": {
+        "docs": "https://webapi.legistar.com/Help"
+      }
+    },
+    {
+      "id": "legistar.matters.histories",
+      "name": "List a matter's history",
+      "summary": "Actions taken on one matter (referrals, votes, passage), each with the acting body and result.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{client}/Matters/{matter_id}/Histories",
+      "params": {
+        "client": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legistar client name.",
+          "example": "seattle"
+        },
+        "matter_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Matter id.",
+          "example": 1234
+        },
+        "AgendaNote": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include agenda notes."
+        },
+        "MinutesNote": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include minutes notes."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$filter",
+          "description": "OData v3 filter, e.g. on MatterHistoryPassedFlag or MatterHistoryActionBodyName.",
+          "example": "MatterHistoryPassedFlag ne null"
+        }
+      },
+      "notes": [
+        "To see the roll call of a vote, take the history's event item id and call event_items.votes."
+      ],
+      "job": "legislation.history",
+      "docs_url": "https://webapi.legistar.com/Home/Examples",
+      "verified": {
+        "docs": "https://webapi.legistar.com/Help"
+      }
+    },
+    {
+      "id": "legistar.events.list",
+      "name": "List meetings",
+      "summary": "Meetings (events) of the client's bodies, with date, time, location and agenda and minutes links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{client}/Events",
+      "params": {
+        "client": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legistar client name.",
+          "example": "seattle"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$top",
+          "description": "OData: number of items (at most 1000).",
+          "example": 100
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$skip",
+          "description": "OData: items to skip.",
+          "example": 0
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$filter",
+          "description": "OData v3 filter expression.",
+          "example": "EventDate ge datetime'2014-09-01' and EventDate lt datetime'2014-10-01'"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$orderby",
+          "description": "OData sort.",
+          "example": "EventDate desc"
+        }
+      },
+      "job": "events.list",
+      "docs_url": "https://webapi.legistar.com/Home/Examples",
+      "verified": {
+        "docs": "https://webapi.legistar.com/Help"
+      }
+    },
+    {
+      "id": "legistar.events.items",
+      "name": "List a meeting's agenda items",
+      "summary": "The agenda items of one meeting, each with its matter, action and result.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{client}/Events/{event_id}/EventItems",
+      "params": {
+        "client": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legistar client name.",
+          "example": "seattle"
+        },
+        "event_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Event id.",
+          "example": 5678
+        },
+        "AgendaNote": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include agenda notes."
+        },
+        "MinutesNote": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include minutes notes."
+        },
+        "Attachments": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include matter attachments."
+        }
+      },
+      "docs_url": "https://webapi.legistar.com/Help",
+      "verified": {
+        "docs": "https://webapi.legistar.com/Help"
+      }
+    },
+    {
+      "id": "legistar.event_items.votes",
+      "name": "List votes on an agenda item",
+      "summary": "Each member's vote on one agenda item.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{client}/EventItems/{event_item_id}/Votes",
+      "params": {
+        "client": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legistar client name.",
+          "example": "seattle"
+        },
+        "event_item_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Event item id.",
+          "example": 5678
+        }
+      },
+      "job": "legislation.votes",
+      "docs_url": "https://webapi.legistar.com/Help",
+      "verified": {
+        "docs": "https://webapi.legistar.com/Help"
+      }
+    },
+    {
+      "id": "legistar.bodies.list",
+      "name": "List bodies",
+      "summary": "The client's council, committees and other bodies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{client}/Bodies",
+      "params": {
+        "client": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legistar client name.",
+          "example": "seattle"
+        }
+      },
+      "docs_url": "https://webapi.legistar.com/Help",
+      "verified": {
+        "docs": "https://webapi.legistar.com/Help"
+      }
+    },
+    {
+      "id": "legistar.persons.list",
+      "name": "List people",
+      "summary": "Council members and other people in the client's Legistar, with contact fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{client}/Persons",
+      "params": {
+        "client": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legistar client name.",
+          "example": "seattle"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$filter",
+          "description": "OData v3 filter expression."
+        }
+      },
+      "docs_url": "https://webapi.legistar.com/Help",
+      "verified": {
+        "docs": "https://webapi.legistar.com/Help"
+      }
+    }
+  ]
+}

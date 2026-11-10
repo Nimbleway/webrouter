@@ -1,0 +1,329 @@
+{
+  "vendor": "harvard-dataverse",
+  "name": "Harvard Dataverse",
+  "category": "other",
+  "summary": "Harvard's public Dataverse repository of research datasets (including collections such as the MIT Election Data and Science Lab's returns): search, dataset and file metadata, collection contents and file downloads.",
+  "docs_url": "https://guides.dataverse.org/en/latest/api/",
+  "base_url": "https://dataverse.harvard.edu",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "HARVARD_DATAVERSE_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional Dataverse API token (account menu > API Token on dataverse.harvard.edu); only needed for unpublished or restricted content. Sent in the X-Dataverse-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Dataverse-key",
+        "value": "{api_token}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Published datasets and public files are readable without a token.",
+    "Datasets are addressed by numeric database id or by DOI: put the literal ':persistentId' where the id goes and pass persistentId=doi:... as a query parameter (datasets.get does this).",
+    "Collections are addressed by alias (e.g. medsl) or database id; :root is the top collection.",
+    "Some files require a guestbook response before download; those return an error on a plain GET."
+  ],
+  "sources": [
+    "https://guides.dataverse.org/en/latest/api/search.html",
+    "https://guides.dataverse.org/en/latest/api/native-api.html",
+    "https://guides.dataverse.org/en/latest/api/dataaccess.html",
+    "https://guides.dataverse.org/en/latest/api/auth.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "harvard-dataverse.search",
+      "name": "Search datasets, files and collections",
+      "summary": "Datasets, files or collections matching a query, with names, DOIs, descriptions and optional facets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search terms; field syntax like title:data and * wildcards allowed.",
+          "example": "election returns"
+        },
+        "type": {
+          "in": "query",
+          "type": "array",
+          "description": "dataverse, dataset and/or file; all when omitted.",
+          "example": [
+            "dataset"
+          ]
+        },
+        "subtree": {
+          "in": "query",
+          "type": "array",
+          "description": "Collection alias(es) to search within, including sub-collections.",
+          "example": [
+            "medsl"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "name, date or score (relevance, the default).",
+          "enum": [
+            "name",
+            "date",
+            "score"
+          ]
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "asc or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page: default 10, max 1000.",
+          "example": 10
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset cursor for paging.",
+          "example": 0
+        },
+        "fq": {
+          "in": "query",
+          "type": "array",
+          "description": "Filter queries on facet fields."
+        },
+        "show_facets": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include facets usable with fq."
+        },
+        "metadata_fields": {
+          "in": "query",
+          "type": "array",
+          "description": "Extra dataset metadata to include, as {block}:{field} or {block}:*.",
+          "example": [
+            "citation:*"
+          ]
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://guides.dataverse.org/en/latest/api/search.html",
+      "verified": {
+        "docs": "https://guides.dataverse.org/en/latest/api/search.html"
+      }
+    },
+    {
+      "id": "harvard-dataverse.datasets.get",
+      "name": "Get a dataset by DOI",
+      "summary": "A dataset's latest version with its citation metadata and file list, by persistent identifier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/datasets/:persistentId/",
+      "params": {
+        "persistentId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Persistent id with its scheme prefix.",
+          "example": "doi:10.7910/DVN/WAWZWZ"
+        },
+        "returnOwners": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also list the collections the dataset belongs to."
+        }
+      },
+      "notes": [
+        "The response's id is the numeric dataset id that datasets.files takes."
+      ],
+      "job": "datasets.schema",
+      "docs_url": "https://guides.dataverse.org/en/latest/api/native-api.html#get-json-representation-of-a-dataset",
+      "verified": {
+        "docs": "https://guides.dataverse.org/en/latest/api/native-api.html#get-json-representation-of-a-dataset"
+      }
+    },
+    {
+      "id": "harvard-dataverse.datasets.files",
+      "name": "List a dataset version's files",
+      "summary": "File metadata (ids, names, sizes, content types, access status) of one dataset version, paged and filterable.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/datasets/{id}/versions/{version}/files",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Numeric dataset id.",
+          "example": "24"
+        },
+        "version": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Version number (e.g. 1.0) or :latest, :latest-published, :draft.",
+          "example": ":latest-published"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size; the response's totalCount gives the total.",
+          "example": 50
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset for paging.",
+          "example": 0
+        },
+        "contentType": {
+          "in": "query",
+          "type": "string",
+          "description": "Only files of this content type.",
+          "example": "text/tab-separated-values"
+        },
+        "searchText": {
+          "in": "query",
+          "type": "string",
+          "description": "Only files whose label or description contains this text."
+        },
+        "accessStatus": {
+          "in": "query",
+          "type": "string",
+          "description": "Only files with this access status.",
+          "enum": [
+            "Public",
+            "Restricted",
+            "EmbargoedThenRestricted",
+            "EmbargoedThenPublic",
+            "RetentionPeriodExpired"
+          ]
+        },
+        "orderCriteria": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "NameAZ",
+            "NameZA",
+            "Newest",
+            "Oldest",
+            "Size",
+            "Type"
+          ]
+        }
+      },
+      "docs_url": "https://guides.dataverse.org/en/latest/api/native-api.html#list-files-in-a-dataset",
+      "verified": {
+        "docs": "https://guides.dataverse.org/en/latest/api/native-api.html#list-files-in-a-dataset"
+      }
+    },
+    {
+      "id": "harvard-dataverse.collections.get",
+      "name": "Get a collection",
+      "summary": "A Dataverse collection's name, alias, description and contacts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/dataverses/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Collection alias, database id, or :root.",
+          "example": "medsl"
+        },
+        "returnChildCount": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include the number of direct children."
+        }
+      },
+      "docs_url": "https://guides.dataverse.org/en/latest/api/native-api.html#view-a-dataverse-collection",
+      "verified": {
+        "docs": "https://guides.dataverse.org/en/latest/api/native-api.html#view-a-dataverse-collection"
+      }
+    },
+    {
+      "id": "harvard-dataverse.collections.contents",
+      "name": "List a collection's contents",
+      "summary": "The collections and datasets directly under one collection (not recursive).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/dataverses/{id}/contents",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Collection alias, database id, or :root.",
+          "example": "medsl"
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://guides.dataverse.org/en/latest/api/native-api.html#show-contents-of-a-dataverse-collection",
+      "verified": {
+        "docs": "https://guides.dataverse.org/en/latest/api/native-api.html#show-contents-of-a-dataverse-collection"
+      }
+    },
+    {
+      "id": "harvard-dataverse.files.download",
+      "name": "Download a data file",
+      "summary": "The content of one file by numeric file id; tabular files come as tab-separated values by default.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/access/datafile/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Numeric file id (from datasets.files or search).",
+          "example": "6"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Tabular files only: original (the uploaded SPSS/Stata/R file), RData, prep (JSON), or subset (with variables).",
+          "enum": [
+            "original",
+            "RData",
+            "prep",
+            "subset"
+          ]
+        },
+        "variables": {
+          "in": "query",
+          "type": "string",
+          "description": "With format=subset: comma-separated data variable ids to keep.",
+          "example": "123,127"
+        },
+        "noVarHeader": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Tabular files only: omit the variable-name header row."
+        }
+      },
+      "notes": [
+        "Returns the raw file, which may be large or binary."
+      ],
+      "docs_url": "https://guides.dataverse.org/en/latest/api/dataaccess.html#basic-file-access",
+      "verified": {
+        "docs": "https://guides.dataverse.org/en/latest/api/dataaccess.html#basic-file-access"
+      }
+    }
+  ]
+}
