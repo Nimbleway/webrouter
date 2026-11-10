@@ -107,6 +107,15 @@ def test_find_ranks_by_words_and_filters(catalog: VendorCatalog) -> None:
     assert len(catalog.find("acme", limit=2)) == 2
 
 
+def test_find_ignores_filler_words() -> None:
+    """Words like "for" and "a" sit in every summary; on their own they must not make a match."""
+    vendor = copy.deepcopy(ACME)
+    vendor["endpoints"][0]["summary"] = "The value of a metric for a time window."
+    catalog = VendorCatalog([Vendor.model_validate(vendor)])
+    assert catalog.find("zebra for a") == []
+    assert catalog.find("the metric for a window") == catalog.find("metric window")
+
+
 # -- every shipped file -----------------------------------------------------
 
 
