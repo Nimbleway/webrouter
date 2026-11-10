@@ -1156,6 +1156,24 @@
       "latency_measured": null
     },
     {
+      "provider": "fireworks",
+      "method": "answer",
+      "mode": null,
+      "price_usd": null,
+      "unit": "token_billed",
+      "note": "the chosen chat model's tokens at its serverless rate, plus the search on `sources` that finds the pages, billed by that backend",
+      "source_url": "https://fireworks.ai/pricing",
+      "checked": "2026-11-10",
+      "setup": null,
+      "setting": "`/inference/v1/chat/completions`, sources `auto`",
+      "does": null,
+      "latency_p50_s": null,
+      "latency_p90_s": null,
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
+    },
+    {
       "provider": "nimble",
       "method": "research",
       "mode": null,

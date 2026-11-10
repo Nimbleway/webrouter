@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from web_router.providers._http import HttpAnswerProvider
+from web_router.providers._http import _HttpProvider
 
 
 class AnswerApi:
@@ -33,7 +33,7 @@ class AnswerApi:
         return httpx.Response(self.status, json=self.payload)
 
 
-def stub_answer_api(provider: HttpAnswerProvider, payload: dict[str, Any], status: int = 200) -> AnswerApi:
+def stub_answer_api(provider: _HttpProvider, payload: dict[str, Any], status: int = 200) -> AnswerApi:
     """Answer this provider's HTTP calls with ``payload``, through its real client settings."""
     api = AnswerApi(payload, status)
     transport = httpx.MockTransport(api.handle)

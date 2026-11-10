@@ -290,6 +290,7 @@ carries one; this table is for reading the others.
 | you | `/v1/answer` on `api.you.com` | $5 per 1k; its response states no cost | [you.com](https://you.com/docs/additional-resources/changelog/2026/8/5.md) | 2026-11-01 |
 | perplexity | `/v1/responses`, `effort=fast` | billed by tokens; tokens plus tools: $0.001 a web search, and the `fast` model's tokens; its response states the total under `usage.cost`: $0.0012 an answer on average over the answer scan of 300 SimpleQA questions on 2026-11-01 | [docs.perplexity.ai](https://docs.perplexity.ai/docs/agent-api/presets.md) | 2026-11-01 |
 | brave | `/res/v1/chat/completions`, `model=brave`, streamed with `enable_citations` | $4 per 1k; plus tokens ($5 per million); its stream states the cost in a `<usage>` tag: $0.054 for one question on 2026-11-03 (9,887 input tokens), not measured over the scan | [brave.com](https://brave.com/search/api/) | 2026-11-01 |
+| fireworks | `/inference/v1/chat/completions`, sources `auto` | billed by tokens; the chosen chat model's tokens at its serverless rate, plus the search on `sources` that finds the pages, billed by that backend | [fireworks.ai](https://fireworks.ai/pricing) | 2026-11-10 |
 <!-- /prices -->
 
 ## Research

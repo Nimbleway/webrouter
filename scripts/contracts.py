@@ -336,7 +336,7 @@ def render(method: str, name: str) -> str:
 
 
 def providers() -> Iterator[tuple[str, str]]:
-    """Every built-in (method, provider) that talks to a vendor; ``auto`` and ``local`` build no payload."""
+    """Every built-in (method, provider) that calls a vendor; `auto`, `local` and `fireworks` build no payload."""
     for method, spec in METHODS.items():
         for name in spec.names():
             if name in spec.env and hasattr(spec.get_class(name), "_build_payload"):

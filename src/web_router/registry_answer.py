@@ -22,6 +22,7 @@ from web_router.constants import (
     PROVIDER_PERPLEXITY,
     PROVIDER_YOU,
 )
+from web_router.constants_fireworks import PROVIDER_FIREWORKS
 from web_router.exceptions import NoAnswerProviderError
 from web_router.registry import _is_set, _resolve
 from web_router.types import Provider, provider_name
@@ -37,6 +38,7 @@ _BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_YOU: ("web_router.providers.you_answer", "YouAnswerProvider", EXTRA_ANSWER),
     PROVIDER_EXA: ("web_router.providers.exa_answer", "ExaAnswerProvider", EXTRA_ANSWER),
     PROVIDER_BRAVE: ("web_router.providers.brave_answer", "BraveAnswerProvider", EXTRA_ANSWER),
+    PROVIDER_FIREWORKS: ("web_router.providers.fireworks", "FireworksAnswerProvider", EXTRA_ANSWER),
 }
 
 _CUSTOM_ANSWER_PROVIDERS: dict[str, type[AnswerProvider]] = {}

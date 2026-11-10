@@ -12,6 +12,7 @@ from typing import Any, Literal, get_args
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_fireworks import ENV_FIREWORKS_ANSWER_MODEL, ENV_FIREWORKS_API_KEY, PROVIDER_FIREWORKS
 from web_router.constants_mcp import (
     MCP_BUDGET_START_PROPERTIES,
     MCP_DESC_BUDGET_START,
@@ -252,6 +253,7 @@ ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_PARALLEL: (ENV_PARALLEL_API_KEY,),
     PROVIDER_EXA: (ENV_EXA_API_KEY,),
     PROVIDER_BRAVE: (ENV_BRAVE_ANSWER_API_KEY,),
+    PROVIDER_FIREWORKS: (ENV_FIREWORKS_API_KEY, ENV_FIREWORKS_ANSWER_MODEL),
 }
 """Which variables each answer provider needs, all of them.
 
@@ -2336,43 +2338,7 @@ PERPLEXITY_OUTPUT_MESSAGE = "message"
 PERPLEXITY_OUTPUT_SEARCH_RESULTS = "search_results"
 PERPLEXITY_OUTPUT_TEXT = "output_text"
 
-# --- Linkup research --------------------------------------------------------
-
-LINKUP_RESEARCH_PATH = "/v1/research"
-LINKUP_RESEARCH_STATUS_PATH = "/v1/research/{research_id}"
-
-LINKUP_RESEARCH_DEPTHS: dict[ResearchEffort, str] = {
-    # `reasoningDepth` runs S, M, L, XL against the four normalized levels one
-    # for one. It sets the price too, $0.25 to $2.50 a run, and defaults to L, so
-    # an unset effort sends nothing.
-    "low": "S",
-    "medium": "M",
-    "high": "L",
-    "max": "XL",
-}
-
-LINKUP_RESEARCH_OUTPUT_TYPE = "sourcedAnswer"
-"""The ``outputType`` a run asks for when it wants prose. The API requires one and has no default."""
-
-LINKUP_RESEARCH_STRUCTURED_OUTPUT_TYPE = "structured"
-"""The ``outputType`` a run with an ``output_schema`` asks for, beside ``structuredOutputSchema``.
-
-Verified live on 2026-09-30: the finished run's ``output`` is the object the
-schema describes and nothing else -- ``{"city": "Paris", "year": 1889}`` for a
-two-field schema -- with no answer and no sources beside it.
-"""
-
-LINKUP_RESEARCH_SCHEMA_FIELD = "structuredOutputSchema"
-"""Where the schema goes, as a JSON string, which is how Linkup takes it."""
-
-LINKUP_RESEARCH_STATES: dict[str, ResearchState] = {
-    "pending": "queued",
-    "processing": "running",
-    "completed": "completed",
-    "failed": "failed",
-}
-
-# You.com research's endpoints, efforts and states are in constants_you.py.
+# Linkup's and You.com's research settings are in constants_linkup.py and constants_you.py.
 
 # --- auto research ----------------------------------------------------------
 
