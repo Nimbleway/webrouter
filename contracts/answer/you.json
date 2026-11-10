@@ -63,7 +63,7 @@
     "include_domains": "live: tests/test_integration_answer.py::test_an_answers_sources_honor_the_domain_filter",
     "exclude_domains": "live: tests/test_integration_answer.py::test_an_answers_sources_leave_out_excluded_domains",
     "country": "live: tests/providers/test_you_answer.py::test_live_answer_ties_its_markers_to_sources",
-    "recency": "live: tests/test_integration_answer.py::test_recency_keeps_dated_sources_in_the_window"
+    "recency": "live: tests/test_integration_answer.py::test_recency_keeps_dated_sources_in_the_window (month); day checked live on 2026-11-09 and 2026-11-10: freshness=day was accepted but not applied, cited pages two to five days old, so day is refused"
   },
   "vendor_options": {
     "boost_domains": {
