@@ -4,7 +4,7 @@
 
 <h1 align="center">WebRouter</h1>
 
-<p align="center"><strong>An open source standard that connects your agent to the web.</strong></p>
+<p align="center"><strong>An open source standard that connects your agent to the internet.</strong></p>
 
 <p align="center">
   <a href="https://pypi.org/project/webrouter/"><img src="https://img.shields.io/pypi/v/webrouter?color=202c26&label=pypi" alt="PyPI"></a>
@@ -17,7 +17,7 @@
   <a href="https://discord.gg/MGztFWSjZh"><img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord"></a>
 </p>
 
-Every web tool your agent needs, behind one interface: search, extract, answer, research and browser sessions. Hand it a task in words and a [router](#smart-routing-experimental) can pick the tool for it. Call any tool directly and the same call works on every provider that serves it, with fallback and no lock-in.
+Connect your agent to every web tool through one interface: search, extract, answer, research and browser sessions, across many providers. A [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
 
 ```bash
 pip install "webrouter[all]"
@@ -46,7 +46,7 @@ WebRouter(Provider.BROWSER_USE).browse("...")  # a hosted browser agent does the
 
 <p align="center"><em>Useful? Star the repo so more agent developers can find it.</em> ⭐</p>
 
-> **Alpha:** the API may change before 1.0.
+> **Beta:** the API may change before 1.0.
 
 Every provider has its own SDK, its own parameter names and its own response
 shape. "How many results" is `max_results` on Tavily, `count` on Brave and
