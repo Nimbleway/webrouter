@@ -96,13 +96,11 @@ def test_a_custom_router_gets_the_prompt_from_a_joined_folder_and_is_fit_on_the_
     summary = route_eval.evaluate_set("tiny", ["my_router:pick"], floor=0.05, folder=tmp_path / "frozen", joined=joined)
     import my_router  # type: ignore[import-not-found]
 
-    assert summary["prompts"]
-    assert my_router.fitted == [10]
-    assert len(my_router.seen) == 20
+    assert summary["prompts"] and my_router.fitted == [10] and len(my_router.seen) == 20
     expected = ["search:nimble", "search:perplexity"]
     assert all(p.startswith("question ") and c == expected and t == "search" for p, c, t in my_router.seen)
-    assert summary["routers"]["my_router:pick"]["held_out"]["accuracy"] is not None
-    assert "every_question" not in summary["routers"]["my_router:pick"], "fit on the training split: held out only"
+    mine = summary["routers"]["my_router:pick"]
+    assert mine["held_out"]["accuracy"] is not None and "every_question" not in mine, "fit on training: held out only"
     assert summary["routers"]["static"]["every_question"]["questions"] == 20, "learns nothing: every question"
     sys.modules.pop("my_router", None)
 

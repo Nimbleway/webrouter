@@ -1,6 +1,32 @@
-"""The choices route-eval's matrix and comparison tests share: a builder, and a router and oracle on four questions."""
+"""What route-eval's matrix and comparison tests share: its modules, a builder, and a router and oracle.
+
+A test module imports a ``*_fixture`` to use the fixture of that name.
+"""
 
 from __future__ import annotations
+
+import sys
+from types import ModuleType
+
+import pytest
+
+
+@pytest.fixture(scope="module", name="matrix")
+def matrix_fixture(route_eval: ModuleType) -> ModuleType:
+    """The matrix maths, as route-eval imported it."""
+    return sys.modules["route_eval_matrix"]
+
+
+@pytest.fixture(scope="module", name="compare")
+def compare_fixture(route_eval: ModuleType) -> ModuleType:
+    """The router comparison, as route-eval imported it."""
+    return sys.modules["route_eval_compare"]
+
+
+@pytest.fixture(scope="module", name="matrix_report")
+def matrix_report_fixture(route_eval: ModuleType) -> ModuleType:
+    """The matrix's report, as route-eval imported it."""
+    return sys.modules["route_eval_report_matrix"]
 
 
 def _c(
