@@ -26,7 +26,7 @@ from typing import Any
 import pytest
 
 from tests.providers._research_stub import ResearchApi, stub_research_api
-from web_router.constants import LINKUP_RESEARCH_DEPTHS
+from web_router.constants_linkup import LINKUP_RESEARCH_DEPTHS
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.linkup import LinkupResearchProvider
 from web_router.types import ResearchEffort, ResearchRequest

@@ -2336,41 +2336,7 @@ PERPLEXITY_OUTPUT_MESSAGE = "message"
 PERPLEXITY_OUTPUT_SEARCH_RESULTS = "search_results"
 PERPLEXITY_OUTPUT_TEXT = "output_text"
 
-# --- Linkup research --------------------------------------------------------
-
-LINKUP_RESEARCH_PATH = "/v1/research"
-LINKUP_RESEARCH_STATUS_PATH = "/v1/research/{research_id}"
-
-LINKUP_RESEARCH_DEPTHS: dict[ResearchEffort, str] = {
-    # `reasoningDepth` runs S, M, L, XL against the four normalized levels one
-    # for one. It sets the price too, $0.25 to $2.50 a run, and defaults to L, so
-    # an unset effort sends nothing.
-    "low": "S",
-    "medium": "M",
-    "high": "L",
-    "max": "XL",
-}
-
-LINKUP_RESEARCH_OUTPUT_TYPE = "sourcedAnswer"
-"""The ``outputType`` a run asks for when it wants prose. The API requires one and has no default."""
-
-LINKUP_RESEARCH_STRUCTURED_OUTPUT_TYPE = "structured"
-"""The ``outputType`` a run with an ``output_schema`` asks for, beside ``structuredOutputSchema``.
-
-Verified live on 2026-09-30: the finished run's ``output`` is the object the
-schema describes and nothing else -- ``{"city": "Paris", "year": 1889}`` for a
-two-field schema -- with no answer and no sources beside it.
-"""
-
-LINKUP_RESEARCH_SCHEMA_FIELD = "structuredOutputSchema"
-"""Where the schema goes, as a JSON string, which is how Linkup takes it."""
-
-LINKUP_RESEARCH_STATES: dict[str, ResearchState] = {
-    "pending": "queued",
-    "processing": "running",
-    "completed": "completed",
-    "failed": "failed",
-}
+# Linkup research's endpoints, output types and states are in constants_linkup.py.
 
 # You.com research's endpoints, efforts and states are in constants_you.py.
 

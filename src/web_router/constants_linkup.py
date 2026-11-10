@@ -1,12 +1,14 @@
-"""Linkup search and answer: the search effort table, the answer's output type, field names and recency windows.
+"""Linkup search, answer and research: the search effort table, the answer's output type, field names and
+recency windows, and research's endpoints, depths, output types and states.
 
 Kept apart from :mod:`web_router.constants`, which every other provider's
 settings share, so that file stops growing. Linkup's host, auth header and
-search path stay there, beside its search, extract and research settings.
+search path stay there, beside its search and extract settings.
 """
 
 from __future__ import annotations
 
+from web_router.types import ResearchState
 from web_router.types_options import ResearchEffort
 
 # Verified live on 2026-11-01. An answer is a search with `outputType:
@@ -55,3 +57,37 @@ several. Measured live on 2026-09-30 at roughly 0.4 s, 1 s, 1.3 s and 6-16 s,
 with snippets of the same size; ``deep`` is billed at ten times the others.
 A search's ``recency`` sets ``fromDate`` as an answer's does.
 """
+
+LINKUP_RESEARCH_PATH = "/v1/research"
+LINKUP_RESEARCH_STATUS_PATH = "/v1/research/{research_id}"
+
+LINKUP_RESEARCH_DEPTHS: dict[ResearchEffort, str] = {
+    # `reasoningDepth` runs S, M, L, XL against the four normalized levels one
+    # for one. It sets the price too, $0.25 to $2.50 a run, and defaults to L, so
+    # an unset effort sends nothing.
+    "low": "S",
+    "medium": "M",
+    "high": "L",
+    "max": "XL",
+}
+
+LINKUP_RESEARCH_OUTPUT_TYPE = "sourcedAnswer"
+"""The ``outputType`` a run asks for when it wants prose. The API requires one and has no default."""
+
+LINKUP_RESEARCH_STRUCTURED_OUTPUT_TYPE = "structured"
+"""The ``outputType`` a run with an ``output_schema`` asks for, beside ``structuredOutputSchema``.
+
+Verified live on 2026-09-30: the finished run's ``output`` is the object the
+schema describes and nothing else -- ``{"city": "Paris", "year": 1889}`` for a
+two-field schema -- with no answer and no sources beside it.
+"""
+
+LINKUP_RESEARCH_SCHEMA_FIELD = "structuredOutputSchema"
+"""Where the schema goes, as a JSON string, which is how Linkup takes it."""
+
+LINKUP_RESEARCH_STATES: dict[str, ResearchState] = {
+    "pending": "queued",
+    "processing": "running",
+    "completed": "completed",
+    "failed": "failed",
+}
