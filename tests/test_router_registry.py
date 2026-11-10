@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from typing import Any
 
 import pytest
 
-from tests.routing_registry_helpers import NAME, Closable, registered
+from tests.routing_registry_helpers import NAME, Closable, built_fixture  # noqa: F401  (fixture)
 from web_router import (
     AsyncWebRouter,
     RouteDecision,
@@ -18,13 +17,6 @@ from web_router import (
     unregister_router,
 )
 from web_router.exceptions import ConfigurationError
-
-
-@pytest.fixture
-def built() -> Iterator[list[Closable]]:
-    """NAME registered for the test; every router the factory builds is appended here."""
-    with registered() as made:
-        yield made
 
 
 def test_a_registered_name_builds_its_router_with_router_config(built: list[Closable]) -> None:
