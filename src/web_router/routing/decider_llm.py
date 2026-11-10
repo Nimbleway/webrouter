@@ -1,0 +1,167 @@
+"""The built-in ``llm`` router: a chat model on any OpenAI-compatible chat-completions API, as a decider.
+
+Experimental. Opt in by name::
+
+    WebRouter(router="llm", router_config={"preset": "openai", "model": "<model>"})
+
+A preset fills the base URL, the key variable and how JSON is asked for:
+``openai`` and ``anthropic`` (a strict ``json_schema`` whose enum is the offered
+ids), ``openrouter`` (the same, where the model supports it), ``deepseek`` and
+``groq`` (``json_object``). A ``base_url`` with no preset -- a local server, a
+proxy -- takes ``api_key_env`` unless it is on this machine, and asks for JSON
+in the prompt only. Either way the reply is checked strictly
+(:mod:`.decider_reply`), and the model's own words are never used.
+
+Each call sends the model the prompt, the budget, and each option's id with its
+method, backend, estimated cost and p90 latency. It is posted with httpx
+directly (:mod:`.decider_http`): no SDK, so nothing such as ``OPENAI_BASE_URL``
+is read from the environment.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Collection
+from typing import Any
+
+from web_router.constants_decider import (
+    DECIDER_WHY_REPLY,
+    LLM_CHAT_PATH,
+    LLM_PRESETS,
+    LLM_REPLY_FORMAT,
+    LLM_ROUTE_TOOLS,
+    LLM_ROUTER_NAME,
+    LLM_TIMEOUT_S,
+    MODE_JSON_OBJECT,
+    MODE_JSON_SCHEMA,
+    MODE_PROMPT,
+    MSG_DECIDER_BOTH,
+    MSG_DECIDER_NO_BASE,
+    MSG_DECIDER_PRESET,
+)
+from web_router.exceptions import ConfigurationError
+from web_router.routing.decider import DeciderQuestion, DeciderReply
+from web_router.routing.decider_http import endpoint, post_json, text
+from web_router.routing.decider_router import DeciderRouter
+from web_router.routing.remote_errors import RemoteRouterInvalid
+
+
+def preset_of(name: str, presets: dict[str, Any], preset: object, base_url: object) -> Any:
+    """The preset's row, or ``None`` for a ``base_url`` of the caller's own.
+
+    Raises:
+        ConfigurationError: for an unknown preset, both a preset and a base URL, or neither.
+    """
+    if preset is None:
+        if base_url is None:
+            raise ConfigurationError(MSG_DECIDER_NO_BASE.format(name=name))
+        return None
+    if not isinstance(preset, str) or preset not in presets:
+        raise ConfigurationError(MSG_DECIDER_PRESET.format(name=name, preset=preset, known=", ".join(presets)))
+    if base_url is not None:
+        raise ConfigurationError(MSG_DECIDER_BOTH.format(name=name))
+    return presets[preset]
+
+
+def menu(question: DeciderQuestion) -> str:
+    """The request as the model reads it: the prompt, the budget and each option."""
+    lines = [f"Request: {question.prompt}", f"Budget: {question.budget or 'none'}", "Options:"]
+    lines.extend(f"- {cid}: {about}" for cid, about in question.options.items())
+    return "\n".join(lines)
+
+
+def schema(question: DeciderQuestion) -> dict[str, Any]:
+    """Strict structured output: a ranking of offered ids, and a confidence."""
+    ranked = {"type": "array", "items": {"type": "string", "enum": list(question.options)}}
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["ranked", "confidence"],
+        "properties": {"ranked": ranked, "confidence": {"type": "number"}},
+    }
+
+
+class LLMDecider:
+    """Asks a chat model to rank the options: one chat completion per routed call, never retried."""
+
+    def __init__(
+        self,
+        *,
+        model: str,
+        preset: str | None = None,
+        base_url: str | None = None,
+        api_key_env: str | None = None,
+        api_key: str | None = None,
+        timeout_s: float = LLM_TIMEOUT_S,
+        route_tools: Collection[str] | None = None,
+    ) -> None:
+        """
+        Raises:
+            ConfigurationError: for an unknown preset, a preset and a base URL together or neither, no model, or
+                any endpoint or key :func:`~.decider_http.endpoint` refuses.
+        """
+        row = preset_of(LLM_ROUTER_NAME, LLM_PRESETS, preset, base_url)
+        mode = MODE_PROMPT
+        if row is not None:
+            base_url, default_env, mode = row
+            api_key_env = default_env if api_key_env is None else api_key_env
+        self.model = text(model, LLM_ROUTER_NAME, "model")
+        self.mode = mode
+        self._endpoint = endpoint(
+            LLM_ROUTER_NAME, base_url, LLM_CHAT_PATH, api_key=api_key, api_key_env=api_key_env, timeout_s=timeout_s
+        )
+        self.timeout_s = self._endpoint.timeout_s
+        self.name = f"{LLM_ROUTER_NAME}({self._endpoint.domain})"
+        self.route_tools = LLM_ROUTE_TOOLS if route_tools is None else route_tools
+
+    def __repr__(self) -> str:
+        return f"LLMDecider({self._endpoint.host!r}, model={self.model!r}, timeout_s={self.timeout_s})"
+
+    def body(self, question: DeciderQuestion) -> dict[str, Any]:
+        """The chat-completions request for ``question``."""
+        system = f"{question.instructions}\n{LLM_REPLY_FORMAT}"
+        messages = [{"role": "system", "content": system}, {"role": "user", "content": menu(question)}]
+        out: dict[str, Any] = {"model": self.model, "messages": messages}
+        if self.mode == MODE_JSON_SCHEMA:
+            strict = {"name": "route", "strict": True, "schema": schema(question)}
+            out["response_format"] = {"type": MODE_JSON_SCHEMA, "json_schema": strict}
+        elif self.mode == MODE_JSON_OBJECT:
+            out["response_format"] = {"type": MODE_JSON_OBJECT}
+        return out
+
+    async def adecide(self, question: DeciderQuestion) -> DeciderReply:
+        """Post one chat completion and read its message as ``{"ranked", "scores", "confidence"}``."""
+        data = await post_json(self._endpoint, self.body(question), question.deadline_s or self.timeout_s)
+        try:
+            content = data["choices"][0]["message"]["content"]
+            answer = json.loads(content)
+        except (KeyError, IndexError, TypeError, ValueError, RecursionError):
+            raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY) from None
+        if not isinstance(answer, dict):
+            raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY)
+        ranked: Any = answer.get("ranked")  # held to the question by the reply check, whatever it is
+        scores, confidence = answer.get("scores"), answer.get("confidence")
+        return DeciderReply(ranked=ranked, scores=scores, confidence=confidence)
+
+
+def llm_router(
+    *,
+    model: str,
+    preset: str | None = None,
+    base_url: str | None = None,
+    api_key_env: str | None = None,
+    api_key: str | None = None,
+    timeout_s: float = LLM_TIMEOUT_S,
+    route_tools: Collection[str] | None = None,
+) -> DeciderRouter:
+    """What ``router="llm"`` builds from ``router_config``: a :class:`DeciderRouter` on an :class:`LLMDecider`."""
+    decider = LLMDecider(
+        model=model,
+        preset=preset,
+        base_url=base_url,
+        api_key_env=api_key_env,
+        api_key=api_key,
+        timeout_s=timeout_s,
+        route_tools=route_tools,
+    )
+    return DeciderRouter(decider)

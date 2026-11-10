@@ -38,8 +38,8 @@ def check_head(response: Any, host: str) -> None:
         raise RemoteRouterInvalid(host, REMOTE_WHY_ENCODING)
 
 
-async def read_capped(response: Any, host: str) -> bytes:
-    """The answer's bytes as sent, refused past the size cap: identity only, so nothing grows past it.
+async def read_capped(response: Any, host: str, limit: int = REMOTE_MAX_RESPONSE_BYTES) -> bytes:
+    """The answer's bytes as sent, refused past ``limit``: identity only, so nothing grows past it.
 
     Raises:
         RemoteRouterInvalid: once the body passes the cap.
@@ -48,7 +48,7 @@ async def read_capped(response: Any, host: str) -> bytes:
     size = 0
     async for chunk in response.aiter_raw():
         size += len(chunk)
-        if size > REMOTE_MAX_RESPONSE_BYTES:
-            raise RemoteRouterInvalid(host, REMOTE_WHY_TOO_LARGE.format(limit=REMOTE_MAX_RESPONSE_BYTES))
+        if size > limit:
+            raise RemoteRouterInvalid(host, REMOTE_WHY_TOO_LARGE.format(limit=limit))
         chunks.append(chunk)
     return b"".join(chunks)

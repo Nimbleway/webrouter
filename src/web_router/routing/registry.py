@@ -2,8 +2,8 @@
 
 Experimental. A name maps to a factory, called with ``router_config``'s
 entries as keyword arguments when a router is built; what it returns is
-attached as any ``router=`` object is. ``remote`` is built in and imported only
-when it is used; registering a name overrides a built-in one of that name, and
+attached as any ``router=`` object is. ``remote``, ``llm`` and ``systemone`` are
+built in and imported only when used; registering a name overrides a built-in one of that name, and
 unregistering it brings the built-in back.
 
 A router the routers build by name is theirs: closing them calls its
@@ -19,6 +19,7 @@ import inspect
 from collections.abc import Callable, Mapping
 from typing import Any
 
+from web_router.constants_decider import LLM_ROUTER_NAME, SYSTEMONE_ROUTER_NAME
 from web_router.constants_invoke import (
     MSG_ROUTER_BUILT_NONE,
     MSG_ROUTER_CONFIG_MISSING,
@@ -36,7 +37,11 @@ from web_router.routing.invoke import RouterLike
 RouterFactory = Callable[..., RouterLike]
 """What :func:`register_router` takes: called with ``router_config``'s entries as keyword arguments."""
 
-_BUILTIN_ROUTERS: dict[str, tuple[str, str]] = {REMOTE_ROUTER_NAME: ("web_router.routing.remote", "RemoteRouter")}
+_BUILTIN_ROUTERS: dict[str, tuple[str, str]] = {
+    REMOTE_ROUTER_NAME: ("web_router.routing.remote", "RemoteRouter"),
+    LLM_ROUTER_NAME: ("web_router.routing.decider_llm", "llm_router"),
+    SYSTEMONE_ROUTER_NAME: ("web_router.routing.decider_systemone", "systemone_router"),
+}
 """Built-in name -> (module, factory), imported on first use so ``import web_router`` pulls in none of them."""
 
 _CUSTOM_ROUTERS: dict[str, RouterFactory] = {}
@@ -133,14 +138,14 @@ def resolve_router(
     return built, built
 
 
-def close_router(router: RouterLike | None) -> None:
+def close_router(router: object) -> None:
     """Call an owned router's ``close()``, when it has one."""
     close = getattr(router, "close", None)
     if callable(close):
         close()
 
 
-def discard_router(router: RouterLike | None) -> None:
+def discard_router(router: object) -> None:
     """Close a router built here from sync code: its ``close()``, else its ``aclose()``, awaited before this returns.
 
     An ``aclose()`` runs on web-router's private loop, where a sync caller's async router ran its calls, so it
@@ -155,7 +160,7 @@ def discard_router(router: RouterLike | None) -> None:
         _on_private_loop(result).result()
 
 
-async def aclose_router(router: RouterLike | None) -> None:
+async def aclose_router(router: object) -> None:
     """Await an owned router's ``aclose()``, else call its ``close()``, when it has either."""
     aclose = getattr(router, "aclose", None)
     if callable(aclose):
