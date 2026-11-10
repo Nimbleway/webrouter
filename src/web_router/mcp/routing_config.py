@@ -8,8 +8,9 @@ set or change them, since :mod:`web_router.mcp.env` loads credentials only:
   ``<module>:<attribute>`` naming a router in a module the operator installed;
   ``remote`` for the built-in remote router, at ``WEB_ROUTER_REMOTE_ROUTER_URL``
   with the bearer key ``WEB_ROUTER_REMOTE_ROUTER_API_KEY``, both read from the
-  same environment; ``off`` for none. Unset, the built-in
-  :func:`~web_router.routing.rules.rules`.
+  same environment; any other built-in router by name, such as ``fallback``,
+  configured by ``WEB_ROUTER_MCP_ROUTER_CONFIG`` (:mod:`.routing_named`);
+  ``off`` for none. Unset, the built-in :func:`~web_router.routing.rules.rules`.
 - ``WEB_ROUTER_MCP_MAX_COST_USD`` and ``WEB_ROUTER_MCP_TIME_LIMIT_S``: the
   ceiling on one connection, held by :mod:`web_router.mcp.budget`.
 
@@ -50,6 +51,13 @@ from web_router.constants_mcp import (
     MCP_URL_POLICY,
     MCP_URL_POLICY_NOTE,
 )
+from web_router.constants_mcp_router import (
+    ENV_MCP_ROUTER_CONFIG,
+    MCP_MSG_CONFIG_UNNAMED,
+    MCP_ROUTER_BUILT_IN,
+    MCP_ROUTER_BUILT_IN_NOTE,
+    MCP_ROUTER_HOSTS_PROMPT_NOTE,
+)
 from web_router.constants_remote import (
     ENV_REMOTE_ROUTER_API_KEY,
     ENV_REMOTE_ROUTER_URL,
@@ -58,8 +66,10 @@ from web_router.constants_remote import (
 )
 from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError
+from web_router.mcp.routing_named import display_name, hosts_in, read_config
 from web_router.routing.contract import Budget
 from web_router.routing.invoke import RouterLike
+from web_router.routing.registry import available_routers
 from web_router.routing.rules import rules
 
 
@@ -70,10 +80,10 @@ class McpRouting:
     router: RouterLike | str | None = rules
     router_name: str = RULES_ROUTER_NAME
     """What the capabilities resource names it: ``rules``, ``off``, ``operator`` -- never the import path -- or
-    ``remote(<scheme>://<host>)``."""
+    ``remote(<scheme>://<host>)``, and a built-in router by its name and its services' hosts."""
     ceiling: Budget = field(default_factory=Budget)
     router_config: Mapping[str, Any] | None = field(default=None, repr=False)
-    """The ``remote`` router's URL and key; left out of the ``repr``, so the key is never printed."""
+    """A built-in router's config, keys captured at startup; left out of the ``repr``, so no key is printed."""
 
     @classmethod
     def from_environ(cls, environ: Mapping[str, str] | None = None) -> McpRouting:
@@ -87,14 +97,19 @@ class McpRouting:
         ceiling = Budget(
             max_cost_usd=_positive(env, ENV_MCP_MAX_COST_USD), time_limit_s=_positive(env, ENV_MCP_TIME_LIMIT_S)
         )
-        raw = env.get(ENV_MCP_ROUTER)
-        if raw is None:
+        spec = (env.get(ENV_MCP_ROUTER) or "").strip() if ENV_MCP_ROUTER in env else None
+        config = read_config(env)
+        if config is not None and spec not in available_routers():
+            message = MCP_MSG_CONFIG_UNNAMED.format(env_var=ENV_MCP_ROUTER_CONFIG, router_var=ENV_MCP_ROUTER, spec=spec)
+            raise ConfigurationError(message)
+        if spec is None:
             return cls(ceiling=ceiling)
-        spec = raw.strip()
         if spec == MCP_ROUTER_OFF:
             return cls(router=None, router_name=MCP_ROUTER_OFF, ceiling=ceiling)
-        if spec == REMOTE_ROUTER_NAME:
+        if spec == REMOTE_ROUTER_NAME and config is None:
             return cls._remote(env, ceiling)
+        if spec in available_routers():
+            return cls(router=spec, router_name=display_name(spec, config), ceiling=ceiling, router_config=config)
         return cls(router=_imported(spec), router_name=MCP_ROUTER_OPERATOR, ceiling=ceiling)
 
     @classmethod
@@ -126,21 +141,30 @@ class McpRouting:
         return {
             "router": self.router_name,
             **runs,
-            "prompt_note": MCP_PROMPT_NOTE + (MCP_REMOTE_PROMPT_NOTE if self.router == REMOTE_ROUTER_NAME else ""),
+            "prompt_note": MCP_PROMPT_NOTE + self._prompt_note(),
             "url_policy": MCP_URL_POLICY,
             "url_policy_note": MCP_URL_POLICY_NOTE,
             "ceiling": {"max_cost_usd": self.ceiling.max_cost_usd, "time_limit_s": self.ceiling.time_limit_s},
             "budget": budget,
         }
 
+    def _prompt_note(self) -> str:
+        """What the router itself is sent of the prompt: nothing, or the prompt whole to each service it names."""
+        if self.router == REMOTE_ROUTER_NAME:
+            return MCP_REMOTE_PROMPT_NOTE
+        hosts = hosts_in(self.router_config) if isinstance(self.router, str) else []
+        return MCP_ROUTER_HOSTS_PROMPT_NOTE.format(hosts=", ".join(hosts)) if hosts else ""
+
     def _runs(self) -> dict[str, str]:
         """Where the router runs, and for one that is not the library's own, a note on what it may send."""
         if self.router_name in (RULES_ROUTER_NAME, MCP_ROUTER_OFF):
             return {"router_runs": MCP_ROUTER_IN_PROCESS}
-        if self.router == REMOTE_ROUTER_NAME:
-            host = host_of(str((self.router_config or {}).get("url", "")))
-            return {"router_runs": MCP_ROUTER_REMOTE, "router_note": MCP_ROUTER_REMOTE_NOTE.format(host=host)}
-        return {"router_runs": MCP_ROUTER_OPERATOR, "router_note": MCP_ROUTER_OPERATOR_NOTE}
+        if not isinstance(self.router, str):
+            return {"router_runs": MCP_ROUTER_OPERATOR, "router_note": MCP_ROUTER_OPERATOR_NOTE}
+        if hosts := hosts_in(self.router_config):
+            note = MCP_ROUTER_REMOTE_NOTE.format(host=", ".join(hosts))
+            return {"router_runs": MCP_ROUTER_REMOTE, "router_note": note}
+        return {"router_runs": MCP_ROUTER_BUILT_IN, "router_note": MCP_ROUTER_BUILT_IN_NOTE}
 
 
 def _positive(env: Mapping[str, str], name: str) -> float | None:
