@@ -314,8 +314,10 @@ environment -- once, when the server starts:
   Only `web_run` asks the router here, so `route_tools` in the config changes
   nothing. A
   config entry `api_key_env` names the variable holding a key: its value is
-  read once at startup and put in its place as `api_key` (`""` when unset),
-  so the router never reads the environment again. For example, a router
+  read once at startup and put in its place as `api_key`, so the router never
+  reads the environment again. When the variable is unset, `remote` starts
+  with no key (`""`), while `llm` and `systemone` stop the server from
+  starting. For example, a router
   service with a local classifier service behind it:
 
   ```bash
