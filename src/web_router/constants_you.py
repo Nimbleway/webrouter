@@ -81,8 +81,8 @@ YOU_RECENCY: dict[Recency, str] = {
     "month": "month",
     "year": "year",
 }
-"""You.com's own ``freshness`` values, one for one, on search, answer and the MCP tool alike. Live, on answer,
-``week`` kept every result to the last two weeks' pages."""
+"""You.com's own ``freshness`` values, used as is on search and the MCP tool; answer refuses ``day``
+(``YOU_ANSWER_REFUSED_RECENCY``). Live, on answer, ``week`` kept every result to the last two weeks' pages."""
 
 YOU_ANSWER_REFUSED_RECENCY: frozenset[Recency] = frozenset({"day"})
 """Recency the answer refuses: live (2026-11-09 to 11-10), ``freshness=day`` cited pages two to five days old."""
