@@ -98,10 +98,10 @@ class RouterServer(ThreadingHTTPServer):
         host, port = self.server_address[:2]
         return f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
 
-    @property
-    def hosts(self) -> set[str]:
-        """The ``Host`` headers it answers: the address it is bound to, and ``localhost`` on the same port."""
-        return {self.authority, f"localhost:{self.server_address[1]}"}
+    def answers(self, host: str | None) -> bool:
+        """Whether it answers this ``Host``: its address or ``localhost``, any when bound to 0.0.0.0 or :: (keyed)."""
+        unspecified = ipaddress.ip_address(self.server_address[0]).is_unspecified
+        return unspecified or host in {self.authority, f"localhost:{self.server_address[1]}"}
 
     @property
     def url(self) -> str:
@@ -113,7 +113,7 @@ class _Handler(BaseHTTPRequestHandler):
     timeout = SOCKET_TIMEOUT_S  # a client that sends headers and then nothing gives up its thread
 
     def do_POST(self) -> None:
-        if self.headers.get("Host") not in self.server.hosts:
+        if not self.server.answers(self.headers.get("Host")):
             return self._answer(421, {"error": "unknown host"})  # a page re-pointing a DNS name here, say
         if self.path != PATH:
             return self._answer(404, {"error": "not found"})

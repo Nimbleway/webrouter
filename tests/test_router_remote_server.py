@@ -93,3 +93,18 @@ def test_the_example_server_serves_ipv6_loopback() -> None:
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_the_example_server_bound_to_every_address_answers_the_host_its_clients_use() -> None:
+    import httpx
+
+    server = reference.serve("0.0.0.0", 0, api_key=KEY)
+    try:
+        port = server.server_address[1]
+        body = {"schema": 1, "prompt": "x", "candidates": [], "deadline_s": 1.0}
+        headers = {"Authorization": f"Bearer {KEY}", "Host": f"192.0.2.7:{port}"}  # the machine's LAN address, say
+        with httpx.Client(trust_env=False) as client:
+            assert client.post(f"http://127.0.0.1:{port}/route", json=body, headers=headers).status_code == 200
+    finally:
+        server.shutdown()
+        server.server_close()
