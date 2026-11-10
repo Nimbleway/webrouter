@@ -17,7 +17,7 @@ from contextlib import suppress
 from typing import Any
 
 from web_router.constants_invoke import MSG_ROUTER_OTHER_LOOP, ROUTER_THREAD_NAME
-from web_router.constants_merge import ROUTER_ERROR, ROUTER_TIMEOUT
+from web_router.constants_merge import ROUTER_ERROR, ROUTER_INVALID, ROUTER_TIMEOUT
 from web_router.providers._deadline import current_deadline
 from web_router.routing.contract import RouteRequest
 
@@ -61,6 +61,20 @@ def _on_thread(fn: _Side, req: RouteRequest) -> Future[Any]:
 
     threading.Thread(target=context.run, args=(run,), name=ROUTER_THREAD_NAME, daemon=True).start()
     return future
+
+
+class InvalidAnswer(Exception):
+    """Raised by a router whose answer arrived but cannot be read as a decision: recorded as ``router_invalid``.
+
+    The ``remote`` router raises it for a body that is not a well-formed decision; any router may.
+    """
+
+
+class TimedOut(Exception):
+    """Raised by a router whose own transport gave up at the deadline: recorded as ``router_timeout``.
+
+    The ``remote`` router's HTTP timeout is the call's deadline, so it may fire just before the wait does.
+    """
 
 
 def _on_private_loop(awaitable: Awaitable[Any]) -> Future[Any]:
@@ -120,7 +134,9 @@ def _classified(done: Future[Any] | asyncio.Future[Any]) -> tuple[str | None, An
     if done.cancelled():
         return ROUTER_ERROR, None
     if (error := done.exception()) is not None:
-        return ROUTER_ERROR, error
+        if isinstance(error, TimedOut):
+            return ROUTER_TIMEOUT, error
+        return (ROUTER_INVALID if isinstance(error, InvalidAnswer) else ROUTER_ERROR), error
     return None, done.result()
 
 

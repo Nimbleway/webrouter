@@ -125,7 +125,9 @@ and you do not need it. `langchain` installs `langchain-core` for the
 install. `browser` is named after what it lets a browser
 handle do — drive the page — rather than after `open_browser`, which needs no
 Playwright: a vendor session opens over httpx, which `[all]` installs, and
-`local` needs only the standard library and a Chrome or Chromium.
+`local` needs only the standard library and a Chrome or Chromium. `remote`
+installs httpx for the built-in [`remote` router](#a-router-service-routerremote),
+for an install that carries no method extra; `[all]` includes it.
 
 ## Quickstart
 
@@ -1913,6 +1915,8 @@ response = wr.run(plan, budget=Budget(max_cost_usd=0.05))
 A router takes a `RouteRequest` and returns a `RouteDecision`: a function,
 method, `functools.partial` or coroutine function, or an object with
 `route(req)` or `aroute(req)`; an object that is only callable is refused.
+A string names a registered router, such as the built-in `remote`: see
+[A router service](#a-router-service-routerremote).
 A router is shown a `RouteRequest` and nothing else: the `prompt`, the `urls`
 found in it, the `budget`, the method you pinned (`pinned_tool`), its own
 time to answer (`deadline_s`) and the `candidates`, each a `Candidate` named
@@ -2091,6 +2095,145 @@ routers: each sends the prompt to that model's server, which bills for it. The
 MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
+
+### A router service: `router="remote"`
+
+A router can run as a service of its own, in any language, and be shared by
+every process that routes. The built-in `remote` router asks one over HTTP:
+
+```python
+wr = WebRouter(
+    router="remote",
+    router_config={
+        "url": "https://router.example.com/route",
+        "timeout_s": 1.0,  # the default; cut to the call's budget and deadline
+    },
+)  # api_key=, else WEB_ROUTER_REMOTE_ROUTER_API_KEY
+```
+
+Each routed call posts its `RouteRequest` as JSON and reads a `RouteDecision`
+back, both carrying `"schema": 1`, the wire format's major version, with the
+contract types' own field names. The JSON Schema files ship in the package,
+generated from those types: `web_router/data/schemas/router/v1/request.json`
+and `response.json`; `web_router.routing.wire` reads and writes both sides. A
+service ignores request fields it does not know, and the router ignores
+decision fields it does not know. A request, and a decision (every decision
+field may be left out or `null`):
+
+```json
+{
+  "schema": 1,
+  "prompt": "read https://example.com/pricing",
+  "candidates": [
+    {
+      "tool": "extract",
+      "provider": "jina",
+      "est_cost_usd": 0.0,
+      "est_latency_s": 2.1,
+      "id": "extract:jina"
+    },
+    {
+      "tool": "search",
+      "provider": "tavily",
+      "est_cost_usd": 0.008,
+      "est_latency_s": 1.2,
+      "id": "search:tavily"
+    }
+  ],
+  "deadline_s": 1.0,
+  "urls": [
+    "https://example.com/pricing"
+  ],
+  "budget": {
+    "max_cost_usd": 0.05,
+    "time_limit_s": 30.0,
+    "strict": false
+  },
+  "pinned_tool": null
+}
+```
+
+```json
+{
+  "schema": 1,
+  "tools": [
+    "extract"
+  ],
+  "providers": {
+    "extract": [
+      "jina"
+    ]
+  },
+  "exclude": {
+    "search:tavily": "the prompt names a URL"
+  },
+  "params": null,
+  "confidence": 0.9,
+  "reason": "the prompt names a URL"
+}
+```
+
+- **What the service is sent.** What any router is shown: the prompt and the
+  URLs in it, whole, query strings included, the budget and the candidates.
+  Candidate ids (`search:tavily`) name the backends you have configured; that
+  is by design. No key value is ever sent: the one credential is the service's
+  own bearer key, `api_key` in `router_config` or
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY` (read once, when the router is built),
+  never logged.
+- **Transport.** httpx (`pip install "webrouter[remote]"`, or any method
+  extra), imported only when the router is built. The router is async only,
+  so a call past its time is cancelled rather than left running, from sync and
+  async code alike. Its one connection pool belongs to the event loop that
+  first used it -- for `WebRouter`, web-router's private loop, where all its
+  calls run -- so warm calls reuse their connection; a call from another loop
+  gets a client of its own, closed when the call ends. Closing the router
+  closes the pool on its own loop, waiting at most 2 s without blocking an
+  async caller's loop, and leaves the router closed: a later call is a
+  `router_error` and opens nothing. A pool that will not close is dropped
+  with a `ResourceWarning`. One request, never retried; no
+  redirect is followed, and no proxy or other setting is read from the
+  environment. The URL must be `https`, or `http` to `localhost`, 127.0.0.0/8
+  or `::1` (not `*.localhost`, not `0.0.0.0`); a URL with credentials, a query
+  or a fragment, or one a browser could read two ways, is refused when the
+  router is built, and the error does not echo it.
+- **Failures.** A timeout is `router_timeout`; a transport error, a status
+  other than 200 or a decision naming a `schema` other than 1 is
+  `router_error`; an answer that is not an `application/json` decision of at
+  most 64 KiB, with at most 64 entries in any one list or mapping -- a
+  missing `schema` included -- is `router_invalid`. Either
+  way the static order runs, the record's `reason` says which, and
+  `fail_on_router_error=True` raises `RouterError` instead. The service's
+  `reason` and `exclude` reasons are cut to 300 characters, and an echo of its
+  own bearer key is redacted.
+- **The URLs it may set.** The URLs a service sets for extract or browse are
+  held to `url_policy="public_only"` even when you set no `url_policy`: a
+  service cannot name a loopback, private or metadata address by hostname. A
+  refused URL is set aside in the record's `ignored`. Your own `url_policy`
+  applies when you set one. `public_only` checks the hostname as written and
+  does not resolve it, so a service could name a host whose DNS points at a
+  private address; that matters only for a backend that fetches from your
+  machine, such as a provider you register or host yourself. Every built-in
+  backend hands the URL to its vendor, which fetches it from its own network.
+- **What is shown.** The decision record names it `remote(<scheme>://<host>)`:
+  never the URL's path, and never the key.
+
+[`examples/router_remote_server.py`](examples/router_remote_server.py) is a
+reference service in the standard library: the wire format around the
+built-in rules router, to run beside your code or port. It binds 127.0.0.1,
+answers only a `Host` naming it, checks the bearer key in constant time and
+caps a request at 1 MB.
+
+`remote` is a registered name. `register_router(name, factory)` adds your own
+(`unregister_router(name)` removes it, bringing back a built-in of that name),
+and `WebRouter(router=name, router_config={...})` builds one by calling
+`factory(**router_config)`; a key the factory does not take, or one it needs
+and is not given, raises `ConfigurationError` naming the key, never its
+value. A router that `WebRouter` builds by name is its to
+close: `close()` calls the router's `close()`, and `aclose()` its `aclose()`
+(else `close()`). A router passed in is yours to close, as a provider is. A
+router names itself in the record with a `router_name` attribute; without
+one, its qualified name is used, and with a `min_url_policy` attribute
+(`"public_only"`) holds the URLs it sets to that policy when you set none.
 
 ## Routing and extending
 
@@ -2402,6 +2545,7 @@ Keys are read from the environment, or passed explicitly through
 | `auto` | *none — keyless* | search, extract, open_browser |
 | OpenAI *(the default `evaluate()` judge, not a backend)* | `OPENAI_API_KEY` | evaluate |
 | Anthropic *(`AnthropicJudge` for `evaluate()`, not a backend)* | `ANTHROPIC_API_KEY` | evaluate |
+| Your router service *(`router="remote"`, not a backend)* | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` *(optional; `router_config["api_key"]` wins)* | routing |
 
 A key set once serves every method of a provider that has several. See
 [`.env.example`](.env.example). The library reads the environment only; the

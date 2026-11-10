@@ -40,7 +40,7 @@ from web_router.constants_invoke import MSG_ROUTER_CLASS, MSG_ROUTER_FORM
 from web_router.constants_merge import ROUTER_ERROR, ROUTER_INVALID, ROUTER_TIMEOUT
 from web_router.exceptions import ConfigurationError, RouterError
 from web_router.providers._deadline import current_deadline
-from web_router.routing._forms import _declared_timeout, _sides
+from web_router.routing._forms import _declared_timeout, _name_of, _sides
 from web_router.routing._runner import (
     _asettled,
     _close,
@@ -106,7 +106,7 @@ class AttachedRouter:
             raise ConfigurationError(MSG_ROUTER_FORM.format(kind=type(router).__name__))
         self.timeout_s = _declared_timeout(router)
         self.fail_on_error = fail_on_error
-        self.name: str = getattr(router, "__qualname__", None) or type(router).__qualname__
+        self.name: str = _name_of(router)
 
     def deadline(self, budget: Budget | None) -> float:
         """Seconds the router gets: its ``timeout_s``, cut to the call's deadline and its budget's time limit."""

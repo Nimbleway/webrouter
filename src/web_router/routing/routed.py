@@ -18,14 +18,14 @@ budget's research effort -- and recorded on the response's ``decision``.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Collection, Iterator
+from collections.abc import Awaitable, Callable, Collection, Iterator, Mapping
 from contextlib import contextmanager
 from typing import Any, TypeVar, get_args
 
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_invoke import MSG_ROUTE_TOOLS
+from web_router.constants_invoke import MSG_ROUTE_TOOLS, ROUTER_URL_POLICY_ATTR
 from web_router.exceptions import ConfigurationError
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
@@ -37,6 +37,7 @@ from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
+from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -61,28 +62,35 @@ def _route_tools(route_tools: Collection[ToolName] | None) -> frozenset[ToolName
     return frozenset(route_tools)
 
 
-class RouterSetup:
+class RouterSetup(RouterOwner):
     """The attached router and the tools it is consulted on, shared by both routers."""
 
     _router: AttachedRouter | None = None
     _route_tools: frozenset[ToolName] = _ALL_TOOLS
     _url_check: UrlCheck | None = None
+    _router_url_check: UrlCheck | None = None
+    """The check on the URLs a router sets: the caller's ``url_policy``, else the router's ``min_url_policy``."""
 
     def _attach_router(
         self,
-        router: RouterLike | None,
+        router: RouterLike | str | None,
         route_tools: Collection[ToolName] | None,
         fail_on_router_error: bool,
         url_policy: UrlPolicy | None = None,
+        router_config: Mapping[str, Any] | None = None,
     ) -> None:
-        """
+        """Attach the router; called last in a constructor, since a router built by name is the caller's to close.
+
         Raises:
-            ConfigurationError: for a ``router`` in neither form, a ``route_tools`` naming something else, or an
-                unknown ``url_policy``.
+            ConfigurationError: for a ``router`` in neither form nor a registered name, ``router_config`` without a
+                name, a ``route_tools`` naming something else, or an unknown ``url_policy``.
         """
         self._url_check = url_check(url_policy)
         self._route_tools = _route_tools(route_tools)
-        self._router = None if router is None else AttachedRouter(router, fail_on_error=fail_on_router_error)
+        with self._built(router, router_config) as attached:
+            self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
+            floor = getattr(attached, ROUTER_URL_POLICY_ATTR, None) if url_policy is None else url_policy
+            self._router_url_check = url_check(floor)
 
     def _route_request(
         self, chain: Any, request: NormalizedRequest, budget: Budget | None
@@ -132,7 +140,7 @@ class RouterSetup:
         req, found = routed
         caller_set = request.specified_parameters() | request.always_sent
         out = decided(
-            req, found, outcome, router=self._attached().name, caller_set=caller_set, url_check=self._url_check
+            req, found, outcome, router=self._attached().name, caller_set=caller_set, url_check=self._router_url_check
         )
         if out.params:
             request = request.model_copy(update=dict(out.params))
