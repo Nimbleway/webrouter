@@ -105,8 +105,9 @@ def response_schema() -> dict[str, Any]:
     """The JSON Schema of a decision, generated from :class:`RouteDecision`, with what the types cannot say.
 
     ``confidence`` is held to 0..1, as the merge rule holds it, every list and mapping to
-    :data:`WIRE_MAX_NAMES` entries, as :func:`~.wire._bounded` holds them, and every field may be ``null`` -- unset, as
-    :func:`~.wire.decision_from_wire` reads it -- ``exclude`` included, whose type has no ``None``.
+    :data:`WIRE_MAX_NAMES` entries, as :func:`~.wire._bounded` holds them, an option's value in ``params``
+    included, and every field may be ``null`` -- unset, as :func:`~.wire.decision_from_wire` reads it --
+    ``exclude`` included, whose type has no ``None``.
     """
     schema = _schema(_decision_adapter(), WIRE_RESPONSE_TITLE, "validation")
     fields = schema["properties"]
@@ -119,6 +120,11 @@ def response_schema() -> dict[str, Any]:
         **{k: v for k, v in exclude.items() if k not in ("type", "additionalProperties")},
     }
     _cap(fields)
+    # An option's value is any JSON; untyped, these cap it only when it is a list or a mapping, as _bounded does.
+    fields["params"]["anyOf"][0]["additionalProperties"]["additionalProperties"] = {
+        "maxItems": WIRE_MAX_NAMES,
+        "maxProperties": WIRE_MAX_NAMES,
+    }
     return schema
 
 

@@ -81,7 +81,10 @@
       "anyOf": [
         {
           "additionalProperties": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "maxItems": 64,
+              "maxProperties": 64
+            },
             "type": "object",
             "maxProperties": 64
           },

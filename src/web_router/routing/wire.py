@@ -124,10 +124,12 @@ def _bounded(decision: RouteDecision) -> RouteDecision:
     A service's words reach the decision record and, through the MCP server, a model; neither needs an essay.
 
     Raises:
-        WireError: for a list or mapping of more than :data:`WIRE_MAX_NAMES` entries.
+        WireError: for a list or mapping of more than :data:`WIRE_MAX_NAMES` entries, a method's options and the
+            lists and mappings they hold (one level down, such as extract's ``urls``) included.
     """
-    sized = [decision.tools or (), decision.exclude, *(decision.providers or {}).values()]
-    sized += list((decision.params or {}).values())
+    options = list((decision.params or {}).values())
+    held = [value for option in options for value in option.values() if isinstance(value, list | Mapping)]
+    sized = [decision.tools or (), decision.exclude, *(decision.providers or {}).values(), *options, *held]
     if any(len(entry) > WIRE_MAX_NAMES for entry in sized):
         raise WireError(REMOTE_WHY_TOO_MANY.format(limit=WIRE_MAX_NAMES))
     if decision.confidence is not None and not 0 <= decision.confidence <= 1:
