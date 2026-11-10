@@ -1,0 +1,320 @@
+{
+  "vendor": "captaindata",
+  "name": "Captain Data",
+  "category": "enrichment",
+  "summary": "LinkedIn people and company data: find, search via Sales Navigator queries, enrich profiles, work history, skills and company employees.",
+  "docs_url": "https://docs.captaindata.com/v1/introduction",
+  "pricing_url": "https://www.captaindata.com/pricing",
+  "base_url": "https://api.captaindata.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CAPTAINDATA_API_KEY"
+        ],
+        "description": "A Captain Data API key (app.captaindata.com/developers); each workspace user has their own. Sent in the X-API-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call spends credits (see each endpoint); the daily credit quota is separate from the rate limit.",
+    "Rate limit by plan, from 1 request/second (Trial) to 40 (Titanium); a 429 means back off.",
+    "Paging is by cursor: follow the X-Pagination-Next response header (or pass its cursor) until it is absent. Page numbers were removed on 2026-01-15.",
+    "Search endpoints take a raw LinkedIn Sales Navigator query string, not keyword parameters."
+  ],
+  "sources": [
+    "https://docs.captaindata.com/llms.txt",
+    "https://docs.captaindata.com/v1/api/openapi.json",
+    "https://docs.captaindata.com/v1/credit-costs.md",
+    "https://docs.captaindata.com/v1/rate-limits.md",
+    "https://docs.captaindata.com/v1/pagination.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "captaindata.quotas.get",
+      "name": "Get workspace quota",
+      "summary": "Credits left and billing information for the workspace.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/quotas",
+      "notes": [
+        "Free, but has its own low rate limit (5 to 100 requests per minute by plan)."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.captaindata.com/v1/api/quotas",
+      "verified": {
+        "docs": "https://docs.captaindata.com/v1/api/quotas.md"
+      }
+    },
+    {
+      "id": "captaindata.people.find",
+      "name": "Find a person by name",
+      "summary": "A person's uid and LinkedIn URL from a full name, optionally with company name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/people/find",
+      "params": {
+        "full_name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full name, matched as an exact phrase."
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name, for a more accurate match."
+        }
+      },
+      "notes": [
+        "2 credits."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.captaindata.com/v1/api/people/find",
+      "verified": {
+        "docs": "https://docs.captaindata.com/v1/api/people/find.md"
+      }
+    },
+    {
+      "id": "captaindata.people.search",
+      "name": "Search people (Sales Navigator query)",
+      "summary": "People matching a LinkedIn Sales Navigator people search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/people/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The query parameter value of a Sales Navigator people search URL (everything after ?query=).",
+          "example": "(keywords:ceo)"
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the X-Pagination-Next response header of the previous page; expires after 24 hours."
+        }
+      },
+      "notes": [
+        "1 credit per request plus 1 per result; 25 results per page, and every page pays the request fee again."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.captaindata.com/v1/api/people/search",
+      "verified": {
+        "docs": "https://docs.captaindata.com/v1/api/people/search.md"
+      }
+    },
+    {
+      "id": "captaindata.people.enrich",
+      "name": "Enrich a LinkedIn profile",
+      "summary": "Full profile data from a LinkedIn profile URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/people/enrich",
+      "params": {
+        "li_profile_url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL starting with https://www.linkedin.com/in/, /pub/, /sales/people/ or /sales/lead/.",
+          "example": "https://www.linkedin.com/in/williamhgates/"
+        },
+        "full_enrich": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also include up to 5 experiences and 2 skills."
+        }
+      },
+      "notes": [
+        "1 credit, 2 with full_enrich. No emails or phones."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.captaindata.com/v1/api/people/enrich",
+      "verified": {
+        "docs": "https://docs.captaindata.com/v1/api/people/enrich.md"
+      }
+    },
+    {
+      "id": "captaindata.people.experiences",
+      "name": "List a person's work experience",
+      "summary": "Complete work history of a LinkedIn profile.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/people/experiences",
+      "params": {
+        "li_profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL (/in/, /pub/ or Sales Navigator); this or people_uid."
+        },
+        "people_uid": {
+          "in": "query",
+          "type": "string",
+          "description": "Captain Data person uid from Find, Search or Enrich People; preferred over the URL."
+        }
+      },
+      "notes": [
+        "1 credit per request plus 1 per 20 results."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.captaindata.com/v1/api/people/experiences",
+      "verified": {
+        "docs": "https://docs.captaindata.com/v1/api/people/experiences.md"
+      }
+    },
+    {
+      "id": "captaindata.people.skills",
+      "name": "List a person's skills",
+      "summary": "Complete skill list of a LinkedIn profile.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/people/skills",
+      "params": {
+        "li_profile_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL (/in/, /pub/ or Sales Navigator); this or people_uid."
+        },
+        "people_uid": {
+          "in": "query",
+          "type": "string",
+          "description": "Captain Data person uid from Find, Search or Enrich People; preferred over the URL."
+        }
+      },
+      "notes": [
+        "1 credit per request plus 1 per 20 results."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.captaindata.com/v1/api/people/skills",
+      "verified": {
+        "docs": "https://docs.captaindata.com/v1/api/people/skills.md"
+      }
+    },
+    {
+      "id": "captaindata.companies.find",
+      "name": "Find a company by domain or name",
+      "summary": "A company's uid and LinkedIn URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/find",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Website domain without protocol or path; preferred.",
+          "example": "example.com"
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name; send this or domain, not both."
+        }
+      },
+      "notes": [
+        "2 credits."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.captaindata.com/v1/api/companies/find",
+      "verified": {
+        "docs": "https://docs.captaindata.com/v1/api/companies/find.md"
+      }
+    },
+    {
+      "id": "captaindata.companies.search",
+      "name": "Search companies (Sales Navigator query)",
+      "summary": "Companies matching a LinkedIn Sales Navigator company search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The query parameter value of a Sales Navigator company search URL."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the X-Pagination-Next response header of the previous page; expires after 24 hours."
+        }
+      },
+      "notes": [
+        "1 credit per request plus 1 per result."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.captaindata.com/v1/api/companies/search",
+      "verified": {
+        "docs": "https://docs.captaindata.com/v1/api/companies/search.md"
+      }
+    },
+    {
+      "id": "captaindata.companies.enrich",
+      "name": "Enrich a LinkedIn company",
+      "summary": "Company profile data from a LinkedIn company URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/enrich",
+      "params": {
+        "li_company_url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn company URL (/company/, /school/, /showcase/ or Sales Navigator /sales/company).",
+          "example": "https://www.linkedin.com/company/captaindata/"
+        }
+      },
+      "notes": [
+        "1 credit."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.captaindata.com/v1/api/companies/enrich",
+      "verified": {
+        "docs": "https://docs.captaindata.com/v1/api/companies/enrich.md"
+      }
+    },
+    {
+      "id": "captaindata.companies.employees",
+      "name": "List a company's employees",
+      "summary": "Employees of a company by its Captain Data uid, optionally filtered by a Sales Navigator people query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_uid}/employees",
+      "params": {
+        "company_uid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company uid from Find Company or Search Companies."
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "A Sales Navigator people search query value, to filter."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the X-Pagination-Next response header of the previous page; expires after 24 hours."
+        }
+      },
+      "notes": [
+        "1 credit per request plus 1 per result; 25 per page, so a full page is about 26 credits."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.captaindata.com/v1/api/companies/find-employees",
+      "verified": {
+        "docs": "https://docs.captaindata.com/v1/api/companies/find-employees.md"
+      }
+    }
+  ]
+}
