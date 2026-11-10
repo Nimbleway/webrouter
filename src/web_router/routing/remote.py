@@ -98,7 +98,7 @@ class RemoteRouter(PoolCloser):
 
         Raises:
             ConfigurationError: for httpx not installed, a URL :func:`~.remote_url.checked_url` refuses, a
-                ``timeout_s`` that is not a positive number, or an ``api_key`` that is not a string.
+                ``timeout_s`` that is not a positive number, or a key that is not visible ASCII.
         """
         self._httpx = load_httpx()
         self._url = checked_url(url, self._httpx)

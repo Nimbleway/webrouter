@@ -39,9 +39,13 @@ def checked_timeout(value: object) -> float:
 
 
 def bearer_key(api_key: object) -> str | None:
-    """``api_key``, else ``WEB_ROUTER_REMOTE_ROUTER_API_KEY``, else ``None``; a key that is not a string is refused."""
+    """``api_key``, else ``WEB_ROUTER_REMOTE_ROUTER_API_KEY``, else ``None``.
+
+    A key that is not visible ASCII is refused now, never echoed: as a header it would fail every call, and a
+    non-ASCII one would carry the whole ``Authorization`` value in its ``UnicodeEncodeError``.
+    """
     key = os.environ.get(ENV_REMOTE_ROUTER_API_KEY) if api_key is None else api_key
-    if key is not None and not isinstance(key, str):
+    if key is not None and not (isinstance(key, str) and key.isascii() and key.isprintable() and " " not in key):
         raise ConfigurationError(MSG_REMOTE_KEY)
     return key or None
 

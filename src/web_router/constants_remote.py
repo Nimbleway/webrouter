@@ -89,7 +89,9 @@ MSG_REMOTE_URL = "router_config['url'] is not an absolute http(s) URL with a hos
 MSG_REMOTE_URL_PARTS = "router_config['url'] may not carry credentials, a query or a fragment: pass the key as api_key."
 MSG_REMOTE_HTTPS = "router_config['url'] must use https; plain http is allowed only to localhost, 127.0.0.0/8 or ::1."
 MSG_REMOTE_TIMEOUT = "router_config['timeout_s'] must be a positive number of seconds; got {value!r}."
-MSG_REMOTE_KEY = "router_config['api_key'] must be a string."
+MSG_REMOTE_KEY = (
+    "router_config['api_key'], or WEB_ROUTER_REMOTE_ROUTER_API_KEY, must be a string of visible ASCII characters."
+)
 MSG_REMOTE_NO_HTTPX = (
     "router='remote' needs httpx, which web-router's '{extra}' extra installs: pip install 'webrouter[{extra}]'."
 )

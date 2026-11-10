@@ -2215,8 +2215,8 @@ field may be left out or `null`):
   Candidate ids (`search:tavily`) name the backends you have configured; that
   is by design. No key value is ever sent: the one credential is the service's
   own bearer key, `api_key` in `router_config` or
-  `WEB_ROUTER_REMOTE_ROUTER_API_KEY` (read once, when the router is built),
-  never logged.
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY` (read once, when the router is built,
+  and refused unless it is visible ASCII), never logged.
 - **Transport.** httpx (`pip install "webrouter[remote]"`, or any method
   extra), imported only when the router is built. The router is async only,
   so a call past its time is cancelled rather than left running, from sync and
