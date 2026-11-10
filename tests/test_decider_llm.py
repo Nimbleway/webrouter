@@ -189,3 +189,9 @@ async def test_a_json_mode_model_may_give_scores_as_a_mapping(monkeypatch: pytes
     serve(monkeypatch, chat({"ranked": ["search:exa"], "scores": {"search:exa": 0.4}}))
     decision = await llm_router(preset="groq", model="m").aroute(request())
     assert decision.reason == "llm(api.groq.com): search:exa, p=0.40"
+
+
+async def test_a_reply_in_a_code_fence_is_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    serve(monkeypatch, chat('```json\n{"ranked": ["search:exa"]}\n```'))
+    decision = await llm_router(base_url="http://localhost:9000", model="m").aroute(request())
+    assert decision.reason == "llm(localhost): search:exa"

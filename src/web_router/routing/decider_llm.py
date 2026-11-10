@@ -49,6 +49,14 @@ from web_router.routing.decider_router import DeciderRouter, takes_config_of
 from web_router.routing.remote_errors import RemoteRouterInvalid
 
 
+def _unfenced(content: str) -> str:
+    """``content`` without a Markdown code fence around it, which models asked in the prompt often add."""
+    text = content.strip()
+    if text.startswith("```") and text.endswith("```") and "\n" in text:
+        return text[text.index("\n") + 1 : -3]
+    return content
+
+
 def checked_mode(mode: object) -> str:
     """``mode`` when it is one of ``json_schema``, ``json_object`` or ``prompt``."""
     if not isinstance(mode, str) or mode not in LLM_MODES:
@@ -111,7 +119,7 @@ class LLMDecider:
         data = await post_json(self._endpoint, self.body(question), question.deadline_s or self.timeout_s)
         try:
             content = data["choices"][0]["message"]["content"]
-            answer = json.loads(content)
+            answer = json.loads(_unfenced(content))
         except (KeyError, IndexError, TypeError, ValueError, RecursionError):
             raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY) from None
         if not isinstance(answer, dict):
