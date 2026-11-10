@@ -33,6 +33,7 @@ from web_router.exceptions import ProviderError
 from web_router.integrations._options import answer_provider_for, extract_provider_for, tool_provider
 from web_router.integrations._render import render_answer, render_extract, render_search
 from web_router.integrations._specs import KNOWN_METHODS, TOOLS, ToolSpec
+from web_router.routing._runner import _on_private_loop
 from web_router.types import (
     ExtractFormat,
     ExtractResponse,
@@ -168,7 +169,8 @@ class WebRouterTools(Generic[ResultT]):
     def _call(self, name: str, tool_input: dict[str, Any]) -> ResultT:
         router = self.router
         if isinstance(router, AsyncWebRouter):
-            return asyncio.run(self._acall(name, tool_input))
+            result: ResultT = _on_private_loop(self._acall(name, tool_input)).result()  # one loop for every call
+            return result
         method = self._method(name)
         if problem := _invalid(method, name, tool_input):
             return self._result(problem, is_error=True)
