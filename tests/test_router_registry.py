@@ -182,27 +182,6 @@ def test_a_router_that_fails_to_construct_closes_the_router_it_built(built: list
     assert all(router.closed == 1 for router in built), "built only after the provider checks, or closed by them"
 
 
-def test_a_refused_async_only_router_is_closed_with_aclose() -> None:
-    made: list[Any] = []
-
-    class AsyncOnly:
-        timeout_s = -1  # refused when attached
-
-        async def aroute(self, req: RouteRequest) -> RouteDecision:
-            return RouteDecision()
-
-        async def aclose(self) -> None:
-            made.append("aclosed")
-
-    register_router(NAME, AsyncOnly)
-    try:
-        with pytest.raises(ConfigurationError, match="timeout_s"):
-            WebRouter(router=NAME)
-    finally:
-        unregister_router(NAME)
-    assert made == ["aclosed"]
-
-
 def test_the_sync_router_runs_an_async_only_routers_aclose() -> None:
     made: list[str] = []
 

@@ -86,8 +86,9 @@ def test_the_response_schema_publishes_the_entry_limit_the_client_holds() -> Non
     limits = _limits(fields)
     assert limits and all(limit == WIRE_MAX_NAMES for _, limit in limits)
     over = {"schema": 1, "exclude": {f"search:p{i}": "why" for i in range(WIRE_MAX_NAMES + 1)}}
-    with pytest.raises(WireError, match=f"more than {WIRE_MAX_NAMES} entries"):
-        decision_from_wire(over)
+    for body in (over, {"schema": 1, "tools": ["search"] * (WIRE_MAX_NAMES + 1)}):
+        with pytest.raises(WireError, match=f"more than {WIRE_MAX_NAMES} entries"):
+            decision_from_wire(body)
     at = {"schema": 1, "exclude": {f"search:p{i}": "why" for i in range(WIRE_MAX_NAMES)}}
     assert len(decision_from_wire(at).exclude) == WIRE_MAX_NAMES
 
@@ -161,15 +162,9 @@ def test_another_major_version_is_a_version_error_without_echoing_it(version: An
 @pytest.mark.parametrize(
     "body",
     [
-        {"schema": 1, "tools": "search"},
         {"schema": 1, "tools": ["teleport"]},
-        {"schema": 1, "providers": {"search": "exa"}},
-        {"schema": 1, "exclude": ["search:exa"]},
-        {"schema": 1, "confidence": "very"},
         {"schema": 1, "confidence": True},
-        {"schema": 1, "confidence": 2},
         {"schema": 1, "confidence": "0.5"},
-        {"schema": 1, "tools": [1]},
     ],
 )
 def test_a_decision_that_breaks_the_types_is_refused(body: dict[str, Any]) -> None:

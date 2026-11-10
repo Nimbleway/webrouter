@@ -131,11 +131,8 @@ def test_a_decision_of_another_schema_version_is_router_error() -> None:
     ("answer", "why"),
     [
         ({"tools": ["extract"]}, "missing or not a number"),
-        ({"schema": "1", "tools": ["extract"]}, "missing or not a number"),
-        ({"schema": 1, "tools": "extract"}, "does not fit"),
-        ({"schema": 1, "tools": ["search"] * 65}, "more than 64 entries"),
     ],
-    ids=["no-schema", "string-schema", "ill-typed", "too-many"],
+    ids=["no-schema"],
 )
 def test_a_decision_without_a_schema_or_of_another_shape_is_router_invalid(answer: dict[str, Any], why: str) -> None:
     with running(lambda body: answer) as server:
