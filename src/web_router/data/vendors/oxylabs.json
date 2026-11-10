@@ -1,0 +1,426 @@
+{
+  "vendor": "oxylabs",
+  "name": "Oxylabs Web Scraper API",
+  "category": "scraping",
+  "summary": "Oxylabs Web Scraper API (Classic): scrape any URL, Google results and Amazon products as HTML, Markdown or parsed JSON, live or as async jobs.",
+  "docs_url": "https://developers.oxylabs.io/products/web-scraper-api.md",
+  "pricing_url": "https://oxylabs.io/pricing/web-scraper-api",
+  "base_url": "https://data.oxylabs.io",
+  "hosts": {
+    "realtime": "https://realtime.oxylabs.io"
+  },
+  "auth": {
+    "credentials": {
+      "username": {
+        "env": [
+          "OXYLABS_USERNAME"
+        ],
+        "description": "The API user name created for Web Scraper API in the dashboard (not your dashboard login)."
+      },
+      "password": {
+        "env": [
+          "OXYLABS_PASSWORD"
+        ],
+        "description": "That API user's password."
+      }
+    },
+    "basic": {
+      "username": "{username}",
+      "password": "{password}"
+    }
+  },
+  "notes": [
+    "Every scrape is POST /v1/queries with a source naming the scraper (universal, google_search, amazon_product, ...). This entry names three; others take the same shape.",
+    "Realtime calls (on realtime.oxylabs.io) hold the connection until the result is ready. Push-pull (jobs.create on data.oxylabs.io) returns a job id: poll jobs.status until done, then jobs.results.",
+    "faulted jobs are not charged.",
+    "This is the Classic API with HTTP Basic credentials, the one the library's extract backend uses. Oxylabs' newer Web API (webapi.oxylabs.io, Bearer OXYLABS_WEB_API_KEY) is a separate product and not in this entry."
+  ],
+  "sources": [
+    "https://developers.oxylabs.io/products/web-scraper-api.md",
+    "https://developers.oxylabs.io/products/web-scraper-api/integration-methods/realtime.md",
+    "https://developers.oxylabs.io/products/web-scraper-api/integration-methods/push-pull.md",
+    "https://developers.oxylabs.io/products/web-scraper-api/targets/any-domain.md",
+    "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/search/web-search.md",
+    "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/amazon/product.md",
+    "https://developers.oxylabs.io/products/web-scraper-api/features/result-processing-and-storage/output-types/markdown-output.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "oxylabs.scrape.url",
+      "name": "Scrape a URL",
+      "summary": "Any public page as HTML, Markdown or parsed data, returned in the same call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/queries",
+      "host": "realtime",
+      "params": {
+        "source": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be universal.",
+          "enum": [
+            "universal"
+          ],
+          "example": "universal"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The page to scrape.",
+          "example": "https://example.com"
+        },
+        "render": {
+          "in": "body",
+          "type": "string",
+          "description": "html renders JavaScript (try it when content comes back empty).",
+          "enum": [
+            "html"
+          ]
+        },
+        "markdown": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the page as Markdown instead of HTML. Default false."
+        },
+        "parse": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return parsed JSON where a dedicated parser exists. Default false."
+        },
+        "parsing_instructions": {
+          "in": "body",
+          "type": "object",
+          "description": "Custom parsing logic run on the HTML result."
+        },
+        "geo_location": {
+          "in": "body",
+          "type": "string",
+          "description": "Location to fetch from, e.g. 'United States' or a city or postal code; see the proxy-location page for formats."
+        },
+        "user_agent_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Device type and browser. Default desktop."
+        },
+        "browser_instructions": {
+          "in": "body",
+          "type": "array",
+          "description": "Browser actions to run while rendering."
+        },
+        "context": {
+          "in": "body",
+          "type": "array",
+          "description": "List of {key, value} pairs: headers, cookies, session_id, http_method, content, follow_redirects, successful_status_codes (and limit_per_page for Google)."
+        }
+      },
+      "notes": [
+        "A read over POST. Set markdown true for LLM-ready text."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://developers.oxylabs.io/products/web-scraper-api/targets/any-domain.md",
+      "verified": {
+        "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/any-domain.md"
+      }
+    },
+    {
+      "id": "oxylabs.serp.google",
+      "name": "Search Google",
+      "summary": "Google web results for a query, raw or parsed, returned in the same call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/queries",
+      "host": "realtime",
+      "params": {
+        "source": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_search.",
+          "enum": [
+            "google_search"
+          ],
+          "example": "google_search"
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Keywords; Google operators work.",
+          "example": "iphone 15 launch inurl:apple"
+        },
+        "parse": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return parsed JSON where a dedicated parser exists. Default false."
+        },
+        "render": {
+          "in": "body",
+          "type": "string",
+          "description": "html renders JavaScript (try it when content comes back empty).",
+          "enum": [
+            "html"
+          ]
+        },
+        "geo_location": {
+          "in": "body",
+          "type": "string",
+          "description": "Location to fetch from, e.g. 'United States' or a city or postal code; see the proxy-location page for formats."
+        },
+        "locale": {
+          "in": "body",
+          "type": "string",
+          "description": "Accept-Language for the Google interface language."
+        },
+        "start_page": {
+          "in": "body",
+          "type": "integer",
+          "description": "First page. Default 1."
+        },
+        "pages": {
+          "in": "body",
+          "type": "integer",
+          "description": "Pages to fetch. Default 1."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page. Default 10; Google now gives about 10 organic results a page."
+        },
+        "user_agent_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Device type and browser. Default desktop."
+        },
+        "context": {
+          "in": "body",
+          "type": "array",
+          "description": "List of {key, value} pairs: headers, cookies, session_id, http_method, content, follow_redirects, successful_status_codes (and limit_per_page for Google)."
+        }
+      },
+      "notes": [
+        "A read over POST. geo_location matters a lot for Google results."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/search/web-search.md",
+      "verified": {
+        "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/search/web-search.md"
+      }
+    },
+    {
+      "id": "oxylabs.amazon.product",
+      "name": "Get an Amazon product",
+      "summary": "An Amazon product page by ASIN, parsed into price, buybox, rating and more.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/queries",
+      "host": "realtime",
+      "params": {
+        "source": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be amazon_product.",
+          "enum": [
+            "amazon_product"
+          ],
+          "example": "amazon_product"
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The 10-character ASIN.",
+          "example": "B08Y72CH1F"
+        },
+        "parse": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return parsed JSON where a dedicated parser exists. Default false."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Amazon domain suffix, e.g. com, nl, de."
+        },
+        "geo_location": {
+          "in": "body",
+          "type": "string",
+          "description": "Delivery location, e.g. a postal code."
+        },
+        "locale": {
+          "in": "body",
+          "type": "string",
+          "description": "Page language."
+        },
+        "render": {
+          "in": "body",
+          "type": "string",
+          "description": "html renders JavaScript (try it when content comes back empty).",
+          "enum": [
+            "html"
+          ]
+        },
+        "user_agent_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Device type and browser. Default desktop."
+        },
+        "context": {
+          "in": "body",
+          "type": "array",
+          "description": "List of {key, value} pairs: headers, cookies, session_id, http_method, content, follow_redirects, successful_status_codes (and limit_per_page for Google)."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "products.get",
+      "docs_url": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/amazon/product.md",
+      "verified": {
+        "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/amazon/product.md"
+      }
+    },
+    {
+      "id": "oxylabs.jobs.create",
+      "name": "Submit an async scrape job",
+      "summary": "Queue a universal scrape and get a job id (push-pull).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/queries",
+      "params": {
+        "source": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be universal.",
+          "enum": [
+            "universal"
+          ],
+          "example": "universal"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The page to scrape.",
+          "example": "https://example.com"
+        },
+        "render": {
+          "in": "body",
+          "type": "string",
+          "description": "html renders JavaScript (try it when content comes back empty).",
+          "enum": [
+            "html"
+          ]
+        },
+        "markdown": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the page as Markdown instead of HTML. Default false."
+        },
+        "parse": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return parsed JSON where a dedicated parser exists. Default false."
+        },
+        "parsing_instructions": {
+          "in": "body",
+          "type": "object",
+          "description": "Custom parsing logic run on the HTML result."
+        },
+        "geo_location": {
+          "in": "body",
+          "type": "string",
+          "description": "Location to fetch from, e.g. 'United States' or a city or postal code; see the proxy-location page for formats."
+        },
+        "user_agent_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Device type and browser. Default desktop."
+        },
+        "browser_instructions": {
+          "in": "body",
+          "type": "array",
+          "description": "Browser actions to run while rendering."
+        },
+        "context": {
+          "in": "body",
+          "type": "array",
+          "description": "List of {key, value} pairs: headers, cookies, session_id, http_method, content, follow_redirects, successful_status_codes (and limit_per_page for Google)."
+        },
+        "callback_url": {
+          "in": "body",
+          "type": "string",
+          "description": "URL Oxylabs POSTs to when the job finishes."
+        }
+      },
+      "notes": [
+        "A read over POST that starts a billed job. Any other source and its parameters work here too, through a raw call."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://developers.oxylabs.io/products/web-scraper-api/integration-methods/push-pull.md",
+      "verified": {
+        "docs": "https://developers.oxylabs.io/products/web-scraper-api/integration-methods/push-pull.md"
+      }
+    },
+    {
+      "id": "oxylabs.jobs.status",
+      "name": "Get job status",
+      "summary": "A push-pull job's status: pending, done or faulted.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/queries/{job_id}",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id jobs.create returned."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://developers.oxylabs.io/products/web-scraper-api/integration-methods/push-pull.md",
+      "verified": {
+        "docs": "https://developers.oxylabs.io/products/web-scraper-api/integration-methods/push-pull.md"
+      }
+    },
+    {
+      "id": "oxylabs.jobs.results",
+      "name": "Get job results",
+      "summary": "A finished job's content, raw, parsed, png or xhr.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/queries/{job_id}/results",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job id."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Result type; omit for the default.",
+          "enum": [
+            "raw",
+            "parsed",
+            "png",
+            "xhr"
+          ]
+        }
+      },
+      "notes": [
+        "The _links in job answers use http://; always call over https."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://developers.oxylabs.io/products/web-scraper-api/integration-methods/push-pull.md",
+      "verified": {
+        "docs": "https://developers.oxylabs.io/products/web-scraper-api/integration-methods/push-pull.md"
+      }
+    }
+  ]
+}

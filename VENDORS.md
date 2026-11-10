@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-206 vendors, 1836 endpoints.
+210 vendors, 1870 endpoints.
 
 ### advertising
 
@@ -270,8 +270,12 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Decodo](https://help.decodo.com/docs/web-data-api-introduction.md) `decodo` | Decodo's Web Data API: scrape a page or a supported site's template, Google results, crawl a site up to 10,000 pages, or map its URLs. | 8 read | key in header | `DECODO_API_KEY` | docs 2026-11-09 |
 | [Firecrawl](https://docs.firecrawl.dev/introduction) `firecrawl` | Scrape, map, crawl, search and extract the web, returning clean markdown and structured data. | 12 read, 1 write | key in header | `FIRECRAWL_API_KEY` | docs 2026-11-08 |
 | [Massive (Web Render)](https://docs.joinmassive.com/web-render/overview.md) `joinmassive` | Massive's Web Render API: unblock and render web pages, Google results pages, and ChatGPT, Gemini, Perplexity or AI Overview answers, from chosen locations. | 4 read | key in header | `MASSIVE_TOKEN` | docs 2026-11-09 |
+| [Notte](https://docs.notte.cc/api-reference/authentication.md) `notte` | Notte's API: scrape pages to markdown or structured JSON, search the web, and drive hosted browser sessions with plain-language actions. | 6 read, 3 write | key in header | `NOTTE_API_KEY` | docs 2026-11-09 |
 | [Olostep](https://docs.olostep.com/) `olostep` | Scrape, crawl, map, search and answer over the web with Olostep's API. | 12 read | key in header | `OLOSTEP_API_KEY` | docs 2026-11-08 |
+| [Outscraper](https://app.outscraper.com/api-docs) `outscraper` | Google Maps places and reviews, Google Search, website contacts, company firmographics and Amazon products from Outscraper's scraping API. | 8 read | key in header | `OUTSCRAPER_API_KEY` | docs 2026-11-09 |
+| [Oxylabs Web Scraper API](https://developers.oxylabs.io/products/web-scraper-api.md) `oxylabs` | Oxylabs Web Scraper API (Classic): scrape any URL, Google results and Amazon products as HTML, Markdown or parsed JSON, live or as async jobs. | 6 read | HTTP Basic | `OXYLABS_USERNAME`, `OXYLABS_PASSWORD` | docs 2026-11-09 |
 | [Riveter](https://docs.riveterhq.com/) `riveter` | Riveter's AI web data API: scrape a page, quick web search, one-off research answers, and enrichment runs that fill new columns for rows of companies, people or URLs. | 6 read, 2 write | key in header | `RIVETER_API_KEY` | docs 2026-11-09 |
+| [ScrapeGraphAI](https://docs.scrapegraphai.com/api-reference/introduction) `scrapegraphai` | AI-powered scrape, extract, search and crawl with natural-language prompts (ScrapeGraphAI v2 API). | 8 read, 3 write | key in header | `SGAI_API_KEY` | docs 2026-11-08 |
 | [ScreenshotOne](https://screenshotone.com/docs/getting-started/) `screenshotone` | Render a web page, HTML or Markdown to an image or PDF in a real browser, with ad and cookie-banner blocking, element capture and page metadata. | 3 read | key in query | `SCREENSHOTONE_API_KEY` | docs 2026-11-09 |
 | [Spider Cloud](https://spider.cloud/docs/api) `spidercloud` | Spider's crawl, scrape, links, search and screenshot API for AI agents and RAG. | 6 read | key in header | `SPIDER_API_KEY` | docs 2026-11-08 |
 | [Supadata](https://docs.supadata.ai/api-reference/introduction) `supadata` | Transcripts and metadata of YouTube, TikTok, Instagram, X and Facebook videos, YouTube search, AI extraction from video, and web page scraping to Markdown. | 10 read | key in header | `SUPADATA_API_KEY` | docs 2026-11-09 |
