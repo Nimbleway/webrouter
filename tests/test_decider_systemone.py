@@ -85,8 +85,13 @@ def test_a_bad_setup_is_refused_when_the_router_is_built(
     monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
     monkeypatch.setenv("FIREWORKS_API_KEY", TOKEN)
     with pytest.raises(ConfigurationError, match=message) as caught:
-        systemone_router(**config)  # type: ignore[arg-type]
+        systemone_router(**config)
     assert TOKEN not in str(caught.value)
+
+
+def test_a_key_the_decider_does_not_take_is_refused_by_the_decider() -> None:
+    with pytest.raises(TypeError, match="bogus"):
+        systemone_router(preset="fireworks", bogus=1)
 
 
 def test_by_name_it_orders_every_tool_but_search_unless_told(monkeypatch: pytest.MonkeyPatch) -> None:

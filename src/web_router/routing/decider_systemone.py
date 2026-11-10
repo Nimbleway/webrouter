@@ -107,26 +107,9 @@ class SystemOneDecider:
         return DeciderReply(ranked=ranked, scores=probabilities, confidence=answer.get("confidence"))
 
 
-def systemone_router(
-    *,
-    preset: str | None = None,
-    base_url: str | None = None,
-    path: str | None = None,
-    model: str | None = None,
-    api_key_env: str | None = None,
-    api_key: str | None = None,
-    timeout_s: float = SYSTEMONE_TIMEOUT_S,
-    route_tools: Collection[str] | None = None,
-) -> DeciderRouter:
-    """What ``router="systemone"`` builds from ``router_config``: a :class:`DeciderRouter` on a System One API."""
-    decider = SystemOneDecider(
-        preset=preset,
-        base_url=base_url,
-        path=path,
-        model=model,
-        api_key_env=api_key_env,
-        api_key=api_key,
-        timeout_s=timeout_s,
-        route_tools=route_tools,
-    )
-    return DeciderRouter(decider)
+def systemone_router(**config: Any) -> DeciderRouter:
+    """What ``router="systemone"`` builds from ``router_config``: a :class:`DeciderRouter` on a System One API.
+
+    ``config`` is :class:`SystemOneDecider`'s keyword arguments, which check it.
+    """
+    return DeciderRouter(SystemOneDecider(**config))

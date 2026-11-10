@@ -142,26 +142,9 @@ class LLMDecider:
         return DeciderReply(ranked=ranked, scores=scores, confidence=confidence)
 
 
-def llm_router(
-    *,
-    model: str,
-    preset: str | None = None,
-    base_url: str | None = None,
-    api_key_env: str | None = None,
-    api_key: str | None = None,
-    timeout_s: float = LLM_TIMEOUT_S,
-    route_tools: Collection[str] | None = None,
-    response_format: str | None = None,
-) -> DeciderRouter:
-    """What ``router="llm"`` builds from ``router_config``: a :class:`DeciderRouter` on an :class:`LLMDecider`."""
-    decider = LLMDecider(
-        model=model,
-        preset=preset,
-        base_url=base_url,
-        api_key_env=api_key_env,
-        api_key=api_key,
-        timeout_s=timeout_s,
-        route_tools=route_tools,
-        response_format=response_format,
-    )
-    return DeciderRouter(decider)
+def llm_router(**config: Any) -> DeciderRouter:
+    """What ``router="llm"`` builds from ``router_config``: a :class:`DeciderRouter` on an :class:`LLMDecider`.
+
+    ``config`` is :class:`LLMDecider`'s keyword arguments, which check it.
+    """
+    return DeciderRouter(LLMDecider(**config))
