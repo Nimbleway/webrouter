@@ -127,13 +127,13 @@ class ParallelResearchProvider(HttpResearchProvider):
         """
         if self._state(run) != "completed":
             return self._progress(run)
-        result = self._get(self.result_path.format(run_id=run.get("run_id")))
+        result = self._get(self.result_path.format(run_id=_run_id(run)))
         return self._progress(run, self._to_response(request, run, result))
 
     async def _aread(self, request: ResearchRequest, run: dict[str, Any]) -> ResearchProgress:
         if self._state(run) != "completed":
             return self._progress(run)
-        result = await self._aget(self.result_path.format(run_id=run.get("run_id")))
+        result = await self._aget(self.result_path.format(run_id=_run_id(run)))
         return self._progress(run, self._to_response(request, run, result))
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:
