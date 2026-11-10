@@ -119,3 +119,12 @@ def test_a_last_member_given_the_time_left_that_times_out_is_the_walk_timing_out
         plan = wr.plan("who won the 2022 world cup")
     assert plan.decision.reason == "router_timeout"
     assert [m.outcome for m in plan.decision.members or []] == ["router_timeout"]
+
+
+def test_a_member_cut_short_that_times_out_at_once_still_leaves_the_next() -> None:
+    def early(req: RouteRequest) -> RouteDecision:
+        raise TimedOut
+
+    early.timeout_s = 5.0  # type: ignore[attr-defined]  # cut to the 30 ms left, and gives up at once
+    decision = FallbackRouter(routers=[early, answers("next")]).route(request(deadline_s=FALLBACK_MARGIN_S + 0.03))
+    assert outcomes(decision) == [("custom", "router_timeout", False), ("custom", "ok", True)]

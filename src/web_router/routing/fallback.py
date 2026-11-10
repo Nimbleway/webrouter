@@ -69,8 +69,11 @@ class _Asking:
         self.started = time.perf_counter()
         self.members: list[DecisionMember] = []
         self.timed_out = False
-        """Whether the walk ended for want of time: the last member asked timed out with no time left after it
-        or with all that was left as its limit, or no time was left to ask the next."""
+        """Whether no time is left to ask another member: the last one timed out with none left after it, or
+        none was left to ask the next."""
+        self.ran_out = False
+        """What the record says: :attr:`timed_out`, or the last member asked had all the time left as its limit
+        and timed out near the end -- an inner fallback stops its own margin early."""
         self.cut = False
         """Whether the member being asked was given the time left, less than its own limit."""
 
@@ -81,7 +84,7 @@ class _Asking:
     def out_of_time(self) -> bool:
         """Whether no time is left to ask the next member; recorded as the walk timing out."""
         if self.left() <= 0:
-            self.timed_out = True
+            self.timed_out = self.ran_out = True
         return self.timed_out
 
     def skips(self, member: Member) -> bool:
@@ -115,10 +118,10 @@ class _Asking:
         settled = ROUTER_TIMEOUT if nested else ROUTER_EMPTY if empty else ROUTER_OK
         code = cast("MemberOutcome", outcome.failure or settled)
         counted = code == ROUTER_OK
-        # Out of time when none is left, or the member had all of it and timed out within two margins of the end:
-        # an inner fallback stops its own margin early. One that reports its own timeout early leaves the next.
-        near_end = self.left() <= 0 or (self.cut and self.left() < 2 * FALLBACK_MARGIN_S)
-        self.timed_out = code == ROUTER_TIMEOUT and near_end
+        # Stopped only when no time is left: a member that reports its own timeout early leaves the next.
+        left = self.left()
+        self.timed_out = code == ROUTER_TIMEOUT and left <= 0
+        self.ran_out = self.timed_out or (code == ROUTER_TIMEOUT and self.cut and left < 2 * FALLBACK_MARGIN_S)
         self.members.append(DecisionMember(name=member.name, outcome=code, ms=outcome.elapsed_ms, counted=counted))
         return decision if counted else None
 
@@ -165,7 +168,7 @@ class FallbackRouter:
         for member in asking.to_ask(self._members):
             if (decision := asking.settle(member, member.attached.call(asking.request_for(member)))) is not None:
                 return composed(decision, asking.members)
-        return composed(None, asking.members, timed_out=asking.timed_out)
+        return composed(None, asking.members, timed_out=asking.ran_out)
 
     async def aroute(self, req: RouteRequest) -> CompositeDecision:
         """:meth:`route` from async code."""
@@ -174,7 +177,7 @@ class FallbackRouter:
             outcome = await member.attached.acall(asking.request_for(member))
             if (decision := asking.settle(member, outcome)) is not None:
                 return composed(decision, asking.members)
-        return composed(None, asking.members, timed_out=asking.timed_out)
+        return composed(None, asking.members, timed_out=asking.ran_out)
 
     def close(self) -> None:
         """Close the members built by name; those passed in are the caller's."""
