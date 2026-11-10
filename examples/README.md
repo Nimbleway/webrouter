@@ -21,6 +21,7 @@ Runnable scripts, roughly in the order worth reading them.
 | [`router_llm.py`](router_llm.py) | The built-in `router="llm"` on a preset (`LLM_ROUTER_PRESET`, `openai` unless set): a chat model ranks the candidates, held to their ids; 3 s — sends the prompt to that server, bills | `LLM_ROUTER_MODEL` + the preset's key, such as `OPENAI_API_KEY` |
 | [`router_remote_server.py`](router_remote_server.py) | A router service in the standard library for `router="remote"`: the JSON wire format, schema 1, around the built-in rules router; `--demo` plans through it | no |
 | [`router_jev.py`](router_jev.py) | An async router on TypeSafe's Jev written out by hand, ranking by its probability per candidate; `timeout_s = 1.0` — sends the prompt to TypeSafe, bills. `router="systemone"` is the same built in | `TYPESAFE_API_KEY` |
+| [`router_openai_decisions.py`](router_openai_decisions.py) | OpenAI's Decisions API as a decider on `DeciderRouter`: one `choice` question over the candidates, ranked by its probability per option; 3 s — sends the prompt to OpenAI, bills | `OPENAI_API_KEY` |
 | [`error_handling.py`](error_handling.py) | Every exception and what to do about each | no |
 | [`search_depth.py`](search_depth.py) | `lite` / `fast` / `deep` measured across backends | no |
 | [`custom_provider.py`](custom_provider.py) | Adding your own backend, against Wikipedia's open API | no |
@@ -41,7 +42,7 @@ the exceptions, and not by oversight: every agentic backend bills for the run,
 every cloud browser for the time it is open, and a template run fetches on the
 backend's account, so there is no anonymous tier for them to fall back on.
 With no key each names the variables that would fix it and exits.
-`router_llm.py` and `router_jev.py` are exceptions too: each plan sends the
+`router_llm.py`, `router_jev.py` and `router_openai_decisions.py` are exceptions too: each plan sends the
 prompt to a model on another server, which bills for it unless it is your own. With no
 key each says what to set and exits. `router_classifier.py` needs no key but
 does need scikit-learn, which web-router does not depend on: run it with

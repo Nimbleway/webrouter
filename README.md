@@ -2112,13 +2112,14 @@ The library ships one keyless router, `web_router.routing.rules.rules`: a
 prompt with a URL is extracted, anything else searched, and two model routers,
 `router="llm"` and `router="systemone"`: see
 [Decision APIs](#decision-apis-deciderrouter-routerllm-and-routersystemone).
-Five example routers, tested offline: [rules](examples/router_rules.py), a
+Six example routers, tested offline: [rules](examples/router_rules.py), a
 [scikit-learn classifier](examples/router_classifier.py), a
 [decider of your own](examples/router_decider.py), the built-in
-[`llm` router on a preset](examples/router_llm.py) and
-[Jev](examples/router_jev.py), TypeSafe's model, written out by hand. The last
-two are model routers: each sends the prompt to that model's server, which
-bills for it. The
+[`llm` router on a preset](examples/router_llm.py),
+[Jev](examples/router_jev.py), TypeSafe's model, written out by hand, and
+[OpenAI's Decisions API](examples/router_openai_decisions.py) as a decider.
+The last three are model routers: each sends the prompt to that model's
+server, which bills for it. The
 MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
