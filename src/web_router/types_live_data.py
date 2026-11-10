@@ -237,7 +237,7 @@ class LiveDataResponse(BaseModel):
             return values
         if "template" in values and "source" not in values:
             _deprecated("template", "source")
-            values = {**values, "source": values.pop("template")}
+            values = {**{k: v for k, v in values.items() if k != "template"}, "source": values["template"]}
         records, data = values.get("records"), values.get("data")
         if not records and data:
             values = {**values, "records": [data]}

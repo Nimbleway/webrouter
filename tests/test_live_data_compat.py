@@ -77,3 +77,15 @@ def test_the_not_found_error_takes_its_old_keyword() -> None:
     with pytest.raises(TypeError, match="not both"):
         LiveDataSourceNotFoundError("nimble", "a", template="b")
     assert LiveDataSourceNotFoundError("nimble", "").source == "", "an empty name is still a not-found"
+
+
+def test_a_response_built_the_old_way_still_validates_and_leaves_its_arguments_alone() -> None:
+    from web_router.types_live_data import LiveDataResponse
+
+    given = {"provider": "custom", "template": "books_pdp", "data": {"title": "A book"}}
+    with pytest.warns(DeprecationWarning, match="template"):
+        response = LiveDataResponse.model_validate(given)
+    assert response.source == "books_pdp" and response.records == [{"title": "A book"}]
+    assert "template" in given, "the caller's dict is not changed"
+    with pytest.warns(DeprecationWarning, match="template"):
+        assert LiveDataResponse(provider="custom", template="books_pdp").source == "books_pdp"  # type: ignore[call-arg]
