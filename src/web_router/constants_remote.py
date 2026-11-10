@@ -74,6 +74,9 @@ WIRE_CONFIDENCE_RANGE = {"minimum": 0, "maximum": 1}
 WIRE_MAX_TEXT = 300
 """Characters kept of a decision's ``reason`` and of each ``exclude`` reason; the rest is cut."""
 
+WIRE_MAX_NAME = 128
+"""Characters kept of each name a decision sets -- candidate id, provider, option -- since a record may show it."""
+
 WIRE_MAX_NAMES = 64
 """The most entries a decision may hold in one list or mapping: ``tools``, one method's ``providers``,
 ``exclude``, or one method's ``params``. Past it, the decision is refused."""

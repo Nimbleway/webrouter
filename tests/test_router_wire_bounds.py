@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from web_router.constants_remote import WIRE_MAX_NAMES
+from web_router.constants_remote import WIRE_MAX_NAME, WIRE_MAX_NAMES
 from web_router.routing.wire import WireError, decision_from_wire
 from web_router.routing.wire_schema import response_schema
 
@@ -31,3 +31,12 @@ def test_a_list_inside_a_methods_options_is_held_to_the_entry_limit() -> None:
 def test_the_response_schema_caps_a_list_or_mapping_inside_a_methods_options() -> None:
     option = response_schema()["properties"]["params"]["anyOf"][0]["additionalProperties"]["additionalProperties"]
     assert option == {"maxItems": WIRE_MAX_NAMES, "maxProperties": WIRE_MAX_NAMES}, "untyped: any JSON, capped"
+
+
+def test_every_name_a_decision_sets_is_cut_short() -> None:
+    long = "search:" + "x" * 20_000
+    wire = {"schema": 1, "exclude": {long: "why"}, "providers": {"search": [long]}, "params": {"search": {long: 1}}}
+    decision = decision_from_wire(wire)
+    assert decision.providers is not None and decision.params is not None
+    names = [*decision.exclude, *decision.providers["search"], *decision.params["search"]]
+    assert len(names) == 3 and all(len(name) == WIRE_MAX_NAME for name in names)
