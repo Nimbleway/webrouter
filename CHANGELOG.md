@@ -8,6 +8,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+### Changed
+
+- The `evals` extra now accepts `anthropic` 2.x as well as 1.x, and the `browser` extra accepts Playwright 1.64 and 1.65 as well as 1.63; the browser actions were tested on 1.65 against a real Chromium.
+- `answer(provider="you", recency="day")` now raises `UnsupportedParameterError` before the call: live, You.com answered it citing pages several days old. `week`, `month` and `year` are unchanged, and the `auto` answer chain moves on to the next backend.
+
 ### Fixed
 
 - Nimble `research` at `effort="max"` runs again. Nimble's API refuses its own `max` tier, which is not open yet, with a 422, so `max` now sends `x-high`, the deepest tier it runs today.
