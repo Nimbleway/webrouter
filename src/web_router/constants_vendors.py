@@ -61,6 +61,9 @@ VENDOR_FIND_STOP_WORDS: Final = frozenset(
 """Query words :meth:`~web_router.WebRouter.find_vendor_endpoints` ignores: they say nothing about what an
 endpoint does, and counted as matches they let a summary's grammar outrank its meaning."""
 
+VENDOR_TOKEN_LOCK_POLL: Final = 0.01
+"""Seconds an async token call sleeps between tries at the lock a sync call may hold."""
+
 VENDOR_TOKEN_REFRESH_MARGIN: Final = 60.0
 """Seconds before an OAuth access token's stated expiry at which it is refreshed instead of reused."""
 
@@ -116,6 +119,11 @@ VENDOR_CATEGORIES: Final = (
     "other",
 )
 """The shelves a vendor is listed under. One per vendor; ``other`` when none fits."""
+
+MSG_VENDOR_OAUTH_LITERAL: Final = (
+    "oauth2.{field} is sent as written and cannot hold a placeholder: {value!r}. Use the literal value."
+)
+MCP_MSG_VENDOR_ARG_TYPE: Final = "Tool {tool!r} takes {name!r} as {kind}, not {value!r}."
 
 MSG_VENDOR_UNKNOWN: Final = "Unknown vendor {vendor!r}. Known vendors: {known}"
 MSG_VENDOR_ENDPOINT_UNKNOWN: Final = "Unknown vendor endpoint {endpoint!r}.{hint}"
