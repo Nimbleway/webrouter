@@ -44,11 +44,10 @@ from web_router.constants_fallback import (
 )
 from web_router.constants_merge import ROUTER_EMPTY, ROUTER_TIMEOUT
 from web_router.exceptions import ConfigurationError
-from web_router.routing.composite import CompositeDecision, composed
+from web_router.routing.composite import CompositeDecision, composed, decides_nothing
 from web_router.routing.contract import RouteDecision, RouteRequest
 from web_router.routing.fallback_members import Member, aclose_members, built_members, close_members
 from web_router.routing.invoke import RouterOutcome
-from web_router.routing.merge_shape import decides_nothing
 from web_router.routing.route_tools import ALL_TOOLS
 from web_router.types_decision import DecisionMember, MemberOutcome
 

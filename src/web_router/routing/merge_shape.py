@@ -73,9 +73,3 @@ def _members_well_formed(decision: RouteDecision) -> bool:
     if not isinstance(decision.timed_out, bool):
         return False
     return sum(m.counted for m in members) <= 1
-
-
-def decides_nothing(decision: RouteDecision) -> bool:
-    """A decision that decides nothing: no method, no backend, no exclusion and no option."""
-    providers, params = decision.providers or {}, decision.params or {}
-    return not (decision.tools or any(providers.values()) or decision.exclude or any(params.values()))

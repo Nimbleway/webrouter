@@ -48,14 +48,18 @@ def members_of(decision: object) -> list[DecisionMember] | None:
     return list(decision.members)
 
 
+def decides_nothing(decision: RouteDecision) -> bool:
+    """A decision that decides nothing: no method, no backend, no exclusion and no option."""
+    providers, params = decision.providers or {}, decision.params or {}
+    return not (decision.tools or any(providers.values()) or decision.exclude or any(params.values()))
+
+
 def none_answered(decision: object) -> str | None:
     """Why a composite gave no answer: ``router_timeout`` or ``router_empty``; ``None`` when it decides something.
 
     Judged by the decision itself, as the ``fallback`` router judges a member's, whatever ``members`` or
     ``timed_out`` say. ``None`` too for any decision that is not a composite's.
     """
-    from web_router.routing.merge_shape import decides_nothing  # merge_shape imports this module
-
     if not isinstance(decision, CompositeDecision) or not decides_nothing(decision):
         return None
     return ROUTER_TIMEOUT if decision.timed_out else ROUTER_EMPTY
