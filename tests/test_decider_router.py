@@ -13,6 +13,7 @@ import pytest
 from tests.decider_helpers import CANDIDATES, EXTRACT, AFixed, Fixed, reply, request
 from web_router import DeciderQuestion, DeciderReply, DeciderRouter, RouteDecision, WebRouter
 from web_router.exceptions import ConfigurationError
+from web_router.routing._runner import _close
 from web_router.routing.invoke import AttachedRouter
 
 OFFERED = [c.id for c in CANDIDATES]
@@ -180,3 +181,13 @@ def test_a_coroutine_answered_after_the_deadline_is_closed_unawaited(from_async:
             break
         time.sleep(0.02)
     assert decider.answered.cr_frame is None  # closed, so never reported as not awaited
+
+
+async def test_a_task_answered_by_decide_is_cancelled_when_the_call_drops_it() -> None:
+    task = asyncio.ensure_future(asyncio.sleep(10))
+    decider = Fixed(task)
+    pending = DeciderRouter(decider).route(request())
+    _close(pending)
+    await asyncio.sleep(0)  # the cancel is scheduled on the task's own loop
+    with pytest.raises(asyncio.CancelledError):
+        await task

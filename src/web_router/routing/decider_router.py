@@ -27,7 +27,7 @@ from typing import Any
 from web_router.constants_decider import MSG_DECIDER_FORM
 from web_router.exceptions import ConfigurationError
 from web_router.routing._forms import _declared_timeout
-from web_router.routing._runner import _close_late, _on_thread
+from web_router.routing._runner import _close, _close_late, _on_thread
 from web_router.routing.contract import RouteDecision, RouteRequest
 from web_router.routing.decider import Decider, DeciderQuestion
 from web_router.routing.decider_question import decision_for, question_for
@@ -69,9 +69,7 @@ class _Pending:
         return self._finish(await self._reply)
 
     def close(self) -> None:
-        close = getattr(self._reply, "close", None)
-        if callable(close):
-            close()
+        _close(self._reply)  # a coroutine closed, a task cancelled
 
 
 class DeciderRouter:
