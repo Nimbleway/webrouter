@@ -290,7 +290,11 @@ environment -- once, when the server starts:
   from the same process environment at startup;
 - `WEB_ROUTER_MCP_ROUTER=<name>` names any other built-in router, such as
   [`fallback`](../README.md#chaining-routers-routerfallback), with its
-  `router_config` as a JSON object in `WEB_ROUTER_MCP_ROUTER_CONFIG`. A
+  `router_config` as a JSON object in `WEB_ROUTER_MCP_ROUTER_CONFIG`, the
+  same keys the library takes, flat for one router:
+  `WEB_ROUTER_MCP_ROUTER=llm WEB_ROUTER_MCP_ROUTER_CONFIG='{"preset": "openai", "model": "gpt-4.1-mini"}'`.
+  Only `web_run` asks the router here, so `route_tools` in the config changes
+  nothing. A
   config entry `api_key_env` names the variable holding a key: its value is
   read once at startup and put in its place as `api_key` (`""` when unset),
   so the router never reads the environment again. For example, a router
@@ -367,7 +371,9 @@ server charges itself run on the budget's clock, and `research` and `browse`
 wait no longer than it has left.
 
 - **The operator's ceiling**: `WEB_ROUTER_MCP_MAX_COST_USD` and
-  `WEB_ROUTER_MCP_TIME_LIMIT_S`. With no `budget_start`, the whole connection
+  `WEB_ROUTER_MCP_TIME_LIMIT_S`. It counts what the backends charge; a router
+  that bills for itself, such as `llm` or `systemone`, is billed by its vendor
+  and is not counted. With no `budget_start`, the whole connection
   is one task under it, its clock running from the connection's start. The
   agent cannot reset or raise it.
 - **`budget_start(max_cost_usd, time_limit_s)`** opens a new task inside the
@@ -406,7 +412,8 @@ all of it under `routing`: the router (`rules`, `operator` for yours -- never
 its `<module>:<attribute>` -- `remote(<scheme>://<host>)` for a service, never its path, query or key,
 `fallback(<member>, ...)` for a fallback, or
 `off`), where it runs (`router_runs`: `in_process` for the built-in router or
-none, `operator` with a `router_note` for yours, `remote` with a `router_note` naming each host prompts go to,
+none, `operator` with a `router_note` for yours, `remote` with a `router_note` naming each host prompts go to --
+a service, or a built-in `llm` or `systemone` router's vendor host --
 `built_in` for a built-in router whose config names no URL),
 a `prompt_note` saying the
 prompt goes to the backend, and to each router service's host, the `url_policy` with a `url_policy_note` saying

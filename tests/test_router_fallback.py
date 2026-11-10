@@ -133,6 +133,18 @@ def test_a_fallback_may_hold_a_fallback() -> None:
     ]
 
 
+def test_an_inner_fallback_that_ran_out_of_time_is_recorded_as_a_timeout() -> None:
+    def inner(req: Any) -> CompositeDecision:
+        return CompositeDecision(timed_out=True)
+
+    with fallback(inner, answers("next")) as wr:
+        plan = wr.plan("who won the 2022 world cup")
+    assert [(m.name, m.outcome) for m in plan.decision.members or []] == [
+        ("custom", "router_timeout"),
+        ("custom", "ok"),
+    ]
+
+
 def ok(name: str, counted: bool) -> DecisionMember:
     return DecisionMember(name=name, outcome="ok", ms=1.0, counted=counted)
 
