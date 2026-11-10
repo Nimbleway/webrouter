@@ -1310,7 +1310,7 @@ A change users would notice adds a line under `## [Unreleased]` in `CHANGELOG.md
 ## Files for feedback
 
 Don't commit drafts, decks, PDFs or images for feedback; open a
-[Discussion](https://github.com/WebContextLayer/webrouter/discussions) and attach them.
+[Discussion](https://github.com/Nimbleway/webrouter/discussions) and attach them.
 
 ## Secrets
 

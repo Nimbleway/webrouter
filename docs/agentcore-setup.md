@@ -15,7 +15,7 @@ from them.
 ## 1. Install
 
 ```bash
-pip install "web-router[aws]"
+pip install "webrouter[aws]"
 ```
 
 ## 2. Create the gateway
