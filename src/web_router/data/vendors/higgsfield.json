@@ -1,0 +1,319 @@
+{
+  "vendor": "higgsfield",
+  "name": "Higgsfield",
+  "category": "media-generation",
+  "summary": "Image and video generation (SOUL, Kling, Seedance, Wan and more) through one asynchronous request API.",
+  "docs_url": "https://docs.higgsfield.ai/docs",
+  "base_url": "https://api.higgsfield.ai",
+  "auth": {
+    "credentials": {
+      "key_id": {
+        "env": [
+          "HF_API_KEY_ID"
+        ],
+        "description": "The key ID of a Higgsfield API credential (console.higgsfield.ai)."
+      },
+      "key_secret": {
+        "env": [
+          "HF_API_KEY_SECRET"
+        ],
+        "description": "The secret of the same Higgsfield API credential."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Key {key_id}:{key_secret}"
+      }
+    ]
+  },
+  "notes": [
+    "Each model has its own endpoint path (its endpoint ID) and JSON body; the console (console.higgsfield.ai) and docs.higgsfield.ai/docs/models list them. Only a few are named here.",
+    "Generation is asynchronous: a submission returns {status: queued, request_id, status_url, cancel_url}; poll higgsfield.requests.status every 2 s backing off to 10 s until completed, failed, nsfw or canceled.",
+    "Charged to the account balance only on success; failed, nsfw and canceled requests are refunded. Estimate a cost first with POST /estimate/{endpoint id} and the same body.",
+    "Over the concurrency limit, requests queue; when the queue is full a submission gets 429 with Retry-After. Send an Idempotency-Key header so a retried submission does not create a duplicate.",
+    "Output files are kept seven days after the request finishes (expires_at in the status answer); download what you keep."
+  ],
+  "sources": [
+    "https://docs.higgsfield.ai/docs/llms.txt",
+    "https://docs.higgsfield.ai/docs/authentication.md",
+    "https://docs.higgsfield.ai/docs/concepts/requests.md",
+    "https://docs.higgsfield.ai/docs/concepts/polling.md",
+    "https://docs.higgsfield.ai/docs/concepts/billing-and-retention.md",
+    "https://docs.higgsfield.ai/docs/concepts/rate-limits.md",
+    "https://docs.higgsfield.ai/docs/models/soul-2/generate.md",
+    "https://docs.higgsfield.ai/docs/models/kling-3/pro-text-to-video.md",
+    "https://docs.higgsfield.ai/docs/api-reference/requests/get-request-status.md",
+    "https://docs.higgsfield.ai/docs/api-reference/requests/cancel-a-queued-request.md",
+    "https://docs.higgsfield.ai/docs/api-reference/requests/delete-request-data.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "higgsfield.image.generate",
+      "name": "Generate images with SOUL V2",
+      "summary": "Submits a text-to-image request (portraits, fashion, editorial); returns a request id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/higgsfield-ai/soul/v2/standard",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text instructions for the image.",
+          "example": "A ceramic vase on a wooden table beside a sunlit window, editorial photograph."
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "Default 1:1.",
+          "enum": [
+            "9:16",
+            "16:9",
+            "4:3",
+            "3:4",
+            "1:1",
+            "2:3",
+            "3:2"
+          ]
+        },
+        "resolution": {
+          "in": "body",
+          "type": "string",
+          "description": "Default 720p.",
+          "enum": [
+            "720p",
+            "1080p"
+          ]
+        },
+        "enhance_prompt": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Prompt enhancement; default false."
+        },
+        "style_id": {
+          "in": "body",
+          "type": "string",
+          "description": "UUID of a SOUL style; a default general style is used when omitted."
+        },
+        "custom_reference_id": {
+          "in": "body",
+          "type": "string",
+          "description": "UUID of a completed Soul ID character reference owned by the account."
+        },
+        "custom_reference_strength": {
+          "in": "body",
+          "type": "number",
+          "description": "Above 0 and up to 1 when custom_reference_id is set; default 1."
+        },
+        "seed": {
+          "in": "body",
+          "type": "integer",
+          "description": "1 to 1000000; random when omitted (null is invalid)."
+        },
+        "batch_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Number of images: 1 (default) or 4.",
+          "enum": [
+            1,
+            4
+          ]
+        },
+        "idempotency_key": {
+          "in": "header",
+          "type": "string",
+          "wire_name": "Idempotency-Key",
+          "description": "Makes a retried submission return the original request instead of a duplicate."
+        }
+      },
+      "notes": [
+        "A read over POST charged to the balance on success."
+      ],
+      "job": "ai.image.generate",
+      "docs_url": "https://docs.higgsfield.ai/docs/models/soul-2/generate",
+      "verified": {
+        "docs": "https://docs.higgsfield.ai/docs/models/soul-2/generate.md"
+      }
+    },
+    {
+      "id": "higgsfield.image.estimate",
+      "name": "Estimate a SOUL V2 image request",
+      "summary": "Cost in USD for a SOUL V2 request with the given body, without generating.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/estimate/higgsfield-ai/soul/v2/standard",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The same body you would submit for generation."
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "As on higgsfield.image.generate."
+        },
+        "resolution": {
+          "in": "body",
+          "type": "string",
+          "description": "As on higgsfield.image.generate."
+        },
+        "batch_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "As on higgsfield.image.generate."
+        }
+      },
+      "notes": [
+        "A read over POST; free. Returns {usd}. Any model can be estimated at /estimate/{its endpoint ID}."
+      ],
+      "job": "ai.cost.estimate",
+      "docs_url": "https://docs.higgsfield.ai/docs/concepts/billing-and-retention",
+      "verified": {
+        "docs": "https://docs.higgsfield.ai/docs/concepts/billing-and-retention.md"
+      }
+    },
+    {
+      "id": "higgsfield.video.generate",
+      "name": "Generate a video with Kling 3.0 Pro",
+      "summary": "Submits a text-to-video request with optional native audio and multi-shot prompts; returns a request id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/kling-video/v3.0/pro/text-to-video",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What the video shows, up to 2,500 characters; required even with multi_prompt."
+        },
+        "duration": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seconds, 3 to 15; default 5."
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "Default 16:9.",
+          "enum": [
+            "16:9",
+            "9:16",
+            "1:1"
+          ]
+        },
+        "sound": {
+          "in": "body",
+          "type": "string",
+          "description": "Native audio; default on.",
+          "enum": [
+            "on",
+            "off"
+          ]
+        },
+        "cfg_scale": {
+          "in": "body",
+          "type": "number",
+          "description": "0 to 1; default 0.5."
+        },
+        "multi_shots": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true to use multi_prompt custom shots."
+        },
+        "multi_prompt": {
+          "in": "body",
+          "type": "array",
+          "description": "1 to 6 shots of {prompt (up to 512 chars), duration (1-15 s)}; their durations are summed for billing."
+        },
+        "idempotency_key": {
+          "in": "header",
+          "type": "string",
+          "wire_name": "Idempotency-Key",
+          "description": "Makes a retried submission return the original request."
+        }
+      },
+      "notes": [
+        "A read over POST charged to the balance on success."
+      ],
+      "job": "ai.video.generate",
+      "docs_url": "https://docs.higgsfield.ai/docs/models/kling-3/pro-text-to-video",
+      "verified": {
+        "docs": "https://docs.higgsfield.ai/docs/models/kling-3/pro-text-to-video.md"
+      }
+    },
+    {
+      "id": "higgsfield.requests.status",
+      "name": "Get request status and output",
+      "summary": "State (queued, in_progress, completed, failed, nsfw, canceled) and output URLs when completed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/requests/{request_id}/status",
+      "params": {
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Request id from a submission."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.higgsfield.ai/docs/api-reference/requests/get-request-status",
+      "verified": {
+        "docs": "https://docs.higgsfield.ai/docs/api-reference/requests/get-request-status.md"
+      }
+    },
+    {
+      "id": "higgsfield.requests.cancel",
+      "name": "Cancel a queued request",
+      "summary": "Cancels a request that has not started; it is refunded.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/requests/{request_id}/cancel",
+      "params": {
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Request id."
+        }
+      },
+      "notes": [
+        "202 with an empty body on success; 400 once processing has started."
+      ],
+      "job": "jobs.cancel",
+      "docs_url": "https://docs.higgsfield.ai/docs/api-reference/requests/cancel-a-queued-request",
+      "verified": {
+        "docs": "https://docs.higgsfield.ai/docs/api-reference/requests/cancel-a-queued-request.md"
+      }
+    },
+    {
+      "id": "higgsfield.requests.delete",
+      "name": "Delete a finished request's data",
+      "summary": "Deletes a finished request's files, prompt and parameters now; billing records stay.",
+      "kind": "write",
+      "method": "DELETE",
+      "path": "/requests/{request_id}",
+      "params": {
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Request id."
+        }
+      },
+      "notes": [
+        "Fails while the request is still queued or in progress."
+      ],
+      "job": "jobs.delete",
+      "docs_url": "https://docs.higgsfield.ai/docs/api-reference/requests/delete-request-data",
+      "verified": {
+        "docs": "https://docs.higgsfield.ai/docs/api-reference/requests/delete-request-data.md"
+      }
+    }
+  ]
+}
