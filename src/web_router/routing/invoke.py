@@ -36,11 +36,11 @@ from concurrent.futures import Future
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from web_router.constants_invoke import MSG_ROUTER_CLASS, MSG_ROUTER_FORM, ROUTER_NAME_ATTR
+from web_router.constants_invoke import MSG_ROUTER_CLASS, MSG_ROUTER_FORM
 from web_router.constants_merge import ROUTER_ERROR, ROUTER_INVALID, ROUTER_TIMEOUT
 from web_router.exceptions import ConfigurationError, RouterError
 from web_router.providers._deadline import current_deadline
-from web_router.routing._forms import _declared_timeout, _sides
+from web_router.routing._forms import _declared_timeout, _name_of, _sides
 from web_router.routing._runner import (
     _asettled,
     _close,
@@ -74,14 +74,6 @@ RouterLike = (
     | AsyncRouter
 )
 """What ``router=`` takes: a function or coroutine function, or an object with ``route`` or ``aroute``."""
-
-
-def _name_of(router: object) -> str:
-    """What a decision record calls the router: its ``router_name`` when it sets one, else its qualified name."""
-    declared = getattr(router, ROUTER_NAME_ATTR, None)
-    if isinstance(declared, str) and declared:
-        return declared
-    return getattr(router, "__qualname__", None) or type(router).__qualname__
 
 
 @dataclass(frozen=True)

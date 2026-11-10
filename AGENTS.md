@@ -166,7 +166,7 @@ src/web_router/
 │   │                   its own thread or loop within its timeout, and the failure policy
 │   ├── _runner.py      the worker thread and private loop a router runs on, the wait
 │   │                   within its deadline, and the cleanup of what it leaves behind
-│   ├── _forms.py       a router's sync and async sides and its declared timeout_s
+│   ├── _forms.py       a router's sync and async sides, its declared timeout_s and its name
 │   ├── registry.py     register_router()/unregister_router(): routers by name, built
 │   │                   from router_config, and closed by the router that built them
 │   ├── wire.py         the JSON wire format, schema 1: a RouteRequest out, a
@@ -183,6 +183,7 @@ src/web_router/
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
+│   ├── router_owner.py a router built by name: kept to close with the routers, or closed if refused
 │   ├── submitted.py    submitted(): a job's start (submit_research, submit_browse)
 │   │                   held to the shared budget in force, at the effort it maps
 │   ├── decide.py       decided(): candidates and a router's outcome merged into the
