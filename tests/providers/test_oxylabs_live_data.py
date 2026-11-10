@@ -1,7 +1,7 @@
 """Oxylabs live data: dedicated sources run through Realtime with parsing.
 
 Shapes follow https://developers.oxylabs.io (Realtime integration, dedicated
-parsers, response codes). Values are synthetic. Not yet verified live.
+parsers, response codes). Values are synthetic; the provider was verified live on 2026-11-10.
 """
 
 from __future__ import annotations

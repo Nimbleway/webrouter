@@ -16,8 +16,8 @@ datasets are not here: they are not live.
 
 Written from https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests,
 the scraper management API (``GET /datasets/v3/scrapers``) and the error-code
-page, read on 2026-11-09. **Not yet verified live**: no Bright Data token was
-available.
+page, read on 2026-11-09. Verified live on 2026-11-10: the catalogue, a local
+search, a description and a run of ``amazon_products`` on one product URL.
 
 What the API does not say, this does not invent. A scraper's input and output
 are listed as field names without types, so a description's schemas name

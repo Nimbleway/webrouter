@@ -1,7 +1,7 @@
 """Bright Data live data: ready-made scrapers listed, described, and run on one input synchronously.
 
 Shapes follow https://docs.brightdata.com (synchronous requests, the scraper
-management API, error codes). Values are synthetic. Not yet verified live.
+management API, error codes). Values are synthetic; the provider was verified live on 2026-11-10.
 """
 
 from __future__ import annotations

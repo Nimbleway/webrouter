@@ -8,8 +8,9 @@ The inputs are the source's own: ``query`` (an ASIN, a search term) for some,
 ``geo_location`` -- sent as given.
 
 Written from https://developers.oxylabs.io (Realtime integration, dedicated
-parsers, response codes), read on 2026-11-09. **Not yet verified live**: no
-Oxylabs credentials were available.
+parsers, response codes), read on 2026-11-09. Verified live on 2026-11-10: runs
+of ``amazon_product`` and ``google_search``. A source Oxylabs does not have
+answers 400 "Unsupported source.", raised as a ``ProviderError``.
 
 Oxylabs has no endpoint that lists its sources, so the catalogue is the list
 of sources with a dedicated parser that its docs publish, and a description

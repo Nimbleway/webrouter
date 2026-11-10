@@ -326,9 +326,11 @@ calls.
 | `Provider.OXYLABS` | `oxylabs` | [Oxylabs dedicated sources](https://developers.oxylabs.io/scraping-solutions/web-scraper-api/features/result-processing-and-storage/dedicated-parsers) | `OXYLABS_USERNAME`, `OXYLABS_PASSWORD` | — |
 
 Nimble was verified live on 2026-10-22: a listing, a description and a run on
-a public test page. **Apify, Bright Data and Oxylabs are written from their
-documentation** and have not yet been called live; their integration tests
-skip themselves until keys are available. Listing and describing bill nothing
+a public test page. Apify, Bright Data and Oxylabs were verified live on
+2026-11-10: a run on each (Apify's Google Maps Actor, Bright Data's
+`amazon_products`, Oxylabs' `amazon_product` and `google_search`), and Apify's
+and Bright Data's catalogue, search and description. Their integration tests skip themselves until keys are
+available. Listing and describing bill nothing
 on any of them; what a run bills is each vendor's own rate, recorded dated and
 sourced in [`benchmarks/providers/PRICING.md`](benchmarks/providers/PRICING.md)
 from the price list `web_router.prices` reads (see

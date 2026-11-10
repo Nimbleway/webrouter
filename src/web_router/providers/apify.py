@@ -10,7 +10,8 @@ Written from https://docs.apify.com/api/v2 and its pages for the Store
 listing (``GET /v2/store``), an Actor (``GET /v2/actors/{id}``), its default
 build (``GET /v2/actors/{id}/builds/default``, where the input schema lives)
 and the synchronous run (``POST /v2/actors/{id}/run-sync-get-dataset-items``),
-read on 2026-11-09. **Not yet verified live**: no Apify token was available.
+read on 2026-11-09. Verified live on 2026-11-10: a Store listing, a native
+search, a description and a run of ``compass~crawler-google-places``.
 
 What a run does not say, this does not invent: Apify documents no generic
 time a page was scraped, so ``fetched_at`` stays ``None``; and an Actor
