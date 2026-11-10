@@ -15,7 +15,7 @@ from web_router.mcp import server
 from web_router.mcp.routing_config import McpRouting
 
 SECRET = "sk-process-key"
-FROM_FILE = "sk-project-file-key"
+FROM_FILE = "sk-file-key"
 
 
 def named(router: str, config: Any, **env: str) -> dict[str, str]:
