@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from web_router.types_options import Recency
 
@@ -22,7 +22,7 @@ def today() -> date:
     through here so :func:`pinned_today` can fix it: a provider contract records
     the dates a request sends, and must not go stale overnight.
     """
-    return _PINNED_TODAY.get() or datetime.now(timezone.utc).date()
+    return _PINNED_TODAY.get() or datetime.now(UTC).date()
 
 
 @contextmanager

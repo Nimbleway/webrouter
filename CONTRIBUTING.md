@@ -40,7 +40,7 @@ again on every pull request, with the unit tests; run `make check` before you pu
 so a red CI does not cost a review round. After editing `pyproject.toml`, run
 `make lock && make requirements` and commit the results.
 
-`requires-python` is `>=3.10` — the floor the package supports. `.python-version` pins 3.12, which is just the interpreter `uv` uses
+`requires-python` is `>=3.11` — the floor the package supports. `.python-version` pins 3.12, which is just the interpreter `uv` uses
 for local development, not a requirement.
 
 ## Tests
