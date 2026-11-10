@@ -71,7 +71,7 @@ def _variable(name: str | None, config: Mapping[str, Any]) -> str | None:
     """
     if config.get(MCP_CONFIG_KEY) is not None:
         return None
-    if MCP_CONFIG_KEY_ENV in config:
+    if config.get(MCP_CONFIG_KEY_ENV) is not None:  # null is unset, as the library reads it
         variable = config[MCP_CONFIG_KEY_ENV]
         if not isinstance(variable, str):
             kind = type(variable).__name__

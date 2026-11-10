@@ -125,3 +125,9 @@ def test_a_remote_member_given_no_key_field_captures_its_key_at_startup(monkeypa
     unset = McpRouting.from_environ(named("fallback", {"routers": [remote]}))
     monkeypatch.setenv("WEB_ROUTER_REMOTE_ROUTER_API_KEY", FROM_FILE)
     assert unset.router_config["routers"][0]["api_key"] == "", "none at startup: none later"  # type: ignore[index]
+
+
+def test_a_null_api_key_env_is_unset_so_the_preset_key_is_captured() -> None:
+    config = {"preset": "deepseek", "model": "m", "api_key_env": None}
+    routing = McpRouting.from_environ(named("llm", config, DEEPSEEK_API_KEY=SECRET))
+    assert routing.router_config == {"preset": "deepseek", "model": "m", "api_key": SECRET}
