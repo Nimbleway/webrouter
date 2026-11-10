@@ -9,30 +9,34 @@ from typing import Any
 from web_router import RouteDecision, RouteRequest
 
 
+def _decide(label: str, log: list[str] | None) -> RouteDecision:
+    if log is not None:
+        log.append(label)
+    return RouteDecision(tools=["search"], reason=label)
+
+
+def _with_attrs(member: Any, attrs: dict[str, Any]) -> Any:
+    for name, value in attrs.items():
+        setattr(member, name, value)
+    return member
+
+
 def answers(label: str, log: list[str] | None = None, **attrs: Any) -> Any:
     """A sync member that decides search, with ``label`` as its reason; ``attrs`` set on it (``timeout_s`` ...)."""
 
     def member(req: RouteRequest) -> RouteDecision:
-        if log is not None:
-            log.append(label)
-        return RouteDecision(tools=["search"], reason=label)
+        return _decide(label, log)
 
-    for name, value in attrs.items():
-        setattr(member, name, value)
-    return member
+    return _with_attrs(member, attrs)
 
 
 def aanswers(label: str, log: list[str] | None = None, **attrs: Any) -> Any:
     """:func:`answers`, as a coroutine function."""
 
     async def member(req: RouteRequest) -> RouteDecision:
-        if log is not None:
-            log.append(label)
-        return RouteDecision(tools=["search"], reason=label)
+        return _decide(label, log)
 
-    for name, value in attrs.items():
-        setattr(member, name, value)
-    return member
+    return _with_attrs(member, attrs)
 
 
 def raises(req: RouteRequest) -> RouteDecision:

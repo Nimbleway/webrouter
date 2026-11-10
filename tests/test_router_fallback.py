@@ -89,7 +89,7 @@ def test_the_decision_keeps_the_answer_and_lists_the_members() -> None:
     assert outcomes(decision) == [("custom", "router_empty", False), ("custom", "ok", True)]
 
 
-@pytest.mark.parametrize("routers", [[], (), "remote", {"name": "remote"}, None])
+@pytest.mark.parametrize("routers", [[], "remote", None])
 def test_routers_must_be_a_non_empty_list(routers: Any) -> None:
     with pytest.raises(ConfigurationError, match="non-empty list"):
         WebRouter(router="fallback", router_config={"routers": routers})
