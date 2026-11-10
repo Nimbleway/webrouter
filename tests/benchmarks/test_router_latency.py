@@ -8,7 +8,7 @@ import sys
 import time
 from collections.abc import Iterator
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from typing import Any
 
 import pytest
@@ -182,6 +182,14 @@ def test_a_stated_rtt_adds_a_simulated_remote_beside_loopback(latency: ModuleTyp
     assert [s.name for s in specs] == ["remote:http://127.0.0.1", "remote:http://127.0.0.1 +40ms"]
     assert "simulated 40 ms" in specs[1].describe
     assert not any(secret in s.name + s.describe for s in specs for secret in ("pw", "token", "/r"))
+
+
+def test_deadline_s_only_shortens_a_routers_own_deadline() -> None:
+    deadline = _module("router_latency_run")._deadline
+    attached = SimpleNamespace(timeout_s=1.0)
+    assert deadline(attached, None) == 1.0
+    assert deadline(attached, 0.25) == 0.25
+    assert deadline(attached, 5.0) == 1.0  # never past the router's real limit
 
 
 def test_a_simulated_link_keeps_the_call_within_its_deadline(latency: ModuleType) -> None:

@@ -5,8 +5,9 @@ Every router is called through the library's own
 ``router_ms`` a decision record would hold, thread or loop hop included. Each
 round calls every router once, in a seeded random order, so drift over the
 session lands on all of them alike. A call is given the router's own deadline
--- its ``timeout_s``, as a routed call is -- unless ``--deadline-s`` sets
-another; a call that hits it is **censored**: counted, never used as a value.
+-- its ``timeout_s``, as a routed call is -- or ``--deadline-s`` when that is
+shorter; a call that hits it is **censored**: counted, never used as a value.
+The added wall time always runs under the router's own ``timeout_s``.
 The added wall time is a stubbed search through ``auto`` with the router
 attached against the same with ``route_tools=()``, interleaved, so candidate
 building, pricing and the hop are in it and no backend's noise is. An async
@@ -78,7 +79,7 @@ class Series:
 
 
 def _deadline(attached: AttachedRouter, override: float | None) -> float:
-    return attached.timeout_s if override is None else override
+    return attached.timeout_s if override is None else min(override, attached.timeout_s)
 
 
 def _rounds(rng: random.Random, names: Sequence[str], count: int) -> Iterator[tuple[int, str]]:

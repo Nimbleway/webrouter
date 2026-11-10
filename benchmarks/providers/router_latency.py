@@ -155,7 +155,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     p.add_argument("--warmup", type=_count, default=DEFAULT_WARMUP, help="calls dropped after the first")
     p.add_argument("--cold", type=_count, default=DEFAULT_COLD, help="calls each on a freshly built router")
     p.add_argument("--e2e", type=_positive, default=DEFAULT_E2E, help="stubbed searches, routed against unrouted")
-    p.add_argument("--deadline-s", type=_seconds, default=None, help="every call's deadline (default: each router's)")
+    p.add_argument("--deadline-s", type=_seconds, default=None, help="caps each router's deadline (not --e2e's)")
     p.add_argument("--async", dest="use_async", action="store_true", help="call from an event loop, as acall")
     p.add_argument("--seed", type=int, default=DEFAULT_SEED, help="the prompt sample's and call order's seed")
     p.add_argument("--chain", choices=CHAINS, default=CHAIN_ALL, help="auto's order: every key, or the keys here")
