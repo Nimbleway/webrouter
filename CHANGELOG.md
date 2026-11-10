@@ -8,7 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
-- `fireworks`, an answer backend (experimental): one search on `sources` (`auto` by default) finds five pages, and a Fireworks chat model, named by `model=` or `FIREWORKS_ANSWER_MODEL`, answers from them with a verbatim quote per citation. A citation that is not in those pages fails the call. It joins `auto` last, unmeasured, and only with both `FIREWORKS_API_KEY` and `FIREWORKS_ANSWER_MODEL` set. Tested offline; a live call is not yet verified.
+- `fireworks`, an answer backend (experimental): one search on `sources` (`auto` by default) finds five pages, and a Fireworks chat model, named by `model=` or `FIREWORKS_ANSWER_MODEL`, answers from them with a verbatim quote per citation. A citation that is not in those pages fails the call. It joins `auto` last, unmeasured, and only with both `FIREWORKS_API_KEY` and `FIREWORKS_ANSWER_MODEL` set. Verified live on 2026-11-10 with `accounts/fireworks/models/qwen3p8-max`.
 
 ### Fixed
 

@@ -1,7 +1,7 @@
 """The Fireworks answer provider, over a stubbed search and a stubbed chat completions API.
 
-Mapped from the Fireworks docs, not yet a live call: chat completions are
-OpenAI-shaped, and `response_format: {"type": "json_object"}` asks for JSON.
+Verified against the live API on 2026-11-10 with Qwen 3.8 Max: chat completions
+are OpenAI-shaped, and `response_format: {"type": "json_object"}` asks for JSON.
 The search that finds the pages is any WebRouter backend, stubbed here.
 """
 
