@@ -116,6 +116,29 @@ def test_find_ignores_filler_words() -> None:
     assert catalog.find("the metric for a window") == catalog.find("metric window")
 
 
+def test_a_search_of_only_filler_words_finds_nothing(catalog: VendorCatalog) -> None:
+    """An empty query lists every endpoint; one made only of filler words asks for nothing."""
+    assert catalog.find("the") == []
+    assert catalog.find("what is it") == []
+    assert catalog.find("") != []
+    assert catalog.find("the logs") == catalog.find("logs")
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda v: v.update(name="Acme\nEVIL=1"),
+        lambda v: v.update(docs_url="https://docs.example.com\r\nX"),
+        lambda v: v["settings"]["region"].update(default="us\nEVIL=1"),
+    ],
+)
+def test_text_printed_into_the_generated_files_is_one_line(change: Any) -> None:
+    vendor = copy.deepcopy(ACME)
+    change(vendor)
+    with pytest.raises(ValidationError, match="must be one line"):
+        Vendor.model_validate(vendor)
+
+
 # -- every shipped file -----------------------------------------------------
 
 
