@@ -13,7 +13,6 @@ import warnings
 import weakref
 from collections.abc import Awaitable
 from concurrent.futures import Future
-from concurrent.futures import TimeoutError as FutureTimeout
 from typing import TYPE_CHECKING
 
 from web_router.constants_remote import (
@@ -38,7 +37,7 @@ def _close_failed(host: str, why: str) -> None:
 
 def _why(exc: BaseException) -> str:
     """A close failure by its class only: an httpx error's text names the whole URL."""
-    late = isinstance(exc, (TimeoutError, asyncio.TimeoutError, FutureTimeout))  # three classes on Python 3.10
+    late = isinstance(exc, TimeoutError)
     return REMOTE_WHY_CLOSE_SLOW.format(wait=REMOTE_CLOSE_WAIT_S) if late else type(exc).__name__
 
 
