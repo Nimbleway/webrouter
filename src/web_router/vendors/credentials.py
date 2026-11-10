@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import math
 import os
 import threading
 import time
@@ -240,6 +241,8 @@ class TokenCache:
                 seconds = float(lifetime)
             elif lifetime not in (None, ""):
                 raise TypeError(f"expires_in is a {type(lifetime).__name__}")
+            if seconds is not None and not math.isfinite(seconds):
+                raise ValueError(f"expires_in is not finite: {seconds}")
         except (ValueError, TypeError) as exc:
             error = mask(f"{type(exc).__name__}: {exc}", secrets)
             raise ProviderError(
@@ -248,8 +251,12 @@ class TokenCache:
         access = payload.get("access_token")
         if not isinstance(access, str) or not access:
             raise ProviderError(request.vendor, MSG_VENDOR_TOKEN_NO_ACCESS.format(url=request.url))
-        expires = time.monotonic() + (seconds if seconds and seconds > 0 else VENDOR_TOKEN_DEFAULT_LIFETIME)
-        self._tokens[request.key] = _Token(access, expires)
+        # The default only when the vendor gave no lifetime: a stated one, however short, is believed.
+        lifetime_s = VENDOR_TOKEN_DEFAULT_LIFETIME if seconds is None else seconds
+        if lifetime_s > VENDOR_TOKEN_REFRESH_MARGIN:
+            self._tokens[request.key] = _Token(access, time.monotonic() + lifetime_s)
+        else:
+            self._tokens.pop(request.key, None)  # good for this call only; the next one mints afresh
         return access
 
 
