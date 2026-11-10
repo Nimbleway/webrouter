@@ -2084,11 +2084,12 @@ from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](benchmarks/providers/README.md#route-eval-replaying-a-router).
 
 The library ships one keyless router, `web_router.routing.rules.rules`: a
-prompt with a URL is extracted, anything else searched. Four example routers,
+prompt with a URL is extracted, anything else searched. Five example routers,
 tested offline: [rules](examples/router_rules.py), a
 [scikit-learn classifier](examples/router_classifier.py), an
 [OpenAI-compatible model](examples/router_llm.py) and
-[Jev](examples/router_jev.py), TypeSafe's model. The last two are model
+[Jev](examples/router_jev.py), TypeSafe's model, and
+[Fireworks System One](examples/router_fireworks.py). The last three are model
 routers: each sends the prompt to that model's server, which bills for it. The
 MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
