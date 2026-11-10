@@ -179,6 +179,7 @@ src/web_router/
 │   ├── remote_config.py its other settings: httpx, timeout_s, the bearer key, headers
 │   ├── remote_errors.py its errors: RemoteRouterError, ...Timeout and ...Invalid
 │   ├── remote_redact.py the bearer key redacted from a decision that echoes it
+│   ├── remote_reply.py its reply checked before it is parsed: a 200 of JSON, identity, under 64 KiB
 │   ├── remote_close.py the pool's close on its own loop, bounded, warned when it fails
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
