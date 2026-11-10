@@ -1,0 +1,85 @@
+{
+  "vendor": "ofac-sls",
+  "name": "OFAC Sanctions List Service",
+  "category": "other",
+  "summary": "The US Treasury OFAC Sanctions List Service's published list files: the Specially Designated Nationals (SDN) list and the consolidated non-SDN list, in the standard XML and the advanced data-model XML.",
+  "docs_url": "https://ofac.treasury.gov/sanctions-list-service",
+  "base_url": "https://sanctionslistservice.ofac.treas.gov",
+  "settings": {
+    "user_agent": {
+      "env": [
+        "OFAC_SLS_USER_AGENT"
+      ],
+      "description": "The User-Agent sent with every request; the SLS host rejects requests without one (403). E.g. your application name and a contact."
+    }
+  },
+  "headers": {
+    "User-Agent": "{user_agent}"
+  },
+  "notes": [
+    "Free and keyless, but the host answers 403 to requests with no User-Agent header; set OFAC_SLS_USER_AGENT.",
+    "These are whole-list XML downloads, not a search API: download once and match locally, and re-download when OFAC publishes changes.",
+    "The old www.treasury.gov/ofac/downloads/<file> URLs redirect here.",
+    "The XML schemas are at /api/PublicationPreview/exports/XML.xsd (standard files) and /api/PublicationPreview/exports/ADVANCED_XML.xsd (advanced files)."
+  ],
+  "sources": [
+    "https://ofac.treasury.gov/sanctions-list-service",
+    "https://ofac.treasury.gov/sdn-list-data-formats-data-schemas/ofac-technical-actions-in-reverse-chronological-order/20240516_44",
+    "https://ofac.treasury.gov/recent-actions/20240507_44"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ofac-sls.sdn.xml",
+      "name": "Download the SDN list (XML)",
+      "summary": "The full Specially Designated Nationals and Blocked Persons list: individuals, entities, vessels and aircraft with aliases, addresses, ids and programs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/PublicationPreview/exports/SDN.XML",
+      "job": "sanctions.list",
+      "docs_url": "https://ofac.treasury.gov/recent-actions/20240507_44",
+      "verified": {
+        "docs": "https://ofac.treasury.gov/recent-actions/20240507_44"
+      }
+    },
+    {
+      "id": "ofac-sls.consolidated.xml",
+      "name": "Download the consolidated non-SDN list (XML)",
+      "summary": "All of OFAC's non-SDN sanctions lists in one file, in the same format as SDN.XML.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/PublicationPreview/exports/CONSOLIDATED.XML",
+      "job": "sanctions.list",
+      "docs_url": "https://ofac.treasury.gov/recent-actions/20240507_44",
+      "verified": {
+        "docs": "https://ofac.treasury.gov/recent-actions/20240507_44"
+      }
+    },
+    {
+      "id": "ofac-sls.sdn.advanced",
+      "name": "Download the SDN list (advanced XML)",
+      "summary": "The SDN list in OFAC's Advanced Sanctions Data Model, with richer structure for identities, features and relationships.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/PublicationPreview/exports/SDN_ADVANCED.XML",
+      "job": "sanctions.list",
+      "docs_url": "https://ofac.treasury.gov/recent-actions/20240507_44",
+      "verified": {
+        "docs": "https://ofac.treasury.gov/recent-actions/20240507_44"
+      }
+    },
+    {
+      "id": "ofac-sls.consolidated.advanced",
+      "name": "Download the consolidated non-SDN list (advanced XML)",
+      "summary": "The consolidated non-SDN lists in the Advanced Sanctions Data Model.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/PublicationPreview/exports/CONS_ADVANCED.XML",
+      "job": "sanctions.list",
+      "docs_url": "https://ofac.treasury.gov/recent-actions/20240507_44",
+      "verified": {
+        "docs": "https://ofac.treasury.gov/recent-actions/20240507_44"
+      }
+    }
+  ]
+}

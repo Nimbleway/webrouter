@@ -1,0 +1,92 @@
+{
+  "vendor": "austender",
+  "name": "AusTender",
+  "category": "other",
+  "summary": "Australian Government contract notices (awarded contracts since 2013) in Open Contracting Data Standard format, by notice ID or date range.",
+  "docs_url": "https://github.com/austender/austender-ocds-api",
+  "base_url": "https://api.tenders.gov.au",
+  "notes": [
+    "Keyless. Answers are OCDS release packages: each contract notice is a release with parties, awards and contracts.",
+    "Covers contract notices (awarded contracts), not open tender opportunities.",
+    "Data from AusTender (Department of Finance), licensed CC BY 3.0 AU."
+  ],
+  "sources": [
+    "https://github.com/austender/austender-ocds-api",
+    "https://app.swaggerhub.com/apis/austender/ocds-api/1.1"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "austender.contracts.get",
+      "name": "Get a contract notice",
+      "summary": "OCDS releases of one contract notice; a parent CN returns its amendments too.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ocds/findById/{cn}",
+      "params": {
+        "cn": {
+          "in": "path",
+          "type": "string",
+          "description": "Contract Notice ID, e.g. CN followed by digits.",
+          "required": true,
+          "example": "CN3000000"
+        }
+      },
+      "job": "contracts.get",
+      "docs_url": "https://app.swaggerhub.com/apis/austender/ocds-api/1.1",
+      "verified": {
+        "docs": "https://app.swaggerhub.com/apis/austender/ocds-api/1.1"
+      }
+    },
+    {
+      "id": "austender.contracts.by_date",
+      "name": "Find contract notices by date range",
+      "summary": "OCDS releases of contract notices whose published, last-modified, start or end date falls in a UTC range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ocds/findByDates/{dateType}/{startRnge}/{endRnge}",
+      "params": {
+        "dateType": {
+          "in": "path",
+          "type": "string",
+          "description": "Which date the range applies to.",
+          "required": true,
+          "enum": [
+            "contractPublished",
+            "contractLastModified",
+            "contractStart",
+            "contractEnd"
+          ]
+        },
+        "startRnge": {
+          "in": "path",
+          "type": "string",
+          "description": "Range start, UTC, yyyy-mm-ddThh:mi:ssZ.",
+          "required": true,
+          "example": "2026-11-01T00:00:00Z"
+        },
+        "endRnge": {
+          "in": "path",
+          "type": "string",
+          "description": "Range end, UTC, yyyy-mm-ddThh:mi:ssZ.",
+          "required": true,
+          "example": "2026-11-02T00:00:00Z"
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor the API issues; pass it back unchanged."
+        }
+      },
+      "notes": [
+        "contractPublished returns only parent CNs, not amendments; use contractLastModified to get both.",
+        "Cursor values are generated per session by the API; never build them yourself."
+      ],
+      "job": "contracts.search",
+      "docs_url": "https://app.swaggerhub.com/apis/austender/ocds-api/1.1",
+      "verified": {
+        "docs": "https://app.swaggerhub.com/apis/austender/ocds-api/1.1"
+      }
+    }
+  ]
+}

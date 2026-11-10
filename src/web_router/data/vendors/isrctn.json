@@ -1,0 +1,97 @@
+{
+  "vendor": "isrctn",
+  "name": "ISRCTN",
+  "category": "other",
+  "summary": "Registry of clinical trials: search trials by condition, intervention, country, phase, status or dates, and fetch one trial's full record.",
+  "docs_url": "https://www.isrctn.com/editorial/retrieveFile/81786542-9920-48a0-8fce-09f8428ab843/37855",
+  "base_url": "https://www.isrctn.com",
+  "notes": [
+    "Keyless. Responses are XML, never JSON.",
+    "Formats: default (the stored record, recommended), who, ukctg, and internal (deprecated legacy format).",
+    "The query result has no paging: limit (default 10) caps the hits, and the result reports roughly how many matched. Split big queries by date range rather than raising limit.",
+    "Batch jobs should run sequentially, not in parallel. Any status other than 200 is a failure."
+  ],
+  "sources": [
+    "https://www.isrctn.com/editorial/retrieveFile/81786542-9920-48a0-8fce-09f8428ab843/37855"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "isrctn.trials.search",
+      "name": "Search clinical trials",
+      "summary": "Trials matching keywords and field constraints, with their full records in the chosen format.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/query/format/{format}",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "default",
+            "who",
+            "ukctg",
+            "internal"
+          ],
+          "example": "default"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Keywords and constraints joined by AND/OR, - to negate. Constraints include title, condition, intervention, conditionCategory, recruitmentCountry, recruitmentStatus, trialStatus, phase, gender, ageRange, funderName, sponsorOrganisation, fundingType; date fields (overallStartDate, overallEndDate, dateApplied, lastEdited) take LT/LE/GT/GE/NE with a full dateTime. Quote values with spaces.",
+          "example": "title:covid AND recruitmentCountry: \"United Kingdom\""
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most trials to return; default 10.",
+          "example": 10
+        }
+      },
+      "notes": [
+        "Date comparisons need the time part: lastEdited GE 2021-01-20T00:00:00."
+      ],
+      "job": "health.trials.search",
+      "docs_url": "https://www.isrctn.com/editorial/retrieveFile/81786542-9920-48a0-8fce-09f8428ab843/37855",
+      "verified": {
+        "docs": "https://www.isrctn.com/editorial/retrieveFile/81786542-9920-48a0-8fce-09f8428ab843/37855"
+      }
+    },
+    {
+      "id": "isrctn.trials.get",
+      "name": "Get one clinical trial",
+      "summary": "One trial's full record by its ISRCTN.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/trial/{isrctn}/format/{format}",
+      "params": {
+        "isrctn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The trial's ISRCTN, with or without the ISRCTN prefix.",
+          "example": "ISRCTN49306926"
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "default",
+            "who",
+            "ukctg",
+            "internal"
+          ],
+          "example": "who"
+        }
+      },
+      "job": "health.trials.get",
+      "docs_url": "https://www.isrctn.com/editorial/retrieveFile/81786542-9920-48a0-8fce-09f8428ab843/37855",
+      "verified": {
+        "docs": "https://www.isrctn.com/editorial/retrieveFile/81786542-9920-48a0-8fce-09f8428ab843/37855"
+      }
+    }
+  ]
+}
