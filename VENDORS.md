@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-271 vendors, 2258 endpoints.
+276 vendors, 2289 endpoints.
 
 ### advertising
 
@@ -365,8 +365,13 @@ The tables below are generated from `src/web_router/data/vendors/` by
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [Google Calendar](https://developers.google.com/workspace/calendar/api/v3/reference) `google-calendar` | Read a Google user's calendars, events and free/busy times, and create events, through the Google Calendar API v3. | 4 read, 1 write | OAuth refresh token | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `GOOGLE_CALENDAR_REFRESH_TOKEN` | docs 2026-11-09 |
+| [Google Maps Platform](https://developers.google.com/maps/documentation) `google-maps` | Places search and details (Places API New), forward and reverse geocoding, and Street View coverage lookups. | 6 read | key in query | `GOOGLE_MAPS_API_KEY` | docs 2026-11-09 |
 | [IPinfo](https://ipinfo.io/developers/ipinfo-api) `ipinfo` | IP geolocation and ASN data: free country-level Lite lookups, and city-level geolocation with hosting, VPN/anonymous, mobile and anycast flags on paid plans. | 3 read | key in header | `IPINFO_TOKEN` | docs 2026-11-09 |
+| [Microsoft Graph (Microsoft 365)](https://learn.microsoft.com/en-us/graph/overview) `microsoft-graph` | Microsoft 365 / Entra ID tenant data through Microsoft Graph: users, groups and members, licence subscriptions and assignments, Microsoft 365 activity reports and sign-in logs. | 8 read | OAuth refresh token | `MS_GRAPH_CLIENT_ID`, `MS_GRAPH_CLIENT_SECRET`, `MS_GRAPH_REFRESH_TOKEN` | docs 2026-11-09 |
 | [NOAA National Hurricane Center](https://www.nhc.noaa.gov/productexamples/) `nhc` | Keyless feeds of active Atlantic and Pacific tropical cyclones: a JSON summary of every active storm with links to its advisories, plus basin and per-storm RSS and GIS feeds. | 4 read | none | none | docs 2026-11-09 |
+| [US National Weather Service](https://www.weather.gov/documentation/services-web-api) `nws` | Official US forecasts (7-day and hourly), active weather alerts and station observations from the National Weather Service API (api.weather.gov). | 7 read | none | none | docs 2026-11-09 |
 | [OFAC-API (sanctions screening)](https://docs.ofac-api.com/) `ofacapi` | Fuzzy screening of people, companies, vessels and aircraft against OFAC SDN and 20+ other sanctions, PEP and watch lists, single, batch or as async bulk jobs. | 5 read | key in header | `OFAC_API_KEY` | docs 2026-11-09 |
 | [Service Victoria Servo Saver](https://service.vic.gov.au/find-services/transport-and-driving/servo-saver/help-centre/servo-saver-public-api) `servosaver` | Victoria (Australia) government Fair Fuel open data: every registered service station's fuel prices in cents per litre, plus station, brand and fuel-type reference lists. | 4 read | key in header | `SERVOSAVER_API_KEY` | docs 2026-11-09 |
+| [USGS Water Data](https://api.waterdata.usgs.gov/docs/) `usgswater` | US stream gauge readings (discharge, gage height, water temperature and more): latest and historical instantaneous values, daily statistics and monitoring-location metadata from the USGS Water Data OGC APIs. | 5 read | key in header | `USGS_API_KEY` | docs 2026-11-09 |
 <!-- /vendors -->
