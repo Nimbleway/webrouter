@@ -344,7 +344,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         )
         async_only = sorted(async_client_holders(self._config))
         if async_only:
-            self._close_router()  # built by name above, and this router is never returned to close it
+            self._close_refused_router()  # built by name above, and this router is never returned to close it
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
 
     def search(
