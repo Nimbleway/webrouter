@@ -39,7 +39,7 @@ def _nimble(handle: Handler, *, max_retries: int = 0) -> NimbleResearchProvider:
     return provider
 
 
-def _animble(handle: Handler, *, max_retries: int = 0) -> NimbleResearchProvider:
+def _async_nimble(handle: Handler, *, max_retries: int = 0) -> NimbleResearchProvider:
     provider = NimbleResearchProvider(api_key="test-key")
     transport = httpx.MockTransport(handle)
     provider._async_client = AsyncNimble(
@@ -138,7 +138,7 @@ async def test_the_async_start_keeps_a_finished_run_whose_answer_could_not_be_fe
     nimble_script = _Script(research_run("completed"), NIMBLE_RESULT)
     parallel_script = _Script(PARALLEL_RUN, PARALLEL_RESULT)
 
-    nimble_job = await _animble(nimble_script.handle).asubmit(QUERY)
+    nimble_job = await _async_nimble(nimble_script.handle).asubmit(QUERY)
     parallel_job = await _parallel(monkeypatch, parallel_script.handle).asubmit(QUERY)
 
     assert nimble_job.job_id.endswith(RUN_ID) and nimble_job.progress.state == "running"
@@ -154,6 +154,6 @@ async def test_the_async_start_never_retries_the_call_that_creates_a_run() -> No
         return httpx.Response(503, json={"error": "busy"})
 
     with pytest.raises(ProviderError):
-        await _animble(handle, max_retries=2).asubmit(QUERY)
+        await _async_nimble(handle, max_retries=2).asubmit(QUERY)
 
     assert len(posts) == 1
