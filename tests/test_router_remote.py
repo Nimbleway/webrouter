@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import gzip
 import time
+from concurrent.futures import Future
 from typing import Any
 
 import pytest
 
 from tests.routing_remote_helpers import URL_PROMPT, Canned, Recorder, ask, canned, config, reference, running
 from web_router import AsyncWebRouter, Budget, WebRouter
-from web_router.routing.remote import RemoteRouter, RemoteRouterError, RemoteRouterInvalid
+from web_router.routing._runner import _classified
+from web_router.routing.remote import RemoteRouter, RemoteRouterError, RemoteRouterInvalid, RemoteRouterTimeout
 from web_router.routing.wire import request_from_wire
 
 
@@ -130,6 +133,18 @@ def test_an_answer_over_64_kib_is_invalid() -> None:
     assert plan.decision.reason == "router_invalid"
 
 
+@pytest.mark.parametrize("over", [0, 1], ids=["at-the-cap", "one-byte-over"])
+def test_an_answer_of_exactly_64_kib_is_read_and_one_byte_more_is_invalid(over: int) -> None:
+    head, tail = b'{"schema": 1, "reason": "', b'"}'
+    body = head + b"x" * (64 * 1024 - len(head) - len(tail) + over) + tail
+    with canned(Canned(body=body)) as base:
+        if not over:
+            assert ask(RemoteRouter(url=base + "/route")).reason is not None
+            return
+        with pytest.raises(RemoteRouterInvalid, match="over 65536 bytes"):
+            ask(RemoteRouter(url=base + "/route"))
+
+
 def test_a_compressed_answer_is_invalid_and_never_decompressed() -> None:
     bomb = gzip.compress(b"{" + b" " * (8 * 1024 * 1024) + b"}")
     answer = Canned(body=bomb, headers={"Content-Encoding": "gzip"})
@@ -155,3 +170,12 @@ def test_a_reply_nested_too_deep_to_parse_is_invalid() -> None:
     deep = b'{"schema": 1, "params": {"search": ' + b"[" * 30_000 + b"]" * 30_000 + b"}}"
     with canned(Canned(body=deep)) as base, pytest.raises(RemoteRouterInvalid, match="not a JSON object"):
         ask(RemoteRouter(url=base + "/route"))
+
+
+def test_the_transport_giving_up_at_the_deadline_is_a_timeout_not_an_error() -> None:
+    late = request_from_wire({"schema": 1, "prompt": "solar news", "candidates": [], "deadline_s": 0.2})
+    with canned(Canned(body=b'{"schema": 1}', drip_s=1.0)) as base, pytest.raises(RemoteRouterTimeout, match="Timeout"):
+        asyncio.run(RemoteRouter(url=base + "/route").aroute(late))
+    done: Future[Any] = Future()
+    done.set_exception(RemoteRouterTimeout("https://router.example.com", "late"))
+    assert _classified(done)[0] == "router_timeout", "recorded as a timeout even when it beats the outer wait"
