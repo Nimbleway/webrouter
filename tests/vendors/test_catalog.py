@@ -15,10 +15,16 @@ from tests.vendors.conftest import ACME, OAUTH
 from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_ENV_CATALOG_DIR
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_vendors import VendorNotFoundError
-from web_router.vendors.catalog import VendorCatalog, get_catalog, load_vendor_file, reload_catalog
+from web_router.vendors.catalog import (
+    VendorCatalog,
+    builtin_catalog,
+    get_catalog,
+    load_vendor_file,
+    reload_catalog,
+)
 from web_router.vendors.schema import Vendor
 
-SHIPPED = get_catalog()
+SHIPPED = builtin_catalog()
 
 
 def _broken(change: Any) -> dict[str, Any]:
@@ -202,3 +208,23 @@ def test_vendors_md_and_env_example_are_current() -> None:
     env = ENV_EXAMPLE.read_text(encoding="utf-8")
     assert regenerate_markdown(markdown, SHIPPED) == markdown, "VENDORS.md is stale: run `make vendors`."
     assert regenerate_env(env, SHIPPED) == env, ".env.example is stale: run `make vendors`."
+
+
+def test_the_generated_files_ignore_a_local_vendor_folder(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from scripts.vendors import main
+
+    extra = {**copy.deepcopy(OAUTH), "vendor": "localco", "name": "Local Co"}
+    for endpoint in extra["endpoints"]:
+        endpoint["id"] = endpoint["id"].replace("oauthco.", "localco.")
+    for spec in extra["auth"]["credentials"].values():
+        spec["env"] = [name.replace("OAUTHCO", "LOCALCO") for name in spec["env"]]
+    (tmp_path / "localco.json").write_text(json.dumps(extra), encoding="utf-8")
+    monkeypatch.setenv(VENDOR_ENV_CATALOG_DIR, str(tmp_path))
+    reload_catalog()
+    try:
+        assert "localco" in get_catalog().names()
+        assert "localco" not in builtin_catalog().names()
+        assert main(["--check"]) == 0
+    finally:
+        monkeypatch.delenv(VENDOR_ENV_CATALOG_DIR)
+        reload_catalog()
