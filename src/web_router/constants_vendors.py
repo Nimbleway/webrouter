@@ -30,6 +30,37 @@ VENDOR_ERROR_BODY_LIMIT: Final = 2000
 VENDOR_FIND_LIMIT: Final = 20
 """Endpoints :meth:`~web_router.WebRouter.find_vendor_endpoints` returns when no limit is given."""
 
+VENDOR_FIND_STOP_WORDS: Final = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "by",
+        "for",
+        "from",
+        "i",
+        "in",
+        "is",
+        "it",
+        "me",
+        "my",
+        "of",
+        "on",
+        "or",
+        "our",
+        "the",
+        "to",
+        "what",
+        "with",
+        "your",
+    }
+)
+"""Query words :meth:`~web_router.WebRouter.find_vendor_endpoints` ignores: they say nothing about what an
+endpoint does, and counted as matches they let a summary's grammar outrank its meaning."""
+
 VENDOR_TOKEN_REFRESH_MARGIN: Final = 60.0
 """Seconds before an OAuth access token's stated expiry at which it is refreshed instead of reused."""
 
