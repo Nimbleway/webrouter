@@ -16,6 +16,7 @@ from typing import Any, cast
 
 from web_router._urls import shown
 from web_router.routing.candidates import CandidateSet
+from web_router.routing.composite import members_of
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
@@ -88,6 +89,7 @@ def decided(
         dropped={**(refused or {}), **found.dropped} or None,
         unmeasured=list(found.unmeasured) or None,
         router_ms=None if outcome is None else outcome.elapsed_ms,
+        members=members_of(decision),
         **stamp(req.prompt),
         **fields,
     )

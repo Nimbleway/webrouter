@@ -115,6 +115,7 @@ from web_router.registry_answer import (
 from web_router.routing import (
     Budget,
     Candidate,
+    CompositeDecision,
     Decider,
     DeciderQuestion,
     DeciderReply,
@@ -169,7 +170,7 @@ from web_router.types import (
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
-from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
+from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionMember, DecisionRecord
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 __all__ = [
@@ -211,6 +212,7 @@ __all__ = [
     "BudgetStatus",
     "Candidate",
     "Citation",
+    "CompositeDecision",
     "ConfigurationError",
     "DeadlineExceededError",
     "Decider",
@@ -219,6 +221,7 @@ __all__ = [
     "DeciderRouter",
     "DecisionAttempt",
     "DecisionHop",
+    "DecisionMember",
     "DecisionRecord",
     "ElementNotFoundError",
     "ExtractBenchmarkReport",

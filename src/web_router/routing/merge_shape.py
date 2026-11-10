@@ -8,7 +8,9 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import TypeGuard, get_args
 
+from web_router.routing.composite import CompositeDecision
 from web_router.routing.contract import RouteDecision, ToolName
+from web_router.types_decision import DecisionMember
 
 TOOLS: tuple[str, ...] = get_args(ToolName)
 
@@ -52,7 +54,18 @@ def well_formed(decision: object) -> TypeGuard[RouteDecision]:
         and all(isinstance(k, str) and isinstance(v, str) for k, v in exclude.items())
         and (decision.reason is None or isinstance(decision.reason, str))
         and (confidence is None or _probability(confidence))
+        and _members_well_formed(decision)
     )
+
+
+def _members_well_formed(decision: RouteDecision) -> bool:
+    """A composite's ``members``: a tuple or list of :class:`DecisionMember`, at most one of them counted."""
+    if not isinstance(decision, CompositeDecision):
+        return True
+    members = decision.members
+    if not isinstance(members, tuple | list) or not all(isinstance(m, DecisionMember) for m in members):
+        return False
+    return sum(m.counted for m in members) <= 1
 
 
 def decides_nothing(decision: RouteDecision) -> bool:
