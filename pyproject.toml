@@ -96,7 +96,7 @@ answer = [
 # browser is the session's, reached over CDP. Pillow converts a screenshot a
 # vendor's browser returns as JPEG although PNG was asked for (Anchor does).
 browser = [
-    "playwright>=1.63,<1.64",
+    "playwright>=1.63,<1.66",
     "pillow>=10",
 ]
 # Not a method of one backend but a catalog of many: a vendor's own API
@@ -126,7 +126,7 @@ mcp = [
 evals = [
     "webrouter[search]",
     "openai>=1.0,<4",
-    "anthropic>=1.8,<2",
+    "anthropic>=1.8,<3",
     # SealQA is published as Parquet; read only inside Dataset.sealqa().
     "pyarrow>=15",
 ]
@@ -171,7 +171,7 @@ dev = [
 # plain `make install` never pull the Anthropic SDK; run it with
 # `uv run --all-extras --group agent-bench`.
 agent-bench = [
-    "anthropic>=1.8,<2",
+    "anthropic>=1.8,<3",
     "python-dotenv>=1.0",
 ]
 

@@ -40,7 +40,7 @@
     },
     "recency": {
       "day": {
-        "body.freshness": "day"
+        "refused": "UnsupportedParameterError"
       },
       "week": {
         "body.freshness": "week"
