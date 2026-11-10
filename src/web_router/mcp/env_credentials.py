@@ -21,7 +21,9 @@ from web_router.constants import (
     RESEARCH_ENV_BY_PROVIDER,
     TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.exceptions import ConfigurationError
 from web_router.vendors.catalog import get_catalog
+from web_router.vendors.schema import Vendor
 
 ALL_ENV_TABLES: tuple[Mapping[str, str | tuple[str, ...] | None], ...] = (
     ENV_BY_PROVIDER,
@@ -59,8 +61,17 @@ def credential_variables() -> frozenset[str]:
     ``DD_API_KEY`` means both.
     """
     named = {name for table in ALL_ENV_TABLES for env in table.values() for name in env_names(env)}
-    vendors = {var for vendor in get_catalog().all() for var in vendor.credential_variables()}
+    vendors = {var for vendor in _vendors() for var in vendor.credential_variables()}
     return frozenset(named | set(_OPTIONAL_KEYS) | vendors)
+
+
+def _vendors() -> list[Vendor]:
+    """The vendor catalog, or none when a bad ``WEB_ROUTER_VENDOR_CATALOG`` cannot load: the server still starts,
+    and the vendor tools report the bad catalog when they are called."""
+    try:
+        return get_catalog().all()
+    except ConfigurationError:
+        return []
 
 
 @dataclass(frozen=True)
