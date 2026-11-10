@@ -350,7 +350,9 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         routing_helpers.py holds the router tests' fake members,
                         wr(), Ranker and the tool, called and priced fixtures;
                         routing_remote_helpers.py starts the reference router
-                        service on a free loopback port for the remote tests.
+                        service on a free loopback port for the remote tests, with
+                        their sample request and loop and close builders;
+                        routing_registry_helpers.py the routers the registry tests build.
                         test_contract.py, test_extract_contract.py, test_template_contract.py,
                         test_research_contract.py, test_answer_contract.py,
                         test_browse_contract.py and

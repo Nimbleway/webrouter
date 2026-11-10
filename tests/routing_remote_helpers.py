@@ -1,8 +1,10 @@
-"""What the remote router's tests share: the reference server from examples/, started on a free loopback port."""
+"""What the remote router's tests share: the reference server from examples/ on a free loopback port, and builders."""
 
 from __future__ import annotations
 
+import asyncio
 import json
+import socket
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -11,6 +13,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from tests.examples.helpers import load_example
+from web_router import RouteDecision, RouteRequest
+from web_router.routing.remote import RemoteRouter
+from web_router.routing.wire import request_from_wire
 
 reference = load_example("router_remote_server")
 
@@ -97,3 +102,78 @@ def canned(answer: Canned) -> Iterator[str]:
     finally:
         server.shutdown()
         server.server_close()
+
+
+URL_PROMPT = "read https://en.wikipedia.org/wiki/Web_scraping"
+
+SLOW_CLOSE_S = 5.0
+"""How long a stuck pool takes to close: far past any wait a test allows."""
+
+SHORT_WAIT_S = 0.05
+"""The close wait a test sets, so a stuck close is given up on at once."""
+
+
+def sample_request() -> RouteRequest:
+    """A schema-1 request with one search candidate."""
+    return request_from_wire(
+        {"schema": 1, "prompt": "solar news", "candidates": [{"tool": "search", "provider": "exa"}], "deadline_s": 1.0}
+    )
+
+
+def ask(router: RemoteRouter) -> RouteDecision:
+    """``router``'s answer to :func:`sample_request`, on a loop of its own."""
+    return asyncio.run(router.aroute(sample_request()))
+
+
+@contextmanager
+def loop_thread() -> Iterator[asyncio.AbstractEventLoop]:
+    """An event loop running on a thread of its own, as web-router's private loop does."""
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    try:
+        yield loop
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(5)
+        loop.close()
+
+
+def on_loop(loop: asyncio.AbstractEventLoop, router: RemoteRouter) -> RouteDecision:
+    """``router``'s answer to :func:`sample_request`, asked on ``loop`` from this thread."""
+    return asyncio.run_coroutine_threadsafe(router.aroute(sample_request()), loop).result(5)
+
+
+def stuck(pool: Any, delay_s: float = SLOW_CLOSE_S) -> list[str]:
+    """Make ``pool`` take ``delay_s`` to close; what it did is recorded."""
+    done: list[str] = []
+    real = pool.aclose
+
+    async def slow() -> None:
+        try:
+            await asyncio.sleep(delay_s)
+        except asyncio.CancelledError:
+            done.append("cancelled")
+            raise
+        await real()
+        done.append("closed")
+
+    pool.aclose = slow
+    return done
+
+
+def _answers(address: tuple[str, int]) -> bool:
+    """Whether a new connection to the reference server at ``address`` is served: its 404 for an unknown path."""
+    with socket.create_connection(address, timeout=2) as conn:
+        conn.sendall(b"POST /nowhere HTTP/1.1\r\nHost: " + f"{address[0]}:{address[1]}".encode() + b"\r\n\r\n")
+        return conn.recv(12).startswith(b"HTTP/1.0 404")
+
+
+def served_again(address: tuple[str, int], wait_s: float = 2.0) -> bool:
+    """Whether the reference server serves a new connection within ``wait_s``, once its workers are free."""
+    deadline = time.monotonic() + wait_s
+    while time.monotonic() < deadline:
+        if _answers(address):
+            return True
+        time.sleep(0.05)
+    return False
