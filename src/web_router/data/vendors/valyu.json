@@ -1,0 +1,413 @@
+{
+  "vendor": "valyu",
+  "name": "Valyu",
+  "category": "search",
+  "summary": "Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports.",
+  "docs_url": "https://docs.valyu.ai/api-reference/overview",
+  "pricing_url": "https://docs.valyu.ai/pricing",
+  "base_url": "https://api.valyu.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "VALYU_API_KEY"
+        ],
+        "description": "a Valyu API key (platform.valyu.ai)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The header is x-api-key, not Authorization: Bearer.",
+    "Pay per use from a credit balance; paid plans unlock specialist sources (SEC filings, trials, patents); a 403 can mean a plan too low for a dataset.",
+    "Async patterns: contents with async true returns a job_id (poll valyu.contents.job); DeepResearch returns a task id (poll valyu.research.status).",
+    "The streaming Answer endpoint (POST /v1/answer, server-sent events) is left out."
+  ],
+  "sources": [
+    "https://docs.valyu.ai/api-reference/overview",
+    "https://docs.valyu.ai/api-reference/openapi.json",
+    "https://docs.valyu.ai/api-reference/endpoint/search",
+    "https://docs.valyu.ai/api-reference/endpoint/contents"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "valyu.search",
+      "name": "Search the web and specialist datasets",
+      "summary": "Ranked results with extracted content from the web, news, SEC filings, market data, papers, trials and patents.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query, in natural language.",
+          "example": "Apple 10-K risk factors 2025"
+        },
+        "max_num_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results; keep small to control cost.",
+          "example": 5
+        },
+        "search_type": {
+          "in": "body",
+          "type": "string",
+          "description": "all (default), web, news or proprietary (the dataset route).",
+          "enum": [
+            "all",
+            "web",
+            "news",
+            "proprietary"
+          ]
+        },
+        "included_sources": {
+          "in": "body",
+          "type": "array",
+          "description": "Dataset ids, presets such as finance, or domains to restrict to."
+        },
+        "excluded_sources": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains, dataset ids or presets to leave out."
+        },
+        "scope_policy": {
+          "in": "body",
+          "type": "string",
+          "description": "advisory (default) or strict to search every listed dataset."
+        },
+        "instructions": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language ranking guidance."
+        },
+        "response_length": {
+          "in": "body",
+          "type": "string",
+          "description": "Content size per result: short (25,000 characters, default), medium, large or max."
+        },
+        "start_date": {
+          "in": "body",
+          "type": "string",
+          "description": "Published on or after: YYYY, YYYY-MM-DD or ISO datetime."
+        },
+        "end_date": {
+          "in": "body",
+          "type": "string",
+          "description": "Published on or before."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 code for geo-targeted web results."
+        },
+        "fast_mode": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip query rewriting and reranking for lower latency."
+        },
+        "url_only": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only URLs; web and news search types only."
+        },
+        "max_price": {
+          "in": "body",
+          "type": "number",
+          "description": "Cap on the cost of the whole request."
+        }
+      },
+      "notes": [
+        "A read over POST: it only retrieves data.",
+        "Priced per result returned: web and news 0.1 credit each, other datasets priced per 1,000 results (see valyu.datasources.list). A 206 means partial success.",
+        "Plan limits can skip a dataset and report it in the warnings list instead of failing."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/search",
+      "verified": {
+        "docs": "https://docs.valyu.ai/api-reference/endpoint/search"
+      }
+    },
+    {
+      "id": "valyu.contents.extract",
+      "name": "Extract content from URLs",
+      "summary": "Clean text, a summary or schema-shaped JSON from up to 50 URLs.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/contents",
+      "params": {
+        "urls": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "HTTP(S) URLs to extract. Up to 10 synchronously, up to 50 with async true.",
+          "example": [
+            "https://example.com"
+          ]
+        },
+        "response_length": {
+          "in": "body",
+          "type": "string",
+          "description": "Maximum characters per URL: short (default), medium, large, max."
+        },
+        "summary": {
+          "in": "body",
+          "type": "object",
+          "description": "Set for an AI summary or a JSON schema extraction; raises the price."
+        },
+        "extract_effort": {
+          "in": "body",
+          "type": "string",
+          "description": "auto (default) or high for pages that need JavaScript rendering."
+        },
+        "screenshot": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also capture a screenshot per page."
+        },
+        "max_age": {
+          "in": "body",
+          "type": "integer",
+          "description": "Oldest cached copy accepted, in seconds, 0 to 2592000; 0 forces a live crawl."
+        },
+        "async": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Run in the background and return a job_id; required above 10 URLs."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL called when an async job finishes."
+        }
+      },
+      "notes": [
+        "A read over POST: it only retrieves data.",
+        "Asynchronous when async is true: the response carries a job_id. Poll valyu.contents.job with it.",
+        "0.2 credits per extracted URL, 0.6 with summary; failed URLs are free. Inspect each result: a 206 means some URLs failed."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/contents",
+      "verified": {
+        "docs": "https://docs.valyu.ai/api-reference/endpoint/contents"
+      }
+    },
+    {
+      "id": "valyu.contents.job",
+      "name": "Poll an async extraction job",
+      "summary": "Status and results of a job started by valyu.contents.extract with async true.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/contents/jobs/{job_id}",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job_id returned by the async extraction request."
+        }
+      },
+      "notes": [
+        "Polls the job started by valyu.contents.extract. Only the key that created a job can read it."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/contents-job",
+      "verified": {
+        "docs": "https://docs.valyu.ai/api-reference/endpoint/contents-job"
+      }
+    },
+    {
+      "id": "valyu.research.create",
+      "name": "Start a DeepResearch task",
+      "summary": "Starts an asynchronous research agent that returns a cited report. Poll with valyu.research.status.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/deepresearch/tasks",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The research question or brief, up to 25,000 characters."
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "Depth and price: instant (8 credits), fast (25), standard (100, default), heavy (500) or max (2,500).",
+          "enum": [
+            "instant",
+            "fast",
+            "standard",
+            "heavy",
+            "max"
+          ]
+        },
+        "research_strategy": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language guidance for how to search."
+        },
+        "report_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language output format instructions."
+        },
+        "urls": {
+          "in": "body",
+          "type": "array",
+          "description": "URLs to include as context, max 10."
+        },
+        "output_formats": {
+          "in": "body",
+          "type": "array",
+          "description": "markdown (default), pdf and others."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL called on completion."
+        }
+      },
+      "notes": [
+        "Starts a billed job that only produces data, so it is kind read.",
+        "Asynchronous: the response carries a task id. Poll valyu.research.status with that id; instant mode finishes in under 30 seconds, heavier modes take minutes.",
+        "Billed a fixed number of credits per task by mode."
+      ],
+      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/deepresearch-create",
+      "verified": {
+        "docs": "https://docs.valyu.ai/api-reference/endpoint/deepresearch-create"
+      }
+    },
+    {
+      "id": "valyu.research.status",
+      "name": "Get a DeepResearch task's status and result",
+      "summary": "Status, and when finished the report, sources and cost of a task from valyu.research.create.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/deepresearch/tasks/{id}/status",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Task id returned by valyu.research.create."
+        }
+      },
+      "notes": [
+        "Polls the task started by valyu.research.create."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/deepresearch-status",
+      "verified": {
+        "docs": "https://docs.valyu.ai/api-reference/endpoint/deepresearch-status"
+      }
+    },
+    {
+      "id": "valyu.research.list",
+      "name": "List DeepResearch tasks",
+      "summary": "Your recent research tasks.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/deepresearch/list",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum tasks to return."
+        }
+      },
+      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/deepresearch-list",
+      "verified": {
+        "docs": "https://docs.valyu.ai/api-reference/endpoint/deepresearch-list"
+      }
+    },
+    {
+      "id": "valyu.research.cancel",
+      "name": "Cancel a DeepResearch task",
+      "summary": "Stops a running or queued task.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v1/deepresearch/tasks/{id}/cancel",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Task id."
+        }
+      },
+      "notes": [
+        "Answers 409 if the task already finished."
+      ],
+      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/deepresearch-cancel",
+      "verified": {
+        "docs": "https://docs.valyu.ai/api-reference/endpoint/deepresearch-cancel"
+      }
+    },
+    {
+      "id": "valyu.datasources.list",
+      "name": "List data sources",
+      "summary": "Every dataset Valyu can search, with id, category, description and price per 1,000 results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/datasources",
+      "params": {
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by category; see valyu.datasources.categories."
+        }
+      },
+      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/datasources-list",
+      "verified": {
+        "docs": "https://docs.valyu.ai/api-reference/endpoint/datasources-list"
+      }
+    },
+    {
+      "id": "valyu.datasources.search",
+      "name": "Find data sources by description",
+      "summary": "Datasets matching a plain-language description of the data you need.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/datasources/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "What data you want.",
+          "example": "quarterly earnings and market data"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum datasets, capped at 100."
+        }
+      },
+      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/datasources-search",
+      "verified": {
+        "docs": "https://docs.valyu.ai/api-reference/endpoint/datasources-search"
+      }
+    },
+    {
+      "id": "valyu.datasources.categories",
+      "name": "List data source categories",
+      "summary": "Datasource categories with dataset counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/datasources/categories",
+      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/datasources-categories",
+      "verified": {
+        "docs": "https://docs.valyu.ai/api-reference/endpoint/datasources-categories"
+      }
+    }
+  ]
+}

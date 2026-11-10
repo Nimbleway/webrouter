@@ -1,0 +1,80 @@
+{
+  "vendor": "arxiv",
+  "name": "arXiv",
+  "category": "search",
+  "summary": "Search and look up arXiv preprints (titles, authors, abstracts, categories, links) through arXiv's free query API.",
+  "docs_url": "https://info.arxiv.org/help/api/user-manual.html",
+  "base_url": "https://export.arxiv.org/api",
+  "notes": [
+    "Keyless and free; read the arXiv API Terms of Use. Put a 3-second delay between repeated calls.",
+    "Answers are Atom 1.0 XML, not JSON; errors also come back as an Atom feed with one entry. Totals are in opensearch:totalResults.",
+    "Results change only after new articles are announced (after midnight), so cache a query for the day.",
+    "At most 2,000 results per call and 30,000 per query overall; use OAI-PMH for bulk harvesting."
+  ],
+  "sources": [
+    "https://info.arxiv.org/help/api/user-manual.html",
+    "https://info.arxiv.org/help/api/index.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "arxiv.query",
+      "name": "Search or look up arXiv papers",
+      "summary": "Papers matching a field-prefixed query and/or a list of arXiv IDs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "search_query": {
+          "in": "query",
+          "type": "string",
+          "description": "Query with field prefixes ti, au, abs, co, jr, cat, rn, all; AND, OR, ANDNOT; quotes for phrases; submittedDate:[YYYYMMDDTTTT TO YYYYMMDDTTTT] (GMT).",
+          "example": "au:del_maestro AND ti:checkerboard"
+        },
+        "id_list": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated arXiv IDs. With search_query, returns the listed IDs that also match."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-based index of the first result, default 0."
+        },
+        "max_results": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per call, default 10, at most 2000."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "relevance",
+            "lastUpdatedDate",
+            "submittedDate"
+          ]
+        },
+        "sortOrder": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction.",
+          "enum": [
+            "ascending",
+            "descending"
+          ]
+        }
+      },
+      "notes": [
+        "Look up papers by ID with id_list rather than an id: query.",
+        "Page with start and max_results; a request beyond 30,000 results answers 400."
+      ],
+      "job": "scholar.search",
+      "docs_url": "https://info.arxiv.org/help/api/user-manual.html",
+      "verified": {
+        "docs": "https://info.arxiv.org/help/api/user-manual.html"
+      }
+    }
+  ]
+}

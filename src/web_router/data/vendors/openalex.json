@@ -1,0 +1,424 @@
+{
+  "vendor": "openalex",
+  "name": "OpenAlex",
+  "category": "search",
+  "summary": "Open catalog of scholarly works, authors, institutions, sources and topics, with citations, open-access status and grouping counts.",
+  "docs_url": "https://help.openalex.org/how-to-use-the-api/api-overview",
+  "pricing_url": "https://help.openalex.org/access/pricing/",
+  "base_url": "https://api.openalex.org",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OPENALEX_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional free OpenAlex API key (openalex.org account); raises the daily budget 10x and the rate limit from 10 to 30 requests per second. Sent as the api_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Works without a key on a small daily budget; a free key gives $1 of usage a day, resetting at midnight UTC, and is needed to follow cursor paging past the first page.",
+    "Rate limit: 10 requests/second keyless, 30 with a free key; semantic search 1 per second.",
+    "page/per_page paging stops at 10,000 results (page * per_page); use cursor=* for more. per_page max is 100.",
+    "group_by returns up to 200 groups per page and pages only by cursor."
+  ],
+  "sources": [
+    "https://help.openalex.org/how-to-use-the-api/api-overview",
+    "https://help.openalex.org/api/authentication/",
+    "https://help.openalex.org/api/paging/",
+    "https://help.openalex.org/api/endpoints/",
+    "https://help.openalex.org/api/searching/",
+    "https://help.openalex.org/api/filtering/",
+    "https://help.openalex.org/api/sorting/",
+    "https://help.openalex.org/api/grouping/",
+    "https://help.openalex.org/api/get-single-entities/",
+    "https://help.openalex.org/api/autocomplete/",
+    "https://help.openalex.org/access/pricing/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "openalex.works.list",
+      "name": "Search and filter scholarly works",
+      "summary": "Papers, books and datasets matching a search and/or filters, or counts grouped by a field.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/works",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text search over the entity's searchable fields. AND, OR, NOT in uppercase; quotes for phrases."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field:value filters (comma = AND, | = OR, ! = NOT, > and < for ranges), e.g. publication_year:2024,is_oa:true."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field or field:desc; display_name, cited_by_count, works_count, publication_date (works), relevance_score (needs search). Comma-separate several."
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated top-level fields to return, e.g. id,display_name."
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to three comma-separated fields to count by instead of listing records; :include_unknown after a field keeps unknowns."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 100, default 25."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; page * per_page may not exceed 10,000."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor paging: start with * and pass meta.next_cursor; reaches past 10,000 results. Needs a free key past the first page."
+        },
+        "search_semantic": {
+          "wire_name": "search.semantic",
+          "in": "query",
+          "type": "string",
+          "description": "Semantic (embedding) search by meaning, e.g. an abstract. Cannot be combined with another search parameter; limited to 1 request per second."
+        }
+      },
+      "notes": [
+        "Pricing (help.openalex.org search page): list+filter calls cost $0.10 per 1,000, search calls $1 per 1,000. Each response reports its own cost in meta.cost_usd.",
+        "Fetching up to 100 records by ID in one list request (an OR filter on the ID) costs one list call, cheaper than 100 single lookups."
+      ],
+      "job": "scholar.search",
+      "docs_url": "https://help.openalex.org/api/endpoints/",
+      "verified": {
+        "docs": "https://help.openalex.org/api/endpoints/"
+      }
+    },
+    {
+      "id": "openalex.works.get",
+      "name": "Get a work",
+      "summary": "One work record by OpenAlex ID or external ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/works/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenAlex ID (W2741809807), doi:10.7717/peerj.4375, pmid:29456894, or the full https://doi.org/... URL.",
+          "example": "W2741809807"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return."
+        }
+      },
+      "notes": [
+        "Single-entity lookups are free."
+      ],
+      "job": "scholar.paper",
+      "docs_url": "https://help.openalex.org/api/get-single-entities/",
+      "verified": {
+        "docs": "https://help.openalex.org/api/get-single-entities/"
+      }
+    },
+    {
+      "id": "openalex.authors.list",
+      "name": "Search and filter authors",
+      "summary": "Author records with works and citation counts, affiliations and IDs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/authors",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text search over the entity's searchable fields. AND, OR, NOT in uppercase; quotes for phrases."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field:value filters (comma = AND, | = OR, ! = NOT, > and < for ranges), e.g. publication_year:2024,is_oa:true."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field or field:desc; display_name, cited_by_count, works_count, publication_date (works), relevance_score (needs search). Comma-separate several."
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated top-level fields to return, e.g. id,display_name."
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to three comma-separated fields to count by instead of listing records; :include_unknown after a field keeps unknowns."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 100, default 25."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; page * per_page may not exceed 10,000."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor paging: start with * and pass meta.next_cursor; reaches past 10,000 results. Needs a free key past the first page."
+        }
+      },
+      "job": "scholar.authors.search",
+      "docs_url": "https://help.openalex.org/api/endpoints/",
+      "verified": {
+        "docs": "https://help.openalex.org/api/endpoints/"
+      }
+    },
+    {
+      "id": "openalex.authors.get",
+      "name": "Get an author",
+      "summary": "One author record by OpenAlex ID or external ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/authors/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenAlex ID (A...) or orcid:0000-0001-6187-6610.",
+          "example": "orcid:0000-0001-6187-6610"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return."
+        }
+      },
+      "notes": [
+        "Single-entity lookups are free."
+      ],
+      "job": "scholar.author",
+      "docs_url": "https://help.openalex.org/api/get-single-entities/",
+      "verified": {
+        "docs": "https://help.openalex.org/api/get-single-entities/"
+      }
+    },
+    {
+      "id": "openalex.institutions.list",
+      "name": "Search and filter institutions",
+      "summary": "Universities, companies and other research institutions with ROR IDs and output counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/institutions",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text search over the entity's searchable fields. AND, OR, NOT in uppercase; quotes for phrases."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field:value filters (comma = AND, | = OR, ! = NOT, > and < for ranges), e.g. publication_year:2024,is_oa:true."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field or field:desc; display_name, cited_by_count, works_count, publication_date (works), relevance_score (needs search). Comma-separate several."
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated top-level fields to return, e.g. id,display_name."
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to three comma-separated fields to count by instead of listing records; :include_unknown after a field keeps unknowns."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 100, default 25."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; page * per_page may not exceed 10,000."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor paging: start with * and pass meta.next_cursor; reaches past 10,000 results. Needs a free key past the first page."
+        }
+      },
+      "job": "scholar.institutions.search",
+      "docs_url": "https://help.openalex.org/api/endpoints/",
+      "verified": {
+        "docs": "https://help.openalex.org/api/endpoints/"
+      }
+    },
+    {
+      "id": "openalex.sources.list",
+      "name": "Search and filter sources",
+      "summary": "Journals, repositories and conferences that host works, with ISSNs and counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sources",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text search over the entity's searchable fields. AND, OR, NOT in uppercase; quotes for phrases."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field:value filters (comma = AND, | = OR, ! = NOT, > and < for ranges), e.g. publication_year:2024,is_oa:true."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field or field:desc; display_name, cited_by_count, works_count, publication_date (works), relevance_score (needs search). Comma-separate several."
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated top-level fields to return, e.g. id,display_name."
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to three comma-separated fields to count by instead of listing records; :include_unknown after a field keeps unknowns."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 100, default 25."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; page * per_page may not exceed 10,000."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor paging: start with * and pass meta.next_cursor; reaches past 10,000 results. Needs a free key past the first page."
+        }
+      },
+      "job": "scholar.sources.search",
+      "docs_url": "https://help.openalex.org/api/endpoints/",
+      "verified": {
+        "docs": "https://help.openalex.org/api/endpoints/"
+      }
+    },
+    {
+      "id": "openalex.topics.list",
+      "name": "Search and filter topics",
+      "summary": "Research topics with their subfield, field and domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/topics",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text search over the entity's searchable fields. AND, OR, NOT in uppercase; quotes for phrases."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field:value filters (comma = AND, | = OR, ! = NOT, > and < for ranges), e.g. publication_year:2024,is_oa:true."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field or field:desc; display_name, cited_by_count, works_count, publication_date (works), relevance_score (needs search). Comma-separate several."
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated top-level fields to return, e.g. id,display_name."
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to three comma-separated fields to count by instead of listing records; :include_unknown after a field keeps unknowns."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 100, default 25."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; page * per_page may not exceed 10,000."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor paging: start with * and pass meta.next_cursor; reaches past 10,000 results. Needs a free key past the first page."
+        }
+      },
+      "job": "scholar.topics.search",
+      "docs_url": "https://help.openalex.org/api/endpoints/",
+      "verified": {
+        "docs": "https://help.openalex.org/api/endpoints/"
+      }
+    },
+    {
+      "id": "openalex.autocomplete",
+      "name": "Autocomplete entity names",
+      "summary": "Type-ahead matches for a partial name across one entity type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/autocomplete/{entity_type}",
+      "params": {
+        "entity_type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "works, authors, sources, institutions, topics, keywords, publishers or funders.",
+          "example": "authors"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "The search string.",
+          "required": true,
+          "example": "einst"
+        }
+      },
+      "job": "scholar.autocomplete",
+      "docs_url": "https://help.openalex.org/api/autocomplete/",
+      "verified": {
+        "docs": "https://help.openalex.org/api/autocomplete/"
+      }
+    }
+  ]
+}
