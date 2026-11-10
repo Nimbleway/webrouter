@@ -47,7 +47,7 @@
         "db": {
           "in": "query",
           "type": "string",
-          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog.",
+          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog, clinvar, gene, or gds (GEO datasets); pubmed.info lists them all.",
           "example": "pubmed"
         },
         "term": {
@@ -137,7 +137,7 @@
         "db": {
           "in": "query",
           "type": "string",
-          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog.",
+          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog, clinvar, gene, or gds (GEO datasets); pubmed.info lists them all.",
           "required": true,
           "example": "pubmed"
         },
@@ -186,7 +186,7 @@
         "db": {
           "in": "query",
           "type": "string",
-          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog.",
+          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog, clinvar, gene, or gds (GEO datasets); pubmed.info lists them all.",
           "required": true,
           "example": "pubmed"
         },
@@ -241,7 +241,7 @@
         "db": {
           "in": "query",
           "type": "string",
-          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog.",
+          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog, clinvar, gene, or gds (GEO datasets); pubmed.info lists them all.",
           "example": "pubmed"
         },
         "id": {
@@ -308,7 +308,7 @@
         "db": {
           "in": "query",
           "type": "string",
-          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog.",
+          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog, clinvar, gene, or gds (GEO datasets); pubmed.info lists them all.",
           "example": "pubmed"
         },
         "retmode": {
