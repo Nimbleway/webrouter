@@ -15,6 +15,7 @@ from urllib.parse import quote
 
 from web_router.constants_vendors import MSG_VENDOR_BAD_PATH
 from web_router.exceptions import ConfigurationError, MissingParameterError, UnsupportedParameterError
+from web_router.vendors.catalog import get_catalog
 from web_router.vendors.schema import Vendor, VendorEndpoint, VendorParam
 
 
@@ -112,3 +113,23 @@ def plan_raw(
     plan.body = body
     plan.headers = dict(headers or {})
     return plan
+
+
+def endpoint_plan(endpoint: str, params: Mapping[str, Any] | None) -> _Plan:
+    """The request ``call_vendor`` sends, built once for both routers: ``endpoint`` looked up in the catalog."""
+    found = get_catalog().endpoint(endpoint)
+    return plan_endpoint(get_catalog().vendor(found.vendor), found, dict(params or {}))
+
+
+def raw_plan(
+    vendor: str,
+    method: str,
+    path: str,
+    *,
+    query: Mapping[str, Any] | Sequence[tuple[str, Any]] | None,
+    body: Any,
+    headers: Mapping[str, str] | None,
+    host: str | None,
+) -> _Plan:
+    """The request ``vendor_request`` sends, built once for both routers: ``vendor`` looked up in the catalog."""
+    return plan_raw(get_catalog().vendor(vendor), method, path, query=query, body=body, headers=headers, host=host)
