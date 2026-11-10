@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from tests.decider_helpers import CANDIDATES, TOKEN, request, respond, serve, systemone
@@ -12,11 +14,6 @@ from web_router.routing.invoke import AttachedRouter
 
 PRESETS = {
     "typesafe": ("https://api.typesafe.ai/v1/systemone", "jev-1.14.0", "TYPESAFE_API_KEY"),
-    "fireworks": (
-        "https://api.fireworks.ai/inference/v1/systemone",
-        "accounts/fireworks/models/rune",
-        "FIREWORKS_API_KEY",
-    ),
 }
 
 
@@ -74,7 +71,6 @@ def test_a_reply_out_of_shape_is_invalid(answers: object, monkeypatch: pytest.Mo
         ({"preset": "typesafe"}, "TYPESAFE_API_KEY is not set"),
         ({"base_url": "https://so.example.com", "model": "m"}, "api_key_env"),
         ({"base_url": "https://so.example.com", "api_key": TOKEN}, "router_config\\['model'\\]"),
-        ({"base_url": "https://so.example.com", "model": "m", "api_key_env": "FIREWORKS_API_KEY"}, "sent only to"),
         ({"base_url": "https://so.example.com", "model": "m", "api_key": TOKEN, "path": "/x?k=v"}, "query"),
         ({"preset": "jev"}, "has no preset 'jev'"),
     ],
@@ -83,17 +79,27 @@ def test_a_bad_setup_is_refused_when_the_router_is_built(
     config: dict[str, str], message: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
-    monkeypatch.setenv("FIREWORKS_API_KEY", TOKEN)
     with pytest.raises(ConfigurationError, match=message) as caught:
-        systemone_router(**config)  # type: ignore[arg-type]
+        systemone_router(**config)
     assert TOKEN not in str(caught.value)
 
 
+@pytest.mark.parametrize(
+    ("name", "config", "message"),
+    [("systemone", {"preset": "typesafe", "bogus": 1}, "'bogus'"), ("llm", {"preset": "openai"}, "'model'")],
+)
+def test_a_router_config_that_does_not_fit_the_decider_is_a_configuration_error(
+    name: str, config: dict[str, Any], message: str
+) -> None:
+    with pytest.raises(ConfigurationError, match=message):
+        WebRouter(router=name, router_config=config)
+
+
 def test_by_name_it_orders_every_tool_but_search_unless_told(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FIREWORKS_API_KEY", TOKEN)
-    with WebRouter(router="systemone", router_config={"preset": "fireworks"}) as client:
+    monkeypatch.setenv("TYPESAFE_API_KEY", TOKEN)
+    with WebRouter(router="systemone", router_config={"preset": "typesafe"}) as client:
         assert client._route_tools == {"answer", "extract", "research", "browse"}
-    config = {"preset": "fireworks", "route_tools": ("search",)}
+    config = {"preset": "typesafe", "route_tools": ("search",)}
     with WebRouter(router="systemone", router_config=config) as client:
         assert client._route_tools == {"search"}
 

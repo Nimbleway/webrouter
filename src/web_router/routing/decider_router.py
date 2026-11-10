@@ -22,7 +22,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections.abc import Awaitable, Callable, Generator
-from typing import Any
+from typing import Any, TypeVar
 
 from web_router.constants_decider import MSG_DECIDER_FORM
 from web_router.exceptions import ConfigurationError
@@ -33,6 +33,19 @@ from web_router.routing.decider import Decider, DeciderQuestion
 from web_router.routing.decider_question import decision_for, question_for
 from web_router.routing.decider_reply import checked_reply
 from web_router.routing.registry import aclose_router, discard_router
+
+_Factory = TypeVar("_Factory", bound=Callable[..., Any])
+
+
+def takes_config_of(decider: type) -> Callable[[_Factory], _Factory]:
+    """Give a ``**config`` router factory ``decider``'s signature, so a ``router_config`` key it does not take,
+    or one it needs, is a ``ConfigurationError`` when the router is built by name."""
+
+    def mark(factory: _Factory) -> _Factory:
+        factory.__signature__ = inspect.signature(decider)  # type: ignore[attr-defined]
+        return factory
+
+    return mark
 
 
 def _decider_name(decider: object) -> str:

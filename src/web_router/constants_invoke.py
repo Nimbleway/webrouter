@@ -52,3 +52,4 @@ MSG_ROUTER_CONFIG_UNNAMED = "router_config= configures a router named by string,
 MSG_ROUTER_CONFIG_UNKNOWN = "router={name!r} does not take the router_config key(s) {keys}; it takes: {takes}."
 MSG_ROUTER_CONFIG_MISSING = "router={name!r} needs the router_config key(s) {keys}."
 MSG_ROUTER_DISCARD_FAILED = "A router built by name and refused did not close ({kind}); it is dropped."
+MSG_TOOLS_SYNC_IN_LOOP = "call() on an AsyncWebRouter blocks its caller; from async code, await acall() instead."

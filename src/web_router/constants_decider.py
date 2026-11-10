@@ -71,12 +71,6 @@ preset asks in the prompt only, which any server reads."""
 SYSTEMONE_DEFAULT_PATH = "/v1/systemone"
 SYSTEMONE_PRESETS: dict[str, tuple[str, str, str, str]] = {
     "typesafe": ("https://api.typesafe.ai", SYSTEMONE_DEFAULT_PATH, "jev-1.14.0", "TYPESAFE_API_KEY"),
-    "fireworks": (
-        "https://api.fireworks.ai",
-        "/inference/v1/systemone",
-        "accounts/fireworks/models/rune",
-        "FIREWORKS_API_KEY",
-    ),
 }
 """``systemone`` preset -> (base URL, path, pinned model, key variable)."""
 
@@ -87,7 +81,6 @@ KEY_HOMES: dict[str, str] = {
     "OPENROUTER_API_KEY": "openrouter.ai",
     "GROQ_API_KEY": "api.groq.com",
     "TYPESAFE_API_KEY": "api.typesafe.ai",
-    "FIREWORKS_API_KEY": "api.fireworks.ai",
 }
 """A preset's key variable -> the one host it is sent to: a vendor's key never goes to another server."""
 
@@ -107,7 +100,6 @@ MSG_DECIDER_REPLY = "The decider {name!r} answered something other than a Decide
 MSG_DECIDER_RANKED = "The decider {name!r} answered a ranking that is not a list of the offered option ids, once each."
 MSG_DECIDER_SCORES = "The decider {name!r} answered scores that are not numbers from 0 to 1 for ranked ids."
 MSG_DECIDER_CONFIDENCE = "The decider {name!r} answered a confidence that is not a number from 0 to 1."
-MSG_DECIDER_NO_MODEL = "router={name!r} needs router_config['model'], the model's name as its server spells it."
 MSG_DECIDER_PRESET = "router={name!r} has no preset {preset!r}; known: {known}."
 MSG_DECIDER_BOTH = "router={name!r} takes a preset or a base_url, not both."
 MSG_DECIDER_NO_BASE = "router={name!r} needs router_config['preset'] or router_config['base_url']."

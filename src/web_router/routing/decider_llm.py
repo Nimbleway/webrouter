@@ -39,34 +39,14 @@ from web_router.constants_decider import (
     MODE_JSON_OBJECT,
     MODE_JSON_SCHEMA,
     MODE_PROMPT,
-    MSG_DECIDER_BOTH,
     MSG_DECIDER_MODE,
-    MSG_DECIDER_NO_BASE,
-    MSG_DECIDER_PRESET,
 )
 from web_router.exceptions import ConfigurationError
 from web_router.routing.decider import DeciderQuestion, DeciderReply
-from web_router.routing.decider_http import endpoint, post_json, text
+from web_router.routing.decider_http import endpoint, post_json, preset_of, text
 from web_router.routing.decider_llm_prompt import menu, schema, scores_of
-from web_router.routing.decider_router import DeciderRouter
+from web_router.routing.decider_router import DeciderRouter, takes_config_of
 from web_router.routing.remote_errors import RemoteRouterInvalid
-
-
-def preset_of(name: str, presets: dict[str, Any], preset: object, base_url: object) -> Any:
-    """The preset's row, or ``None`` for a ``base_url`` of the caller's own.
-
-    Raises:
-        ConfigurationError: for an unknown preset, both a preset and a base URL, or neither.
-    """
-    if preset is None:
-        if base_url is None:
-            raise ConfigurationError(MSG_DECIDER_NO_BASE.format(name=name))
-        return None
-    if not isinstance(preset, str) or preset not in presets:
-        raise ConfigurationError(MSG_DECIDER_PRESET.format(name=name, preset=preset, known=", ".join(presets)))
-    if base_url is not None:
-        raise ConfigurationError(MSG_DECIDER_BOTH.format(name=name))
-    return presets[preset]
 
 
 def checked_mode(mode: object) -> str:
@@ -142,26 +122,10 @@ class LLMDecider:
         return DeciderReply(ranked=ranked, scores=scores, confidence=confidence)
 
 
-def llm_router(
-    *,
-    model: str,
-    preset: str | None = None,
-    base_url: str | None = None,
-    api_key_env: str | None = None,
-    api_key: str | None = None,
-    timeout_s: float = LLM_TIMEOUT_S,
-    route_tools: Collection[str] | None = None,
-    response_format: str | None = None,
-) -> DeciderRouter:
-    """What ``router="llm"`` builds from ``router_config``: a :class:`DeciderRouter` on an :class:`LLMDecider`."""
-    decider = LLMDecider(
-        model=model,
-        preset=preset,
-        base_url=base_url,
-        api_key_env=api_key_env,
-        api_key=api_key,
-        timeout_s=timeout_s,
-        route_tools=route_tools,
-        response_format=response_format,
-    )
-    return DeciderRouter(decider)
+@takes_config_of(LLMDecider)
+def llm_router(**config: Any) -> DeciderRouter:
+    """What ``router="llm"`` builds from ``router_config``: a :class:`DeciderRouter` on an :class:`LLMDecider`.
+
+    ``config`` is :class:`LLMDecider`'s keyword arguments, checked against its signature when built by name.
+    """
+    return DeciderRouter(LLMDecider(**config))

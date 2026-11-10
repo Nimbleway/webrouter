@@ -2,15 +2,14 @@
 
 Experimental. Opt in by name::
 
-    WebRouter(router="systemone", router_config={"preset": "fireworks"})
+    WebRouter(router="systemone", router_config={"preset": "typesafe"})
 
 System One answers typed questions about a state. Each routed call asks one
 ``choice`` question whose criteria are the options -- each id with its
 method, backend, estimated cost and p90 latency -- about the prompt, and reads
 back a probability per option and a confidence. The probabilities are the
 scores and rank the options, highest first; the API's own ``choice`` is not
-used. Presets: ``typesafe`` (TypeSafe's Jev, ``TYPESAFE_API_KEY``) and
-``fireworks`` (Fireworks' Rune, ``FIREWORKS_API_KEY``), each with its model
+used. Preset: ``typesafe`` (TypeSafe's Jev, ``TYPESAFE_API_KEY``), its model
 pinned, so a new release changes nothing until you change ``model``. Another
 server takes ``base_url``, ``path``, ``model`` and ``api_key_env``.
 """
@@ -32,10 +31,9 @@ from web_router.constants_decider import (
     SYSTEMONE_TIMEOUT_S,
 )
 from web_router.routing.decider import DeciderQuestion, DeciderReply
-from web_router.routing.decider_http import endpoint, post_json, text
-from web_router.routing.decider_llm import preset_of
+from web_router.routing.decider_http import endpoint, post_json, preset_of, text
 from web_router.routing.decider_reply import unit_number
-from web_router.routing.decider_router import DeciderRouter
+from web_router.routing.decider_router import DeciderRouter, takes_config_of
 from web_router.routing.remote_errors import RemoteRouterInvalid
 
 
@@ -107,26 +105,10 @@ class SystemOneDecider:
         return DeciderReply(ranked=ranked, scores=probabilities, confidence=answer.get("confidence"))
 
 
-def systemone_router(
-    *,
-    preset: str | None = None,
-    base_url: str | None = None,
-    path: str | None = None,
-    model: str | None = None,
-    api_key_env: str | None = None,
-    api_key: str | None = None,
-    timeout_s: float = SYSTEMONE_TIMEOUT_S,
-    route_tools: Collection[str] | None = None,
-) -> DeciderRouter:
-    """What ``router="systemone"`` builds from ``router_config``: a :class:`DeciderRouter` on a System One API."""
-    decider = SystemOneDecider(
-        preset=preset,
-        base_url=base_url,
-        path=path,
-        model=model,
-        api_key_env=api_key_env,
-        api_key=api_key,
-        timeout_s=timeout_s,
-        route_tools=route_tools,
-    )
-    return DeciderRouter(decider)
+@takes_config_of(SystemOneDecider)
+def systemone_router(**config: Any) -> DeciderRouter:
+    """What ``router="systemone"`` builds from ``router_config``: a :class:`DeciderRouter` on a System One API.
+
+    ``config`` is :class:`SystemOneDecider`'s keyword arguments, checked against its signature when built by name.
+    """
+    return DeciderRouter(SystemOneDecider(**config))

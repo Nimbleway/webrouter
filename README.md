@@ -1,22 +1,27 @@
-# WebRouter
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Nimbleway/webrouter/main/docs/assets/webrouter-mascot.png" alt="WebRouter" width="360">
+</p>
 
-**WebRouter is an open source standard that connects your agent to the web.**
+<h1 align="center">WebRouter</h1>
 
-One Python interface over search, extraction, answer, research and browser APIs, with fallback across providers and a router that can choose the method and provider for you.
+<p align="center"><strong>An open source standard that connects your agent to the internet.</strong></p>
 
-> **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
+<p align="center">
+  <a href="https://pypi.org/project/webrouter/"><img src="https://img.shields.io/pypi/v/webrouter?color=202c26&label=pypi" alt="PyPI"></a>
+  <a href="https://github.com/Nimbleway/webrouter/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-202c26" alt="License: Apache 2.0"></a>
+  <a href="https://pypi.org/project/webrouter/"><img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-202c26" alt="Python 3.11 to 3.13"></a>
+  <a href="https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml"><img src="https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+</p>
 
-[![CI](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
-[![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+<p align="center">
+  <a href="https://discord.gg/MGztFWSjZh"><img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord"></a>
+</p>
 
-Twelve search backends, seven extract backends, a template catalogue, five
-answer backends, three agentic research backends (plus Exa's, retired upstream), five
-browser-session backends and three browser agents. One call each. Switching
-between them is one argument.
-Maintained by [Nimble](https://nimbleway.com), one of the backends it routes to.
+Connect your agent to every web tool through one interface: search, extract, answer, research and browser sessions, across many providers. A [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
+
+```bash
+pip install "webrouter[all]"
+```
 
 ```python
 from web_router import Provider, WebRouter
@@ -38,6 +43,10 @@ with WebRouter("local").open_browser() as browser:  # a browser to drive, also k
 
 WebRouter(Provider.BROWSER_USE).browse("...")  # a hosted browser agent does the task
 ```
+
+<p align="center"><em>Useful? Star the repo so more agent developers can find it.</em> ⭐</p>
+
+> **Beta:** the API may change before 1.0.
 
 Every provider has its own SDK, its own parameter names and its own response
 shape. "How many results" is `max_results` on Tavily, `count` on Brave and
@@ -211,6 +220,11 @@ uv run --env-file .env python examples/main.py
 ```
 
 ## Provider support
+
+Twelve search backends, seven extract backends, a template catalogue, five
+answer backends, three agentic research backends (plus Exa's, retired upstream), five
+browser-session backends and three browser agents. One call each. Switching
+between them is one argument.
 
 A provider name serves the methods it serves and no others: `brave` searches
 and cannot extract, `oxylabs` extracts and cannot search, `nimble` searches,
@@ -427,7 +441,7 @@ difference matters:
 | Provider | Verified how |
 | --- | --- |
 | `parallel` | **Live.** Real runs against the Task API, and every recorded payload in its tests is a real response. |
-| `nimble` | **Against the `nimble-python` SDK's generated types**, produced from its OpenAPI spec — stronger than prose docs, weaker than a live call. |
+| `nimble` | **Against the `nimble-python` SDK's generated types**, produced from its OpenAPI spec — stronger than prose docs, weaker than a live call. Its `max` sends `x-high`, which Nimble's docs put at 15 to 30 minutes, longer than `research()`'s default 600-second wait: pass a larger `timeout`, or use `submit_research()` and poll, rather than leave a paid run going after the wait gives up. |
 | `perplexity` | **Live.** On 2026-09-30 the chat endpoint's deep research model answered 403 ("Sonar is now the Agent API"), so research moved to `/v1/responses`: a background run was followed from `queued` through `in_progress` to `completed`, presets `low`, `medium` and `xhigh` were accepted, and a cancel left a run `cancelled`. Its payloads are the ones in the tests. |
 | `linkup` | **Live.** Runs at `effort="low"` (`reasoningDepth` S, $0.25 each) were followed from start to answer, one of them with an `output_schema`, whose result was the schema's object alone; their payloads are the ones in the tests. Efforts above `low` are documentation-derived. Linkup's docs put `max` (XL) at 10 to 20 minutes and `high` (L) at 5 to 10, longer than `research()`'s default 600-second wait: pass a larger `timeout`, or use `submit_research()` and poll, rather than leave a paid run going after the wait gives up. |
 | `you` | **Live.** On 2026-10-16 a background run at `effort="low"` (`lite`) was followed from `queued` through `running` to `completed` on `api.you.com` (the same path on the search host answers 403); an unknown `research_effort` was a 422 naming `lite`, `standard`, `deep`, `exhaustive` and `frontier`. Its payloads are the ones in the tests. You.com offers no cancel, so `cancel()` returns `False`. `max` maps to `exhaustive`: `frontier`, background-only and priced well above it, is reachable as `provider_options={"research_effort": "frontier"}`. Efforts above `low` are documentation-derived. |
@@ -1060,11 +1074,11 @@ the package:
 | `low` | `low` | `lite` | `low` | `S` | `lite` |
 | `medium` | `medium` | `core` | `medium` | `M` | `standard` |
 | `high` | `high` | `pro` | `high` | `L` | `deep` |
-| `max` | `max` | `ultra` | `xhigh` | `XL` | `exhaustive` |
+| `max` | `x-high` | `ultra` | `xhigh` | `XL` | `exhaustive` |
 
 A backend with fewer tiers maps more than one level onto the same setting rather
-than inventing a distinction it does not have. Nimble's `x-high` and `5x-high`, and Parallel's `base`,
-have no normalized level of their own and are reachable through
+than inventing a distinction it does not have. Nimble's own `max` is not open yet, so `max` sends its deepest tier,
+`x-high`. Parallel's `base` has no normalized level of its own and is reachable through
 `provider_options`, as is You.com's `frontier`.
 
 Parallel is the one backend that *requires* an effort, so leaving it unset sends
@@ -2116,13 +2130,14 @@ The library ships one keyless router, `web_router.routing.rules.rules`: a
 prompt with a URL is extracted, anything else searched, and two model routers,
 `router="llm"` and `router="systemone"`: see
 [Decision APIs](#decision-apis-deciderrouter-routerllm-and-routersystemone).
-Five example routers, tested offline: [rules](examples/router_rules.py), a
+Six example routers, tested offline: [rules](examples/router_rules.py), a
 [scikit-learn classifier](examples/router_classifier.py), a
 [decider of your own](examples/router_decider.py), the built-in
-[`llm` router on a preset](examples/router_llm.py) and
-[Jev](examples/router_jev.py), TypeSafe's model, written out by hand. The last
-two are model routers: each sends the prompt to that model's server, which
-bills for it. The
+[`llm` router on a preset](examples/router_llm.py),
+[Jev](examples/router_jev.py), TypeSafe's model, written out by hand, and
+[OpenAI's Decisions API](examples/router_openai_decisions.py) as a decider.
+The last three are model routers: each sends the prompt to that model's
+server, which bills for it. The
 MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
@@ -2325,19 +2340,18 @@ each sends the prompt off your machine only when you name it.
 
 - **`router="systemone"`**: a System One decision API, asked one `choice`
   question per call; its probability per option is the score, and ranks them.
-  Presets: `typesafe` (TypeSafe's Jev, model `jev-1.14.0`,
-  `TYPESAFE_API_KEY`) and `fireworks` (Fireworks' Rune, model
-  `accounts/fireworks/models/rune`, `FIREWORKS_API_KEY`), each pinned so a new
+  Preset: `typesafe` (TypeSafe's Jev, model `jev-1.14.0`,
+  `TYPESAFE_API_KEY`), pinned so a new
   release changes nothing until you pass `model`; another server takes `base_url`, `path`, `model` and `api_key_env`. `timeout_s` is
   1 s, and `route_tools` every tool but search, unless set.
 
   ```python
-  WebRouter(router="systemone", router_config={"preset": "fireworks"})
+  WebRouter(router="systemone", router_config={"preset": "typesafe"})
   ```
 
 Each preset's key comes from that vendor's variable (`OPENAI_API_KEY`,
 `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`,
-`OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `FIREWORKS_API_KEY`), read once
+`OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`), read once
 when the router is built, and is sent only to that vendor's host: naming one
 for another `base_url` raises `ConfigurationError`, as does a key that is
 missing. Each call sends the server the prompt -- for an extract, its URLs
@@ -2759,6 +2773,16 @@ make test-browser
   an agent whose tools are WebRouter's, and
   [skills/web-router/SKILL.md](skills/web-router/SKILL.md), the same contract
   packaged as an agent skill
+
+## Community
+
+- [Discord](https://discord.gg/MGztFWSjZh). Best for: questions in #help, chatting with other
+  builders and the maintainers, and showing what you built in #showcase.
+- [GitHub Issues](https://github.com/Nimbleway/webrouter/issues). Best for: bugs
+  and gaps in a provider's support.
+- [GitHub Discussions](https://github.com/Nimbleway/webrouter/discussions). Best
+  for: proposals and design ideas.
+- [SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md). Best for: vulnerabilities. Never in a public channel.
 
 ## License
 

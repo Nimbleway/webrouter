@@ -25,10 +25,9 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from web_router.constants_decider import LLM_PRESETS, LLM_REPLY_FORMAT, MODE_JSON_SCHEMA
+from web_router.constants_decider import LLM_PRESETS
 from web_router.routing.contract import RouteRequest
-from web_router.routing.decider_llm import llm_router
-from web_router.routing.decider_llm_prompt import menu, schema
+from web_router.routing.decider_llm import LLMDecider, llm_router
 from web_router.routing.decider_question import question_for
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
@@ -103,12 +102,11 @@ def _sklearn() -> Any:
         return classifier.ClassifierRouter(joblib.load(path))
 
 
-def llm_tokens(req: RouteRequest, preset: str = "openai") -> tuple[int, int]:
-    """Estimated input and output tokens of one ``llm`` router call: instructions, options and schema; a ranking."""
+def llm_tokens(req: RouteRequest, **config: Any) -> tuple[int, int]:
+    """Estimated input and output tokens of one ``llm`` router call: the request its decider sends; a ranking."""
     question = question_for(req)
-    sent = question.instructions + LLM_REPLY_FORMAT + menu(question)
-    if LLM_PRESETS.get(preset, ("", "", ""))[2] == MODE_JSON_SCHEMA:  # only a strict-schema preset sends it
-        sent += json.dumps(schema(question))
+    decider = LLMDecider(**{"model": "model", **config}, api_key="dry-run")  # a placeholder key: nothing is sent
+    sent = json.dumps(decider.body(question))
     scores = [{"id": cid, "p": 0.5} for cid in question.options]
     ranking = json.dumps({"ranked": list(question.options), "scores": scores, "confidence": 0.5})
     return math.ceil(len(sent) / CHARS_PER_TOKEN), math.ceil(len(ranking) / CHARS_PER_TOKEN)
@@ -126,7 +124,7 @@ def _llm(model: str | None, price: tuple[float, float] | None) -> RouterSpec:
     def cost(req: RouteRequest) -> float | None:
         if price is None:
             return None
-        tokens_in, tokens_out = llm_tokens(req, preset)
+        tokens_in, tokens_out = llm_tokens(req, preset=preset)
         return (tokens_in * price[0] + tokens_out * price[1]) / MTOK
 
     shown = model or f"${LLM_MODEL_ENV}"
