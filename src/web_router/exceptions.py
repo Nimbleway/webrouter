@@ -330,9 +330,15 @@ class LiveDataSourceNotFoundError(ProviderError):
     """
 
     def __init__(
-        self, provider: str, source: str = "", *, original: BaseException | None = None, hint: str = "", **old: str
+        self,
+        provider: str,
+        source: str | None = None,
+        *,
+        original: BaseException | None = None,
+        hint: str = "",
+        **old: str,
     ) -> None:
-        source = source or deprecated_keyword(type(self).__name__, old, "template", "source")
+        source = deprecated_keyword(type(self).__name__, old, "template", "source", source)
         self.source = source
         self.template = source
         super().__init__(provider, MSG_LIVE_DATA_SOURCE_NOT_FOUND.format(name=source) + hint, original=original)
