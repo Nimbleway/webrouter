@@ -1,0 +1,405 @@
+{
+  "vendor": "google-tag-manager",
+  "name": "Google Tag Manager",
+  "category": "analytics",
+  "summary": "Your Tag Manager accounts, containers and workspaces: read tags, triggers and variables, create container versions, and publish them live.",
+  "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2",
+  "base_url": "https://tagmanager.googleapis.com/tagmanager/v2",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "GOOGLE_TAG_MANAGER_CLIENT_ID"
+        ],
+        "description": "the OAuth client id of a Google Cloud OAuth app with the Tag Manager API enabled (Google Cloud console > APIs & Services > Credentials)"
+      },
+      "client_secret": {
+        "env": [
+          "GOOGLE_TAG_MANAGER_CLIENT_SECRET"
+        ],
+        "description": "that OAuth app's client secret"
+      },
+      "refresh_token": {
+        "env": [
+          "GOOGLE_TAG_MANAGER_REFRESH_TOKEN"
+        ],
+        "description": "a refresh token minted with that OAuth app for the scope https://www.googleapis.com/auth/tagmanager.readonly (reads), tagmanager.edit.containerversions and tagmanager.publish (the write calls)"
+      }
+    },
+    "oauth2": {
+      "grant": "refresh_token",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "refresh_token": "{refresh_token}"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Own-account API: every call acts as the Google user the refresh token belongs to, and only reaches accounts that user can access.",
+    "Resources nest: account > container > workspace > tags, triggers, variables. Ids are digits; the public GTM-XXXX id is not an API id.",
+    "Lists page with pageToken/nextPageToken. A publish makes a container version live on the real site; create_version only snapshots a workspace.",
+    "Per-method OAuth scopes are narrower than one broad token: reads need tagmanager.readonly, creating a version needs tagmanager.edit.containerversions, publishing needs tagmanager.publish."
+  ],
+  "sources": [
+    "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2",
+    "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts/list",
+    "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers/list",
+    "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.tags/list",
+    "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces/create_version",
+    "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.versions/publish"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "google-tag-manager.accounts.list",
+      "name": "List Tag Manager accounts",
+      "summary": "Every GTM account the signed-in user can access.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts",
+      "params": {
+        "includeGoogleTags": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return accounts associated with Google Tag."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "analytics.accounts.list",
+      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts/list",
+      "verified": {
+        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts/list"
+      }
+    },
+    {
+      "id": "google-tag-manager.containers.list",
+      "name": "List containers in an account",
+      "summary": "Containers (web, server, iOS, Android) of one account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/containers",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM account id, digits.",
+          "example": "6000000000"
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "analytics.containers.list",
+      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers/list",
+      "verified": {
+        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers/list"
+      }
+    },
+    {
+      "id": "google-tag-manager.workspaces.list",
+      "name": "List workspaces of a container",
+      "summary": "Workspaces (editing sandboxes) of one container.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/containers/{container_id}/workspaces",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM account id, digits.",
+          "example": "6000000000"
+        },
+        "container_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM container id, digits (not the GTM-XXXX public id).",
+          "example": "12345678"
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "analytics.workspaces.list",
+      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces/list",
+      "verified": {
+        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces/list"
+      }
+    },
+    {
+      "id": "google-tag-manager.tags.list",
+      "name": "List tags in a workspace",
+      "summary": "All tags of a workspace with type, parameters and firing triggers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/containers/{container_id}/workspaces/{workspace_id}/tags",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM account id, digits.",
+          "example": "6000000000"
+        },
+        "container_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM container id, digits (not the GTM-XXXX public id).",
+          "example": "12345678"
+        },
+        "workspace_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM workspace id; the default workspace is usually 1 or 2 - list workspaces to find it.",
+          "example": "2"
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "analytics.tags.list",
+      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.tags/list",
+      "verified": {
+        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.tags/list"
+      }
+    },
+    {
+      "id": "google-tag-manager.tags.get",
+      "name": "Get one tag",
+      "summary": "One tag of a workspace by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/containers/{container_id}/workspaces/{workspace_id}/tags/{tag_id}",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM account id, digits.",
+          "example": "6000000000"
+        },
+        "container_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM container id, digits (not the GTM-XXXX public id).",
+          "example": "12345678"
+        },
+        "workspace_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM workspace id; the default workspace is usually 1 or 2 - list workspaces to find it.",
+          "example": "2"
+        },
+        "tag_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM tag id.",
+          "example": "14"
+        }
+      },
+      "job": "analytics.tags.get",
+      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.tags/get",
+      "verified": {
+        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.tags/get"
+      }
+    },
+    {
+      "id": "google-tag-manager.triggers.list",
+      "name": "List triggers in a workspace",
+      "summary": "All triggers of a workspace.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/containers/{container_id}/workspaces/{workspace_id}/triggers",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM account id, digits.",
+          "example": "6000000000"
+        },
+        "container_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM container id, digits (not the GTM-XXXX public id).",
+          "example": "12345678"
+        },
+        "workspace_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM workspace id; the default workspace is usually 1 or 2 - list workspaces to find it.",
+          "example": "2"
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "analytics.triggers.list",
+      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.triggers/list",
+      "verified": {
+        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.triggers/list"
+      }
+    },
+    {
+      "id": "google-tag-manager.variables.list",
+      "name": "List variables in a workspace",
+      "summary": "All user-defined variables of a workspace.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/containers/{container_id}/workspaces/{workspace_id}/variables",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM account id, digits.",
+          "example": "6000000000"
+        },
+        "container_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM container id, digits (not the GTM-XXXX public id).",
+          "example": "12345678"
+        },
+        "workspace_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM workspace id; the default workspace is usually 1 or 2 - list workspaces to find it.",
+          "example": "2"
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "analytics.variables.list",
+      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.variables/list",
+      "verified": {
+        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.variables/list"
+      }
+    },
+    {
+      "id": "google-tag-manager.workspaces.create_version",
+      "name": "Create a container version from a workspace",
+      "summary": "Snapshots the workspace into a new container version. Does not publish it.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/accounts/{account_id}/containers/{container_id}/workspaces/{workspace_id}:create_version",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM account id, digits.",
+          "example": "6000000000"
+        },
+        "container_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM container id, digits (not the GTM-XXXX public id).",
+          "example": "12345678"
+        },
+        "workspace_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM workspace id; the default workspace is usually 1 or 2 - list workspaces to find it.",
+          "example": "2"
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Name of the version to create."
+        },
+        "notes": {
+          "in": "body",
+          "type": "string",
+          "description": "Notes for the version."
+        }
+      },
+      "notes": [
+        "Does not make anything live: publish the returned version with google-tag-manager.versions.publish."
+      ],
+      "job": "analytics.versions.create",
+      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces/create_version",
+      "verified": {
+        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces/create_version"
+      }
+    },
+    {
+      "id": "google-tag-manager.versions.publish",
+      "name": "Publish a container version live",
+      "summary": "Makes a container version the live one for the container: the site's tags change.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/accounts/{account_id}/containers/{container_id}/versions/{version_id}:publish",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM account id, digits.",
+          "example": "6000000000"
+        },
+        "container_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GTM container id, digits (not the GTM-XXXX public id).",
+          "example": "12345678"
+        },
+        "version_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Container version id, from create_version's answer or a versions list."
+        },
+        "fingerprint": {
+          "in": "query",
+          "type": "string",
+          "description": "When given, must match the stored version's fingerprint or the call is refused."
+        }
+      },
+      "notes": [
+        "Takes effect on the real site immediately. The request body must be empty."
+      ],
+      "job": "analytics.versions.publish",
+      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.versions/publish",
+      "verified": {
+        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.versions/publish"
+      }
+    }
+  ]
+}
