@@ -2,6 +2,7 @@
   "vendor": "newsdata",
   "name": "NewsData.io",
   "category": "search",
+  "data": "public",
   "summary": "Worldwide news API: latest and archived articles with country, category, language, domain and sentiment filters, plus crypto and market news, sources and article counts.",
   "docs_url": "https://newsdata.io/documentation",
   "pricing_url": "https://newsdata.io/pricing",

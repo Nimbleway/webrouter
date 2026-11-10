@@ -44,6 +44,9 @@ async def tools(recorder: Recorder) -> Any:
 async def test_vendors_lists_vendors_then_endpoints(tools: WebRouterTools) -> None:
     observability = await tools.call(MCP_TOOL_VENDORS, {"category": "observability"})
     assert {row["vendor"]: row for row in observability["vendors"]}["datadog"]["configured"] is True
+    assert {row["vendor"]: row for row in observability["vendors"]}["datadog"]["data"] == "account"
+    public = await tools.call(MCP_TOOL_VENDORS, {"data": "public", "category": "seo"})
+    assert public["vendors"] and all(row["data"] == "public" for row in public["vendors"])
     advertising = await tools.call(MCP_TOOL_VENDORS, {"category": "advertising"})
     assert (
         "GOOGLE_ADS_REFRESH_TOKEN"

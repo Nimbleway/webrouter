@@ -2,6 +2,7 @@
   "vendor": "thecompaniesapi",
   "name": "The Companies API",
   "category": "company-data",
+  "data": "public",
   "summary": "Company enrichment from a domain, email or social URL, plus segmentation search over millions of companies.",
   "docs_url": "https://www.thecompaniesapi.com/api",
   "pricing_url": "https://www.thecompaniesapi.com/pricing",

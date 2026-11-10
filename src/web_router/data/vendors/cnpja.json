@@ -2,6 +2,7 @@
   "vendor": "cnpja",
   "name": "CNPJá",
   "category": "company-data",
+  "data": "public",
   "summary": "Brazilian company registry (CNPJ) data: establishments, companies with partners, Simples Nacional and Receita Federal records, and filtered searches.",
   "docs_url": "https://api.cnpja.com/docs",
   "base_url": "https://api.cnpja.com",

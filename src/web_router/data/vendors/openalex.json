@@ -2,6 +2,7 @@
   "vendor": "openalex",
   "name": "OpenAlex",
   "category": "search",
+  "data": "public",
   "summary": "Open catalog of scholarly works, authors, institutions, sources and topics, with citations, open-access status and grouping counts.",
   "docs_url": "https://help.openalex.org/how-to-use-the-api/api-overview",
   "pricing_url": "https://help.openalex.org/access/pricing/",

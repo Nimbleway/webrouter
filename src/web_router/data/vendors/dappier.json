@@ -2,6 +2,7 @@
   "vendor": "dappier",
   "name": "Dappier",
   "category": "search",
+  "data": "public",
   "summary": "Real-time answers from Dappier AI models (live web search, news, stocks) and semantic article recommendations from licensed publisher data models.",
   "docs_url": "https://docs.dappier.com/quickstart",
   "pricing_url": "https://platform.dappier.com/marketplace",

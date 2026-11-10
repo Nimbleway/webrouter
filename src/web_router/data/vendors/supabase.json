@@ -2,6 +2,7 @@
   "vendor": "supabase",
   "name": "Supabase",
   "category": "developer",
+  "data": "account",
   "summary": "Supabase Management API: the user's projects and organisations, SQL against a project's Postgres, logs, health, advisors, edge functions and storage buckets.",
   "docs_url": "https://supabase.com/docs/reference/api/introduction",
   "pricing_url": "https://supabase.com/pricing",

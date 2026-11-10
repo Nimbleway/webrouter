@@ -2,6 +2,7 @@
   "vendor": "listennotes",
   "name": "Listen Notes",
   "category": "search",
+  "data": "public",
   "summary": "Podcast search engine API: full-text search of podcasts and episodes, podcast and episode metadata with transcripts, best-of lists, recommendations and genres.",
   "docs_url": "https://www.listennotes.com/api/docs/",
   "pricing_url": "https://www.listennotes.com/api/pricing/",

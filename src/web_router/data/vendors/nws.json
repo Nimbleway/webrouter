@@ -2,6 +2,7 @@
   "vendor": "nws",
   "name": "US National Weather Service",
   "category": "other",
+  "data": "public",
   "summary": "Official US forecasts (7-day and hourly), active weather alerts and station observations from the National Weather Service API (api.weather.gov).",
   "docs_url": "https://www.weather.gov/documentation/services-web-api",
   "base_url": "https://api.weather.gov",

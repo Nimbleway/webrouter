@@ -2,6 +2,7 @@
   "vendor": "runway",
   "name": "Runway",
   "category": "media-generation",
+  "data": "service",
   "summary": "Video, image and audio generation (Gen-4.5 and hosted third-party models) as asynchronous tasks.",
   "docs_url": "https://docs.dev.runwayml.com/api/",
   "pricing_url": "https://docs.dev.runwayml.com/guides/pricing",

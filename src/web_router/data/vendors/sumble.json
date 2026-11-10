@@ -2,6 +2,7 @@
   "vendor": "sumble",
   "name": "Sumble",
   "category": "company-data",
+  "data": "public",
   "summary": "Organization, people, job post and team data: what companies use, who works there and buying signals.",
   "docs_url": "https://docs.sumble.com/api/api",
   "pricing_url": "https://sumble.com/pricing",

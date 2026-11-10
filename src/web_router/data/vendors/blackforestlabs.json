@@ -2,6 +2,7 @@
   "vendor": "blackforestlabs",
   "name": "Black Forest Labs (FLUX)",
   "category": "media-generation",
+  "data": "service",
   "summary": "FLUX image generation and editing (FLUX.2 [pro]/[max], FLUX1.1 [pro]) from Black Forest Labs' own API.",
   "docs_url": "https://docs.bfl.ml/quick_start/introduction",
   "pricing_url": "https://docs.bfl.ml/quick_start/pricing",

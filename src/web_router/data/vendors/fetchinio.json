@@ -2,6 +2,7 @@
   "vendor": "fetchinio",
   "name": "Fetchin",
   "category": "social",
+  "data": "public",
   "summary": "Professional-network profiles, posts, comments, reactions and company pages as a credit-billed API.",
   "docs_url": "https://docs.fetchin.io/",
   "base_url": "https://api.fetchin.io",

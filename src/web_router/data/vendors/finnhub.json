@@ -2,6 +2,7 @@
   "vendor": "finnhub",
   "name": "Finnhub",
   "category": "finance",
+  "data": "public",
   "summary": "Stock quotes, candles, company profiles, fundamentals, earnings and market news from Finnhub.",
   "docs_url": "https://finnhub.io/docs/api",
   "pricing_url": "https://finnhub.io/pricing",

@@ -2,6 +2,7 @@
   "vendor": "gleif",
   "name": "GLEIF",
   "category": "company-data",
+  "data": "public",
   "summary": "The Global LEI Index: legal entity records by LEI, name, BIC or ISIN, with direct and ultimate parents and children, keyless.",
   "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
   "base_url": "https://api.gleif.org/api/v1",

@@ -2,6 +2,7 @@
   "vendor": "github",
   "name": "GitHub",
   "category": "developer",
+  "data": "account",
   "summary": "Repositories, issues, pull requests, commits and code search on GitHub through its REST API.",
   "docs_url": "https://docs.github.com/en/rest",
   "pricing_url": "https://github.com/pricing",

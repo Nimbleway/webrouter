@@ -2,6 +2,7 @@
   "vendor": "contactout",
   "name": "ContactOut",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find work and personal emails and phones from LinkedIn profiles, search people and companies, and verify emails.",
   "docs_url": "https://api.contactout.com/",
   "pricing_url": "https://contactout.com/pricing",

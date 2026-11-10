@@ -2,6 +2,7 @@
   "vendor": "vaquill",
   "name": "Vaquill",
   "category": "other",
+  "data": "public",
   "summary": "US statutes, regulations, constitutions and court rules (federal and every state): search, citation resolution, section metadata, full text and cross-state comparison.",
   "docs_url": "https://www.vaquill.ai/docs/api-guide/overview",
   "pricing_url": "https://www.vaquill.ai/legal-api",

@@ -2,6 +2,7 @@
   "vendor": "findymail",
   "name": "Findymail",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find and verify emails and phones from names, domains or LinkedIn profiles, and look up companies and employees.",
   "docs_url": "https://app.findymail.com/docs/",
   "pricing_url": "https://www.findymail.com/pricing",

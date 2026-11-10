@@ -2,6 +2,7 @@
   "vendor": "openfunnel",
   "name": "OpenFunnel",
   "category": "company-data",
+  "data": "public",
   "summary": "Find lookalike companies from seeds or a description, companies by the tech in their job posts, and qualify one company against criteria.",
   "docs_url": "https://docs.openfunnel.dev",
   "base_url": "https://api.openfunnel.dev",

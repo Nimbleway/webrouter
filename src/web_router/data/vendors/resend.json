@@ -2,6 +2,7 @@
   "vendor": "resend",
   "name": "Resend",
   "category": "messaging",
+  "data": "service",
   "summary": "Transactional email: send email, read sent and received emails, delivery metrics, domains, request logs and usage.",
   "docs_url": "https://resend.com/docs/api-reference/introduction.md",
   "pricing_url": "https://resend.com/pricing",

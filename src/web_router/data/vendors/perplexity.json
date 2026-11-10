@@ -2,6 +2,7 @@
   "vendor": "perplexity",
   "name": "Perplexity",
   "category": "search",
+  "data": "public",
   "summary": "Perplexity's Search API, Agent API with web search, and embeddings.",
   "docs_url": "https://docs.perplexity.ai/docs/getting-started/overview",
   "pricing_url": "https://docs.perplexity.ai/docs/getting-started/pricing",

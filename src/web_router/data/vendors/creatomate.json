@@ -2,6 +2,7 @@
   "vendor": "creatomate",
   "name": "Creatomate",
   "category": "media-generation",
+  "data": "service",
   "summary": "Template-based video and image rendering: fill a stored template's dynamic fields per render through the REST API.",
   "docs_url": "https://creatomate.com/docs/api/reference/introduction",
   "pricing_url": "https://creatomate.com/pricing",

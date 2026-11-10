@@ -2,6 +2,7 @@
   "vendor": "vapi",
   "name": "Vapi",
   "category": "messaging",
+  "data": "service",
   "summary": "Voice AI agents: list and read calls with transcripts and costs, assistants, phone numbers, call analytics, and start outbound calls.",
   "docs_url": "https://docs.vapi.ai/api-reference",
   "pricing_url": "https://vapi.ai/pricing",

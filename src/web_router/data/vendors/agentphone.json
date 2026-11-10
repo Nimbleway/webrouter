@@ -2,6 +2,7 @@
   "vendor": "agentphone",
   "name": "AgentPhone",
   "category": "messaging",
+  "data": "service",
   "summary": "Phone numbers for AI agents: SMS/iMessage/WhatsApp messages, conversations, voice calls with transcripts, and usage.",
   "docs_url": "https://docs.agentphone.to/api-reference.md",
   "base_url": "https://api.agentphone.ai",

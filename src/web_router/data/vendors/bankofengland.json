@@ -2,6 +2,7 @@
   "vendor": "bankofengland",
   "name": "Bank of England",
   "category": "finance",
+  "data": "public",
   "summary": "Bank of England Statistical Interactive Database: Bank Rate, SONIA, yields, exchange rates and other series by code, as CSV or XML, keyless.",
   "docs_url": "https://www.bankofengland.co.uk/boeapps/database/help.asp",
   "base_url": "https://www.bankofengland.co.uk/boeapps/database",

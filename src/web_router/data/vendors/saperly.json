@@ -2,6 +2,7 @@
   "vendor": "saperly",
   "name": "Saperly",
   "category": "messaging",
+  "data": "service",
   "summary": "Phone carrier for AI agents: numbers, SMS, outbound voice calls with transcripts, consent records and usage.",
   "docs_url": "https://saperly.com/docs",
   "base_url": "https://api.saperly.com",

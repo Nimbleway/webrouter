@@ -2,6 +2,7 @@
   "vendor": "assemblyai",
   "name": "AssemblyAI",
   "category": "ai",
+  "data": "service",
   "summary": "Speech-to-text for audio and video files by URL, with speaker labels, PII redaction, subtitles and word search.",
   "docs_url": "https://www.assemblyai.com/docs/api-reference/overview",
   "pricing_url": "https://www.assemblyai.com/pricing",

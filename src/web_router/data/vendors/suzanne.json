@@ -2,6 +2,7 @@
   "vendor": "suzanne",
   "name": "Suzanne",
   "category": "media-generation",
+  "data": "service",
   "summary": "Text-to-3D and photo-to-3D: textured 3D meshes (GLB, OBJ, STL, FBX) from a prompt or 1-4 photos.",
   "docs_url": "https://console.suzanne3d.com/documentation/",
   "base_url": "https://api.suzanne3d.com",

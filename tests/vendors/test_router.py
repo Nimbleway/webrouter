@@ -9,6 +9,7 @@ from tests.vendors.conftest import Recorder
 from web_router import AsyncWebRouter, WebRouter
 from web_router.exceptions_vendors import VendorNotFoundError, VendorWriteRefusedError
 from web_router.vendors.caller import VendorCaller
+from web_router.vendors.catalog import get_catalog
 
 DATADOG = {"datadog": {"api_key": "dd-api", "app_key": "dd-app"}}
 
@@ -39,6 +40,17 @@ def test_vendors_lists_the_catalog_with_what_is_missing() -> None:
         }
         assert configured - {"datadog"} <= keyless
         assert all(row.category == "advertising" for row in router.vendors(category="advertising"))
+
+
+def test_vendors_filter_by_whose_data_they_hold() -> None:
+    with WebRouter() as router:
+        public = {row.vendor for row in router.vendors(data="public")}
+        account = {row.vendor for row in router.vendors(data="account")}
+        service = {row.vendor for row in router.vendors(data="service")}
+    assert {"dataforseo", "crunchbase", "hunter"} <= public
+    assert {"datadog", "google-ads", "slack"} <= account
+    assert {"openai", "twilio", "elevenlabs"} <= service
+    assert len(public) + len(account) + len(service) == len(get_catalog())
 
 
 def test_describe_and_find() -> None:

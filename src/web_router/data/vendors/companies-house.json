@@ -2,6 +2,7 @@
   "vendor": "companies-house",
   "name": "Companies House",
   "category": "company-data",
+  "data": "public",
   "summary": "The UK company register: company profiles, officers, filing history, persons with significant control, charges and insolvency.",
   "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference",
   "base_url": "https://api.company-information.service.gov.uk",

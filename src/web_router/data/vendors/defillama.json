@@ -2,6 +2,7 @@
   "vendor": "defillama",
   "name": "DefiLlama",
   "category": "finance",
+  "data": "public",
   "summary": "DeFi protocol and chain TVL, token prices by contract, stablecoin supply, yield pools, DEX volumes and protocol fees, keyless.",
   "docs_url": "https://api-docs.defillama.com/",
   "base_url": "https://api.llama.fi",

@@ -2,6 +2,7 @@
   "vendor": "orbisearch",
   "name": "OrbiSearch",
   "category": "email-verification",
+  "data": "public",
   "summary": "Email verification that resolves catch-all domains, single or in bulk.",
   "docs_url": "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md",
   "pricing_url": "https://orbisearch.com/pricing",

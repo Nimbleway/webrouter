@@ -2,6 +2,7 @@
   "vendor": "posthog",
   "name": "PostHog",
   "category": "analytics",
+  "data": "account",
   "summary": "Product analytics from a PostHog project: SQL (HogQL) queries over events and persons, saved insights and dashboards, persons, events and feature flags.",
   "docs_url": "https://posthog.com/docs/api",
   "pricing_url": "https://posthog.com/pricing",

@@ -2,6 +2,7 @@
   "vendor": "carsxe",
   "name": "CarsXE",
   "category": "other",
+  "data": "public",
   "summary": "Vehicle data: VIN decoding, license plate lookup in 50+ countries, market value, history, recalls, lien and theft checks, and year/make/model search.",
   "docs_url": "https://docs.carsxe.com/docs",
   "pricing_url": "https://carsxe.com/pricing",

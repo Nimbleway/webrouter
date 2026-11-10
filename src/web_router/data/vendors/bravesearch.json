@@ -2,6 +2,7 @@
   "vendor": "bravesearch",
   "name": "Brave Search",
   "category": "search",
+  "data": "public",
   "summary": "Web, news, video and image search plus LLM-ready page context from Brave's independent index.",
   "docs_url": "https://api-dashboard.search.brave.com/documentation",
   "pricing_url": "https://api-dashboard.search.brave.com/documentation/pricing/index.html.md",

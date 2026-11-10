@@ -2,6 +2,7 @@
   "vendor": "fal",
   "name": "fal.ai",
   "category": "media-generation",
+  "data": "service",
   "summary": "Hosted image, video, audio and 3D generation models run through fal's queue API, plus model search, pricing and usage.",
   "docs_url": "https://fal.ai/docs/api-reference/inference-api/index",
   "pricing_url": "https://fal.ai/pricing",

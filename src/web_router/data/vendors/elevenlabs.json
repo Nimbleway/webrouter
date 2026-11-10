@@ -2,6 +2,7 @@
   "vendor": "elevenlabs",
   "name": "ElevenLabs",
   "category": "media-generation",
+  "data": "service",
   "summary": "Text to speech, sound effects and music generation, plus voice search, models and usage, from ElevenLabs.",
   "docs_url": "https://elevenlabs.io/docs/api-reference/introduction",
   "pricing_url": "https://elevenlabs.io/pricing/api",

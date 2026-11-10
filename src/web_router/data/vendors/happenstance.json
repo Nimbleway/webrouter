@@ -2,6 +2,7 @@
   "vendor": "happenstance",
   "name": "Happenstance",
   "category": "enrichment",
+  "data": "account",
   "summary": "Research a person from a description, and search for people across your network, groups and friends' connections.",
   "docs_url": "https://developer.happenstance.ai/api-reference/introduction",
   "base_url": "https://api.happenstance.ai",

@@ -2,6 +2,7 @@
   "vendor": "scrapegraphai",
   "name": "ScrapeGraphAI",
   "category": "scraping",
+  "data": "public",
   "summary": "AI-powered scrape, extract, search and crawl with natural-language prompts (ScrapeGraphAI v2 API).",
   "docs_url": "https://docs.scrapegraphai.com/api-reference/introduction",
   "pricing_url": "https://scrapegraphai.com/pricing",

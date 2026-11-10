@@ -2,6 +2,7 @@
   "vendor": "greenhouse",
   "name": "Greenhouse Job Board",
   "category": "company-data",
+  "data": "public",
   "summary": "A company's public Greenhouse job board: open roles with descriptions, departments, offices and pay ranges, keyless.",
   "docs_url": "https://docs.greenhouse.io/job-board.html",
   "base_url": "https://boards-api.greenhouse.io/v1",

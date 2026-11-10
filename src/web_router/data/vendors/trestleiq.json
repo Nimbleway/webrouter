@@ -2,6 +2,7 @@
   "vendor": "trestleiq",
   "name": "Trestle",
   "category": "email-verification",
+  "data": "public",
   "summary": "Phone validation, caller identification and lead-contact grading (phone, email, address, IP) from Trestle's identity data.",
   "docs_url": "https://docs.trestleiq.com/api-reference",
   "base_url": "https://api.trestleiq.com",

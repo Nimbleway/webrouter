@@ -2,6 +2,7 @@
   "vendor": "creatify",
   "name": "Creatify",
   "category": "media-generation",
+  "data": "service",
   "summary": "AI video ads from a product link: scrape a URL, generate avatar-led short videos, and list avatars and voices.",
   "docs_url": "https://docs.creatify.ai/introduction",
   "pricing_url": "https://creatify.ai/pricing",

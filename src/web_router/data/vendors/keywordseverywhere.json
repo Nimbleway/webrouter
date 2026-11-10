@@ -2,6 +2,7 @@
   "vendor": "keywordseverywhere",
   "name": "Keywords Everywhere",
   "category": "seo",
+  "data": "public",
   "summary": "Keyword search volume, CPC and competition, related and People Also Search For keywords, domain and URL keywords, traffic and backlinks.",
   "docs_url": "https://api.keywordseverywhere.com/docs/#/",
   "base_url": "https://api.keywordseverywhere.com/v1",

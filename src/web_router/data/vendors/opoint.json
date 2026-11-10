@@ -2,6 +2,7 @@
   "vendor": "opoint",
   "name": "Opoint",
   "category": "search",
+  "data": "public",
   "summary": "Global news monitoring: boolean search over Opoint's news archive, stored-search feeds and SafeFeed firehoses.",
   "docs_url": "https://api-docs.opoint.com/guides/search",
   "base_url": "https://api.opoint.com",

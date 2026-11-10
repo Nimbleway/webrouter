@@ -2,6 +2,7 @@
   "vendor": "replicate",
   "name": "Replicate",
   "category": "media-generation",
+  "data": "service",
   "summary": "Run open-source and official image, video, audio and language models as asynchronous predictions.",
   "docs_url": "https://replicate.com/docs/reference/http",
   "pricing_url": "https://replicate.com/pricing",

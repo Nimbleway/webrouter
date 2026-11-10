@@ -2,6 +2,7 @@
   "vendor": "branddev",
   "name": "Context.dev",
   "category": "company-data",
+  "data": "public",
   "summary": "Brand and company data, natural-language company and people search, person enrichment, news, plus web scrape, crawl, map and search from Context.dev.",
   "docs_url": "https://docs.context.dev",
   "pricing_url": "https://www.context.dev/pricing",

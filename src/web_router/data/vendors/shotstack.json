@@ -2,6 +2,7 @@
   "vendor": "shotstack",
   "name": "Shotstack",
   "category": "media-generation",
+  "data": "service",
   "summary": "Render videos, images and audio from a JSON timeline or saved template, generate AI assets, and inspect media.",
   "docs_url": "https://shotstack.io/docs/api/",
   "pricing_url": "https://shotstack.io/pricing/",

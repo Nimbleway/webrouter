@@ -2,6 +2,7 @@
   "vendor": "exa",
   "name": "Exa",
   "category": "search",
+  "data": "public",
   "summary": "Neural web search, page contents, cited answers, Agent runs and Websets from Exa.",
   "docs_url": "https://exa.ai/docs/reference/getting-started",
   "pricing_url": "https://exa.ai/pricing",

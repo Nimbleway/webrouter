@@ -2,6 +2,7 @@
   "vendor": "tiktok",
   "name": "TikTok Display API",
   "category": "social",
+  "data": "account",
   "summary": "The TikTok Display API: profile and videos of the TikTok user who authorized your app.",
   "docs_url": "https://developers.tiktok.com/doc/display-api-overview/",
   "base_url": "https://open.tiktokapis.com",

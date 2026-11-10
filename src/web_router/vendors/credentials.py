@@ -113,9 +113,11 @@ def summarize(vendor: Vendor, source: CredentialSource) -> VendorSummary:
         vendor=vendor.vendor,
         name=vendor.name,
         category=vendor.category,
+        data=vendor.data,
         summary=vendor.summary,
         docs_url=vendor.docs_url,
         endpoint_count=len(vendor.endpoints),
+        priced_endpoints=sum(1 for endpoint in vendor.endpoints if endpoint.price_usd is not None),
         configured=not missing,
         missing=missing,
     )

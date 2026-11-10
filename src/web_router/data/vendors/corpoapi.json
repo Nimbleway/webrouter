@@ -2,6 +2,7 @@
   "vendor": "corpoapi",
   "name": "Corpo API",
   "category": "company-data",
+  "data": "public",
   "summary": "Official company-register lookups by jurisdiction: profiles, officers, charges, insolvency, shareholders, financials, ownership and VAT checks.",
   "docs_url": "https://docs.corpoapi.com",
   "pricing_url": "https://corpoapi.com",

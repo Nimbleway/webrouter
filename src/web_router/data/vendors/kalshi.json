@@ -2,6 +2,7 @@
   "vendor": "kalshi",
   "name": "Kalshi",
   "category": "finance",
+  "data": "public",
   "summary": "Public market data from Kalshi, a prediction market exchange: series, events, markets, order books, trades and candlesticks.",
   "docs_url": "https://docs.kalshi.com/getting_started/quick_start_market_data",
   "base_url": "https://external-api.kalshi.com/trade-api/v2",

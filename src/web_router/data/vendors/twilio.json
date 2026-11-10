@@ -2,6 +2,7 @@
   "vendor": "twilio",
   "name": "Twilio",
   "category": "messaging",
+  "data": "service",
   "summary": "Twilio SMS and voice: send and read messages, list and place calls, phone numbers, usage records, balance and phone number lookup.",
   "docs_url": "https://www.twilio.com/docs/usage/api",
   "pricing_url": "https://www.twilio.com/en-us/pricing",

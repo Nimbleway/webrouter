@@ -2,6 +2,7 @@
   "vendor": "edges",
   "name": "Edges",
   "category": "social",
+  "data": "public",
   "summary": "LinkedIn and Sales Navigator data over REST: extract people, companies and posts, run searches, and find profile or company URLs.",
   "docs_url": "https://docs.edges.run/v1/api/introduction",
   "pricing_url": "https://docs.edges.run/v1/api/credit-costs",

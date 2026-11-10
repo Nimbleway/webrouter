@@ -2,6 +2,7 @@
   "vendor": "google-maps",
   "name": "Google Maps Platform",
   "category": "other",
+  "data": "public",
   "summary": "Places search and details (Places API New), forward and reverse geocoding, and Street View coverage lookups.",
   "docs_url": "https://developers.google.com/maps/documentation",
   "pricing_url": "https://developers.google.com/maps/billing-and-pricing/pricing",

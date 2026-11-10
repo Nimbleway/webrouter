@@ -2,6 +2,7 @@
   "vendor": "ecb",
   "name": "European Central Bank",
   "category": "finance",
+  "data": "public",
   "summary": "ECB Data Portal SDMX API: euro reference exchange rates, ECB interest rates, inflation, money and banking statistics, keyless.",
   "docs_url": "https://data.ecb.europa.eu/help/api/overview",
   "base_url": "https://data-api.ecb.europa.eu/service",

@@ -2,6 +2,7 @@
   "vendor": "slack",
   "name": "Slack",
   "category": "messaging",
+  "data": "account",
   "summary": "Your Slack workspace: read channels, history, threads and users, search messages, and post messages and reactions.",
   "docs_url": "https://docs.slack.dev/reference/methods/",
   "base_url": "https://slack.com/api",

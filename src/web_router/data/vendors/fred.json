@@ -2,6 +2,7 @@
   "vendor": "fred",
   "name": "FRED (St. Louis Fed)",
   "category": "finance",
+  "data": "public",
   "summary": "US and international economic time series from the Federal Reserve Bank of St. Louis: series search, metadata, observations, categories and release calendars.",
   "docs_url": "https://fred.stlouisfed.org/docs/api/fred/",
   "base_url": "https://api.stlouisfed.org/fred",

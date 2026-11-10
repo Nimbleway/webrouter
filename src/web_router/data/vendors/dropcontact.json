@@ -2,6 +2,7 @@
   "vendor": "dropcontact",
   "name": "Dropcontact",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find and verify professional emails and add company data to contact lists, asynchronously, paying only for verified emails.",
   "docs_url": "https://developer.dropcontact.com/",
   "pricing_url": "https://www.dropcontact.com/pricing",

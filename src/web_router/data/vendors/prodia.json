@@ -2,6 +2,7 @@
   "vendor": "prodia",
   "name": "Prodia",
   "category": "media-generation",
+  "data": "service",
   "summary": "Fast image and video generation inference (FLUX, SDXL, Seedream, Veo, Kling, Wan and more) through one job endpoint.",
   "docs_url": "https://docs.prodia.com/reference/inference/",
   "pricing_url": "https://docs.prodia.com/reference/pricing/",

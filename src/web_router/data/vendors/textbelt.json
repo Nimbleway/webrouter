@@ -2,6 +2,7 @@
   "vendor": "textbelt",
   "name": "Textbelt",
   "category": "messaging",
+  "data": "service",
   "summary": "Send SMS with a prepaid key and check delivery status.",
   "docs_url": "https://textbelt.com/",
   "pricing_url": "https://textbelt.com/purchase/",

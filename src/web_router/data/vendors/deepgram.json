@@ -2,6 +2,7 @@
   "vendor": "deepgram",
   "name": "Deepgram",
   "category": "ai",
+  "data": "service",
   "summary": "Speech-to-text transcription of recorded audio, text-to-speech, and text analysis (summaries, topics, sentiment, intents).",
   "docs_url": "https://developers.deepgram.com/reference/deepgram-api-overview",
   "pricing_url": "https://deepgram.com/pricing",

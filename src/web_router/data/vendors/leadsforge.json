@@ -2,6 +2,7 @@
   "vendor": "leadsforge",
   "name": "Leadsforge",
   "category": "enrichment",
+  "data": "public",
   "summary": "B2B lead search with email, phone and LinkedIn enrichment, lookalike companies, company followers and Google Maps business discovery.",
   "docs_url": "https://api.leadsforge.ai/public/swagger/index.html",
   "base_url": "https://api.leadsforge.ai/public/v1",

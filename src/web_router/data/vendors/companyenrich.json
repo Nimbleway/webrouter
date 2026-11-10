@@ -2,6 +2,7 @@
   "vendor": "companyenrich",
   "name": "CompanyEnrich",
   "category": "company-data",
+  "data": "public",
   "summary": "Company and people search, enrichment, workforce insights, lookalikes and work-email lookup from CompanyEnrich.",
   "docs_url": "https://docs.companyenrich.com",
   "pricing_url": "https://companyenrich.com/pricing",

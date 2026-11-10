@@ -2,6 +2,7 @@
   "vendor": "edinet",
   "name": "EDINET",
   "category": "finance",
+  "data": "public",
   "summary": "Japan FSA's EDINET disclosure system: daily lists of securities filings (annual and quarterly reports, large shareholding reports) and the filings themselves as XBRL, PDF or CSV.",
   "docs_url": "https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf",
   "base_url": "https://api.edinet-fsa.go.jp/api/v2",

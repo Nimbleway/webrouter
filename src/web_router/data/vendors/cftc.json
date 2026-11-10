@@ -2,6 +2,7 @@
   "vendor": "cftc",
   "name": "US CFTC Commitments of Traders",
   "category": "finance",
+  "data": "public",
   "summary": "Weekly Commitments of Traders futures and options positioning (Legacy, Disaggregated, TFF, Supplemental) from the CFTC Public Reporting Environment.",
   "docs_url": "https://www.cftc.gov/MarketReports/CommitmentsofTraders/ExplanatoryNotes/index.htm",
   "base_url": "https://publicreporting.cftc.gov",

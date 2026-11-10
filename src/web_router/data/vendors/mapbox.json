@@ -2,6 +2,7 @@
   "vendor": "mapbox",
   "name": "Mapbox",
   "category": "other",
+  "data": "public",
   "summary": "Geocoding, place and POI search, driving/walking/cycling directions, travel-time matrices and isochrones.",
   "docs_url": "https://docs.mapbox.com/api/overview/",
   "pricing_url": "https://www.mapbox.com/pricing",

@@ -2,6 +2,7 @@
   "vendor": "moz",
   "name": "Moz",
   "category": "seo",
+  "data": "public",
   "summary": "Moz Links API: Domain Authority, Page Authority, backlinks, anchor text, linking domains and top pages.",
   "docs_url": "https://moz.com/help/links-api",
   "base_url": "https://lsapi.seomoz.com/v2",

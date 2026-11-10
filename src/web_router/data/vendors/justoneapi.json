@@ -2,6 +2,7 @@
   "vendor": "justoneapi",
   "name": "Just One API",
   "category": "social",
+  "data": "public",
   "summary": "Social and e-commerce data from Chinese and global platforms: Xiaohongshu, Weibo, TikTok, Instagram and YouTube profiles, posts, comments and search.",
   "docs_url": "https://docs.justoneapi.com/en/usage",
   "base_url": "https://api.justoneapi.com",

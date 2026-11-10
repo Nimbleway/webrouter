@@ -1422,6 +1422,7 @@ from web_router import WebRouter
 router = WebRouter()
 
 router.vendors(configured=True)  # the vendors whose keys are set here
+router.vendors(data="public")  # the same answer for anyone: SEO, company, market data
 router.find_vendor_endpoints("google ads spend by campaign")
 router.vendor_endpoint("google-ads.query")  # inputs, notes, credentials
 

@@ -2,6 +2,7 @@
   "vendor": "octen",
   "name": "Octen",
   "category": "search",
+  "data": "public",
   "summary": "Real-time web, news and broad search plus URL content extraction from Octen.",
   "docs_url": "https://docs.octen.ai/",
   "pricing_url": "https://docs.octen.ai/overview/pricing.md",

@@ -2,6 +2,7 @@
   "vendor": "search1api",
   "name": "Search1API",
   "category": "search",
+  "data": "public",
   "summary": "Web, news and Maps search, page reading, screenshots, extraction and site crawling through one API.",
   "docs_url": "https://s1.dev/docs",
   "pricing_url": "https://s1.dev/pricing",

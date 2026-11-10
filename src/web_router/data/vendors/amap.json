@@ -2,6 +2,7 @@
   "vendor": "amap",
   "name": "Amap (Gaode) Web Service",
   "category": "other",
+  "data": "public",
   "summary": "China maps from Amap/Gaode: geocoding and reverse geocoding, POI search by keyword, area or id, driving and transit routes, and city weather.",
   "docs_url": "https://lbs.amap.com/api/webservice/summary",
   "base_url": "https://restapi.amap.com",

@@ -2,6 +2,7 @@
   "vendor": "klaviyo",
   "name": "Klaviyo",
   "category": "analytics",
+  "data": "account",
   "summary": "Email, SMS and push campaign and flow performance (opens, clicks, conversions, revenue), metrics and their aggregates from a Klaviyo account.",
   "docs_url": "https://developers.klaviyo.com/en/reference/api_overview",
   "pricing_url": "https://www.klaviyo.com/pricing",

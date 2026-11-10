@@ -2,6 +2,7 @@
   "vendor": "spyfu",
   "name": "SpyFu",
   "category": "seo",
+  "data": "public",
   "summary": "SpyFu competitive research API: domain stats, organic and paid keywords, competitors, top pages and keyword data.",
   "docs_url": "https://developer.spyfu.com/",
   "pricing_url": "https://developer.spyfu.com/docs/api-pricing",

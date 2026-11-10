@@ -2,6 +2,7 @@
   "vendor": "ideogram",
   "name": "Ideogram",
   "category": "media-generation",
+  "data": "service",
   "summary": "Text-to-image with strong typography (Ideogram 4.5), prompt enhancement, and hosted video models.",
   "docs_url": "https://developer.ideogram.ai/v2/ideogram-api/api-overview",
   "base_url": "https://api.ideogram.ai",

@@ -2,6 +2,7 @@
   "vendor": "tako",
   "name": "Tako",
   "category": "search",
+  "data": "public",
   "summary": "Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents.",
   "docs_url": "https://docs.tako.com/",
   "pricing_url": "https://tako.com/pricing",

@@ -2,6 +2,7 @@
   "vendor": "piapi",
   "name": "PiAPI",
   "category": "media-generation",
+  "data": "service",
   "summary": "Unified gateway to image, video and audio generation models (Flux, Kling, Midjourney, Luma and more) through two task endpoints.",
   "docs_url": "https://piapi.ai/docs/overview",
   "pricing_url": "https://piapi.ai/pricing",

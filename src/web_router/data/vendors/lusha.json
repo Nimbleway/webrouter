@@ -2,6 +2,7 @@
   "vendor": "lusha",
   "name": "Lusha",
   "category": "enrichment",
+  "data": "public",
   "summary": "Search B2B contacts and companies, then reveal emails, phones and firmographics for the ones you pick.",
   "docs_url": "https://docs.lusha.com/",
   "pricing_url": "https://www.lusha.com/pricing/",

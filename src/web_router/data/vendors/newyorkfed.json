@@ -2,6 +2,7 @@
   "vendor": "newyorkfed",
   "name": "Federal Reserve Bank of New York Markets Data",
   "category": "finance",
+  "data": "public",
   "summary": "US reference rates (SOFR, EFFR, OBFR, TGCR, BGCR), SOMA holdings, repo and reverse repo operations and primary dealer statistics from the New York Fed.",
   "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
   "base_url": "https://markets.newyorkfed.org",

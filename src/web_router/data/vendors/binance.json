@@ -2,6 +2,7 @@
   "vendor": "binance",
   "name": "Binance",
   "category": "finance",
+  "data": "public",
   "summary": "Binance spot exchange public market data: prices, 24h tickers, order books, trades, candles and symbol rules, keyless.",
   "docs_url": "https://developers.binance.com/docs/binance-spot-api-docs/rest-api",
   "base_url": "https://{host}/api/v3",

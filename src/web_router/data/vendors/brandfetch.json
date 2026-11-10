@@ -2,6 +2,7 @@
   "vendor": "brandfetch",
   "name": "Brandfetch",
   "category": "company-data",
+  "data": "public",
   "summary": "Brand data by domain, ticker, ISIN or crypto symbol: logos, colors, fonts, descriptions and company facts; plus brand-name search and brand context.",
   "docs_url": "https://docs.brandfetch.com",
   "pricing_url": "https://brandfetch.com/developers/pricing",

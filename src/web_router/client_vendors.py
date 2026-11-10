@@ -60,12 +60,15 @@ class _VendorLookup:
         """Where this router reads vendor credentials: ``vendor_credentials=`` first, then the environment."""
         return credential_source(self._vendor_credentials)
 
-    def vendors(self, *, category: str | None = None, configured: bool | None = None) -> list[VendorSummary]:
+    def vendors(
+        self, *, category: str | None = None, configured: bool | None = None, data: str | None = None
+    ) -> list[VendorSummary]:
         """Every vendor in the catalog, by name, with whether this router holds its credentials.
 
         ``configured=True`` keeps the vendors every required credential is set
         for, ``False`` the ones still missing one -- each row names the
-        variable to set.
+        variable to set. ``data`` keeps the vendors whose API answers with that
+        kind of data: ``'public'``, ``'account'`` or ``'service'``.
         """
         source = self.vendor_credential_source()
         rows = [summarize(vendor, source) for vendor in get_catalog().all()]
@@ -73,6 +76,8 @@ class _VendorLookup:
             rows = [row for row in rows if row.category == category]
         if configured is not None:
             rows = [row for row in rows if row.configured is configured]
+        if data is not None:
+            rows = [row for row in rows if row.data == data]
         return rows
 
     def vendor(self, name: str) -> Vendor:

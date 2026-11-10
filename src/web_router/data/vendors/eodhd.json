@@ -2,6 +2,7 @@
   "vendor": "eodhd",
   "name": "EODHD",
   "category": "finance",
+  "data": "public",
   "summary": "End-of-day and delayed prices, ticker search and fundamentals for stocks, ETFs, forex and crypto on global exchanges.",
   "docs_url": "https://eodhd.com/financial-apis/",
   "pricing_url": "https://eodhd.com/pricing",

@@ -2,6 +2,7 @@
   "vendor": "removebg",
   "name": "remove.bg",
   "category": "media-generation",
+  "data": "service",
   "summary": "Automatic image background removal, with optional crop, shadow and new background.",
   "docs_url": "https://www.remove.bg/api",
   "pricing_url": "https://www.remove.bg/pricing",

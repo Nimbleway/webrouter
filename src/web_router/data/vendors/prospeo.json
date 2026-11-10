@@ -2,6 +2,7 @@
   "vendor": "prospeo",
   "name": "Prospeo",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find and verify emails and mobiles, enrich people and companies, and search a B2B people and company database.",
   "docs_url": "https://prospeo.io/api-docs",
   "pricing_url": "https://prospeo.io/pricing",

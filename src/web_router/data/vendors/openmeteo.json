@@ -2,6 +2,7 @@
   "vendor": "openmeteo",
   "name": "Open-Meteo",
   "category": "other",
+  "data": "public",
   "summary": "Keyless weather forecasts, historical weather since 1940, air quality, marine forecasts and place-name geocoding for any coordinate.",
   "docs_url": "https://open-meteo.com/en/docs",
   "pricing_url": "https://open-meteo.com/en/pricing",

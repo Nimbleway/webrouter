@@ -2,6 +2,7 @@
   "vendor": "coresignal",
   "name": "Coresignal",
   "category": "company-data",
+  "data": "public",
   "summary": "Fresh company, employee and job data from professional-network sources: search for IDs, then collect or enrich records.",
   "docs_url": "https://docs.coresignal.com",
   "pricing_url": "https://coresignal.com/pricing/",

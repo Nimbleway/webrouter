@@ -2,6 +2,7 @@
   "vendor": "pinterest-ads",
   "name": "Pinterest Ads",
   "category": "advertising",
+  "data": "account",
   "summary": "Your Pinterest ad accounts: list accounts, campaigns, ad groups and ads, and pull analytics for accounts and campaigns.",
   "docs_url": "https://developers.pinterest.com/docs/api/v5/",
   "base_url": "https://api.pinterest.com/v5",

@@ -2,6 +2,7 @@
   "vendor": "htmlcsstoimage",
   "name": "HTML/CSS to Image",
   "category": "media-generation",
+  "data": "service",
   "summary": "Render HTML and CSS, or a live web page, into a PNG, JPG, WebP or PDF image hosted at a permanent URL.",
   "docs_url": "https://docs.htmlcsstoimage.com/",
   "pricing_url": "https://htmlcsstoimage.com/pricing",

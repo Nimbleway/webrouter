@@ -2,6 +2,7 @@
   "vendor": "usgswater",
   "name": "USGS Water Data",
   "category": "other",
+  "data": "public",
   "summary": "US stream gauge readings (discharge, gage height, water temperature and more): latest and historical instantaneous values, daily statistics and monitoring-location metadata from the USGS Water Data OGC APIs.",
   "docs_url": "https://api.waterdata.usgs.gov/docs/",
   "base_url": "https://api.waterdata.usgs.gov/ogcapi/v1",

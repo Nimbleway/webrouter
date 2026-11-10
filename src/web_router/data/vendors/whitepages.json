@@ -2,6 +2,7 @@
   "vendor": "whitepages",
   "name": "Whitepages Pro",
   "category": "enrichment",
+  "data": "public",
   "summary": "US people search, reverse phone lookup and property records (owners, residents, tax and mortgage history).",
   "docs_url": "https://api.whitepages.com/docs",
   "pricing_url": "https://whitepages.com/pro-api",

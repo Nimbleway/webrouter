@@ -2,6 +2,7 @@
   "vendor": "leadocean",
   "name": "LeadOcean",
   "category": "enrichment",
+  "data": "public",
   "summary": "B2B people and company search, person and company enrichment, work and personal email, phone and reverse lookups, and bulk CSV exports.",
   "docs_url": "https://leadocean.io/docs",
   "base_url": "https://api.leadocean.io",

@@ -2,6 +2,7 @@
   "vendor": "outscraper",
   "name": "Outscraper",
   "category": "scraping",
+  "data": "public",
   "summary": "Google Maps places and reviews, Google Search, website contacts, company firmographics and Amazon products from Outscraper's scraping API.",
   "docs_url": "https://app.outscraper.com/api-docs",
   "pricing_url": "https://outscraper.com/pricing/",

@@ -2,6 +2,7 @@
   "vendor": "builtwith",
   "name": "BuiltWith",
   "category": "company-data",
+  "data": "public",
   "summary": "Website technology profiling: the tech stack and metadata of a domain, sites using a technology, related sites and domains for a company name.",
   "docs_url": "https://api.builtwith.com",
   "base_url": "https://api.builtwith.com",

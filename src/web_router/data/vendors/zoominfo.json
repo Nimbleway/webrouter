@@ -2,6 +2,7 @@
   "vendor": "zoominfo",
   "name": "ZoomInfo",
   "category": "enrichment",
+  "data": "public",
   "summary": "B2B contact and company search and enrichment, scoops, intent and lookups from ZoomInfo's Data API.",
   "docs_url": "https://docs.gtm.ai/reference/api-overview",
   "pricing_url": "https://www.zoominfo.com/pricing",

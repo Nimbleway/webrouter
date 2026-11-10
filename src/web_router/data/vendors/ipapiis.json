@@ -2,6 +2,7 @@
   "vendor": "ipapiis",
   "name": "ipapi.is",
   "category": "other",
+  "data": "public",
   "summary": "IP address intelligence: geolocation, ASN, owning company and abuse contact, and VPN, proxy, Tor, datacenter and crawler detection.",
   "docs_url": "https://ipapi.is/developers.html",
   "pricing_url": "https://ipapi.is/pricing.html",

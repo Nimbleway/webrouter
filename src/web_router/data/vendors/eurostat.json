@@ -2,6 +2,7 @@
   "vendor": "eurostat",
   "name": "Eurostat",
   "category": "finance",
+  "data": "public",
   "summary": "Eurostat EU statistics (prices and inflation, energy, labour, trade, GDP, population, regions) as JSON-stat or SDMX, keyless.",
   "docs_url": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access",
   "base_url": "https://ec.europa.eu/eurostat/api/dissemination",

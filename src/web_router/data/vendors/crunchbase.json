@@ -2,6 +2,7 @@
   "vendor": "crunchbase",
   "name": "Crunchbase",
   "category": "company-data",
+  "data": "public",
   "summary": "Company, funding, investor and people data from the Crunchbase REST API (v4): entity lookup, search and autocomplete.",
   "docs_url": "https://data.crunchbase.com/docs/using-the-api",
   "base_url": "https://api.crunchbase.com/v4/data",

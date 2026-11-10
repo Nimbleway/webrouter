@@ -2,6 +2,7 @@
   "vendor": "marketstack",
   "name": "Marketstack",
   "category": "finance",
+  "data": "public",
   "summary": "Worldwide end-of-day and intraday stock prices, tickers, exchanges, dividends and splits from Marketstack (APILayer).",
   "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
   "pricing_url": "https://marketstack.com/pricing",

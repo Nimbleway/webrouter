@@ -2,6 +2,7 @@
   "vendor": "moltsets",
   "name": "MoltSets",
   "category": "enrichment",
+  "data": "public",
   "summary": "B2B people and company search, email and mobile lookup, email validation and reverse lookups.",
   "docs_url": "https://developer.moltsets.com",
   "pricing_url": "https://moltsets.com/pricing/",

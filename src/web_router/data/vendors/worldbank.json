@@ -2,6 +2,7 @@
   "vendor": "worldbank",
   "name": "World Bank Indicators API",
   "category": "finance",
+  "data": "public",
   "summary": "World Bank development indicators (GDP, population, poverty, health, education...) for every country and aggregate, by year.",
   "docs_url": "https://datahelpdesk.worldbank.org/knowledgebase/topics/125589",
   "base_url": "https://api.worldbank.org/v2",

@@ -2,6 +2,7 @@
   "vendor": "tinyfish",
   "name": "TinyFish",
   "category": "scraping",
+  "data": "service",
   "summary": "Hosted browser-agent automation and deep research from TinyFish.",
   "docs_url": "https://docs.tinyfish.ai/",
   "pricing_url": "https://www.tinyfish.ai/pricing",

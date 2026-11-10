@@ -2,6 +2,7 @@
   "vendor": "commoditypriceapi",
   "name": "Commodity Price API",
   "category": "finance",
+  "data": "public",
   "summary": "Latest, historical, intraday and time-series prices for metals, oil, agricultural and other commodities.",
   "docs_url": "https://commoditypriceapi.com/docs",
   "pricing_url": "https://commoditypriceapi.com/pricing",

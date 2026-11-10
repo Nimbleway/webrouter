@@ -2,6 +2,7 @@
   "vendor": "linkup",
   "name": "Linkup",
   "category": "search",
+  "data": "public",
   "summary": "Agentic web search, page fetch and asynchronous research with sourced answers from Linkup.",
   "docs_url": "https://docs.linkup.so/pages/documentation/get-started/introduction",
   "pricing_url": "https://www.linkup.so/pricing",

@@ -2,6 +2,7 @@
   "vendor": "fundable",
   "name": "Fundable",
   "category": "company-data",
+  "data": "public",
   "summary": "Venture funding data: deals (rounds), startups with their latest round, investor firms and people, by filters or identifier.",
   "docs_url": "https://docs.tryfundable.ai/api-reference/introduction",
   "pricing_url": "https://www.tryfundable.ai/api-access/",

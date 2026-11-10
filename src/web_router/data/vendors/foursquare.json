@@ -2,6 +2,7 @@
   "vendor": "foursquare",
   "name": "Foursquare Places API",
   "category": "other",
+  "data": "public",
   "summary": "Search 100M+ points of interest by name, category or location, and read a place's details, tips and photos.",
   "docs_url": "https://docs.foursquare.com/fsq-developers-places/reference/places-api-overview",
   "pricing_url": "https://foursquare.com/pricing/",

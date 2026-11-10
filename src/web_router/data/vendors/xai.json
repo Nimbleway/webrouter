@@ -2,6 +2,7 @@
   "vendor": "xai",
   "name": "xAI (Grok)",
   "category": "ai",
+  "data": "service",
   "summary": "Grok language models with server-side web and X search, image generation and model listings through the xAI API.",
   "docs_url": "https://docs.x.ai/developers/rest-api-reference/inference.md",
   "pricing_url": "https://docs.x.ai/developers/pricing",

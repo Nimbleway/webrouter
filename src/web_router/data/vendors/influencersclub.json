@@ -2,6 +2,7 @@
   "vendor": "influencersclub",
   "name": "Influencers Club",
   "category": "social",
+  "data": "public",
   "summary": "Creator discovery, similar creators and enrichment (profile, analytics, posts, audience overlap) across social platforms.",
   "docs_url": "https://docs.influencers.club/",
   "pricing_url": "https://www.influencers.club/pricing",

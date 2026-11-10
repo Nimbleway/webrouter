@@ -2,6 +2,7 @@
   "vendor": "theirstack",
   "name": "TheirStack",
   "category": "company-data",
+  "data": "public",
   "summary": "Job postings and company technographics: search jobs and companies by hiring signals, technologies and firmographics.",
   "docs_url": "https://theirstack.com/en/docs/what-is-theirstack",
   "pricing_url": "https://theirstack.com/en/pricing",

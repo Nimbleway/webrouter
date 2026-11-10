@@ -2,6 +2,7 @@
   "vendor": "tiingo",
   "name": "Tiingo",
   "category": "finance",
+  "data": "public",
   "summary": "End-of-day and intraday stock prices, crypto prices and financial news from Tiingo.",
   "docs_url": "https://www.tiingo.com/documentation/general/overview",
   "pricing_url": "https://www.tiingo.com/pricing",

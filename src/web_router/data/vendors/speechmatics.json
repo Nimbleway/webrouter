@@ -2,6 +2,7 @@
   "vendor": "speechmatics",
   "name": "Speechmatics",
   "category": "ai",
+  "data": "service",
   "summary": "Batch speech-to-text jobs on Speechmatics: list jobs, read their status and transcripts, and check usage.",
   "docs_url": "https://docs.speechmatics.com/api-ref/batch/create-a-new-job",
   "pricing_url": "https://www.speechmatics.com/pricing",

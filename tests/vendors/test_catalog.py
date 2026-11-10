@@ -44,6 +44,11 @@ def _broken(change: Any) -> dict[str, Any]:
         (lambda v: v["endpoints"][0].update(kind="maybe"), "kind"),
         (lambda v: v["endpoints"][0].update(verified={}), "verified needs"),
         (lambda v: v.update(category="misc"), "is not one of"),
+        (lambda v: v.pop("data"), "data"),
+        (lambda v: v.update(data="mine"), "data"),
+        (lambda v: v["endpoints"][0].update(price_usd=0.01), "only a vendor whose data is 'public'"),
+        (lambda v: v.update(data="public") or v["endpoints"][3].update(price_usd=0.01), "a write cannot be priced"),
+        (lambda v: v.update(data="public") or v["endpoints"][0].update(price_usd=-1), "greater than or equal to 0"),
         (lambda v: v["auth"]["credentials"]["api_key"].update(env=["lower"]), "environment variable"),
     ],
 )

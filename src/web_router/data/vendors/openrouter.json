@@ -2,6 +2,7 @@
   "vendor": "openrouter",
   "name": "OpenRouter",
   "category": "ai",
+  "data": "service",
   "summary": "One OpenAI-style API in front of hundreds of language, image, speech and video models from many providers.",
   "docs_url": "https://openrouter.ai/docs/api-reference/overview",
   "pricing_url": "https://openrouter.ai/pricing",

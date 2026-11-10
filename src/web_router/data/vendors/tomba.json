@@ -2,6 +2,7 @@
   "vendor": "tomba",
   "name": "Tomba",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find, verify and enrich professional emails, phone numbers and company data by domain, name, LinkedIn URL or article.",
   "docs_url": "https://docs.tomba.io/api",
   "pricing_url": "https://tomba.io/pricing",

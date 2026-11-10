@@ -2,6 +2,7 @@
   "vendor": "tavily",
   "name": "Tavily",
   "category": "search",
+  "data": "public",
   "summary": "Tavily's web search, extraction, crawl, map and research APIs for AI agents.",
   "docs_url": "https://docs.tavily.com/documentation/api-reference",
   "pricing_url": "https://www.tavily.com/pricing",

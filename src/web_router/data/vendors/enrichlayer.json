@@ -2,6 +2,7 @@
   "vendor": "enrichlayer",
   "name": "Enrich Layer",
   "category": "enrichment",
+  "data": "public",
   "summary": "People, company, contact, job and school data: profile enrichment, lookups, search, emails and phone numbers from Enrich Layer.",
   "docs_url": "https://enrichlayer.com/docs",
   "pricing_url": "https://enrichlayer.com/pricing",

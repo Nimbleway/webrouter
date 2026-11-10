@@ -2,6 +2,7 @@
   "vendor": "spidercloud",
   "name": "Spider Cloud",
   "category": "scraping",
+  "data": "public",
   "summary": "Spider's crawl, scrape, links, search and screenshot API for AI agents and RAG.",
   "docs_url": "https://spider.cloud/docs/api",
   "pricing_url": "https://spider.cloud/pricing",

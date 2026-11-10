@@ -2,6 +2,7 @@
   "vendor": "clay",
   "name": "Clay",
   "category": "enrichment",
+  "data": "account",
   "summary": "Clay's Public API: people and company search, saved enrichment routines, and queries over your Clay tables.",
   "docs_url": "https://developers.clay.com/public-api/quickstart",
   "pricing_url": "https://www.clay.com/pricing",

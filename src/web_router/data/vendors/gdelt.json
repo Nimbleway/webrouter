@@ -2,6 +2,7 @@
   "vendor": "gdelt",
   "name": "GDELT Project",
   "category": "search",
+  "data": "public",
   "summary": "Free search over worldwide online news monitored by GDELT: article lists and coverage-volume, tone, language and source-country timelines.",
   "docs_url": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/",
   "base_url": "https://api.gdeltproject.org/api/v2",

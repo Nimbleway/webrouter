@@ -2,6 +2,7 @@
   "vendor": "zerobounce",
   "name": "ZeroBounce",
   "category": "email-verification",
+  "data": "public",
   "summary": "Real-time email validation with status, sub-status, domain and activity signals, plus credit and usage checks.",
   "docs_url": "https://www.zerobounce.net/docs/email-validation-api-quickstart",
   "pricing_url": "https://www.zerobounce.net/pricing",

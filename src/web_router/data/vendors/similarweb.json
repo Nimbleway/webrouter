@@ -2,6 +2,7 @@
   "vendor": "similarweb",
   "name": "Similarweb",
   "category": "analytics",
+  "data": "public",
   "summary": "Estimated website traffic and engagement, marketing channel mix, referrals, country split, global rank, similar sites and search keywords for any domain.",
   "docs_url": "https://developers.similarweb.com/docs/similarweb-web-traffic-api",
   "pricing_url": "https://www.similarweb.com/corp/pricing/",

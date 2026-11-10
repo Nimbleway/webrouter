@@ -2,6 +2,7 @@
   "vendor": "firecrawl",
   "name": "Firecrawl",
   "category": "scraping",
+  "data": "public",
   "summary": "Scrape, map, crawl, search and extract the web, returning clean markdown and structured data.",
   "docs_url": "https://docs.firecrawl.dev/introduction",
   "pricing_url": "https://www.firecrawl.dev/pricing",

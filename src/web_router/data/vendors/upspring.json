@@ -2,6 +2,7 @@
   "vendor": "upspring",
   "name": "Upspring",
   "category": "advertising",
+  "data": "public",
   "summary": "Competitive ad intelligence: live ads across Meta, TikTok, YouTube, Google, LinkedIn and more, broken into creative dimensions, with advertisers graded D to A+ on estimated spend, traffic and sales.",
   "docs_url": "https://public-api.upspring.ai/v1/docs/ui",
   "pricing_url": "https://www.upspring.ai/pricing",

@@ -2,6 +2,7 @@
   "vendor": "airscale",
   "name": "Airscale",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find professional and personal emails and mobile numbers, search people and companies, and extract LinkedIn profiles.",
   "docs_url": "https://docs.airscale.io/api-reference/api-overview",
   "pricing_url": "https://airscale.io/pricing",

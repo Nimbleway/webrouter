@@ -64,13 +64,14 @@ def markdown_table(catalog: VendorCatalog) -> str:
         lines += [
             f"### {category}",
             "",
-            "| Vendor | What it holds | Endpoints | Auth | Variables | Checked |",
-            "|---|---|---|---|---|---|",
+            "| Vendor | What it holds | Data | Endpoints | Auth | Variables | Checked |",
+            "|---|---|---|---|---|---|---|",
         ]
         for vendor in vendors:
             variables = ", ".join(f"`{spec.env[0]}`" for spec in vendor.auth.credentials.values()) or "none"
             lines.append(
-                f"| [{vendor.name}]({vendor.docs_url}) `{vendor.vendor}` | {vendor.summary} | {_counts(vendor)} "
+                f"| [{vendor.name}]({vendor.docs_url}) `{vendor.vendor}` | {vendor.summary} | {vendor.data} "
+                f"| {_counts(vendor)} "
                 f"| {_auth(vendor)} | {variables} | {_verified(vendor)} |"
             )
         lines.append("")

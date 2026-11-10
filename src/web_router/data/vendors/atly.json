@@ -2,6 +2,7 @@
   "vendor": "atly",
   "name": "Atly",
   "category": "search",
+  "data": "public",
   "summary": "Review-based place discovery: where to go for an intent (work-friendly, gluten-free, first date) near a location, with reasons.",
   "docs_url": "https://agentic-api.atly.com/v2/docs",
   "base_url": "https://agentic-api.atly.com/v2",

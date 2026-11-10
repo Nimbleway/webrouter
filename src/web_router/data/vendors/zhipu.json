@@ -2,6 +2,7 @@
   "vendor": "zhipu",
   "name": "Zhipu AI (BigModel)",
   "category": "ai",
+  "data": "service",
   "summary": "GLM chat models, a web search API built for LLMs, a web page reader, embeddings and image generation on Zhipu's BigModel open platform (mainland China).",
   "docs_url": "https://docs.bigmodel.cn/cn/guide/start/introduction",
   "pricing_url": "https://bigmodel.cn/pricing",

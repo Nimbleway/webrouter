@@ -2,6 +2,7 @@
   "vendor": "tikhub",
   "name": "TikHub",
   "category": "social",
+  "data": "public",
   "summary": "Public data from TikTok, Instagram, YouTube and X (and many other platforms) over one API: profiles, posts, comments and search.",
   "docs_url": "https://docs.tikhub.io/",
   "base_url": "https://api.tikhub.io",

@@ -2,6 +2,7 @@
   "vendor": "limadata",
   "name": "Limadata",
   "category": "company-data",
+  "data": "public",
   "summary": "Real-time B2B people and company enrichment, database search, contact finding and company job postings.",
   "docs_url": "https://limadata.com/api",
   "pricing_url": "https://limadata.com/pricing",

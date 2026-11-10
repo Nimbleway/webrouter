@@ -2,6 +2,7 @@
   "vendor": "ohdear",
   "name": "Oh Dear",
   "category": "observability",
+  "data": "account",
   "summary": "Website monitoring: monitors, uptime and downtime, response-time metrics, certificate health, broken links and per-check summaries.",
   "docs_url": "https://ohdear.app/docs/api/introduction",
   "pricing_url": "https://ohdear.app/pricing",

@@ -2,6 +2,7 @@
   "vendor": "seranking",
   "name": "SE Ranking",
   "category": "seo",
+  "data": "public",
   "summary": "SE Ranking Data API: domain analysis, keyword research and backlink data.",
   "docs_url": "https://seranking.com/api/data/",
   "pricing_url": "https://seranking.com/api/data/getting-started/#plans-and-pricing",

@@ -2,6 +2,7 @@
   "vendor": "fishaudio",
   "name": "Fish Audio",
   "category": "media-generation",
+  "data": "service",
   "summary": "Text-to-speech, voice design and voice-model management from Fish Audio.",
   "docs_url": "https://docs.fish.audio/api-reference/introduction",
   "pricing_url": "https://docs.fish.audio/developer-guide/models-pricing/pricing-and-rate-limits",

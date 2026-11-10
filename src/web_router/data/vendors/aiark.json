@@ -2,6 +2,7 @@
   "vendor": "aiark",
   "name": "AI Ark",
   "category": "enrichment",
+  "data": "public",
   "summary": "B2B people and company search, verified email and mobile finding, job posts and lookalike company discovery from AI Ark.",
   "docs_url": "https://docs.ai-ark.com",
   "base_url": "https://api.ai-ark.com/api/developer-portal",

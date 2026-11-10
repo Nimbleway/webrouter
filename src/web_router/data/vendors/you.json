@@ -2,6 +2,7 @@
   "vendor": "you",
   "name": "You.com",
   "category": "search",
+  "data": "public",
   "summary": "You.com's cited Answer, Research and Finance Research APIs.",
   "docs_url": "https://you.com/docs/welcome",
   "pricing_url": "https://you.com/platform",

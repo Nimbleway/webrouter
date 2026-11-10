@@ -2,6 +2,7 @@
   "vendor": "origami",
   "name": "Origami",
   "category": "company-data",
+  "data": "public",
   "summary": "An AI agent that builds researched lead lists from a plain-English brief; read the lists and rows back.",
   "docs_url": "https://docs.origami.chat/v3/overview",
   "pricing_url": "https://origami.chat/pricing",

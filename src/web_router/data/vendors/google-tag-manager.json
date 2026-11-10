@@ -2,6 +2,7 @@
   "vendor": "google-tag-manager",
   "name": "Google Tag Manager",
   "category": "analytics",
+  "data": "account",
   "summary": "Your Tag Manager accounts, containers and workspaces: read tags, triggers and variables, create container versions, and publish them live.",
   "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2",
   "base_url": "https://tagmanager.googleapis.com/tagmanager/v2",

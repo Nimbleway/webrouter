@@ -2,6 +2,7 @@
   "vendor": "benzinga",
   "name": "Benzinga",
   "category": "finance",
+  "data": "public",
   "summary": "Benzinga financial news, analyst ratings, consensus price targets, and earnings, guidance and dividend calendars.",
   "docs_url": "https://docs.benzinga.com/introduction/introduction",
   "base_url": "https://api.benzinga.com",

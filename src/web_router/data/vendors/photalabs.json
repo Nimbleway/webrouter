@@ -2,6 +2,7 @@
   "vendor": "photalabs",
   "name": "Phota Labs",
   "category": "media-generation",
+  "data": "service",
   "summary": "Identity-preserving photo generation, editing, enhancement and restyling from trained person profiles (Phota API).",
   "docs_url": "https://docs.photalabs.com/",
   "pricing_url": "https://docs.photalabs.com/pricing",

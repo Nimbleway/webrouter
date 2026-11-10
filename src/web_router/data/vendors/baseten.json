@@ -2,6 +2,7 @@
   "vendor": "baseten",
   "name": "Baseten",
   "category": "ai",
+  "data": "service",
   "summary": "Inference for open-source LLMs through Baseten Model APIs (OpenAI-compatible chat), plus your Baseten models and token usage.",
   "docs_url": "https://docs.baseten.co/reference/inference-api/overview",
   "pricing_url": "https://www.baseten.co/pricing/",

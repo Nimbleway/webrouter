@@ -2,6 +2,7 @@
   "vendor": "parallel",
   "name": "Parallel",
   "category": "search",
+  "data": "public",
   "summary": "Web search, URL extraction, deep-research Tasks and people/company discovery from Parallel Web Systems.",
   "docs_url": "https://docs.parallel.ai/getting-started/overview",
   "pricing_url": "https://parallel.ai/pricing",

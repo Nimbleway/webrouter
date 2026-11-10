@@ -2,6 +2,7 @@
   "vendor": "crawl4ai",
   "name": "Crawl4AI Cloud",
   "category": "scraping",
+  "data": "public",
   "summary": "Crawl4AI's hosted API: scrape pages to markdown, extract JSON, search the web, Google results as data, direct answers and ready-made site recipes.",
   "docs_url": "https://api.crawl4ai.com/docs",
   "pricing_url": "https://api.crawl4ai.com/v1/prices",

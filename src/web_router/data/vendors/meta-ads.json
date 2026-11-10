@@ -2,6 +2,7 @@
   "vendor": "meta-ads",
   "name": "Meta Ads (Marketing API)",
   "category": "advertising",
+  "data": "account",
   "summary": "Your Facebook and Instagram ad accounts: account details, campaigns, and performance insights (spend, reach, clicks, conversions) at any level and breakdown.",
   "docs_url": "https://developers.facebook.com/docs/marketing-apis",
   "base_url": "https://graph.facebook.com/{api_version}",

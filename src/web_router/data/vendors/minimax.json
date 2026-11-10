@@ -2,6 +2,7 @@
   "vendor": "minimax",
   "name": "MiniMax",
   "category": "media-generation",
+  "data": "service",
   "summary": "MiniMax speech, video (H3), image, music and chat models through the MiniMax API Platform.",
   "docs_url": "https://platform.minimax.io/docs/api-reference/api-overview",
   "pricing_url": "https://platform.minimax.io/docs/pricing/overview",

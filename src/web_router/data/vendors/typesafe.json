@@ -2,6 +2,7 @@
   "vendor": "typesafe",
   "name": "TypeSafe",
   "category": "ai",
+  "data": "service",
   "summary": "Jev, a System One model that answers typed questions (choice, score, yes/no, image box) about text or images with calibrated probabilities instead of generated prose.",
   "docs_url": "https://docs.typesafe.ai/introduction",
   "pricing_url": "https://docs.typesafe.ai/models",

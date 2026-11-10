@@ -2,6 +2,7 @@
   "vendor": "deepseek",
   "name": "DeepSeek",
   "category": "ai",
+  "data": "service",
   "summary": "DeepSeek chat and reasoning models through an OpenAI-compatible API, plus web Search and Fetch tools.",
   "docs_url": "https://api-docs.deepseek.com/",
   "pricing_url": "https://api-docs.deepseek.com/quick_start/pricing",

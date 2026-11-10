@@ -2,6 +2,7 @@
   "vendor": "riveter",
   "name": "Riveter",
   "category": "scraping",
+  "data": "public",
   "summary": "Riveter's AI web data API: scrape a page, quick web search, one-off research answers, and enrichment runs that fill new columns for rows of companies, people or URLs.",
   "docs_url": "https://docs.riveterhq.com/",
   "pricing_url": "https://www.riveterhq.com/pricing",

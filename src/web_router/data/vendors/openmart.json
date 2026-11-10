@@ -2,6 +2,7 @@
   "vendor": "openmart",
   "name": "Openmart",
   "category": "company-data",
+  "data": "public",
   "summary": "A local business database: search businesses and brands, with company enrichment from a website.",
   "docs_url": "https://app.openmart.com/api-docs",
   "base_url": "https://api.openmart.ai",

@@ -2,6 +2,7 @@
   "vendor": "clado",
   "name": "Clado",
   "category": "enrichment",
+  "data": "public",
   "summary": "Natural-language people search over LinkedIn profiles, deep research jobs, profile scraping and email/phone enrichment.",
   "docs_url": "https://docs.clado.ai/api-reference/introduction",
   "pricing_url": "https://docs.clado.ai/api-reference/pricing",

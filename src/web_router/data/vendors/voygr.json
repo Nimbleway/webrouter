@@ -2,6 +2,7 @@
   "vendor": "voygr",
   "name": "VOYGR",
   "category": "company-data",
+  "data": "public",
   "summary": "Check that a business exists at an address, enrich place records (hours, contacts, socials, custom fields), and place AI phone calls to US businesses.",
   "docs_url": "https://api.voygr.tech/docs",
   "base_url": "https://api.voygr.tech",

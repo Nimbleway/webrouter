@@ -2,6 +2,7 @@
   "vendor": "gladia",
   "name": "Gladia",
   "category": "ai",
+  "data": "service",
   "summary": "Multilingual speech-to-text for recorded audio, with diarization, translation, summaries, sentiment and subtitles as add-ons.",
   "docs_url": "https://docs.gladia.io/api-reference/index",
   "pricing_url": "https://www.gladia.io/pricing",

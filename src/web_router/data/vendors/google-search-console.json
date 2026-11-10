@@ -2,6 +2,7 @@
   "vendor": "google-search-console",
   "name": "Google Search Console",
   "category": "seo",
+  "data": "account",
   "summary": "Your Search Console properties: search performance (clicks, impressions, CTR, position by query, page, country, device and date) and sitemaps.",
   "docs_url": "https://developers.google.com/webmaster-tools/v1/api_reference_index",
   "base_url": "https://www.googleapis.com/webmasters/v3",

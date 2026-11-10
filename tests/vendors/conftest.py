@@ -45,6 +45,7 @@ ACME: dict[str, Any] = {
     "vendor": "acme",
     "name": "Acme Metrics",
     "category": "observability",
+    "data": "account",
     "summary": "Metrics and logs from Acme.",
     "base_url": "https://api.{region}.acme.test",
     "settings": {
@@ -109,6 +110,7 @@ QUERYKEY: dict[str, Any] = {
     "vendor": "querykey",
     "name": "Query Key Co",
     "category": "seo",
+    "data": "public",
     "summary": "A vendor that takes its key in the query string.",
     "base_url": "https://api.querykey.test",
     "auth": {
@@ -123,6 +125,7 @@ BASIC: dict[str, Any] = {
     "vendor": "basicco",
     "name": "Basic Co",
     "category": "enrichment",
+    "data": "public",
     "summary": "HTTP Basic auth.",
     "base_url": "https://api.basic.test",
     "auth": {
@@ -137,6 +140,7 @@ OAUTH: dict[str, Any] = {
     "vendor": "oauthco",
     "name": "OAuth Co",
     "category": "advertising",
+    "data": "account",
     "summary": "An OAuth refresh-token vendor with a second static header.",
     "base_url": "https://ads.oauth.test/v3",
     "auth": {
@@ -173,6 +177,7 @@ KEYLESS: dict[str, Any] = {
     "vendor": "openco",
     "name": "Open Co",
     "category": "other",
+    "data": "public",
     "summary": "No credentials at all.",
     "base_url": "https://open.test",
     "endpoints": [_endpoint("openco.items.list", "GET", "/items")],

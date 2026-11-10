@@ -2,6 +2,7 @@
   "vendor": "village",
   "name": "Village",
   "category": "enrichment",
+  "data": "account",
   "summary": "Relationship intelligence: warm-introduction paths to people and companies through your network, with people and company enrichment.",
   "docs_url": "https://docs.village.ai/api-reference/introduction",
   "pricing_url": "https://village.ai/pricing",

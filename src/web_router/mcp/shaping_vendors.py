@@ -58,6 +58,7 @@ def shape_vendor_list(rows: list[VendorSummary], *, budget: int) -> dict[str, An
                 "vendor": row.vendor,
                 "name": row.name,
                 "category": row.category,
+                "data": row.data,
                 "summary": row.summary,
                 "endpoints": row.endpoint_count,
                 "configured": row.configured,
@@ -66,7 +67,7 @@ def shape_vendor_list(rows: list[VendorSummary], *, budget: int) -> dict[str, An
             for row in rows
         ],
     }
-    hint = "Pass category, configured, or a query to narrow it."
+    hint = "Pass category, configured, data, or a query to narrow it."
     return _fit_rows(payload, "vendors", budget, shed=("summary",), hint=hint)
 
 
@@ -127,6 +128,7 @@ def shape_endpoint(
         "method": endpoint.method,
         "path": endpoint.path,
         "host": vendor.base_for(endpoint.host),
+        "data": vendor.data,
         "params": params,
         "notes": [*endpoint.notes, *vendor.notes],
         "docs_url": endpoint.docs_url,

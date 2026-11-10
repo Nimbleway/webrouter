@@ -2,6 +2,7 @@
   "vendor": "byteplus-search",
   "name": "BytePlus Searchinfinity",
   "category": "search",
+  "data": "public",
   "summary": "Web and image search and static page fetch from BytePlus (ByteDance) Searchinfinity: Flux and Omnira search engines plus a Fetch API.",
   "docs_url": "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_available_APIs",
   "pricing_url": "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_pricing",

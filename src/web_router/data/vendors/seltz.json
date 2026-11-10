@@ -2,6 +2,7 @@
   "vendor": "seltz",
   "name": "Seltz",
   "category": "search",
+  "data": "public",
   "summary": "Web search, cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports.",
   "docs_url": "https://docs.seltz.ai/",
   "base_url": "https://api.seltz.ai",

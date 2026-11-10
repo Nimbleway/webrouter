@@ -2,6 +2,7 @@
   "vendor": "gdacs",
   "name": "GDACS",
   "category": "other",
+  "data": "public",
   "summary": "Global Disaster Alert and Coordination System (EC, UN OCHA): alerts and impact data for earthquakes, tropical cyclones, floods, volcanoes, droughts and wildfires worldwide.",
   "docs_url": "https://www.gdacs.org/gdacsapi/swagger/index.html",
   "base_url": "https://www.gdacs.org/gdacsapi",

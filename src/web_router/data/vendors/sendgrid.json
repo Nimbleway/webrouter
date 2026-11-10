@@ -2,6 +2,7 @@
   "vendor": "sendgrid",
   "name": "SendGrid",
   "category": "messaging",
+  "data": "service",
   "summary": "Twilio SendGrid email: send mail, delivery statistics, email activity, bounces and spam reports, and credit balance.",
   "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/how-to-use-the-sendgrid-v3-api",
   "pricing_url": "https://sendgrid.com/en-us/pricing",

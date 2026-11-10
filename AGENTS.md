@@ -1136,7 +1136,16 @@ it is a format change to discuss first, not a branch in `caller.py`.
    vendors never share a variable (a test checks).
 6. Notes are what a caller gets wrong without being told: units, paging,
    credits per call, async job flows.
-7. Run `make vendors` (regenerates `VENDORS.md` and `.env.example`'s vendor
+7. `data` says whose data the API answers with: `public` when the answer is
+   the same whoever asks (SEO metrics, company records, prices), `account`
+   when it is the caller's own account or workspace (Google Ads, Datadog,
+   Slack), `service` when it is no data at all (a model, generation,
+   processing the caller's own files, messaging). Only a `public` vendor's
+   reads may carry `price_usd`, the fixed price of one call when a managed
+   service serves it on its own key; the format refuses it anywhere else.
+   Leave it unset until the price is decided: an unpriced endpoint is not
+   offered that way.
+8. Run `make vendors` (regenerates `VENDORS.md` and `.env.example`'s vendor
    section) and `uv run pytest tests/vendors`, which loads every shipped
    file. Add a line to `CHANGELOG.md`.
 

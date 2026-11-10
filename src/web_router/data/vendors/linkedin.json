@@ -2,6 +2,7 @@
   "vendor": "linkedin",
   "name": "LinkedIn",
   "category": "social",
+  "data": "account",
   "summary": "LinkedIn's official API for the signed-in member: identity, reading and publishing posts for a member or company page.",
   "docs_url": "https://learn.microsoft.com/en-us/linkedin/",
   "base_url": "https://api.linkedin.com",

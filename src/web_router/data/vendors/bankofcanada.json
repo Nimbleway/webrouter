@@ -2,6 +2,7 @@
   "vendor": "bankofcanada",
   "name": "Bank of Canada",
   "category": "finance",
+  "data": "public",
   "summary": "Bank of Canada Valet API: exchange rates, interest rates and other Bank of Canada statistical series, keyless.",
   "docs_url": "https://www.bankofcanada.ca/valet/docs",
   "base_url": "https://www.bankofcanada.ca/valet",

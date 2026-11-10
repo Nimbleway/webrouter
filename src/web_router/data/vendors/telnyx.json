@@ -2,6 +2,7 @@
   "vendor": "telnyx",
   "name": "Telnyx",
   "category": "messaging",
+  "data": "service",
   "summary": "Telnyx communications: send SMS/MMS, read messages, phone numbers, number lookup, available-number search, usage detail records and balance.",
   "docs_url": "https://developers.telnyx.com/api-reference",
   "pricing_url": "https://telnyx.com/pricing",

@@ -2,6 +2,7 @@
   "vendor": "scrapecreators",
   "name": "Scrape Creators",
   "category": "social",
+  "data": "public",
   "summary": "Public social media data over one API: TikTok, Instagram, YouTube, X, LinkedIn and Reddit profiles, posts, comments and search.",
   "docs_url": "https://docs.scrapecreators.com",
   "base_url": "https://api.scrapecreators.com",

@@ -2,6 +2,7 @@
   "vendor": "aviato",
   "name": "Aviato",
   "category": "company-data",
+  "data": "public",
   "summary": "Company, funding, investor and people data, contact info and search through the Aviato data engine.",
   "docs_url": "https://docs.data.aviato.co",
   "pricing_url": "https://www.aviato.co",

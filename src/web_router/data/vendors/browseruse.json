@@ -2,6 +2,7 @@
   "vendor": "browseruse",
   "name": "Browser Use",
   "category": "scraping",
+  "data": "public",
   "summary": "Run Browser Use Cloud agents that carry out a task in a hosted stealth browser, and read their status, steps and results.",
   "docs_url": "https://docs.browser-use.com/cloud/api-reference.md",
   "pricing_url": "https://browser-use.com/pricing",

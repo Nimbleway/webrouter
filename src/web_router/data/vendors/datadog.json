@@ -2,6 +2,7 @@
   "vendor": "datadog",
   "name": "Datadog",
   "category": "observability",
+  "data": "account",
   "summary": "Metrics, logs, events, monitors, dashboards, hosts, incidents and SLOs from your Datadog organization.",
   "docs_url": "https://docs.datadoghq.com/api/latest/",
   "pricing_url": "https://www.datadoghq.com/pricing/",

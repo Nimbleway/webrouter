@@ -2,6 +2,7 @@
   "vendor": "environmentagency",
   "name": "Environment Agency (UK) flood monitoring",
   "category": "other",
+  "data": "public",
   "summary": "Live flood warnings and alerts for England, flood areas, and river, sea, groundwater and rainfall readings from Environment Agency monitoring stations.",
   "docs_url": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
   "base_url": "https://environment.data.gov.uk/flood-monitoring",

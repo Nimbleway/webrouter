@@ -2,6 +2,7 @@
   "vendor": "stripe",
   "name": "Stripe",
   "category": "finance",
+  "data": "account",
   "summary": "Payments data from a Stripe account: charges, customers, payment intents, invoices, subscriptions and the balance.",
   "docs_url": "https://docs.stripe.com/api",
   "pricing_url": "https://stripe.com/pricing",

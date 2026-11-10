@@ -2,6 +2,7 @@
   "vendor": "majestic",
   "name": "Majestic",
   "category": "seo",
+  "data": "public",
   "summary": "Majestic link intelligence: Trust Flow, Citation Flow, backlinks, referring domains, anchors and top pages.",
   "docs_url": "https://developer-support.majestic.com/api/",
   "base_url": "https://api.majestic.com",

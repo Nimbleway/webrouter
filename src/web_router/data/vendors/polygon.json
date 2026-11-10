@@ -2,6 +2,7 @@
   "vendor": "polygon",
   "name": "Polygon.io (Massive)",
   "category": "finance",
+  "data": "public",
   "summary": "US stock bars, snapshots, trades, reference data, dividends and news from Polygon.io, now branded Massive.",
   "docs_url": "https://polygon.io/docs/rest/stocks/aggregates",
   "pricing_url": "https://polygon.io/pricing",

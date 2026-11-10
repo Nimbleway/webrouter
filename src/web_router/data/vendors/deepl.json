@@ -2,6 +2,7 @@
   "vendor": "deepl",
   "name": "DeepL",
   "category": "ai",
+  "data": "service",
   "summary": "Machine translation and text improvement (rephrasing in a style or tone), with glossaries, supported-language lookups and usage.",
   "docs_url": "https://developers.deepl.com/docs",
   "pricing_url": "https://www.deepl.com/pro-api",

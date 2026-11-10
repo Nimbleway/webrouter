@@ -2,6 +2,7 @@
   "vendor": "hubspot",
   "name": "HubSpot",
   "category": "analytics",
+  "data": "account",
   "summary": "HubSpot CRM records (contacts, companies, deals, tickets), CRM search, deal pipelines and stages, and owners through the CRM v3 API.",
   "docs_url": "https://developers.hubspot.com/docs/api-reference/legacy/crm/understanding-the-crm",
   "pricing_url": "https://www.hubspot.com/pricing",

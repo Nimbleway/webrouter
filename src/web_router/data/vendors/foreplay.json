@@ -2,6 +2,7 @@
   "vendor": "foreplay",
   "name": "Foreplay",
   "category": "advertising",
+  "data": "public",
   "summary": "Search a library of Meta, TikTok and other platform ads and brands: creatives, transcripts, brand lookups by name or domain, and running-ad analytics.",
   "docs_url": "https://public.api.foreplay.co/docs",
   "pricing_url": "https://www.foreplay.co/pricing",

@@ -2,6 +2,7 @@
   "vendor": "anyapi",
   "name": "AnyAPI",
   "category": "social",
+  "data": "public",
   "summary": "One pay-per-call wallet in front of many data sources: social profiles, posts, comments and search across Facebook, Instagram, LinkedIn, TikTok, X and Google.",
   "docs_url": "https://getanyapi.com/docs",
   "base_url": "https://api.getanyapi.com",

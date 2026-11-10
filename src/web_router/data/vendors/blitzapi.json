@@ -2,6 +2,7 @@
   "vendor": "blitzapi",
   "name": "BlitzAPI",
   "category": "enrichment",
+  "data": "public",
   "summary": "B2B people and company search, LinkedIn-based enrichment, verified work emails, phone numbers and job postings from BlitzAPI.",
   "docs_url": "https://docs.blitz-api.ai",
   "pricing_url": "https://docs.blitz-api.ai/guide/concepts/pricing",

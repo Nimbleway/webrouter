@@ -2,6 +2,7 @@
   "vendor": "sixtyfour",
   "name": "Sixtyfour",
   "category": "enrichment",
+  "data": "public",
   "summary": "Research agents and data for people and companies: enrichment, email and phone finding, reverse lookups and filter search.",
   "docs_url": "https://docs.sixtyfour.ai/introduction",
   "pricing_url": "https://docs.sixtyfour.ai/guides/credits-and-pricing",

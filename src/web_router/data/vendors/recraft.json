@@ -2,6 +2,7 @@
   "vendor": "recraft",
   "name": "Recraft",
   "category": "media-generation",
+  "data": "service",
   "summary": "Raster and SVG vector image generation, editing, vectorizing, background removal and upscaling.",
   "docs_url": "https://www.recraft.ai/docs/api-reference/introduction",
   "pricing_url": "https://www.recraft.ai/docs/api-reference/pricing",

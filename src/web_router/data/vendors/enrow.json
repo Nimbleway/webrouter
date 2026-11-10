@@ -2,6 +2,7 @@
   "vendor": "enrow",
   "name": "Enrow",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find and verify professional emails and find phone numbers, asynchronously, by name, company or LinkedIn URL.",
   "docs_url": "https://docs.enrow.io/api-overview",
   "pricing_url": "https://enrow.io/pricing",

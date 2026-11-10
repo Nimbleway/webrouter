@@ -2,6 +2,7 @@
   "vendor": "bounceban",
   "name": "BounceBan",
   "category": "email-verification",
+  "data": "public",
   "summary": "Email verification that also scores catch-all and gateway-protected addresses, with single, bulk-list and account calls.",
   "docs_url": "https://bounceban.com/public/doc/api.html",
   "pricing_url": "https://bounceban.com/pricing",

@@ -2,6 +2,7 @@
   "vendor": "olostep",
   "name": "Olostep",
   "category": "scraping",
+  "data": "public",
   "summary": "Scrape, crawl, map, search and answer over the web with Olostep's API.",
   "docs_url": "https://docs.olostep.com/",
   "pricing_url": "https://www.olostep.com/pricing",

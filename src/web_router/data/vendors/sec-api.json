@@ -2,6 +2,7 @@
   "vendor": "sec-api",
   "name": "SEC API (sec-api.io)",
   "category": "finance",
+  "data": "public",
   "summary": "SEC EDGAR filings as JSON from sec-api.io: filing search, full-text search, insider trades (Forms 3/4/5), 13F institutional holdings, XBRL-to-JSON financials, filing section extraction and ticker/CIK/CUSIP mapping.",
   "docs_url": "https://sec-api.io/docs",
   "pricing_url": "https://sec-api.io/pricing",

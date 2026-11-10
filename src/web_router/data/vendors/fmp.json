@@ -2,6 +2,7 @@
   "vendor": "fmp",
   "name": "Financial Modeling Prep",
   "category": "finance",
+  "data": "public",
   "summary": "Stock quotes, end-of-day prices, company profiles, financial statements, key metrics, news, earnings calendar and Treasury rates from Financial Modeling Prep (FMP).",
   "docs_url": "https://site.financialmodelingprep.com/developer/docs",
   "pricing_url": "https://site.financialmodelingprep.com/developer/docs/pricing",

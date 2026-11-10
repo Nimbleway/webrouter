@@ -2,6 +2,7 @@
   "vendor": "notte",
   "name": "Notte",
   "category": "scraping",
+  "data": "public",
   "summary": "Notte's API: scrape pages to markdown or structured JSON, search the web, and drive hosted browser sessions with plain-language actions.",
   "docs_url": "https://docs.notte.cc/api-reference/authentication.md",
   "pricing_url": "https://www.notte.cc/pricing",

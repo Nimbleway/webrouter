@@ -2,6 +2,7 @@
   "vendor": "hunter",
   "name": "Hunter",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find and verify professional email addresses by domain or person, and enrich people and companies.",
   "docs_url": "https://hunter.io/api-documentation/v2",
   "pricing_url": "https://hunter.io/pricing",

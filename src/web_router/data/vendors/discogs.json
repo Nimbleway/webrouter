@@ -2,6 +2,7 @@
   "vendor": "discogs",
   "name": "Discogs",
   "category": "other",
+  "data": "public",
   "summary": "The Discogs music database (releases, masters, artists, labels, search) and marketplace prices and stats for a release.",
   "docs_url": "https://www.discogs.com/developers",
   "base_url": "https://api.discogs.com",

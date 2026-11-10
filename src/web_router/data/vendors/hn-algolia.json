@@ -2,6 +2,7 @@
   "vendor": "hn-algolia",
   "name": "Hacker News Search (Algolia)",
   "category": "search",
+  "data": "public",
   "summary": "Full-text search over Hacker News stories, comments, polls and users, plus whole items with their comment trees, from the free HN Search API built on Algolia.",
   "docs_url": "https://hn.algolia.com/api",
   "base_url": "https://hn.algolia.com/api/v1",

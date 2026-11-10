@@ -2,6 +2,7 @@
   "vendor": "coingecko",
   "name": "CoinGecko",
   "category": "finance",
+  "data": "public",
   "summary": "Crypto prices, market data, history, OHLC candles and trending coins from CoinGecko.",
   "docs_url": "https://docs.coingecko.com/reference/introduction",
   "pricing_url": "https://www.coingecko.com/en/api/pricing",

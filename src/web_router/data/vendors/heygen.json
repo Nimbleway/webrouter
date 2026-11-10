@@ -2,6 +2,7 @@
   "vendor": "heygen",
   "name": "HeyGen",
   "category": "media-generation",
+  "data": "service",
   "summary": "AI avatar videos: prompt-to-video with Video Agent, avatar videos from a script, and the avatars, voices and videos in an account.",
   "docs_url": "https://developers.heygen.com/docs/quick-start",
   "pricing_url": "https://www.heygen.com/api-pricing",

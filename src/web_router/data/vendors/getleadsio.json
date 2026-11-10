@@ -2,6 +2,7 @@
   "vendor": "getleadsio",
   "name": "GetLeads",
   "category": "enrichment",
+  "data": "public",
   "summary": "B2B contact and company database with structured search, counts, async CSV exports, and person and company enrichment.",
   "docs_url": "https://www.getleads.io/docs/",
   "base_url": "https://app.getleads.io",

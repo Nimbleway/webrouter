@@ -2,6 +2,7 @@
   "vendor": "pdfco",
   "name": "PDF.co",
   "category": "other",
+  "data": "service",
   "summary": "PDF and document processing: text, JSON and table extraction with OCR, text search, template-based parsing, HTML to PDF, merging and file info.",
   "docs_url": "https://developer.pdf.co/api/index",
   "pricing_url": "https://pdf.co/pricing",

@@ -2,6 +2,7 @@
   "vendor": "signalbase",
   "name": "Signalbase",
   "category": "company-data",
+  "data": "public",
   "summary": "Funding, acquisition, hiring and job-change signals, investors, companies and people.",
   "docs_url": "https://docs.trysignalbase.com",
   "pricing_url": "https://www.trysignalbase.com/pricing",

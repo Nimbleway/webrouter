@@ -149,6 +149,12 @@ MSG_VENDOR_TOKEN_UNREADABLE: Final = "the token endpoint at {url} answered somet
 MSG_VENDOR_TOKEN_UNREACHABLE: Final = "could not reach the token endpoint at {url}: {error}"
 MSG_VENDOR_CATALOG_INVALID: Final = "Vendor catalog file {file} is invalid: {error}"
 MSG_VENDOR_CATALOG_ID_MISMATCH: Final = "declares vendor {declared!r} but is named {stem!r}.json"
+MSG_VENDOR_CATALOG_PRICE_NOT_PUBLIC: Final = (
+    "endpoint {endpoint!r}: only a vendor whose data is 'public' may price an endpoint, and this one's is {data!r}"
+)
+MSG_VENDOR_CATALOG_PRICE_ON_WRITE: Final = (
+    "endpoint {endpoint!r}: a write cannot be priced; only reads are served on a managed key"
+)
 MSG_VENDOR_CATALOG_DUPLICATE_ENDPOINT: Final = "endpoint id {endpoint!r} appears more than once"
 MSG_VENDOR_CATALOG_ENDPOINT_PREFIX: Final = "endpoint id {endpoint!r} must start with {prefix!r}"
 MSG_VENDOR_CATALOG_PATH_PARAM: Final = "endpoint {endpoint!r}: path placeholder {{{name}}} has no 'path' parameter"
@@ -181,6 +187,12 @@ MCP_VENDORS_PROPERTIES: dict[str, dict[str, Any]] = {
     "configured": {
         "type": "boolean",
         "description": "When listing vendors: true for the ones whose credentials are set here, false for the rest.",
+    },
+    "data": {
+        "type": "string",
+        "enum": ["public", "account", "service"],
+        "description": "When listing vendors: only those whose API answers with public data (the same for anyone), "
+        "the caller's own account data, or a service such as a model or messaging.",
     },
     "limit": {"type": "integer", "minimum": 1, "description": "Most endpoints to list; 20 unset."},
 }

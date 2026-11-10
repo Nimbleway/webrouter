@@ -2,6 +2,7 @@
   "vendor": "higgsfield",
   "name": "Higgsfield",
   "category": "media-generation",
+  "data": "service",
   "summary": "Image and video generation (SOUL, Kling, Seedance, Wan and more) through one asynchronous request API.",
   "docs_url": "https://docs.higgsfield.ai/docs",
   "base_url": "https://api.higgsfield.ai",

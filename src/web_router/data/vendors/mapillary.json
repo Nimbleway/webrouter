@@ -2,6 +2,7 @@
   "vendor": "mapillary",
   "name": "Mapillary",
   "category": "other",
+  "data": "public",
   "summary": "Street-level imagery from Meta's Mapillary: find geotagged photos by area, point, sequence or creator, and map features (signs, objects) detected in them.",
   "docs_url": "https://www.mapillary.com/developer/api-documentation",
   "base_url": "https://graph.mapillary.com",

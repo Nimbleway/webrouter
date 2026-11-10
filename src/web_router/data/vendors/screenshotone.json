@@ -2,6 +2,7 @@
   "vendor": "screenshotone",
   "name": "ScreenshotOne",
   "category": "scraping",
+  "data": "service",
   "summary": "Render a web page, HTML or Markdown to an image or PDF in a real browser, with ad and cookie-banner blocking, element capture and page metadata.",
   "docs_url": "https://screenshotone.com/docs/getting-started/",
   "pricing_url": "https://screenshotone.com/pricing/",

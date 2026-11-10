@@ -2,6 +2,7 @@
   "vendor": "recentfunding",
   "name": "Recent Funding",
   "category": "company-data",
+  "data": "public",
   "summary": "Recently funded startups with sourced round amounts, investors, founders, acquisitions and new VC funds.",
   "docs_url": "https://recentfunding.com/docs/",
   "pricing_url": "https://recentfunding.com/pricing/",

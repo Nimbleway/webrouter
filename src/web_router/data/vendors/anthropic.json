@@ -2,6 +2,7 @@
   "vendor": "anthropic",
   "name": "Anthropic (Claude API)",
   "category": "ai",
+  "data": "service",
   "summary": "Claude models through Anthropic's own API: messages, token counting, model list and batch jobs.",
   "docs_url": "https://platform.claude.com/docs/en/api/overview",
   "pricing_url": "https://www.anthropic.com/pricing",

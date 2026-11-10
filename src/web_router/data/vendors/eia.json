@@ -2,6 +2,7 @@
   "vendor": "eia",
   "name": "US Energy Information Administration",
   "category": "finance",
+  "data": "public",
   "summary": "US energy statistics (electricity, petroleum, natural gas, coal, prices, production, consumption) from the EIA Open Data API v2.",
   "docs_url": "https://www.eia.gov/opendata/documentation.php",
   "base_url": "https://api.eia.gov/v2",

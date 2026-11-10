@@ -2,6 +2,7 @@
   "vendor": "trykitt",
   "name": "Kitt",
   "category": "email-verification",
+  "data": "public",
   "summary": "Find and verify work emails in real time, with a credit balance and job lookup.",
   "docs_url": "https://documenter.getpostman.com/view/479833/2s93m62NHf",
   "base_url": "https://api.trykitt.ai",

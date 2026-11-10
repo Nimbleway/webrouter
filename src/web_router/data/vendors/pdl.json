@@ -2,6 +2,7 @@
   "vendor": "pdl",
   "name": "People Data Labs",
   "category": "enrichment",
+  "data": "public",
   "summary": "Person and company enrichment, identify and dataset search over PDL's person and company data.",
   "docs_url": "https://docs.peopledatalabs.com/docs/api-overview",
   "pricing_url": "https://www.peopledatalabs.com/pricing/person",

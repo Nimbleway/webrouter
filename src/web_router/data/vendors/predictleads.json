@@ -2,6 +2,7 @@
   "vendor": "predictleads",
   "name": "PredictLeads",
   "category": "company-data",
+  "data": "public",
   "summary": "Company intelligence: job openings, technology detections, news and financing events, connections and more for 120M+ companies.",
   "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
   "pricing_url": "https://www.predictleads.com/pricing",

@@ -47,7 +47,9 @@ async def vendors_tool(router: AsyncWebRouter, arguments: Mapping[str, Any]) -> 
         return shape_endpoint_list(
             endpoints, get_catalog(), router.vendor_credential_source(), budget=max_response_chars()
         )
-    rows = router.vendors(category=arguments.get("category"), configured=arguments.get("configured"))
+    rows = router.vendors(
+        category=arguments.get("category"), configured=arguments.get("configured"), data=arguments.get("data")
+    )
     return shape_vendor_list(rows, budget=max_response_chars())
 
 

@@ -2,6 +2,7 @@
   "vendor": "unsplash",
   "name": "Unsplash",
   "category": "other",
+  "data": "public",
   "summary": "Search and fetch free high-resolution stock photos, collections and photographers' work.",
   "docs_url": "https://unsplash.com/documentation",
   "base_url": "https://api.unsplash.com",

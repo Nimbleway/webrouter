@@ -2,6 +2,7 @@
   "vendor": "leadmagic",
   "name": "LeadMagic",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find and validate work emails, personal emails and mobiles from names or profile URLs, and look up profiles and companies.",
   "docs_url": "https://leadmagic.io/docs/api-reference/email-validation",
   "pricing_url": "https://leadmagic.io/pricing",

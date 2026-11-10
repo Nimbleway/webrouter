@@ -2,6 +2,7 @@
   "vendor": "artificial-analysis",
   "name": "Artificial Analysis",
   "category": "ai",
+  "data": "public",
   "summary": "Independent benchmarks of AI models: intelligence indices, speed, latency and price for LLMs, and Elo arena rankings for image, video, speech and music models.",
   "docs_url": "https://artificialanalysis.ai/data-api/docs",
   "pricing_url": "https://artificialanalysis.ai/data-api",

@@ -2,6 +2,7 @@
   "vendor": "sentry",
   "name": "Sentry",
   "category": "observability",
+  "data": "account",
   "summary": "Error and performance monitoring: issues, their events and stack traces, explore queries over errors, logs and spans, event volume stats, projects and releases.",
   "docs_url": "https://docs.sentry.io/api/",
   "pricing_url": "https://sentry.io/pricing/",

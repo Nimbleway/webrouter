@@ -2,6 +2,7 @@
   "vendor": "quickenrich",
   "name": "Quick Enrich",
   "category": "enrichment",
+  "data": "public",
   "summary": "Work email and phone lookup by LinkedIn URL or name and company, reverse email lookup, domain and contact discovery, and company search.",
   "docs_url": "https://app.quickenrich.io/docs",
   "base_url": "https://app.quickenrich.io",

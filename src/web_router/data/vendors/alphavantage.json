@@ -2,6 +2,7 @@
   "vendor": "alphavantage",
   "name": "Alpha Vantage",
   "category": "finance",
+  "data": "public",
   "summary": "Stock, forex and crypto prices, company fundamentals, earnings, market news sentiment and technical indicators.",
   "docs_url": "https://www.alphavantage.co/documentation/",
   "pricing_url": "https://www.alphavantage.co/premium/",

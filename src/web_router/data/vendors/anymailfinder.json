@@ -2,6 +2,7 @@
   "vendor": "anymailfinder",
   "name": "Anymail Finder",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find and verify business emails by person, company, decision-maker role or LinkedIn URL, charged only for valid hits.",
   "docs_url": "https://anymailfinder.com/email-finder-api/docs",
   "pricing_url": "https://anymailfinder.com/pricing",

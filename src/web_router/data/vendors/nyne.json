@@ -2,6 +2,7 @@
   "vendor": "nyne",
   "name": "Nyne.ai",
   "category": "enrichment",
+  "data": "public",
   "summary": "People and company intelligence: person enrichment and search with contacts and social profiles, company enrichment, search, employees and funding.",
   "docs_url": "https://api.nyne.ai/documentation",
   "base_url": "https://api.nyne.ai",

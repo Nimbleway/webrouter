@@ -2,6 +2,7 @@
   "vendor": "ticketmaster",
   "name": "Ticketmaster",
   "category": "other",
+  "data": "public",
   "summary": "Events, attractions (artists, teams, shows) and venues on Ticketmaster, Universe, FrontGate and Ticketmaster Resale, from the Discovery API.",
   "docs_url": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/",
   "base_url": "https://app.ticketmaster.com/discovery/v2",

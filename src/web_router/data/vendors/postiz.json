@@ -2,6 +2,7 @@
   "vendor": "postiz",
   "name": "Postiz",
   "category": "social",
+  "data": "service",
   "summary": "Schedule and publish posts to connected social channels (X, LinkedIn, Instagram, TikTok, YouTube and more) and read their analytics.",
   "docs_url": "https://docs.postiz.com/public-api/introduction",
   "pricing_url": "https://postiz.com/pricing",

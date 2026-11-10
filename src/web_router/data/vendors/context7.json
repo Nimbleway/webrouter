@@ -2,6 +2,7 @@
   "vendor": "context7",
   "name": "Context7",
   "category": "developer",
+  "data": "public",
   "summary": "Up-to-date, version-specific documentation and code snippets for software libraries, ranked for a question; plus reading one web page narrowed to a question.",
   "docs_url": "https://context7.com/docs/api-guide",
   "pricing_url": "https://context7.com/plans",

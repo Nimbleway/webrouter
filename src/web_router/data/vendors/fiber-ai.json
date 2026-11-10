@@ -2,6 +2,7 @@
   "vendor": "fiber-ai",
   "name": "Fiber AI",
   "category": "company-data",
+  "data": "public",
   "summary": "B2B company and people search, LinkedIn live enrichment, and email and phone reveal.",
   "docs_url": "https://api.fiber.ai/llms.txt",
   "pricing_url": "https://fiber.ai/pricing",

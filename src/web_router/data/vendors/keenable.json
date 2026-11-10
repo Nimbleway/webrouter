@@ -2,6 +2,7 @@
   "vendor": "keenable",
   "name": "Keenable",
   "category": "search",
+  "data": "public",
   "summary": "Web search and page fetch on Keenable's own index, built for AI agents.",
   "docs_url": "https://docs.keenable.ai/api-reference",
   "base_url": "https://api.keenable.ai",

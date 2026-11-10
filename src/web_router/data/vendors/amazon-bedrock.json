@@ -2,6 +2,7 @@
   "vendor": "amazon-bedrock",
   "name": "Amazon Bedrock",
   "category": "ai",
+  "data": "service",
   "summary": "Foundation models (Anthropic, Meta, Mistral, Amazon and others) served on AWS: Converse chat, token counting and the model catalog, with a Bedrock API key.",
   "docs_url": "https://docs.aws.amazon.com/bedrock/latest/APIReference/welcome.html",
   "pricing_url": "https://aws.amazon.com/bedrock/pricing/",

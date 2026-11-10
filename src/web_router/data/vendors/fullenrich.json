@@ -2,6 +2,7 @@
   "vendor": "fullenrich",
   "name": "FullEnrich",
   "category": "enrichment",
+  "data": "public",
   "summary": "Waterfall enrichment of work emails, personal emails and mobile phones across 20+ providers, plus people and company search and reverse email lookup.",
   "docs_url": "https://docs.fullenrich.com/api/v2/general/introduction",
   "pricing_url": "https://fullenrich.com/pricing",

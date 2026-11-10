@@ -2,6 +2,7 @@
   "vendor": "cloudflare",
   "name": "Cloudflare",
   "category": "analytics",
+  "data": "account",
   "summary": "Zone traffic, firewall and security analytics through Cloudflare's GraphQL Analytics API, plus zones and DNS records from the v4 REST API.",
   "docs_url": "https://developers.cloudflare.com/api/",
   "pricing_url": "https://www.cloudflare.com/plans/",

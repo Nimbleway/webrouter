@@ -2,6 +2,7 @@
   "vendor": "oxylabs",
   "name": "Oxylabs Web Scraper API",
   "category": "scraping",
+  "data": "public",
   "summary": "Oxylabs Web Scraper API (Classic): scrape any URL, Google results and Amazon products as HTML, Markdown or parsed JSON, live or as async jobs.",
   "docs_url": "https://developers.oxylabs.io/products/web-scraper-api.md",
   "pricing_url": "https://oxylabs.io/pricing/web-scraper-api",

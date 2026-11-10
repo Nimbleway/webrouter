@@ -2,6 +2,7 @@
   "vendor": "captaindata",
   "name": "Captain Data",
   "category": "enrichment",
+  "data": "public",
   "summary": "LinkedIn people and company data: find, search via Sales Navigator queries, enrich profiles, work history, skills and company employees.",
   "docs_url": "https://docs.captaindata.com/v1/introduction",
   "pricing_url": "https://www.captaindata.com/pricing",

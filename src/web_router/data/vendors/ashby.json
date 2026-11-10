@@ -2,6 +2,7 @@
   "vendor": "ashby",
   "name": "Ashby Job Board",
   "category": "company-data",
+  "data": "public",
   "summary": "A company's public Ashby job board: listed roles with descriptions, location, workplace type and optional compensation.",
   "docs_url": "https://developers.ashbyhq.com/docs/public-job-posting-api",
   "base_url": "https://api.ashbyhq.com/posting-api",

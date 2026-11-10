@@ -2,6 +2,7 @@
   "vendor": "akta",
   "name": "akta.pro",
   "category": "company-data",
+  "data": "public",
   "summary": "Company data, headcount, traffic, jobs, reviews, news signals and generated company lists from akta.pro.",
   "docs_url": "https://docs.akta.pro",
   "pricing_url": "https://docs.akta.pro/getting-started/pricing.md",

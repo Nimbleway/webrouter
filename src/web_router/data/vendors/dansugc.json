@@ -2,6 +2,7 @@
   "vendor": "dansugc",
   "name": "DansUGC",
   "category": "media-generation",
+  "data": "service",
   "summary": "A marketplace of real-creator UGC videos: search and license the B-roll library, browse creator video formats, and track custom video orders.",
   "docs_url": "https://dansugc.com/docs",
   "pricing_url": "https://dansugc.com/pricing",

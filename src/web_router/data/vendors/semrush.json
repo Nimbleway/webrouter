@@ -2,6 +2,7 @@
   "vendor": "semrush",
   "name": "Semrush",
   "category": "seo",
+  "data": "public",
   "summary": "Semrush Analytics API: domain overviews, organic and paid keywords, keyword research and backlink reports.",
   "docs_url": "https://developer.semrush.com/api/v3/analytics/basic-docs/",
   "pricing_url": "https://www.semrush.com/prices/",

@@ -2,6 +2,7 @@
   "vendor": "openai",
   "name": "OpenAI",
   "category": "ai",
+  "data": "service",
   "summary": "GPT models through the Responses and Chat Completions APIs, plus embeddings, image generation, text-to-speech and moderation.",
   "docs_url": "https://developers.openai.com/api/docs",
   "pricing_url": "https://openai.com/api/pricing/",

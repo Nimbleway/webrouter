@@ -2,6 +2,7 @@
   "vendor": "nasdaq-data-link",
   "name": "Nasdaq Data Link",
   "category": "finance",
+  "data": "public",
   "summary": "Financial, economic and alternative datasets from Nasdaq Data Link through its Tables API: filter rows and columns of any table you can access, and read table metadata.",
   "docs_url": "https://data.nasdaq.com/tablesapi",
   "base_url": "https://data.nasdaq.com/api/v3",

@@ -2,6 +2,7 @@
   "vendor": "keepa",
   "name": "Keepa",
   "category": "other",
+  "data": "public",
   "summary": "Amazon product price and sales-rank history, product search, best-seller lists, categories and seller data across 11 Amazon marketplaces.",
   "docs_url": "https://github.com/keepacom/api_backend",
   "pricing_url": "https://keepa.com/#!api",

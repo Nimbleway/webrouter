@@ -2,6 +2,7 @@
   "vendor": "x",
   "name": "X (Twitter) API",
   "category": "social",
+  "data": "public",
   "summary": "X API v2: search recent posts, look up users and posts, read timelines and followers, and publish posts.",
   "docs_url": "https://docs.x.com/x-api",
   "pricing_url": "https://docs.x.com/x-api/getting-started/pricing",

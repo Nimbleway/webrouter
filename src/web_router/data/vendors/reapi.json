@@ -2,6 +2,7 @@
   "vendor": "reapi",
   "name": "reAPI",
   "category": "media-generation",
+  "data": "service",
   "summary": "One API and prepaid credits for many image, video, audio and chat models, with an asynchronous task model.",
   "docs_url": "https://reapi.ai/docs",
   "pricing_url": "https://reapi.ai/pricing",

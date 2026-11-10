@@ -2,6 +2,7 @@
   "vendor": "arxiv",
   "name": "arXiv",
   "category": "search",
+  "data": "public",
   "summary": "Search and look up arXiv preprints (titles, authors, abstracts, categories, links) through arXiv's free query API.",
   "docs_url": "https://info.arxiv.org/help/api/user-manual.html",
   "base_url": "https://export.arxiv.org/api",

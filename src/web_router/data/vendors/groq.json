@@ -2,6 +2,7 @@
   "vendor": "groq",
   "name": "Groq",
   "category": "ai",
+  "data": "service",
   "summary": "Fast inference of open LLMs (and text-to-speech) on Groq LPUs, through an OpenAI-compatible API.",
   "docs_url": "https://console.groq.com/docs/api-reference",
   "pricing_url": "https://groq.com/pricing",

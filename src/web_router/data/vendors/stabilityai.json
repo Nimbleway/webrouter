@@ -2,6 +2,7 @@
   "vendor": "stabilityai",
   "name": "Stability AI",
   "category": "media-generation",
+  "data": "service",
   "summary": "Stable Diffusion image generation, async generation results, engines and credit balance.",
   "docs_url": "https://docs.stability.ai/api-reference",
   "pricing_url": "https://docs.stability.ai/pricing",

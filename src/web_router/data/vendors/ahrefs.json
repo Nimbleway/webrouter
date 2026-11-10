@@ -2,6 +2,7 @@
   "vendor": "ahrefs",
   "name": "Ahrefs",
   "category": "seo",
+  "data": "public",
   "summary": "Ahrefs API v3: Domain Rating, backlinks, referring domains, organic keywords, top pages and keyword metrics.",
   "docs_url": "https://docs.ahrefs.com/api/docs/introduction.md",
   "pricing_url": "https://ahrefs.com/pricing",

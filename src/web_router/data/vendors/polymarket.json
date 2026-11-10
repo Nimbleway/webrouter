@@ -2,6 +2,7 @@
   "vendor": "polymarket",
   "name": "Polymarket",
   "category": "finance",
+  "data": "public",
   "summary": "Public prediction-market data from Polymarket: search, events and markets (Gamma API), order books, prices and price history (CLOB API), trades, holders and open interest (Data API).",
   "docs_url": "https://docs.polymarket.com/",
   "base_url": "https://gamma-api.polymarket.com",

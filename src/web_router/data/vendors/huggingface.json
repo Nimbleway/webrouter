@@ -2,6 +2,7 @@
   "vendor": "huggingface",
   "name": "Hugging Face Hub",
   "category": "ai",
+  "data": "public",
   "summary": "Search the Hugging Face Hub's models, datasets, Spaces and papers, and read paper pages and daily papers.",
   "docs_url": "https://huggingface.co/docs/hub/api",
   "pricing_url": "https://huggingface.co/pricing",

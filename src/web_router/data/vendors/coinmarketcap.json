@@ -2,6 +2,7 @@
   "vendor": "coinmarketcap",
   "name": "CoinMarketCap",
   "category": "finance",
+  "data": "public",
   "summary": "Crypto listings, latest and historical quotes, OHLCV, coin metadata, global market metrics and the Fear and Greed index from CoinMarketCap.",
   "docs_url": "https://coinmarketcap.com/api/documentation/",
   "pricing_url": "https://coinmarketcap.com/api/pricing/",

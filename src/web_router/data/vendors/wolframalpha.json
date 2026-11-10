@@ -2,6 +2,7 @@
   "vendor": "wolframalpha",
   "name": "Wolfram|Alpha",
   "category": "ai",
+  "data": "public",
   "summary": "Computational answers to natural-language questions (math, science, units, data on places, finance, dates and more): LLM-ready text, one-line answers, structured result pods or a rendered result image.",
   "docs_url": "https://products.wolframalpha.com/api",
   "pricing_url": "https://products.wolframalpha.com/api",

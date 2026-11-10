@@ -2,6 +2,7 @@
   "vendor": "rocketreach",
   "name": "RocketReach",
   "category": "enrichment",
+  "data": "public",
   "summary": "Search and look up professionals and companies: work and personal emails, phones, job history and firmographics.",
   "docs_url": "https://docs.rocketreach.co/reference/rocketreach-api",
   "pricing_url": "https://rocketreach.co/pricing",

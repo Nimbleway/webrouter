@@ -2,6 +2,7 @@
   "vendor": "icypeas",
   "name": "Icypeas",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find and verify professional emails, search a people and company database, and scrape profile and company data.",
   "docs_url": "https://api-doc.icypeas.com/",
   "pricing_url": "https://www.icypeas.com/pricing",

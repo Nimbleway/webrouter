@@ -2,6 +2,7 @@
   "vendor": "didit",
   "name": "Didit",
   "category": "other",
+  "data": "service",
   "summary": "Identity verification and fraud: KYC/KYB verification sessions and their decisions, and standalone AML screening of people and companies.",
   "docs_url": "https://docs.didit.me/getting-started/introduction",
   "pricing_url": "https://docs.didit.me/getting-started/pricing",

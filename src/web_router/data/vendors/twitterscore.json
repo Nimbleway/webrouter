@@ -2,6 +2,7 @@
   "vendor": "twitterscore",
   "name": "TwitterScore",
   "category": "social",
+  "data": "public",
   "summary": "Influence scores for X (Twitter) accounts, mostly crypto: score history, smart followers by category and tag, mentions and trending accounts.",
   "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
   "pricing_url": "https://twitterscore.io/api/prices",

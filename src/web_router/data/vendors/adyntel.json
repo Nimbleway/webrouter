@@ -2,6 +2,7 @@
   "vendor": "adyntel",
   "name": "Adyntel",
   "category": "advertising",
+  "data": "public",
   "summary": "Competitor ad intelligence: the ads a company runs on Meta, Google, LinkedIn and TikTok, keyword search across ad libraries, and a domain's paid and organic keywords.",
   "docs_url": "https://docs.adyntel.com/",
   "base_url": "https://api.adyntel.com",

@@ -2,6 +2,7 @@
   "vendor": "apify",
   "name": "Apify",
   "category": "scraping",
+  "data": "public",
   "summary": "Run Apify Actors (ready-made scrapers for Google, LinkedIn, Meta ads, TikTok, Lazada, Weibo and more), poll their runs and read the datasets they produce.",
   "docs_url": "https://docs.apify.com/api/v2",
   "pricing_url": "https://apify.com/pricing",

@@ -2,6 +2,7 @@
   "vendor": "meta-ad-library",
   "name": "Meta Ad Library",
   "category": "advertising",
+  "data": "public",
   "summary": "Search the public Meta Ad Library: ads running on Facebook, Instagram and other Meta apps by keyword or page, including political and issue ads.",
   "docs_url": "https://www.facebook.com/ads/library/api/",
   "base_url": "https://graph.facebook.com/{api_version}",

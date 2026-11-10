@@ -2,6 +2,7 @@
   "vendor": "lever",
   "name": "Lever Postings",
   "category": "company-data",
+  "data": "public",
   "summary": "A company's published Lever job postings, filterable by location, team, department and commitment, keyless.",
   "docs_url": "https://github.com/lever/postings-api",
   "base_url": "https://{host}/v0/postings",

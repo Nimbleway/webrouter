@@ -2,6 +2,7 @@
   "vendor": "apollo",
   "name": "Apollo.io",
   "category": "enrichment",
+  "data": "public",
   "summary": "Search and enrich B2B people and companies, with email and phone reveal, from Apollo's contact database.",
   "docs_url": "https://docs.apollo.io/reference/",
   "pricing_url": "https://www.apollo.io/pricing",

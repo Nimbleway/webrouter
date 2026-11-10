@@ -2,6 +2,7 @@
   "vendor": "google-analytics",
   "name": "Google Analytics 4 (Data API)",
   "category": "analytics",
+  "data": "account",
   "summary": "Reports from your Google Analytics 4 properties: users, sessions, events and conversions by any dimension, plus realtime and the dimension/metric catalog.",
   "docs_url": "https://developers.google.com/analytics/devguides/reporting/data/v1",
   "base_url": "https://analyticsdata.googleapis.com/v1beta",

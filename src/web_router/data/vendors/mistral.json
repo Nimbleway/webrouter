@@ -2,6 +2,7 @@
   "vendor": "mistral",
   "name": "Mistral AI",
   "category": "ai",
+  "data": "service",
   "summary": "Mistral language models for chat, embeddings, document OCR, moderation and speech.",
   "docs_url": "https://docs.mistral.ai/api/",
   "pricing_url": "https://docs.mistral.ai/inference/pricing",

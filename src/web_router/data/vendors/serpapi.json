@@ -2,6 +2,7 @@
   "vendor": "serpapi",
   "name": "SerpApi",
   "category": "search",
+  "data": "public",
   "summary": "Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches.",
   "docs_url": "https://serpapi.com/search-api",
   "pricing_url": "https://serpapi.com/pricing",

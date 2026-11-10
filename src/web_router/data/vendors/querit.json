@@ -2,6 +2,7 @@
   "vendor": "querit",
   "name": "Querit",
   "category": "search",
+  "data": "public",
   "summary": "Web search API for AI agents, with highlights, optional full page text and code and finance verticals.",
   "docs_url": "https://www.querit.ai/en/docs/overview/about",
   "pricing_url": "https://www.querit.ai/en/pricing",

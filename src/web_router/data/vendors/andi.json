@@ -2,6 +2,7 @@
   "vendor": "andi",
   "name": "Andi AI Search",
   "category": "search",
+  "data": "public",
   "summary": "Web search API for agents with adjustable effort, optional full page content, a page fetch/extract endpoint and curated topic news feeds.",
   "docs_url": "https://docs.andiai.com/api-reference/introduction",
   "pricing_url": "https://docs.andiai.com/pricing",

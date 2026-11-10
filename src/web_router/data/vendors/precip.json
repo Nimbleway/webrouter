@@ -2,6 +2,7 @@
   "vendor": "precip",
   "name": "Precip",
   "category": "other",
+  "data": "public",
   "summary": "Hyper-local observed rainfall, snowfall, soil moisture and soil temperature for any point in the US and Canada from radar and gauges, plus minutely nowcasts and a 10-day hourly forecast.",
   "docs_url": "https://api-docs.precip.ai/overview",
   "pricing_url": "https://precip.ai/developers",

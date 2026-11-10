@@ -2,6 +2,7 @@
   "vendor": "dataforseo",
   "name": "DataForSEO",
   "category": "seo",
+  "data": "public",
   "summary": "DataForSEO APIs: live and queued Google SERPs, keyword data, DataForSEO Labs and backlinks, billed per task in USD.",
   "docs_url": "https://docs.dataforseo.com/v3/",
   "pricing_url": "https://dataforseo.com/pricing",

@@ -2,6 +2,7 @@
   "vendor": "facebook",
   "name": "Facebook Pages (Graph API)",
   "category": "social",
+  "data": "account",
   "summary": "Facebook Pages you manage through Meta's Graph API: Page details, the Page feed, and publishing posts and photos.",
   "docs_url": "https://developers.facebook.com/docs/pages-api",
   "base_url": "https://graph.facebook.com/{api_version}",

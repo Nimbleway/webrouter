@@ -2,6 +2,7 @@
   "vendor": "ofacapi",
   "name": "OFAC-API (sanctions screening)",
   "category": "other",
+  "data": "public",
   "summary": "Fuzzy screening of people, companies, vessels and aircraft against OFAC SDN and 20+ other sanctions, PEP and watch lists, single, batch or as async bulk jobs.",
   "docs_url": "https://docs.ofac-api.com/",
   "pricing_url": "https://www.ofac-api.com/pricing",

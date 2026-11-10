@@ -2,6 +2,7 @@
   "vendor": "joinmassive",
   "name": "Massive (Web Render)",
   "category": "scraping",
+  "data": "public",
   "summary": "Massive's Web Render API: unblock and render web pages, Google results pages, and ChatGPT, Gemini, Perplexity or AI Overview answers, from chosen locations.",
   "docs_url": "https://docs.joinmassive.com/web-render/overview.md",
   "pricing_url": "https://docs.joinmassive.com/web-render/pricing.md",

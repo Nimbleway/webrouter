@@ -2,6 +2,7 @@
   "vendor": "bls",
   "name": "US Bureau of Labor Statistics",
   "category": "finance",
+  "data": "public",
   "summary": "US labor and price statistics (CPI, PPI, employment, unemployment, wages) as time series from the BLS Public Data API v2.",
   "docs_url": "https://www.bls.gov/developers/api_signature_v2.htm",
   "base_url": "https://api.bls.gov/publicAPI/v2",

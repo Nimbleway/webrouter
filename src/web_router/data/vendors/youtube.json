@@ -2,6 +2,7 @@
   "vendor": "youtube",
   "name": "YouTube Data API",
   "category": "social",
+  "data": "public",
   "summary": "Public YouTube data: videos, channels, playlists, comments and search, read with a Google API key.",
   "docs_url": "https://developers.google.com/youtube/v3/docs",
   "pricing_url": "https://developers.google.com/youtube/v3/determine_quota_cost",

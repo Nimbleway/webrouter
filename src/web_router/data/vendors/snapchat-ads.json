@@ -2,6 +2,7 @@
   "vendor": "snapchat-ads",
   "name": "Snapchat Ads",
   "category": "advertising",
+  "data": "account",
   "summary": "Your Snapchat ad accounts: organizations, ad accounts, campaigns and ads, plus delivery stats for any of them.",
   "docs_url": "https://developers.snap.com/api/marketing-api/Ads-API/authentication",
   "base_url": "https://adsapi.snapchat.com/v1",

@@ -2,6 +2,7 @@
   "vendor": "dropleads",
   "name": "DropLeads",
   "category": "enrichment",
+  "data": "public",
   "summary": "Prime-DB people and company search, verified or simple person enrichment, company enrichment and credit balance.",
   "docs_url": "https://dropleads.readme.io/",
   "base_url": "https://prime.dropleads.io",

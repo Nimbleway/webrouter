@@ -2,6 +2,7 @@
   "vendor": "klippa",
   "name": "Klippa DocHorizon (Doxis AI.dp)",
   "category": "ai",
+  "data": "service",
   "summary": "Document OCR and data capture: invoices and receipts, identity documents, and generic key-value and table extraction from any document.",
   "docs_url": "https://dochorizon.klippa.com/docs/api/getting-started",
   "base_url": "https://{host}/api/services",

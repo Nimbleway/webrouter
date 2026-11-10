@@ -2,6 +2,7 @@
   "vendor": "bcpmdata",
   "name": "BCPM Data",
   "category": "other",
+  "data": "public",
   "summary": "Chinese pharmaceutical data (BCPMData Open Platform): global drug R&D pipelines, China and US clinical trials, and China drug approval numbers with insurance and essential-drug status.",
   "docs_url": "https://open.bcpmdata.com/guide/1.html",
   "base_url": "https://srv-openapi.bcpmdata.com",

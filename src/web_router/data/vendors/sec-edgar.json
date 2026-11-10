@@ -2,6 +2,7 @@
   "vendor": "sec-edgar",
   "name": "SEC EDGAR",
   "category": "finance",
+  "data": "public",
   "summary": "US public company filing histories and XBRL financial data (company facts, single concepts, cross-company frames) from the SEC's free EDGAR APIs.",
   "docs_url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
   "base_url": "https://data.sec.gov",

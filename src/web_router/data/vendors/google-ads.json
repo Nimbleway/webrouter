@@ -2,6 +2,7 @@
   "vendor": "google-ads",
   "name": "Google Ads",
   "category": "advertising",
+  "data": "account",
   "summary": "Your Google Ads accounts: GAQL reports on campaigns, spend, clicks and conversions, Keyword Planner ideas and volumes, and budget changes.",
   "docs_url": "https://developers.google.com/google-ads/api/rest/overview",
   "pricing_url": "https://developers.google.com/google-ads/api/docs/access-levels",

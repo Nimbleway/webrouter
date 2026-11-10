@@ -2,6 +2,7 @@
   "vendor": "crustdata",
   "name": "Crustdata",
   "category": "company-data",
+  "data": "public",
   "summary": "Company and people search, enrichment, job listings and web search from Crustdata's datasets.",
   "docs_url": "https://docs.crustdata.com",
   "pricing_url": "https://docs.crustdata.com/general/pricing.md",

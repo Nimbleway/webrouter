@@ -2,6 +2,7 @@
   "vendor": "fastmoss",
   "name": "FastMoss",
   "category": "social",
+  "data": "public",
   "summary": "TikTok Shop data: products, shops, creators, videos and rankings, with sales and revenue estimates by region.",
   "docs_url": "https://developer.fastmoss.com/api/docs/guide/quickStart.html",
   "base_url": "https://openapi.fastmoss.com",

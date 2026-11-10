@@ -2,6 +2,7 @@
   "vendor": "nasapower",
   "name": "NASA POWER",
   "category": "other",
+  "data": "public",
   "summary": "Keyless NASA satellite and reanalysis weather, solar radiation and climate data for any point or region: hourly, daily, monthly and long-term climatology since 1981.",
   "docs_url": "https://power.larc.nasa.gov/docs/services/api/",
   "base_url": "https://power.larc.nasa.gov/api",

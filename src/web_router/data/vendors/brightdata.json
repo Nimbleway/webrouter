@@ -2,6 +2,7 @@
   "vendor": "brightdata",
   "name": "Bright Data",
   "category": "scraping",
+  "data": "public",
   "summary": "Pre-built site scrapers, Web Unlocker, SERP API and Marketplace datasets from Bright Data.",
   "docs_url": "https://docs.brightdata.com/",
   "pricing_url": "https://brightdata.com/pricing",

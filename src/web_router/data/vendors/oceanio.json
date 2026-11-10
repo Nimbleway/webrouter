@@ -2,6 +2,7 @@
   "vendor": "oceanio",
   "name": "Ocean.io",
   "category": "company-data",
+  "data": "public",
   "summary": "Lookalike company and people search, company and person enrichment and bulk lookups.",
   "docs_url": "https://app.ocean.io/docs",
   "pricing_url": "https://www.ocean.io/pricing",

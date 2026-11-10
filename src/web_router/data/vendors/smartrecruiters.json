@@ -2,6 +2,7 @@
   "vendor": "smartrecruiters",
   "name": "SmartRecruiters",
   "category": "company-data",
+  "data": "public",
   "summary": "Public job postings and departments of companies hiring on SmartRecruiters (Posting API).",
   "docs_url": "https://developers.smartrecruiters.com/docs/posting-api",
   "base_url": "https://api.smartrecruiters.com/v1",

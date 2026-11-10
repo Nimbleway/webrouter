@@ -2,6 +2,7 @@
   "vendor": "diffbot",
   "name": "Diffbot",
   "category": "company-data",
+  "data": "public",
   "summary": "Diffbot Knowledge Graph: search organizations, people and articles with DQL, and enhance records from partial data.",
   "docs_url": "https://www.diffbot.com/docs/",
   "pricing_url": "https://www.diffbot.com/pricing/",

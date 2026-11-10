@@ -2,6 +2,7 @@
   "vendor": "cloro",
   "name": "cloro",
   "category": "seo",
+  "data": "public",
   "summary": "Structured answers and sources from ChatGPT, Gemini, Perplexity, Google AI Mode, Bing AI Mode, Google Search and Google News, by country.",
   "docs_url": "https://cloro.dev/docs/api-reference/introduction",
   "pricing_url": "https://cloro.dev/docs/guides/providers",

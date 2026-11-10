@@ -2,6 +2,7 @@
   "vendor": "fiscal-ai",
   "name": "Fiscal.ai",
   "category": "finance",
+  "data": "public",
   "summary": "Public company financials from Fiscal.ai: as-reported and standardized statements, ratios, segments and KPIs, stock prices, filings, news and earnings call transcripts for companies in the US, Canada, UK and EU.",
   "docs_url": "https://docs.fiscal.ai/",
   "base_url": "https://api.fiscal.ai",

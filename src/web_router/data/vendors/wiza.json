@@ -2,6 +2,7 @@
   "vendor": "wiza",
   "name": "Wiza",
   "category": "enrichment",
+  "data": "public",
   "summary": "Reveal emails and phones from profile URLs or names, enrich companies, and search prospects.",
   "docs_url": "https://docs.wiza.co/",
   "pricing_url": "https://wiza.co/pricing",

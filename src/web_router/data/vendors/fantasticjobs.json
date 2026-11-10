@@ -2,6 +2,7 @@
   "vendor": "fantasticjobs",
   "name": "Fantastic.jobs",
   "category": "company-data",
+  "data": "public",
   "summary": "A job-postings feed from 58 ATS platforms and LinkedIn, Wellfound and Y Combinator, with AI-derived salary, seniority and remote fields and company details.",
   "docs_url": "https://developer.fantastic.jobs",
   "pricing_url": "https://developer.fantastic.jobs/documentation/credit-usage",

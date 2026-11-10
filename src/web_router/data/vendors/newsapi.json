@@ -2,6 +2,7 @@
   "vendor": "newsapi",
   "name": "NewsAPI.org",
   "category": "search",
+  "data": "public",
   "summary": "Search news articles from worldwide sources and blogs, top headlines by country, category or source, and the list of sources.",
   "docs_url": "https://newsapi.org/docs",
   "pricing_url": "https://newsapi.org/pricing",

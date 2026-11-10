@@ -2,6 +2,7 @@
   "vendor": "financialdatasets",
   "name": "Financial Datasets",
   "category": "finance",
+  "data": "public",
   "summary": "US public-company prices, financial statements, metrics, SEC filings, insider and institutional holdings, and macro series.",
   "docs_url": "https://docs.financialdatasets.ai/introduction",
   "pricing_url": "https://financialdatasets.ai",

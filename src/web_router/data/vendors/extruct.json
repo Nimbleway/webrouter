@@ -2,6 +2,7 @@
   "vendor": "extruct",
   "name": "Extruct AI",
   "category": "company-data",
+  "data": "public",
   "summary": "Company search by natural-language description, lookalikes of a reference company, company profiles, and async Deep Search and Deep Research tasks.",
   "docs_url": "https://docs.extruct.ai/api-reference/introduction",
   "base_url": "https://api.extruct.ai/v1",

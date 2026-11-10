@@ -2,6 +2,7 @@
   "vendor": "supadata",
   "name": "Supadata",
   "category": "scraping",
+  "data": "public",
   "summary": "Transcripts and metadata of YouTube, TikTok, Instagram, X and Facebook videos, YouTube search, AI extraction from video, and web page scraping to Markdown.",
   "docs_url": "https://docs.supadata.ai/api-reference/introduction",
   "pricing_url": "https://supadata.ai/pricing",

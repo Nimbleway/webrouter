@@ -2,6 +2,7 @@
   "vendor": "valyu",
   "name": "Valyu",
   "category": "search",
+  "data": "public",
   "summary": "Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports.",
   "docs_url": "https://docs.valyu.ai/api-reference/overview",
   "pricing_url": "https://docs.valyu.ai/pricing",

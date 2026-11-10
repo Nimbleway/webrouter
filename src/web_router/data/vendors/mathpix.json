@@ -2,6 +2,7 @@
   "vendor": "mathpix",
   "name": "Mathpix",
   "category": "ai",
+  "data": "service",
   "summary": "OCR for math, science and general documents: images to Mathpix Markdown/LaTeX, and PDFs or ebooks to Markdown, DOCX, LaTeX, HTML and more.",
   "docs_url": "https://docs.mathpix.com/",
   "pricing_url": "https://mathpix.com/pricing",

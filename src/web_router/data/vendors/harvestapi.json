@@ -2,6 +2,7 @@
   "vendor": "harvestapi",
   "name": "HarvestAPI",
   "category": "social",
+  "data": "public",
   "summary": "LinkedIn data without a LinkedIn login: profiles, companies, jobs, posts, comments and reactions, searchable by filters.",
   "docs_url": "https://docs.harvestapi.io",
   "base_url": "https://api.harvestapi.io",

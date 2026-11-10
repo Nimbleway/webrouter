@@ -32,6 +32,8 @@ from web_router.constants_vendors import (
     MSG_VENDOR_CATALOG_ENDPOINT_PREFIX,
     MSG_VENDOR_CATALOG_PATH_PARAM,
     MSG_VENDOR_CATALOG_PATH_UNUSED,
+    MSG_VENDOR_CATALOG_PRICE_NOT_PUBLIC,
+    MSG_VENDOR_CATALOG_PRICE_ON_WRITE,
     MSG_VENDOR_CATALOG_SCHEME,
     MSG_VENDOR_CATALOG_SETTING_CHOICES,
     MSG_VENDOR_CATALOG_UNKNOWN_REF,
@@ -48,6 +50,16 @@ ParamLocation = Literal["path", "query", "body", "header"]
 ParamType = Literal["string", "integer", "number", "boolean", "array", "object"]
 EndpointKind = Literal["read", "write"]
 HttpMethod = Literal["GET", "POST", "PUT", "PATCH", "DELETE"]
+VendorData = Literal["public", "account", "service"]
+"""Whose data a vendor's API answers with.
+
+- ``public`` -- the same answer whoever asks (SEO metrics, company records,
+  prices). The only kind a managed service could serve on its own key.
+- ``account`` -- the caller's own account or workspace (Google Ads, Datadog,
+  Slack): only the caller's key reaches it.
+- ``service`` -- not data at all: a model, generation, processing of the
+  caller's own input, messaging.
+"""
 
 _FORMATTER = string.Formatter()
 
@@ -215,6 +227,12 @@ class VendorEndpoint(_Strict):
     docs_url: str
     verified: VendorVerification
     example_response: Any = None
+    price_usd: float | None = Field(
+        default=None,
+        ge=0,
+        description="The fixed price of one call when a managed service serves it on its own key; unset, it is not "
+        "offered that way. Only reads of a vendor whose data is 'public' take one.",
+    )
 
     @model_validator(mode="after")
     def _consistent(self) -> VendorEndpoint:
@@ -250,6 +268,7 @@ class Vendor(_Strict):
     vendor: str = Field(pattern=VENDOR_ID_PATTERN)
     name: str
     category: str
+    data: VendorData = Field(description="Whose data the API answers with; see VendorData.")
     summary: str
     docs_url: str
     pricing_url: str | None = None
@@ -315,9 +334,17 @@ class Vendor(_Strict):
                 raise ValueError(f"endpoint {endpoint.id!r}: credentials {sorted(unknown)} are not the vendor's")
             if endpoint.host is not None and endpoint.host not in self.hosts:
                 raise ValueError(f"endpoint {endpoint.id!r}: host {endpoint.host!r} is not one of the vendor's hosts")
+            if endpoint.price_usd is not None:
+                self._check_price(endpoint)
             if endpoint.id in seen:
                 raise ValueError(MSG_VENDOR_CATALOG_DUPLICATE_ENDPOINT.format(endpoint=endpoint.id))
             seen.add(endpoint.id)
+
+    def _check_price(self, endpoint: VendorEndpoint) -> None:
+        if self.data != "public":
+            raise ValueError(MSG_VENDOR_CATALOG_PRICE_NOT_PUBLIC.format(endpoint=endpoint.id, data=self.data))
+        if endpoint.writes:
+            raise ValueError(MSG_VENDOR_CATALOG_PRICE_ON_WRITE.format(endpoint=endpoint.id))
 
     def base_for(self, host: str | None) -> str:
         """The API base a call goes to: ``base_url``, or the named host."""

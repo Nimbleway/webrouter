@@ -2,6 +2,7 @@
   "vendor": "datagma",
   "name": "Datagma",
   "category": "enrichment",
+  "data": "public",
   "summary": "Find work emails and phones, enrich people and companies, and detect job changes.",
   "docs_url": "https://datagmaapi.readme.io/reference/getting-started-with-your-api",
   "pricing_url": "https://datagma.com/pricing",

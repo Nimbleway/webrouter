@@ -2,6 +2,7 @@
   "vendor": "jina",
   "name": "Jina AI",
   "category": "search",
+  "data": "public",
   "summary": "Jina Reader (any URL to LLM-ready markdown), Jina web search returning read pages, and Jina's embeddings and reranker models.",
   "docs_url": "https://jina.ai/reader",
   "pricing_url": "https://jina.ai/reader#pricing",

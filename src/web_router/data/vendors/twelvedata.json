@@ -2,6 +2,7 @@
   "vendor": "twelvedata",
   "name": "Twelve Data",
   "category": "finance",
+  "data": "public",
   "summary": "Prices, quotes, time series, symbol search and fundamentals for stocks, forex, crypto and ETFs worldwide.",
   "docs_url": "https://twelvedata.com/docs",
   "pricing_url": "https://twelvedata.com/pricing",

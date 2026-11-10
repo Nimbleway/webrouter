@@ -2,6 +2,7 @@
   "vendor": "browserbase",
   "name": "Browserbase",
   "category": "scraping",
+  "data": "public",
   "summary": "Fetch pages, search the web and run hosted browser agents on Browserbase, and inspect its browser sessions.",
   "docs_url": "https://docs.browserbase.com/reference/api/overview.md",
   "pricing_url": "https://www.browserbase.com/pricing",

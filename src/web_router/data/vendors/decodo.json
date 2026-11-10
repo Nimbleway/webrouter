@@ -2,6 +2,7 @@
   "vendor": "decodo",
   "name": "Decodo",
   "category": "scraping",
+  "data": "public",
   "summary": "Decodo's Web Data API: scrape a page or a supported site's template, Google results, crawl a site up to 10,000 pages, or map its URLs.",
   "docs_url": "https://help.decodo.com/docs/web-data-api-introduction.md",
   "pricing_url": "https://help.decodo.com/docs/web-data-api-billing.md",

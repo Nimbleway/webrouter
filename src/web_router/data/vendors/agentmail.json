@@ -2,6 +2,7 @@
   "vendor": "agentmail",
   "name": "AgentMail",
   "category": "messaging",
+  "data": "service",
   "summary": "Email inboxes for AI agents: create inboxes, read messages and threads, send and reply.",
   "docs_url": "https://docs.agentmail.to/",
   "base_url": "https://{host}",

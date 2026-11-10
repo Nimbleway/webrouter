@@ -2,6 +2,7 @@
   "vendor": "datalegion",
   "name": "Data Legion",
   "category": "enrichment",
+  "data": "public",
   "summary": "Person and company enrichment and SQL-style search over 188M+ person and 71M+ company profiles, with optional contact data.",
   "docs_url": "https://www.datalegion.ai/docs/api-reference/overview",
   "pricing_url": "https://www.datalegion.ai/pricing",

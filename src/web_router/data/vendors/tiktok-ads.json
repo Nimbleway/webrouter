@@ -2,6 +2,7 @@
   "vendor": "tiktok-ads",
   "name": "TikTok Ads (Marketing API)",
   "category": "advertising",
+  "data": "account",
   "summary": "TikTok API for Business: ad accounts, campaigns, ad groups, ads and synchronous performance reports for the advertisers that authorized your app.",
   "docs_url": "https://business-api.tiktok.com/portal/docs",
   "base_url": "https://business-api.tiktok.com/open_api/v1.3",

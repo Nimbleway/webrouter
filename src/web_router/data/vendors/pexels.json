@@ -2,6 +2,7 @@
   "vendor": "pexels",
   "name": "Pexels",
   "category": "other",
+  "data": "public",
   "summary": "Free stock photos and videos: search, curated and popular feeds, single items with download URLs per size, and collections.",
   "docs_url": "https://www.pexels.com/api/documentation/",
   "base_url": "https://api.pexels.com/v1",

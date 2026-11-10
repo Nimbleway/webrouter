@@ -2,6 +2,7 @@
   "vendor": "litescrape",
   "name": "Litescrape",
   "category": "search",
+  "data": "public",
   "summary": "Low-cost SERP and web-data API: Google, Bing, DuckDuckGo, maps, app stores, review sites and page fetch.",
   "docs_url": "https://litescrape.com/docs",
   "pricing_url": "https://litescrape.com/pricing",

@@ -2,6 +2,7 @@
   "vendor": "workable",
   "name": "Workable",
   "category": "company-data",
+  "data": "public",
   "summary": "Published jobs, locations and departments from a company's public Workable careers page.",
   "docs_url": "https://help.workable.com/hc/en-us/articles/115012771647",
   "base_url": "https://www.workable.com/api",

@@ -2,6 +2,7 @@
   "vendor": "hlrlookup",
   "name": "HLR Lookup",
   "category": "other",
+  "data": "public",
   "summary": "Live HLR and mobile number portability lookups: whether a phone number is live, its type, and its original and current network.",
   "docs_url": "https://www.hlrlookup.com/knowledge",
   "pricing_url": "https://www.hlrlookup.com/pricing",

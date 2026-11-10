@@ -15,9 +15,11 @@ class VendorSummary(BaseModel):
     vendor: str
     name: str
     category: str
+    data: str = Field(description="Whose data the API answers with: 'public', 'account' or 'service'.")
     summary: str
     docs_url: str
     endpoint_count: int
+    priced_endpoints: int = Field(default=0, description="Endpoints with a fixed price on a managed service's key.")
     configured: bool = Field(description="Every credential its calls require is set.")
     missing: list[str] = Field(
         default_factory=list, description="The variable to set for each required credential that is not, first choice."
