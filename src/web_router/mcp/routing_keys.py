@@ -32,6 +32,7 @@ from web_router.constants_mcp_router import (
     MCP_MSG_KEY_HOME,
     MCP_MSG_KEY_UNSET,
 )
+from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY, REMOTE_ROUTER_NAME
 from web_router.exceptions import ConfigurationError
 
 DECIDER_PRESETS: dict[str, dict[str, tuple[str, str]]] = {
@@ -63,7 +64,7 @@ def hostname(url: str) -> str:
 
 
 def _variable(name: str | None, config: Mapping[str, Any]) -> str | None:
-    """The variable router ``name`` would read its key from: ``api_key_env``, else its preset's.
+    """The variable router ``name`` would read its key from: ``api_key_env``, else its preset's, else ``remote``'s.
 
     ``None`` when ``config`` gives ``api_key`` itself: an explicit key wins, as the deciders' transport reads it.
     An ``api_key`` of ``null`` gives none, so the variable is still read here, never later.
@@ -79,7 +80,9 @@ def _variable(name: str | None, config: Mapping[str, Any]) -> str | None:
             )
         return variable
     row = _preset(name, config)
-    return None if row is None else row[1]
+    if row is not None:
+        return row[1]
+    return ENV_REMOTE_ROUTER_API_KEY if name == REMOTE_ROUTER_NAME else None  # read now, as the legacy path does
 
 
 def captured_key(name: str | None, config: dict[str, Any], env: Mapping[str, str]) -> dict[str, Any]:

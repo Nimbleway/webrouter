@@ -116,3 +116,12 @@ def test_a_member_name_with_spaces_is_keyed_named_and_hosted_as_its_router() -> 
     assert section["router"] == "fallback(llm(api.deepseek.com))"
     assert "https://api.deepseek.com" in section["router_note"]
     assert routing.build()._router.name == section["router"]  # type: ignore[union-attr]
+
+
+def test_a_remote_member_given_no_key_field_captures_its_key_at_startup(monkeypatch: pytest.MonkeyPatch) -> None:
+    remote = {"name": "remote", "url": "https://r.example.com/x"}
+    routing = McpRouting.from_environ(named("fallback", {"routers": [remote]}, WEB_ROUTER_REMOTE_ROUTER_API_KEY=SECRET))
+    assert routing.router_config["routers"][0]["api_key"] == SECRET  # type: ignore[index]
+    unset = McpRouting.from_environ(named("fallback", {"routers": [remote]}))
+    monkeypatch.setenv("WEB_ROUTER_REMOTE_ROUTER_API_KEY", FROM_FILE)
+    assert unset.router_config["routers"][0]["api_key"] == "", "none at startup: none later"  # type: ignore[index]
