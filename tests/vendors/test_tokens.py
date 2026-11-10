@@ -68,7 +68,31 @@ def test_a_non_finite_lifetime_is_an_unreadable_answer(expires_in: str) -> None:
         _twice(_TokenEndpoint(_body(expires_in)))
 
 
-def test_a_sync_and_an_async_call_on_a_cold_cache_make_one_exchange() -> None:
+def test_a_sync_call_on_the_loop_thread_does_not_hang_behind_an_async_one() -> None:
+    """An async call holds the token across its await; a sync call made on the same thread must still finish."""
+    cache, request = TokenCache(), token_request("oauthco", _OAUTH, CREDENTIALS["oauthco"])
+    got: list[str] = []
+
+    async def slow(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(0.2)
+        return httpx.Response(200, content=_body("3600"))
+
+    async def both() -> None:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(slow)) as aclient:
+            task = asyncio.create_task(cache.aget(request, aclient))
+            await asyncio.sleep(0.05)
+            with httpx.Client(transport=httpx.MockTransport(_TokenEndpoint(_body("3600")))) as client:
+                got.append(cache.get(request, client))
+            got.append(await task)
+
+    runner = threading.Thread(target=lambda: asyncio.run(both()), daemon=True)
+    runner.start()
+    runner.join(timeout=2)
+    assert not runner.is_alive(), "the sync call hung the event loop"
+    assert got == ["t", "t"]
+
+
+def test_a_sync_and_an_async_call_on_different_threads_both_finish() -> None:
     endpoint = _TokenEndpoint(_body("3600"), delay=0.2)
     cache, request = TokenCache(), token_request("oauthco", _OAUTH, CREDENTIALS["oauthco"])
     got: list[str] = []
@@ -81,12 +105,14 @@ def test_a_sync_and_an_async_call_on_a_cold_cache_make_one_exchange() -> None:
         async with httpx.AsyncClient(transport=httpx.MockTransport(endpoint)) as client:
             got.append(await cache.aget(request, client))
 
-    thread = threading.Thread(target=sync_side)
-    thread.start()
+    threads = [threading.Thread(target=sync_side), threading.Thread(target=sync_side)]
+    for thread in threads:
+        thread.start()
     asyncio.run(async_side())
-    thread.join()
-    assert got == ["t", "t"]
-    assert endpoint.calls == 1
+    for thread in threads:
+        thread.join()
+    assert got == ["t", "t", "t"]
+    assert endpoint.calls <= 2  # the two sync calls share one exchange; the async one may make its own
 
 
 @pytest.mark.parametrize(
