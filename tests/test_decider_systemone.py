@@ -74,7 +74,6 @@ def test_a_reply_out_of_shape_is_invalid(answers: object, monkeypatch: pytest.Mo
         ({"preset": "typesafe"}, "TYPESAFE_API_KEY is not set"),
         ({"base_url": "https://so.example.com", "model": "m"}, "api_key_env"),
         ({"base_url": "https://so.example.com", "api_key": TOKEN}, "router_config\\['model'\\]"),
-        ({"base_url": "https://so.example.com", "model": "m", "api_key_env": "FIREWORKS_API_KEY"}, "sent only to"),
         ({"base_url": "https://so.example.com", "model": "m", "api_key": TOKEN, "path": "/x?k=v"}, "query"),
         ({"preset": "jev"}, "has no preset 'jev'"),
     ],

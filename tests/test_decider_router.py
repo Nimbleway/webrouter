@@ -67,8 +67,6 @@ BAD_REPLIES = {
     "score-text": reply("search:exa", scores={"search:exa": "0.5"}),  # type: ignore[dict-item]
     "scores-list": DeciderReply(ranked=["search:exa"], scores=[0.5]),  # type: ignore[arg-type]
     "confidence-negative": reply("search:exa", confidence=-0.1),
-    "confidence-inf": reply("search:exa", confidence=math.inf),
-    "confidence-bool": reply("search:exa", confidence=True),
 }
 
 

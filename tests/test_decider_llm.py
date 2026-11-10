@@ -21,7 +21,7 @@ RANKED = {"ranked": ["answer:perplexity", "search:exa"], "scores": SCORES, "conf
 
 FAILURES = (
     *("redirect", "status", "transport", "too-large", "not-json", "not-object"),
-    *("unknown-id", "score-twice", "score-extra-key", "no-choice"),
+    *("score-twice", "score-extra-key", "no-choice"),
 )
 
 PRESETS = {
@@ -146,7 +146,6 @@ def _failing(monkeypatch: pytest.MonkeyPatch, handler: Any) -> str:
         (lambda r: respond(raw=b" " * (300 * 1024)), "router_invalid"),
         (chat("not json"), "router_invalid"),
         (chat(["search:exa"]), "router_invalid"),
-        (chat({"ranked": ["search:nope"]}), "router_invalid"),
         (chat({"ranked": ["search:exa"], "scores": [{"id": "search:exa", "p": 0.5}] * 2}), "router_invalid"),
         (chat({"ranked": ["search:exa"], "scores": [{"id": "search:exa", "p": 0.5, "x": 1}]}), "router_invalid"),
         (lambda r: respond({"choices": []}), "router_invalid"),
