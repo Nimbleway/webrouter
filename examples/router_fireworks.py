@@ -16,6 +16,10 @@ static order.
 
 **This router sends each prompt to Fireworks.**
 
+Verified live on 2026-11-10: Rune answered the documented shape, a `choice`
+with `probabilities` summing to 1 and a `confidence`, in about half a second
+for three candidates.
+
 The key is `FIREWORKS_API_KEY`; with none set this prints what to set and
 exits. The model is pinned, so a new model behind another name does not change
 the routing until you change the pin. Each plan bills one System One call, on an

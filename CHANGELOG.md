@@ -8,7 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
-- `examples/router_fireworks.py` (experimental): an example router on Fireworks System One and its public Rune model. It ranks the candidates by the probability Rune gives each, and below a confidence of 0.2 it decides nothing, so the static order runs. It refuses a reply whose probabilities fall outside 0 to 1 or do not sum to 1. It is tested offline; a live call is not yet verified.
+- `examples/router_fireworks.py` (experimental): an example router on Fireworks System One and its public Rune model. It ranks the candidates by the probability Rune gives each, and below a confidence of 0.2 it decides nothing, so the static order runs. It refuses a reply whose probabilities fall outside 0 to 1 or do not sum to 1. It is tested offline and was verified live on 2026-11-10.
 
 ### Fixed
 
