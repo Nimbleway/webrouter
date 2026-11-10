@@ -58,6 +58,13 @@ def placeholders(template: str) -> set[str]:
     return {field for _, field, _, _ in _FORMATTER.parse(template) if field}
 
 
+def _one_line(value: str | None) -> str | None:
+    """Refuse a line break: these fields are printed into ``VENDORS.md`` cells and ``.env.example`` comments."""
+    if value is not None and ("\n" in value or "\r" in value):
+        raise ValueError(f"must be one line: {value!r}")
+    return value
+
+
 class _Strict(BaseModel):
     # A key the format does not define is a typo in a catalog file, never something to ignore.
     model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
@@ -79,6 +86,7 @@ class VendorSetting(_Strict):
     description: str = ""
 
     _check_env = field_validator("env")(_env_names)
+    _check_one_line = field_validator("default", "description")(_one_line)
 
 
 class VendorCredential(_Strict):
@@ -89,6 +97,7 @@ class VendorCredential(_Strict):
     description: str = ""
 
     _check_env = field_validator("env")(_env_names)
+    _check_one_line = field_validator("description")(_one_line)
 
 
 class VendorOAuth2(_Strict):
@@ -271,6 +280,8 @@ class Vendor(_Strict):
     sources: list[str] = Field(min_length=1, description="The vendor pages this file was written from.")
     curated: str = Field(description="ISO date the file was last checked against the vendor's docs.")
     endpoints: list[VendorEndpoint] = Field(default_factory=list)
+
+    _check_one_line = field_validator("name", "summary", "docs_url", "pricing_url")(_one_line)
 
     @field_validator("category")
     @classmethod
