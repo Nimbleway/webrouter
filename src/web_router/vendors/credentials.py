@@ -34,7 +34,7 @@ from web_router.constants_vendors import (
     VENDOR_TOKEN_REFRESH_MARGIN,
 )
 from web_router.exceptions import ProviderError
-from web_router.vendors.schema import Vendor, VendorOAuth2
+from web_router.vendors.schema import Vendor, VendorEndpoint, VendorOAuth2
 from web_router.vendors.types import VendorSummary
 
 if TYPE_CHECKING:
@@ -100,12 +100,20 @@ def credential_source(
     return vendor_credentials
 
 
-def missing_credentials(vendor: Vendor, source: CredentialSource) -> list[str]:
-    """The first-choice variable of each credential ``vendor`` requires that ``source`` does not hold."""
+def missing_credentials(vendor: Vendor, source: CredentialSource, endpoint: VendorEndpoint | None = None) -> list[str]:
+    """The first-choice variable of each credential a call needs that ``source`` does not hold.
+
+    What a call needs is the caller's rule: the endpoint's own credential list when it has one, else every
+    credential ``vendor`` requires.
+    """
+    if endpoint is not None and endpoint.credentials is not None:
+        needed = set(endpoint.credentials)
+    else:
+        needed = {name for name, spec in vendor.auth.credentials.items() if spec.required}
     return [
         spec.env[0]
         for name, spec in vendor.auth.credentials.items()
-        if spec.required and not source.get(vendor.vendor, name, spec.env)
+        if name in needed and not source.get(vendor.vendor, name, spec.env)
     ]
 
 

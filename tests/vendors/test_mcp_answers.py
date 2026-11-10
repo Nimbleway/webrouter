@@ -9,7 +9,7 @@ import pytest
 
 from tests.vendors.conftest import Recorder
 from web_router import AsyncWebRouter
-from web_router.constants_vendors import MCP_TOOL_CALL_VENDOR
+from web_router.constants_vendors import MCP_TOOL_CALL_VENDOR, MCP_TOOL_VENDOR_ENDPOINT, MCP_TOOL_VENDORS
 from web_router.mcp.tools import WebRouterTools
 from web_router.vendors.caller import VendorCaller
 
@@ -36,3 +36,25 @@ async def test_the_raw_handle_holds_what_the_answer_shows(body: dict[str, Any]) 
     assert raw == shown["data"]
     if body is _ECHOED:
         assert "sess-abc123" not in str(raw) and "tok-xyz" not in str(raw)
+
+
+@pytest.mark.parametrize(("credentials", "missing"), [({"api_key": "k"}, []), ({}, ["DD_API_KEY"])])
+async def test_an_endpoint_is_usable_with_only_the_keys_it_lists(credentials: dict[str, str], missing: list[str]):
+    tools = await _tools(Recorder(), {"datadog": credentials})
+    try:
+        described = await tools.call(MCP_TOOL_VENDOR_ENDPOINT, {"endpoint": "datadog.auth.validate"})
+        found = await tools.call(MCP_TOOL_VENDORS, {"query": "validate api key", "vendor": "datadog"})
+    finally:
+        await tools.aclose()
+    assert described["set_to_enable"] == missing
+    row = next(row for row in found["endpoints"] if row["endpoint"] == "datadog.auth.validate")
+    assert row["configured"] is (not missing)
+
+
+async def test_an_endpoint_without_its_own_list_still_needs_every_key() -> None:
+    tools = await _tools(Recorder(), {"datadog": {"api_key": "k"}})
+    try:
+        described = await tools.call(MCP_TOOL_VENDOR_ENDPOINT, {"endpoint": "datadog.monitors.list"})
+    finally:
+        await tools.aclose()
+    assert described["set_to_enable"] == ["DD_APPLICATION_KEY"]

@@ -73,22 +73,23 @@ def shape_vendor_list(rows: list[VendorSummary], *, budget: int) -> dict[str, An
 def shape_endpoint_list(
     endpoints: list[VendorEndpoint], catalog: VendorCatalog, credentials: CredentialSource, *, budget: int
 ) -> dict[str, Any]:
-    """Matching endpoints, best first: the id to call, what it does, and whether its vendor is usable here."""
-    ready: dict[str, list[str]] = {}
+    """Matching endpoints, best first: the id to call, what it does, and whether it is usable here."""
+    missing: dict[tuple[str, tuple[str, ...] | None], list[str]] = {}
     rows = []
     for endpoint in endpoints:
         vendor = catalog.vendor(endpoint.vendor)
-        if vendor.vendor not in ready:
-            ready[vendor.vendor] = missing_credentials(vendor, credentials)
+        key = (vendor.vendor, tuple(endpoint.credentials) if endpoint.credentials is not None else None)
+        if key not in missing:
+            missing[key] = missing_credentials(vendor, credentials, endpoint)
         row: dict[str, Any] = {
             "endpoint": endpoint.id,
             "name": endpoint.name,
             "kind": endpoint.kind,
             "vendor": vendor.name,
-            "configured": not ready[vendor.vendor],
+            "configured": not missing[key],
         }
-        if ready[vendor.vendor]:
-            row["set_to_enable"] = ready[vendor.vendor]
+        if missing[key]:
+            row["set_to_enable"] = missing[key]
         rows.append(row)
     payload = {"endpoint_count": len(rows), "endpoints": rows}
     hint = "Pass a narrower query, a vendor, or a smaller limit."
@@ -135,7 +136,7 @@ def shape_endpoint(
             name: {"env": spec.env, "default": spec.default, "description": spec.description}
             for name, spec in vendor.settings.items()
         },
-        "set_to_enable": missing_credentials(vendor, credentials),
+        "set_to_enable": missing_credentials(vendor, credentials, endpoint),
     }
     if endpoint.example_response is not None:
         payload["example_response"] = endpoint.example_response
