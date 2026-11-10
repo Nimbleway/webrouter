@@ -419,7 +419,7 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
             query=request.query,
             answer=content if prose else None,
             structured=None if prose else content,
-            citations=_citations(output.get("trust") or {}),
+            citations=_citations(output.get("trust") or {}, output.get("sources") or []),
             # `outcome` keeps its default: nothing Nimble returns reports a run
             # that stopped short of the work it was given.
             request_id=run.get("id"),
@@ -458,13 +458,13 @@ def _source_group(domains: list[str] | None) -> list[dict[str, Any]] | None:
     return None if domains is None else [{"title": NIMBLE_RESEARCH_SOURCE_GROUP, "domains": domains}]
 
 
-def _citations(trust: dict[str, Any]) -> list[Citation]:
+def _citations(trust: dict[str, Any], sources: list[dict[str, Any]]) -> list[Citation]:
     """The claims' citations, then every source consulted that none of them cited.
 
     A claim says what its citations back -- a path into the structured answer,
     or the callout marker that appears in the prose -- which is what
-    :attr:`Citation.field` carries. The sources list is the run's bibliography
-    and attributes nothing, so what it adds is cited without a field.
+    :attr:`Citation.field` carries. The run's bibliography -- ``trust.sources``, or ``output.sources`` for a run
+    without trust (``trust: null``) -- attributes nothing, so what it adds is cited without a field.
     """
     citations: list[Citation] = []
     seen: set[tuple[str, str | None]] = set()
@@ -490,7 +490,7 @@ def _citations(trust: dict[str, Any]) -> list[Citation]:
             )
 
     cited_urls = {citation.url for citation in citations}
-    for source in trust.get("sources") or []:
+    for source in [*(trust.get("sources") or []), *sources]:
         url = source.get("url") or ""
         if url in cited_urls:
             continue

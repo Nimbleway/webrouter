@@ -14,6 +14,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
+- `research(provider="nimble")` now cites the run's `output.sources`, so a run without trust (`trust_mode="no_trust"`, which answers `trust: null`) is cited from them instead of returning no citations. A run with trust also gains, without a field, any of them its trust sources leave out.
+
 ## [0.11.0] - 2026-11-09
 
 ### Changed
