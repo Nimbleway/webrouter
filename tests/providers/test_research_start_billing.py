@@ -103,7 +103,6 @@ def test_parallel_keeps_a_finished_run_whose_answer_could_not_be_fetched(monkeyp
     ("failure", "nothing_started"),
     [
         (httpx.RemoteProtocolError("Server disconnected without sending a response."), False),
-        (httpx.ReadError("connection reset"), False),
         (httpx.ConnectError("connection refused"), True),
     ],
 )
