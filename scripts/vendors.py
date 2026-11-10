@@ -17,7 +17,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from web_router.constants_vendors import VENDOR_CATEGORIES
-from web_router.vendors.catalog import VendorCatalog, get_catalog
+from web_router.vendors.catalog import VendorCatalog, builtin_catalog
 from web_router.vendors.schema import Vendor
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -121,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="exit 1 if VENDORS.md or .env.example is stale")
     args = parser.parse_args(argv)
-    catalog = get_catalog()
+    catalog = builtin_catalog()  # never a local extra folder: these files are committed
     stale = []
     for path, regenerate in ((VENDORS_MD, regenerate_markdown), (ENV_EXAMPLE, regenerate_env)):
         current = path.read_text(encoding="utf-8")
