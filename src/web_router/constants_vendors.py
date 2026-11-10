@@ -123,6 +123,8 @@ VENDOR_CATEGORIES: Final = (
 MSG_VENDOR_OAUTH_LITERAL: Final = (
     "oauth2.{field} is sent as written and cannot hold a placeholder: {value!r}. Use the literal value."
 )
+MCP_MSG_VENDOR_ARG_TYPE: Final = "Tool {tool!r} takes {name!r} as {kind}, not {value!r}."
+
 MSG_VENDOR_UNKNOWN: Final = "Unknown vendor {vendor!r}. Known vendors: {known}"
 MSG_VENDOR_ENDPOINT_UNKNOWN: Final = "Unknown vendor endpoint {endpoint!r}.{hint}"
 MSG_VENDOR_ENDPOINT_HINT: Final = " {vendor!r} has: {known}"

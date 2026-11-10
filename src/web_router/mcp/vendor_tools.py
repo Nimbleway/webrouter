@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_MSG_MISSING_ARGUMENT
 from web_router.constants_vendors import (
+    MCP_MSG_VENDOR_ARG_TYPE,
     MCP_MSG_VENDOR_CALL_ARGS,
     MCP_TOOL_CALL_VENDOR,
     MCP_TOOL_VENDOR_ENDPOINT,
@@ -37,8 +38,26 @@ if TYPE_CHECKING:
     from web_router.mcp.tools import WebRouterTools
 
 
+_ARG_KINDS: dict[str, tuple[str, Callable[[Any], bool]]] = {
+    "query": ("a string", lambda value: isinstance(value, str)),
+    "vendor": ("a string", lambda value: isinstance(value, str)),
+    "category": ("a string", lambda value: isinstance(value, str)),
+    "limit": ("a whole number", lambda value: isinstance(value, int) and not isinstance(value, bool)),
+    "configured": ("true or false", lambda value: isinstance(value, bool)),
+}
+
+
+def _check_types(arguments: Mapping[str, Any]) -> None:
+    """A wrong type is the model's to fix, so it comes back as a readable tool error, not a crash."""
+    for name, (kind, ok) in _ARG_KINDS.items():
+        value = arguments.get(name)
+        if value is not None and not ok(value):
+            raise ValueError(MCP_MSG_VENDOR_ARG_TYPE.format(tool=MCP_TOOL_VENDORS, name=name, kind=kind, value=value))
+
+
 async def vendors_tool(router: AsyncWebRouter, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """Endpoints matching a query or one vendor's, best first; without either, the vendors themselves."""
+    _check_types(arguments)
     query, vendor = arguments.get("query"), arguments.get("vendor")
     if query or vendor:
         endpoints = router.find_vendor_endpoints(

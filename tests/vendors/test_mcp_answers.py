@@ -67,3 +67,16 @@ async def test_an_endpoint_lists_the_values_a_setting_accepts() -> None:
     finally:
         await tools.aclose()
     assert "datadoghq.eu" in described["settings"]["site"]["choices"]
+
+
+@pytest.mark.parametrize(
+    "arguments", [{"query": ["google"]}, {"query": "google ads", "limit": "2"}, {"configured": "yes"}]
+)
+async def test_a_wrong_argument_type_is_a_readable_tool_error(arguments: dict[str, Any]) -> None:
+    tools = await _tools(Recorder(), _DATADOG)
+    try:
+        with pytest.raises(ValueError, match="takes"):
+            await tools.call(MCP_TOOL_VENDORS, arguments)
+        assert (await tools.call(MCP_TOOL_VENDORS, {"query": "google ads", "limit": 2}))["endpoints"]
+    finally:
+        await tools.aclose()
