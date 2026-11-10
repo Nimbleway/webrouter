@@ -8,7 +8,10 @@ vendors happen to ship.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
+
+import web_router
 
 _COMMON: dict[str, Any] = {
     "docs_url": "https://docs.example.com",
@@ -182,3 +185,8 @@ CREDENTIALS = {
         "developer_token": "dev-token-secret",
     },
 }
+
+
+def shipped_dir() -> Path:
+    """Where the package's own vendor files are."""
+    return Path(web_router.__file__).parent / "data" / "vendors"
