@@ -145,6 +145,16 @@ def test_an_inner_fallback_that_ran_out_of_time_is_recorded_as_a_timeout() -> No
     ]
 
 
+def test_a_nested_decision_marked_timed_out_that_decides_something_is_taken() -> None:
+    def inner(req: Any) -> CompositeDecision:
+        return CompositeDecision(tools=["search"], reason="inner", timed_out=True)
+
+    with fallback(inner, answers("next")) as wr:
+        plan = wr.plan("who won the 2022 world cup")
+    assert plan.decision.reason == "inner"
+    assert [(m.name, m.outcome) for m in plan.decision.members or []] == [("custom", "ok")]
+
+
 def ok(name: str, counted: bool) -> DecisionMember:
     return DecisionMember(name=name, outcome="ok", ms=1.0, counted=counted)
 

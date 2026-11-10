@@ -89,7 +89,8 @@ class _Asking:
         """``member``'s decision when it decides something, else ``None``; either way recorded."""
         decision = outcome.decision
         empty = decision is None or decides_nothing(decision)
-        nested = isinstance(decision, CompositeDecision) and decision.timed_out  # an inner fallback out of time
+        # An inner fallback out of time; one that still decides something is taken as its answer.
+        nested = empty and isinstance(decision, CompositeDecision) and decision.timed_out
         settled = ROUTER_TIMEOUT if nested else ROUTER_EMPTY if empty else ROUTER_OK
         code = cast("MemberOutcome", outcome.failure or settled)
         counted = code == ROUTER_OK
