@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-276 vendors, 2289 endpoints.
+282 vendors, 2328 endpoints.
 
 ### advertising
 
@@ -365,6 +365,9 @@ The tables below are generated from `src/web_router/data/vendors/` by
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [API Ninjas](https://api-ninjas.com/api) `apininjas` | One key for many small reference-data APIs: WHOIS and DNS, IP geolocation, sanctions screening, earnings call transcripts, geocoding and more. | 8 read | key in header | `APININJAS_API_KEY` | docs 2026-11-09 |
+| [CarsXE](https://docs.carsxe.com/docs) `carsxe` | Vehicle data: VIN decoding, license plate lookup in 50+ countries, market value, history, recalls, lien and theft checks, and year/make/model search. | 9 read | key in query | `CARSXE_API_KEY` | docs 2026-11-09 |
+| [Foursquare Places API](https://docs.foursquare.com/fsq-developers-places/reference/places-api-overview) `foursquare` | Search 100M+ points of interest by name, category or location, and read a place's details, tips and photos. | 6 read | key in header | `FOURSQUARE_API_KEY` | docs 2026-11-09 |
 | [Google Calendar](https://developers.google.com/workspace/calendar/api/v3/reference) `google-calendar` | Read a Google user's calendars, events and free/busy times, and create events, through the Google Calendar API v3. | 4 read, 1 write | OAuth refresh token | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `GOOGLE_CALENDAR_REFRESH_TOKEN` | docs 2026-11-09 |
 | [Google Maps Platform](https://developers.google.com/maps/documentation) `google-maps` | Places search and details (Places API New), forward and reverse geocoding, and Street View coverage lookups. | 6 read | key in query | `GOOGLE_MAPS_API_KEY` | docs 2026-11-09 |
 | [IPinfo](https://ipinfo.io/developers/ipinfo-api) `ipinfo` | IP geolocation and ASN data: free country-level Lite lookups, and city-level geolocation with hosting, VPN/anonymous, mobile and anycast flags on paid plans. | 3 read | key in header | `IPINFO_TOKEN` | docs 2026-11-09 |
@@ -374,4 +377,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [OFAC-API (sanctions screening)](https://docs.ofac-api.com/) `ofacapi` | Fuzzy screening of people, companies, vessels and aircraft against OFAC SDN and 20+ other sanctions, PEP and watch lists, single, batch or as async bulk jobs. | 5 read | key in header | `OFAC_API_KEY` | docs 2026-11-09 |
 | [Service Victoria Servo Saver](https://service.vic.gov.au/find-services/transport-and-driving/servo-saver/help-centre/servo-saver-public-api) `servosaver` | Victoria (Australia) government Fair Fuel open data: every registered service station's fuel prices in cents per litre, plus station, brand and fuel-type reference lists. | 4 read | key in header | `SERVOSAVER_API_KEY` | docs 2026-11-09 |
 | [USGS Water Data](https://api.waterdata.usgs.gov/docs/) `usgswater` | US stream gauge readings (discharge, gage height, water temperature and more): latest and historical instantaneous values, daily statistics and monitoring-location metadata from the USGS Water Data OGC APIs. | 5 read | key in header | `USGS_API_KEY` | docs 2026-11-09 |
+| [Vaquill](https://www.vaquill.ai/docs/api-guide/overview) `vaquill` | US statutes, regulations, constitutions and court rules (federal and every state): search, citation resolution, section metadata, full text and cross-state comparison. | 6 read | key in header | `VAQUILL_API_KEY` | docs 2026-11-09 |
+| [WA FuelWatch](https://www.fuelwatch.wa.gov.au/tools/rss) `wafuelwatch` | Western Australian retail fuel prices by suburb, region, brand and fuel type, today's and tomorrow's, from the WA Government's FuelWatch feed. | 1 read | none | none | docs 2026-11-09 |
+| [WeatherAPI.com](https://www.weatherapi.com/docs/) `weatherapi` | Worldwide current weather, forecasts up to 14 days, historical weather back to 2010, long-range future weather, alerts, marine and astronomy data, plus location search. | 9 read | key in query | `WEATHERAPI_API_KEY` | docs 2026-11-09 |
 <!-- /vendors -->

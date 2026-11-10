@@ -1,0 +1,340 @@
+{
+  "vendor": "apininjas",
+  "name": "API Ninjas",
+  "category": "other",
+  "summary": "One key for many small reference-data APIs: WHOIS and DNS, IP geolocation, sanctions screening, earnings call transcripts, geocoding and more.",
+  "docs_url": "https://api-ninjas.com/api",
+  "pricing_url": "https://api-ninjas.com/pricing",
+  "base_url": "https://api.api-ninjas.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "APININJAS_API_KEY"
+        ],
+        "description": "An API Ninjas key (api-ninjas.com > My Account). One key works for every API; sent in the X-Api-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The free tier is non-commercial only and hides many fields and options; each API's page lists what needs a premium plan (non-.com domains for WHOIS and DNS, most IP lookup fields, sanctions filters beyond name).",
+    "This entry names a handful of the ~150 APIs; any other one is GET https://api.api-ninjas.com/v1/<name> with the parameters on its api-ninjas.com/api/<name> page."
+  ],
+  "sources": [
+    "https://api-ninjas.com/api",
+    "https://api-ninjas.com/api/whois",
+    "https://api-ninjas.com/api/dnslookup",
+    "https://api-ninjas.com/api/iplookup",
+    "https://api-ninjas.com/api/sanctionsscreening",
+    "https://api-ninjas.com/api/earningscalltranscript",
+    "https://api-ninjas.com/api/geocoding"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "apininjas.whois",
+      "name": "Look up a domain's WHOIS record",
+      "summary": "Registrar, creation and expiry dates, name servers and (premium) registrant details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/whois",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain to check.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "TLDs other than .com, and the registrant_* and privacy fields, need a premium plan."
+      ],
+      "job": "domain.whois",
+      "docs_url": "https://api-ninjas.com/api/whois",
+      "verified": {
+        "docs": "https://api-ninjas.com/api/whois"
+      }
+    },
+    {
+      "id": "apininjas.dns",
+      "name": "Look up a domain's DNS records",
+      "summary": "DNS records for a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/dnslookup",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain to look up.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "Free tier returns NS, PTR, SRV, SOA and CAA only; A, AAAA, CNAME, MX and TXT, and non-.com domains, need a premium plan."
+      ],
+      "job": "domain.dns",
+      "docs_url": "https://api-ninjas.com/api/dnslookup",
+      "verified": {
+        "docs": "https://api-ninjas.com/api/dnslookup"
+      }
+    },
+    {
+      "id": "apininjas.ip.lookup",
+      "name": "Geolocate an IP address",
+      "summary": "Country and region for an IPv4 or IPv6 address; premium adds city, ISP, ASN and VPN/Tor/hosting flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/iplookup",
+      "params": {
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "IPv4 or IPv6 address."
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://api-ninjas.com/api/iplookup",
+      "verified": {
+        "docs": "https://api-ninjas.com/api/iplookup"
+      }
+    },
+    {
+      "id": "apininjas.sanctions.screen",
+      "name": "Screen a name against sanctions lists",
+      "summary": "Possible matches on OFAC (free) and EU, UK, UN and AU lists (paid), with a confidence score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/sanctionsscreening",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full name; word order does not matter.",
+          "example": "Vladimir Putin"
+        },
+        "entity_type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "individual",
+            "entity",
+            "vessel",
+            "aircraft"
+          ],
+          "description": "Premium. vessel and aircraft need Business tier."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Premium. ISO 3166-1 alpha-2 nationality or jurisdiction."
+        },
+        "dob": {
+          "in": "query",
+          "type": "string",
+          "description": "Premium. Date of birth YYYY-MM-DD, matched within a year."
+        },
+        "nationality": {
+          "in": "query",
+          "type": "string",
+          "description": "Premium. ISO 3166-1 alpha-2 nationality."
+        },
+        "sources": {
+          "in": "query",
+          "type": "string",
+          "description": "Premium. Comma-separated subset of OFAC,EU,UK,UN,AU."
+        },
+        "min_score": {
+          "in": "query",
+          "type": "integer",
+          "description": "Premium. Minimum confidence 0-100, default 70."
+        }
+      },
+      "notes": [
+        "Free tier: OFAC SDN list, individuals only, name only. Developer adds EU and entities; Business adds UK, UN, AU, vessels and aircraft."
+      ],
+      "job": "sanctions.screen",
+      "docs_url": "https://api-ninjas.com/api/sanctionsscreening",
+      "verified": {
+        "docs": "https://api-ninjas.com/api/sanctionsscreening"
+      }
+    },
+    {
+      "id": "apininjas.earnings.transcript",
+      "name": "Get an earnings call transcript",
+      "summary": "A company's earnings call transcript for a quarter, or the latest one.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/earningstranscript",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker (one of ticker or cik is required).",
+          "example": "AAPL"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK, instead of ticker."
+        },
+        "year": {
+          "in": "query",
+          "type": "integer",
+          "description": "2000 to the current year; needs quarter."
+        },
+        "quarter": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "description": "Needs year. Latest transcript when both are unset."
+        },
+        "qa_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to return only the analyst Q&A."
+        }
+      },
+      "notes": [
+        "Premium only. Developer tier covers the last 5 years; the full archive from 2005 and the summary, guidance and sentiment fields need Business or above."
+      ],
+      "job": "company.earnings.transcript",
+      "docs_url": "https://api-ninjas.com/api/earningscalltranscript",
+      "verified": {
+        "docs": "https://api-ninjas.com/api/earningscalltranscript"
+      }
+    },
+    {
+      "id": "apininjas.earnings.transcripts_search",
+      "name": "List available earnings call transcripts",
+      "summary": "Transcripts by company or call date, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/earningstranscriptsearch",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker."
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact call date YYYY-MM-DD; not with start_date/end_date."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Inclusive range start YYYY-MM-DD, with end_date; at most 30 days without ticker or cik."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Inclusive range end YYYY-MM-DD."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default 20, max 200."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        }
+      },
+      "notes": [
+        "Premium only. Needs at least one of ticker, cik, date or start_date/end_date."
+      ],
+      "job": "company.earnings.transcript",
+      "docs_url": "https://api-ninjas.com/api/earningscalltranscript",
+      "verified": {
+        "docs": "https://api-ninjas.com/api/earningscalltranscript"
+      }
+    },
+    {
+      "id": "apininjas.geocode",
+      "name": "Geocode a city",
+      "summary": "Coordinates for a city name, optionally narrowed by country, US state or ZIP code.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/geocoding",
+      "params": {
+        "city": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City name."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "US state (US cities only)."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country name or 2- or 3-letter ISO code."
+        },
+        "zipcode": {
+          "in": "query",
+          "type": "string",
+          "description": "5-digit ZIP code (US only)."
+        }
+      },
+      "job": "geo.geocode",
+      "docs_url": "https://api-ninjas.com/api/geocoding",
+      "verified": {
+        "docs": "https://api-ninjas.com/api/geocoding"
+      }
+    },
+    {
+      "id": "apininjas.reverse_geocode",
+      "name": "Reverse-geocode a coordinate",
+      "summary": "The place names at a latitude and longitude.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/reversegeocoding",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude."
+        }
+      },
+      "job": "geo.reverse_geocode",
+      "docs_url": "https://api-ninjas.com/api/geocoding",
+      "verified": {
+        "docs": "https://api-ninjas.com/api/geocoding"
+      }
+    }
+  ]
+}

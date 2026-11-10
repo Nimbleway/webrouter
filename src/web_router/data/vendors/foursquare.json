@@ -1,0 +1,366 @@
+{
+  "vendor": "foursquare",
+  "name": "Foursquare Places API",
+  "category": "other",
+  "summary": "Search 100M+ points of interest by name, category or location, and read a place's details, tips and photos.",
+  "docs_url": "https://docs.foursquare.com/fsq-developers-places/reference/places-api-overview",
+  "pricing_url": "https://foursquare.com/pricing/",
+  "base_url": "https://places-api.foursquare.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FOURSQUARE_API_KEY"
+        ],
+        "description": "a Foursquare Service API key (Developer Console > your project > Service API Keys); sent as a Bearer token"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "X-Places-Api-Version": "2025-06-17",
+    "Accept": "application/json"
+  },
+  "notes": [
+    "This is the places-api.foursquare.com API: service keys and a dated X-Places-Api-Version header instead of the old api.foursquare.com/v3 paths. fsq_id is now fsq_place_id.",
+    "With no 'fields', calls return all Pro fields; other fields must be named in 'fields', comma-separated (see the response fields page).",
+    "Paging: when more results exist, the response's 'link' header carries the next-page URL with a cursor. 'limit' sets results per page.",
+    "Rate limit: 50 queries per second across all endpoints on Pay as You Go and Sandbox, 100 on Enterprise."
+  ],
+  "sources": [
+    "https://docs.foursquare.com/fsq-developers-places/reference/authentication",
+    "https://docs.foursquare.com/fsq-developers-places/reference/rate-limits",
+    "https://docs.foursquare.com/fsq-developers-places/reference/pagination",
+    "https://docs.foursquare.com/fsq-developers-places/reference/place-search",
+    "https://docs.foursquare.com/fsq-developers-places/reference/place-details",
+    "https://docs.foursquare.com/fsq-developers-places/reference/place-tips",
+    "https://docs.foursquare.com/fsq-developers-places/reference/place-photos",
+    "https://docs.foursquare.com/fsq-developers-places/reference/autocomplete",
+    "https://docs.foursquare.com/fsq-developers-places/reference/place-match"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "foursquare.places.search",
+      "name": "Search places",
+      "summary": "Places matching a query, categories or chains around a point, in a box or near a named locality.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/places/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "description": "Text matched against name, category, phone, taste and tips.",
+          "example": "coffee"
+        },
+        "ll": {
+          "in": "query",
+          "description": "Centre point as 'latitude,longitude'.",
+          "example": "41.8781,-87.6298"
+        },
+        "radius": {
+          "in": "query",
+          "type": "integer",
+          "description": "Metres from ll, 0 to 100000; default 22000. Only with ll (or IP-biased location)."
+        },
+        "near": {
+          "in": "query",
+          "description": "A locality name, e.g. 'Chicago, IL'; errors if it cannot be geocoded."
+        },
+        "ne": {
+          "in": "query",
+          "description": "North-east corner of a box as 'lat,lng'; use with sw."
+        },
+        "sw": {
+          "in": "query",
+          "description": "South-west corner of a box as 'lat,lng'; use with ne."
+        },
+        "fsq_category_ids": {
+          "in": "query",
+          "description": "Comma-separated Foursquare category ids."
+        },
+        "fsq_chain_ids": {
+          "in": "query",
+          "description": "Comma-separated chain ids."
+        },
+        "exclude_fsq_chain_ids": {
+          "in": "query",
+          "description": "Comma-separated chain ids to leave out; not with exclude_all_chains."
+        },
+        "exclude_all_chains": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only places not known to belong to a chain."
+        },
+        "fields": {
+          "in": "query",
+          "description": "Comma-separated response fields; default all Pro fields."
+        },
+        "min_price": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lowest price tier, 1 to 4."
+        },
+        "max_price": {
+          "in": "query",
+          "type": "integer",
+          "description": "Highest price tier, 1 to 4."
+        },
+        "open_at": {
+          "in": "query",
+          "description": "Open at a day and time, DOWTHHMM with Monday = 1, e.g. '1T2130'. Not with open_now."
+        },
+        "open_now": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only places open now. Not with open_at."
+        },
+        "tel_format": {
+          "in": "query",
+          "description": "Phone number format.",
+          "enum": [
+            "NATIONAL",
+            "E164"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "description": "Result order.",
+          "enum": [
+            "RELEVANCE",
+            "RATING",
+            "DISTANCE",
+            "POPULARITY"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 50; default 10."
+        }
+      },
+      "notes": [
+        "radius, ne/sw and near drop global results; places without hours are excluded by open_now and open_at."
+      ],
+      "job": "places.search",
+      "docs_url": "https://docs.foursquare.com/fsq-developers-places/reference/place-search",
+      "verified": {
+        "docs": "https://docs.foursquare.com/fsq-developers-places/reference/place-search"
+      }
+    },
+    {
+      "id": "foursquare.places.get",
+      "name": "Get place details",
+      "summary": "One place by its Foursquare id: name, address, categories, coordinates, chains and any fields requested.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/places/{fsq_place_id}",
+      "params": {
+        "fsq_place_id": {
+          "in": "path",
+          "required": true,
+          "description": "The Foursquare place id (formerly venue id).",
+          "example": "5a187743ccad6b307315e6fe"
+        },
+        "fields": {
+          "in": "query",
+          "description": "Comma-separated response fields; default all Pro fields."
+        }
+      },
+      "job": "places.details",
+      "docs_url": "https://docs.foursquare.com/fsq-developers-places/reference/place-details",
+      "verified": {
+        "docs": "https://docs.foursquare.com/fsq-developers-places/reference/place-details"
+      }
+    },
+    {
+      "id": "foursquare.places.tips",
+      "name": "Get a place's tips",
+      "summary": "User tips (short reviews) left on a place.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/places/{fsq_place_id}/tips",
+      "params": {
+        "fsq_place_id": {
+          "in": "path",
+          "required": true,
+          "description": "The Foursquare place id."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Tips per page, 1 to 50; default 10."
+        },
+        "fields": {
+          "in": "query",
+          "description": "Comma-separated tip fields to return."
+        },
+        "sort": {
+          "in": "query",
+          "description": "Order; POPULAR is the default.",
+          "enum": [
+            "POPULAR",
+            "NEWEST"
+          ]
+        }
+      },
+      "job": "places.reviews",
+      "docs_url": "https://docs.foursquare.com/fsq-developers-places/reference/place-tips",
+      "verified": {
+        "docs": "https://docs.foursquare.com/fsq-developers-places/reference/place-tips"
+      }
+    },
+    {
+      "id": "foursquare.places.photos",
+      "name": "Get a place's photos",
+      "summary": "Photo records for a place: prefix and suffix to build an image URL, size and date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/places/{fsq_place_id}/photos",
+      "params": {
+        "fsq_place_id": {
+          "in": "path",
+          "required": true,
+          "description": "The Foursquare place id."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Photos per page, up to 50; default 10."
+        },
+        "sort": {
+          "in": "query",
+          "description": "Order; POPULAR is the default.",
+          "enum": [
+            "POPULAR",
+            "NEWEST"
+          ]
+        },
+        "classifications": {
+          "in": "query",
+          "description": "Comma-separated photo classifications to restrict to, e.g. 'food_or_drink', 'menu', 'outdoor', 'logos'."
+        }
+      },
+      "notes": [
+        "An image URL is prefix + size + suffix; prefix + 'original' + suffix gives the full-size photo."
+      ],
+      "job": "places.photos",
+      "docs_url": "https://docs.foursquare.com/fsq-developers-places/reference/place-photos",
+      "verified": {
+        "docs": "https://docs.foursquare.com/fsq-developers-places/reference/place-photos"
+      }
+    },
+    {
+      "id": "foursquare.places.autocomplete",
+      "name": "Autocomplete places and addresses",
+      "summary": "Suggestions for a partial query: places, search terms and geographies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/autocomplete",
+      "params": {
+        "query": {
+          "in": "query",
+          "required": true,
+          "description": "The partial text, at least 3 characters."
+        },
+        "ll": {
+          "in": "query",
+          "description": "Point to bias around, as 'latitude,longitude'."
+        },
+        "radius": {
+          "in": "query",
+          "type": "integer",
+          "description": "Metres around ll to bias results to."
+        },
+        "types": {
+          "in": "query",
+          "description": "Any combination of place, search and geo, comma-separated; default all."
+        },
+        "bias": {
+          "in": "query",
+          "description": "Bias results toward one type.",
+          "enum": [
+            "place",
+            "search",
+            "geo"
+          ]
+        },
+        "session_token": {
+          "in": "query",
+          "description": "Your own token grouping a user's keystrokes and selection into one billed session."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1 to 50; default 10."
+        }
+      },
+      "notes": [
+        "Without session_token every request is billed separately (per keystroke)."
+      ],
+      "job": "places.autocomplete",
+      "docs_url": "https://docs.foursquare.com/fsq-developers-places/reference/autocomplete",
+      "verified": {
+        "docs": "https://docs.foursquare.com/fsq-developers-places/reference/autocomplete"
+      }
+    },
+    {
+      "id": "foursquare.places.match",
+      "name": "Match a place by name and address",
+      "summary": "The Foursquare place that best matches a known name and address, to resolve your record to a place id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/places/match",
+      "params": {
+        "name": {
+          "in": "query",
+          "required": true,
+          "description": "Name of the place."
+        },
+        "address": {
+          "in": "query",
+          "required": true,
+          "description": "Street address, e.g. '1060 W Addison St'."
+        },
+        "city": {
+          "in": "query",
+          "required": true,
+          "description": "City or locality."
+        },
+        "state": {
+          "in": "query",
+          "description": "State or region."
+        },
+        "postal_code": {
+          "in": "query",
+          "description": "Postal code."
+        },
+        "cc": {
+          "in": "query",
+          "required": true,
+          "description": "Two-letter country code; only English-speaking countries are supported.",
+          "example": "US"
+        },
+        "ll": {
+          "in": "query",
+          "description": "The place's location as 'latitude,longitude'."
+        },
+        "fields": {
+          "in": "query",
+          "description": "Comma-separated response fields; default all Pro fields."
+        }
+      },
+      "job": "places.match",
+      "docs_url": "https://docs.foursquare.com/fsq-developers-places/reference/place-match",
+      "verified": {
+        "docs": "https://docs.foursquare.com/fsq-developers-places/reference/place-match"
+      }
+    }
+  ]
+}
