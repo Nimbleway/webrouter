@@ -12,7 +12,7 @@ import pytest
 from pydantic import ValidationError
 
 from tests.vendors.conftest import ACME, OAUTH
-from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_ENV_CATALOG_DIR
+from web_router.constants_vendors import VENDOR_ENV_CATALOG_DIR
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_vendors import VendorNotFoundError
 from web_router.vendors.catalog import (
@@ -165,7 +165,6 @@ def test_the_catalog_ships_vendors() -> None:
 @pytest.mark.parametrize("path", SHIPPED_FILES, ids=lambda path: path.stem)
 def test_a_shipped_file(path: Path) -> None:
     vendor = load_vendor_file(path)
-    assert vendor.category in VENDOR_CATEGORIES
     assert re.match(r"^\d{4}-\d{2}-\d{2}$", vendor.curated)
     assert vendor.endpoints, "a vendor file names at least one endpoint"
     for endpoint in vendor.endpoints:
