@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 import os
-from typing import Any
+from typing import Any, TypeGuard
 
 from web_router.constants_remote import (
     ENV_REMOTE_ROUTER_API_KEY,
@@ -38,6 +38,11 @@ def checked_timeout(value: object) -> float:
     return float(value)
 
 
+def visible_ascii(key: object) -> TypeGuard[str]:
+    """Whether ``key`` can ride in a header: a string of visible ASCII characters, no space."""
+    return isinstance(key, str) and key.isascii() and key.isprintable() and " " not in key
+
+
 def bearer_key(api_key: object) -> str | None:
     """``api_key``, else ``WEB_ROUTER_REMOTE_ROUTER_API_KEY``, else ``None``.
 
@@ -45,7 +50,7 @@ def bearer_key(api_key: object) -> str | None:
     non-ASCII one would carry the whole ``Authorization`` value in its ``UnicodeEncodeError``.
     """
     key = os.environ.get(ENV_REMOTE_ROUTER_API_KEY) if api_key is None else api_key
-    if key is not None and not (isinstance(key, str) and key.isascii() and key.isprintable() and " " not in key):
+    if key is not None and not visible_ascii(key):
         raise ConfigurationError(MSG_REMOTE_KEY)
     return key or None
 

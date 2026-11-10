@@ -658,7 +658,8 @@ row per router: a router declares the tools it fits as its own `route_tools`
 (see the README's Smart routing), and a caller's `route_tools` always wins.
 
 **How it times.** A router is one of `rules` (the built-in rules router),
-`sklearn`, `llm` and `jev` (the examples in `examples/`), `remote:<url>` (a
+`llm` (the built-in `router="llm"`, on the preset `LLM_ROUTER_PRESET` names,
+`openai` unless set), `sklearn` and `jev` (the examples in `examples/`), `remote:<url>` (a
 router service in the wire format, schema 1; `--remote-rtt-ms` adds the same
 service behind a simulated round trip, three of them on a new connection), or
 your own `module:attr`. Each is called through the library's own router call,
@@ -684,7 +685,7 @@ an Apple M4 Pro (12 CPUs), macOS 26.6.2, Python 3.12.13, web-router 0.10.0,
 scikit-learn 1.9.1, openai 3.45.0, httpx 0.28.1. Each router was called 200
 times after a first call and 5 warm-up calls, interleaved in a seeded random
 order, on `tools-effort-60` and `simpleqa-300-v2`. The LLM router is
-`examples/router_llm.py` on OpenAI's `gpt-4.1-mini`; Jev is
+`examples/router_llm.py` as it was then, on the openai SDK, on OpenAI's `gpt-4.1-mini`; Jev is
 `examples/router_jev.py` on `jev-1.14.0`; the sklearn router is the example's
 toy-trained pipeline; remote is the built-in `remote` router asking
 `examples/router_remote_server.py` on loopback, then the same behind a

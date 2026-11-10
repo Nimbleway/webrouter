@@ -36,27 +36,32 @@ def _loopback_literal(host: str) -> bool:
         return False
 
 
-def checked_url(url: object, httpx: Any) -> str:
+def is_loopback(host: str) -> bool:
+    """Whether plain ``http`` may reach ``host``: the exact name ``localhost``, or a literal loopback address."""
+    return host == REMOTE_LOOPBACK_NAME or _loopback_literal(host)
+
+
+def checked_url(url: object, httpx: Any, field: str = "url") -> str:
     """``url`` when it is ``https``, or ``http`` to ``localhost`` or a loopback address, with nothing secret in it.
 
     Raises:
         ConfigurationError: for no URL, one httpx cannot parse or a browser could read two ways (credentials
             included), one with no host, a query or a fragment, or a plain-``http`` one to any other host. Never
-            echoing the URL.
+            echoing the URL. Its message names the ``router_config`` key ``field``.
     """
     if not isinstance(url, str) or not url.strip():
         raise ConfigurationError(MSG_REMOTE_NO_URL)
     if _ambiguous(url):
-        raise ConfigurationError(MSG_REMOTE_URL)
+        raise ConfigurationError(MSG_REMOTE_URL.format(field=field))
     try:
         parsed = httpx.URL(url)
     except (httpx.InvalidURL, TypeError, ValueError):
-        raise ConfigurationError(MSG_REMOTE_URL) from None
+        raise ConfigurationError(MSG_REMOTE_URL.format(field=field)) from None
     scheme, host = parsed.scheme.lower(), parsed.host
     if not host or scheme not in (REMOTE_SECURE_SCHEME, REMOTE_LOOPBACK_SCHEME):
-        raise ConfigurationError(MSG_REMOTE_URL)
+        raise ConfigurationError(MSG_REMOTE_URL.format(field=field))
     if "?" in url or "#" in url:  # credentials are an @ in the authority, which _ambiguous refuses
-        raise ConfigurationError(MSG_REMOTE_URL_PARTS)
-    if scheme != REMOTE_SECURE_SCHEME and not (host == REMOTE_LOOPBACK_NAME or _loopback_literal(host)):
-        raise ConfigurationError(MSG_REMOTE_HTTPS)
+        raise ConfigurationError(MSG_REMOTE_URL_PARTS.format(field=field))
+    if scheme != REMOTE_SECURE_SCHEME and not is_loopback(host):
+        raise ConfigurationError(MSG_REMOTE_HTTPS.format(field=field))
     return str(parsed)

@@ -89,9 +89,11 @@ WIRE_REQUEST_TITLE = "web-router RouteRequest, wire schema v1"
 WIRE_RESPONSE_TITLE = "web-router RouteDecision, wire schema v1"
 
 MSG_REMOTE_NO_URL = "router='remote' needs router_config={{'url': ...}}, the router service's URL."
-MSG_REMOTE_URL = "router_config['url'] is not an absolute http(s) URL with a host that parses one way."
-MSG_REMOTE_URL_PARTS = "router_config['url'] may not carry a query or a fragment: pass the key as api_key."
-MSG_REMOTE_HTTPS = "router_config['url'] must use https; plain http is allowed only to localhost, 127.0.0.0/8 or ::1."
+MSG_REMOTE_URL = "router_config[{field!r}] is not an absolute http(s) URL with a host that parses one way."
+MSG_REMOTE_URL_PARTS = "router_config[{field!r}] may not carry a query or a fragment: pass the key as api_key."
+MSG_REMOTE_HTTPS = (
+    "router_config[{field!r}] must use https; plain http is allowed only to localhost, 127.0.0.0/8 or ::1."
+)
 MSG_REMOTE_TIMEOUT = "router_config['timeout_s'] must be a positive number of seconds; got {value!r}."
 MSG_REMOTE_KEY = (
     "router_config['api_key'], or WEB_ROUTER_REMOTE_ROUTER_API_KEY, must be a string of visible ASCII characters."

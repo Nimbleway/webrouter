@@ -102,12 +102,12 @@ async def _awaited(awaitable: Awaitable[Any]) -> Any:
 
 
 def _close(value: object) -> None:
-    """Drop an awaitable nobody will await: close a coroutine; cancel a task, reading its error, on its own loop."""
-    if inspect.iscoroutine(value):
-        value.close()
-    elif isinstance(value, asyncio.Future):
+    """Drop an awaitable nobody will await: cancel a task, reading its error, on its own loop; close any other."""
+    if isinstance(value, asyncio.Future):
         with suppress(RuntimeError):  # its loop is closed: nothing left to run it
             value.get_loop().call_soon_threadsafe(_abandon, value)
+    elif inspect.isawaitable(value) and callable(close := getattr(value, "close", None)):
+        close()  # a coroutine, or an awaitable that holds one
 
 
 def _abandon(task: asyncio.Future[Any]) -> None:
