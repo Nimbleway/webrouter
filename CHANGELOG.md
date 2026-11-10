@@ -10,6 +10,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
+- `research(provider="nimble")` returned no citations when Nimble sent its sources in `output.sources` with `output.trust` null (or listing no sources), as its agents API now does: those sources are now the response's citations, each once, with no `field`. A run whose `trust` lists sources answers as before.
+
 ## [0.11.0] - 2026-11-09
 
 ### Changed

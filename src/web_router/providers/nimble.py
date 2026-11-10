@@ -407,19 +407,19 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
     def _to_response(self, request: ResearchRequest, run: dict[str, Any], result: dict[str, Any]) -> ResearchResponse:
         output = result.get("output") or {}
         content = output.get("content")
-        # `type` is optional in the payload, so the content decides only when it
-        # is absent: a structured output's content is an object or an array, but
-        # a reported type wins over the shape -- schema-conforming JSON can be a
-        # bare string.
+        # `type` is optional in the payload, so the content decides only when it is absent: a structured output's
+        # content is an object or an array, but a reported type wins over the shape -- schema-conforming JSON can be
+        # a bare string.
         kind = output.get("type")
         prose = kind == NIMBLE_RESEARCH_TEXT_OUTPUT if kind is not None else isinstance(content, str)
+        trust = output.get("trust") or {}
 
         return ResearchResponse(
             provider=self.name,
             query=request.query,
             answer=content if prose else None,
             structured=None if prose else content,
-            citations=_citations(output.get("trust") or {}),
+            citations=_citations({**trust, "sources": trust.get("sources") or output.get("sources") or []}),
             # `outcome` keeps its default: nothing Nimble returns reports a run
             # that stopped short of the work it was given.
             request_id=run.get("id"),
