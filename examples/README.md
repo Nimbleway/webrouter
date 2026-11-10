@@ -19,6 +19,7 @@ Runnable scripts, roughly in the order worth reading them.
 | [`router_classifier.py`](router_classifier.py) | A scikit-learn pipeline, saved and loaded with joblib, ranking methods by `predict_proba`; `timeout_s = 0.05` | no, but scikit-learn |
 | [`router_llm.py`](router_llm.py) | An async router on any OpenAI-compatible server, its answer held to the candidate ids by a JSON schema; `timeout_s = 3.0` — sends the prompt to that server, bills | `OPENAI_API_KEY` + `LLM_ROUTER_MODEL` |
 | [`router_jev.py`](router_jev.py) | An async router on TypeSafe's Jev, ranking by its probability per candidate; `timeout_s = 1.0` — sends the prompt to TypeSafe, bills | `TYPESAFE_API_KEY` |
+| [`router_fireworks.py`](router_fireworks.py) | An async router on Fireworks System One (Rune), ranking by its probability per candidate and keeping the static order below a confidence floor; `timeout_s = 1.0`: sends the prompt to Fireworks, bills | `FIREWORKS_API_KEY` |
 | [`error_handling.py`](error_handling.py) | Every exception and what to do about each | no |
 | [`search_depth.py`](search_depth.py) | `lite` / `fast` / `deep` measured across backends | no |
 | [`custom_provider.py`](custom_provider.py) | Adding your own backend, against Wikipedia's open API | no |
@@ -39,7 +40,7 @@ the exceptions, and not by oversight: every agentic backend bills for the run,
 every cloud browser for the time it is open, and a template run fetches on the
 backend's account, so there is no anonymous tier for them to fall back on.
 With no key each names the variables that would fix it and exits.
-`router_llm.py` and `router_jev.py` are exceptions too: each plan sends the
+`router_llm.py`, `router_jev.py` and `router_fireworks.py` are exceptions too: each plan sends the
 prompt to a model on another server, which bills for it unless it is your own. With no
 key each says what to set and exits. `router_classifier.py` needs no key but
 does need scikit-learn, which web-router does not depend on: run it with
