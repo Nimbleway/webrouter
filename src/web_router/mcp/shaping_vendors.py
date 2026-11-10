@@ -133,7 +133,12 @@ def shape_endpoint(
         "docs_url": endpoint.docs_url,
         "credentials": {name: spec.env for name, spec in vendor.auth.credentials.items()},
         "settings": {
-            name: {"env": spec.env, "default": spec.default, "description": spec.description}
+            name: {
+                "env": spec.env,
+                "default": spec.default,
+                "description": spec.description,
+                **({"choices": spec.choices} if spec.choices else {}),
+            }
             for name, spec in vendor.settings.items()
         },
         "set_to_enable": missing_credentials(vendor, credentials, endpoint),

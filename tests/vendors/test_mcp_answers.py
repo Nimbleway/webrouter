@@ -58,3 +58,12 @@ async def test_an_endpoint_without_its_own_list_still_needs_every_key() -> None:
     finally:
         await tools.aclose()
     assert described["set_to_enable"] == ["DD_APPLICATION_KEY"]
+
+
+async def test_an_endpoint_lists_the_values_a_setting_accepts() -> None:
+    tools = await _tools(Recorder(), _DATADOG)
+    try:
+        described = await tools.call(MCP_TOOL_VENDOR_ENDPOINT, {"endpoint": "datadog.monitors.list"})
+    finally:
+        await tools.aclose()
+    assert "datadoghq.eu" in described["settings"]["site"]["choices"]
