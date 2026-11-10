@@ -84,15 +84,6 @@ def _wilson(hits: int, n: int) -> tuple[float, float] | None:
     return (centre - half, centre + half)
 
 
-def _mcnemar(only_first: int, only_second: int) -> float:
-    """The exact two-sided McNemar p-value of two paired scores, from their discordant counts alone."""
-    n = only_first + only_second
-    if n == 0:
-        return 1.0
-    tail = sum(math.comb(n, k) for k in range(min(only_first, only_second) + 1))
-    return min(1.0, 2 * tail / 2**n)
-
-
 def _pct(values: list[float], fraction: float) -> float | None:
     # Nearest rank, as evaluate() computes its own p95, so a scan agrees with the library on the same rows.
     values = sorted(values)

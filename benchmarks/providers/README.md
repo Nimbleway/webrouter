@@ -566,7 +566,8 @@ A set that mixes methods other than these paths is refused by name.
 
 Every set's report also has, held out, each router's **cost-weighted tool
 confusion matrix** and **where routers disagree**
-(`route_eval_matrix.py`, rendered by `route_eval_report_matrix.py`).
+(`route_eval_matrix.py` and `route_eval_compare.py`, rendered by
+`route_eval_report_matrix.py`).
 
 - **The matrix** counts each held-out question by the tool the router's
   choice ran (rows; `unserved` when nothing served it) against the best tool

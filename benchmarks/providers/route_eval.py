@@ -35,8 +35,9 @@ from _common import _pct, _wilson
 from frozen import FROZEN_DIR
 from route_eval_cli import DEFAULT_ROUTERS, DEFAULT_SEED, DEFAULT_TEST_FRACTION, run, skip_absent_specs
 from route_eval_cli import DEFAULT_SETS as DEFAULT_SETS
+from route_eval_compare import comparisons
 from route_eval_floor import Floor, floor_for
-from route_eval_matrix import EVERY_CHOICES, HELD_OUT_CHOICES, choices, comparisons, matrices
+from route_eval_matrix import EVERY_CHOICES, HELD_OUT_CHOICES, choices, matrices
 from route_eval_paths import DEFAULT_PATH_ROUTERS, MIXED, research_by_effort
 from route_eval_rank import KEYLESS as KEYLESS
 from route_eval_rank import backend_stats, recommended, too_few
@@ -188,7 +189,7 @@ def evaluate_set(
     choice is not a candidate here is skipped, with a note, instead of refused: a backend is no path.
     ``floor`` of ``None`` ranks and judges with the method's own floor (:func:`~route_eval_floor.floor_for`).
     Each router is compared, held out, with ``static`` and every router in ``against``, which are scored too
-    (:mod:`route_eval_matrix`), and has its cost-weighted tool confusion matrix against the oracle. A router
+    (:mod:`route_eval_compare`), and has its cost-weighted tool confusion matrix against the oracle. A router
     with no ``fit`` -- ``static``, ``always:``, a file router that learns nothing -- is also scored and
     compared on every question, where the held-out split only costs it questions.
     """

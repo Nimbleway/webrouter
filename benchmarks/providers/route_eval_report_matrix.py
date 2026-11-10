@@ -1,7 +1,8 @@
 """route-eval's report on tool choice: each router's cost-weighted confusion matrix, and where routers disagree.
 
-The numbers are :mod:`route_eval_matrix`'s; :mod:`route_eval_report` appends
-these sections to each set's. Imported as a sibling, by name, as ``_common`` is.
+The numbers are :mod:`route_eval_matrix`'s and :mod:`route_eval_compare`'s;
+:mod:`route_eval_report` appends these sections to each set's. Imported as a
+sibling, by name, as ``_common`` is.
 """
 
 from __future__ import annotations
