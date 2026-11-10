@@ -418,7 +418,11 @@ class WebRouterTools:
         every job still being polled runs on its providers.
         """
         self._retired.append(self.router)
-        self.router = self._router_factory()
+        rebuilt = self._router_factory()
+        # Vendor keys handed to the old router in code are not in the environment, so carry them over.
+        if rebuilt._vendor_credentials is None:
+            rebuilt._init_vendors(self.router._vendor_credentials)
+        self.router = rebuilt
         self._tools_changed = True
 
     async def _browser_open(self, arguments: Mapping[str, Any]) -> dict[str, Any]:

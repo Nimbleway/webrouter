@@ -111,3 +111,16 @@ def test_a_small_answer_comes_back_whole() -> None:
     shaped = shape_vendor_response(_answer({"a": 1}), "h1", budget=8000)
     assert shaped["truncated"] is False
     assert shaped["data"] == {"a": 1}
+
+
+async def test_vendor_keys_passed_in_code_survive_loading_a_dotenv(tmp_path: Any, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("TAVILY_API_KEY", "")
+    monkeypatch.delenv("TAVILY_API_KEY")  # registered, so the key load_env sets is taken away afterwards
+    (tmp_path / ".env").write_text("TAVILY_API_KEY=tvly-test\n", encoding="utf-8")
+    tools = WebRouterTools(AsyncWebRouter(vendor_credentials=_DATADOG))
+    try:
+        await tools.call("load_env", {"path": str(tmp_path / ".env")})
+        rows = (await tools.call(MCP_TOOL_VENDORS, {"category": "observability"}))["vendors"]
+    finally:
+        await tools.aclose()
+    assert {row["vendor"]: row for row in rows}["datadog"]["configured"] is True
