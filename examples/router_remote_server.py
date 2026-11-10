@@ -90,8 +90,6 @@ class RouterServer(ThreadingHTTPServer):
         finally:
             self._slots.release()
 
-    address_family = socket.AF_INET  # set per instance below: AF_INET6 for an IPv6 host such as ::1
-
     @property
     def authority(self) -> str:
         """``host:port`` as a URL and a ``Host`` header write it: an IPv6 address in brackets."""
@@ -105,7 +103,10 @@ class RouterServer(ThreadingHTTPServer):
 
     @property
     def url(self) -> str:
-        return f"http://{self.authority}{PATH}"
+        """The URL a client uses: a loopback address in place of 0.0.0.0 or ::, which no client may dial."""
+        host, port = self.server_address[:2]
+        host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(host, host)
+        return f"http://[{host}]:{port}{PATH}" if ":" in host else f"http://{host}:{port}{PATH}"
 
 
 class _Handler(BaseHTTPRequestHandler):

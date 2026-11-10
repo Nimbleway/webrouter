@@ -111,6 +111,18 @@ def test_the_example_server_bound_to_every_address_answers_the_host_its_clients_
         server.server_close()
 
 
+def test_the_example_server_bound_to_every_address_gives_its_clients_a_loopback_url() -> None:
+    server = reference.serve("0.0.0.0", 0, api_key=KEY)
+    try:
+        assert server.url == f"http://127.0.0.1:{server.server_address[1]}/route"
+        config = {"url": server.url, "api_key": KEY}
+        plan = WebRouter(router="remote", router_config=config).plan("read https://example.com")
+        assert plan.decision.reason != "router_error" and plan.tool == "extract"
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 def test_the_example_server_bound_to_every_address_without_a_key_keeps_the_host_check() -> None:
     import httpx
 
