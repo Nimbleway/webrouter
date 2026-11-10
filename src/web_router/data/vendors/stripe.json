@@ -1,0 +1,518 @@
+{
+  "vendor": "stripe",
+  "name": "Stripe",
+  "category": "finance",
+  "summary": "Payments data from a Stripe account: charges, customers, payment intents, invoices, subscriptions and the balance.",
+  "docs_url": "https://docs.stripe.com/api",
+  "pricing_url": "https://stripe.com/pricing",
+  "base_url": "https://api.stripe.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "STRIPE_SECRET_KEY",
+          "STRIPE_API_KEY"
+        ],
+        "description": "a Stripe secret key (sk_test_/sk_live_) or, better, a restricted key (rk_live_) with read permissions only (Dashboard > Developers > API keys). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Amounts are integers in the currency's smallest unit (cents for USD: 1099 = $10.99); timestamps are Unix seconds.",
+    "List endpoints page with cursors: pass the last object's id as starting_after (has_more says whether to continue); limit is 1-100, default 10.",
+    "Search endpoints page with the next_page value from the previous response as page, not starting_after. Search data can lag writes by up to a minute (an hour during outages) and is not available to merchants in India.",
+    "A test key (sk_test_) only sees sandbox data; live data needs a live or restricted key. Prefer a read-only restricted key for this catalog.",
+    "Responses follow the account's API version unless a Stripe-Version header is sent; field shapes can differ between versions.",
+    "Refunds, payouts, customer updates and other writes are not in this entry."
+  ],
+  "sources": [
+    "https://docs.stripe.com/api/authentication",
+    "https://docs.stripe.com/api/charges/list",
+    "https://docs.stripe.com/api/charges/search",
+    "https://docs.stripe.com/api/customers/list",
+    "https://docs.stripe.com/api/customers/retrieve",
+    "https://docs.stripe.com/api/customers/search",
+    "https://docs.stripe.com/api/payment_intents/list",
+    "https://docs.stripe.com/api/invoices/list",
+    "https://docs.stripe.com/api/subscriptions/list",
+    "https://docs.stripe.com/api/balance/balance_retrieve",
+    "https://docs.stripe.com/api/balance_transactions/list"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "stripe.balance.get",
+      "name": "Get account balance",
+      "summary": "Available and pending funds per currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/balance",
+      "job": "payments.balance",
+      "docs_url": "https://docs.stripe.com/api/balance/balance_retrieve",
+      "verified": {
+        "docs": "https://docs.stripe.com/api/balance/balance_retrieve"
+      }
+    },
+    {
+      "id": "stripe.balance_transactions.list",
+      "name": "List balance transactions",
+      "summary": "Every movement of funds (charges, refunds, fees, payouts), newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/balance_transactions",
+      "params": {
+        "created_gte": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[gte]",
+          "description": "Only transactions created at or after this Unix time."
+        },
+        "created_lt": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[lt]",
+          "description": "Only transactions created before this Unix time."
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Three-letter ISO currency code, lowercase.",
+          "example": "usd"
+        },
+        "payout": {
+          "in": "query",
+          "type": "string",
+          "description": "Only transactions paid out in this payout id."
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Only transactions for this source object id (a charge, say)."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Only transactions of this type, e.g. charge, refund, payout.",
+          "example": "charge"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-100, default 10."
+        },
+        "starting_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the last object on the previous page."
+        },
+        "ending_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the first object on the next page, to page backwards."
+        }
+      },
+      "job": "payments.transactions.list",
+      "docs_url": "https://docs.stripe.com/api/balance_transactions/list",
+      "verified": {
+        "docs": "https://docs.stripe.com/api/balance_transactions/list"
+      }
+    },
+    {
+      "id": "stripe.charges.list",
+      "name": "List charges",
+      "summary": "Charges, newest first, optionally for one customer or payment intent.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/charges",
+      "params": {
+        "customer": {
+          "in": "query",
+          "type": "string",
+          "description": "Only charges for this customer id (cus_...)."
+        },
+        "payment_intent": {
+          "in": "query",
+          "type": "string",
+          "description": "Only charges created by this PaymentIntent id (pi_...)."
+        },
+        "transfer_group": {
+          "in": "query",
+          "type": "string",
+          "description": "Only charges for this transfer group."
+        },
+        "created_gte": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[gte]",
+          "description": "Only charges created at or after this Unix time."
+        },
+        "created_lt": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[lt]",
+          "description": "Only charges created before this Unix time."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-100, default 10."
+        },
+        "starting_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the last object on the previous page."
+        },
+        "ending_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the first object on the next page, to page backwards."
+        }
+      },
+      "notes": [
+        "An unknown customer id is an error, not an empty list."
+      ],
+      "job": "payments.charges.list",
+      "docs_url": "https://docs.stripe.com/api/charges/list",
+      "verified": {
+        "docs": "https://docs.stripe.com/api/charges/list"
+      }
+    },
+    {
+      "id": "stripe.charges.search",
+      "name": "Search charges",
+      "summary": "Charges matching a Stripe Search Query Language expression.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/charges/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A Search Query Language expression over the charge query fields (docs.stripe.com/search)."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-100, default 10."
+        },
+        "page": {
+          "in": "query",
+          "type": "string",
+          "description": "The next_page value from the previous response; leave out on the first call."
+        }
+      },
+      "job": "payments.charges.search",
+      "docs_url": "https://docs.stripe.com/api/charges/search",
+      "verified": {
+        "docs": "https://docs.stripe.com/api/charges/search"
+      }
+    },
+    {
+      "id": "stripe.customers.list",
+      "name": "List customers",
+      "summary": "Customers, newest first, optionally by exact email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/customers",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact, case-sensitive email to filter by."
+        },
+        "created_gte": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[gte]",
+          "description": "Only customers created at or after this Unix time."
+        },
+        "created_lt": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[lt]",
+          "description": "Only customers created before this Unix time."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-100, default 10."
+        },
+        "starting_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the last object on the previous page."
+        },
+        "ending_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the first object on the next page, to page backwards."
+        }
+      },
+      "job": "payments.customers.list",
+      "docs_url": "https://docs.stripe.com/api/customers/list",
+      "verified": {
+        "docs": "https://docs.stripe.com/api/customers/list"
+      }
+    },
+    {
+      "id": "stripe.customers.get",
+      "name": "Get a customer",
+      "summary": "One customer object by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/customers/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Customer id.",
+          "example": "cus_NeGfPRiPKxeBi1"
+        }
+      },
+      "notes": [
+        "A deleted customer comes back with deleted: true and few other fields."
+      ],
+      "job": "payments.customers.get",
+      "docs_url": "https://docs.stripe.com/api/customers/retrieve",
+      "verified": {
+        "docs": "https://docs.stripe.com/api/customers/retrieve"
+      }
+    },
+    {
+      "id": "stripe.customers.search",
+      "name": "Search customers",
+      "summary": "Customers matching a Search Query Language expression (name, email, metadata, ...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/customers/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A Search Query Language expression over the customer query fields.",
+          "example": "name:'Jane Doe' AND metadata['foo']:'bar'"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-100, default 10."
+        },
+        "page": {
+          "in": "query",
+          "type": "string",
+          "description": "The next_page value from the previous response; leave out on the first call."
+        }
+      },
+      "job": "payments.customers.search",
+      "docs_url": "https://docs.stripe.com/api/customers/search",
+      "verified": {
+        "docs": "https://docs.stripe.com/api/customers/search"
+      }
+    },
+    {
+      "id": "stripe.payment_intents.list",
+      "name": "List payment intents",
+      "summary": "PaymentIntents, newest first, optionally for one customer.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/payment_intents",
+      "params": {
+        "customer": {
+          "in": "query",
+          "type": "string",
+          "description": "Only payment intents for this customer id."
+        },
+        "created_gte": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[gte]",
+          "description": "Only payment intents created at or after this Unix time."
+        },
+        "created_lt": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[lt]",
+          "description": "Only payment intents created before this Unix time."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-100, default 10."
+        },
+        "starting_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the last object on the previous page."
+        },
+        "ending_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the first object on the next page, to page backwards."
+        }
+      },
+      "job": "payments.intents.list",
+      "docs_url": "https://docs.stripe.com/api/payment_intents/list",
+      "verified": {
+        "docs": "https://docs.stripe.com/api/payment_intents/list"
+      }
+    },
+    {
+      "id": "stripe.invoices.list",
+      "name": "List invoices",
+      "summary": "Invoices, newest first, by customer, subscription or status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/invoices",
+      "params": {
+        "customer": {
+          "in": "query",
+          "type": "string",
+          "description": "Only invoices for this customer id."
+        },
+        "subscription": {
+          "in": "query",
+          "type": "string",
+          "description": "Only invoices for this subscription id."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "draft",
+            "open",
+            "paid",
+            "uncollectible",
+            "void"
+          ]
+        },
+        "collection_method": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "charge_automatically",
+            "send_invoice"
+          ]
+        },
+        "created_gte": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[gte]",
+          "description": "Only invoices created at or after this Unix time."
+        },
+        "created_lt": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[lt]",
+          "description": "Only invoices created before this Unix time."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-100, default 10."
+        },
+        "starting_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the last object on the previous page."
+        },
+        "ending_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the first object on the next page, to page backwards."
+        }
+      },
+      "job": "payments.invoices.list",
+      "docs_url": "https://docs.stripe.com/api/invoices/list",
+      "verified": {
+        "docs": "https://docs.stripe.com/api/invoices/list"
+      }
+    },
+    {
+      "id": "stripe.subscriptions.list",
+      "name": "List subscriptions",
+      "summary": "Subscriptions by customer, price or status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/subscriptions",
+      "params": {
+        "customer": {
+          "in": "query",
+          "type": "string",
+          "description": "Only subscriptions for this customer id."
+        },
+        "price": {
+          "in": "query",
+          "type": "string",
+          "description": "Only subscriptions that contain this price id."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Unset returns every subscription that is not canceled; all returns every status; ended returns canceled and incomplete_expired ones.",
+          "enum": [
+            "active",
+            "all",
+            "canceled",
+            "ended",
+            "incomplete",
+            "incomplete_expired",
+            "past_due",
+            "paused",
+            "trialing",
+            "unpaid"
+          ]
+        },
+        "collection_method": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "charge_automatically",
+            "send_invoice"
+          ]
+        },
+        "created_gte": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[gte]",
+          "description": "Only subscriptions created at or after this Unix time."
+        },
+        "created_lt": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "created[lt]",
+          "description": "Only subscriptions created before this Unix time."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-100, default 10."
+        },
+        "starting_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the last object on the previous page."
+        },
+        "ending_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: the id of the first object on the next page, to page backwards."
+        }
+      },
+      "job": "payments.subscriptions.list",
+      "docs_url": "https://docs.stripe.com/api/subscriptions/list",
+      "verified": {
+        "docs": "https://docs.stripe.com/api/subscriptions/list"
+      }
+    }
+  ]
+}
