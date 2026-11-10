@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 from web_router.constants_vendors import EXTRA_VENDORS
 from web_router.exceptions import ProviderNotInstalledError
@@ -55,6 +55,16 @@ class _VendorLookup:
                     raise ProviderNotInstalledError("vendors", EXTRA_VENDORS) from exc
                 self._vendor_caller = VendorCaller(self._vendor_credentials)
             return self._vendor_caller
+
+    def keeping_vendor_credentials_of(self, previous: _VendorLookup) -> Self:
+        """This router, given ``previous``'s ``vendor_credentials=`` when it was built without any.
+
+        For a router rebuilt from the environment after a ``.env`` load: vendor keys an embedder passed in code are
+        not in the environment, so the rebuilt router would otherwise lose them.
+        """
+        if self._vendor_credentials is None and previous._vendor_credentials is not None:
+            self._init_vendors(previous._vendor_credentials)
+        return self
 
     def vendor_credential_source(self) -> CredentialSource:
         """Where this router reads vendor credentials: ``vendor_credentials=`` first, then the environment."""
