@@ -86,7 +86,7 @@ class _AsyncRace:
             return None
         try:
             finished = await asyncio.wait_for(self._finished.get(), timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return None
         self.running -= 1
         return finished

@@ -15,7 +15,7 @@ import json
 import math
 import sys
 from collections.abc import Awaitable, Callable, Hashable, Mapping, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -178,7 +178,7 @@ def scan_main(
     if ENV_FILE.is_file():
         load_dotenv(ENV_FILE)
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    args.out = args.out or DEFAULT_OUT / (out_prefix + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
+    args.out = args.out or DEFAULT_OUT / (out_prefix + datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"))
     if (args.out / "rows.jsonl").exists():
         raise SystemExit(MSG_OUT_NOT_EMPTY.format(path=args.out / "rows.jsonl"))
     args.out.mkdir(parents=True, exist_ok=True)

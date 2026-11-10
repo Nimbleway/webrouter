@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking (Python version):** web-router now requires Python 3.11 or newer. Python 3.10 reached end of life in October 2026, and the fixed releases of some dependencies (Pillow, filelock) no longer support it. On Python 3.10, pip and uv keep installing 0.11.0, the last release that supports it.
+
 ### Added
 
 ### Fixed

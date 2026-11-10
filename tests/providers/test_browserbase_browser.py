@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -260,7 +260,7 @@ def test_the_session_is_normalized_with_browserbases_own_expiry(browserbase: _Br
 
     assert session.provider == "browserbase"
     assert session.session_id == SESSION_ID
-    assert session.expires_at == datetime(2026, 9, 23, 10, 10, tzinfo=timezone.utc)
+    assert session.expires_at == datetime(2026, 9, 23, 10, 10, tzinfo=UTC)
     assert session.live_view_url is None, "Browserbase's live view grants control, so it is never shown"
     assert session.control_url is None, "the live view is a second request, which open does not make"
     assert session.raw == OPENED

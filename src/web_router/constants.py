@@ -1114,7 +1114,7 @@ JOB_TIMEOUT_ERROR_SUFFIXES = ("TimeoutError", "TimeoutException")
 """How a poll's failure is recognized as a timed-out request: by the names of its exception classes.
 
 By name rather than by type because the job core imports no HTTP client or SDK:
-``TimeoutError`` (and ``asyncio``'s, the same class from 3.11), httpx's
+``TimeoutError`` (``asyncio``'s is the same class), httpx's
 ``TimeoutException`` family and Stainless SDKs' ``APITimeoutError`` all end in
 one of these.
 """

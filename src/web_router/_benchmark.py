@@ -196,7 +196,7 @@ async def afan_out(
         remaining = None if deadline is None else max(0.0, deadline - own)
         try:
             outcome: _AnswerT | WebRouterError = await asyncio.wait_for(call(member), remaining)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             outcome = BenchmarkTimeoutError(name, timeout or 0.0)
         except Exception as exc:
             outcome = _failure(name, exc)

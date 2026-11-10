@@ -167,7 +167,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md#promoting-a-provider-option).
 
 ## Code
 
-- **Python 3.10+.** `from __future__ import annotations` at the top of every
+- **Python 3.11+.** `from __future__ import annotations` at the top of every
   module. Full type annotations; `mypy --strict` must pass on `src/`.
 - **Line length 120**, ruff-formatted. Do not hand-wrap what the formatter owns.
 - **No hardcoded literals in logic.** Endpoints, env var names, timeouts, header

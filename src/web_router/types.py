@@ -46,7 +46,7 @@ README.md.
 """
 
 
-class Provider(str, Enum):
+class Provider(str, Enum):  # noqa: UP042 -- StrEnum would change what str(Provider.X) returns
     """The providers built into web-router.
 
     Every argument that names a provider also accepts a plain string; this
