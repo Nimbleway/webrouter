@@ -2242,12 +2242,13 @@ field may be left out or `null`):
   own bearer key is redacted.
 - **The URLs it may set.** The URLs a service sets for extract or browse are
   held to `url_policy="public_only"` even when you set no `url_policy`: a
-  service cannot name a loopback, private or metadata address. A
+  service cannot name a loopback, private or metadata address by hostname. A
   refused URL is set aside in the record's `ignored`. Your own `url_policy`
   applies when you set one. `public_only` checks the hostname as written and
   does not resolve it, so a service could name a host whose DNS points at a
-  private address; that matters only for backends that fetch from your
-  machine, such as the `local` browser.
+  private address; that matters only for a backend that fetches from your
+  machine, such as a provider you register or host yourself. Every built-in
+  backend hands the URL to its vendor, which fetches it from its own network.
 - **What is shown.** The decision record names it `remote(<scheme>://<host>)`:
   never the URL's path, and never the key.
 

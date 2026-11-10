@@ -43,7 +43,7 @@ from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
-from web_router.routing.registry import aclose_router, discard_router, resolve_router
+from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -78,11 +78,10 @@ def _route_tools(route_tools: Collection[ToolName] | None, router: object = None
     return frozenset(tools)
 
 
-class RouterSetup:
+class RouterSetup(RouterOwner):
     """The attached router and the tools it is consulted on, shared by both routers."""
 
     _router: AttachedRouter | None = None
-    _owned_router: RouterLike | None = None
     _route_tools: frozenset[ToolName] = _ALL_TOOLS
     _url_check: UrlCheck | None = None
     _router_url_check: UrlCheck | None = None
@@ -106,24 +105,11 @@ class RouterSetup:
         self._url_check = url_check(url_policy)
         # Checked once, before a router is built by name, and that result kept: the caller's value is not read again.
         callers = None if route_tools is None else _route_tools(route_tools)
-        attached, owned = resolve_router(router, router_config)
-        try:
+        with self._built(router, router_config) as attached:
             self._route_tools = _route_tools(None, attached) if callers is None else callers
             self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
             floor = getattr(attached, ROUTER_URL_POLICY_ATTR, None) if url_policy is None else url_policy
             self._router_url_check = url_check(floor)
-        except BaseException:
-            discard_router(owned)  # built here and refused: nothing else would close it
-            raise
-        self._owned_router = owned
-
-    def _close_router(self) -> None:
-        """Close the router when it was built here by name; one passed in is the caller's to close."""
-        discard_router(self._owned_router)  # an async-only router's aclose(), run here, included
-
-    async def _aclose_router(self) -> None:
-        """:meth:`_close_router` from async code: the router's ``aclose()``, else its ``close()``."""
-        await aclose_router(self._owned_router)
 
     def _route_request(
         self, chain: Any, request: NormalizedRequest, budget: Budget | None
