@@ -120,6 +120,9 @@ VENDOR_CATEGORIES: Final = (
 )
 """The shelves a vendor is listed under. One per vendor; ``other`` when none fits."""
 
+MSG_VENDOR_OAUTH_LITERAL: Final = (
+    "oauth2.{field} is sent as written and cannot hold a placeholder: {value!r}. Use the literal value."
+)
 MSG_VENDOR_UNKNOWN: Final = "Unknown vendor {vendor!r}. Known vendors: {known}"
 MSG_VENDOR_ENDPOINT_UNKNOWN: Final = "Unknown vendor endpoint {endpoint!r}.{hint}"
 MSG_VENDOR_ENDPOINT_HINT: Final = " {vendor!r} has: {known}"

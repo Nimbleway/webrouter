@@ -35,6 +35,7 @@ from web_router.constants_vendors import (
     MSG_VENDOR_CATALOG_SCHEME,
     MSG_VENDOR_CATALOG_SETTING_CHOICES,
     MSG_VENDOR_CATALOG_UNKNOWN_REF,
+    MSG_VENDOR_OAUTH_LITERAL,
     VENDOR_CATEGORIES,
     VENDOR_ENDPOINT_ID_PATTERN,
     VENDOR_ENV_PATTERN,
@@ -94,11 +95,11 @@ class VendorOAuth2(_Strict):
     """How to mint an access token before a call. The token is cached until shortly before it expires."""
 
     grant: Literal["refresh_token", "client_credentials"]
-    token_url: str
+    token_url: str = Field(description="Literal: sent as written, so it may hold no {placeholder}.")
     client_id: str = Field(description="A template, usually '{client_id}'.")
     client_secret: str = Field(description="A template, usually '{client_secret}'.")
     refresh_token: str | None = Field(default=None, description="A template; required for the refresh_token grant.")
-    scope: str | None = None
+    scope: str | None = Field(default=None, description="Literal: sent as written, so it may hold no {placeholder}.")
     client_auth: Literal["body", "basic"] = Field(
         default="body", description="Where the client id and secret go: the form body, or HTTP Basic."
     )
@@ -113,6 +114,9 @@ class VendorOAuth2(_Strict):
             raise ValueError("the refresh_token grant needs a refresh_token template")
         if not self.token_url.startswith("https://"):
             raise ValueError(MSG_VENDOR_CATALOG_SCHEME.format(url=self.token_url))
+        for name, value in (("token_url", self.token_url), ("scope", self.scope or "")):
+            if "{" in value or "}" in value:
+                raise ValueError(MSG_VENDOR_OAUTH_LITERAL.format(field=name, value=value))
         return self
 
     def templates(self) -> list[str]:
