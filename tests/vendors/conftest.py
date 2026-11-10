@@ -13,7 +13,16 @@ import pytest
 from tests.vendors.data import ALL_VENDORS, CREDENTIALS
 from web_router.vendors.caller import VendorCaller
 from web_router.vendors.catalog import VendorCatalog
+from web_router.vendors.plan import plan_endpoint
 from web_router.vendors.schema import Vendor
+
+MakeCaller = Callable[..., VendorCaller]
+
+
+def _call(caller: VendorCaller, catalog: VendorCatalog, endpoint: str, params: dict[str, Any], **kw: Any) -> Any:
+    """Send ``endpoint`` with ``params`` through ``caller``, planned from ``catalog``."""
+    found = catalog.endpoint(endpoint)
+    return caller.send(plan_endpoint(catalog.vendor(found.vendor), found, params), **kw)
 
 
 class Recorder:

@@ -11,8 +11,10 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
+from tests.vendors.conftest import MakeCaller, Recorder, _call
 from tests.vendors.data import CREDENTIALS, OAUTH
 from web_router.exceptions import ProviderError
+from web_router.vendors.catalog import VendorCatalog
 from web_router.vendors.schema import VendorOAuth2
 from web_router.vendors.tokens import TokenCache, token_request
 
@@ -102,3 +104,60 @@ def test_an_oauth_token_url_or_scope_holds_no_placeholder(change: dict[str, Any]
 def test_a_literal_scope_is_sent_as_written() -> None:
     oauth = VendorOAuth2.model_validate({**OAUTH["auth"]["oauth2"], "scope": "read write"})
     assert token_request("oauthco", oauth, CREDENTIALS["oauthco"]).form["scope"] == "read write"
+
+
+# -- token failures, through the caller ---------------------------------------
+
+
+def _token_failure(respond: Any) -> Any:
+    class Failing(Recorder):
+        def __call__(self, request: httpx.Request) -> httpx.Response:
+            self.requests.append(request)
+            if request.url.host == "auth.oauth.test":
+                return respond(request)
+            return httpx.Response(200, json={})
+
+    return Failing()
+
+
+@pytest.mark.parametrize(
+    "respond",
+    [
+        lambda request: httpx.Response(200, text="<html>not json</html>"),
+        lambda request: httpx.Response(200, json=["a", "list"]),
+        lambda request: httpx.Response(200, json={"access_token": "t", "expires_in": "soon"}),
+    ],
+    ids=["not-json", "not-an-object", "bad-expiry"],
+)
+def test_a_malformed_token_answer_is_a_provider_error(catalog: VendorCatalog, make_caller: MakeCaller, respond: Any):
+    with pytest.raises(ProviderError, match="not a token"):
+        _call(make_caller(_token_failure(respond)), catalog, "oauthco.report.query", {"customer_id": "1", "query": "q"})
+
+
+def test_an_unreachable_token_endpoint_is_a_provider_error(catalog: VendorCatalog, make_caller: MakeCaller) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectTimeout("timed out sending refresh-secret-abc", request=request)
+
+    with pytest.raises(ProviderError, match="could not reach the token endpoint") as raised:
+        _call(make_caller(_token_failure(respond)), catalog, "oauthco.report.query", {"customer_id": "1", "query": "q"})
+    assert "refresh-secret-abc" not in str(raised.value)
+
+
+def test_a_token_being_minted_does_not_hold_up_another_account() -> None:
+    oauth = _OAUTH
+    first = token_request("oauthco", oauth, {**CREDENTIALS["oauthco"], "refresh_token": "account-one"})
+    second = token_request("oauthco", oauth, {**CREDENTIALS["oauthco"], "refresh_token": "account-two"})
+    cache = TokenCache()
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json={"access_token": "x"}))
+    )
+    held = cache._lock(first.key)
+    held.acquire()  # the first account's exchange is in flight
+    try:
+        done = threading.Event()
+        worker = threading.Thread(target=lambda: (cache.get(second, client), done.set()))
+        worker.start()
+        assert done.wait(timeout=2), "the second account waited on the first account's lock"
+    finally:
+        held.release()
+        client.close()
