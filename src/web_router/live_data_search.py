@@ -19,10 +19,15 @@ of :mod:`web_router.providers.base`, which is at its size limit.
 from __future__ import annotations
 
 import abc
+import asyncio
 import logging
+import time
+import weakref
 from typing import Any
 
 from web_router.constants_live_data import (
+    LIVE_DATA_SEARCH_CACHE_SECONDS,
+    LIVE_DATA_SEARCH_CONCURRENCY,
     LIVE_DATA_SEARCH_LOCAL,
     LIVE_DATA_SEARCH_MAX_SOURCES,
     LIVE_DATA_SEARCH_NATIVE,
@@ -35,6 +40,18 @@ from web_router.providers.base import LiveDataProvider
 from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
 
 logger = logging.getLogger(__name__)
+
+_Catalogue = tuple[list[LiveDataSourcePage], bool]
+"""A catalogue read for a local search: the listing pages, in order, and whether they reach its end."""
+
+_read: weakref.WeakKeyDictionary[LiveDataProvider, tuple[float, _Catalogue]] = weakref.WeakKeyDictionary()
+"""Each provider's last catalogue read and when it was made, so a second search soon after reads nothing.
+
+A catalogue changes slowly and is read whole to be searched -- dozens of
+pages on a large one -- so it is kept for :data:`LIVE_DATA_SEARCH_CACHE_SECONDS`.
+Only the listing is kept: a run still fetches its site on every call. Keyed
+weakly, so a closed and dropped provider takes its read with it.
+"""
 
 
 class NativeSourceSearch(abc.ABC):
@@ -71,13 +88,16 @@ def search_live_data_sources(
             lambda: native._search(query, limit=limit, offset=offset), MSG_LIVE_DATA_SOURCES_FAILED
         )
         return page.model_copy(update={"query": query, "search": LIVE_DATA_SEARCH_NATIVE})
-    pages: list[LiveDataSourcePage] = []
-    read, complete = 0, False
-    while read < LIVE_DATA_SEARCH_MAX_SOURCES:
-        pages.append(page := provider.live_data_sources(limit=LIVE_DATA_SEARCH_PAGE, offset=read))
-        read += len(page.sources)
-        if complete := _last_page(page, read=read):
-            break
+    if (catalogue := _cached(provider)) is None:
+        pages: list[LiveDataSourcePage] = []
+        read, complete = 0, False
+        while read < LIVE_DATA_SEARCH_MAX_SOURCES:
+            pages.append(page := provider.live_data_sources(limit=LIVE_DATA_SEARCH_PAGE, offset=read))
+            read += len(page.sources)
+            if complete := _last_page(page, read=read):
+                break
+        catalogue = _keep(provider, (pages, complete))
+    pages, complete = catalogue
     return _matched(provider.name, pages, query, limit=limit, offset=offset, complete=complete)
 
 
@@ -91,14 +111,53 @@ async def asearch_live_data_sources(
             provider._asearch(query, limit=limit, offset=offset), MSG_LIVE_DATA_SOURCES_FAILED
         )
         return page.model_copy(update={"query": query, "search": LIVE_DATA_SEARCH_NATIVE})
-    pages: list[LiveDataSourcePage] = []
-    read, complete = 0, False
+    if (catalogue := _cached(provider)) is None:
+        catalogue = _keep(provider, await _aread(provider))
+    pages, complete = catalogue
+    return _matched(provider.name, pages, query, limit=limit, offset=offset, complete=complete)
+
+
+async def _aread(provider: LiveDataProvider) -> _Catalogue:
+    """Read a catalogue for a local search; once the first page gives its count, the rest are asked for at once.
+
+    The first page's length is the backend's own page size, so the later
+    offsets step by it, and a backend that caps its pages below what was asked
+    is still read through. At most :data:`LIVE_DATA_SEARCH_CONCURRENCY` pages are
+    in flight. Without a count, pages are read one after another until a short one.
+    """
+    first = await provider.alive_data_sources(limit=LIVE_DATA_SEARCH_PAGE, offset=0)
+    pages, read = [first], len(first.sources)
+    if _last_page(first, read=read):
+        return pages, True
+    if first.total is not None:
+        gate = asyncio.Semaphore(LIVE_DATA_SEARCH_CONCURRENCY)
+        end = min(first.total, LIVE_DATA_SEARCH_MAX_SOURCES)
+
+        async def one(offset: int) -> LiveDataSourcePage:
+            async with gate:
+                return await provider.alive_data_sources(limit=LIVE_DATA_SEARCH_PAGE, offset=offset)
+
+        pages += await asyncio.gather(*(one(offset) for offset in range(read, end, read)))
+        read = sum(len(page.sources) for page in pages)
+        return pages, read >= first.total
     while read < LIVE_DATA_SEARCH_MAX_SOURCES:
         pages.append(page := await provider.alive_data_sources(limit=LIVE_DATA_SEARCH_PAGE, offset=read))
         read += len(page.sources)
-        if complete := _last_page(page, read=read):
-            break
-    return _matched(provider.name, pages, query, limit=limit, offset=offset, complete=complete)
+        if _last_page(page, read=read):
+            return pages, True
+    return pages, False
+
+
+def _cached(provider: LiveDataProvider) -> _Catalogue | None:
+    kept = _read.get(provider)
+    if kept is None or time.monotonic() - kept[0] > LIVE_DATA_SEARCH_CACHE_SECONDS:
+        return None
+    return kept[1]
+
+
+def _keep(provider: LiveDataProvider, catalogue: _Catalogue) -> _Catalogue:
+    _read[provider] = (time.monotonic(), catalogue)
+    return catalogue
 
 
 def matches(source: LiveDataSource, query: str) -> bool:

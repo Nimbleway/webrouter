@@ -205,3 +205,32 @@ def test_search_mode_names_a_native_searcher() -> None:
 )
 def test_matches_reads_name_site_and_description_ignoring_case(query: str, expected: bool) -> None:
     assert matches(CATALOGUE[121], query) is expected
+
+
+def test_a_second_search_soon_after_reuses_the_catalogue_read() -> None:
+    provider = PagedProvider()
+    search_live_data_sources(provider, "amazon")
+    read = len(provider.listed)
+    page = search_live_data_sources(provider, "amazon search")
+
+    assert len(provider.listed) == read, "nothing listed again"
+    assert page.names == ["amazon_search"]
+
+
+def test_a_catalogue_read_older_than_the_cache_is_read_again(monkeypatch: pytest.MonkeyPatch) -> None:
+    provider = PagedProvider()
+    search_live_data_sources(provider, "amazon")
+    read = len(provider.listed)
+    monkeypatch.setattr("web_router.live_data_search.LIVE_DATA_SEARCH_CACHE_SECONDS", -1.0)
+    search_live_data_sources(provider, "amazon")
+
+    assert len(provider.listed) == 2 * read
+
+
+async def test_an_async_search_asks_for_every_page_once_the_count_is_known() -> None:
+    provider = SmallPages()
+    page = await AsyncWebRouter().live_data_sources(provider=provider, query="amazon")
+
+    offsets = sorted(offset or 0 for _, offset in provider.listed)
+    assert offsets == list(range(0, len(CATALOGUE), SmallPages.page_cap)), "each page once, stepping by the page size"
+    assert page.total == 3

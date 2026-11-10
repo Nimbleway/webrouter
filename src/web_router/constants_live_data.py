@@ -138,6 +138,15 @@ LIVE_DATA_SEARCH_PAGE: Final = 100
 LIVE_DATA_SEARCH_MAX_SOURCES: Final = 5000
 """Sources read at most to search one catalogue here, so a vendor that pages forever cannot hold a call."""
 
+LIVE_DATA_SEARCH_CONCURRENCY: Final = 8
+"""Catalogue pages asked for at once by an async local search, once the first page has given the count."""
+
+LIVE_DATA_SEARCH_CACHE_SECONDS: Final = 600.0
+"""How long a catalogue read for a local search is reused by the next search of the same provider.
+
+Only the listing: a run still fetches its site on every call.
+"""
+
 LIVE_DATA_SEARCH_NATIVE: Final = "native"
 LIVE_DATA_SEARCH_LOCAL: Final = "local"
 

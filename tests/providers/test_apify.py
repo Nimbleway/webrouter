@@ -2,7 +2,7 @@
 
 The response shapes follow https://docs.apify.com/api/v2 (Store listing,
 Actor, default build, run-sync-get-dataset-items). Names and values are
-synthetic. Not yet verified against a live response.
+synthetic; the provider was verified live on 2026-11-10.
 """
 
 from __future__ import annotations
