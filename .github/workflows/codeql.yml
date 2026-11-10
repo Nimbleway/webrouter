@@ -16,8 +16,9 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  # Only a PR's older runs are dropped: every commit on main gets a full scan.
+  # A PR shares one group and drops its older runs. Every other run is grouped
+  # by commit, so no commit on main waits behind another or gets replaced.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
