@@ -239,5 +239,4 @@ def main() -> None:
     and finding no file is a no-op, so a server with no key anywhere starts on
     the keyless tier.
     """
-    routing = McpRouting.from_environ()  # its keys read before any .env file fills the environment
-    anyio.run(partial(serve, env=EnvSources.at_startup(), routing=routing))
+    anyio.run(partial(serve, routing=McpRouting.from_environ(), env=EnvSources.at_startup()))  # router keys before .env
