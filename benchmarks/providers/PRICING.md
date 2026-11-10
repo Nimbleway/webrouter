@@ -310,7 +310,7 @@ request. Each row is the vendor tier web-router's normalized `effort` maps to
 | nimble | `low` | Web Search Agent `effort=low`, 10 to 30 s | $0.025 per run | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
 | nimble | `medium` | `medium`, 1 to 3 minutes | $0.10 per run | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
 | nimble | `high` | `high`, 5 to 15 minutes | $0.50 per run | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
-| nimble | `max` | `max` | not published ("custom, coming soon") | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
+| nimble | `max` | `x-high` | sends x-high, Nimble's deepest open tier; its $2.00 per run is not recorded yet | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
 | parallel | `low` | processor `lite` | $0.005 per run | [docs.parallel.ai](https://docs.parallel.ai/getting-started/pricing) | 2026-10-07 |
 | parallel | `medium` (default) | `core` | $0.025 per run | [docs.parallel.ai](https://docs.parallel.ai/getting-started/pricing) | 2026-10-07 |
 | parallel | `high` | `pro` | $0.10 per run | [docs.parallel.ai](https://docs.parallel.ai/getting-started/pricing) | 2026-10-07 |
@@ -336,9 +336,8 @@ billed values". Past 272K input tokens the OpenAI models' input price doubles an
 the output price rises by half: `gpt-6-luna` $0.20 / $0.75, `gpt-6-sol` $4 / $15
 per 1M tokens.
 
-Tiers web-router does not map, reachable only through `provider_options`: Nimble
-`x-high` ($2.00 per run), Parallel `base` ($0.01) and `ultra2x` / `4x` / `8x`
-($0.60 / $1.20 / $2.40). Parallel bills only completed runs. The one live Linkup
+Tiers web-router does not map, reachable only through `provider_options`:
+Parallel `base` ($0.01) and `ultra2x` / `4x` / `8x` ($0.60 / $1.20 / $2.40). Parallel bills only completed runs. The one live Linkup
 run, at `effort=low`, took about 105 seconds.
 
 ## Browser sessions

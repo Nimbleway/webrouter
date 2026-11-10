@@ -2153,14 +2153,13 @@ from outside a handle can outlive the memory, and it raises as an unknown id.
 # prose documentation, so the field names here are the ones the API declares.
 
 NIMBLE_RESEARCH_EFFORT: dict[ResearchEffort, str] = {
-    # Nimble's tiers are low/medium/high/x-high/5x-high/max. The four
-    # normalized levels land on the four that mean the same thing everywhere;
-    # x-high and 5x-high sit between high and max and are reachable through
-    # provider_options, because no other backend has anything to map them onto.
+    # Nimble's API takes low/medium/high/x-high; its own `max` is listed as
+    # coming soon and refused with a 422, so the normalized `max` sends x-high,
+    # the deepest tier Nimble runs today.
     "low": "low",
     "medium": "medium",
     "high": "high",
-    "max": "max",
+    "max": "x-high",
 }
 
 NIMBLE_RESEARCH_STATES: dict[str, ResearchState] = {
