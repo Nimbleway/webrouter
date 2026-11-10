@@ -138,3 +138,21 @@ def test_a_router_that_fails_to_close_still_lets_the_rest_close(latency: ModuleT
         latency._close([Router("a"), Router("b")], loop)
     assert closed == ["a", "b"]
     assert loop is None or loop.is_closed()
+
+
+def test_the_reported_cost_prices_the_requests_the_run_sent(latency: ModuleType) -> None:
+    sent: list[str] = []
+    price = {p: 10.0**i for i, p in enumerate("abcdef")}  # six prompts: one seed's 12 would price each twice
+
+    class Recording:
+        timeout_s = 1.0
+
+        def route(self, req: RouteRequest) -> RouteDecision:
+            sent.append(req.prompt)
+            return RouteDecision()
+
+    spec = module("router_latency_routers").RouterSpec("rec", "rec", Recording, cost_usd=lambda r: price[r.prompt])
+    args = latency.parse_args(["-n", "3", "--warmup", "1", "--cold", "3", "--e2e", "3", "--seed", "7"])
+    report = latency.run(args, [spec], [req(p) for p in price])
+    assert len(sent) == 1 + 1 + 3 + 3 + 1 + 3
+    assert report["routers"]["rec"]["cost_usd"] == sum(price[p] for p in sent)

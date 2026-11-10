@@ -87,12 +87,14 @@ def sample(pool: Sequence[RouteRequest], count: int, seed: int) -> list[RouteReq
     return [shuffled[i % len(shuffled)] for i in range(count)]
 
 
-def _calls(args: argparse.Namespace) -> int:
-    return 1 + args.warmup + args.n + args.cold + args.warmup + args.e2e
+def _phases(args: argparse.Namespace, pool: Sequence[RouteRequest]) -> tuple[list[RouteRequest], ...]:
+    """The requests each phase sends: timed, cold builds, then routed against unrouted, each on its own seed."""
+    timed = sample(pool, 1 + args.warmup + args.n, args.seed)
+    return timed, sample(pool, args.cold, args.seed + 2), sample(pool, args.warmup + args.e2e, args.seed + 1)
 
 
 def _plan(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[RouteRequest]) -> list[dict[str, Any]]:
-    every = sample(pool, _calls(args), args.seed)
+    every = [req for phase in _phases(args, pool) for req in phase]  # priced as run, so the estimate is the run's
     return [
         {
             "name": s.name,
@@ -131,7 +133,7 @@ def _close(routers: Iterable[Any], loop: asyncio.AbstractEventLoop | None) -> No
 def run(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[RouteRequest]) -> dict[str, Any]:
     """Every router timed interleaved, then built fresh for each cold call, then routed against unrouted."""
     tools = tool_latencies(args.chain)
-    plan = sample(pool, 1 + args.warmup + args.n, args.seed)
+    plan, cold_reqs, routed = _phases(args, pool)
     built: dict[str, Any] = {}
     # One loop for every async phase: a router's kept-alive connections belong to the loop that opened them.
     loop = asyncio.new_event_loop() if args.use_async else None
@@ -141,12 +143,12 @@ def run(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[Ro
         measured = interleaved(built, plan, warmup=args.warmup, deadline_s=args.deadline_s, seed=args.seed, loop=loop)
         cold = cold_builds(
             {s.name: s.build for s in specs},
-            sample(pool, args.cold, args.seed + 2),
+            cold_reqs,
             deadline_s=args.deadline_s,
             seed=args.seed,
             loop=loop,
         )
-        prompts = [r.prompt for r in sample(pool, args.warmup + args.e2e, args.seed + 1)]
+        prompts = [r.prompt for r in routed]
         chain = chain_orders(args.chain)["search"]
         added = added_wall_time(built, prompts, chain, warmup=args.warmup, seed=args.seed, loop=loop)
     finally:
