@@ -1,0 +1,550 @@
+{
+  "vendor": "pdl",
+  "name": "People Data Labs",
+  "category": "enrichment",
+  "summary": "Person and company enrichment, identify and dataset search over PDL's person and company data.",
+  "docs_url": "https://docs.peopledatalabs.com/docs/api-overview",
+  "pricing_url": "https://www.peopledatalabs.com/pricing/person",
+  "base_url": "https://api.peopledatalabs.com/v5",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "PDL_API_KEY",
+          "PEOPLEDATALABS_API_KEY"
+        ],
+        "description": "a People Data Labs API key (dashboard.peopledatalabs.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-priced: enrichment per match, search per record returned, identify per call. Free-tier credits and rate limits are small.",
+    "Enrichment and identify take query parameters; search takes a JSON body.",
+    "Responses use lowercase text by default; set titlecase for display.",
+    "Bulk enrichment, preview, autocomplete and cleaner endpoints exist but are not listed."
+  ],
+  "sources": [
+    "https://docs.peopledatalabs.com/llms.txt",
+    "https://docs.peopledatalabs.com/docs/authentication.md",
+    "https://docs.peopledatalabs.com/docs/input-parameters-person-enrichment-api.md",
+    "https://docs.peopledatalabs.com/docs/input-parameters-person-search-api.md"
+  ],
+  "endpoints": [
+    {
+      "id": "pdl.person.enrich",
+      "name": "Enrich a person",
+      "summary": "One-to-one match returning the full profile for a person identified by email, phone, social profile, PDL id, or name plus a locating detail.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/enrich",
+      "params": {
+        "pdl_id": {
+          "in": "query",
+          "type": "string",
+          "description": "PDL persistent id; if given, other match inputs are ignored.",
+          "example": "qEnOZ5Oh0poWnQ1luFBfVw_0000"
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name, at least first and last.",
+          "example": "Jennifer C. Jackson"
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "middle_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Middle name."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Where the person lives, anything from a street address to a country.",
+          "example": "Medford, OR USA"
+        },
+        "street_address": {
+          "in": "query",
+          "type": "string",
+          "description": "Street address."
+        },
+        "locality": {
+          "in": "query",
+          "type": "string",
+          "description": "City or locality."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "State or region."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country."
+        },
+        "postal_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Postal code; assumed US when country is missing."
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Name, website or social URL of a company the person worked at.",
+          "example": "Amazon"
+        },
+        "school": {
+          "in": "query",
+          "type": "string",
+          "description": "Name, website or social URL of a school attended."
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "description": "A phone number; must start with +country code.",
+          "example": "+1 555-234-1234"
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "An email the person has used."
+        },
+        "email_hash": {
+          "in": "query",
+          "type": "string",
+          "description": "SHA-256 or MD5 hash of an email."
+        },
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "description": "A social profile URL.",
+          "example": "https://linkedin.com/in/seanthorne"
+        },
+        "lid": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn id."
+        },
+        "birth_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Year or YYYY-MM-DD."
+        },
+        "data_include": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; prefix with - to exclude. Default is the full profile.",
+          "example": "full_name,emails.address"
+        },
+        "titlecase": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Titlecase the text; responses are lowercase by default."
+        },
+        "include_if_matched": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add a field listing which inputs matched."
+        },
+        "min_likelihood": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum likelihood score (1 to 10, default 2) for a record to count as a match.",
+          "example": 6
+        },
+        "required": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields a response must contain to count (and be billed), as a boolean expression.",
+          "example": "work_email AND experience"
+        }
+      },
+      "notes": [
+        "Needs at least one of: profile, email, phone, email_hash, lid, pdl_id, or (name or first and last name) plus one of company, school, location, address parts or birth_date.",
+        "Billed per match; 404 means no match and costs nothing. Default limit 100 per minute free, 1,000 paying.",
+        "Use required to pay only for records that carry the fields you need."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.peopledatalabs.com/docs/reference-person-enrichment-api",
+      "verified": {
+        "docs": "https://docs.peopledatalabs.com/docs/reference-person-enrichment-api"
+      }
+    },
+    {
+      "id": "pdl.person.identify",
+      "name": "Identify possible people",
+      "summary": "Returns a ranked list of candidate profiles for a partial description of a person.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/identify",
+      "params": {
+        "pdl_id": {
+          "in": "query",
+          "type": "string",
+          "description": "PDL persistent id; if given, other match inputs are ignored.",
+          "example": "qEnOZ5Oh0poWnQ1luFBfVw_0000"
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name, at least first and last.",
+          "example": "Jennifer C. Jackson"
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "middle_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Middle name."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Where the person lives, anything from a street address to a country.",
+          "example": "Medford, OR USA"
+        },
+        "street_address": {
+          "in": "query",
+          "type": "string",
+          "description": "Street address."
+        },
+        "locality": {
+          "in": "query",
+          "type": "string",
+          "description": "City or locality."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "State or region."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country."
+        },
+        "postal_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Postal code; assumed US when country is missing."
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Name, website or social URL of a company the person worked at.",
+          "example": "Amazon"
+        },
+        "school": {
+          "in": "query",
+          "type": "string",
+          "description": "Name, website or social URL of a school attended."
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "description": "A phone number; must start with +country code.",
+          "example": "+1 555-234-1234"
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "An email the person has used."
+        },
+        "email_hash": {
+          "in": "query",
+          "type": "string",
+          "description": "SHA-256 or MD5 hash of an email."
+        },
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "description": "A social profile URL.",
+          "example": "https://linkedin.com/in/seanthorne"
+        },
+        "lid": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn id."
+        },
+        "birth_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Year or YYYY-MM-DD."
+        },
+        "data_include": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; prefix with - to exclude. Default is the full profile.",
+          "example": "full_name,emails.address"
+        },
+        "titlecase": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Titlecase the text; responses are lowercase by default."
+        },
+        "include_if_matched": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add a field listing which inputs matched."
+        }
+      },
+      "notes": [
+        "Consumes one credit per call however many profiles return, unlike the other APIs. Default limit 10 calls per minute.",
+        "Takes the same identifying inputs as person.enrich."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.peopledatalabs.com/docs/reference-person-identify-api",
+      "verified": {
+        "docs": "https://docs.peopledatalabs.com/docs/reference-person-identify-api"
+      }
+    },
+    {
+      "id": "pdl.person.search",
+      "name": "Search people",
+      "summary": "Search the person dataset with an Elasticsearch query or an SQL query, paged with scroll_token.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "description": "An Elasticsearch 7.7 query over the person fields. Give query or sql, not both.",
+          "example": {
+            "bool": {
+              "must": [
+                {
+                  "term": {
+                    "location_country": "mexico"
+                  }
+                },
+                {
+                  "term": {
+                    "job_title_role": "health"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "sql": {
+          "in": "body",
+          "type": "string",
+          "description": "SQL of the form SELECT * FROM person WHERE ...; alternative to query."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records to return, 1 to 100.",
+          "example": 10
+        },
+        "scroll_token": {
+          "in": "body",
+          "type": "string",
+          "description": "scroll_token from the previous response, for the next page."
+        },
+        "dataset": {
+          "in": "body",
+          "type": "string",
+          "description": "Which dataset to search; all, or a slice such as resume."
+        },
+        "titlecase": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Titlecase the records."
+        },
+        "data_include": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to return."
+        }
+      },
+      "notes": [
+        "A read over POST: the query is in the body.",
+        "Billed one credit per record returned. Default limit 10 requests per minute.",
+        "Answers 200 even with no hits; read total to tell."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.peopledatalabs.com/docs/reference-person-search-api",
+      "verified": {
+        "docs": "https://docs.peopledatalabs.com/docs/reference-person-search-api"
+      }
+    },
+    {
+      "id": "pdl.company.enrich",
+      "name": "Enrich a company",
+      "summary": "One-to-one match returning the company profile for a name, website, social profile, ticker or PDL id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/enrich",
+      "params": {
+        "pdl_id": {
+          "in": "query",
+          "type": "string",
+          "description": "PDL company id or LinkedIn slug; other inputs are then ignored.",
+          "example": "google"
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name.",
+          "example": "Google, Inc."
+        },
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "description": "Company social profile.",
+          "example": "linkedin.com/company/google"
+        },
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Stock ticker.",
+          "example": "GOOGL"
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website.",
+          "example": "google.com"
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Headquarters location."
+        },
+        "locality": {
+          "in": "query",
+          "type": "string",
+          "description": "HQ locality."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "HQ region."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "HQ country."
+        },
+        "postal_code": {
+          "in": "query",
+          "type": "string",
+          "description": "HQ postal code."
+        },
+        "data_include": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated company fields to return.",
+          "example": "name,location.metro"
+        },
+        "titlecase": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Titlecase the text."
+        },
+        "include_if_matched": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add a field listing which inputs matched."
+        },
+        "min_likelihood": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum likelihood, 1 to 10, default 2."
+        },
+        "required": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields a response must contain to count as a match.",
+          "example": "location AND (website OR linkedin_url)"
+        }
+      },
+      "notes": [
+        "Billed per match; 404 means no match and costs nothing. Limit 10 per minute free, 1,000 per minute paying."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.peopledatalabs.com/docs/reference-company-enrichment-api",
+      "verified": {
+        "docs": "https://docs.peopledatalabs.com/docs/reference-company-enrichment-api"
+      }
+    },
+    {
+      "id": "pdl.company.search",
+      "name": "Search companies",
+      "summary": "Search the company dataset with an Elasticsearch query or SQL, paged with scroll_token.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "description": "An Elasticsearch 7.7 query over the company fields. Give query or sql.",
+          "example": {
+            "term": {
+              "name": "people data labs"
+            }
+          }
+        },
+        "sql": {
+          "in": "body",
+          "type": "string",
+          "description": "SQL of the form SELECT * FROM company WHERE ...; alternative to query."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records to return, 1 to 100.",
+          "example": 10
+        },
+        "scroll_token": {
+          "in": "body",
+          "type": "string",
+          "description": "scroll_token from the previous response."
+        },
+        "titlecase": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Titlecase the records."
+        }
+      },
+      "notes": [
+        "A read over POST: the query is in the body.",
+        "Billed one credit per record returned. Default limit 10 requests per minute.",
+        "Answers 200 even with no hits; read total."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.peopledatalabs.com/docs/reference-company-search-api",
+      "verified": {
+        "docs": "https://docs.peopledatalabs.com/docs/reference-company-search-api"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}
