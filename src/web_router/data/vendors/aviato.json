@@ -1,0 +1,2133 @@
+{
+  "vendor": "aviato",
+  "name": "Aviato",
+  "category": "company-data",
+  "summary": "Company, funding, investor and people data, contact info and search through the Aviato data engine.",
+  "docs_url": "https://docs.data.aviato.co",
+  "pricing_url": "https://www.aviato.co",
+  "base_url": "https://data.api.aviato.co",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AVIATO_API_KEY"
+        ],
+        "description": "an Aviato API key (data.aviato.co dashboard > Teams > API Keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-based; billing.balance shows the team balance. Previews and 404s cost nothing; most enrich calls cost a credit per successful lookup.",
+    "Company endpoints accept any one identifier (id, website, linkedinURL, crunchbaseID...). List endpoints need perPage and page.",
+    "Search endpoints take the Aviato DSL; person.simple_search is the flat-parameter alternative. At most 15 searches run concurrently."
+  ],
+  "sources": [
+    "https://docs.data.aviato.co/llms.txt",
+    "https://docs.data.aviato.co/openapi.json",
+    "https://docs.data.aviato.co/intro/introduction-auth.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "aviato.billing.balance",
+      "name": "Get the team credit balance",
+      "kind": "read",
+      "method": "GET",
+      "path": "/billing/balance",
+      "job": "account.usage",
+      "docs_url": "https://docs.data.aviato.co/api-reference/billing/get-balance.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/billing/get-balance.md"
+      }
+    },
+    {
+      "id": "aviato.company.enrich",
+      "name": "Enrich a company",
+      "summary": "Details on one company, found by any identifier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/enrich",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "preview": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only minimal identification info, no credit charged."
+        },
+        "full": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include funding rounds, investments, acquisitions, founders and funds."
+        },
+        "require": {
+          "in": "query",
+          "type": "array",
+          "description": "Top-level response fields that must be non-empty; otherwise 404 and no credit is charged."
+        }
+      },
+      "notes": [
+        "Costs a credit per successful lookup; a 404 is free."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/enrich.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/enrich.md"
+      }
+    },
+    {
+      "id": "aviato.company.financials",
+      "name": "Get company financials",
+      "summary": "Estimated annual revenue range and related financial data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/financials",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "require": {
+          "in": "query",
+          "type": "array",
+          "description": "Top-level response fields that must be non-empty; otherwise 404 and no credit is charged."
+        }
+      },
+      "notes": [
+        "404 without a charge when no data exists."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/enrich-financials.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/enrich-financials.md"
+      }
+    },
+    {
+      "id": "aviato.company.social_metrics",
+      "name": "Get company social metrics",
+      "summary": "Audience counts and growth.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/social-metrics",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "require": {
+          "in": "query",
+          "type": "array",
+          "description": "Top-level response fields that must be non-empty; otherwise 404 and no credit is charged."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/enrich-social-metrics.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/enrich-social-metrics.md"
+      }
+    },
+    {
+      "id": "aviato.company.web_traffic",
+      "name": "Get company web traffic",
+      "summary": "Traffic history, sources and visitor geography.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/web-traffic",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "require": {
+          "in": "query",
+          "type": "array",
+          "description": "Top-level response fields that must be non-empty; otherwise 404 and no credit is charged."
+        }
+      },
+      "job": "domain.overview",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/enrich-web-traffic.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/enrich-web-traffic.md"
+      }
+    },
+    {
+      "id": "aviato.company.legal",
+      "name": "Get company legal identifiers",
+      "summary": "Registered name and legal identifiers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/legal",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "require": {
+          "in": "query",
+          "type": "array",
+          "description": "Top-level response fields that must be non-empty; otherwise 404 and no credit is charged."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/enrich-legal.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/enrich-legal.md"
+      }
+    },
+    {
+      "id": "aviato.company.bulk_enrich",
+      "name": "Enrich up to 100 companies",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/bulk-enrich",
+      "params": {
+        "lookups": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Lookups, each with one or more identifiers: id, name, website, linkedinURL, linkedinID, crunchbaseID, pitchbookID."
+        },
+        "require": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields that must be non-empty per lookup; failing lookups come back with lookupSuccessful false and are not billed."
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/bulk-enrich.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/bulk-enrich.md"
+      }
+    },
+    {
+      "id": "aviato.company.acquisitions",
+      "name": "List companies a company acquired",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/acquisitions",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "company.acquisitions",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/get-acquisitions.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/get-acquisitions.md"
+      }
+    },
+    {
+      "id": "aviato.company.founders",
+      "name": "List a company's founders",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/founders",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "company.employees",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/get-company-founders.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/get-company-founders.md"
+      }
+    },
+    {
+      "id": "aviato.company.investments",
+      "name": "List investments into a company",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/investments",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "company.investments",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/get-company-investments.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/get-company-investments.md"
+      }
+    },
+    {
+      "id": "aviato.company.funding_rounds",
+      "name": "List a company's funding rounds",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/funding-rounds",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "company.funding",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/get-company-funding-rounds.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/get-company-funding-rounds.md"
+      }
+    },
+    {
+      "id": "aviato.company.employees",
+      "name": "List a company's employees",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/employees",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "company.employees",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/get-employees.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/get-employees.md"
+      }
+    },
+    {
+      "id": "aviato.company.outbound_investments",
+      "name": "List investments a company made",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/investments/outbound",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "company.investments",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/get-company-outbound-investments.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/get-company-outbound-investments.md"
+      }
+    },
+    {
+      "id": "aviato.company.fund_investments",
+      "name": "List funds a company invested in",
+      "summary": "Individual funds, e.g. a growth fund of an investor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/investments/funds",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "company.investments",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/get-company-fund-investments.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/get-company-fund-investments.md"
+      }
+    },
+    {
+      "id": "aviato.company.funds",
+      "name": "List funds a company raised",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/funds",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Aviato company ID."
+        },
+        "linkedinID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedin identifier."
+        },
+        "linkedinNumID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company linkedinNum identifier."
+        },
+        "facebookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company facebook identifier."
+        },
+        "twitterID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company twitter identifier."
+        },
+        "crunchbaseID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company crunchbase identifier."
+        },
+        "pitchbookID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company pitchbook identifier."
+        },
+        "producthuntID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company producthunt identifier."
+        },
+        "dealroomID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company dealroom identifier."
+        },
+        "goldenID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company golden identifier."
+        },
+        "angellistID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company angellist identifier."
+        },
+        "wellfoundID": {
+          "in": "query",
+          "type": "string",
+          "description": "Company wellfound identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL, e.g. linkedin.com/company/google or linkedin.com/company/1441."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "company.funds",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/get-company-funds.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/get-company-funds.md"
+      }
+    },
+    {
+      "id": "aviato.company.search",
+      "name": "Search companies with the Aviato DSL",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/search",
+      "params": {
+        "dsl": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The DSL query object; it must contain a filters array. See the DSL docs for fields and operators.",
+          "example": {
+            "filters": []
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. At most 15 searches may run at once per customer, shared with the person search.",
+        "Filter nesting is capped at 100 groups."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.data.aviato.co/api-reference/company/search.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/company/search.md"
+      }
+    },
+    {
+      "id": "aviato.person.enrich",
+      "name": "Enrich a person",
+      "summary": "Details on one person, found by any identifier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/enrich",
+      "params": {
+        "linkedinEntityId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn entity ID."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Person LinkedIn URL (linkedin.com/in/...)."
+        },
+        "angelListID": {
+          "in": "query",
+          "type": "string",
+          "description": "AngelList ID."
+        },
+        "signalNfxID": {
+          "in": "query",
+          "type": "string",
+          "description": "Signal NFX ID."
+        },
+        "polyworkID": {
+          "in": "query",
+          "type": "string",
+          "description": "Polywork ID."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Person email."
+        },
+        "preview": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only minimal identification info, no credit charged."
+        },
+        "full": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include company investments, fund investments and founded companies."
+        },
+        "require": {
+          "in": "query",
+          "type": "array",
+          "description": "Top-level response fields that must be non-empty; otherwise 404 and no credit is charged."
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/enrich.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/enrich.md"
+      }
+    },
+    {
+      "id": "aviato.person.bulk_enrich",
+      "name": "Enrich up to 20 people",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/bulk/enrich",
+      "params": {
+        "lookups": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Lookups, each with one or more identifiers: id, email, linkedinURL, linkedinEntityId, twitterID, crunchbaseID, angelListID."
+        },
+        "preview": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Minimal identification info only, no credits."
+        },
+        "require": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields that must be non-empty per lookup."
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data. Max 20 per call."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/bulk-enrich.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/bulk-enrich.md"
+      }
+    },
+    {
+      "id": "aviato.person.contact_info",
+      "name": "Pull a person's contact info",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/contact-info",
+      "params": {
+        "linkedinEntityId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn entity ID."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Person LinkedIn URL (linkedin.com/in/...)."
+        },
+        "angelListID": {
+          "in": "query",
+          "type": "string",
+          "description": "AngelList ID."
+        },
+        "signalNfxID": {
+          "in": "query",
+          "type": "string",
+          "description": "Signal NFX ID."
+        },
+        "polyworkID": {
+          "in": "query",
+          "type": "string",
+          "description": "Polywork ID."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Person email."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to one email type.",
+          "enum": [
+            "personal",
+            "work",
+            "student"
+          ]
+        }
+      },
+      "job": "people.email.find",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/pull-contact-info.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/pull-contact-info.md"
+      }
+    },
+    {
+      "id": "aviato.person.bulk_contact_info",
+      "name": "Contact info for up to 100 people",
+      "summary": "Charges credits only for people with contact data found.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/bulk/contact-info",
+      "params": {
+        "lookups": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Lookups, each with one or more identifiers: id, email, linkedinURL, linkedinEntityId, twitterID, crunchbaseID."
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/bulk-contact-info.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/bulk-contact-info.md"
+      }
+    },
+    {
+      "id": "aviato.person.email",
+      "name": "Get a person's emails",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/email",
+      "params": {
+        "linkedinEntityId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn entity ID."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Person LinkedIn URL (linkedin.com/in/...)."
+        },
+        "angelListID": {
+          "in": "query",
+          "type": "string",
+          "description": "AngelList ID."
+        },
+        "signalNfxID": {
+          "in": "query",
+          "type": "string",
+          "description": "Signal NFX ID."
+        },
+        "polyworkID": {
+          "in": "query",
+          "type": "string",
+          "description": "Polywork ID."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Person email."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to one email type.",
+          "enum": [
+            "personal",
+            "work",
+            "student"
+          ]
+        }
+      },
+      "job": "people.email.find",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/get-email.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/get-email.md"
+      }
+    },
+    {
+      "id": "aviato.person.phone",
+      "name": "Get a person's phone numbers",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/phone",
+      "params": {
+        "linkedinEntityId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn entity ID."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Person LinkedIn URL (linkedin.com/in/...)."
+        },
+        "angelListID": {
+          "in": "query",
+          "type": "string",
+          "description": "AngelList ID."
+        },
+        "signalNfxID": {
+          "in": "query",
+          "type": "string",
+          "description": "Signal NFX ID."
+        },
+        "polyworkID": {
+          "in": "query",
+          "type": "string",
+          "description": "Polywork ID."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Person email."
+        }
+      },
+      "job": "people.phone.find",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/get-phone.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/get-phone.md"
+      }
+    },
+    {
+      "id": "aviato.person.email_hash",
+      "name": "Get SHA-256 hashes of personal emails",
+      "summary": "Only personal emails, hashed for privacy-safe matching.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/email-hash",
+      "params": {
+        "linkedinEntityId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn entity ID."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Person LinkedIn URL (linkedin.com/in/...)."
+        },
+        "angelListID": {
+          "in": "query",
+          "type": "string",
+          "description": "AngelList ID."
+        },
+        "signalNfxID": {
+          "in": "query",
+          "type": "string",
+          "description": "Signal NFX ID."
+        },
+        "polyworkID": {
+          "in": "query",
+          "type": "string",
+          "description": "Polywork ID."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Person email."
+        }
+      },
+      "job": "people.email.find",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/pull-email-hash.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/pull-email-hash.md"
+      }
+    },
+    {
+      "id": "aviato.person.search",
+      "name": "Search people with the Aviato DSL",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/search",
+      "params": {
+        "dsl": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The DSL query object; it must contain a filters array.",
+          "example": {
+            "filters": []
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. Shares the 15-concurrent-search limit with company search."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/search.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/search.md"
+      }
+    },
+    {
+      "id": "aviato.person.simple_search",
+      "name": "Search people with query parameters",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/simple/search",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page, max 100.",
+          "example": 25
+        },
+        "enrich": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Enrich every result (1 person credit each); otherwise minimal results."
+        },
+        "fullName": {
+          "in": "query",
+          "type": "string",
+          "description": "Fuzzy name query."
+        },
+        "headline": {
+          "in": "query",
+          "type": "string",
+          "description": "Keyword search on headline."
+        },
+        "country": {
+          "in": "query",
+          "type": "array",
+          "description": "Countries, OR-ed."
+        },
+        "region": {
+          "in": "query",
+          "type": "array",
+          "description": "Regions or states, OR-ed."
+        },
+        "locality": {
+          "in": "query",
+          "type": "array",
+          "description": "Cities, OR-ed."
+        },
+        "skills": {
+          "in": "query",
+          "type": "array",
+          "description": "All listed skills must be present."
+        },
+        "currentTitles": {
+          "in": "query",
+          "type": "array",
+          "description": "Current titles, OR-ed."
+        },
+        "pastTitles": {
+          "in": "query",
+          "type": "array",
+          "description": "Past titles, OR-ed."
+        },
+        "currentCompanyNames": {
+          "in": "query",
+          "type": "array",
+          "description": "Current employers by name, OR-ed."
+        },
+        "currentDepartments": {
+          "in": "query",
+          "type": "array",
+          "description": "Current departments, OR-ed."
+        },
+        "minLinkedinConnections": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum LinkedIn connections."
+        },
+        "minLinkedinFollowers": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum LinkedIn followers."
+        }
+      },
+      "notes": [
+        "Many more filters exist (past and all variants for titles, companies, schools); see the docs."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/simple-search.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/simple-search.md"
+      }
+    },
+    {
+      "id": "aviato.person.vestings",
+      "name": "Get a person's vestings",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/vestings",
+      "params": {
+        "linkedinEntityId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn entity ID."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Person LinkedIn URL (linkedin.com/in/...)."
+        },
+        "angelListID": {
+          "in": "query",
+          "type": "string",
+          "description": "AngelList ID."
+        },
+        "signalNfxID": {
+          "in": "query",
+          "type": "string",
+          "description": "Signal NFX ID."
+        },
+        "polyworkID": {
+          "in": "query",
+          "type": "string",
+          "description": "Polywork ID."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Person email."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/get-vestings.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/get-vestings.md"
+      }
+    },
+    {
+      "id": "aviato.person.company_investments",
+      "name": "List companies a person invested in",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/investments/companies",
+      "params": {
+        "linkedinEntityId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn entity ID."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Person LinkedIn URL (linkedin.com/in/...)."
+        },
+        "angelListID": {
+          "in": "query",
+          "type": "string",
+          "description": "AngelList ID."
+        },
+        "signalNfxID": {
+          "in": "query",
+          "type": "string",
+          "description": "Signal NFX ID."
+        },
+        "polyworkID": {
+          "in": "query",
+          "type": "string",
+          "description": "Polywork ID."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Person email."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/get-company-investments.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/get-company-investments.md"
+      }
+    },
+    {
+      "id": "aviato.person.fund_investments",
+      "name": "List funds a person invested in",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/investments/funds",
+      "params": {
+        "linkedinEntityId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn entity ID."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Person LinkedIn URL (linkedin.com/in/...)."
+        },
+        "angelListID": {
+          "in": "query",
+          "type": "string",
+          "description": "AngelList ID."
+        },
+        "signalNfxID": {
+          "in": "query",
+          "type": "string",
+          "description": "Signal NFX ID."
+        },
+        "polyworkID": {
+          "in": "query",
+          "type": "string",
+          "description": "Polywork ID."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Person email."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/get-fund-investments.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/get-fund-investments.md"
+      }
+    },
+    {
+      "id": "aviato.person.founded_companies",
+      "name": "List companies a person founded",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/founded-companies",
+      "params": {
+        "linkedinEntityId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn entity ID."
+        },
+        "linkedinURL": {
+          "in": "query",
+          "type": "string",
+          "description": "Person LinkedIn URL (linkedin.com/in/...)."
+        },
+        "angelListID": {
+          "in": "query",
+          "type": "string",
+          "description": "AngelList ID."
+        },
+        "signalNfxID": {
+          "in": "query",
+          "type": "string",
+          "description": "Signal NFX ID."
+        },
+        "polyworkID": {
+          "in": "query",
+          "type": "string",
+          "description": "Polywork ID."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Person email."
+        },
+        "perPage": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number.",
+          "example": 1
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://docs.data.aviato.co/api-reference/person/get-founded-companies.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/person/get-founded-companies.md"
+      }
+    },
+    {
+      "id": "aviato.geocoder.search",
+      "name": "Find geocoded location IDs",
+      "summary": "Use the returned ID in locationIDList filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geocoder/search",
+      "params": {
+        "text": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Location text.",
+          "example": "San Francisco"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum matches."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language."
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://docs.data.aviato.co/api-reference/geocoder/search.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/geocoder/search.md"
+      }
+    },
+    {
+      "id": "aviato.marketmap.generate",
+      "name": "Start generating a market map",
+      "summary": "Starts a job that finds similar companies; read it with marketmap.get.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/marketmap/generate",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name; give with website."
+        },
+        "website": {
+          "in": "body",
+          "type": "string",
+          "description": "Company website; give with name."
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Aviato company ID, instead of name and website."
+        }
+      },
+      "notes": [
+        "Starts a job that only produces data; poll marketmap.get with the returned map ID."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.data.aviato.co/api-reference/marketmap/generate-map.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/marketmap/generate-map.md"
+      }
+    },
+    {
+      "id": "aviato.marketmap.get",
+      "name": "Get a generated market map",
+      "kind": "read",
+      "method": "GET",
+      "path": "/marketmap/get",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Market map ID from marketmap.generate."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.data.aviato.co/api-reference/marketmap/get-map.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/marketmap/get-map.md"
+      }
+    },
+    {
+      "id": "aviato.exports.list",
+      "name": "List data exports",
+      "kind": "read",
+      "method": "GET",
+      "path": "/exports/list",
+      "params": {
+        "team": {
+          "in": "query",
+          "type": "string",
+          "description": "Team."
+        },
+        "excludeDeleted": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip exports marked deleted."
+        }
+      },
+      "docs_url": "https://docs.data.aviato.co/api-reference/dataexport/get-export-list.md",
+      "verified": {
+        "docs": "https://docs.data.aviato.co/api-reference/dataexport/get-export-list.md"
+      }
+    }
+  ]
+}
