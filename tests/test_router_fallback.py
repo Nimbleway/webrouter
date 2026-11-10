@@ -155,6 +155,27 @@ def test_a_nested_decision_marked_timed_out_that_decides_something_is_taken() ->
     assert [(m.name, m.outcome) for m in plan.decision.members or []] == [("custom", "ok")]
 
 
+@pytest.mark.parametrize(
+    ("composite", "strict"),
+    [
+        (CompositeDecision(tools=["search"], reason="mine"), True),
+        (CompositeDecision(tools=["search"], reason="mine", timed_out=True), False),
+    ],
+    ids=["no-member-counted-strict", "timed-out"],
+)
+def test_a_composite_is_judged_by_what_it_decides(composite: CompositeDecision, strict: bool) -> None:
+    with WebRouter(router=lambda req: composite, fail_on_router_error=strict) as wr:
+        assert wr.plan("who won the 2022 world cup").decision.reason == "mine"
+
+
+def test_an_empty_composite_with_a_counted_member_is_empty() -> None:
+    def composite(req: Any) -> CompositeDecision:
+        return CompositeDecision(members=(ok("a", True),))
+
+    with WebRouter(router=composite, fail_on_router_error=True) as wr, pytest.raises(RouterError, match="router_empty"):
+        wr.plan("who won the 2022 world cup")
+
+
 def ok(name: str, counted: bool) -> DecisionMember:
     return DecisionMember(name=name, outcome="ok", ms=1.0, counted=counted)
 
