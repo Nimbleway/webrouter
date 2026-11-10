@@ -24,7 +24,7 @@ def test_its_limit_is_the_sum_of_its_members_and_the_default_holds_for_one_that_
 @pytest.mark.parametrize("limit", [FALLBACK_MARGIN_S, 0.01])
 def test_a_time_limit_inside_its_margin_is_refused(limit: float) -> None:
     config = {"routers": [answers("a")], "timeout_s": limit}
-    with pytest.raises(ConfigurationError, match="timeout_s must be more than its 0.02 s margin"):
+    with pytest.raises(ConfigurationError, match=r"timeout_s must be more than its 0\.02 s margin"):
         WebRouter(router="fallback", router_config=config)
     assert FallbackRouter(routers=[answers("a")], timeout_s=0.03).timeout_s == 0.03
 
