@@ -11,7 +11,7 @@ import json
 import os
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -134,7 +134,7 @@ def open_run(out: Path, setup: dict[str, Any]) -> dict[str, Any]:
     """``run.json`` written for a new run, or checked against the one a resumed run left."""
     out.mkdir(parents=True, exist_ok=True)
     path = out / RUN_FILE
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    now = datetime.now(UTC).isoformat(timespec="seconds")
     if path.is_file():
         before = json.loads(path.read_text(encoding="utf-8"))
         for key in RESUME_KEYS:

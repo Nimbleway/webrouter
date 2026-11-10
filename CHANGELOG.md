@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `web-router` are recorded here, newest first. Versions
+All notable changes to WebRouter are recorded here, newest first. Versions
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 `0.x`, a breaking change bumps the minor version.
 
@@ -16,6 +16,24 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 - **Templates are renamed live data.** `run_template()`, `templates()` and `template()` are now `live_data()`, `live_data_sources()` and `live_data_source()`; `TemplateRequest`, `TemplateResponse`, `Template`, `TemplatePage`, `TemplateSample`, `TemplateProvider` and `TemplateNotFoundError` are `LiveDataRequest`, `LiveDataResponse`, `LiveDataSource`, `LiveDataSourcePage`, `LiveDataSample`, `LiveDataProvider` and `LiveDataSourceNotFoundError`, and the run's `template` field is `source`. The old names still work, with a `DeprecationWarning`, until a later release removes them. A live data source fetches the site for the call: a backend joins only if it fetches on request (stored datasets are `call_vendor`'s). `LiveDataResponse` gains `records`, every record the run extracted, with `data` kept as the first, and `fetched_at`, the vendor's own fetch time or `None`. **MCP: the tools are renamed with no alias** -- `live_data_sources`, `live_data_source` and `live_data` (its argument `template` is now `source`), and the capabilities resource keys them under `live_data`; a client re-reads the tool list on connect. Their results change keys too: a run returns `records` (every record), `record_count` and `fetched_at` in place of `data`; a listing returns `sources` and `source_count` in place of `templates` and `template_count`; a description returns `source` in place of `template`. The price-list method `run_template` is `live_data`.
 
 ### Fixed
+
+## [0.12.0] - 2026-11-10
+
+### Changed
+
+- **Breaking (Python version):** WebRouter now requires Python 3.11 or newer. Python 3.10 reached end of life in October 2026, and the fixed releases of some dependencies (Pillow, filelock) no longer support it. On Python 3.10, pip and uv keep installing 0.11.0, the last release that supports it.
+- The package description and the README tagline now read "WebRouter is an open source standard that connects your agent to the web", and the README title is WebRouter. The import (`web_router`) and the `web-router-mcp` command are unchanged.
+
+### Fixed
+
+- `research(provider="nimble")` now cites the run's `output.sources`, so a run without trust (`trust_mode="no_trust"`, which answers `trust: null`) is cited from them instead of returning no citations. A run with trust also gains, without a field, any of them its trust sources leave out.
+
+## [0.11.0] - 2026-11-09
+
+### Changed
+
+- The repository moved to [github.com/Nimbleway/webrouter](https://github.com/Nimbleway/webrouter). Links to the old location redirect, and the package metadata now points to the new one. Security reports go through GitHub's private vulnerability reporting (see SECURITY.md).
+- **Breaking (install name):** the package is now named `webrouter` and is published to [PyPI](https://pypi.org/project/webrouter/): install it with `pip install "webrouter[all]"` or `uv add "webrouter[all]"`. Earlier releases were named `web-router` and published only to a private index. The import is unchanged (`import web_router`), as are the `web-router-mcp` command and the MCP server's name.
 
 ## [0.10.0] - 2026-11-09
 

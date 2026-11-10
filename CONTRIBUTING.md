@@ -15,7 +15,7 @@ are enforced by review rather than by tooling.
 We use [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
-git clone https://github.com/WebContextLayer/webrouter.git
+git clone https://github.com/Nimbleway/webrouter.git
 cd webrouter
 make install
 ```
@@ -40,7 +40,7 @@ again on every pull request, with the unit tests; run `make check` before you pu
 so a red CI does not cost a review round. After editing `pyproject.toml`, run
 `make lock && make requirements` and commit the results.
 
-`requires-python` is `>=3.10` — the floor the package supports. `.python-version` pins 3.12, which is just the interpreter `uv` uses
+`requires-python` is `>=3.11` — the floor the package supports. `.python-version` pins 3.12, which is just the interpreter `uv` uses
 for local development, not a requirement.
 
 ## Tests
@@ -310,7 +310,7 @@ time.
   `Not fixing: <reason>`); the maintainers are asked to review only then. Qodo does not review
   drafts on its own; a `/agentic_review` comment asks it to.
 - Don't commit drafts, decks, PDFs or images for feedback; open a
-  [Discussion](https://github.com/WebContextLayer/webrouter/discussions) and attach them.
+  [Discussion](https://github.com/Nimbleway/webrouter/discussions) and attach them.
 
 Every unit test must work without an API key. Anything that needs one belongs
 behind `@pytest.mark.integration`.
@@ -319,6 +319,14 @@ behind `@pytest.mark.integration`.
 
 The maintainers cut each release. A pull request merged here is carried into
 the next one.
+
+A release is a `vX.Y.Z` tag on `main` whose `_version.py` says `X.Y.Z`. A
+maintainer runs the [Release](.github/workflows/release.yml) workflow on that
+tag (`gh workflow run release.yml --ref vX.Y.Z -f tag=vX.Y.Z`): it builds the sdist and wheel from the tag, and after a maintainer
+approves the `pypi` environment, publishes them to
+[PyPI](https://pypi.org/project/webrouter/) through trusted publishing, so no
+upload token exists. It refuses a tag that is not on `main`, does not match
+`__version__`, or is not above every version already on PyPI.
 
 ## AI coding agents
 

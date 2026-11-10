@@ -1320,7 +1320,7 @@ plumbing — never the network, and never `OPENAI_API_KEY` or
 
 [STYLE_GUIDE.md](STYLE_GUIDE.md) is the full version and takes precedence. In short:
 
-- Python 3.10+, `from __future__ import annotations`, full type annotations.
+- Python 3.11+, `from __future__ import annotations`, full type annotations.
   `mypy --strict` must pass on `src/`.
 - Line length 120, ruff-formatted.
 - Comments explain *why*, never *what*. Do not narrate the code, leave TODOs
@@ -1343,7 +1343,7 @@ A change users would notice adds a line under `## [Unreleased]` in `CHANGELOG.md
 ## Files for feedback
 
 Don't commit drafts, decks, PDFs or images for feedback; open a
-[Discussion](https://github.com/WebContextLayer/webrouter/discussions) and attach them.
+[Discussion](https://github.com/Nimbleway/webrouter/discussions) and attach them.
 
 ## Secrets
 
