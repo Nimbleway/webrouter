@@ -1,0 +1,600 @@
+{
+  "vendor": "sentry",
+  "name": "Sentry",
+  "category": "observability",
+  "summary": "Error and performance monitoring: issues, their events and stack traces, explore queries over errors, logs and spans, event volume stats, projects and releases.",
+  "docs_url": "https://docs.sentry.io/api/",
+  "pricing_url": "https://sentry.io/pricing/",
+  "base_url": "https://{host}/api/0",
+  "settings": {
+    "host": {
+      "env": [
+        "SENTRY_API_HOST"
+      ],
+      "default": "sentry.io",
+      "choices": [
+        "sentry.io",
+        "us.sentry.io",
+        "de.sentry.io"
+      ],
+      "description": "sentry.io, or the organization's data region: us.sentry.io or de.sentry.io. Self-hosted Sentry is not covered."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "SENTRY_AUTH_TOKEN"
+        ],
+        "description": "A Sentry auth token: an organization token, a user token, or an internal integration's token, with the read scopes the calls need (org:read, project:read, event:read)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Every path takes the organization slug; paths end with a slash.",
+    "Paging is by the Link response header: follow the rel=\"next\" cursor while it says results=\"true\". A next cursor is always present, even on the last page.",
+    "Rate limits are per endpoint and per caller; a 429 means wait, and X-Sentry-Rate-Limit-* headers report the window.",
+    "Issue lists default to query=is:unresolved; send an empty query for every issue."
+  ],
+  "sources": [
+    "https://docs.sentry.io/api/auth/",
+    "https://docs.sentry.io/api/pagination/",
+    "https://docs.sentry.io/api/ratelimits/",
+    "https://github.com/getsentry/sentry-api-schema"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "sentry.projects.list",
+      "name": "List projects",
+      "summary": "The organization's projects.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id_or_slug}/projects/",
+      "params": {
+        "organization_id_or_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization slug or id.",
+          "example": "acme"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by name or slug."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows, default and max 100."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the Link header of the previous page."
+        }
+      },
+      "docs_url": "https://docs.sentry.io/api/organizations/list-an-organizations-projects/",
+      "verified": {
+        "docs": "https://docs.sentry.io/api/organizations/list-an-organizations-projects/"
+      }
+    },
+    {
+      "id": "sentry.issues.list",
+      "name": "List issues",
+      "summary": "Issues matching a search, sorted by last seen by default.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id_or_slug}/issues/",
+      "params": {
+        "organization_id_or_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization slug or id.",
+          "example": "acme"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Search, e.g. 'is:unresolved level:error'; default is:unresolved, empty for all."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Order.",
+          "enum": [
+            "date",
+            "freq",
+            "inbox",
+            "new",
+            "recommended",
+            "trends",
+            "user"
+          ]
+        },
+        "project": {
+          "in": "query",
+          "type": "array",
+          "description": "Project ids or slugs; -1 for all accessible."
+        },
+        "environment": {
+          "in": "query",
+          "type": "array",
+          "description": "Environment names."
+        },
+        "statsPeriod": {
+          "in": "query",
+          "type": "string",
+          "description": "Relative range like 24h, 14d; overrides start and end."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-8601 start."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-8601 end."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max 100."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the Link header."
+        }
+      },
+      "job": "incidents.list",
+      "docs_url": "https://docs.sentry.io/api/events/list-an-organizations-issues/",
+      "verified": {
+        "docs": "https://docs.sentry.io/api/events/list-an-organizations-issues/"
+      }
+    },
+    {
+      "id": "sentry.issues.get",
+      "name": "Get an issue",
+      "summary": "One issue with stats, counts, first and last seen.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id_or_slug}/issues/{issue_id}/",
+      "params": {
+        "organization_id_or_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization slug or id.",
+          "example": "acme"
+        },
+        "issue_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Issue id (numeric, from issues.list)."
+        },
+        "environment": {
+          "in": "query",
+          "type": "array",
+          "description": "Environment names."
+        }
+      },
+      "docs_url": "https://docs.sentry.io/api/events/retrieve-an-issue/",
+      "verified": {
+        "docs": "https://docs.sentry.io/api/events/retrieve-an-issue/"
+      }
+    },
+    {
+      "id": "sentry.issues.events.list",
+      "name": "List an issue's events",
+      "summary": "Events grouped into one issue.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id_or_slug}/issues/{issue_id}/events/",
+      "params": {
+        "organization_id_or_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization slug or id.",
+          "example": "acme"
+        },
+        "issue_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Issue id (numeric, from issues.list)."
+        },
+        "full": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include full bodies with stack traces; caps the page at 10."
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Event search."
+        },
+        "statsPeriod": {
+          "in": "query",
+          "type": "string",
+          "description": "Relative range like 24h, 14d; overrides start and end."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-8601 start."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-8601 end."
+        },
+        "environment": {
+          "in": "query",
+          "type": "array",
+          "description": "Environment names."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows, default and max 100."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the Link header of the previous page."
+        }
+      },
+      "docs_url": "https://docs.sentry.io/api/events/list-an-issues-events/",
+      "verified": {
+        "docs": "https://docs.sentry.io/api/events/list-an-issues-events/"
+      }
+    },
+    {
+      "id": "sentry.issues.events.get",
+      "name": "Get an issue event",
+      "summary": "One event of an issue with stack trace, tags and context; latest, oldest or recommended.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id_or_slug}/issues/{issue_id}/events/{event_id}/",
+      "params": {
+        "organization_id_or_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization slug or id.",
+          "example": "acme"
+        },
+        "issue_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Issue id (numeric, from issues.list)."
+        },
+        "event_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "An event id, or latest, oldest or recommended.",
+          "example": "latest"
+        },
+        "llmFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "Adds a 'formatted' field rendering the event for an LLM.",
+          "enum": [
+            "json",
+            "markdown",
+            "xml"
+          ]
+        },
+        "environment": {
+          "in": "query",
+          "type": "array",
+          "description": "Environment names."
+        }
+      },
+      "docs_url": "https://docs.sentry.io/api/events/retrieve-an-issue-event/",
+      "verified": {
+        "docs": "https://docs.sentry.io/api/events/retrieve-an-issue-event/"
+      }
+    },
+    {
+      "id": "sentry.explore.events",
+      "name": "Query errors, logs or spans as a table",
+      "summary": "Fields and aggregates over a dataset (errors, logs, spans...), filtered by Sentry search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id_or_slug}/events/",
+      "params": {
+        "organization_id_or_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization slug or id.",
+          "example": "acme"
+        },
+        "dataset": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Dataset.",
+          "enum": [
+            "errors",
+            "logs",
+            "profile_functions",
+            "spans",
+            "tracemetrics",
+            "uptime_results"
+          ]
+        },
+        "field": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Up to 20 fields or functions, e.g. title, count(), p95(span.duration)."
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Sentry search filter."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "A requested field; prefix - for descending."
+        },
+        "project": {
+          "in": "query",
+          "type": "array",
+          "description": "Project ids or slugs; -1 for all accessible."
+        },
+        "environment": {
+          "in": "query",
+          "type": "array",
+          "description": "Environment names."
+        },
+        "statsPeriod": {
+          "in": "query",
+          "type": "string",
+          "description": "Relative range like 24h, 14d; overrides start and end."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-8601 start."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-8601 end."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows, default and max 100."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the Link header of the previous page."
+        }
+      },
+      "notes": [
+        "For tables, not bulk export."
+      ],
+      "job": "logs.search",
+      "docs_url": "https://docs.sentry.io/api/explore/query-explore-events-in-table-format/",
+      "verified": {
+        "docs": "https://docs.sentry.io/api/explore/query-explore-events-in-table-format/"
+      }
+    },
+    {
+      "id": "sentry.stats",
+      "name": "Get event volume",
+      "summary": "Counts of accepted, filtered and rate-limited events over time, grouped by outcome, category, reason or project.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id_or_slug}/stats_v2/",
+      "params": {
+        "organization_id_or_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization slug or id.",
+          "example": "acme"
+        },
+        "field": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "sum(quantity) (events; bytes for attachments) or sum(times_seen).",
+          "enum": [
+            "sum(quantity)",
+            "sum(times_seen)"
+          ]
+        },
+        "groupBy": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "outcome, category, reason and/or project."
+        },
+        "statsPeriod": {
+          "in": "query",
+          "type": "string",
+          "description": "Range like 1d or 30d."
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution, default and minimum 1h."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-8601 or epoch seconds."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO-8601 or epoch seconds."
+        },
+        "project": {
+          "in": "query",
+          "type": "array",
+          "description": "Project ids; -1 for all."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Data category, e.g. error, transaction, replay."
+        },
+        "outcome": {
+          "in": "query",
+          "type": "string",
+          "description": "Outcome.",
+          "enum": [
+            "accepted",
+            "filtered",
+            "rate_limited",
+            "invalid",
+            "abuse",
+            "client_discard",
+            "cardinality_limited"
+          ]
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.sentry.io/api/organizations/retrieve-event-counts-for-an-organization-v2/",
+      "verified": {
+        "docs": "https://docs.sentry.io/api/organizations/retrieve-event-counts-for-an-organization-v2/"
+      }
+    },
+    {
+      "id": "sentry.releases.list",
+      "name": "List releases",
+      "summary": "Releases, most recent first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id_or_slug}/releases/",
+      "params": {
+        "organization_id_or_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization slug or id.",
+          "example": "acme"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of the version."
+        },
+        "project": {
+          "in": "query",
+          "type": "array",
+          "description": "Project ids or slugs; -1 for all accessible."
+        },
+        "environment": {
+          "in": "query",
+          "type": "array",
+          "description": "Environment names."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows, default and max 100."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the Link header of the previous page."
+        }
+      },
+      "docs_url": "https://docs.sentry.io/api/releases/list-an-organizations-releases/",
+      "verified": {
+        "docs": "https://docs.sentry.io/api/releases/list-an-organizations-releases/"
+      }
+    },
+    {
+      "id": "sentry.issues.update",
+      "name": "Update an issue",
+      "summary": "Resolve, ignore, assign or change priority of an issue.",
+      "kind": "write",
+      "method": "PUT",
+      "path": "/organizations/{organization_id_or_slug}/issues/{issue_id}/",
+      "params": {
+        "organization_id_or_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization slug or id.",
+          "example": "acme"
+        },
+        "issue_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Issue id (numeric, from issues.list)."
+        },
+        "status": {
+          "in": "body",
+          "type": "string",
+          "description": "New status.",
+          "enum": [
+            "resolved",
+            "unresolved",
+            "ignored",
+            "resolvedInNextRelease",
+            "muted"
+          ]
+        },
+        "assignedTo": {
+          "in": "body",
+          "type": "string",
+          "description": "user:<id>, team:<id>, a username or email."
+        },
+        "priority": {
+          "in": "body",
+          "type": "string",
+          "description": "Priority.",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "hasSeen": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Mark seen by the token's user."
+        },
+        "isBookmarked": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Bookmark for the token's user."
+        }
+      },
+      "notes": [
+        "Only the fields sent change. Needs the event:write scope."
+      ],
+      "docs_url": "https://docs.sentry.io/api/events/update-an-issue/",
+      "verified": {
+        "docs": "https://docs.sentry.io/api/events/update-an-issue/"
+      }
+    }
+  ]
+}
