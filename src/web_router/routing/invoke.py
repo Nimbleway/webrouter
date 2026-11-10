@@ -162,7 +162,7 @@ class AttachedRouter:
                 return early
             try:
                 scheduled_task = _on_caller_loop(value)
-            except Exception as exc:  # e.g. a future bound to another loop (3.10 checks this eagerly)
+            except Exception as exc:  # e.g. a future bound to another loop
                 _close(value)
                 return self._failed(ROUTER_ERROR, started, exc)
             code, value = await _asettled(scheduled_task, _left(req, started))  # measured after scheduling

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `web-router` are recorded here, newest first. Versions
+All notable changes to WebRouter are recorded here, newest first. Versions
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 `0.x`, a breaking change bumps the minor version.
 
@@ -21,6 +21,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 - route-eval (experimental): each set's report adds, held out, every router's cost-weighted tool confusion matrix -- the tool its choice ran against the best tool, the oracle's, each cell weighed by the dollars and seconds spent beyond the oracle's choice -- with two counts off the oracle, *wrong tool, wrong answer* (accuracy lost to tool choice) and *right, not the cheapest tool* (cost regret), the overspend beside the accuracy lost, and a comparison of each router with `static` and with any router named by the new `--against` (`--against oracle` is refused: the matrix already sets every router against the oracle): where their served paths and tools differ, which alone was right with an exact McNemar p-value, each one's accuracy with its Wilson 95% interval, and mean cost over the questions both costs are known for. A router with no `fit` is also scored and compared on every question. `--json` keeps each router's choices. See the benchmarks README's [Tool confusion and comparing routers](benchmarks/providers/README.md#tool-confusion-and-comparing-routers).
 
 ### Fixed
+
+## [0.12.0] - 2026-11-10
+
+### Changed
+
+- **Breaking (Python version):** WebRouter now requires Python 3.11 or newer. Python 3.10 reached end of life in October 2026, and the fixed releases of some dependencies (Pillow, filelock) no longer support it. On Python 3.10, pip and uv keep installing 0.11.0, the last release that supports it.
+- The package description and the README tagline now read "WebRouter is an open source standard that connects your agent to the web", and the README title is WebRouter. The import (`web_router`) and the `web-router-mcp` command are unchanged.
+
+### Fixed
+
+- `research(provider="nimble")` now cites the run's `output.sources`, so a run without trust (`trust_mode="no_trust"`, which answers `trust: null`) is cited from them instead of returning no citations. A run with trust also gains, without a field, any of them its trust sources leave out.
 
 ## [0.11.0] - 2026-11-09
 

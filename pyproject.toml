@@ -1,11 +1,11 @@
 [project]
 name = "webrouter"
 dynamic = ["version"]
-description = "A provider-agnostic router for web search and page-extraction APIs (Nimble, Exa, Tavily, Brave, Oxylabs, Bright Data, ...)"
+description = "WebRouter is an open source standard that connects your agent to the web"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "src/web_router/evals/prompts/LICENSE-simple-evals"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Nimble" },
 ]
@@ -35,7 +35,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -197,7 +196,7 @@ managed = true
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
@@ -205,6 +204,10 @@ src = ["src", "tests"]
 # which ruff cannot. Functions over either limit today carry a `# noqa`.
 select = ["E", "F", "I", "UP", "B", "SIM", "TID", "RUF", "C901", "PLR0915"]
 ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# UP042 would turn the public `Provider` into a StrEnum, which changes what str(Provider.X) returns.
+"src/web_router/types.py" = ["UP042"]
 
 [tool.ruff.lint.mccabe]
 # McCabe's own threshold, and ruff's default.
@@ -217,7 +220,7 @@ max-statements = 50
 known-first-party = ["web_router", "scripts"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 files = ["src/web_router"]
 strict = true
 warn_unused_ignores = true

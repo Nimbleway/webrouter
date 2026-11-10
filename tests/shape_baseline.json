@@ -25,7 +25,6 @@
   "tests/providers/test_http_base.py": 468,
   "tests/providers/test_hyperbrowser_browser.py": 428,
   "tests/providers/test_local_browser.py": 898,
-  "tests/providers/test_nimble_research.py": 481,
   "tests/providers/test_nimble_template.py": 485,
   "tests/test_auto.py": 1142,
   "tests/test_auto_browse.py": 513,
