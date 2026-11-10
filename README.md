@@ -2280,7 +2280,8 @@ keep the static order. A reply naming an id not offered, an id twice, or a
 number that is not a finite 0..1 is set aside whole (`router_invalid`). The
 ranking becomes `tools` and `providers`; a `DeciderRouter` never sets options,
 exclusions or URLs, and its reason holds the decider's `name`, the first id
-and its score, never the decider's own words. A decider has `decide(question)`
+and its score when the decider gives one (the strict-schema `llm` presets give
+none), never the decider's own words. A decider has `decide(question)`
 or `async adecide(question)`, and may declare `name`, `timeout_s` and
 `route_tools`, which the router declares in turn:
 
@@ -2304,8 +2305,9 @@ each sends the prompt off your machine only when you name it.
 
 - **`router="llm"`**: a chat model on any OpenAI-compatible chat-completions
   API, posted with httpx (no SDK, so no `OPENAI_BASE_URL` or other variable is
-  read). `router_config` takes `model` and either a `preset` or a `base_url`,
-  and `api_key_env`, `api_key`, `timeout_s` (3 s) and `route_tools`
+  read). `model` is required: the router names no default model, so pass the
+  model's name as its server spells it. `router_config` also takes either a
+  `preset` or a `base_url`, and `api_key_env`, `api_key`, `timeout_s` (3 s) and `route_tools`
   (research and browse unless set). Presets: `openai` and `anthropic` (a strict
   JSON schema whose enum is the offered ids), `openrouter` (the same, where the
   model supports it), `deepseek` and `groq` (JSON mode). A `base_url` of your
@@ -2319,9 +2321,10 @@ each sends the prompt off your machine only when you name it.
 
 - **`router="systemone"`**: a System One decision API, asked one `choice`
   question per call; its probability per option is the score, and ranks them.
-  Presets: `typesafe` (TypeSafe's Jev, `TYPESAFE_API_KEY`) and `fireworks`
-  (Fireworks' Rune, `FIREWORKS_API_KEY`), each with its model pinned; another
-  server takes `base_url`, `path`, `model` and `api_key_env`. `timeout_s` is
+  Presets: `typesafe` (TypeSafe's Jev, model `jev-1.14.0`,
+  `TYPESAFE_API_KEY`) and `fireworks` (Fireworks' Rune, model
+  `accounts/fireworks/models/rune`, `FIREWORKS_API_KEY`), each pinned so a new
+  release changes nothing until you pass `model`; another server takes `base_url`, `path`, `model` and `api_key_env`. `timeout_s` is
   1 s, and `route_tools` every tool but search, unless set.
 
   ```python
@@ -2339,10 +2342,15 @@ your configured backends, with their estimated cost and p90 latency; never a
 provider key. The transport is the `remote` router's: `https` only (plain
 `http` only to this machine), no credentials, query or fragment in the URL,
 one request, no retries, no redirects, no proxy read from the environment, and
-answers of `application/json` under 256 KiB. A failure names the error class
-or HTTP status and the host, never the URL or the key. The record names each
-`llm(<host>)` or `systemone(<host>)`. Both need httpx, which the `remote`
-extra installs. Each call bills on that server.
+answers of `application/json` under 256 KiB. A failure leaves the static
+order, and the record says only `router_timeout`, `router_error` or
+`router_invalid`; with `fail_on_router_error=True`, the `RouterError` it
+raises carries the error class or HTTP status and the scheme and host on its
+`__cause__`, never the URL's path or the key. The record names each
+`llm(<host>)` or `systemone(<host>)`: the host, not the model. Both need
+httpx, which the `remote` extra installs. Each call bills on that server: the
+router's own call is billed by its vendor and is not counted in a `Budget`'s
+cost or the record's `estimated_cost_usd`.
 
 ## Routing and extending
 

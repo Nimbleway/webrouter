@@ -11,7 +11,9 @@ ids), ``openrouter`` (the same, where the model supports it), ``deepseek`` and
 proxy -- takes ``api_key_env`` unless it is on this machine, and asks for JSON
 in the prompt only. ``response_format`` (``json_schema``, ``json_object`` or
 ``prompt``) overrides either. Either way the reply is checked strictly
-(:mod:`.decider_reply`), and the model's own words are never used.
+(:mod:`.decider_reply`), and the model's own words are never used. ``model``
+is required: the router names no default model. The strict-schema presets ask
+for no scores, so their reasons carry no ``p=``.
 
 Each call sends the model the prompt, the budget, and each option's id with its
 method, backend, estimated cost and p90 latency. It is posted with httpx

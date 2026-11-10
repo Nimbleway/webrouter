@@ -11,10 +11,10 @@ and p90 latency (extract only when the prompt names a URL) -- checks the reply
 (:mod:`.decider_reply`) and answers a :class:`~web_router.RouteDecision` whose
 ``tools`` and ``providers`` follow the ranking. It never sets options,
 exclusions or URLs, and its reason holds the decider's name, the first id and
-that id's score, never the decider's own words. The decider's ``timeout_s``,
-``name`` and ``route_tools`` are the router's. A sync decider runs on a worker
-thread from async code; an async one on web-router's private loop from sync
-code, as any router does.
+that id's score when the decider gives one, never the decider's own words.
+The decider's ``timeout_s``, ``name`` and ``route_tools`` are the router's. A
+sync decider runs on a worker thread from async code; an async one on
+web-router's private loop from sync code, as any router does.
 """
 
 from __future__ import annotations

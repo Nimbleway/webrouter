@@ -6,7 +6,9 @@ base URL, no redirect followed, no proxy or other setting read from the
 environment, no retry, and an answer of ``application/json`` under 256 KiB.
 Each call opens its own client and closes it, so nothing outlives the call or
 its event loop. A failure is reported by error class or HTTP status and the
-host, never the URL or the key. A key is read only from the variable
+scheme and host, never the URL's path or the key: the record shows only its
+code, and with ``fail_on_router_error=True`` this error is the ``RouterError``'s
+``__cause__``. The call itself is billed by its vendor, outside any budget. A key is read only from the variable
 ``api_key_env`` names, or given as ``api_key``; a preset's variable (such as
 ``OPENAI_API_KEY``) is sent only to that vendor's own host.
 """

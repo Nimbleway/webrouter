@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
+import socket
 from typing import Any
 
 import httpx
 import pytest
 
 from tests.decider_helpers import CANDIDATES, TOKEN, chat, request, respond, serve
-from web_router import WebRouter
+from web_router import RouterError, WebRouter
 from web_router.exceptions import ConfigurationError
 from web_router.routing.decider_llm import LLMDecider, llm_router
 from web_router.routing.invoke import AttachedRouter
@@ -159,3 +160,15 @@ def test_by_name_with_router_config_it_routes_a_plan(monkeypatch: pytest.MonkeyP
         plan = client.plan("who won the 2022 world cup")
     assert plan.decision.router == "llm(api.openai.com)"
     assert plan.decision.reason == f"llm(api.openai.com): {plan.tool}:{plan.providers[plan.tool][0]}"
+
+
+def test_the_failures_class_and_host_ride_on_router_errors_cause() -> None:
+    with socket.socket() as probe:  # a loopback port nothing listens on: refused, never the network
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    router = llm_router(base_url=f"http://127.0.0.1:{port}/v1/private", model="m", timeout_s=2.0)
+    with pytest.raises(RouterError) as caught:
+        AttachedRouter(router, fail_on_error=True).call(request())
+    assert "router_error" in str(caught.value)
+    cause = str(caught.value.__cause__)
+    assert "http://127.0.0.1" in cause and "ConnectError" in cause and "private" not in cause
