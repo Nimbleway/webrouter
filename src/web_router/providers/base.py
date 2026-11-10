@@ -86,6 +86,7 @@ from web_router.exceptions import (
     WebRouterError,
     describe,
 )
+from web_router.live_data_compat import TemplateMethods
 from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_window, current_deadline
 from web_router.providers._error_pages import split_error_pages
 from web_router.providers._page import AsyncPage, SyncPage
@@ -478,7 +479,7 @@ class _Collected:
         return ProviderError(self.provider, MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail), original=original)
 
 
-class LiveDataProvider(_BaseProvider):
+class LiveDataProvider(TemplateMethods, _BaseProvider):
     """Base class for a live data backend: a vendor's ready-made scrapers, run for this call.
 
     A source is a saved, site-specific scraper the backend holds: run with its
@@ -500,8 +501,7 @@ class LiveDataProvider(_BaseProvider):
 
     A format outside this set raises :class:`UnsupportedFormatError` rather
     than coming back as a different representation under the requested name.
-    Unlike an extract there is no default to pin: with no format asked for,
-    no page comes back, on every backend alike.
+    Unlike an extract there is no default: with no format asked for, no page.
     """
 
     # -- What subclasses implement -------------------------------------------

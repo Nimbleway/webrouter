@@ -76,6 +76,12 @@ OXYLABS_DOCS_URL: Final = "https://developers.oxylabs.io/products/web-api/scrape
 
 MSG_OXYLABS_NO_FIELDS: Final = "Oxylabs returned no parsed fields for {source!r} ({url})"
 
+MSG_BRIGHTDATA_RENAMED_HINT: Final = (
+    "; Bright Data may have added a scraper with the same name, which gives each its site: {names}."
+    " A gd_ dataset id never changes"
+)
+"""Appended to a Bright Data not-found: a name gains its site when another scraper takes the same name."""
+
 MSG_OXYLABS_NOT_FETCHED: Final = "Oxylabs could not fetch {source!r}: status {status} ({url})"
 
 MSG_OXYLABS_FAULTED: Final = "Oxylabs' job {job_id} for {source!r} faulted: status {status}"

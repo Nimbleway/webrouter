@@ -12,6 +12,11 @@ source, named from the scraper's own name:
 
 A final name that still clashes once the method is added gets the dataset id
 too. A dataset id is still accepted as a source, meaning that scraper's URL method.
+
+Names follow the catalogue as it is now: when Bright Data adds a scraper with a
+name already taken, both gain their site, and the old name stops resolving
+(the not-found error lists the names that replaced it). The ``gd_`` dataset id
+is the name that never changes, so store that one.
 Checked against Bright Data's published catalogue on 2026-11-09: 1,301
 scrapers give 1,297 distinct base names before the site rule.
 """
