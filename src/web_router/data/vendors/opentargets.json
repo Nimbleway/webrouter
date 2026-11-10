@@ -1,7 +1,7 @@
 {
   "vendor": "opentargets",
   "name": "Open Targets Platform",
-  "category": "other",
+  "category": "science",
   "summary": "Drug target evidence: target-disease associations, target tractability and genetic constraint, diseases, drugs and their mechanisms, through one GraphQL API.",
   "docs_url": "https://platform-docs.opentargets.org/data-access/graphql-api",
   "base_url": "https://api.platform.opentargets.org",

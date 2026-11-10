@@ -1,7 +1,7 @@
 {
   "vendor": "eccc-geomet",
   "name": "Environment and Climate Change Canada (GeoMet-OGC-API)",
-  "category": "other",
+  "category": "environment",
   "summary": "Canadian weather, climate and water data from ECCC/MSC as OGC API Features: climate stations and daily/monthly observations, hydrometric levels and flows, weather alerts, AQHI and more.",
   "docs_url": "https://eccc-msc.github.io/open-data/msc-geomet/ogc_api_en/",
   "base_url": "https://api.weather.gc.ca",

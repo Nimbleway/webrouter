@@ -1,7 +1,7 @@
 {
   "vendor": "usgs-earthquake",
   "name": "USGS Earthquake Catalog",
-  "category": "other",
+  "category": "environment",
   "summary": "The USGS ComCat earthquake catalog over the FDSN event web service: search and count events worldwide by time, area, magnitude and depth, or fetch one event.",
   "docs_url": "https://earthquake.usgs.gov/fdsnws/event/1/",
   "base_url": "https://earthquake.usgs.gov/fdsnws/event/1",

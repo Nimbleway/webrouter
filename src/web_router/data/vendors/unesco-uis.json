@@ -1,7 +1,7 @@
 {
   "vendor": "unesco-uis",
   "name": "UNESCO Institute for Statistics Data API",
-  "category": "other",
+  "category": "government",
   "summary": "UNESCO education, science, culture and communication indicators by country and region and year, with indicator and geo-unit definitions, from the keyless UIS Data API.",
   "docs_url": "https://api.uis.unesco.org/api/public/documentation",
   "base_url": "https://api.uis.unesco.org/api/public",

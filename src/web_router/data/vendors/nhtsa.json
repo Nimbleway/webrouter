@@ -1,7 +1,7 @@
 {
   "vendor": "nhtsa",
   "name": "NHTSA vPIC",
-  "category": "other",
+  "category": "government",
   "summary": "The US National Highway Traffic Safety Administration's vPIC vehicle API: decode a VIN into make, model, year, body, engine and plant details, decode WMIs, and list makes and models.",
   "docs_url": "https://vpic.nhtsa.dot.gov/api/",
   "base_url": "https://vpic.nhtsa.dot.gov/api",

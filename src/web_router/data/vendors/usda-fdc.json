@@ -1,7 +1,7 @@
 {
   "vendor": "usda-fdc",
   "name": "USDA FoodData Central",
-  "category": "other",
+  "category": "health",
   "summary": "USDA nutrient composition data for foods: Foundation, SR Legacy, FNDDS survey foods and Branded Foods, searchable and by FDC ID.",
   "docs_url": "https://fdc.nal.usda.gov/api-guide/",
   "base_url": "https://api.nal.usda.gov/fdc",

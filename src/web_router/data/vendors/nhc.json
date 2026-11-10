@@ -1,7 +1,7 @@
 {
   "vendor": "nhc",
   "name": "NOAA National Hurricane Center",
-  "category": "other",
+  "category": "environment",
   "summary": "Keyless feeds of active Atlantic and Pacific tropical cyclones: a JSON summary of every active storm with links to its advisories, plus basin and per-storm RSS and GIS feeds.",
   "docs_url": "https://www.nhc.noaa.gov/productexamples/",
   "base_url": "https://www.nhc.noaa.gov",

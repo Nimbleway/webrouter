@@ -97,25 +97,38 @@ VENDOR_ENDPOINT_ID_PATTERN: Final = r"^[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9_.-]*$
 
 VENDOR_ENV_PATTERN: Final = r"^[A-Z][A-Z0-9_]*$"
 
-VENDOR_CATEGORIES: Final = (
-    "advertising",
-    "analytics",
-    "seo",
-    "observability",
-    "social",
-    "enrichment",
-    "email-verification",
-    "company-data",
-    "finance",
-    "search",
-    "scraping",
-    "ai",
-    "media-generation",
-    "messaging",
-    "developer",
-    "other",
-)
-"""The shelves a vendor is listed under. One per vendor; ``other`` when none fits."""
+VENDOR_CATEGORY_DESCRIPTIONS: Final = {
+    "advertising": "Ad accounts and ad libraries: campaigns, spend, creatives.",
+    "analytics": "Web and product analytics, tag management, CRM and marketing data.",
+    "seo": "Keywords, rankings, backlinks and search-console data.",
+    "social": "Social networks and communities: profiles, posts, creators.",
+    "enrichment": "People and contact data: emails, phones, profiles.",
+    "verification": "Checking an email, a phone number or an identity.",
+    "company-data": "Companies, funding, jobs, technographics and business registries.",
+    "finance": "Markets, crypto, filings and economic statistics.",
+    "search": "Web, news and archive search.",
+    "scraping": "Fetching, rendering and extracting web pages; hosted browsers.",
+    "ai": "Language, speech, translation and document models.",
+    "media-generation": "Generating images, video, audio and 3D.",
+    "media": "Stock images, video, music, films and texts.",
+    "messaging": "Sending email, SMS, voice calls and chat messages.",
+    "productivity": "Calendars, files and documents.",
+    "commerce": "Products, prices, travel, tickets, property and shipping.",
+    "maps": "Maps, places, routing and geolocation.",
+    "environment": "Weather, climate, water and natural hazards.",
+    "science": "Research literature and life-science databases: genes, proteins, compounds.",
+    "health": "Drugs, clinical trials, providers, nutrition and public-health data.",
+    "government": "Public records: law, courts, spending, procurement, sanctions, elections, open-data portals.",
+    "sports": "Fantasy sports, leagues and sports statistics.",
+    "security": "Vulnerabilities, advisories and threat intelligence.",
+    "developer": "Package registries, code hosting, cloud platforms and their prices.",
+    "observability": "Logs, metrics, errors and uptime.",
+}
+"""Each shelf a vendor is listed under, with what belongs on it; ``VENDORS.md`` prints the line under its heading."""
+
+VENDOR_CATEGORIES: Final = tuple(VENDOR_CATEGORY_DESCRIPTIONS)
+"""The shelves a vendor is listed under, one per vendor. There is no catch-all: a vendor that fits none
+needs a new shelf."""
 
 MSG_VENDOR_UNKNOWN: Final = "Unknown vendor {vendor!r}. Known vendors: {known}"
 MSG_VENDOR_ENDPOINT_UNKNOWN: Final = "Unknown vendor endpoint {endpoint!r}.{hint}"

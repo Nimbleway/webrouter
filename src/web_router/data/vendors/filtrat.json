@@ -1,7 +1,7 @@
 {
   "vendor": "filtrat",
   "name": "Filtrat",
-  "category": "email-verification",
+  "category": "verification",
   "summary": "Email verification, work-email finding from a name and domain or a LinkedIn URL, bulk list jobs, and email-to-LinkedIn lookup.",
   "docs_url": "https://filtrat.io/v1/docs",
   "base_url": "https://api.filtrat.io/v1",

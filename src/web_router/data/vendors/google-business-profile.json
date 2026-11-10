@@ -1,7 +1,7 @@
 {
   "vendor": "google-business-profile",
   "name": "Google Business Profile",
-  "category": "other",
+  "category": "maps",
   "summary": "Your Google Business Profile locations and reviews: list locations, read customer reviews, and reply to them.",
   "docs_url": "https://developers.google.com/my-business",
   "base_url": "https://mybusiness.googleapis.com/v4",

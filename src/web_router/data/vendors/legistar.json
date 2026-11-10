@@ -1,7 +1,7 @@
 {
   "vendor": "legistar",
   "name": "Legistar Web API",
-  "category": "other",
+  "category": "government",
   "summary": "Granicus Legistar's public Web API for city and county councils that use Legistar: legislation (matters) and their histories, meetings (events) and agenda items, votes, bodies and people, per client jurisdiction.",
   "docs_url": "https://webapi.legistar.com/Help",
   "base_url": "https://webapi.legistar.com",

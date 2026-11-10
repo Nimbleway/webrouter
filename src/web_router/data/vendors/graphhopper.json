@@ -1,7 +1,7 @@
 {
   "vendor": "graphhopper",
   "name": "GraphHopper Directions API",
-  "category": "other",
+  "category": "maps",
   "summary": "Routing, distance matrices, isochrones and geocoding on OpenStreetMap data.",
   "docs_url": "https://docs.graphhopper.com/",
   "pricing_url": "https://www.graphhopper.com/pricing/",

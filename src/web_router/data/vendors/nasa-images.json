@@ -1,7 +1,7 @@
 {
   "vendor": "nasa-images",
   "name": "NASA Image and Video Library",
-  "category": "search",
+  "category": "media",
   "summary": "Search NASA's public image, video and audio library and get each asset's files, metadata and captions from the free images-api.nasa.gov API.",
   "docs_url": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf",
   "base_url": "https://images-api.nasa.gov",

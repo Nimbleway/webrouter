@@ -1,7 +1,7 @@
 {
   "vendor": "cloudconvert",
   "name": "CloudConvert",
-  "category": "other",
+  "category": "productivity",
   "summary": "File conversion across 200+ formats (documents, images, audio, video, archives), plus optimize, merge, thumbnails and website capture, run as jobs of tasks.",
   "docs_url": "https://cloudconvert.com/api/v2",
   "pricing_url": "https://cloudconvert.com/pricing",

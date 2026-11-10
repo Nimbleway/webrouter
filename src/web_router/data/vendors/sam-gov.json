@@ -1,7 +1,7 @@
 {
   "vendor": "sam-gov",
   "name": "SAM.gov",
-  "category": "other",
+  "category": "government",
   "summary": "US federal contract opportunities (solicitations, presolicitations, award notices) and the registry of entities registered to do business with the US government, from the GSA's SAM.gov APIs.",
   "docs_url": "https://open.gsa.gov/api/get-opportunities-public-api/",
   "base_url": "https://api.sam.gov",

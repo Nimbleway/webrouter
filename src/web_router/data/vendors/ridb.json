@@ -1,7 +1,7 @@
 {
   "vendor": "ridb",
   "name": "Recreation.gov RIDB",
-  "category": "other",
+  "category": "commerce",
   "summary": "The Recreation Information Database behind Recreation.gov: US federal recreation areas, facilities (campgrounds, trails, ranger stations), campsites, permits, tours, activities and events.",
   "docs_url": "https://ridb.recreation.gov/docs",
   "base_url": "https://ridb.recreation.gov/api/v1",

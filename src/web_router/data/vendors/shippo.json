@@ -1,7 +1,7 @@
 {
   "vendor": "shippo",
   "name": "Shippo",
-  "category": "other",
+  "category": "commerce",
   "summary": "Multi-carrier shipping: rate quotes across 40+ carriers, label purchase, package tracking, address validation and carrier accounts.",
   "docs_url": "https://docs.goshippo.com/shippoapi/public-api/",
   "pricing_url": "https://goshippo.com/pricing",

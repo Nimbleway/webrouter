@@ -1,7 +1,7 @@
 {
   "vendor": "sportsdataio",
   "name": "SportsDataIO (FantasyData)",
-  "category": "other",
+  "category": "sports",
   "summary": "NFL schedules, live scores, standings, players, season stats and fantasy projections with ADP from SportsDataIO, the API behind FantasyData.",
   "docs_url": "https://sportsdata.io/developers/api-documentation/nfl",
   "base_url": "https://api.sportsdata.io/v3/nfl",

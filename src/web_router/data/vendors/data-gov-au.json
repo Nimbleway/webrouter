@@ -1,7 +1,7 @@
 {
   "vendor": "data-gov-au",
   "name": "data.gov.au",
-  "category": "other",
+  "category": "government",
   "summary": "Australia's national open data catalogue: search and read metadata of government datasets and query tabular resources row by row.",
   "docs_url": "https://docs.ckan.org/en/latest/api/",
   "base_url": "https://data.gov.au",

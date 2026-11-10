@@ -1,7 +1,7 @@
 {
   "vendor": "string-db",
   "name": "STRING",
-  "category": "other",
+  "category": "science",
   "summary": "Protein-protein interaction networks and functional enrichment for thousands of organisms: identifier mapping, networks, interaction partners, enrichment, annotations and homology.",
   "docs_url": "https://string-db.org/help/api/",
   "base_url": "https://string-db.org/api",

@@ -1,7 +1,7 @@
 {
   "vendor": "grants-gov",
   "name": "Grants.gov",
-  "category": "other",
+  "category": "government",
   "summary": "US federal grant opportunities from Grants.gov: keyword and filter search over forecasted, posted, closed and archived opportunities, and the full detail of one opportunity.",
   "docs_url": "https://www.grants.gov/api/api-guide",
   "base_url": "https://api.grants.gov",

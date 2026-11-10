@@ -1,7 +1,7 @@
 {
   "vendor": "data-gov-lv",
   "name": "Latvian Open Data Portal (data.gov.lv)",
-  "category": "other",
+  "category": "government",
   "summary": "Latvia's national open data portal, including the Register of Enterprises' company register, officers, members, beneficial owners, insolvencies and annual-report financials, queryable row by row.",
   "docs_url": "https://docs.ckan.org/en/latest/api/",
   "base_url": "https://data.gov.lv",

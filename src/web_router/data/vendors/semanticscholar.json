@@ -1,7 +1,7 @@
 {
   "vendor": "semanticscholar",
   "name": "Semantic Scholar",
-  "category": "search",
+  "category": "science",
   "summary": "Academic Graph API from Ai2: paper and author search, paper details, citations, references and full-text snippet search.",
   "docs_url": "https://api.semanticscholar.org/api-docs/graph",
   "base_url": "https://api.semanticscholar.org/graph/v1",

@@ -1,7 +1,7 @@
 {
   "vendor": "openfda",
   "name": "openFDA",
-  "category": "other",
+  "category": "health",
   "summary": "US Food and Drug Administration public data: drug, device and food adverse events, recalls, drug labels, NDC directory, approvals and 510(k) clearances.",
   "docs_url": "https://open.fda.gov/apis/",
   "base_url": "https://api.fda.gov",

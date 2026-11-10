@@ -1,7 +1,7 @@
 {
   "vendor": "openverse",
   "name": "Openverse",
-  "category": "search",
+  "category": "media",
   "summary": "Search openly licensed and public-domain images and audio (Creative Commons and similar) with license, creator and attribution for each work.",
   "docs_url": "https://api.openverse.org/v1/",
   "base_url": "https://api.openverse.org",

@@ -1,7 +1,7 @@
 {
   "vendor": "npi-registry",
   "name": "NPPES NPI Registry",
-  "category": "other",
+  "category": "health",
   "summary": "US healthcare providers and organizations by National Provider Identifier: names, taxonomies (specialties), practice and mailing addresses, other identifiers, refreshed daily by CMS.",
   "docs_url": "https://npiregistry.cms.hhs.gov/api-page",
   "base_url": "https://npiregistry.cms.hhs.gov",

@@ -1,7 +1,7 @@
 {
   "vendor": "civicapi",
   "name": "civicAPI",
-  "category": "other",
+  "category": "government",
   "summary": "Live and historic election results and race calls for elections around the world, from local races to national ones.",
   "docs_url": "https://civicapi.org/api-documentation",
   "base_url": "https://civicapi.org",

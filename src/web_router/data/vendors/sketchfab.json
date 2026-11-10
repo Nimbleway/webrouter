@@ -1,7 +1,7 @@
 {
   "vendor": "sketchfab",
   "name": "Sketchfab",
-  "category": "other",
+  "category": "media",
   "summary": "Search and read Sketchfab's 3D model library (filters for downloadable, license, face count, PBR, rigging) and get download links for downloadable models.",
   "docs_url": "https://docs.sketchfab.com/data-api/v3/index.html",
   "base_url": "https://api.sketchfab.com",

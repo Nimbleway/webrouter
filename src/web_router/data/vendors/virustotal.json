@@ -1,7 +1,7 @@
 {
   "vendor": "virustotal",
   "name": "VirusTotal",
-  "category": "other",
+  "category": "security",
   "summary": "Threat-intelligence reports on files, URLs, domains and IP addresses: multi-engine antivirus verdicts, reputation and relationships, plus URL scanning.",
   "docs_url": "https://docs.virustotal.com/reference/overview",
   "pricing_url": "https://docs.virustotal.com/reference/public-vs-premium-api",

@@ -16,7 +16,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from web_router.constants_vendors import VENDOR_CATEGORIES
+from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_CATEGORY_DESCRIPTIONS
 from web_router.vendors.catalog import VendorCatalog, get_catalog
 from web_router.vendors.schema import Vendor
 
@@ -63,6 +63,8 @@ def markdown_table(catalog: VendorCatalog) -> str:
             continue
         lines += [
             f"### {category}",
+            "",
+            VENDOR_CATEGORY_DESCRIPTIONS[category],
             "",
             "| Vendor | What it holds | Endpoints | Auth | Variables | Checked |",
             "|---|---|---|---|---|---|",

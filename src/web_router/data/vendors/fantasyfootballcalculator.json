@@ -1,7 +1,7 @@
 {
   "vendor": "fantasyfootballcalculator",
   "name": "Fantasy Football Calculator",
-  "category": "other",
+  "category": "sports",
   "summary": "Fantasy football average draft position (ADP) from Fantasy Football Calculator's mock drafts, by scoring format, league size and year, from its free ADP REST API.",
   "docs_url": "https://help.fantasyfootballcalculator.com/article/42-adp-rest-api",
   "base_url": "https://fantasyfootballcalculator.com",

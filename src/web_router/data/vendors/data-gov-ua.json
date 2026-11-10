@@ -1,7 +1,7 @@
 {
   "vendor": "data-gov-ua",
   "name": "data.gov.ua",
-  "category": "other",
+  "category": "government",
   "summary": "Ukraine's national open data portal, including the Ministry of Justice's Unified State Register (EDR) of legal entities, sole proprietors and public associations: dataset search, metadata and publication status.",
   "docs_url": "https://docs.ckan.org/en/latest/api/",
   "base_url": "https://data.gov.ua",

@@ -1,7 +1,7 @@
 {
   "vendor": "chembl",
   "name": "ChEMBL",
-  "category": "other",
+  "category": "science",
   "summary": "EMBL-EBI's ChEMBL database of bioactive molecules: molecules and their properties, targets, bioactivity measurements, approved drugs, and substructure and similarity search.",
   "docs_url": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services",
   "base_url": "https://www.ebi.ac.uk/chembl/api/data",

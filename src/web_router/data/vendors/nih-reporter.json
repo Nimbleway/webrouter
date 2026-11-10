@@ -1,7 +1,7 @@
 {
   "vendor": "nih-reporter",
   "name": "NIH RePORTER",
-  "category": "other",
+  "category": "science",
   "summary": "NIH RePORTER's API over federally funded research awards (NIH and other agencies): search projects by investigator, organization, fiscal year, text, funding and dates, and find the publications linked to them.",
   "docs_url": "https://api.reporter.nih.gov/",
   "base_url": "https://api.reporter.nih.gov",

@@ -1,7 +1,7 @@
 {
   "vendor": "wafuelwatch",
   "name": "WA FuelWatch",
-  "category": "other",
+  "category": "commerce",
   "summary": "Western Australian retail fuel prices by suburb, region, brand and fuel type, today's and tomorrow's, from the WA Government's FuelWatch feed.",
   "docs_url": "https://www.fuelwatch.wa.gov.au/tools/rss",
   "base_url": "https://www.fuelwatch.wa.gov.au",

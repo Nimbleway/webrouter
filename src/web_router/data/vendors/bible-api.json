@@ -1,7 +1,7 @@
 {
   "vendor": "bible-api",
   "name": "bible-api.com",
-  "category": "other",
+  "category": "media",
   "summary": "Free, keyless Bible verses by reference, book and chapter listings, and random verses in public-domain translations.",
   "docs_url": "https://bible-api.com/",
   "base_url": "https://bible-api.com",

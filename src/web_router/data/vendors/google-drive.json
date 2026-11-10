@@ -1,7 +1,7 @@
 {
   "vendor": "google-drive",
   "name": "Google Drive",
-  "category": "other",
+  "category": "productivity",
   "summary": "Search a Google user's Drive, read file metadata, download files and export Google Docs, Sheets and Slides as text, Markdown, CSV or PDF.",
   "docs_url": "https://developers.google.com/workspace/drive/api/reference/rest/v3",
   "base_url": "https://www.googleapis.com/drive/v3",

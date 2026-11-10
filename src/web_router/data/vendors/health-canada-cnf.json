@@ -1,7 +1,7 @@
 {
   "vendor": "health-canada-cnf",
   "name": "Canadian Nutrient File (Health Canada)",
-  "category": "other",
+  "category": "health",
   "summary": "Health Canada's reference food composition database: foods commonly eaten in Canada, their nutrient amounts per 100 g, serving-size conversion factors and food groups.",
   "docs_url": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html",
   "base_url": "https://food-nutrition.canada.ca/api/canadian-nutrient-file",

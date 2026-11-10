@@ -1,7 +1,7 @@
 {
   "vendor": "pubmed",
   "name": "PubMed (NCBI E-utilities)",
-  "category": "search",
+  "category": "science",
   "summary": "NCBI's Entrez E-utilities over PubMed and the other NCBI databases: search, summaries, full records and links between records.",
   "docs_url": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html",
   "base_url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils",

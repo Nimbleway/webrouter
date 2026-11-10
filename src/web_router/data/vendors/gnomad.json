@@ -1,7 +1,7 @@
 {
   "vendor": "gnomad",
   "name": "gnomAD (Genome Aggregation Database)",
-  "category": "other",
+  "category": "science",
   "summary": "Population allele frequencies of human genetic variants and per-gene constraint metrics from the Broad Institute's gnomAD, through the GraphQL API behind its browser.",
   "docs_url": "https://gnomad.broadinstitute.org/downloads#api",
   "base_url": "https://gnomad.broadinstitute.org",

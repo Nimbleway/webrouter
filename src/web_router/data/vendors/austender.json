@@ -1,7 +1,7 @@
 {
   "vendor": "austender",
   "name": "AusTender",
-  "category": "other",
+  "category": "government",
   "summary": "Australian Government contract notices (awarded contracts since 2013) in Open Contracting Data Standard format, by notice ID or date range.",
   "docs_url": "https://github.com/austender/austender-ocds-api",
   "base_url": "https://api.tenders.gov.au",

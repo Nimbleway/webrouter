@@ -163,6 +163,12 @@ def test_every_shipped_write_says_so() -> None:
                 assert endpoint.kind == "write" or endpoint.notes, f"{endpoint.id}: explain why this POST reads"
 
 
+def test_every_shelf_is_used_and_none_is_a_catch_all() -> None:
+    """A vendor that fits no shelf needs a new one, not an "other" bin, and no shelf sits empty."""
+    assert "other" not in VENDOR_CATEGORIES
+    assert {vendor.category for vendor in SHIPPED.all()} == set(VENDOR_CATEGORIES)
+
+
 def test_shipped_env_variables_belong_to_one_vendor() -> None:
     """Two vendors reading one variable would send one vendor's key to the other."""
     owner: dict[str, str] = {}

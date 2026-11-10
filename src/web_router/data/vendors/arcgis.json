@@ -1,7 +1,7 @@
 {
   "vendor": "arcgis",
   "name": "ArcGIS Online",
-  "category": "search",
+  "category": "maps",
   "summary": "Search ArcGIS Online's public content (feature layers, map services, web maps, datasets) and read an item's metadata and data.",
   "docs_url": "https://developers.arcgis.com/rest/users-groups-and-items/search/",
   "base_url": "https://www.arcgis.com/sharing/rest",

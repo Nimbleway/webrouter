@@ -1,7 +1,7 @@
 {
   "vendor": "tmdb",
   "name": "TMDB (The Movie Database)",
-  "category": "other",
+  "category": "media",
   "summary": "Movie, TV series and people metadata: search, details, discovery filters, trending titles and streaming availability.",
   "docs_url": "https://developer.themoviedb.org/docs/getting-started",
   "base_url": "https://api.themoviedb.org/3",

@@ -1,7 +1,7 @@
 {
   "vendor": "legislation-gov-uk",
   "name": "legislation.gov.uk",
-  "category": "other",
+  "category": "government",
   "summary": "UK legislation (Acts, statutory instruments, devolved legislation) as revised and as enacted, in XML or Atom, from The National Archives' free Legislation API.",
   "docs_url": "https://www.legislation.gov.uk/developer",
   "base_url": "https://www.legislation.gov.uk",

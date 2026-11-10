@@ -1,7 +1,7 @@
 {
   "vendor": "uscensus",
   "name": "US Census Bureau",
-  "category": "other",
+  "category": "government",
   "summary": "US Census Bureau statistics (American Community Survey, decennial census and more) by geography, plus the Census Geocoder that turns addresses into coordinates and census geographies.",
   "docs_url": "https://www.census.gov/data/developers/guidance/api-user-guide.html",
   "base_url": "https://api.census.gov/data",

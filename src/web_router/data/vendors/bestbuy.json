@@ -1,7 +1,7 @@
 {
   "vendor": "bestbuy",
   "name": "Best Buy",
-  "category": "other",
+  "category": "commerce",
   "summary": "Best Buy US products: search and details with prices, stores and in-store availability, categories, trending and most-viewed products, and open-box offers.",
   "docs_url": "https://bestbuyapis.github.io/api-documentation/",
   "base_url": "https://api.bestbuy.com/v1",

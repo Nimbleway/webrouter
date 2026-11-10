@@ -1,7 +1,7 @@
 {
   "vendor": "mux",
   "name": "Mux",
-  "category": "other",
+  "category": "media",
   "summary": "Video hosting and streaming (assets, live streams) and Mux Data playback analytics: views, viewers, startup time, rebuffering and quality metrics.",
   "docs_url": "https://www.mux.com/docs/api-reference/",
   "pricing_url": "https://www.mux.com/pricing",

@@ -1,7 +1,7 @@
 {
   "vendor": "ambientcg",
   "name": "ambientCG",
-  "category": "other",
+  "category": "media",
   "summary": "CC0 PBR materials, HDRIs, decals and 3D models from ambientCG: search assets with their metadata and download links, and list categories and collections.",
   "docs_url": "https://docs.ambientcg.com/api/v3/",
   "base_url": "https://ambientcg.com/api/v3",

@@ -1,7 +1,7 @@
 {
   "vendor": "cpsc-recalls",
   "name": "CPSC Recalls (SaferProducts.gov)",
-  "category": "other",
+  "category": "government",
   "summary": "US Consumer Product Safety Commission product recalls: products, hazards, injuries, remedies, manufacturers, retailers and UPCs, searchable by field and date.",
   "docs_url": "https://www.cpsc.gov/s3fs-public/RecallRetrievalWebServicesProgrammersGuide20180917.pdf",
   "base_url": "https://www.saferproducts.gov/RestWebServices",
