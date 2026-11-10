@@ -30,16 +30,11 @@ from web_router.constants_vendors import (
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_vendors import VendorWriteRefusedError
 from web_router.vendors.catalog import VendorCatalog, get_catalog
-from web_router.vendors.credentials import (
-    CredentialSource,
-    TokenCache,
-    TokenRequest,
-    credential_source,
-    token_request,
-)
+from web_router.vendors.credentials import CredentialSource, credential_source
 from web_router.vendors.plan import _Plan
 from web_router.vendors.response import Prepared, response, send_kwargs, transport_error
 from web_router.vendors.schema import ACCESS_TOKEN
+from web_router.vendors.tokens import TokenCache, TokenRequest, token_request
 from web_router.vendors.types import VendorResponse
 from web_router.vendors.values import applied, render, resolve, wants_token
 

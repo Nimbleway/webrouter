@@ -13,8 +13,8 @@ from pydantic import ValidationError
 
 from tests.vendors.conftest import CREDENTIALS, OAUTH
 from web_router.exceptions import ProviderError
-from web_router.vendors.credentials import TokenCache, token_request
 from web_router.vendors.schema import VendorOAuth2
+from web_router.vendors.tokens import TokenCache, token_request
 
 _OAUTH = VendorOAuth2.model_validate(OAUTH["auth"]["oauth2"])
 

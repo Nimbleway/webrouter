@@ -18,8 +18,9 @@ from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.exceptions_vendors import VendorWriteRefusedError
 from web_router.vendors.caller import VendorCaller
 from web_router.vendors.catalog import VendorCatalog
-from web_router.vendors.credentials import TokenCache, mask, mask_answer, token_request
+from web_router.vendors.masking import mask, mask_answer
 from web_router.vendors.plan import plan_endpoint, plan_raw
+from web_router.vendors.tokens import TokenCache, token_request
 
 # -- guarantees -------------------------------------------------------------
 

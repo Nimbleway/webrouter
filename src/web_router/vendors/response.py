@@ -19,7 +19,7 @@ from web_router.constants_vendors import (
     VENDOR_MASK,
 )
 from web_router.exceptions import ProviderError
-from web_router.vendors.credentials import mask, mask_answer
+from web_router.vendors.masking import mask, mask_answer
 from web_router.vendors.plan import _Plan
 from web_router.vendors.types import VendorResponse
 

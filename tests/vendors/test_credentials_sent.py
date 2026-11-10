@@ -10,7 +10,7 @@ import httpx
 from tests.vendors.conftest import ACME, CREDENTIALS, OAUTH, Recorder, _endpoint
 from web_router.vendors.caller import VendorCaller
 from web_router.vendors.catalog import VendorCatalog
-from web_router.vendors.credentials import mask_answer
+from web_router.vendors.masking import mask_answer
 from web_router.vendors.plan import plan_endpoint
 from web_router.vendors.schema import Vendor
 
