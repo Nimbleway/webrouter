@@ -1,0 +1,334 @@
+{
+  "vendor": "graphhopper",
+  "name": "GraphHopper Directions API",
+  "category": "other",
+  "summary": "Routing, distance matrices, isochrones and geocoding on OpenStreetMap data.",
+  "docs_url": "https://docs.graphhopper.com/",
+  "pricing_url": "https://www.graphhopper.com/pricing/",
+  "base_url": "https://graphhopper.com/api/1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GRAPHHOPPER_API_KEY"
+        ],
+        "description": "a GraphHopper API key (graphhopper.com dashboard > API keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billed in credits against a daily limit. Each response's X-RateLimit-Credits header gives the cost of that call and X-RateLimit-Remaining the credits left before it; 429 means the daily or per-minute limit is spent.",
+    "Points are 'latitude,longitude' in requests, and multi-value parameters repeat (point=..&point=..); pass a list.",
+    "The free package supports only the car, bike and foot profiles."
+  ],
+  "sources": [
+    "https://docs.graphhopper.com/",
+    "https://docs.graphhopper.com/_bundle/openapi.yaml",
+    "https://docs.graphhopper.com/openapi/routing/getroute"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "graphhopper.route.get",
+      "name": "Calculate a route",
+      "summary": "Distance, time, geometry and turn-by-turn instructions between two or more points.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/route",
+      "params": {
+        "point": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Points as 'latitude,longitude', origin first, destination last, vias between. Sent as repeated point parameters; the maximum count depends on the plan.",
+          "example": [
+            "51.131,12.414",
+            "48.224,3.867"
+          ]
+        },
+        "profile": {
+          "in": "query",
+          "description": "Vehicle profile; default car. Free plan: car, bike, foot only. Others include car_avoid_motorway, car_avoid_ferry, car_avoid_toll, small_truck, truck, scooter, hike, mtb, racingbike, or a custom profile id (cp_...).",
+          "example": "car"
+        },
+        "locale": {
+          "in": "query",
+          "description": "Language of instructions, e.g. 'de' or 'pt_PT'; default en."
+        },
+        "instructions": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return turn instructions; default true."
+        },
+        "calc_points": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the route geometry; default true."
+        },
+        "points_encoded": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Default true (polyline-encoded). false returns plain [lon, lat] coordinates."
+        },
+        "elevation": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add altitude as a third coordinate; default false."
+        },
+        "details": {
+          "in": "query",
+          "type": "array",
+          "description": "Path details to return, e.g. street_name, road_class, surface, max_speed, toll, time, distance."
+        },
+        "optimize": {
+          "in": "query",
+          "description": "'true' lets the service reorder via points to minimise time; costs more credits. Not with ch.disable=true.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "point_hint": {
+          "in": "query",
+          "type": "array",
+          "description": "A road name per point to snap it to; none or one per point."
+        },
+        "snap_prevention": {
+          "in": "query",
+          "type": "array",
+          "description": "Road types not to snap points to: motorway, trunk, ferry, tunnel, bridge, ford."
+        },
+        "curbside": {
+          "in": "query",
+          "type": "array",
+          "description": "Per point: any, right or left; for all points or none."
+        },
+        "algorithm": {
+          "in": "query",
+          "description": "Solve a different problem: several near-optimal routes, or a round trip from the first point.",
+          "enum": [
+            "alternative_route",
+            "round_trip"
+          ]
+        },
+        "round_trip_distance": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "round_trip.distance",
+          "description": "Approximate length of a round trip in metres; default 10000."
+        },
+        "round_trip_seed": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "round_trip.seed",
+          "description": "Random seed; change it for a different round trip."
+        },
+        "alternative_route_max_paths": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "alternative_route.max_paths",
+          "description": "Most alternatives to return; default 2."
+        }
+      },
+      "notes": [
+        "Distances are metres, times milliseconds.",
+        "Coordinates in the response are [longitude, latitude] (GeoJSON order), the reverse of the point parameter."
+      ],
+      "job": "geo.route",
+      "docs_url": "https://docs.graphhopper.com/openapi/routing/getroute",
+      "verified": {
+        "docs": "https://docs.graphhopper.com/openapi/routing/getroute"
+      }
+    },
+    {
+      "id": "graphhopper.geocode.forward",
+      "name": "Geocode an address or place",
+      "summary": "Places matching a text query, with coordinates, address parts and OSM ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geocode",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "The address or place to look for.",
+          "example": "Berlin Alexanderplatz"
+        },
+        "locale": {
+          "in": "query",
+          "description": "Result language; the default provider supports en, fr, es, de, pt, ru, it. Default en."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most results; default 5."
+        },
+        "point": {
+          "in": "query",
+          "description": "'latitude,longitude' to bias results toward."
+        },
+        "provider": {
+          "in": "query",
+          "description": "Geocoder to use; default 'default'. Alternatives such as nominatim are under development and may fall back to default."
+        }
+      },
+      "notes": [
+        "The default provider does prefix matching, tuned for autocomplete."
+      ],
+      "job": "geo.geocode",
+      "docs_url": "https://docs.graphhopper.com/openapi/geocoding/getgeocode",
+      "verified": {
+        "docs": "https://docs.graphhopper.com/openapi/geocoding/getgeocode"
+      }
+    },
+    {
+      "id": "graphhopper.geocode.reverse",
+      "name": "Reverse geocode a point",
+      "summary": "Addresses and places near a coordinate.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geocode",
+      "params": {
+        "reverse": {
+          "in": "query",
+          "type": "boolean",
+          "required": true,
+          "description": "Must be true for reverse geocoding.",
+          "example": true
+        },
+        "point": {
+          "in": "query",
+          "required": true,
+          "description": "'latitude,longitude' to look up.",
+          "example": "52.5219,13.4132"
+        },
+        "locale": {
+          "in": "query",
+          "description": "Result language; default en."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most results; default 5."
+        },
+        "provider": {
+          "in": "query",
+          "description": "Geocoder to use; default 'default'."
+        }
+      },
+      "notes": [
+        "Do not send q with reverse=true."
+      ],
+      "job": "geo.reverse",
+      "docs_url": "https://docs.graphhopper.com/openapi/geocoding/getgeocode",
+      "verified": {
+        "docs": "https://docs.graphhopper.com/openapi/geocoding/getgeocode"
+      }
+    },
+    {
+      "id": "graphhopper.matrix.get",
+      "name": "Compute a distance/time matrix",
+      "summary": "Travel times, distances or weights between every origin and destination.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/matrix",
+      "params": {
+        "profile": {
+          "in": "query",
+          "description": "Vehicle profile; default car. Free plan: car, bike, foot only. Others include car_avoid_motorway, car_avoid_ferry, car_avoid_toll, small_truck, truck, scooter, hike, mtb, racingbike, or a custom profile id (cp_...).",
+          "example": "car"
+        },
+        "point": {
+          "in": "query",
+          "type": "array",
+          "description": "Points as 'latitude,longitude' that are both origins and destinations (N points give N x N entries). Or use from_point and to_point."
+        },
+        "from_point": {
+          "in": "query",
+          "type": "array",
+          "description": "Origin points, 'latitude,longitude'."
+        },
+        "to_point": {
+          "in": "query",
+          "type": "array",
+          "description": "Destination points, 'latitude,longitude'."
+        },
+        "out_array": {
+          "in": "query",
+          "type": "array",
+          "description": "Which matrices to return: weights, times, distances.",
+          "example": [
+            "times",
+            "distances"
+          ]
+        },
+        "fail_fast": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Error as soon as a point cannot be found or connected; default true. false returns null entries instead."
+        }
+      },
+      "notes": [
+        "Large matrices use the async POST /matrix/calculate flow instead (not in this entry)."
+      ],
+      "job": "geo.matrix",
+      "docs_url": "https://docs.graphhopper.com/openapi/matrix/getmatrix",
+      "verified": {
+        "docs": "https://docs.graphhopper.com/openapi/matrix/getmatrix"
+      }
+    },
+    {
+      "id": "graphhopper.isochrone.get",
+      "name": "Compute an isochrone",
+      "summary": "Polygons of everywhere reachable from a point within a travel time or distance.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/isochrone",
+      "params": {
+        "point": {
+          "in": "query",
+          "required": true,
+          "description": "Start coordinate, 'latitude,longitude'.",
+          "example": "51.131,12.414"
+        },
+        "profile": {
+          "in": "query",
+          "description": "Vehicle profile; default car. Free plan: car, bike, foot only. Others include car_avoid_motorway, car_avoid_ferry, car_avoid_toll, small_truck, truck, scooter, hike, mtb, racingbike, or a custom profile id (cp_...).",
+          "example": "car"
+        },
+        "time_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Travel time in seconds."
+        },
+        "distance_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Travel distance in metres, instead of time_limit."
+        },
+        "buckets": {
+          "in": "query",
+          "type": "integer",
+          "description": "Split the limit into this many nested polygons; default 1."
+        },
+        "reverse_flow": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for the area that can reach the point, false (default) for the area reachable from it."
+        }
+      },
+      "job": "geo.isochrone",
+      "docs_url": "https://docs.graphhopper.com/openapi/isochrones/getisochrone",
+      "verified": {
+        "docs": "https://docs.graphhopper.com/openapi/isochrones/getisochrone"
+      }
+    }
+  ]
+}

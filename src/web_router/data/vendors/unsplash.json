@@ -1,0 +1,324 @@
+{
+  "vendor": "unsplash",
+  "name": "Unsplash",
+  "category": "other",
+  "summary": "Search and fetch free high-resolution stock photos, collections and photographers' work.",
+  "docs_url": "https://unsplash.com/documentation",
+  "base_url": "https://api.unsplash.com",
+  "auth": {
+    "credentials": {
+      "access_key": {
+        "env": [
+          "UNSPLASH_ACCESS_KEY"
+        ],
+        "description": "The Access Key of an Unsplash developer application (unsplash.com/oauth/applications). Sent as 'Authorization: Client-ID <key>'."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Client-ID {access_key}"
+      }
+    ]
+  },
+  "headers": {
+    "Accept-Version": "v1"
+  },
+  "notes": [
+    "Rate limit: 50 requests per hour for a demo application, 1000 per hour once approved for production. Image files on images.unsplash.com do not count.",
+    "Paging: page defaults to 1, per_page to 10, max 30.",
+    "API guidelines: hotlink the returned image URLs (keep the ixid parameter on any resized URL), credit the photographer and Unsplash, and call photos.download_track whenever your app downloads a photo."
+  ],
+  "sources": [
+    "https://unsplash.com/documentation"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "unsplash.photos.search",
+      "name": "Search photos",
+      "summary": "Photos matching a query, filterable by color, orientation and collection.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/photos",
+      "params": {
+        "query": {
+          "in": "query",
+          "required": true,
+          "description": "Search terms.",
+          "example": "mountain lake"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10, max 30."
+        },
+        "order_by": {
+          "in": "query",
+          "description": "Default relevant.",
+          "enum": [
+            "relevant",
+            "latest"
+          ]
+        },
+        "collections": {
+          "in": "query",
+          "description": "Collection ids, comma-separated."
+        },
+        "content_filter": {
+          "in": "query",
+          "description": "Safety filter, default low.",
+          "enum": [
+            "low",
+            "high"
+          ]
+        },
+        "color": {
+          "in": "query",
+          "description": "Color filter.",
+          "enum": [
+            "black_and_white",
+            "black",
+            "white",
+            "yellow",
+            "orange",
+            "red",
+            "purple",
+            "magenta",
+            "green",
+            "teal",
+            "blue"
+          ]
+        },
+        "orientation": {
+          "in": "query",
+          "description": "Orientation filter.",
+          "enum": [
+            "landscape",
+            "portrait",
+            "squarish"
+          ]
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://unsplash.com/documentation#search-photos",
+      "verified": {
+        "docs": "https://unsplash.com/documentation#search-photos"
+      }
+    },
+    {
+      "id": "unsplash.photos.get",
+      "name": "Get a photo",
+      "summary": "One photo with its URLs at every size, photographer, EXIF, location and stats.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/photos/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "required": true,
+          "description": "Photo id."
+        }
+      },
+      "job": "media.stock.get",
+      "docs_url": "https://unsplash.com/documentation#get-a-photo",
+      "verified": {
+        "docs": "https://unsplash.com/documentation#get-a-photo"
+      }
+    },
+    {
+      "id": "unsplash.photos.list",
+      "name": "List editorial photos",
+      "summary": "The Editorial feed of photos.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/photos",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10, max 30."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://unsplash.com/documentation#list-photos",
+      "verified": {
+        "docs": "https://unsplash.com/documentation#list-photos"
+      }
+    },
+    {
+      "id": "unsplash.photos.random",
+      "name": "Get random photos",
+      "summary": "One or more random photos, optionally from a query, user, collection or topic.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/photos/random",
+      "params": {
+        "query": {
+          "in": "query",
+          "description": "Limit to photos matching this query."
+        },
+        "username": {
+          "in": "query",
+          "description": "Limit to this user's photos."
+        },
+        "collections": {
+          "in": "query",
+          "description": "Collection ids, comma-separated; not with query."
+        },
+        "topics": {
+          "in": "query",
+          "description": "Topic ids, comma-separated; not with query."
+        },
+        "orientation": {
+          "in": "query",
+          "description": "Orientation filter.",
+          "enum": [
+            "landscape",
+            "portrait",
+            "squarish"
+          ]
+        },
+        "content_filter": {
+          "in": "query",
+          "description": "Safety filter, default low.",
+          "enum": [
+            "low",
+            "high"
+          ]
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "How many photos, default 1, max 30."
+        }
+      },
+      "notes": [
+        "With count the answer is an array; without it, a single photo object."
+      ],
+      "job": "media.stock.search",
+      "docs_url": "https://unsplash.com/documentation#get-a-random-photo",
+      "verified": {
+        "docs": "https://unsplash.com/documentation#get-a-random-photo"
+      }
+    },
+    {
+      "id": "unsplash.photos.download_track",
+      "name": "Record a photo download",
+      "summary": "Tells Unsplash a photo was downloaded; returns the download url.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/photos/{id}/download",
+      "params": {
+        "id": {
+          "in": "path",
+          "required": true,
+          "description": "Photo id."
+        }
+      },
+      "notes": [
+        "Required by the API guidelines each time your app downloads a photo. It only increments the photo's download counter; it does not return the image itself."
+      ],
+      "docs_url": "https://unsplash.com/documentation#track-a-photo-download",
+      "verified": {
+        "docs": "https://unsplash.com/documentation#track-a-photo-download"
+      }
+    },
+    {
+      "id": "unsplash.collections.search",
+      "name": "Search collections",
+      "summary": "Curated photo collections matching a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/collections",
+      "params": {
+        "query": {
+          "in": "query",
+          "required": true,
+          "description": "Search terms."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10, max 30."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://unsplash.com/documentation#search-collections",
+      "verified": {
+        "docs": "https://unsplash.com/documentation#search-collections"
+      }
+    },
+    {
+      "id": "unsplash.users.photos",
+      "name": "List a user's photos",
+      "summary": "Photos uploaded by one photographer.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{username}/photos",
+      "params": {
+        "username": {
+          "in": "path",
+          "required": true,
+          "description": "The user's username."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10, max 30."
+        },
+        "order_by": {
+          "in": "query",
+          "description": "Default latest.",
+          "enum": [
+            "latest",
+            "oldest",
+            "popular",
+            "views",
+            "downloads"
+          ]
+        },
+        "stats": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include each photo's stats, default false."
+        },
+        "orientation": {
+          "in": "query",
+          "description": "Orientation filter.",
+          "enum": [
+            "landscape",
+            "portrait",
+            "squarish"
+          ]
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://unsplash.com/documentation#list-a-users-photos",
+      "verified": {
+        "docs": "https://unsplash.com/documentation#list-a-users-photos"
+      }
+    }
+  ]
+}
