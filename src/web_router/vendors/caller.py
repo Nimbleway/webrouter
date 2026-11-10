@@ -275,7 +275,6 @@ class VendorCaller:
                 status=response.status_code, method=plan.method, path=plan.path, body=body or "(empty body)"
             )
             raise ProviderError(plan.vendor.vendor, detail)
-        content_type = response.headers.get(VENDOR_CONTENT_TYPE_HEADER)
         data: Any = None
         text: str | None = None
         if response.content:
@@ -288,6 +287,10 @@ class VendorCaller:
             for key, value in response.headers.items()
             if key.lower() not in VENDOR_DROPPED_RESPONSE_HEADERS
         }
+        # From the masked headers, so a secret the vendor echoed into the content type stays masked there too.
+        content_type = next(
+            (value for key, value in headers.items() if key.lower() == VENDOR_CONTENT_TYPE_HEADER), None
+        )
         return VendorResponse(
             vendor=plan.vendor.vendor,
             endpoint=plan.endpoint,
