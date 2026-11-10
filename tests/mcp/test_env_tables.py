@@ -1,4 +1,4 @@
-"""Which variables a ``.env`` may set: every credential ``.env.example`` names, from one list of tables."""
+"""Which variables a ``.env`` may set: every credential ``.env.example`` names but the env-only ones."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from web_router.constants import (
     ENV_OPENAI_API_KEY,
 )
 from web_router.mcp.env import EnvSources
-from web_router.mcp.env_credentials import ALL_ENV_TABLES, credential_variables
+from web_router.mcp.env_credentials import ALL_ENV_TABLES, ENV_ONLY, file_variables
 from web_router.mcp.methods import METHODS
 
 ENV_EXAMPLE = Path(__file__).resolve().parents[2] / ".env.example"
@@ -28,12 +28,13 @@ def _example_variables() -> set[str]:
     return set(re.findall(r"^([A-Z][A-Z0-9_]*)=", ENV_EXAMPLE.read_text(encoding="utf-8"), flags=re.MULTILINE))
 
 
-def test_every_credential_in_env_example_loads_and_nothing_else_does() -> None:
-    assert _example_variables() - NOT_CREDENTIALS == set(credential_variables())
+def test_every_credential_in_env_example_but_the_env_only_ones_loads_and_nothing_else_does() -> None:
+    assert set(ENV_ONLY) <= _example_variables()
+    assert _example_variables() - NOT_CREDENTIALS - set(ENV_ONLY) == set(file_variables())
 
 
 def test_the_tools_read_the_same_tables_the_loader_does() -> None:
-    """``unlock`` and the no-backend hints name only variables a ``.env`` can actually set."""
+    """``unlock`` and the no-backend hints read the loader's tables, env-only variables included."""
     in_tools = {id(method.env) for method in METHODS.values()}
     assert in_tools == {id(table) for table in ALL_ENV_TABLES}
 

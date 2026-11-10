@@ -25,8 +25,8 @@ MCP_SERVER_INSTRUCTIONS = (
     "method, each backend still missing a key and the variable that would add it. Every key the user adds "
     "unlocks more backends and fallbacks, and research, browse and cloud browsers need one at all -- with a "
     "key for every backend, every capability is available. When a method has nothing to run on, or the user "
-    "wants more, point them there and to .env.example, have them put keys in their .env themselves, and call "
-    "`load_env` with the path they give."
+    "wants more, point them there and to .env.example; have them put keys in their .env themselves, then call "
+    "`load_env` with the path they give (except AGENTCORE_GATEWAY_URL, which is set in the server's environment)."
 )
 
 
@@ -157,12 +157,22 @@ MCP_MSG_KEY_HINT = (
 )
 """Said instead, once, after a library error that named ``provider_config``."""
 
+MCP_MSG_ENV_ONLY_HINT = " Through this server: it is set in the server's environment, and the server is restarted."
+"""Said instead of :data:`MCP_MSG_KEY_HINT` when the setting is one no file may set: ``AGENTCORE_GATEWAY_URL``."""
+
 MCP_RESOURCE_NOT_FOUND = -32002
 """The JSON-RPC error code MCP gives a read of a resource the server does not have."""
 
 MCP_MSG_UNKNOWN_ARGUMENTS = "{tool} does not take {names}, so nothing was run. It takes: {allowed}."
 MCP_NO_ARGUMENTS = "no arguments"
 """An argument the tool does not declare -- a typo, a guessed option -- refused rather than dropped."""
+
+MCP_MSG_ENV_ONLY = (
+    "{names} is read from the environment only, so the file's value was ignored: "
+    "set it in the server's environment and restart the server."
+)
+MCP_MSG_ENV_ONLY_FILE = "{path} sets no provider key, so nothing was loaded. {note}"
+"""A ``.env`` that sets a variable the server takes only from its environment: ``AGENTCORE_GATEWAY_URL``."""
 
 MCP_MSG_ROUTER_SPEC = "{env_var}={value!r} names no router: expected <module>:<attribute>, or 'off'."
 MCP_MSG_ROUTER_IMPORT = "{env_var}={value!r}: {error}"

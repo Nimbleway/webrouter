@@ -8,6 +8,7 @@ import pytest
 
 from tests.mcp.conftest import FAKE
 from web_router.constants import (
+    ENV_AGENTCORE_GATEWAY_URL,
     ENV_LOCAL_BROWSER_PATH,
     ENV_NIMBLE_API_KEY,
     ENV_TAVILY_API_KEY,
@@ -19,10 +20,17 @@ from web_router.constants import (
     MCP_TOOL_TEMPLATE,
     MCP_TOOL_TEMPLATES,
     MSG_LOCAL_NO_BROWSER,
+    PROVIDER_AGENTCORE,
     PROVIDER_TAVILY,
 )
-from web_router.constants_mcp import MCP_NO_ARGUMENTS, MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
+from web_router.constants_mcp import (
+    MCP_MSG_ENV_ONLY_HINT,
+    MCP_NO_ARGUMENTS,
+    MCP_TOOL_BUDGET_STATUS,
+    MCP_TOOL_WEB_RUN,
+)
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
+from web_router.exceptions import ConfigurationError
 from web_router.mcp.messages import error_text
 from web_router.mcp.routing import _SHAPERS
 from web_router.mcp.server import call_tool
@@ -84,6 +92,19 @@ def test_the_no_browser_error_names_no_provider_config_over_mcp() -> None:
 
     assert "provider_config" not in text and ENV_LOCAL_BROWSER_PATH in text
     assert MCP_TOOL_LOAD_ENV not in text
+
+
+def test_the_gateway_error_offers_no_env_route_over_mcp() -> None:
+    """``AGENTCORE_GATEWAY_URL`` is read from the environment only, so ``load_env`` could not set it."""
+    error = ConfigurationError.missing_setting(
+        PROVIDER_AGENTCORE, env_var=ENV_AGENTCORE_GATEWAY_URL, setting="gateway_url"
+    )
+
+    text = error_text(error)
+
+    assert "provider_config" not in text and ENV_AGENTCORE_GATEWAY_URL in text
+    assert MCP_TOOL_LOAD_ENV not in text
+    assert text.endswith(MCP_MSG_ENV_ONLY_HINT)
 
 
 @pytest.mark.parametrize(

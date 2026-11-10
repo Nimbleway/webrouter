@@ -401,7 +401,7 @@ class WebRouterTools:
         if applied.already_set:
             payload["already_set"] = list(applied.already_set)
         payload["configured"] = methods.configured()
-        notes = [] if applied.loaded else [MCP_MSG_ENV_NOTHING_NEW]
+        notes = ([] if applied.loaded else [MCP_MSG_ENV_NOTHING_NEW]) + applied.notes()
         if applied.remembered is not None:
             notes.append(MCP_MSG_ENV_REMEMBERED.format(pointer=applied.remembered))
         if notes:

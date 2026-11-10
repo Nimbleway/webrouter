@@ -31,7 +31,9 @@ no signup — the keyless backends listed in the README's
 register it with your client, using the absolute path of your clone:
 
 - **Inside the clone**, Claude Code needs nothing: the committed `.mcp.json`
-  starts the server, and you approve it once.
+  starts the server and sets `WEB_ROUTER_ENV_FILE=.env` so it reads the clone's
+  own `.env`; you approve it once. Until you create that `.env`, the
+  capabilities resource shows `explicit_file_missing: true`, which is harmless.
 - **Claude Code, from every project**: register it once at user scope.
 
   ```bash
@@ -85,22 +87,29 @@ Each person brings their own keys: there is no shared key store, and no key
 leaves the machine it was set on.
 
 Credentials come from the environment of the process your client launches, and
-then from `.env` files. At startup the server reads every one of four places,
+then from `.env` files. At startup the server reads every one of three places,
 in this order:
 
 | # | Where | For |
 | --- | --- | --- |
-| 1 | the path in `WEB_ROUTER_ENV_FILE` | pointing a client's config at a `.env` you already keep somewhere |
+| 1 | the path in `WEB_ROUTER_ENV_FILE` | pointing a client's config at a `.env` you already keep somewhere; a relative path is taken from the working directory, which is how this repo's `.mcp.json` reads the clone's `.env` |
 | 2 | `.env` in the user config directory | one file for every client and every project |
 | 3 | the path `load_env` recorded with `remember: true` | a file named in a conversation, read again on every start |
-| 4 | `.env` in the working directory | a checkout of this repo, where `.mcp.json` starts the server at the root |
+
+A `.env` in the directory the server starts in is not read unless
+`WEB_ROUTER_ENV_FILE` names it. To read a project's `.env`, set
+`WEB_ROUTER_ENV_FILE=.env` in that project's own client config, not in a
+user-scope registration, where it would apply to every project you open.
+Because the file `WEB_ROUTER_ENV_FILE` names is read first, a clone's `.env`
+wins over your user config `.env` when this repo's `.mcp.json` starts the server.
+Inside the clone, that `.mcp.json` setting also replaces a `WEB_ROUTER_ENV_FILE`
+you export.
 
 An earlier place wins, per variable; a later file only fills what is still
 unset, and a credential of two variables (Oxylabs' username and password,
 Bright Data's token and zone) only as a whole: a file holding half of one sets
-none of it, so it never blocks a later file holding both. So a project's own `.env` and a
-remembered file can add keys but never replace or complete yours: a repo that
-commits a `.env` with its owner's key does not take over your traffic. The capabilities resource says which file each variable came
+none of it, so it never blocks a later file holding both. So a remembered file
+can add keys but never replace or complete yours. The capabilities resource says which file each variable came
 from. The server never creates the user config directory except to record a
 remembered path. A `WEB_ROUTER_ENV_FILE` that names no file is reported rather
 than silently skipped. With no file anywhere the server starts keyless.
@@ -119,9 +128,12 @@ the client exports always keeps its value over any file's.
 Whichever file it is, only the provider credentials listed in
 [`.env.example`](../.env.example) are taken from it. A switch such as
 `WEB_ROUTER_MCP_ALLOW_FILE_URLS` or `CHROME_PATH` in a file is ignored, because
-a server registered at user scope starts in any workspace and that workspace's
-file is not whoever runs the server; `${...}` is not expanded, so a file cannot
-copy another secret into a provider's key. The server never writes a
+a file named in a conversation, a remembered one or a project's opted-in one is
+not necessarily the user's own configuration; `${...}` is not expanded, so a
+file cannot copy another secret into a provider's key. `AGENTCORE_GATEWAY_URL`
+is read from the environment only, so a file's value is ignored: set it in
+the server's environment and restart the server. A file that sets it is reported
+with a note saying so, unless it is already set. The server never writes a
 credential anywhere, never sends one to anything but the backend it belongs to,
 and never reports one back to the model.
 
@@ -170,8 +182,7 @@ backend lists:
 "env": {
   "searched": [
     {"source": "WEB_ROUTER_ENV_FILE", "path": "/Users/you/wrong/.env", "status": "missing"},
-    {"source": "user config", "path": "/Users/you/Library/Application Support/web-router/.env", "status": "used"},
-    {"source": "working directory", "path": "/Users/you/project/.env", "status": "no credentials"}
+    {"source": "user config", "path": "/Users/you/Library/Application Support/web-router/.env", "status": "used"}
   ],
   "loaded": {"TAVILY_API_KEY": "/Users/you/Library/Application Support/web-router/.env"},
   "explicit_file_missing": true,
@@ -182,7 +193,8 @@ backend lists:
 
 — every place it looked, in order, and what it found there (`used`, `missing`,
 `unreadable` with a `reason`, `no credentials`, or `nothing new` when an earlier
-place had set everything it holds); each variable loaded at startup and the
+place had set everything it holds), with a `note` when the file sets
+`AGENTCORE_GATEWAY_URL`; each variable loaded at startup and the
 file it came from; whether `WEB_ROUTER_ENV_FILE` named a file that is not
 there; the variables the client already exported, by name; and each `load_env`
 since. With no provider key at

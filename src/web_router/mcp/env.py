@@ -3,28 +3,30 @@
 The library never reads dotfiles, but this entry point is an application. An
 MCP client starts it with the client's own environment, in a working directory
 the user rarely chose, so keys nobody exported need another way in.
-:meth:`EnvSources.at_startup` reads every one of four places, in this order:
+:meth:`EnvSources.at_startup` reads every one of three places, in this order:
 
-1. the path in ``WEB_ROUTER_ENV_FILE``, which a client's config can set;
+1. the path in ``WEB_ROUTER_ENV_FILE``, which a client's config can set -- a
+   relative one is taken from the working directory, so a project's
+   ``.mcp.json`` that sets it to ``.env`` opts in to the repo's own file;
 2. ``.env`` in the user config directory;
-3. the file ``load_env(remember=true)`` recorded in the user config directory;
-4. ``.env`` in the working directory -- the repo root, when ``.mcp.json``
-   starts the server there.
+3. the file ``load_env(remember=true)`` recorded in the user config directory.
+
+A ``.env`` that merely sits in the working directory is not read: a server
+registered at user scope starts in whatever repo is open.
 
 An earlier place wins, per variable: a later file fills only what is still
-unset. So a project's own ``.env``, in whatever directory a client started the
-server in, and a remembered file -- a path a conversation recorded -- can only
-add keys, never replace the user's. At runtime :meth:`EnvSources.load` reads
-one more, from a path the user gives the model, so only a path ever passes
-through a conversation.
+unset. So a remembered file -- a path a conversation recorded -- can only add
+keys, never replace the user's. At runtime :meth:`EnvSources.load` reads one
+more, from a path the user gives the model, so only a path ever passes through
+a conversation.
 
-The rules are the same wherever a file comes from. Only provider credentials
-are read -- :func:`credential_variables` -- because a
-server registered at user scope can start in any workspace, and a foreign file
-must not flip a policy switch such as file-URL navigation or point
-``CHROME_PATH`` at a binary of its choosing. A variable already set keeps its
-value. And no value is ever returned, reported or put in an error message:
-names and paths are.
+The rules are the same wherever a file comes from. Only provider keys are
+read -- :func:`file_variables` -- because a file a model was pointed at, a
+remembered one or a project's must not flip a policy switch such as file-URL
+navigation, point ``CHROME_PATH`` at a binary of its choosing or set
+``AGENTCORE_GATEWAY_URL``, which is read from the environment only
+(:data:`ENV_ONLY`). A variable already set keeps its value. And no value is
+ever returned, reported or put in an error message: names and paths are.
 """
 
 from __future__ import annotations
@@ -46,7 +48,6 @@ from web_router.constants import (
     MCP_ENV_REASON_NOT_A_FILE,
     MCP_ENV_REASON_NOT_TEXT,
     MCP_ENV_REASON_TOO_LARGE,
-    MCP_ENV_SOURCE_CWD,
     MCP_ENV_SOURCE_EXPLICIT,
     MCP_ENV_SOURCE_REMEMBERED,
     MCP_ENV_SOURCE_USER,
@@ -63,7 +64,15 @@ from web_router.constants import (
     MCP_USER_CONFIG_ROOT_BY_PLATFORM,
     MCP_USER_CONFIG_ROOT_DEFAULT,
 )
-from web_router.mcp.env_credentials import EnvLoad, apply_credentials, credential_variables
+from web_router.constants_mcp import MCP_MSG_ENV_ONLY_FILE
+from web_router.mcp.env_credentials import (
+    ENV_ONLY,
+    EnvLoad,
+    apply_credentials,
+    credential_variables,
+    env_only_notes,
+    file_variables,
+)
 
 
 def _set_in_environment() -> tuple[str, ...]:
@@ -86,10 +95,11 @@ def user_config_dir() -> Path:
 class EnvFileError(ValueError):
     """A file the server was pointed at and could not use. Its message names the path and why, never a value."""
 
-    def __init__(self, message: str, *, status: str, reason: str | None = None) -> None:
+    def __init__(self, message: str, *, status: str, reason: str | None = None, env_only: tuple[str, ...] = ()) -> None:
         super().__init__(message)
         self.status = status
         self.reason = reason
+        self.env_only = env_only
 
 
 @dataclass(frozen=True)
@@ -100,6 +110,7 @@ class EnvLookup:
     path: Path
     status: str
     reason: str | None = None
+    notes: tuple[str, ...] = ()
 
 
 @dataclass
@@ -122,16 +133,17 @@ class EnvSources:
         sources = cls()
         for source, path in _candidates():
             try:
-                values = read_credentials(path)
+                values, env_only = read_credentials(path)
             except EnvFileError as exc:
-                sources.searched.append(EnvLookup(source, path, exc.status, exc.reason))
+                notes = tuple(env_only_notes(exc.env_only))
+                sources.searched.append(EnvLookup(source, path, exc.status, exc.reason, notes))
                 if source == MCP_ENV_SOURCE_EXPLICIT and exc.status != MCP_ENV_STATUS_NO_CREDENTIALS:
                     sources.explicit_missing = True
                 continue
-            applied = apply_credentials(path, values)
+            applied = apply_credentials(path, values, env_only=env_only)
             sources.startup.append(applied)
             status = MCP_ENV_STATUS_USED if applied.loaded else MCP_ENV_STATUS_NOTHING_NEW
-            sources.searched.append(EnvLookup(source, path, status))
+            sources.searched.append(EnvLookup(source, path, status, notes=tuple(applied.notes())))
         return sources
 
     def load(self, path: str, *, remember: bool = False) -> EnvLoad:
@@ -146,9 +158,9 @@ class EnvSources:
             ValueError: when ``remember`` is set and the path cannot be recorded.
         """
         target = _absolute(path)
-        values = read_credentials(target)
+        values, env_only = read_credentials(target)
         pointer = _remember(target) if remember else None
-        applied = apply_credentials(target, values, remembered=pointer)
+        applied = apply_credentials(target, values, remembered=pointer, env_only=env_only)
         self.runtime.append(applied)
         return applied
 
@@ -164,15 +176,15 @@ class EnvSources:
         }
 
 
-def read_credentials(path: Path) -> dict[str, str]:
-    """The provider credentials ``path`` sets, and nothing else it holds.
+def read_credentials(path: Path) -> tuple[dict[str, str], tuple[str, ...]]:
+    """The provider keys ``path`` sets, and the :data:`ENV_ONLY` variables it set and that were left out.
 
     Refuses anything that is not a small text file before reading it, since a
     model can name any path on the machine.
 
     Raises:
         EnvFileError: for a path with no file, one that cannot be read as
-            text, or one that sets no credential.
+            text or one that sets no key.
     """
     try:
         info = path.stat()
@@ -199,15 +211,19 @@ def read_credentials(path: Path) -> dict[str, str]:
     # Not interpolated: `${OTHER}` would copy a secret the file never held into
     # a provider's key, and send it to that provider with every call.
     values = dotenv_values(stream=io.StringIO(text), interpolate=False)
-    wanted = sorted(credential_variables())
+    wanted = sorted(file_variables())
     # An empty assignment -- a copied .env.example -- carries no credential.
     found = {name: value for name in wanted if (value := values.get(name))}
+    # Not one already exported: that value is kept, as for any variable already set.
+    env_only = tuple(name for name in ENV_ONLY if values.get(name) and not os.environ.get(name))
     if not found:
-        raise EnvFileError(
-            MCP_MSG_ENV_NO_CREDENTIALS.format(path=path, names=", ".join(wanted)),
-            status=MCP_ENV_STATUS_NO_CREDENTIALS,
+        message = (
+            MCP_MSG_ENV_ONLY_FILE.format(path=path, note=" ".join(env_only_notes(env_only)))
+            if env_only
+            else MCP_MSG_ENV_NO_CREDENTIALS.format(path=path, names=", ".join(wanted))
         )
-    return found
+        raise EnvFileError(message, status=MCP_ENV_STATUS_NO_CREDENTIALS, env_only=env_only)
+    return found, env_only
 
 
 def _candidates() -> list[tuple[str, Path]]:
@@ -222,7 +238,6 @@ def _candidates() -> list[tuple[str, Path]]:
     if remembered is not None:
         # After the user .env: a conversation recorded it, and may have been steered to.
         places.append((MCP_ENV_SOURCE_REMEMBERED, remembered))
-    places.append((MCP_ENV_SOURCE_CWD, Path.cwd() / MCP_ENV_FILE))
     return places
 
 
@@ -260,4 +275,6 @@ def _lookup_report(lookup: EnvLookup) -> dict[str, Any]:
     report: dict[str, Any] = {"source": lookup.source, "path": str(lookup.path), "status": lookup.status}
     if lookup.reason is not None:
         report["reason"] = lookup.reason
+    if lookup.notes:
+        report["note"] = " ".join(lookup.notes)
     return report

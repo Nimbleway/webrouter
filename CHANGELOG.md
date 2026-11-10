@@ -8,6 +8,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+### Changed
+
+- **Breaking (MCP key lookup):** the server ignores the `.env` where it starts and `AGENTCORE_GATEWAY_URL` in any file. To read a project's `.env`, set `WEB_ROUTER_ENV_FILE=.env` in that project's own config, such as its `.mcp.json`, never at user scope. Set `AGENTCORE_GATEWAY_URL` in the server's environment (its client config's `env` or the shell that starts it).
+
 ### Fixed
 
 - Nimble `research` at `effort="max"` runs again. Nimble's API refuses its own `max` tier, which is not open yet, with a 422, so `max` now sends `x-high`, the deepest tier it runs today.

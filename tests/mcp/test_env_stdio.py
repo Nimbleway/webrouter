@@ -34,7 +34,6 @@ from web_router.constants import (
     ENV_BRAVE_API_KEY,
     ENV_MCP_ENV_FILE,
     MCP_ENV_FILE,
-    MCP_ENV_SOURCE_CWD,
     MCP_ENV_SOURCE_EXPLICIT,
     MCP_ENV_SOURCE_REMEMBERED,
     MCP_ENV_SOURCE_USER,
@@ -150,13 +149,23 @@ async def test_the_user_config_env_is_found_from_any_directory(setup: Setup) -> 
     _assert_found(body, text, keys, MCP_ENV_SOURCE_USER)
 
 
-async def test_the_working_directory_env_is_still_read(setup: Setup) -> None:
+async def test_a_working_directory_env_is_not_read_unless_the_client_config_names_it(setup: Setup) -> None:
+    """A server registered for every project must not take keys from whatever repo it starts in."""
     keys = setup.keys(setup.work / MCP_ENV_FILE)
 
     async with _server(setup) as session:
+        ignored, text = await _capabilities(session)
+
+    assert PROVIDER_BRAVE not in ignored[MCP_TOOL_SEARCH]
+    assert ignored["env"]["loaded"] == {}
+    assert str(keys) not in text
+
+    # The repo's own .mcp.json opts in with a relative path, taken from the working directory.
+    setup.env[ENV_MCP_ENV_FILE] = MCP_ENV_FILE
+    async with _server(setup) as session:
         body, text = await _capabilities(session)
 
-    _assert_found(body, text, keys, MCP_ENV_SOURCE_CWD)
+    _assert_found(body, text, keys, MCP_ENV_SOURCE_EXPLICIT)
 
 
 async def test_with_no_file_anywhere_the_model_is_told_and_can_load_one(setup: Setup) -> None:

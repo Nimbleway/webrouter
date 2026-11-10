@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import re
 
-from web_router.constants_mcp import MCP_MSG_KEY_HINT, MCP_PROVIDER_CONFIG_ASIDE, MCP_PROVIDER_CONFIG_CLAUSE
+from web_router.constants_mcp import (
+    MCP_MSG_ENV_ONLY_HINT,
+    MCP_MSG_KEY_HINT,
+    MCP_PROVIDER_CONFIG_ASIDE,
+    MCP_PROVIDER_CONFIG_CLAUSE,
+)
+from web_router.mcp.env_credentials import ENV_ONLY
 from web_router.mcp.shaping import redact, redaction_note
 
 
@@ -23,8 +29,12 @@ def error_text(exc: Exception) -> str:
 def _for_mcp(message: str) -> str:
     """A library message as an MCP user can act on it: ``provider_config`` is code, so the ``.env`` route instead.
 
-    An aside beside a setting that is not a key just goes: ``load_env`` would not set it.
+    An aside beside a setting that is not a key just goes: ``load_env`` would not set it. Nor would it set an
+    :data:`ENV_ONLY` variable, so that error gets a hint with no ``.env`` route.
     """
     message = re.sub(MCP_PROVIDER_CONFIG_ASIDE, "", message)
     rewritten, count = re.subn(MCP_PROVIDER_CONFIG_CLAUSE, "", message)
-    return rewritten + MCP_MSG_KEY_HINT if count else message
+    if not count:
+        return message
+    env_only = any(name in message for name in ENV_ONLY)
+    return rewritten + (MCP_MSG_ENV_ONLY_HINT if env_only else MCP_MSG_KEY_HINT)

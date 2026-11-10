@@ -33,11 +33,15 @@ Keep your `.env` out of version control — the shipped `.gitignore` already
 excludes it.
 
 The library itself never reads a `.env`. The MCP server does, at startup —
-from `WEB_ROUTER_ENV_FILE`, its working directory or your user config
-directory — and at runtime through its `load_env` tool, which takes a file's
-path from the model. Either way it takes only the provider credential
-variables web-router names and ignores everything else in the file, a variable
-already set keeps its value, `${...}` is not expanded, and neither the tool's
+from `WEB_ROUTER_ENV_FILE`, your user config directory or a path `load_env`
+remembered — and at runtime through its `load_env` tool, which takes a file's
+path from the model. It does not read a `.env` in the directory it starts in
+unless `WEB_ROUTER_ENV_FILE` names it, as this repo's `.mcp.json` does; the
+file `WEB_ROUTER_ENV_FILE` names is read first, so a clone's `.env` wins over
+your user config `.env`. Whichever file it reads, it takes only the provider
+keys web-router names and ignores everything else in the file;
+`AGENTCORE_GATEWAY_URL` is read from the environment only, never from a file;
+a variable already set keeps its value, `${...}` is not expanded and neither the tool's
 result, its errors nor the capabilities resource carries a value: names and
 paths only. `load_env(remember=true)` records the path, never a copy of the
 keys. What this does not prevent: a model steered by a page it read could call
