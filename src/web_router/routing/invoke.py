@@ -5,25 +5,23 @@ Experimental. A router is the caller's code, in one of two forms:
 * a function or coroutine function, ``router(req) -> RouteDecision``;
 * an object with ``route(req)`` or ``aroute(req)``, or both.
 
-web-router adapts the side the author did not write. A sync router runs on a
-worker thread, from sync and async code alike, so the call can stop waiting at
-the deadline; Python cannot interrupt a thread, so a router still running then
-keeps running, and its answer is dropped. An async router called from sync
-code runs on a private event-loop thread and is cancelled at the deadline. A
-function that does not look async but answers with a coroutine -- an async
-router behind a plain decorator -- has that coroutine awaited the same way,
-within what is left of the same deadline, and closed if it never runs.
+web-router adapts the side the author did not write. A sync router runs on a worker thread, from
+sync and async code alike, so the call can stop waiting at the deadline; Python cannot interrupt a
+thread, so a router still running then keeps running, and its answer is dropped. An async router
+called from sync code runs on a private event-loop thread and is cancelled at the deadline. A
+function that does not look async but answers with a coroutine -- an async router behind a plain
+decorator -- has it awaited the same way, within what is left of the deadline, or closed unrun.
 
 A router declares its time limit as a ``timeout_s`` attribute, on the function
 or the object; without one it has 50 ms. The time it gets is the smaller of
 that and the time the call has left. A router that raises, runs out of time or
 answers something other than a :class:`RouteDecision` leaves the call on the
 static order, and the decision record says why; with ``fail_on_router_error``
-the call raises :class:`~web_router.RouterError` instead.
+the call raises :class:`~web_router.RouterError` instead, as it does when a
+composite router's members all fail or answer empty.
 
-The router is shown the :class:`RouteRequest` and nothing else: the prompt,
-and candidates named ``tool:provider``. Those ids show which backends are
-configured; no key value ever reaches a router.
+The router is shown the :class:`RouteRequest` alone: the prompt, and candidates named
+``tool:provider``, which show the backends configured; no key value reaches a router.
 """
 
 from __future__ import annotations
@@ -51,6 +49,7 @@ from web_router.routing._runner import (
     _on_thread,
     _settled,
 )
+from web_router.routing.composite import none_answered
 from web_router.routing.contract import Budget, RouteDecision, RouteRequest
 from web_router.routing.merge_shape import well_formed
 
@@ -191,6 +190,8 @@ class AttachedRouter:
         if not well_formed(result):
             _close(result)
             return self._failed(ROUTER_INVALID, started)
+        if self.fail_on_error and (code := none_answered(result)):  # a composite whose members gave no answer
+            raise RouterError(self.name, code)
         return RouterOutcome(decision=result, failure=None, elapsed_ms=(time.perf_counter() - started) * 1000)
 
     def _failed(self, code: str, started: float, error: Any = None) -> RouterOutcome:
