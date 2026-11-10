@@ -68,6 +68,7 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.exceptions_budget import BudgetExceededError
+from web_router.exceptions_vendors import VendorNotFoundError, VendorWriteRefusedError
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -159,6 +160,7 @@ from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResp
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
+from web_router.vendors import Vendor, VendorEndpoint, VendorResponse, VendorSummary
 
 __all__ = [
     "ANSWER_PARAMETERS",
@@ -258,6 +260,12 @@ __all__ = [
     "ToolName",
     "UnsupportedFormatError",
     "UnsupportedParameterError",
+    "Vendor",
+    "VendorEndpoint",
+    "VendorNotFoundError",
+    "VendorResponse",
+    "VendorSummary",
+    "VendorWriteRefusedError",
     "Viewport",
     "WebRouter",
     "WebRouterError",

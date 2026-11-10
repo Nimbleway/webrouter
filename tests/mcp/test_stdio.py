@@ -51,6 +51,7 @@ from web_router.constants import (
     PROVIDER_YOU_MCP,
 )
 from web_router.constants_mcp import MCP_TOOL_BUDGET_START, MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
+from web_router.constants_vendors import MCP_TOOL_CALL_VENDOR, MCP_TOOL_VENDOR_ENDPOINT, MCP_TOOL_VENDORS
 
 EVERY_TOOL = [
     MCP_TOOL_SEARCH,
@@ -68,6 +69,9 @@ EVERY_TOOL = [
     MCP_TOOL_WEB_RUN,
     MCP_TOOL_BUDGET_START,
     MCP_TOOL_BUDGET_STATUS,
+    MCP_TOOL_VENDORS,
+    MCP_TOOL_VENDOR_ENDPOINT,
+    MCP_TOOL_CALL_VENDOR,
     *MCP_BROWSER_TOOLS,
 ]
 

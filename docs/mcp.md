@@ -215,6 +215,9 @@ the client's `env` block or a file the server already read takes a restart.
 | `web_run` | Hand a request in words to web-router's router, which picks the method and backends and runs it; `dry_run` returns the plan only. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). | as the method it picks |
 | `budget_start` | Open a task budget, in dollars and seconds, that every billed tool then spends from. | instant |
 | `budget_status` | What the budget has spent, reserved and left. | instant, and free |
+| `vendors` | Find a vendor API to call with the user's own account: with `query` ("google ads spend by campaign"), matching endpoints best first; without, the vendors in the catalog. Each row says whether its credentials are set here, and which variables to set when not. | instant, and free |
+| `vendor_endpoint` | Describe one vendor endpoint: every input and where it goes, the notes a caller gets wrong without (units, paging), and the credentials it needs. | instant, and free |
+| `call_vendor` | Call a vendor's API with the user's credentials -- a catalog `endpoint` with its `params`, or a raw `vendor` + `method` + `path` -- and get the vendor's own JSON back. Writes are refused unless the server was started with `WEB_ROUTER_ALLOW_VENDOR_WRITES=1` **and** the call passes `allow_writes: true`. | as long as the vendor takes; billed by the vendor, if at all |
 | `browser_open` | Open a browser session and get a `session_id` for the tools below. | a few seconds; **a cloud backend bills per minute until it is closed**, `local` is free |
 | `browser_goto` | Load a URL in the session. | as long as the page takes |
 | `browser_snapshot` | The page's accessibility tree, each element tagged `[ref=eN]` to act on. | about a second |
@@ -653,5 +656,7 @@ the server is restarted.
 | `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
 | `WEB_ROUTER_MCP_MAX_COST_USD` | unset | The ceiling on what one connection may spend, in US dollars at estimated list prices. An empty value stops the server from starting. |
 | `WEB_ROUTER_MCP_TIME_LIMIT_S` | unset | The ceiling on how long one connection may run billed calls, in seconds from its start. An empty value stops the server from starting. |
+| `WEB_ROUTER_ALLOW_VENDOR_WRITES` | unset | `1` lets `call_vendor` send calls that change data on a vendor (a budget change, a deleted monitor), and only those the model marks `allow_writes: true`. Off by default: the model can read your vendor accounts but not change them. |
+| `WEB_ROUTER_VENDOR_CATALOG` | unset | A directory of extra vendor files, read after the shipped ones; one named for a shipped vendor replaces it. |
 
-Everything else it reads is a provider credential, and belongs to the provider.
+Everything else it reads is a provider or vendor credential, and belongs to the provider or vendor. `load_env` takes every variable a vendor's catalog file lists, settings such as `DD_SITE` included.

@@ -12,7 +12,9 @@ rules every change here follows.
 `templates` and `template` to find one), `answer` (a backend's written answer
 with its sources, in one call), `research`, `open_browser` (a browser
 session) and `browse` (a hosted browser agent). Each call behaves the same
-whichever backend serves it.
+whichever backend serves it. Beside them, `call_vendor` reaches a vendor's own
+API (Google Ads, Datadog, ...) with the user's credentials, from a catalog of
+vendors listed in [VENDORS.md](VENDORS.md).
 It ships a Python library and an MCP server. [README.md](README.md) is the full
 reference.
 
