@@ -36,13 +36,13 @@ EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 RULES, SKLEARN, LLM, JEV, REMOTE = "rules", "sklearn", "llm", "jev", "remote:"
 KNOWN = (RULES, SKLEARN, LLM, JEV, REMOTE + "<url>")
 
-LLM_KEY_ENV, LLM_MODEL_ENV, LLM_PRESET_ENV = "OPENAI_API_KEY", "LLM_ROUTER_MODEL", "LLM_ROUTER_PRESET"
-JEV_KEY_ENV = "TYPESAFE_API_KEY"
+LLM_MODEL_ENV, LLM_PRESET_ENV, JEV_KEY_ENV = "LLM_ROUTER_MODEL", "LLM_ROUTER_PRESET", "TYPESAFE_API_KEY"
 CHARS_PER_TOKEN = 4
 """A rough English-text token size, for the dry run's estimate only."""
 MTOK = 1_000_000
 
 MSG_BAD_ROUTER = "{spec!r}: a router is one of {known}, or module:attr / path/file.py:attr"
+MSG_BAD_PRESET = "{env}={preset!r}: a preset is one of {known}"
 MSG_NO_SKLEARN = "the sklearn router needs scikit-learn: uv run --all-extras --with scikit-learn python ..."
 
 
@@ -116,7 +116,9 @@ def llm_tokens(req: RouteRequest, preset: str = "openai") -> tuple[int, int]:
 
 def _llm(model: str | None, price: tuple[float, float] | None) -> RouterSpec:
     preset = os.environ.get(LLM_PRESET_ENV) or "openai"
-    key_env = LLM_PRESETS[preset][1] if preset in LLM_PRESETS else LLM_KEY_ENV
+    if preset not in LLM_PRESETS:  # refused in the dry run too, as building the router would
+        raise SystemExit(MSG_BAD_PRESET.format(env=LLM_PRESET_ENV, preset=preset, known=", ".join(LLM_PRESETS)))
+    key_env = LLM_PRESETS[preset][1]
 
     def build() -> Any:
         return llm_router(preset=preset, model=model or os.environ[LLM_MODEL_ENV])
@@ -143,10 +145,8 @@ def _jev(per_call: float | None) -> RouterSpec:
         return example("router_jev.py").JevRouter()
 
     note = f"{per_call:g} USD per call (--jev-price)" if per_call is not None else "unknown: pass --jev-price"
-    model = example("router_jev.py").MODEL
-    return RouterSpec(
-        JEV, f"examples/router_jev.py JevRouter, model {model}", build, (JEV_KEY_ENV,), (), lambda _: per_call, note
-    )
+    describe = f"examples/router_jev.py JevRouter, model {example('router_jev.py').MODEL}"
+    return RouterSpec(JEV, describe, build, (JEV_KEY_ENV,), (), lambda _: per_call, note)
 
 
 def _custom(spec: str) -> RouterSpec:
