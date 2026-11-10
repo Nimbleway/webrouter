@@ -98,8 +98,14 @@ def request_from_wire(data: object) -> RouteRequest:
 
 
 def decision_to_wire(decision: RouteDecision) -> dict[str, Any]:
-    """A router service's side: ``decision`` as the JSON object it answers, ``"schema": 1`` first."""
-    return _versioned(_decision_adapter().dump_python(decision, mode="json"))
+    """A router service's side: ``decision`` as the JSON object it answers, ``"schema": 1`` first.
+
+    The wire's limits apply as :func:`decision_from_wire` holds them, so a service never sends what a client refuses.
+
+    Raises:
+        WireError: for a decision a client would refuse, such as a list of more than :data:`WIRE_MAX_NAMES` entries.
+    """
+    return _versioned(_decision_adapter().dump_python(_bounded(decision), mode="json"))
 
 
 def decision_from_wire(data: object) -> RouteDecision:

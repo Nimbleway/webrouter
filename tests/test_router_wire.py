@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from web_router import Budget, Candidate, RouteDecision, RouteRequest
-from web_router.constants_remote import WIRE_MAX_NAMES, WIRE_REQUEST_FILE, WIRE_RESPONSE_FILE
+from web_router.constants_remote import WIRE_MAX_NAMES, WIRE_MAX_TEXT, WIRE_REQUEST_FILE, WIRE_RESPONSE_FILE
 from web_router.routing.wire import (
     WireError,
     WireVersionError,
@@ -88,6 +88,12 @@ def test_the_response_schema_publishes_the_entry_limit_the_client_holds() -> Non
             decision_from_wire(body)
     at = {"schema": 1, "exclude": {f"search:p{i}": "why" for i in range(WIRE_MAX_NAMES)}}
     assert len(decision_from_wire(at).exclude) == WIRE_MAX_NAMES
+
+
+def test_a_service_cannot_write_a_decision_the_client_refuses() -> None:
+    with pytest.raises(WireError, match=f"more than {WIRE_MAX_NAMES} entries"):
+        decision_to_wire(RouteDecision(tools=["search"] * (WIRE_MAX_NAMES + 1)))
+    assert decision_to_wire(RouteDecision(reason="x" * 10_000))["reason"] == "x" * WIRE_MAX_TEXT
 
 
 def test_the_request_schema_holds_the_budget_caps_to_zero_or_more() -> None:
