@@ -66,7 +66,12 @@ class _Pending:
         return self._finished().__await__()
 
     async def _finished(self) -> RouteDecision:
-        return self._finish(await self._reply)
+        try:
+            answer = await self._reply
+        except Exception:  # e.g. a task of another loop: dropped, not left running
+            _close(self._reply)
+            raise
+        return self._finish(answer)
 
     def close(self) -> None:
         _close(self._reply)  # a coroutine closed, a task cancelled
