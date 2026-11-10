@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-216 vendors, 1900 endpoints.
+221 vendors, 1936 endpoints.
 
 ### advertising
 
@@ -282,6 +282,16 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Spider Cloud](https://spider.cloud/docs/api) `spidercloud` | Spider's crawl, scrape, links, search and screenshot API for AI agents and RAG. | 6 read | key in header | `SPIDER_API_KEY` | docs 2026-11-08 |
 | [Supadata](https://docs.supadata.ai/api-reference/introduction) `supadata` | Transcripts and metadata of YouTube, TikTok, Instagram, X and Facebook videos, YouTube search, AI extraction from video, and web page scraping to Markdown. | 10 read | key in header | `SUPADATA_API_KEY` | docs 2026-11-09 |
 | [TinyFish](https://docs.tinyfish.ai/) `tinyfish` | Hosted browser-agent automation and deep research from TinyFish. | 4 read, 3 write | key in header | `TINYFISH_API_KEY` | docs 2026-11-08 |
+
+### ai
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [AssemblyAI](https://www.assemblyai.com/docs/api-reference/overview) `assemblyai` | Speech-to-text for audio and video files by URL, with speaker labels, PII redaction, subtitles and word search. | 7 read, 1 write | key in header | `ASSEMBLYAI_API_KEY` | docs 2026-11-09 |
+| [Deepgram](https://developers.deepgram.com/reference/deepgram-api-overview) `deepgram` | Speech-to-text transcription of recorded audio, text-to-speech, and text analysis (summaries, topics, sentiment, intents). | 7 read | key in header | `DEEPGRAM_API_KEY` | docs 2026-11-09 |
+| [OpenAI](https://developers.openai.com/api/docs) `openai` | GPT models through the Responses and Chat Completions APIs, plus embeddings, image generation, text-to-speech and moderation. | 8 read | key in header | `OPENAI_API_KEY` | docs 2026-11-09 |
+| [OpenRouter](https://openrouter.ai/docs/api-reference/overview) `openrouter` | One OpenAI-style API in front of hundreds of language, image, speech and video models from many providers. | 11 read | key in header | `OPENROUTER_API_KEY` | docs 2026-11-08 |
+| [TypeSafe](https://docs.typesafe.ai/introduction) `typesafe` | Jev, a System One model that answers typed questions (choice, score, yes/no, image box) about text or images with calibrated probabilities instead of generated prose. | 2 read | key in header | `TYPESAFE_API_KEY` | docs 2026-11-09 |
 
 ### developer
 

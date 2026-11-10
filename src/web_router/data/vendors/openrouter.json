@@ -1,0 +1,467 @@
+{
+  "vendor": "openrouter",
+  "name": "OpenRouter",
+  "category": "ai",
+  "summary": "One OpenAI-style API in front of hundreds of language, image, speech and video models from many providers.",
+  "docs_url": "https://openrouter.ai/docs/api-reference/overview",
+  "pricing_url": "https://openrouter.ai/pricing",
+  "base_url": "https://openrouter.ai/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OPENROUTER_API_KEY"
+        ],
+        "description": "an OpenRouter API key (openrouter.ai/settings/keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Model slugs are author/model, such as anthropic/claude-sonnet-4.5; browse them with openrouter.models.list.",
+    "Costs come from each model's own price plus OpenRouter's fee; credits are prepaid.",
+    "Video generation is asynchronous: submit, then poll the job id."
+  ],
+  "sources": [
+    "https://openrouter.ai/docs/api-reference/overview",
+    "https://openrouter.ai/docs/guides/overview/multimodal/video-generation",
+    "https://openrouter.ai/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "openrouter.chat.complete",
+      "name": "Create a chat completion",
+      "summary": "Send a conversation to any model OpenRouter routes to and get the reply.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/chat/completions",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "description": "Model slug, e.g. openai/gpt-4o. Omit to use the account default.",
+          "example": "openai/gpt-4o"
+        },
+        "messages": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Conversation as a list of {role, content} messages.",
+          "example": [
+            {
+              "role": "user",
+              "content": "Hello"
+            }
+          ]
+        },
+        "max_completion_tokens": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum tokens in the reply."
+        },
+        "temperature": {
+          "in": "body",
+          "type": "number",
+          "description": "Sampling temperature, 0 to 2."
+        },
+        "top_p": {
+          "in": "body",
+          "type": "number",
+          "description": "Nucleus sampling, 0 to 1."
+        },
+        "seed": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seed for repeatable sampling."
+        },
+        "stop": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 4 stop sequences."
+        },
+        "tools": {
+          "in": "body",
+          "type": "array",
+          "description": "Function-calling tool definitions."
+        },
+        "tool_choice": {
+          "in": "body",
+          "type": "string",
+          "description": "Tool choice configuration."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "object",
+          "description": "Structured output format, e.g. {\"type\":\"json_object\"}."
+        },
+        "models": {
+          "in": "body",
+          "type": "array",
+          "description": "Fallback model slugs tried in order."
+        },
+        "provider": {
+          "in": "body",
+          "type": "object",
+          "description": "Provider routing preferences."
+        },
+        "reasoning": {
+          "in": "body",
+          "type": "object",
+          "description": "Options for reasoning models."
+        }
+      },
+      "notes": [
+        "Do not set stream: true; this client returns one JSON body.",
+        "Billed per token at the chosen model's price; the generation id is in the response id."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://openrouter.ai/docs/api-reference/overview",
+      "verified": {
+        "docs": "https://openrouter.ai/docs/api-reference/overview"
+      }
+    },
+    {
+      "id": "openrouter.models.list",
+      "name": "List models",
+      "summary": "Browse and filter the models OpenRouter serves, with pricing and context length.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/models",
+      "params": {
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by use-case category."
+        },
+        "output_modalities": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated output modalities: text, image, embeddings, audio, video."
+        },
+        "input_modalities": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated input modalities: text, image, audio, file."
+        },
+        "supported_parameters": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated parameter names the model must support."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free-text search by model name or slug."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Server-side sort order."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, max 1000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        },
+        "max_price": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum prompt price in dollars per million tokens."
+        }
+      },
+      "notes": [
+        "With neither limit nor offset the full list is returned.",
+        "Prices in the response are dollars per token (as strings)."
+      ],
+      "docs_url": "https://openrouter.ai/openapi.json",
+      "verified": {
+        "docs": "https://openrouter.ai/openapi.json"
+      }
+    },
+    {
+      "id": "openrouter.generation.get",
+      "name": "Get a generation's usage and cost",
+      "summary": "Token counts, cost and provider for one past request, by its generation id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/generation",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Generation id, the id field of a completion response."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://openrouter.ai/docs/api-reference/overview",
+      "verified": {
+        "docs": "https://openrouter.ai/docs/api-reference/overview"
+      }
+    },
+    {
+      "id": "openrouter.credits.get",
+      "name": "Get remaining credits",
+      "summary": "Total credits bought and total used on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/credits",
+      "notes": [
+        "Needs a management-capable key on some accounts."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://openrouter.ai/openapi.json",
+      "verified": {
+        "docs": "https://openrouter.ai/openapi.json"
+      }
+    },
+    {
+      "id": "openrouter.key.get",
+      "name": "Get the current API key",
+      "summary": "Limit, usage and rate-limit info for the key making the call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/key",
+      "job": "account.usage",
+      "docs_url": "https://openrouter.ai/openapi.json",
+      "verified": {
+        "docs": "https://openrouter.ai/openapi.json"
+      }
+    },
+    {
+      "id": "openrouter.image.generate",
+      "name": "Generate an image",
+      "summary": "Create images from a text prompt with an image model.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/images",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Image model slug."
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text description of the image."
+        },
+        "n": {
+          "in": "body",
+          "type": "integer",
+          "description": "Upper bound on images to create, 1 to 10."
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "Normalized aspect ratio; providers clamp to what they support."
+        },
+        "resolution": {
+          "in": "body",
+          "type": "string",
+          "description": "Normalized resolution tier."
+        },
+        "size": {
+          "in": "body",
+          "type": "string",
+          "description": "Shorthand: a tier such as 2K or explicit pixels such as 2048x2048."
+        },
+        "quality": {
+          "in": "body",
+          "type": "string",
+          "description": "Rendering quality; ignored by models without a quality knob."
+        },
+        "output_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Encoding of the returned bytes: png, jpeg, webp and others."
+        },
+        "input_references": {
+          "in": "body",
+          "type": "array",
+          "description": "Reference images for image-to-image, as base64 data URLs or HTTP(S) URLs."
+        },
+        "seed": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seed for repeatable output."
+        }
+      },
+      "notes": [
+        "List valid models first with openrouter.image.models.list."
+      ],
+      "job": "ai.image.generate",
+      "docs_url": "https://openrouter.ai/openapi.json",
+      "verified": {
+        "docs": "https://openrouter.ai/openapi.json"
+      }
+    },
+    {
+      "id": "openrouter.image.models.list",
+      "name": "List image generation models",
+      "summary": "The models that accept openrouter.image.generate.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/images/models",
+      "docs_url": "https://openrouter.ai/openapi.json",
+      "verified": {
+        "docs": "https://openrouter.ai/openapi.json"
+      }
+    },
+    {
+      "id": "openrouter.video.models.list",
+      "name": "List video generation models",
+      "summary": "Per model: supported durations, resolutions, aspect ratios and pricing.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/videos/models",
+      "docs_url": "https://openrouter.ai/docs/guides/overview/multimodal/video-generation",
+      "verified": {
+        "docs": "https://openrouter.ai/docs/guides/overview/multimodal/video-generation"
+      }
+    },
+    {
+      "id": "openrouter.video.submit",
+      "name": "Submit a video generation job",
+      "summary": "Starts an asynchronous job and returns 202 with an id and polling_url. Poll with openrouter.video.status.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/videos",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Video model slug.",
+          "example": "google/veo-3.1"
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text description of the video."
+        },
+        "duration": {
+          "in": "body",
+          "type": "integer",
+          "description": "Length in seconds."
+        },
+        "resolution": {
+          "in": "body",
+          "type": "string",
+          "description": "One of 480p, 720p, 768p, 1080p, 1K, 2K, 4K."
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "e.g. 16:9, 9:16, 1:1, 4:3, 3:4, 3:2, 2:3, 21:9, 9:21."
+        },
+        "size": {
+          "in": "body",
+          "type": "string",
+          "description": "WIDTHxHEIGHT, an alternative to resolution plus aspect_ratio."
+        },
+        "frame_images": {
+          "in": "body",
+          "type": "array",
+          "description": "First and last frame images for image-to-video."
+        },
+        "input_references": {
+          "in": "body",
+          "type": "array",
+          "description": "Reference images for reference-to-video; frame_images wins if both are sent."
+        },
+        "generate_audio": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Defaults to true for audio-capable models."
+        },
+        "seed": {
+          "in": "body",
+          "type": "integer",
+          "description": "Not honored by every provider."
+        },
+        "callback_url": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS webhook called when the job ends; overrides the workspace default."
+        }
+      },
+      "notes": [
+        "Asynchronous: the response carries id and status pending. Poll openrouter.video.status with that id roughly every 30 seconds until completed or failed.",
+        "Billed per job at the model's price."
+      ],
+      "job": "ai.video.generate",
+      "docs_url": "https://openrouter.ai/docs/guides/overview/multimodal/video-generation",
+      "verified": {
+        "docs": "https://openrouter.ai/docs/guides/overview/multimodal/video-generation"
+      }
+    },
+    {
+      "id": "openrouter.video.status",
+      "name": "Poll a video generation job",
+      "summary": "Status of a job from openrouter.video.submit; when completed it lists the output URLs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/videos/{jobId}",
+      "params": {
+        "jobId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id returned by openrouter.video.submit."
+        }
+      },
+      "notes": [
+        "Polls the job started by openrouter.video.submit. Statuses: pending, in_progress, completed, failed. Download the file with openrouter.video.content."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://openrouter.ai/docs/guides/overview/multimodal/video-generation",
+      "verified": {
+        "docs": "https://openrouter.ai/docs/guides/overview/multimodal/video-generation"
+      }
+    },
+    {
+      "id": "openrouter.video.content",
+      "name": "Download a finished video",
+      "summary": "The video file of a completed job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/videos/{jobId}/content",
+      "params": {
+        "jobId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Job id."
+        },
+        "index": {
+          "in": "query",
+          "type": "integer",
+          "description": "Which output to download; defaults to 0."
+        }
+      },
+      "notes": [
+        "Returns binary video data, not JSON."
+      ],
+      "docs_url": "https://openrouter.ai/docs/guides/overview/multimodal/video-generation",
+      "verified": {
+        "docs": "https://openrouter.ai/docs/guides/overview/multimodal/video-generation"
+      }
+    }
+  ]
+}
