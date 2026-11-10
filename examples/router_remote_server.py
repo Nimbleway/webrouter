@@ -23,10 +23,11 @@ Run it with::
 
 Set `WEB_ROUTER_REMOTE_ROUTER_API_KEY` before starting it to require that key;
 the `remote` router reads the same variable. It binds 127.0.0.1 unless
-`--host` says otherwise, answers only a `Host` header naming that address or
-`localhost`, caps a request at 1 MB, serves at most 32 connections at once
-and drops one that sends nothing for 10 seconds. Plain `http` is accepted only to
-`localhost` or a loopback address: put a real service behind `https`.
+`--host` says otherwise (any other host needs the key), answers only a `Host`
+header naming that address or `localhost`, caps a request at 1 MB, serves at
+most 32 connections at once and drops one that sends nothing for 10 seconds.
+Plain `http` is accepted only to `localhost` or a loopback address: put a real
+service behind `https`.
 """
 
 from __future__ import annotations
@@ -43,13 +44,14 @@ from typing import Any
 
 from web_router import WebRouter
 from web_router.routing.rules import rules
-from web_router.routing.wire import WireError, decision_to_wire, request_from_wire
+from web_router.routing.wire import decision_to_wire, request_from_wire
 
 PATH = "/route"
 MAX_BODY_BYTES = 1_000_000
 POLL_S = 0.05  # how soon shutdown() is noticed
 SOCKET_TIMEOUT_S = 10.0
 MAX_WORKERS = 32  # connections served at once; more are closed before a thread is spent on them
+LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")
 PROMPTS = (
     "what is retrieval augmented generation",
     "read https://en.wikipedia.org/wiki/Web_scraping",
@@ -127,13 +129,11 @@ class _Handler(BaseHTTPRequestHandler):
             return self._answer(413, {"error": "a request needs a Content-Length of at most 1 MB"})
         try:
             body = json.loads(self.rfile.read(int(length)))
-            if not isinstance(body, dict):
-                raise WireError("not a JSON object")
+            request_from_wire(body)  # checked apart from decide(), whose own errors are the server's, never a 400
+        except (ValueError, RecursionError):  # bad JSON or a WireError, or JSON nested deeper than Python parses
+            return self._answer(400, {"error": "not a schema-1 request"})
+        try:
             return self._answer(200, self.server.decide(body))
-        except (ValueError, WireError) as exc:  # WireError is a ValueError; bad JSON is one too
-            return self._answer(400, {"error": str(exc)})
-        except RecursionError:  # JSON nested deeper than Python parses
-            return self._answer(400, {"error": "a request nested too deeply"})
         except Exception:  # a decide() that fails: an answer, not a dropped connection, and never its text
             return self._answer(500, {"error": "the router failed"})
 
@@ -157,6 +157,8 @@ class _Handler(BaseHTTPRequestHandler):
 
 def serve(host: str = "127.0.0.1", port: int = 8765, *, api_key: str | None = None) -> RouterServer:
     """A server bound to ``host:port`` (0 picks a free port), answering on a background thread."""
+    if not api_key and host not in LOOPBACK_HOSTS:
+        raise ValueError("a host other than loopback needs WEB_ROUTER_REMOTE_ROUTER_API_KEY: the Host check is no auth")
     server = RouterServer((host, port), api_key=api_key)
     threading.Thread(target=server.serve_forever, kwargs={"poll_interval": POLL_S}, daemon=True).start()
     return server

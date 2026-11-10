@@ -2246,8 +2246,8 @@ field may be left out or `null`):
 
 [`examples/router_remote_server.py`](examples/router_remote_server.py) is a
 reference service in the standard library: the wire format around the
-built-in rules router, to run beside your code or port. It binds 127.0.0.1,
-answers only a `Host` naming it, checks the bearer key in constant time and
+built-in rules router, to run beside your code or port. It binds 127.0.0.1
+(any other host needs the key), answers only a `Host` naming it, checks the bearer key in constant time and
 caps a request at 1 MB.
 
 `remote` is a registered name. `register_router(name, factory)` adds your own
