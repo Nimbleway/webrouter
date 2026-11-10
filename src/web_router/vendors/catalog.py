@@ -98,13 +98,15 @@ class VendorCatalog:
 
         A plain word-overlap score over the id, name, summary, job and the
         vendor's own name and category, with filler words ("a", "for", "the")
-        left out of the query -- enough to go from "google ads spend
+        left out of the query (a query of nothing else finds nothing) -- enough to go from "google ads spend
         by campaign" to the GAQL endpoint without a model in the loop, and
         deterministic, so the same query lists the same endpoints.
         """
         if vendor is not None:
             self.vendor(vendor)
         words = _words(query) - VENDOR_FIND_STOP_WORDS
+        if not words and _words(query):
+            return []  # a query of filler words only asks for nothing, not for everything
         scored: list[tuple[int, str, VendorEndpoint]] = []
         for endpoint in self._endpoints.values():
             owner = self._vendors[endpoint.vendor]
