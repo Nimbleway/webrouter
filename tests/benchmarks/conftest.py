@@ -195,6 +195,24 @@ def route_eval_report(route_eval: ModuleType) -> ModuleType:
     return sys.modules["route_eval_report"]
 
 
+@pytest.fixture(scope="module")
+def matrix(route_eval: ModuleType) -> ModuleType:
+    """The matrix maths, as route-eval imported it."""
+    return sys.modules["route_eval_matrix"]
+
+
+@pytest.fixture(scope="module")
+def compare(route_eval: ModuleType) -> ModuleType:
+    """The router comparison, as route-eval imported it."""
+    return sys.modules["route_eval_compare"]
+
+
+@pytest.fixture(scope="module")
+def matrix_report(route_eval: ModuleType) -> ModuleType:
+    """The matrix's report, as route-eval imported it."""
+    return sys.modules["route_eval_report_matrix"]
+
+
 def route_row(provider: str, grade: str | None, latency: float = 1.0, cost: float | None = None, **extra: Any) -> dict:
     """One frozen row of the set ``tiny``: ``qid``, ``method``, ``mode`` and ``error`` default to ``q``, search,
     default and none."""
