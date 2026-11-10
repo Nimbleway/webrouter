@@ -25,12 +25,30 @@ budget sets, :mod:`.effort_table` the research effort table they read,
 :mod:`.pricing` what an attempt costs and takes, :mod:`.decide` the merged
 decision a call runs with, :mod:`.url_policy` the URLs a call may send,
 :mod:`.attempts` the seam in ``auto``'s fallback loops, :mod:`.registry`
-routers by name, :mod:`.wire` the JSON wire format, and :mod:`.remote` the
-built-in router that speaks it over HTTP.
+routers by name, :mod:`.wire` the JSON wire format, :mod:`.remote` the
+built-in router that speaks it over HTTP, and :mod:`.decider_router` a router
+made of a decider, which the built-in ``llm`` and ``systemone`` routers are.
 """
 
 from web_router.routing.contract import Budget, Candidate, Plan, RouteDecision, RouteRequest, ToolName
+from web_router.routing.decider import AsyncDecider, Decider, DeciderQuestion, DeciderReply, SyncDecider
+from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.invoke import RouterLike
 from web_router.routing.url_policy import UrlPolicy
 
-__all__ = ["Budget", "Candidate", "Plan", "RouteDecision", "RouteRequest", "RouterLike", "ToolName", "UrlPolicy"]
+__all__ = [
+    "AsyncDecider",
+    "Budget",
+    "Candidate",
+    "Decider",
+    "DeciderQuestion",
+    "DeciderReply",
+    "DeciderRouter",
+    "Plan",
+    "RouteDecision",
+    "RouteRequest",
+    "RouterLike",
+    "SyncDecider",
+    "ToolName",
+    "UrlPolicy",
+]

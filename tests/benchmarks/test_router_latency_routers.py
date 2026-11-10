@@ -65,3 +65,19 @@ def test_a_simulated_link_keeps_the_call_within_its_deadline(latency: ModuleType
     assert seen and seen[0] == pytest.approx(0.97)
     with pytest.raises(TimeoutError):
         asyncio.run(remote.DelayedRouter(Inner(), 400.0).aroute(req()))
+
+
+def test_the_llm_estimate_counts_the_schema_only_for_a_preset_that_sends_it(latency: ModuleType) -> None:
+    routers = module("router_latency_routers")
+    strict, json_mode = routers.llm_tokens(req(), preset="openai"), routers.llm_tokens(req(), preset="deepseek")
+    assert strict[0] > json_mode[0] and strict[1] == json_mode[1]
+    own = {"base_url": "https://llm.example"}
+    assert routers.llm_tokens(req(), **own, response_format="json_schema")[0] > routers.llm_tokens(req(), **own)[0]
+
+
+def test_a_mistyped_llm_preset_is_refused_before_the_dry_run_plans_it(
+    latency: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("LLM_ROUTER_PRESET", "opneai")
+    with pytest.raises(SystemExit, match="LLM_ROUTER_PRESET='opneai'"):
+        module("router_latency_routers").router_spec("llm", llm_model="m")
