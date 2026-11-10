@@ -2,10 +2,10 @@
 
 Experimental. ``WEB_ROUTER_MCP_ROUTER`` may name any built-in router, and
 ``WEB_ROUTER_MCP_ROUTER_CONFIG`` holds its ``router_config`` as a JSON object,
-both read once at startup from the process environment. A config entry
-``api_key_env`` names a variable whose value is read then and put in its place
-as ``api_key``, so the router never reads the environment again: a later
-``load_env`` or change to it moves nothing. The capabilities resource names
+both read once at startup from the process environment, before any ``.env``
+file is loaded. Each key a router would read -- ``api_key_env``'s variable, or
+a preset's -- is read then and put in its config as ``api_key``
+(:mod:`.routing_keys`), so the router never reads the environment again. The capabilities resource names
 the router and each service it would send the prompt to, as scheme and host.
 """
 
@@ -25,23 +25,22 @@ from web_router.constants_fallback import (
 )
 from web_router.constants_mcp_router import (
     ENV_MCP_ROUTER_CONFIG,
-    MCP_CONFIG_KEY,
-    MCP_CONFIG_KEY_ENV,
-    MCP_CONFIG_URL_KEYS,
-    MCP_MSG_KEY_ENV,
     MCP_MSG_ROUTER_CONFIG,
     MCP_WHY_NOT_JSON,
     MCP_WHY_NOT_OBJECT,
 )
 from web_router.exceptions import ConfigurationError
+from web_router.mcp.routing_keys import DECIDER_PRESETS, captured_key, hostname, target_url
 
 
-def read_config(env: Mapping[str, str]) -> dict[str, Any] | None:
-    """The router config ``WEB_ROUTER_MCP_ROUTER_CONFIG`` sets, keys captured from ``env``; ``None`` when unset.
+def read_config(env: Mapping[str, str], name: str | None) -> dict[str, Any] | None:
+    """The config ``WEB_ROUTER_MCP_ROUTER_CONFIG`` sets for router ``name``, keys captured from ``env``.
+
+    ``None`` when it is unset.
 
     Raises:
-        ConfigurationError: for a value that is not a JSON object, or an ``api_key_env`` that is not a string.
-            The message never quotes the value, which may hold a key.
+        ConfigurationError: for a value that is not a JSON object, or a key :func:`.routing_keys.captured_key`
+            refuses. The message never quotes the value, which may hold a key.
     """
     raw = env.get(ENV_MCP_ROUTER_CONFIG)
     if raw is None:
@@ -55,46 +54,53 @@ def read_config(env: Mapping[str, str]) -> dict[str, Any] | None:
         why = MCP_WHY_NOT_OBJECT
     if not isinstance(parsed, dict):
         raise ConfigurationError(MCP_MSG_ROUTER_CONFIG.format(env_var=ENV_MCP_ROUTER_CONFIG, why=why))
-    captured: dict[str, Any] = _captured(parsed, env)
+    captured: dict[str, Any] = _captured(parsed, env, name)
     return captured
 
 
-def _captured(value: Any, env: Mapping[str, str]) -> Any:
-    """``value`` with every ``api_key_env`` replaced by ``api_key``, the variable's value read now."""
+def _own_name(value: dict[str, Any], name: str | None) -> str | None:
+    """The router a mapping configures: the ``name`` it holds, as a ``fallback`` member does, else ``name``."""
+    own = value.get(FALLBACK_NAME_KEY)
+    return own if isinstance(own, str) else name
+
+
+def _captured(value: Any, env: Mapping[str, str], name: str | None) -> Any:
+    """``value`` with each router's key read now from ``env`` and put in it as ``api_key``."""
     if isinstance(value, list):
-        return [_captured(item, env) for item in value]
+        return [_captured(item, env, None) for item in value]
     if not isinstance(value, dict):
         return value
-    out = {key: _captured(item, env) for key, item in value.items() if key != MCP_CONFIG_KEY_ENV}
-    if MCP_CONFIG_KEY_ENV in value:
-        variable = value[MCP_CONFIG_KEY_ENV]
-        if not isinstance(variable, str):
-            kind = type(variable).__name__
-            message = MCP_MSG_KEY_ENV.format(env_var=ENV_MCP_ROUTER_CONFIG, key=MCP_CONFIG_KEY_ENV, kind=kind)
-            raise ConfigurationError(message)
-        out[MCP_CONFIG_KEY] = env.get(variable) or ""
-    return out
+    out = {key: _captured(item, env, None) for key, item in value.items()}
+    return captured_key(_own_name(value, name), out, env)
 
 
-def hosts_in(config: object) -> list[str]:
-    """Each service URL ``config`` names, at any depth, as scheme and host, once each, in order."""
+def hosts_in(config: object, name: str | None = None) -> list[str]:
+    """Each service ``config`` posts to, at any depth, a preset's included, as scheme and host, once each."""
     found: list[str] = []
     if isinstance(config, list):
         for item in config:
             found.extend(hosts_in(item))
     elif isinstance(config, dict):
-        for key, item in config.items():
-            found.extend([host_of(item)] if key in MCP_CONFIG_URL_KEYS and isinstance(item, str) else hosts_in(item))
+        if (url := target_url(_own_name(config, name), config)) is not None:
+            found.append(host_of(url))
+        for item in config.values():
+            found.extend(hosts_in(item))
     return list(dict.fromkeys(found))
 
 
 def display_name(name: str, config: Mapping[str, Any] | None) -> str:
-    """What the capabilities resource calls a built-in router: ``fallback(<member>, ...)``, or ``name(<host>)``."""
-    members = (config or {}).get(FALLBACK_MEMBERS_KEY)
+    """What the capabilities resource calls a built-in router, as the decision record names it once built.
+
+    ``fallback(<member>, ...)``; ``llm(<host>)`` and ``systemone(<host>)``, the host alone; else ``name(<scheme>://<host>)``.
+    """
+    config = config or {}
+    members = config.get(FALLBACK_MEMBERS_KEY)
     if name == FALLBACK_ROUTER_NAME and isinstance(members, list):
         return FALLBACK_DISPLAY_NAME.format(members=", ".join(_member_name(member) for member in members))
-    hosts = hosts_in({key: value for key, value in (config or {}).items() if key in MCP_CONFIG_URL_KEYS})
-    return f"{name}({hosts[0]})" if hosts else name
+    url = target_url(name, config)
+    if url is None:
+        return name
+    return f"{name}({hostname(url) if name in DECIDER_PRESETS else host_of(url)})"
 
 
 def _member_name(member: object) -> str:

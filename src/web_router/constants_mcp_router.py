@@ -42,3 +42,8 @@ MCP_WHY_NOT_JSON = "it is not valid JSON"
 MCP_WHY_NOT_OBJECT = "it is JSON, but not an object"
 MCP_MSG_KEY_ENV = "{env_var}: {key} must name an environment variable; got a {kind}."
 MCP_MSG_CONFIG_UNNAMED = "{env_var} configures a built-in router; {router_var} names {spec!r}, which is not one."
+MCP_MSG_KEY_HOME = "{env_var}: {key_var} is sent only to {home}; router {name!r} here posts elsewhere."
+MCP_MSG_KEY_UNSET = (
+    "{env_var}: router {name!r} needs {key_var} set in the server's own process environment at startup; "
+    "a .env file or load_env never supplies a router's key."
+)

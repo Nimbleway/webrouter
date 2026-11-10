@@ -98,7 +98,7 @@ class McpRouting:
             max_cost_usd=_positive(env, ENV_MCP_MAX_COST_USD), time_limit_s=_positive(env, ENV_MCP_TIME_LIMIT_S)
         )
         spec = (env.get(ENV_MCP_ROUTER) or "").strip() if ENV_MCP_ROUTER in env else None
-        config = read_config(env)
+        config = read_config(env, spec)
         if config is not None and spec not in available_routers():
             message = MCP_MSG_CONFIG_UNNAMED.format(env_var=ENV_MCP_ROUTER_CONFIG, router_var=ENV_MCP_ROUTER, spec=spec)
             raise ConfigurationError(message)
@@ -152,7 +152,7 @@ class McpRouting:
         """What the router itself is sent of the prompt: nothing, or the prompt whole to each service it names."""
         if self.router == REMOTE_ROUTER_NAME:
             return MCP_REMOTE_PROMPT_NOTE
-        hosts = hosts_in(self.router_config) if isinstance(self.router, str) else []
+        hosts = hosts_in(self.router_config, self.router) if isinstance(self.router, str) else []
         return MCP_ROUTER_HOSTS_PROMPT_NOTE.format(hosts=", ".join(hosts)) if hosts else ""
 
     def _runs(self) -> dict[str, str]:
@@ -161,7 +161,7 @@ class McpRouting:
             return {"router_runs": MCP_ROUTER_IN_PROCESS}
         if not isinstance(self.router, str):
             return {"router_runs": MCP_ROUTER_OPERATOR, "router_note": MCP_ROUTER_OPERATOR_NOTE}
-        if hosts := hosts_in(self.router_config):
+        if hosts := hosts_in(self.router_config, self.router):
             note = MCP_ROUTER_REMOTE_NOTE.format(host=", ".join(hosts))
             return {"router_runs": MCP_ROUTER_REMOTE, "router_note": note}
         return {"router_runs": MCP_ROUTER_BUILT_IN, "router_note": MCP_ROUTER_BUILT_IN_NOTE}

@@ -306,7 +306,19 @@ environment -- once, when the server starts:
   Set, `WEB_ROUTER_MCP_ROUTER_CONFIG` is the whole config: `remote` then takes
   its URL from it, not from `WEB_ROUTER_REMOTE_ROUTER_URL`. A `remote` router
   or member whose config sets no `api_key` (nor `api_key_env`) still sends
-  `WEB_ROUTER_REMOTE_ROUTER_API_KEY`, read when it is built at startup. A value that is not
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY`, read when it is built at startup.
+
+  **A router's key comes from the server's own process environment only.**
+  An `llm` or `systemone` preset given no key reads its vendor's variable
+  (`OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `TYPESAFE_API_KEY` ...), which is
+  often a provider credential too. The server captures it, and every
+  `api_key_env`, as `api_key` at startup, before it reads any `.env` file, so
+  neither a project's `.env` nor `load_env` can supply or replace a router's
+  key: export it where the server starts. A preset's variable that is unset
+  there stops the server, and a vendor's variable named for a router that
+  posts to any other host is refused. The capabilities resource names a
+  preset's host too, as the record does: `llm(api.openai.com)`,
+  `systemone(api.typesafe.ai)`. A value that is not
   a JSON object, or one set beside no built-in router, stops the server;
 - `WEB_ROUTER_MCP_ROUTER=off` attaches none: `web_run` then plans the static
   order, which is `search`.

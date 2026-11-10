@@ -268,6 +268,8 @@ src/web_router/
 │   ├── routing_config.py the operator's router and ceiling, read once at startup
 │   ├── routing_named.py a built-in router by name: its JSON config, keys captured at
 │   │                   startup, its name and its services' hosts
+│   ├── routing_keys.py where such a router posts, a preset's host included, and its key,
+│   │                   read from the process environment before any .env file
 │   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
 │   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
 │   │                   the charge for run_template and browser_open
