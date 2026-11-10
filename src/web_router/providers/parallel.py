@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
+import httpx
+
 from web_router.constants import (
     ENV_PARALLEL_API_KEY,
     PARALLEL_API_KEY_HEADER,
@@ -37,7 +39,9 @@ from web_router.constants_parallel import (
     PARALLEL_ANSWER_TRUNCATED,
     PARALLEL_ANSWER_WHOLE_FIELD,
 )
+from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider, HttpResearchProvider
+from web_router.providers._research_start import aread_or_running, read_or_running
 from web_router.providers._utils import build_payload
 from web_router.providers.parallel_search import ParallelProvider as ParallelProvider
 from web_router.types import (
@@ -87,6 +91,10 @@ def _citations_from_basis(
 _MAPPED_CITATION_FIELDS = frozenset({"url", "title", "excerpts"})
 
 
+_UNREAD = (ProviderError, httpx.HTTPError, ValueError)
+"""What reading a finished run's answer fails with: a status the API refused, a transport failure, a body not JSON."""
+
+
 class ParallelResearchProvider(HttpResearchProvider):
     """Runs agentic research through the Parallel Task API.
 
@@ -111,10 +119,16 @@ class ParallelResearchProvider(HttpResearchProvider):
     api_key_header: ClassVar[str] = PARALLEL_API_KEY_HEADER
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
-        return self._read(request, self._post(self.research_path, self._build_payload(request)))
+        run = self._post(self.research_path, self._build_payload(request))
+        if self._state(run) != "completed":  # read first, so a state it does not know still raises
+            return self._progress(run)
+        return read_or_running(lambda: self._read(request, run), str(run.get("run_id") or ""), _UNREAD)
 
     async def _astart(self, request: ResearchRequest) -> ResearchProgress:
-        return await self._aread(request, await self._apost(self.research_path, self._build_payload(request)))
+        run = await self._apost(self.research_path, self._build_payload(request))
+        if self._state(run) != "completed":
+            return self._progress(run)
+        return await aread_or_running(lambda: self._aread(request, run), str(run.get("run_id") or ""), _UNREAD)
 
     def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
         return self._read(request, self._get(self.status_path.format(run_id=job_id)))
