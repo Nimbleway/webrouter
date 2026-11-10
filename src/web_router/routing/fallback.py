@@ -51,13 +51,21 @@ class _Asking:
     """One call's walk down the members: the time it has left, and what each member asked came to."""
 
     def __init__(self, req: RouteRequest) -> None:
+        """Start the clock now, when the fallback itself starts.
+
+        A :class:`RouteRequest` carries ``deadline_s``, seconds relative to when the caller started waiting, and
+        no absolute start or deadline, and :class:`~.invoke.AttachedRouter` passes none: so this clock starts
+        a little after the caller's, by the time it took to start this router -- a worker thread, or a task on
+        an event loop, usually well under a millisecond. ``FALLBACK_MARGIN_S`` (20 ms) covers that lag, so the
+        answer, members included, arrives before the caller stops waiting; a start delayed by more than the
+        margin, under heavy load, can still lose it to the caller's timeout.
+        """
         self.req = req
         self.started = time.perf_counter()
         self.members: list[DecisionMember] = []
-        self.cut_short = False
-        """Whether the member being asked was given less than its own limit, for want of time."""
         self.timed_out = False
-        """Whether the walk ended for want of time: the last member asked cut short by it, or none left to ask."""
+        """Whether the walk ended for want of time: the last member asked timed out with no time left after it,
+        or no time was left to ask the next."""
 
     def left(self) -> float:
         """Seconds left to ask members: the deadline less the margin kept back, less the time spent."""
@@ -75,9 +83,7 @@ class _Asking:
 
     def request_for(self, member: Member) -> RouteRequest:
         """The request ``member`` is shown: its deadline the smaller of its own limit and the time left."""
-        left = self.left()
-        self.cut_short = left < member.attached.timeout_s
-        return replace(self.req, deadline_s=min(member.attached.timeout_s, left))
+        return replace(self.req, deadline_s=min(member.attached.timeout_s, self.left()))
 
     def settle(self, member: Member, outcome: RouterOutcome) -> RouteDecision | None:
         """``member``'s decision when it decides something, else ``None``; either way recorded."""
@@ -85,7 +91,8 @@ class _Asking:
         empty = decision is None or decides_nothing(decision)
         code = cast("MemberOutcome", outcome.failure or (ROUTER_EMPTY if empty else ROUTER_OK))
         counted = code == ROUTER_OK
-        self.timed_out = code == ROUTER_TIMEOUT and self.cut_short
+        # Out of time only when none is actually left: a member that reports its own timeout early leaves the next.
+        self.timed_out = code == ROUTER_TIMEOUT and self.left() <= 0
         self.members.append(DecisionMember(name=member.name, outcome=code, ms=outcome.elapsed_ms, counted=counted))
         return decision if counted else None
 

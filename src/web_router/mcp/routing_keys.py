@@ -63,7 +63,12 @@ def hostname(url: str) -> str:
 
 
 def _variable(name: str | None, config: Mapping[str, Any]) -> str | None:
-    """The variable router ``name`` would read its key from: ``api_key_env``, else its preset's, unless given one."""
+    """The variable router ``name`` would read its key from: ``api_key_env``, else its preset's.
+
+    ``None`` when ``config`` gives ``api_key`` itself: an explicit key wins, as the deciders' transport reads it.
+    """
+    if MCP_CONFIG_KEY in config:
+        return None
     if MCP_CONFIG_KEY_ENV in config:
         variable = config[MCP_CONFIG_KEY_ENV]
         if not isinstance(variable, str):
@@ -73,7 +78,7 @@ def _variable(name: str | None, config: Mapping[str, Any]) -> str | None:
             )
         return variable
     row = _preset(name, config)
-    return None if row is None or MCP_CONFIG_KEY in config else row[1]
+    return None if row is None else row[1]
 
 
 def captured_key(name: str | None, config: dict[str, Any], env: Mapping[str, str]) -> dict[str, Any]:
@@ -85,8 +90,8 @@ def captured_key(name: str | None, config: dict[str, Any], env: Mapping[str, str
             unset sends no key.
     """
     variable = _variable(name, config)
-    if variable is None:
-        return config
+    if variable is None:  # no key to read, or an explicit one: nothing is left to read the environment
+        return {key: item for key, item in config.items() if key != MCP_CONFIG_KEY_ENV}
     home = KEY_HOMES.get(variable)
     target = target_url(name, config)
     if home is not None and (target is None or hostname(target) != home):

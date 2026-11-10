@@ -7,9 +7,10 @@ import time
 import pytest
 
 from tests.routing_fallback_helpers import answers, aslow, outcomes, request, slow
-from web_router import AsyncWebRouter, Budget, RouterError, WebRouter
+from web_router import AsyncWebRouter, Budget, RouteDecision, RouteRequest, RouterError, WebRouter
 from web_router.constants_fallback import FALLBACK_MARGIN_S
 from web_router.constants_invoke import ROUTER_TIMEOUT_S
+from web_router.routing._runner import TimedOut
 from web_router.routing.fallback import FallbackRouter
 
 
@@ -91,3 +92,13 @@ def test_fail_on_router_error_raises_a_timeout_when_the_time_ran_out() -> None:
         pytest.raises(RouterError, match="router_timeout"),
     ):
         wr.plan("who won the 2022 world cup", budget=Budget(time_limit_s=0.1))
+
+
+def test_a_member_reporting_its_own_timeout_early_leaves_time_for_the_next() -> None:
+    def early(req: RouteRequest) -> RouteDecision:
+        raise TimedOut  # its own transport gave up, long before the time the fallback had left
+
+    early.timeout_s = 5.0  # type: ignore[attr-defined]  # given less than this: only 1 s is left
+    decision = FallbackRouter(routers=[early, answers("next")]).route(request(deadline_s=1.0))
+    assert outcomes(decision) == [("custom", "router_timeout", False), ("custom", "ok", True)]
+    assert not decision.timed_out

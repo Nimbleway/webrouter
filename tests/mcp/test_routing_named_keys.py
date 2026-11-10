@@ -87,3 +87,12 @@ def test_the_entry_point_reads_the_router_before_any_env_file(monkeypatch: pytes
     monkeypatch.setattr(server.anyio, "run", lambda call: ran.append(call))
     server.main()
     assert ran[0].keywords["routing"].router_config["api_key"] == SECRET
+
+
+def test_an_explicit_api_key_wins_over_api_key_env_and_reads_nothing() -> None:
+    remote = {"name": "remote", "url": "https://r.example.com/x", "api_key": "explicit", "api_key_env": "ONE_KEY"}
+    llm = {"name": "llm", "preset": "deepseek", "model": "m", "api_key": "explicit"}
+    routing = McpRouting.from_environ(named("fallback", {"routers": [remote, llm]}, ONE_KEY=SECRET))
+    members = routing.router_config["routers"]  # type: ignore[index]
+    assert [m["api_key"] for m in members] == ["explicit", "explicit"], "no DEEPSEEK_API_KEY needed or read"
+    assert all("api_key_env" not in m for m in members)

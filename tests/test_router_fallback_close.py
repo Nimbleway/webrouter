@@ -67,3 +67,20 @@ async def test_every_member_is_aclosed_before_a_failed_aclose_is_raised(built: l
     with pytest.raises(RuntimeError, match="aclose failed"):
         await router.aclose()
     assert built[0].aclosed == 1
+
+
+class PolicyRaises(Closable):
+    @property
+    def min_url_policy(self) -> str:
+        raise RuntimeError("policy unreadable")
+
+
+def test_a_member_whose_url_policy_raises_is_closed_too(built: list[Closable]) -> None:
+    made: list[PolicyRaises] = []
+    register_router("test-policy-raises", lambda: made.append(PolicyRaises()) or made[-1])
+    try:
+        with pytest.raises(RuntimeError, match="policy unreadable"):
+            FallbackRouter(routers=[NAME, "test-policy-raises"])
+    finally:
+        unregister_router("test-policy-raises")
+    assert built[0].closed == 1 and made[0].closed == 1
