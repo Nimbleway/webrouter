@@ -52,7 +52,7 @@ from web_router.vendors.credentials import (
     token_request,
 )
 from web_router.vendors.plan import _Plan
-from web_router.vendors.schema import ACCESS_TOKEN, Vendor, placeholders
+from web_router.vendors.schema import ACCESS_TOKEN, Vendor, VendorInjection, placeholders
 from web_router.vendors.types import VendorResponse
 
 
@@ -167,6 +167,28 @@ class VendorCaller:
             vendor = plan.vendor.vendor
             raise VendorWriteRefusedError(vendor, target, MSG_VENDOR_WRITE_REFUSED.format(target=target, vendor=vendor))
 
+    def _applied(self, plan: _Plan, values: Mapping[str, str]) -> list[VendorInjection]:
+        """The injections this call carries.
+
+        Left off: one naming a credential the endpoint's own list excludes (even when configured), an optional
+        one missing a value, and one missing only credentials this call does not need -- or the access token,
+        when this call mints none.
+        """
+        vendor = plan.vendor
+        needed = self._needed(plan)
+        excluded = set(vendor.auth.credentials) - set(plan.credentials) if plan.credentials is not None else set()
+        skippable = set(vendor.auth.credentials) | (set() if self._wants_token(plan) else {ACCESS_TOKEN})
+        applied = []
+        for injection in vendor.auth.inject:
+            names = placeholders(injection.value)
+            if names & excluded:
+                continue
+            absent = {name for name in names if name not in values}
+            if absent and (injection.optional or not (absent & needed or absent - skippable)):
+                continue
+            applied.append(injection)
+        return applied
+
     def _prepare(self, plan: _Plan, values: dict[str, str]) -> _Prepared:
         vendor = plan.vendor
         base = self._render(vendor, vendor.base_for(plan.host), values).rstrip("/")
@@ -182,15 +204,7 @@ class VendorCaller:
         query = list(plan.query)
         body = plan.body
         masked: set[str] = set()
-        needed = self._needed(plan)
-        # Names an injection may lack and still be left off: the vendor's credentials, and the access
-        # token when this call mints none.
-        skippable = set(vendor.auth.credentials) | (set() if self._wants_token(plan) else {ACCESS_TOKEN})
-        for injection in vendor.auth.inject:
-            absent = {name for name in placeholders(injection.value) if name not in values}
-            # An optional injection, or one carrying only credentials this call does not need, is left off.
-            if absent and (injection.optional or not (absent & needed or absent - skippable)):
-                continue
+        for injection in self._applied(plan, values):
             rendered = self._render(vendor, injection.value, values)
             if injection.location == "header":
                 headers[injection.name] = rendered
