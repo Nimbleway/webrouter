@@ -24,11 +24,14 @@ from web_router._urls import host_of
 from web_router.constants_decider import (
     DECIDER_MAX_RESPONSE_BYTES,
     KEY_HOMES,
+    MSG_DECIDER_BOTH,
     MSG_DECIDER_ENV_NAME,
     MSG_DECIDER_KEY,
     MSG_DECIDER_KEY_HOME,
     MSG_DECIDER_KEY_UNSET,
+    MSG_DECIDER_NO_BASE,
     MSG_DECIDER_NO_KEY_ENV,
+    MSG_DECIDER_PRESET,
     MSG_DECIDER_TEXT,
 )
 from web_router.constants_remote import (
@@ -135,3 +138,20 @@ async def post_json(target: Endpoint, body: dict[str, Any], deadline_s: float) -
         return json.loads(raw)
     except (ValueError, RecursionError):
         raise RemoteRouterInvalid(target.host, REMOTE_WHY_NOT_JSON) from None
+
+
+def preset_of(name: str, presets: dict[str, Any], preset: object, base_url: object) -> Any:
+    """The preset's row, or ``None`` for a ``base_url`` of the caller's own.
+
+    Raises:
+        ConfigurationError: for an unknown preset, both a preset and a base URL, or neither.
+    """
+    if preset is None:
+        if base_url is None:
+            raise ConfigurationError(MSG_DECIDER_NO_BASE.format(name=name))
+        return None
+    if not isinstance(preset, str) or preset not in presets:
+        raise ConfigurationError(MSG_DECIDER_PRESET.format(name=name, preset=preset, known=", ".join(presets)))
+    if base_url is not None:
+        raise ConfigurationError(MSG_DECIDER_BOTH.format(name=name))
+    return presets[preset]

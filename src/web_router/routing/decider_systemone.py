@@ -32,8 +32,7 @@ from web_router.constants_decider import (
     SYSTEMONE_TIMEOUT_S,
 )
 from web_router.routing.decider import DeciderQuestion, DeciderReply
-from web_router.routing.decider_http import endpoint, post_json, text
-from web_router.routing.decider_llm import preset_of
+from web_router.routing.decider_http import endpoint, post_json, preset_of, text
 from web_router.routing.decider_reply import unit_number
 from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.remote_errors import RemoteRouterInvalid
