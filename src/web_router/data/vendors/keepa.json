@@ -1,0 +1,525 @@
+{
+  "vendor": "keepa",
+  "name": "Keepa",
+  "category": "other",
+  "summary": "Amazon product price and sales-rank history, product search, best-seller lists, categories and seller data across 11 Amazon marketplaces.",
+  "docs_url": "https://github.com/keepacom/api_backend",
+  "pricing_url": "https://keepa.com/#!api",
+  "base_url": "https://api.keepa.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "KEEPA_API_KEY"
+        ],
+        "description": "A Keepa private API access key (keepa.com > API). Sent as the key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billed in tokens from a per-minute refill. Every answer carries tokensLeft, refillIn (ms), refillRate (per minute) and tokensConsumed; when tokens run out the API answers 503 until they refill.",
+    "Prices are integers in the locale's smallest unit (4900 = $49.00; in Japan 4900 = 4900 yen); -1 means no offer at that time.",
+    "Times in csv histories are Keepa minutes: unix_ms = (keepa_minute + 21564000) * 60000.",
+    "domain is a number, not a hostname: 1 is amazon.com.",
+    "Product finder, deals, lightning deals and product tracking (which writes) are not in this entry."
+  ],
+  "sources": [
+    "https://github.com/keepacom/api_backend",
+    "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java",
+    "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Response.java",
+    "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Product.java"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "keepa.product",
+      "name": "Get products by ASIN",
+      "summary": "Product objects with price, rank and review history, optionally stats, offers and buy box data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/product",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Amazon locale: 1 com, 2 co.uk, 3 de, 4 fr, 5 co.jp, 6 ca, 8 it, 9 es, 10 in, 11 com.mx, 12 com.br.",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "example": 1
+        },
+        "asin": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "1-100 ASINs, comma separated (at most 20 with offers).",
+          "example": "B0BSHF7WHW"
+        },
+        "stats": {
+          "in": "query",
+          "type": "string",
+          "description": "Add a stats field (current, min/max and weighted mean prices) over the last N days (e.g. 90), or between two dates as 'start,end' (ISO 8601 such as 2015-12-31)."
+        },
+        "update": {
+          "in": "query",
+          "type": "integer",
+          "description": "Force a refresh when the stored data is older than this many hours. Default 1; 0 means live data and may cost an extra token."
+        },
+        "history": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 includes the csv price history; 0 leaves it out for a faster, smaller answer.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "offers": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of marketplace offers to retrieve. Costs extra tokens; with offers at most 20 ASINs per call."
+        },
+        "rating": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 includes rating and review-count history even without offers.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "buybox": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 includes all buy box data in the product and stats.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "Offers and live data (update 0) cost extra tokens; tokensConsumed in the answer gives the charge."
+      ],
+      "job": "products.get",
+      "docs_url": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java",
+      "verified": {
+        "docs": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java"
+      }
+    },
+    {
+      "id": "keepa.product.by_code",
+      "name": "Get products by UPC, EAN or ISBN",
+      "summary": "Product objects for product codes; one code can map to several ASINs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/product",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Amazon locale: 1 com, 2 co.uk, 3 de, 4 fr, 5 co.jp, 6 ca, 8 it, 9 es, 10 in, 11 com.mx, 12 com.br.",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "example": 1
+        },
+        "code": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "UPC, EAN or ISBN-13 codes, comma separated, up to 100."
+        },
+        "stats": {
+          "in": "query",
+          "type": "string",
+          "description": "Add a stats field (current, min/max and weighted mean prices) over the last N days (e.g. 90), or between two dates as 'start,end' (ISO 8601 such as 2015-12-31)."
+        },
+        "update": {
+          "in": "query",
+          "type": "integer",
+          "description": "Force a refresh when the stored data is older than this many hours. Default 1; 0 means live data and may cost an extra token."
+        },
+        "history": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 includes the csv price history; 0 leaves it out for a faster, smaller answer.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "offers": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of marketplace offers to retrieve. Costs extra tokens; with offers at most 20 ASINs per call."
+        }
+      },
+      "notes": [
+        "Same path as keepa.product with code instead of asin; never send both."
+      ],
+      "job": "products.get",
+      "docs_url": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java",
+      "verified": {
+        "docs": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java"
+      }
+    },
+    {
+      "id": "keepa.search.products",
+      "name": "Search products",
+      "summary": "Amazon products matching keywords, as product objects or just ASINs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Amazon locale: 1 com, 2 co.uk, 3 de, 4 fr, 5 co.jp, 6 ca, 8 it, 9 es, 10 in, 11 com.mx, 12 com.br.",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "example": 1
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be product.",
+          "enum": [
+            "product"
+          ],
+          "example": "product"
+        },
+        "term": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Keywords.",
+          "example": "usb c hub"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-9, 10 results each; keep other parameters identical. Without page the first 40 results come back."
+        },
+        "stats": {
+          "in": "query",
+          "type": "string",
+          "description": "Add a stats field (current, min/max and weighted mean prices) over the last N days (e.g. 90), or between two dates as 'start,end' (ISO 8601 such as 2015-12-31)."
+        },
+        "update": {
+          "in": "query",
+          "type": "integer",
+          "description": "Force a refresh when the stored data is older than this many hours. Default 1; 0 means live data and may cost an extra token."
+        },
+        "history": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 includes the csv price history; 0 leaves it out for a faster, smaller answer.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "asins-only": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 returns only the ASINs.",
+          "enum": [
+            0,
+            1
+          ],
+          "wire_name": "asins-only"
+        }
+      },
+      "notes": [
+        "At most 50 results per search term."
+      ],
+      "job": "products.search",
+      "docs_url": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java",
+      "verified": {
+        "docs": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java"
+      }
+    },
+    {
+      "id": "keepa.search.categories",
+      "name": "Search categories",
+      "summary": "Amazon category nodes whose name matches keywords.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Amazon locale: 1 com, 2 co.uk, 3 de, 4 fr, 5 co.jp, 6 ca, 8 it, 9 es, 10 in, 11 com.mx, 12 com.br.",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "example": 1
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be category.",
+          "enum": [
+            "category"
+          ],
+          "example": "category"
+        },
+        "term": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Space-separated keywords, all must match, each at least 3 characters."
+        },
+        "parents": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 includes each category's tree.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "job": "reference.categories",
+      "docs_url": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java",
+      "verified": {
+        "docs": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java"
+      }
+    },
+    {
+      "id": "keepa.category",
+      "name": "Look up categories",
+      "summary": "Category objects by node id, optionally with their parent tree.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/category",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Amazon locale: 1 com, 2 co.uk, 3 de, 4 fr, 5 co.jp, 6 ca, 8 it, 9 es, 10 in, 11 com.mx, 12 com.br.",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "example": 1
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Category node id, or up to 10 comma separated (same token cost)."
+        },
+        "parents": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 includes each category's tree.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "job": "reference.categories",
+      "docs_url": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java",
+      "verified": {
+        "docs": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java"
+      }
+    },
+    {
+      "id": "keepa.bestsellers",
+      "name": "Get best sellers",
+      "summary": "ASIN list of the most popular products by sales in a category or product group.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/bestsellers",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Amazon locale: 1 com, 2 co.uk, 3 de, 4 fr, 5 co.jp, 6 ca, 8 it, 9 es, 10 in, 11 com.mx, 12 com.br.",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "example": 1
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A category node id, or a websiteDisplayGroupName (product group)."
+        }
+      },
+      "job": "products.bestsellers",
+      "docs_url": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java",
+      "verified": {
+        "docs": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java"
+      }
+    },
+    {
+      "id": "keepa.seller",
+      "name": "Get sellers",
+      "summary": "Amazon marketplace seller objects by seller id, optionally with the ASINs they list.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/seller",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Amazon locale: 1 com, 2 co.uk, 3 de, 4 fr, 5 co.jp, 6 ca, 8 it, 9 es, 10 in, 11 com.mx, 12 com.br.",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "example": 1
+        },
+        "seller": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Seller id, or up to 100 comma separated (one id when storefront is used)."
+        },
+        "storefront": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 adds the seller's listed ASINs (up to 100,000); extra tokens only when data exists.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "A seller that is not found consumes no tokens."
+      ],
+      "job": "sellers.get",
+      "docs_url": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java",
+      "verified": {
+        "docs": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java"
+      }
+    },
+    {
+      "id": "keepa.topseller",
+      "name": "Get top sellers",
+      "summary": "Seller ids of the most rated Amazon marketplace sellers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/topseller",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Amazon locale: 1 com, 2 co.uk, 3 de, 4 fr, 5 co.jp, 6 ca, 8 it, 9 es, 10 in, 11 com.mx, 12 com.br.",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "example": 1
+        }
+      },
+      "job": "sellers.list",
+      "docs_url": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java",
+      "verified": {
+        "docs": "https://github.com/keepacom/api_backend/blob/master/src/main/java/com/keepa/api/backend/structs/Request.java"
+      }
+    }
+  ]
+}

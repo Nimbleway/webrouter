@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-303 vendors, 2460 endpoints.
+306 vendors, 2485 endpoints.
 
 ### advertising
 
@@ -381,6 +381,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [GraphHopper Directions API](https://docs.graphhopper.com/) `graphhopper` | Routing, distance matrices, isochrones and geocoding on OpenStreetMap data. | 5 read | key in query | `GRAPHHOPPER_API_KEY` | docs 2026-11-09 |
 | [HLR Lookup](https://www.hlrlookup.com/knowledge) `hlrlookup` | Live HLR and mobile number portability lookups: whether a phone number is live, its type, and its original and current network. | 4 read | key in body | `HLRLOOKUP_API_KEY`, `HLRLOOKUP_API_SECRET` | docs 2026-11-09 |
 | [IPinfo](https://ipinfo.io/developers/ipinfo-api) `ipinfo` | IP geolocation and ASN data: free country-level Lite lookups, and city-level geolocation with hosting, VPN/anonymous, mobile and anycast flags on paid plans. | 3 read | key in header | `IPINFO_TOKEN` | docs 2026-11-09 |
+| [Keepa](https://github.com/keepacom/api_backend) `keepa` | Amazon product price and sales-rank history, product search, best-seller lists, categories and seller data across 11 Amazon marketplaces. | 8 read | key in query | `KEEPA_API_KEY` | docs 2026-11-09 |
 | [Mapbox](https://docs.mapbox.com/api/overview/) `mapbox` | Geocoding, place and POI search, driving/walking/cycling directions, travel-time matrices and isochrones. | 8 read | key in query | `MAPBOX_ACCESS_TOKEN` | docs 2026-11-09 |
 | [Mapillary](https://www.mapillary.com/developer/api-documentation) `mapillary` | Street-level imagery from Meta's Mapillary: find geotagged photos by area, point, sequence or creator, and map features (signs, objects) detected in them. | 6 read | key in header | `MAPILLARY_ACCESS_TOKEN` | docs 2026-11-09 |
 | [Microsoft Graph (Microsoft 365)](https://learn.microsoft.com/en-us/graph/overview) `microsoft-graph` | Microsoft 365 / Entra ID tenant data through Microsoft Graph: users, groups and members, licence subscriptions and assignments, Microsoft 365 activity reports and sign-in logs. | 8 read | OAuth refresh token | `MS_GRAPH_CLIENT_ID`, `MS_GRAPH_CLIENT_SECRET`, `MS_GRAPH_REFRESH_TOKEN` | docs 2026-11-09 |
@@ -390,7 +391,9 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [US National Weather Service](https://www.weather.gov/documentation/services-web-api) `nws` | Official US forecasts (7-day and hourly), active weather alerts and station observations from the National Weather Service API (api.weather.gov). | 7 read | none | none | docs 2026-11-09 |
 | [OFAC-API (sanctions screening)](https://docs.ofac-api.com/) `ofacapi` | Fuzzy screening of people, companies, vessels and aircraft against OFAC SDN and 20+ other sanctions, PEP and watch lists, single, batch or as async bulk jobs. | 5 read | key in header | `OFAC_API_KEY` | docs 2026-11-09 |
 | [Open Food Facts](https://openfoodfacts.github.io/openfoodfacts-server/api/) `openfoodfacts` | Keyless open database of packaged food products: ingredients, nutrition facts, Nutri-Score, NOVA, allergens and labels by barcode, plus filtered product search. | 4 read | none | none | docs 2026-11-09 |
+| [PDF.co](https://developer.pdf.co/api/index) `pdfco` | PDF and document processing: text, JSON and table extraction with OCR, text search, template-based parsing, HTML to PDF, merging and file info. | 10 read | key in header | `PDFCO_API_KEY` | docs 2026-11-09 |
 | [Precip](https://api-docs.precip.ai/overview) `precip` | Hyper-local observed rainfall, snowfall, soil moisture and soil temperature for any point in the US and Canada from radar and gauges, plus minutely nowcasts and a 10-day hourly forecast. | 9 read | key in header | `PRECIP_API_KEY` | docs 2026-11-09 |
+| [RentCast](https://developers.rentcast.io/reference/introduction) `rentcast` | US property records, automated value and rent estimates with comparables, active sale and rental listings, and ZIP-level market statistics. | 7 read | key in header | `RENTCAST_API_KEY` | docs 2026-11-09 |
 | [Service Victoria Servo Saver](https://service.vic.gov.au/find-services/transport-and-driving/servo-saver/help-centre/servo-saver-public-api) `servosaver` | Victoria (Australia) government Fair Fuel open data: every registered service station's fuel prices in cents per litre, plus station, brand and fuel-type reference lists. | 4 read | key in header | `SERVOSAVER_API_KEY` | docs 2026-11-09 |
 | [Shippo](https://docs.goshippo.com/shippoapi/public-api/) `shippo` | Multi-carrier shipping: rate quotes across 40+ carriers, label purchase, package tracking, address validation and carrier accounts. | 7 read, 3 write | key in header | `SHIPPO_API_TOKEN` | docs 2026-11-09 |
 | [Socrata (Tyler Data & Insights)](https://dev.socrata.com/docs/other/discovery) `socrata` | Discovery API over the tens of thousands of government datasets, maps and charts published on Socrata open-data portals: search, autocomplete, and counts by portal, tag and category. | 7 read | key in header | `SOCRATA_APP_TOKEN` | docs 2026-11-09 |
