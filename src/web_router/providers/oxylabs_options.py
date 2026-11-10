@@ -31,17 +31,37 @@ _TYPES = {
     "object": "object",
 }
 
-_BOUNDS = {"min": "minimum", "max": "maximum", "min_len": "minLength", "max_len": "maxLength"}
+_BOUNDS = {
+    "min": ("minimum", frozenset({"integer", "number"})),
+    "max": ("maximum", frozenset({"integer", "number"})),
+    "min_len": ("minLength", frozenset({"string"})),
+    "max_len": ("maxLength", frozenset({"string"})),
+}
+"""Each bound, its JSON Schema keyword, and the types that keyword applies to.
+
+A bound on any other type -- ``min_len`` on a ``[json]`` object, which Oxylabs
+counts in characters of the serialized value -- has no JSON Schema keyword
+that means it, so it is left out rather than written as one that is ignored.
+"""
 
 _ARRAY_OF = "array of "
+
+
+def _closing(text: str) -> int | None:
+    """Where the bracket opening ``text`` closes, counting nested ones: ``[array of [string]]`` is one fact."""
+    depth = 0
+    for at, char in enumerate(text):
+        depth += (char == "[") - (char == "]")
+        if depth == 0:
+            return at
+    return None
 
 
 def _facts(line: str) -> tuple[list[str], str]:
     """The bracketed facts at the head of a line, and the description after them."""
     facts: list[str] = []
     rest = line.strip()
-    while rest.startswith("[") and "]" in rest:
-        close = rest.index("]")
+    while rest.startswith("[") and (close := _closing(rest)) is not None:
         facts.append(rest[1:close].strip())
         rest = rest[close + 1 :].lstrip()
     return facts, rest.lstrip(".").strip()
@@ -68,10 +88,21 @@ def _type_of(fact: str) -> dict[str, Any] | None:
     return {"type": kind} if kind else None
 
 
+def _bounded(bounds: dict[str, str], kind: Any) -> dict[str, Any]:
+    """The JSON Schema keywords for the bounds that apply to a parameter of this type."""
+    keywords: dict[str, Any] = {}
+    for key, value in bounds.items():
+        keyword, applies_to = _BOUNDS[key]
+        if kind in applies_to:
+            keywords[keyword] = _value(value, "number" if key in ("min", "max") else "integer")
+    return keywords
+
+
 def _line(line: str) -> tuple[dict[str, Any], bool]:
     """One parameter line as a schema, and whether it is required."""
     facts, description = _facts(line)
     schema: dict[str, Any] = {}
+    bounds: dict[str, str] = {}
     required = False
     for fact in facts:
         key, sep, value = fact.partition(":")
@@ -88,7 +119,8 @@ def _line(line: str) -> tuple[dict[str, Any], bool]:
         elif key == "default":
             schema["default"] = _value(value, kind)
         elif key in _BOUNDS:
-            schema[_BOUNDS[key]] = _value(value, "number" if key in ("min", "max") else "integer")
+            bounds[key] = value
+    schema.update(_bounded(bounds, schema.get("type")))
     if description:
         schema["description"] = description
     return schema, required

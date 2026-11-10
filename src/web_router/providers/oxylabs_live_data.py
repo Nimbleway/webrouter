@@ -249,13 +249,14 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
             if isinstance(status, int) and status >= OXYLABS_FAILED_FETCH_FLOOR:
                 message = MSG_OXYLABS_NOT_FETCHED.format(source=request.source, status=status, url=url)
                 raise ProviderError(self.name, message)
-            if isinstance(fields, dict):
-                records.append(fields)
-            elif isinstance(fields, list) and fields:
-                records.extend(row for row in fields if isinstance(row, dict))
-            else:
+            rows = [fields] if isinstance(fields, dict) else fields if isinstance(fields, list) else []
+            parsed = [row for row in rows if isinstance(row, dict) and row]
+            if not parsed:
                 raise ProviderError(self.name, MSG_OXYLABS_NO_FIELDS.format(source=request.source, url=url))
+            records.extend(parsed)
         first = (results or [{}])[0].get("metadata") or {}
+        if not records:
+            raise ProviderError(self.name, MSG_OXYLABS_NO_FIELDS.format(source=request.source, url=first.get("url")))
         meta = body.get("metadata") or {}
         return LiveDataResponse(
             provider=self.name,

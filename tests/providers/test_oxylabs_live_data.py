@@ -154,11 +154,12 @@ def test_a_description_is_the_endpoints_own_parameters_as_a_schema() -> None:
     assert properties["pages"] == {"type": "integer", "minimum": 1, "maximum": 10, "description": "Pages to fetch."}
     assert properties["autoselect_variant"]["default"] is False
     assert properties["json"]["type"] == "object"
+    # Oxylabs counts that min_len in characters of the serialized object: no JSON Schema keyword means that.
     assert properties["json"]["properties"]["schema"] == {
         "type": "object",
-        "minLength": 10,
         "description": "The json schema the page is parsed into.",
     }
+    assert properties["json"]["properties"]["prompt"]["maxLength"] == 8192
     assert "output" not in properties and "callback_url" not in properties, "set by the run, not by the caller"
     assert source.raw == OPTIONS
 
@@ -174,6 +175,18 @@ def test_an_array_parameter_is_read_from_its_one_element_list() -> None:
         "description": "Formats to return.",
     }
     assert required is False
+
+
+def test_a_nested_array_type_is_one_fact_and_the_facts_after_it_still_count() -> None:
+    from web_router.providers.oxylabs_options import input_schema
+
+    schema = input_schema({"tags": "[array of [string]] [required] [max_len: 5]. Tags to match."})
+    assert schema["properties"]["tags"] == {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Tags to match.",
+    }, "a length bound on an array is not a string length, so it is left out"
+    assert schema["required"] == ["tags"]
 
 
 def test_an_async_only_scraper_is_described_on_its_async_path() -> None:
@@ -229,6 +242,30 @@ def test_a_result_with_no_fields_raises() -> None:
     provider, _ = _provider(lambda request: httpx.Response(200, json=_scraped(None)))
     with pytest.raises(ProviderError, match="no parsed fields"):
         provider.run(LiveDataRequest(source="amazon/product", inputs={"query": "x"}))
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"status": 200, "results": [], "metadata": {}},
+        _scraped({}),
+        _scraped([]),
+        _scraped(["not", "objects"]),
+        _scraped([{}]),
+    ],
+    ids=["no results", "empty object", "empty list", "no objects", "only empty objects"],
+)
+def test_a_run_with_no_parsed_fields_raises(payload: dict[str, Any]) -> None:
+    provider, _ = _provider(lambda request: httpx.Response(200, json=payload))
+    with pytest.raises(ProviderError, match="no parsed fields"):
+        provider.run(LiveDataRequest(source="amazon/product", inputs={"query": "x"}))
+
+
+def test_a_list_of_records_is_every_nonempty_object() -> None:
+    rows = [{"pos": 1}, {}, {"pos": 2}]
+    provider, _ = _provider(lambda request: httpx.Response(200, json=_scraped(rows)))
+    response = provider.run(LiveDataRequest(source="google/search", inputs={"query": "x"}))
+    assert response.records == [{"pos": 1}, {"pos": 2}]
 
 
 def test_an_unknown_source_is_not_found_and_nothing_is_billed() -> None:
@@ -319,6 +356,18 @@ def test_a_shared_extract_config_does_not_send_the_realtime_password(monkeypatch
     provider = wire(OxylabsLiveDataProvider(username="user", api_key="pw", web_api_key="explicit"), api)
     provider.live_data_sources()
     assert api.last.headers["Authorization"] == "Bearer explicit"
+
+
+def test_one_oxylabs_config_entry_serves_extract_and_live_data(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Extract and live data read the same ``provider_config["oxylabs"]`` entry, each taking its own key."""
+    for name in ("OXYLABS_USERNAME", "OXYLABS_PASSWORD", "OXYLABS_WEB_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    config = {"oxylabs": {"username": "user", "api_key": "realtime-password", "web_api_key": "web-key"}}
+    with WebRouter(provider_config=config) as router:
+        extract = router.get_extract_provider("oxylabs")
+        live = router.get_live_data_provider("oxylabs")
+        assert extract._client.headers["Authorization"].startswith("Basic ")  # type: ignore[attr-defined]
+        assert live._client.headers["Authorization"] == "Bearer web-key"  # type: ignore[attr-defined]
 
 
 @pytest.mark.integration
