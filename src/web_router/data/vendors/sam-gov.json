@@ -1,0 +1,257 @@
+{
+  "vendor": "sam-gov",
+  "name": "SAM.gov",
+  "category": "other",
+  "summary": "US federal contract opportunities (solicitations, presolicitations, award notices) and the registry of entities registered to do business with the US government, from the GSA's SAM.gov APIs.",
+  "docs_url": "https://open.gsa.gov/api/get-opportunities-public-api/",
+  "base_url": "https://api.sam.gov",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SAM_GOV_API_KEY"
+        ],
+        "description": "A personal public API key from the Account Details page of a SAM.gov account. Sent as the api_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Daily request limits depend on the account: a personal key of a non-federal user with no SAM.gov role gets 10 requests a day; with a role, or a federal user, 1,000.",
+    "Dates are MM/dd/yyyy, not ISO.",
+    "This entry reads public data only; FOUO and sensitive entity data need a federal system account."
+  ],
+  "sources": [
+    "https://open.gsa.gov/api/get-opportunities-public-api/",
+    "https://open.gsa.gov/api/entity-api/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "sam-gov.opportunities.search",
+      "name": "Search contract opportunities",
+      "summary": "Federal contract notices posted in a date range, filtered by type, NAICS, set-aside, agency, place or deadline.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opportunities/v2/search",
+      "params": {
+        "postedFrom": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start of the posted-date range, MM/dd/yyyy.",
+          "example": "01/01/2026"
+        },
+        "postedTo": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End of the posted-date range, MM/dd/yyyy; at most one year after postedFrom.",
+          "example": "03/31/2026"
+        },
+        "ptype": {
+          "in": "query",
+          "type": "string",
+          "description": "Notice type: u justification, p presolicitation, a award notice, r sources sought, s special notice, o solicitation, g sale of surplus property, k combined synopsis/solicitation, i intent to bundle (DoD).",
+          "enum": [
+            "u",
+            "p",
+            "a",
+            "r",
+            "s",
+            "o",
+            "g",
+            "k",
+            "i"
+          ]
+        },
+        "noticeid": {
+          "in": "query",
+          "type": "string",
+          "description": "Notice id."
+        },
+        "solnum": {
+          "in": "query",
+          "type": "string",
+          "description": "Solicitation number."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Opportunity title."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Place-of-performance state."
+        },
+        "zip": {
+          "in": "query",
+          "type": "string",
+          "description": "Place-of-performance ZIP code."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Notice status.",
+          "enum": [
+            "active",
+            "inactive",
+            "archived",
+            "cancelled",
+            "deleted"
+          ]
+        },
+        "organizationCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Code of the issuing organization."
+        },
+        "organizationName": {
+          "in": "query",
+          "type": "string",
+          "description": "Department or sub-tier name; general text search."
+        },
+        "typeOfSetAside": {
+          "in": "query",
+          "type": "string",
+          "description": "Set-aside code, e.g. SBA, 8A, WOSB, VSA."
+        },
+        "ncode": {
+          "in": "query",
+          "type": "string",
+          "description": "NAICS code, up to 6 digits."
+        },
+        "ccode": {
+          "in": "query",
+          "type": "string",
+          "description": "Classification (product/service) code."
+        },
+        "rdlfrom": {
+          "in": "query",
+          "type": "string",
+          "description": "Response-deadline range start, MM/dd/yyyy."
+        },
+        "rdlto": {
+          "in": "query",
+          "type": "string",
+          "description": "Response-deadline range end, MM/dd/yyyy; at most one year after rdlfrom."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, at most 1000; the default is 1, so set it.",
+          "example": 100
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page index, from 0."
+        }
+      },
+      "notes": [
+        "Returns only the latest version of each notice. The description field is a link that needs api_key appended to download the text."
+      ],
+      "job": "procurement.tenders.search",
+      "docs_url": "https://open.gsa.gov/api/get-opportunities-public-api/",
+      "verified": {
+        "docs": "https://open.gsa.gov/api/get-opportunities-public-api/"
+      }
+    },
+    {
+      "id": "sam-gov.entities.search",
+      "name": "Search registered entities",
+      "summary": "Entities registered in SAM (contractors and grantees) by UEI, CAGE code, name, NAICS, state or free text, with registration and core data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entity-information/v4/entities",
+      "params": {
+        "ueiSAM": {
+          "in": "query",
+          "type": "string",
+          "description": "12-character UEI, or up to 100 of them."
+        },
+        "legalBusinessName": {
+          "in": "query",
+          "type": "string",
+          "description": "Legal business name, partial or complete."
+        },
+        "cageCode": {
+          "in": "query",
+          "type": "string",
+          "description": "5-character CAGE code, or up to 100 of them."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free-text search."
+        },
+        "registrationStatus": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "A",
+            "E"
+          ],
+          "description": "A active, E expired."
+        },
+        "samRegistered": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "Yes",
+            "No"
+          ],
+          "description": "Yes for registered entities (the default), No for ID-assigned-only entities."
+        },
+        "naicsCode": {
+          "in": "query",
+          "type": "string",
+          "description": "NAICS code."
+        },
+        "pscCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Product/service code."
+        },
+        "physicalAddressProvinceOrStateCode": {
+          "in": "query",
+          "type": "string",
+          "description": "State or province of the physical address."
+        },
+        "includeSections": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated sections: entityRegistration, coreData, assertions, pointsOfContact, repsAndCerts, integrityInformation, or All (which leaves out integrityInformation).",
+          "example": "entityRegistration,coreData"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, at most 10."
+        }
+      },
+      "notes": [
+        "At most 10 records per page and only the first 10,000 records of a result; page times size cannot exceed 10,000.",
+        "Values cannot contain & | { } ^ or backslash.",
+        "Adding format or emailId turns the call into an asynchronous bulk extract; this entry does not cover that flow."
+      ],
+      "job": "company.search",
+      "docs_url": "https://open.gsa.gov/api/entity-api/",
+      "verified": {
+        "docs": "https://open.gsa.gov/api/entity-api/"
+      }
+    }
+  ]
+}
