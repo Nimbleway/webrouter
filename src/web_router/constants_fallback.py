@@ -23,6 +23,14 @@ FALLBACK_NAME_KEY: Final = "name"
 FALLBACK_MEMBERS_KEY: Final = "routers"
 """The ``router_config`` key holding its members."""
 
+FALLBACK_MARGIN_S: Final = 0.02
+"""Seconds the fallback router keeps back from its deadline: 20 ms.
+
+It stops asking members that much before the call stops waiting on it, so its answer -- the members it asked
+included -- always arrives in time to be read. Its own default limit adds the margin to its members' sum, so
+with time to spare each member still gets its whole ``timeout_s``.
+"""
+
 ROUTER_OK: Final = "ok"
 """A member's outcome in the decision record when it answered with a decision that decides something."""
 

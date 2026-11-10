@@ -2379,8 +2379,11 @@ config, or a router function or object, sync or async. Each keeps its own
 the time left. A member that times out, raises, answers something other than a
 decision, or answers a decision that decides nothing is passed over, and the
 next is asked. When none decides anything, the call runs on the static order,
-recorded as `router_empty`; with `fail_on_router_error=True` it raises
-`RouterError` instead. Its own limit is the sum of its members' unless
+recorded as `router_empty`, or `router_timeout` when the time ran out before
+one did (the members asked are recorded either way); with
+`fail_on_router_error=True` it raises `RouterError` with that code instead. It
+stops asking 20 ms before its deadline, so its answer is always read in time.
+Its own limit is the sum of its members' plus those 20 ms, unless
 `router_config["timeout_s"]` sets it, and a member that declares `route_tools`
 is asked only on those tools.
 

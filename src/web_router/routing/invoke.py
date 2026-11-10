@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from web_router.constants_invoke import MSG_ROUTER_CLASS, MSG_ROUTER_FORM
-from web_router.constants_merge import ROUTER_EMPTY, ROUTER_ERROR, ROUTER_INVALID, ROUTER_TIMEOUT
+from web_router.constants_merge import ROUTER_ERROR, ROUTER_INVALID, ROUTER_TIMEOUT
 from web_router.exceptions import ConfigurationError, RouterError
 from web_router.providers._deadline import current_deadline
 from web_router.routing._forms import _declared_timeout, _name_of, _sides
@@ -190,8 +190,8 @@ class AttachedRouter:
         if not well_formed(result):
             _close(result)
             return self._failed(ROUTER_INVALID, started)
-        if self.fail_on_error and none_answered(result):  # a composite whose every member failed or was empty
-            raise RouterError(self.name, ROUTER_EMPTY)
+        if self.fail_on_error and (code := none_answered(result)):  # a composite whose members gave no answer
+            raise RouterError(self.name, code)
         return RouterOutcome(decision=result, failure=None, elapsed_ms=(time.perf_counter() - started) * 1000)
 
     def _failed(self, code: str, started: float, error: Any = None) -> RouterOutcome:

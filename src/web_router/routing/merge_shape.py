@@ -65,6 +65,8 @@ def _members_well_formed(decision: RouteDecision) -> bool:
     members = decision.members
     if not isinstance(members, tuple | list) or not all(isinstance(m, DecisionMember) for m in members):
         return False
+    if not isinstance(decision.timed_out, bool):
+        return False
     return sum(m.counted for m in members) <= 1
 
 
