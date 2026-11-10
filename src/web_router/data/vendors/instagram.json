@@ -1,0 +1,489 @@
+{
+  "vendor": "instagram",
+  "name": "Instagram Graph API",
+  "category": "social",
+  "summary": "Your Instagram professional account through Meta's Graph API: profile, media, insights, comments, other businesses' public data, and publishing.",
+  "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api",
+  "base_url": "https://{graph_host}/{api_version}",
+  "settings": {
+    "graph_host": {
+      "env": [
+        "INSTAGRAM_GRAPH_HOST"
+      ],
+      "default": "graph.facebook.com",
+      "choices": [
+        "graph.facebook.com",
+        "graph.instagram.com"
+      ],
+      "description": "graph.facebook.com for Facebook Login or a system-user token; graph.instagram.com for Instagram Login tokens."
+    },
+    "api_version": {
+      "env": [
+        "META_GRAPH_API_VERSION"
+      ],
+      "default": "v27.0",
+      "choices": [
+        "v27.0",
+        "v26.0",
+        "v25.0",
+        "v24.0"
+      ],
+      "description": "Graph API version. Meta retires old versions about two years after release."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "INSTAGRAM_ACCESS_TOKEN"
+        ],
+        "description": "An access token for the Instagram professional account: a Facebook Login user or system-user token, or an Instagram Login token (Meta App Dashboard > Instagram > API setup)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "access_token",
+        "value": "{token}"
+      }
+    ]
+  },
+  "notes": [
+    "Only for Instagram business or creator accounts connected to your Meta app, with the permissions each call lists in its docs. Tokens are tied to the app user.",
+    "Publishing is two calls: media.create_container, then media.publish. Both change the account, so they are writes.",
+    "Insights data can lag 48 hours; missing data comes back as an empty set, not 0.",
+    "Paging uses cursors in paging.cursors.after; follow paging.next when present."
+  ],
+  "sources": [
+    "https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/get-started",
+    "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user",
+    "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media",
+    "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media_publish",
+    "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/insights",
+    "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/business_discovery",
+    "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media",
+    "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media/insights",
+    "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media/comments"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "instagram.user.get",
+      "name": "Get an Instagram professional account",
+      "summary": "Profile fields of the connected Instagram business or creator account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ig_user_id}",
+      "params": {
+        "ig_user_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The Instagram account id (app-scoped).",
+          "example": "17841400000000000"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: id, username, name, biography, followers_count, follows_count, media_count, profile_picture_url, website.",
+          "example": "username,followers_count,follows_count,media_count"
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user"
+      }
+    },
+    {
+      "id": "instagram.media.list",
+      "name": "List an account's media",
+      "summary": "The posts, reels and carousels of the account, newest first (stories are excluded).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ig_user_id}/media",
+      "params": {
+        "ig_user_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The Instagram account id."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated media fields: id, caption, media_type, media_url, permalink, thumbnail_url, timestamp, like_count, comments_count, ...",
+          "example": "id,caption,media_type,permalink,timestamp,like_count,comments_count"
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of a time range: Unix timestamp or strtotime value."
+        },
+        "until": {
+          "in": "query",
+          "type": "string",
+          "description": "End of a time range: Unix timestamp or strtotime value."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media"
+      },
+      "notes": [
+        "Returns up to the 10,000 most recent media. Stories come from the /stories edge, not here.",
+        "media_url is missing for some videos (licensed audio, reels with downloads off): fall back to permalink or thumbnail_url.",
+        "fields: without it only ids come back."
+      ]
+    },
+    {
+      "id": "instagram.media.get",
+      "name": "Get one post",
+      "summary": "Fields of a single media object.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ig_media_id}",
+      "params": {
+        "ig_media_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Media id."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: id, media_type, media_url, permalink, shortcode, thumbnail_url, timestamp, username, alt_text, comments_count, like_count, is_comment_enabled; caption and media_product_type need Facebook Login.",
+          "example": "id,media_type,permalink,timestamp,like_count,comments_count"
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media"
+      }
+    },
+    {
+      "id": "instagram.media.insights",
+      "name": "Get a post's insights",
+      "summary": "Reach, views, interactions and other metrics for one media object.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ig_media_id}/insights",
+      "params": {
+        "ig_media_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Media id."
+        },
+        "metric": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated: reach, views, shares, total_interactions, likes, comments, saved, follows, profile_visits, ...; which exist depends on the media type.",
+          "example": "reach,views,total_interactions"
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "day, week, days_28, month, lifetime or total_over_range."
+        },
+        "breakdown": {
+          "in": "query",
+          "type": "string",
+          "description": "action_type (only with profile_activity) or story_navigation_action_type (only with navigation)."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media/insights",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media/insights"
+      },
+      "notes": [
+        "Needs a professional account and the insights permission. Albums have no insights; story metrics expire after 24 hours; stories with under 5 viewers answer error 10.",
+        "Missing data returns an empty set, not 0. Data can lag 48 hours."
+      ]
+    },
+    {
+      "id": "instagram.user.insights",
+      "name": "Get account-level insights",
+      "summary": "Reach, views, follower and interaction metrics for the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ig_user_id}/insights",
+      "params": {
+        "ig_user_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The Instagram account id."
+        },
+        "metric": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated metrics, e.g. reach, views, follower_count, follows_and_unfollows, profile_links_taps.",
+          "example": "reach,views"
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "day for most metrics, lifetime for demographics.",
+          "example": "day"
+        },
+        "metric_type": {
+          "in": "query",
+          "type": "string",
+          "description": "time_series or total_value.",
+          "enum": [
+            "time_series",
+            "total_value"
+          ]
+        },
+        "breakdown": {
+          "in": "query",
+          "type": "string",
+          "description": "contact_button_type, follow_type or media_product_type; only with metric_type=total_value."
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "string",
+          "description": "For demographic metrics: this_month, this_week, last_14_days, last_30_days, last_90_days, prev_month (the last four unsupported from v20.0)."
+        },
+        "since": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix timestamp; with until, an inclusive range. Default window is the last 24 hours."
+        },
+        "until": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix timestamp."
+        }
+      },
+      "job": "analytics.report",
+      "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/insights",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/insights"
+      },
+      "notes": [
+        "follower_count and online_followers need 100+ followers. Demographics return the top 45 only. Data can lag 48 hours. impressions is deprecated: use views."
+      ]
+    },
+    {
+      "id": "instagram.comments.list",
+      "name": "List comments on a post",
+      "summary": "Top-level comments of a media object (add replies via fields=replies).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ig_media_id}/comments",
+      "params": {
+        "ig_media_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Media id."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: id, text, timestamp, replies, ...",
+          "example": "id,text,timestamp,replies"
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media/comments",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media/comments"
+      },
+      "notes": [
+        "Newest first, at most 50 per query, top-level only unless replies is requested. Cannot be filtered by time."
+      ]
+    },
+    {
+      "id": "instagram.business_discovery",
+      "name": "Look up another business or creator account",
+      "summary": "Public profile counts and recent media of any Instagram professional account, by username.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ig_user_id}",
+      "params": {
+        "ig_user_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Your own Instagram account id."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "business_discovery.username(<name>){public fields and media{...}}.",
+          "example": "business_discovery.username(instagram){followers_count,media_count,media{caption,like_count,comments_count,permalink}}"
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/business_discovery",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/business_discovery"
+      },
+      "notes": [
+        "Read-only, public data only; age-gated accounts return nothing. Needs Facebook Login with instagram_manage_insights.",
+        "The media edge pages with before/after cursors but no next link: build the next request yourself."
+      ]
+    },
+    {
+      "id": "instagram.comments.create",
+      "name": "Comment on a post",
+      "summary": "Posts a public comment on one of the account's media objects.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/{ig_media_id}/comments",
+      "params": {
+        "ig_media_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Media id."
+        },
+        "message": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comment text."
+        }
+      },
+      "job": "social.publish",
+      "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media/comments",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media/comments"
+      },
+      "notes": [
+        "Publishes a comment visible to others. Not supported on live videos."
+      ]
+    },
+    {
+      "id": "instagram.media.create_container",
+      "name": "Create a media container for publishing",
+      "summary": "Step 1 of publishing: an image, video, reel, story or carousel container. Nothing is public until media_publish.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/{ig_user_id}/media",
+      "params": {
+        "ig_user_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The Instagram account id."
+        },
+        "image_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Public URL of a JPEG; for images."
+        },
+        "video_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Public URL of the video; for videos and reels."
+        },
+        "media_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Needed for carousels, reels and stories.",
+          "enum": [
+            "CAROUSEL",
+            "REELS",
+            "STORIES"
+          ]
+        },
+        "caption": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 2,200 characters, 30 hashtags, 20 mentions."
+        },
+        "is_carousel_item": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a child of a carousel."
+        },
+        "children": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 20 child container ids; for carousels."
+        },
+        "alt_text": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 1,000 characters; images only."
+        },
+        "location_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Id of a Page with location data."
+        },
+        "user_tags": {
+          "in": "query",
+          "type": "array",
+          "description": "Objects with username (and x, y from 0.0 to 1.0 for images)."
+        },
+        "share_to_feed": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Reels only: also show in the Feed tab."
+        },
+        "cover_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Reels only: public image URL for the cover."
+        },
+        "thumb_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cover frame position in ms for videos and reels."
+        }
+      },
+      "job": "social.publish",
+      "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media"
+      },
+      "notes": [
+        "Creates a container that expires after 24 hours; up to 400 containers per rolling 24 hours.",
+        "Video containers process asynchronously: poll the container's status_code until FINISHED, then call media_publish."
+      ]
+    },
+    {
+      "id": "instagram.media.publish",
+      "name": "Publish a media container",
+      "summary": "Step 2 of publishing: makes a finished container a live post.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/{ig_user_id}/media_publish",
+      "params": {
+        "ig_user_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The Instagram account id."
+        },
+        "creation_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Container id from media.create_container."
+        }
+      },
+      "job": "social.publish",
+      "docs_url": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media_publish",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media_publish"
+      },
+      "notes": [
+        "Publishes publicly. Limit: 50 published posts per rolling 24 hours per account."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,639 @@
+{
+  "vendor": "influencersclub",
+  "name": "Influencers Club",
+  "category": "social",
+  "summary": "Creator discovery, similar creators and enrichment (profile, analytics, posts, audience overlap) across social platforms.",
+  "docs_url": "https://docs.influencers.club/",
+  "pricing_url": "https://www.influencers.club/pricing",
+  "base_url": "https://api-dashboard.influencers.club",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "INFLUENCERS_CLUB_API_KEY"
+        ],
+        "description": "an Influencers Club API key (create one in the dashboard, or via the API keys endpoints)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-priced per call, mostly fractions of a credit (0.01 per discovered creator, 0.03 to 1 per enrichment). A call returning no data is not charged.",
+    "Discovery paging is 0-indexed: the first page is page 0.",
+    "Discovery filters depend on the platform; get valid filter values from the free dictionary endpoints.",
+    "OAuth 2.0 with PKCE exists for apps acting on behalf of users; this entry uses an API key, which the docs accept as the Bearer credential."
+  ],
+  "sources": [
+    "https://docs.influencers.club/llms.txt",
+    "https://docs.influencers.club/openapi.md",
+    "https://docs.influencers.club/_bundle/openapi.yaml",
+    "https://docs.influencers.club/openapi/discovery-api/public_v1_discovery_create.md",
+    "https://docs.influencers.club/openapi/dictionary/public_v1_discovery_classifier_locations_retrieve.md"
+  ],
+  "endpoints": [
+    {
+      "id": "influencersclub.account.credits",
+      "name": "Check account credits and usage",
+      "summary": "Credits available and credits used for the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/public/v1/accounts/credits/",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.influencers.club/openapi/account-credits-and-usage/account_credits_usage_retrieve.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/account-credits-and-usage/account_credits_usage_retrieve.md"
+      }
+    },
+    {
+      "id": "influencersclub.creators.discover",
+      "name": "Discover creators",
+      "summary": "Search creators on one platform by filters, with an optional plain-language brief; sorted and paginated.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/discovery/",
+      "params": {
+        "platform": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Platform to search.",
+          "enum": [
+            "instagram",
+            "youtube",
+            "tiktok",
+            "twitter",
+            "twitch",
+            "onlyfans"
+          ]
+        },
+        "paging": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{limit, page}; page is 0-indexed.",
+          "example": {
+            "limit": 10,
+            "page": 0
+          }
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Platform-specific filters, for example location, type, gender, profile_language, ai_search (one niche, 3-150 chars). Valid values come from the dictionary endpoints.",
+          "example": {
+            "location": [
+              "United States"
+            ]
+          }
+        },
+        "nlp_search": {
+          "in": "body",
+          "type": "string",
+          "description": "Optional natural-language brief mapped to filters by AI; explicit filters win.",
+          "example": "fitness creators in New York with over 100k followers"
+        },
+        "sort": {
+          "in": "body",
+          "type": "object",
+          "description": "{sort_by: relevancy|engagement_rate|number_of_followers|growth_rate, sort_order: asc|desc}."
+        },
+        "return_filter_values": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add a matched_filters object per creator (0.03 credits per creator instead of 0.01)."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body.",
+        "0.01 credits per creator returned; zero results cost nothing. Usage is capped per billing period.",
+        "Instagram creators with 10k+ followers also carry audience demographics."
+      ],
+      "job": "social.search",
+      "docs_url": "https://docs.influencers.club/openapi/discovery-api/public_v1_discovery_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/discovery-api/public_v1_discovery_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.creators.similar",
+      "name": "Find creators similar to one creator",
+      "summary": "Lookalike creators for a reference account, with optional filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/discovery/creators/similar/",
+      "params": {
+        "platform": {
+          "in": "body",
+          "type": "string",
+          "description": "Platform to search.",
+          "enum": [
+            "instagram",
+            "youtube",
+            "tiktok",
+            "twitter",
+            "twitch",
+            "onlyfans"
+          ]
+        },
+        "filter_key": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What filter_value is.",
+          "enum": [
+            "url",
+            "username",
+            "id"
+          ]
+        },
+        "filter_value": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Email, platform URL or profile handle of the reference creator."
+        },
+        "paging": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{limit, page}; page is 0-indexed.",
+          "example": {
+            "limit": 10,
+            "page": 0
+          }
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional filters to narrow the results, such as location."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.01 credits per creator returned, on every request that returns creators."
+      ],
+      "job": "social.search",
+      "docs_url": "https://docs.influencers.club/openapi/similar-creators/public_v1_discovery_creators_similar_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/similar-creators/public_v1_discovery_creators_similar_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.creators.enrich_full",
+      "name": "Enrich a creator by handle (full)",
+      "summary": "Complete creator profile: cross-platform presence, engagement, growth, income estimates, niche and email.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/creators/enrich/handle/full/",
+      "params": {
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Creator username, profile URL, or YouTube channel id (UC...).",
+          "example": "mrbeast"
+        },
+        "platform": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Platform the handle belongs to.",
+          "enum": [
+            "instagram",
+            "youtube",
+            "tiktok",
+            "onlyfans",
+            "twitter",
+            "snapchat",
+            "discord",
+            "pinterest",
+            "facebook",
+            "linkedin",
+            "twitch"
+          ]
+        },
+        "email_required": {
+          "in": "body",
+          "type": "string",
+          "description": "must_have rejects the match (no charge) when no valid email is found; preferred returns it anyway. Default preferred.",
+          "enum": [
+            "must_have",
+            "preferred"
+          ]
+        },
+        "include_lookalikes": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include lookalike creator recommendations."
+        },
+        "include_audience_data": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include audience demographics."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "1 credit per successful request; nothing is charged when no data comes back."
+      ],
+      "job": "social.profile",
+      "docs_url": "https://docs.influencers.club/openapi/enrich-by-handle-full/public_v1_creators_enrich_handle_full_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/enrich-by-handle-full/public_v1_creators_enrich_handle_full_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.creators.enrich_profile",
+      "name": "Enrich a creator by handle (profile and contact)",
+      "summary": "Identity, validated email, location and core profile fields for one platform.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/creators/enrich/handle/profile/",
+      "params": {
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Creator username, profile URL, or YouTube channel id (UC...).",
+          "example": "mrbeast"
+        },
+        "platform": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Platform the handle belongs to.",
+          "enum": [
+            "instagram",
+            "youtube",
+            "tiktok",
+            "onlyfans",
+            "twitter",
+            "snapchat",
+            "discord",
+            "pinterest",
+            "facebook",
+            "linkedin",
+            "twitch"
+          ]
+        },
+        "email_required": {
+          "in": "body",
+          "type": "string",
+          "description": "must_have rejects the match (no charge) when no valid email is found; preferred returns it anyway.",
+          "enum": [
+            "must_have",
+            "preferred"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.2 credits per successful request. Only the requested platform is returned."
+      ],
+      "job": "social.profile",
+      "docs_url": "https://docs.influencers.club/openapi/enrich-by-handle-profile/public_v1_creators_enrich_handle_profile_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/enrich-by-handle-profile/public_v1_creators_enrich_handle_profile_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.creators.enrich_analytics",
+      "name": "Enrich a creator by handle (analytics)",
+      "summary": "Engagement, growth, posting frequency, income estimates and audience data; no contact fields.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/creators/enrich/handle/analytics/",
+      "params": {
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Creator username, profile URL, or YouTube channel id (UC...).",
+          "example": "mrbeast"
+        },
+        "platform": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Platform the handle belongs to.",
+          "enum": [
+            "instagram",
+            "onlyfans",
+            "tiktok",
+            "twitch",
+            "twitter",
+            "youtube"
+          ]
+        },
+        "include_lookalikes": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include lookalike creator recommendations."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Facebook, Pinterest, Snapchat, Discord and LinkedIn have no analytics and answer 400."
+      ],
+      "job": "social.profile",
+      "docs_url": "https://docs.influencers.club/openapi/enrich-by-handle-analytics/public_v1_creators_enrich_handle_analytics_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/enrich-by-handle-analytics/public_v1_creators_enrich_handle_analytics_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.creators.enrich_raw",
+      "name": "Get a creator's raw platform data",
+      "summary": "Unprocessed platform data: basic profile, post data and media counts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/creators/enrich/handle/raw/",
+      "params": {
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Creator username, profile URL, or YouTube channel id (UC...).",
+          "example": "mrbeast"
+        },
+        "platform": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Platform the handle belongs to.",
+          "enum": [
+            "instagram",
+            "youtube",
+            "tiktok",
+            "onlyfans",
+            "twitter",
+            "snapchat",
+            "discord",
+            "pinterest",
+            "facebook",
+            "linkedin",
+            "twitch"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.03 credits per successful request."
+      ],
+      "job": "social.profile",
+      "docs_url": "https://docs.influencers.club/openapi/enrich-by-handle-raw/public_v1_creators_enrich_handle_raw_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/enrich-by-handle-raw/public_v1_creators_enrich_handle_raw_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.creators.enrich_email",
+      "name": "Enrich a creator by email",
+      "summary": "The creator's strongest platform (most followers) with contact details and account ids.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/creators/enrich/email/",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The creator's email address.",
+          "example": "creator@example.com"
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.05 credits per successful request."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.influencers.club/openapi/enrich-by-email/public_v1_creators_enrich_email_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/enrich-by-email/public_v1_creators_enrich_email_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.creators.socials",
+      "name": "Find a creator's connected social accounts",
+      "summary": "Verified accounts on other platforms, with usernames and follower counts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/creators/socials/",
+      "params": {
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Creator username, profile URL, or YouTube channel id (UC...).",
+          "example": "mrbeast"
+        },
+        "platform": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Platform the handle belongs to.",
+          "enum": [
+            "instagram",
+            "youtube",
+            "tiktok",
+            "onlyfans",
+            "twitter",
+            "twitch"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.5 credits per successful request."
+      ],
+      "job": "social.profile",
+      "docs_url": "https://docs.influencers.club/openapi/connected-socials/public_v1_creators_socials_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/connected-socials/public_v1_creators_socials_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.creators.posts",
+      "name": "List a creator's recent posts",
+      "summary": "Recent posts with captions, media URLs, timestamps and engagement counts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/creators/content/posts/",
+      "params": {
+        "platform": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Platform.",
+          "enum": [
+            "instagram",
+            "tiktok",
+            "youtube"
+          ]
+        },
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Creator username, profile URL, or YouTube channel id (UC...).",
+          "example": "mrbeast"
+        },
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Posts per page, clamped per platform: Instagram fixed at 12, TikTok max 35, YouTube max 50."
+        },
+        "pagination_token": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor from the previous response (next_token)."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.03 credits per successful request."
+      ],
+      "job": "social.posts",
+      "docs_url": "https://docs.influencers.club/openapi/creator-posts/public_v1_creators_content_posts_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/creator-posts/public_v1_creators_content_posts_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.posts.details",
+      "name": "Get post data, comments, transcript or audio",
+      "summary": "Deeper data for one post by id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/creators/content/details/",
+      "params": {
+        "platform": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Platform.",
+          "enum": [
+            "instagram",
+            "tiktok",
+            "youtube"
+          ]
+        },
+        "content_type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What to fetch: data, comments, transcript or audio (audio not on YouTube).",
+          "enum": [
+            "data",
+            "comments",
+            "transcript",
+            "audio"
+          ]
+        },
+        "post_id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Post id.",
+          "example": "3702042988674165349_1541770582"
+        },
+        "pagination_token": {
+          "in": "body",
+          "type": "string",
+          "description": "Pagination token for comments."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.03 credits per successful request."
+      ],
+      "job": "social.comments",
+      "docs_url": "https://docs.influencers.club/openapi/post-details/public_v1_creators_content_details_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/post-details/public_v1_creators_content_details_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.creators.audience_overlap",
+      "name": "Compare audience overlap of creators",
+      "summary": "Per-creator overlap and unique-audience percentages for 2 to 10 creators.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/public/v1/creators/audience/overlap/",
+      "params": {
+        "platform": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Platform of the creators."
+        },
+        "creators": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "2 to 10 creator handles."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "1 credit per request regardless of how many creators."
+      ],
+      "job": "social.profile",
+      "docs_url": "https://docs.influencers.club/openapi/audience-overlap/public_v1_creators_audience_overlap_create.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/audience-overlap/public_v1_creators_audience_overlap_create.md"
+      }
+    },
+    {
+      "id": "influencersclub.dictionary.locations",
+      "name": "List location values for a platform",
+      "summary": "Location strings valid in discovery filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/public/v1/discovery/classifier/locations/{platform}/",
+      "params": {
+        "platform": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Platform.",
+          "example": "instagram"
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring filter on location names."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pagination offset; offset plus limit may not exceed 10,000."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 100."
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "social.search",
+      "docs_url": "https://docs.influencers.club/openapi/dictionary/public_v1_discovery_classifier_locations_retrieve.md",
+      "verified": {
+        "docs": "https://docs.influencers.club/openapi/dictionary/public_v1_discovery_classifier_locations_retrieve.md"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}
