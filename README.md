@@ -1058,11 +1058,11 @@ the package:
 | `low` | `low` | `lite` | `low` | `S` | `lite` |
 | `medium` | `medium` | `core` | `medium` | `M` | `standard` |
 | `high` | `high` | `pro` | `high` | `L` | `deep` |
-| `max` | `max` | `ultra` | `xhigh` | `XL` | `exhaustive` |
+| `max` | `x-high` | `ultra` | `xhigh` | `XL` | `exhaustive` |
 
 A backend with fewer tiers maps more than one level onto the same setting rather
-than inventing a distinction it does not have. Nimble's `x-high` and `5x-high`, and Parallel's `base`,
-have no normalized level of their own and are reachable through
+than inventing a distinction it does not have. Nimble's own `max` is not open yet, so `max` sends its deepest tier,
+`x-high`. Parallel's `base` has no normalized level of its own and is reachable through
 `provider_options`, as is You.com's `frontier`.
 
 Parallel is the one backend that *requires* an effort, so leaving it unset sends

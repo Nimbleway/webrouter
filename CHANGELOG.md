@@ -10,6 +10,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
+- Nimble `research` at `effort="max"` runs again. Nimble's API refuses its own `max` tier, which is not open yet, with a 422, so `max` now sends `x-high`, the deepest tier it runs today.
+
 ## [0.12.0] - 2026-11-10
 
 ### Changed
