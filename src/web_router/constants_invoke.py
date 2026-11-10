@@ -49,3 +49,6 @@ MSG_ROUTER_FACTORY = "register_router({name!r}, ...) takes a callable that build
 MSG_ROUTER_BUILT_NONE = "router={name!r}: its registered factory returned None, not a router."
 MSG_ROUTER_UNKNOWN = "router={name!r} names no registered router; register_router() adds one. Known: {known}."
 MSG_ROUTER_CONFIG_UNNAMED = "router_config= configures a router named by string, router='name'; pass it with one."
+MSG_ROUTER_CONFIG_UNKNOWN = "router={name!r} does not take the router_config key(s) {keys}; it takes: {takes}."
+MSG_ROUTER_CONFIG_MISSING = "router={name!r} needs the router_config key(s) {keys}."
+MSG_ROUTER_DISCARD_FAILED = "A router built by name and refused did not close ({kind}); it is dropped."

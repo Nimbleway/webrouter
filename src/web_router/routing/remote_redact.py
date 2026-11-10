@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from web_router.constants_remote import REMOTE_EXCLUDE_FIELD, REMOTE_KEY_REDACTED, REMOTE_PARAMS_FIELD
+from web_router.constants_remote import (
+    REMOTE_EXCLUDE_FIELD,
+    REMOTE_KEY_REDACTED,
+    REMOTE_PARAMS_FIELD,
+    REMOTE_TOOLS_FIELD,
+)
 
 
 def _unechoed(value: Any, key: str, *, names: bool = False) -> Any:
@@ -21,14 +26,18 @@ def _unechoed(value: Any, key: str, *, names: bool = False) -> Any:
 def unechoed_decision(data: Any, key: str) -> Any:
     """A decision's JSON with ``key`` redacted from its text and every name a record can show.
 
-    Field names and the tool names keying ``providers`` and ``params`` stay whole, so a key spelled like one
-    cannot turn a valid decision invalid; ``exclude``'s candidate ids and each tool's option names are redacted.
+    Field names, ``tools`` and the tool names keying ``providers`` and ``params`` stay whole: the wire refuses
+    any but a known tool's name, so an echo cannot hide there, and a key spelled like one cannot turn a valid
+    decision invalid. ``exclude``'s candidate ids, ``providers``' backend names and each tool's option names are
+    redacted, since a record shows one it ignores; a key spelled like one makes that entry an unknown one.
     """
     if not isinstance(data, dict):
         return data
     out = {}
     for field, item in data.items():
-        if field == REMOTE_PARAMS_FIELD and isinstance(item, dict):
+        if field == REMOTE_TOOLS_FIELD:
+            out[field] = item
+        elif field == REMOTE_PARAMS_FIELD and isinstance(item, dict):
             out[field] = {tool: _unechoed(options, key, names=True) for tool, options in item.items()}
         else:
             out[field] = _unechoed(item, key, names=field == REMOTE_EXCLUDE_FIELD)

@@ -7,12 +7,22 @@ closes it, from sync or async code, or at once when attaching it fails.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from typing import Any
 
+from web_router.constants_invoke import MSG_ROUTER_DISCARD_FAILED
 from web_router.routing.invoke import RouterLike
 from web_router.routing.registry import aclose_router, discard_router, resolve_router
+
+
+def _discard_refused(router: RouterLike | None) -> None:
+    """Close a router whose owner refused to start: the refusal says why, so a failed close warns by its class."""
+    try:
+        discard_router(router)
+    except Exception as exc:
+        warnings.warn(MSG_ROUTER_DISCARD_FAILED.format(kind=type(exc).__name__), ResourceWarning, stacklevel=4)
 
 
 class RouterOwner:
@@ -32,9 +42,13 @@ class RouterOwner:
         try:
             yield attached
         except BaseException:
-            discard_router(owned)  # built here and refused: nothing else would close it
+            _discard_refused(owned)  # built here and refused: nothing else would close it
             raise
         self._owned_router = owned
+
+    def _close_refused_router(self) -> None:
+        """Close the router built here when the routers refuse to start; a close that fails only warns."""
+        _discard_refused(self._owned_router)
 
     def _close_router(self) -> None:
         """Close the router when it was built here by name; one passed in is the caller's to close."""

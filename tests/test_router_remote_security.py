@@ -10,6 +10,8 @@ import pytest
 from tests.routing_remote_helpers import KEY, Canned, Recorder, canned, config, running
 from web_router import RouterError, WebRouter
 from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY
+from web_router.routing.remote_redact import unechoed_decision
+from web_router.routing.wire import decision_from_wire
 
 PROVIDER_KEY = "fake-provider-secret-value-42"
 
@@ -86,6 +88,14 @@ def test_an_escaped_echo_is_redacted_and_a_numeric_key_changes_no_number() -> No
     with canned(Canned(body=b'{"schema": 1, "tools": ["search"]}')) as base:
         plan = WebRouter(router="remote", router_config={"url": base + "/route", "api_key": "schema"}).plan("x")
     assert plan.decision.reason != "router_invalid", "a key spelled like a field leaves the field names alone"
+
+
+def test_a_key_spelled_like_a_tool_name_leaves_a_valid_decision_valid() -> None:
+    answer = {"schema": 1, "tools": ["search"], "providers": {"search": ["exa"]}}
+    decision = decision_from_wire(unechoed_decision(answer, "search"))
+    assert decision.tools == ["search"] and decision.providers == {"search": ["exa"]}
+    echoed = decision_from_wire(unechoed_decision({**answer, "providers": {"search": [KEY]}}, KEY))
+    assert echoed.providers == {"search": ["[redacted]"]}, "an unknown backend reaches the record: still redacted"
 
 
 def test_a_redirect_is_a_router_error_and_the_key_never_follows_it() -> None:
