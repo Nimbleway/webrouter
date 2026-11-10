@@ -21,18 +21,12 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Collection, Iterator, Mapping
 from contextlib import contextmanager
-from typing import Any, TypeVar, get_args
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_invoke import (
-    MSG_ROUTE_TOOLS,
-    MSG_ROUTER_ROUTE_TOOLS,
-    ROUTER_ROUTE_TOOLS_ATTR,
-    ROUTER_URL_POLICY_ATTR,
-)
-from web_router.exceptions import ConfigurationError
+from web_router.constants_invoke import ROUTER_URL_POLICY_ATTR
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
@@ -43,6 +37,7 @@ from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
+from web_router.routing.route_tools import ALL_TOOLS, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import NormalizedRequest
@@ -55,34 +50,11 @@ _TOOL_OF: dict[type[NormalizedRequest], ToolName] = {cls: tool for tool, cls in 
 """The tool a request is for, read from its type."""
 
 
-_ALL_TOOLS: frozenset[ToolName] = frozenset(get_args(ToolName))
-
-
-def _route_tools(route_tools: Collection[ToolName] | None, router: object = None) -> frozenset[ToolName]:
-    """The tools that ask the router: the caller's ``route_tools``, else the router's own, else all five."""
-    message = MSG_ROUTE_TOOLS
-    if route_tools is None:
-        route_tools = getattr(router, ROUTER_ROUTE_TOOLS_ATTR, None)
-        message = MSG_ROUTER_ROUTE_TOOLS
-    if route_tools is None:
-        return _ALL_TOOLS
-    # Iterated once: a collection that reads differently each time is held to this one reading.
-    tools = None if isinstance(route_tools, str) or not isinstance(route_tools, Collection) else tuple(route_tools)
-    if (
-        tools is None
-        or not all(isinstance(tool, str) for tool in tools)  # an unhashable member never reaches set()
-        or not set(tools) <= _ALL_TOOLS
-    ):
-        known = ", ".join(get_args(ToolName))
-        raise ConfigurationError(message.format(known=known, got=route_tools))
-    return frozenset(tools)
-
-
 class RouterSetup(RouterOwner):
     """The attached router and the tools it is consulted on, shared by both routers."""
 
     _router: AttachedRouter | None = None
-    _route_tools: frozenset[ToolName] = _ALL_TOOLS
+    _route_tools: frozenset[ToolName] = ALL_TOOLS
     _url_check: UrlCheck | None = None
     _router_url_check: UrlCheck | None = None
     """The check on the URLs a router sets: the caller's ``url_policy``, else the router's ``min_url_policy``."""
@@ -104,9 +76,9 @@ class RouterSetup(RouterOwner):
         """
         self._url_check = url_check(url_policy)
         # Checked once, before a router is built by name, and that result kept: the caller's value is not read again.
-        callers = None if route_tools is None else _route_tools(route_tools)
+        callers = None if route_tools is None else checked_route_tools(route_tools)
         with self._built(router, router_config) as attached:
-            self._route_tools = _route_tools(None, attached) if callers is None else callers
+            self._route_tools = checked_route_tools(None, attached) if callers is None else callers
             self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
             floor = getattr(attached, ROUTER_URL_POLICY_ATTR, None) if url_policy is None else url_policy
             self._router_url_check = url_check(floor)

@@ -183,6 +183,8 @@ src/web_router/
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
+│   ├── route_tools.py  the tools that ask the router: the caller's route_tools, else
+│   │                   the router's own, else all five; read once
 │   ├── router_owner.py a router built by name: kept to close with the routers, or closed if refused
 │   ├── submitted.py    submitted(): a job's start (submit_research, submit_browse)
 │   │                   held to the shared budget in force, at the effort it maps
