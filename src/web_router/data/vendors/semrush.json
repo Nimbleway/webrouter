@@ -1,0 +1,1005 @@
+{
+  "vendor": "semrush",
+  "name": "Semrush",
+  "category": "seo",
+  "summary": "Semrush Analytics API: domain overviews, organic and paid keywords, keyword research and backlink reports.",
+  "docs_url": "https://developer.semrush.com/api/v3/analytics/basic-docs/",
+  "pricing_url": "https://www.semrush.com/prices/",
+  "base_url": "https://api.semrush.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SEMRUSH_API_KEY"
+        ],
+        "description": "a Semrush API key (Subscription info > API units in your Semrush account); it spends your API unit balance"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every report is a GET with a type parameter naming the report; each endpoint here fixes it, and you must still send it (the enum has one value).",
+    "Reports answer CSV (semicolon-separated, header row), not JSON. Use export_columns to choose columns.",
+    "Billing is in API units per returned line, so always set display_limit; the default is up to 10,000 lines.",
+    "Backlink reports live under /analytics/v1/ instead of the root path; the unit balance check is on a separate http host and is not included."
+  ],
+  "sources": [
+    "https://developer.semrush.com/api/v3/analytics/basic-docs/",
+    "https://developer.semrush.com/api/v3/seo/domain-reports",
+    "https://developer.semrush.com/api/v3/seo/keyword-reports",
+    "https://developer.semrush.com/api/v3/seo/backlinks",
+    "https://developer.semrush.com/api/v3/seo/overview-reports",
+    "https://developer.semrush.com/api/v3/get-started/authorization"
+  ],
+  "endpoints": [
+    {
+      "id": "semrush.overview.domain_ranks",
+      "name": "Domain overview across databases",
+      "summary": "Organic and paid search totals (rank, keywords, traffic, traffic cost) for a domain, one line per regional database.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always domain_ranks for this call.",
+          "example": "domain_ranks",
+          "enum": [
+            "domain_ranks"
+          ]
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to investigate.",
+          "example": "example.com"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "description": "Regional database code. Unset returns about 140 lines, one per database you can access.",
+          "example": "us"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: Db, Dt, Dn, Rk, Or, Ot, Oc, Ad, At, Ac, Sh, Sv, FKn, FPn, Sr, Srb, St, Stb, Sc, Srn, Srl"
+        },
+        "display_sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, a column code plus _asc or _desc. Known values: rk_asc, rk_desc, or_asc, or_desc, ot_asc, ot_desc, oc_asc, oc_desc, ad_asc, ad_desc, at_asc, at_desc, ac_asc, ac_desc"
+        },
+        "display_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Month to report, as YYYYMM15. Unset returns the latest data. Asking for a past date bills the higher historical price.",
+          "example": "20260915"
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Costs 10 API units per line returned (50 per line for historical data). Without database, expect about 140 lines."
+      ],
+      "job": "domain.overview",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/overview-reports",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/overview-reports"
+      }
+    },
+    {
+      "id": "semrush.overview.domain_rank",
+      "name": "Domain overview in one database",
+      "summary": "Rank, organic and paid keywords, traffic and traffic cost for a domain in one regional database.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always domain_rank for this call.",
+          "example": "domain_rank",
+          "enum": [
+            "domain_rank"
+          ]
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to investigate.",
+          "example": "example.com"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Regional database code, such as us, uk or de.",
+          "example": "us"
+        },
+        "display_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Month to report, as YYYYMM15. Unset returns the latest data. Asking for a past date bills the higher historical price.",
+          "example": "20260915"
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: Dn, Rk, Or, Xn, Ot, Oc, Ad, At, Ac, FKn, FPn, Ipu, Ip0, Ip1, Ip2, Ip3, Itu, It0, It1, It2, It3, Icu, Ic0, Ic1, Ic2, Ic3, Sr, Srb, St, Stb, Sc, Srn, Srl"
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Costs 10 API units per line (50 for historical data); a normal call returns one line."
+      ],
+      "job": "domain.rank",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/overview-reports",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/overview-reports"
+      }
+    },
+    {
+      "id": "semrush.domain.organic_keywords",
+      "name": "Domain organic search keywords",
+      "summary": "Keywords a domain ranks for in Google's top 100 organic results, with position, volume, CPC, traffic share and URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always domain_organic for this call.",
+          "example": "domain_organic",
+          "enum": [
+            "domain_organic"
+          ]
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to investigate.",
+          "example": "example.com"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Regional database code, such as us, uk or de.",
+          "example": "us"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: Ph, Po, Pp, Pd, Nq, Cp, Ur, Tr, Tg, Tc, Co, Nr, Td, Kd, Fp, Fk, Ts, In, Pt"
+        },
+        "display_sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, a column code plus _asc or _desc. Known values: po_asc, po_desc, tg_asc, tg_desc, tr_asc, tr_desc, tc_asc, tc_desc, nq_asc, nq_desc, co_asc, co_desc, kd_asc, kd_desc, cp_asc, cp_desc, nr_asc, nr_desc, ts_asc, ts_desc"
+        },
+        "display_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Month to report, as YYYYMM15. Unset returns the latest data. Asking for a past date bills the higher historical price.",
+          "example": "20260915"
+        },
+        "display_positions": {
+          "in": "query",
+          "type": "string",
+          "description": "Only keywords that are new, lost, rise or fall since the previous period.",
+          "enum": [
+            "new",
+            "lost",
+            "rise",
+            "fall"
+          ]
+        },
+        "display_daily": {
+          "in": "query",
+          "type": "integer",
+          "description": "Set 1 for daily position changes over the last 31 days (use with display_positions).",
+          "example": 1
+        },
+        "display_filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Column filter, written as sign|column|value, for example +|Ph|Co|seo keeps keywords containing seo.",
+          "example": "+|Ph|Co|seo"
+        },
+        "display_positions_type": {
+          "in": "query",
+          "type": "string",
+          "description": "organic (default) for standard organic positions, all to add SERP features, serp_features for SERP features only.",
+          "enum": [
+            "organic",
+            "all",
+            "serp_features"
+          ]
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Costs 10 API units per line (50 per line for historical data). A default call returns up to 10,000 lines, so set display_limit."
+      ],
+      "job": "domain.keywords.organic",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/domain-reports",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/domain-reports"
+      }
+    },
+    {
+      "id": "semrush.domain.paid_keywords",
+      "name": "Domain paid search keywords",
+      "summary": "Keywords a domain buys in Google Ads, with position, volume, CPC, traffic share and ad copy.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always domain_adwords for this call.",
+          "example": "domain_adwords",
+          "enum": [
+            "domain_adwords"
+          ]
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to investigate.",
+          "example": "example.com"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Regional database code, such as us, uk or de.",
+          "example": "us"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: Ph, Po, Pp, Pd, Ab, Nq, Cp, Tg, Tr, Tc, Co, Nr, Td, Tt, Ds, Vu, Ur, Ts, Un"
+        },
+        "display_sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, a column code plus _asc or _desc. Known values: po_asc, po_desc, tg_asc, tg_desc, tr_asc, tr_desc, tc_asc, tc_desc, nq_asc, nq_desc"
+        },
+        "display_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Month to report, as YYYYMM15. Unset returns the latest data. Asking for a past date bills the higher historical price.",
+          "example": "20260915"
+        },
+        "display_positions": {
+          "in": "query",
+          "type": "string",
+          "description": "Only keywords that are new, lost, rise or fall since the previous period.",
+          "enum": [
+            "new",
+            "lost",
+            "rise",
+            "fall"
+          ]
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Costs 20 API units per line (100 per line for historical data)."
+      ],
+      "job": "domain.keywords.paid",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/domain-reports",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/domain-reports"
+      }
+    },
+    {
+      "id": "semrush.domain.organic_competitors",
+      "name": "Domain organic competitors",
+      "summary": "Domains that share organic keywords with the target, with common keyword counts and their own organic totals.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always domain_organic_organic for this call.",
+          "example": "domain_organic_organic",
+          "enum": [
+            "domain_organic_organic"
+          ]
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to find competitors for.",
+          "example": "example.com"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Regional database code, such as us, uk or de.",
+          "example": "us"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: Dn, Cr, Np, Or, Ot, Oc, Ad, Sr, St, Sc"
+        },
+        "display_sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, a column code plus _asc or _desc. Known values: np_desc, np_asc, cr_desc, cr_asc"
+        },
+        "display_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Month to report, as YYYYMM15. Unset returns the latest data. Asking for a past date bills the higher historical price.",
+          "example": "20260915"
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Costs 40 API units per line (200 per line for historical data)."
+      ],
+      "job": "domain.competitors",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/domain-reports",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/domain-reports"
+      }
+    },
+    {
+      "id": "semrush.keyword.overview_all_databases",
+      "name": "Keyword overview across databases",
+      "summary": "Search volume, CPC and competition for one keyword, one line per regional database.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always phrase_all for this call.",
+          "example": "phrase_all",
+          "enum": [
+            "phrase_all"
+          ]
+        },
+        "phrase": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The keyword or keyword expression to investigate.",
+          "example": "seo"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "description": "Regional database code. Unset queries all databases.",
+          "example": "us"
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: Dt, Db, Ph, Nq, Cp, Co, Nr, In, Kd"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Costs 10 API units per line."
+      ],
+      "job": "keywords.volume",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/keyword-reports",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/keyword-reports"
+      }
+    },
+    {
+      "id": "semrush.keyword.overview",
+      "name": "Keyword overview in one database",
+      "summary": "Search volume, CPC, competition, number of results and intent for one keyword in one database.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always phrase_this for this call.",
+          "example": "phrase_this",
+          "enum": [
+            "phrase_this"
+          ]
+        },
+        "phrase": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The keyword or keyword expression to investigate.",
+          "example": "seo"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Regional database code, such as us, uk or de.",
+          "example": "us"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: Ph, Nq, Cp, Co, Nr, Td, In, Kd"
+        },
+        "display_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Month to report, as YYYYMM15. Unset returns the latest data. Asking for a past date bills the higher historical price.",
+          "example": "20260915"
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Costs 10 API units per line (50 for historical data)."
+      ],
+      "job": "keywords.volume",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/keyword-reports",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/keyword-reports"
+      }
+    },
+    {
+      "id": "semrush.keyword.related",
+      "name": "Related keywords",
+      "summary": "Keywords related to a seed keyword, with volume, CPC, competition and a relatedness score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always phrase_related for this call.",
+          "example": "phrase_related",
+          "enum": [
+            "phrase_related"
+          ]
+        },
+        "phrase": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The keyword or keyword expression to investigate.",
+          "example": "seo"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Regional database code, such as us, uk or de.",
+          "example": "us"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: Ph, Nq, Cp, Co, Nr, Td, Rr, Fk, In, Kd"
+        },
+        "display_sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, a column code plus _asc or _desc. Known values: nq_asc, nq_desc, cp_asc, cp_desc, co_asc, co_desc, nr_asc, nr_desc, rr_asc, rr_desc, kd_asc, kd_desc"
+        },
+        "display_filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Column filter written as sign|column|value.",
+          "example": "+|Nq|Gt|100"
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Costs 40 API units per line."
+      ],
+      "job": "keywords.ideas",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/keyword-reports",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/keyword-reports"
+      }
+    },
+    {
+      "id": "semrush.keyword.organic_results",
+      "name": "Organic results for a keyword",
+      "summary": "The domains and URLs ranking in Google's top organic results for a keyword.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always phrase_organic for this call.",
+          "example": "phrase_organic",
+          "enum": [
+            "phrase_organic"
+          ]
+        },
+        "phrase": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The keyword or keyword expression to investigate.",
+          "example": "seo"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Regional database code, such as us, uk or de.",
+          "example": "us"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: Po, Pt, Dn, Ur, Fk, Fp, Fl"
+        },
+        "display_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Month to report, as YYYYMM15. Unset returns the latest data. Asking for a past date bills the higher historical price.",
+          "example": "20260915"
+        },
+        "positions_type": {
+          "in": "query",
+          "type": "string",
+          "description": "organic (standard positions) or all (including SERP features).",
+          "enum": [
+            "organic",
+            "all"
+          ]
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Costs 10 API units per line (50 for historical data)."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/keyword-reports",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/keyword-reports"
+      }
+    },
+    {
+      "id": "semrush.keyword.difficulty",
+      "name": "Keyword difficulty",
+      "summary": "Keyword difficulty score (0-100) for up to 100 keywords.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always phrase_kdi for this call.",
+          "example": "phrase_kdi",
+          "enum": [
+            "phrase_kdi"
+          ]
+        },
+        "phrase": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "From 1 to 100 keywords separated by semicolons.",
+          "example": "seo;seo tools"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Regional database code, such as us, uk or de.",
+          "example": "us"
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: Ph, Kd"
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Costs 50 API units per line."
+      ],
+      "job": "keywords.difficulty",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/keyword-reports",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/keyword-reports"
+      }
+    },
+    {
+      "id": "semrush.backlinks.overview",
+      "name": "Backlinks overview",
+      "summary": "Totals for a domain, subdomain or URL: backlinks, referring domains and IPs, follow and nofollow counts, authority score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/analytics/v1/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always backlinks_overview for this call.",
+          "example": "backlinks_overview",
+          "enum": [
+            "backlinks_overview"
+          ]
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Root domain, subdomain or URL to analyze.",
+          "example": "example.com"
+        },
+        "target_type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "What target is: root_domain, domain (host) or url.",
+          "example": "root_domain",
+          "enum": [
+            "root_domain",
+            "domain",
+            "url"
+          ]
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: ascore, total, domains_num, urls_num, ips_num, ipclassc_num, follows_num, nofollows_num, sponsored_num, ugc_num, texts_num, images_num, forms_num, frames_num"
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Backlink reports use the /analytics/v1/ path. Costs 40 API units per request."
+      ],
+      "job": "backlinks.summary",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/backlinks",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/backlinks"
+      }
+    },
+    {
+      "id": "semrush.backlinks.list",
+      "name": "Backlinks",
+      "summary": "Individual backlinks to a target with source and target URLs, anchor, link flags and first and last seen dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/analytics/v1/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always backlinks for this call.",
+          "example": "backlinks",
+          "enum": [
+            "backlinks"
+          ]
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Root domain, subdomain or URL to analyze.",
+          "example": "example.com"
+        },
+        "target_type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "What target is: root_domain, domain (host) or url.",
+          "example": "root_domain",
+          "enum": [
+            "root_domain",
+            "domain",
+            "url"
+          ]
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: page_ascore, response_code, source_size, external_num, internal_num, redirect_url, source_url, source_title, image_url, target_url, target_title, anchor, image_alt, last_seen, first_seen, nofollow, form, frame, image"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        },
+        "display_sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, a column code plus _asc or _desc. Known values: page_ascore_asc, page_ascore_desc, last_seen_asc, last_seen_desc, first_seen_asc, first_seen_desc"
+        },
+        "display_filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter on type, zone, ip, refdomain, anchor, newlink, lostlink, urlanchor or redirects."
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Backlink reports use the /analytics/v1/ path. Costs 40 API units per line."
+      ],
+      "job": "backlinks.list",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/backlinks",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/backlinks"
+      }
+    },
+    {
+      "id": "semrush.backlinks.refdomains",
+      "name": "Referring domains",
+      "summary": "Domains that link to a target, with backlink counts, authority scores, IP, country and first and last seen dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/analytics/v1/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always backlinks_refdomains for this call.",
+          "example": "backlinks_refdomains",
+          "enum": [
+            "backlinks_refdomains"
+          ]
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Root domain, subdomain or URL to analyze.",
+          "example": "example.com"
+        },
+        "target_type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "What target is: root_domain, domain (host) or url.",
+          "example": "root_domain",
+          "enum": [
+            "root_domain",
+            "domain",
+            "url"
+          ]
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: domain_ascore, domain_score, domain, backlinks_num, domain_trust_score, ip, country, first_seen, last_seen"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        },
+        "display_sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, a column code plus _asc or _desc. Known values: domain_ascore_asc, domain_ascore_desc, backlinks_num_asc, backlinks_num_desc, last_seen_asc, last_seen_desc, first_seen_asc, first_seen_desc"
+        },
+        "display_filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter on zone, country, ip, newdomain, lostdomain or category."
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Backlink reports use the /analytics/v1/ path. Costs 40 API units per line."
+      ],
+      "job": "backlinks.refdomains",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/backlinks",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/backlinks"
+      }
+    },
+    {
+      "id": "semrush.backlinks.anchors",
+      "name": "Backlink anchors",
+      "summary": "Anchor texts used in links to a target, with referring domain and backlink counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/analytics/v1/",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The report type. Always backlinks_anchors for this call.",
+          "example": "backlinks_anchors",
+          "enum": [
+            "backlinks_anchors"
+          ]
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Root domain, subdomain or URL to analyze.",
+          "example": "example.com"
+        },
+        "target_type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "What target is: root_domain, domain (host) or url.",
+          "example": "root_domain",
+          "enum": [
+            "root_domain",
+            "domain",
+            "url"
+          ]
+        },
+        "export_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated column codes to return. Unset sends the report's default columns. Known codes: anchor, domains_num, backlinks_num, first_seen, last_seen"
+        },
+        "display_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "example": 10
+        },
+        "display_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lines to skip before the report starts. Add it to display_limit."
+        },
+        "display_sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, a column code plus _asc or _desc. Known values: domains_num_asc, domains_num_desc, backlinks_num_asc, backlinks_num_desc, first_seen_asc, first_seen_desc, last_seen_asc, last_seen_desc"
+        }
+      },
+      "notes": [
+        "Answers CSV text, semicolon-separated with a header row, not JSON; export_columns picks the columns.",
+        "Backlink reports use the /analytics/v1/ path. Costs 40 API units per line."
+      ],
+      "job": "backlinks.anchors",
+      "docs_url": "https://developer.semrush.com/api/v3/seo/backlinks",
+      "verified": {
+        "docs": "https://developer.semrush.com/api/v3/seo/backlinks"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}
