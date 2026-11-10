@@ -108,6 +108,24 @@ JSON_RESULT = {
 }
 
 
+# Recorded from a live low-effort run without trust (task_run_475908a24f724a8d8cb7b97fe3d6a627).
+NO_TRUST_RESULT = {
+    "run": _run("completed", trust_mode="no_trust"),
+    "output": {
+        "type": "json",
+        "content": {"products": ["Web Search Agents (Agent API)", "Search API", "Extract API"]},
+        "trust": None,
+        "sources": [
+            {
+                "url": "https://llms.nimbleway.com/nimble-platform-products-and-apis",
+                "title": "Nimble Platform, Products, and APIs",
+            },
+            {"url": "https://nimbleway.com/pricing", "title": "Nimble Pricing | Web Search Agent Platform & SDK Plans"},
+        ],
+    },
+}
+
+
 class _Model:
     """Stands in for an SDK response model, which the provider reads through ``model_dump``."""
 
@@ -366,6 +384,21 @@ def test_a_structured_run_answers_in_structure_and_cites_by_path(provider: Nimbl
     assert response.structured == {"founded": "2019"}
     assert response.answer is None
     assert [citation.field for citation in response.citations] == ["$.founded"]
+
+
+def test_a_run_without_trust_is_cited_from_its_output_sources(provider: NimbleResearchProvider) -> None:
+    _stub(provider, started=_run("completed"), result=NO_TRUST_RESULT)
+
+    citations = provider.research(ResearchRequest(query="q", output_schema=SCHEMA)).citations
+
+    assert [(citation.url, citation.title, citation.field) for citation in citations] == [
+        (
+            "https://llms.nimbleway.com/nimble-platform-products-and-apis",
+            "Nimble Platform, Products, and APIs",
+            None,
+        ),
+        ("https://nimbleway.com/pricing", "Nimble Pricing | Web Search Agent Platform & SDK Plans", None),
+    ]
 
 
 async def test_the_async_path_answers_the_same_way(provider: NimbleResearchProvider) -> None:
