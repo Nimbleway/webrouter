@@ -10,30 +10,26 @@ answers. Swap `decide` for your own logic, or port it to any language: a
 service reads `"schema": 1` JSON, ignores request fields it does not know, and
 answers `{"schema": 1, ...}` with any of the decision's optional fields.
 
-What a service is shown: the prompt, the URLs in it, the budget and the
-candidates, named `tool:provider` -- which say what backends the caller has
-configured. Never a key value: the one credential on the request is the
-service's own bearer key.
+A service is shown the prompt, its URLs, the budget and the candidates, named `tool:provider` -- which
+say what backends the caller has configured -- and never a key but its own bearer key.
 
-Run it with::
+Run it, after `make setup` in your webrouter clone::
 
-    make setup   # in your webrouter clone: every extra
     uv run python examples/router_remote_server.py            # serve on http://127.0.0.1:8765/route
     uv run python examples/router_remote_server.py --demo     # serve, plan three prompts through it, stop
 
-Set `WEB_ROUTER_REMOTE_ROUTER_API_KEY` before starting it to require that key;
-the `remote` router reads the same variable. It binds 127.0.0.1 unless
-`--host` says otherwise (any other host needs the key), answers only a `Host`
-header naming that address or `localhost`, caps a request at 1 MB, serves at
-most 32 connections at once and drops one that sends nothing for 10 seconds.
-Plain `http` is accepted only to `localhost` or a loopback address: put a real
-service behind `https`.
+`WEB_ROUTER_REMOTE_ROUTER_API_KEY`, set, is the key it requires and the one the `remote` router sends.
+It binds 127.0.0.1 unless `--host` says otherwise (any other host needs the key), answers only a `Host`
+naming that address or `localhost`, caps a request at 1 MB, serves at most 32 connections at once and
+drops one that sends nothing for 10 s. Plain `http` reaches only a loopback host: put a real service
+behind `https`.
 """
 
 from __future__ import annotations
 
 import argparse
 import hmac
+import ipaddress
 import json
 import os
 import socket
@@ -51,7 +47,6 @@ MAX_BODY_BYTES = 1_000_000
 POLL_S = 0.05  # how soon shutdown() is noticed
 SOCKET_TIMEOUT_S = 10.0
 MAX_WORKERS = 32  # connections served at once; more are closed before a thread is spent on them
-LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")
 PROMPTS = (
     "what is retrieval augmented generation",
     "read https://en.wikipedia.org/wiki/Web_scraping",
@@ -155,9 +150,16 @@ class _Handler(BaseHTTPRequestHandler):
         """Quiet: a request line is enough noise in tests, and headers -- the key among them -- are never logged."""
 
 
+def _loopback(host: str) -> bool:
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return host == "localhost"
+
+
 def serve(host: str = "127.0.0.1", port: int = 8765, *, api_key: str | None = None) -> RouterServer:
     """A server bound to ``host:port`` (0 picks a free port), answering on a background thread."""
-    if not api_key and host not in LOOPBACK_HOSTS:
+    if not api_key and not _loopback(host):
         raise ValueError("a host other than loopback needs WEB_ROUTER_REMOTE_ROUTER_API_KEY: the Host check is no auth")
     server = RouterServer((host, port), api_key=api_key)
     threading.Thread(target=server.serve_forever, kwargs={"poll_interval": POLL_S}, daemon=True).start()

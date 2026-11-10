@@ -81,6 +81,7 @@ def test_the_example_server_closes_connections_past_its_worker_limit(monkeypatch
 def test_the_example_server_needs_a_key_to_bind_anything_but_loopback() -> None:
     with pytest.raises(ValueError, match="WEB_ROUTER_REMOTE_ROUTER_API_KEY"):
         reference.serve("0.0.0.0", 0)
+    assert reference._loopback("127.0.0.2") and reference._loopback("localhost") and not reference._loopback("::")
 
 
 def test_the_example_server_serves_ipv6_loopback() -> None:
