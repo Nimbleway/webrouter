@@ -106,6 +106,16 @@ def test_an_unknown_name_is_not_found_and_nothing_is_scraped() -> None:
     assert "/datasets/v3/scrape" not in [r.url.path for r in api.requests]
 
 
+def test_a_name_split_by_a_new_scraper_names_its_replacements() -> None:
+    twin = {**SCRAPER, "id": "gd_twin000000000000000", "domain": "amazon.de"}
+    provider, _ = _provider(_by_path([], catalogue=(SCRAPER, twin)))
+    with pytest.raises(LiveDataSourceNotFoundError) as caught:
+        provider.run(LiveDataRequest(source="amazon_products", inputs={"url": URL}))
+    message = str(caught.value)
+    assert "amazon_products_amazon_com, amazon_products_amazon_de" in message
+    assert "by_keyword" not in message and "gd_" in message
+
+
 def test_options_cannot_change_the_method_a_name_picks() -> None:
     provider, api = _provider(_by_path([]))
     options = {"type": "discover_new", "discover_by": "category_url", "limit_per_input": 5}

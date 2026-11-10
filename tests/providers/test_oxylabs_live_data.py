@@ -79,6 +79,21 @@ def test_a_failed_parse_raises(monkeypatch: pytest.MonkeyPatch, code: int) -> No
         provider.run(LiveDataRequest(source="amazon_product", inputs={"query": "x"}))
 
 
+@pytest.mark.parametrize("payload", [{}, {"results": []}], ids=["absent", "empty"])
+def test_no_result_raises(monkeypatch: pytest.MonkeyPatch, payload: dict[str, Any]) -> None:
+    provider, _ = _provider(lambda request: httpx.Response(200, json=payload), monkeypatch)
+    with pytest.raises(ProviderError, match="no result"):
+        provider.run(LiveDataRequest(source="amazon_product", inputs={"query": "x"}))
+
+
+@pytest.mark.parametrize("content", [{}, {"asin": "B000000001"}], ids=["empty", "no-parse-status"])
+def test_a_record_with_no_parse_status_raises(monkeypatch: pytest.MonkeyPatch, content: dict[str, Any]) -> None:
+    payload = {"results": [_result(content)]}
+    provider, _ = _provider(lambda request: httpx.Response(200, json=payload), monkeypatch)
+    with pytest.raises(ProviderError, match="could not parse"):
+        provider.run(LiveDataRequest(source="amazon_product", inputs={"query": "x"}))
+
+
 def test_an_unparsed_html_body_is_not_a_record(monkeypatch: pytest.MonkeyPatch) -> None:
     payload = {"results": [_result("<html>...</html>")]}
     provider, _ = _provider(lambda request: httpx.Response(200, json=payload), monkeypatch)

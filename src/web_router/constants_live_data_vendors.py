@@ -90,4 +90,12 @@ OXYLABS_FAILED_FETCH_FLOOR: Final = 400
 
 MSG_OXYLABS_NOT_PARSED: Final = "Oxylabs could not parse {source!r}: parse_status_code {code} ({url})"
 
+MSG_BRIGHTDATA_RENAMED_HINT: Final = (
+    "; Bright Data may have added a scraper with the same name, which gives each its site: {names}."
+    " A gd_ dataset id never changes"
+)
+"""Appended to a Bright Data not-found: a name gains its site when another scraper takes the same name."""
+
+MSG_OXYLABS_NO_RESULTS: Final = "Oxylabs returned no result for {source!r}: no page was fetched or parsed"
+
 MSG_OXYLABS_NOT_FETCHED: Final = "Oxylabs could not fetch {source!r}: status {status} ({url})"

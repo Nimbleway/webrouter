@@ -52,6 +52,7 @@ from web_router.constants_live_data_vendors import (
     BRIGHTDATA_SCRAPERS_PATH,
     MSG_BRIGHTDATA_ALL_FAILED,
     MSG_BRIGHTDATA_PENDING,
+    MSG_BRIGHTDATA_RENAMED_HINT,
 )
 from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
 from web_router.providers._http_live_data import HttpLiveDataProvider
@@ -145,8 +146,14 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
         # Bright Data's own name works as written too: "Amazon products" is amazon_products.
         scraper = (known or {}).get(source) or (known or {}).get(slug(source))
         if scraper is None:
-            raise LiveDataSourceNotFoundError(self.name, source)
+            raise LiveDataSourceNotFoundError(self.name, source, hint=self._renamed_hint(slug(source), known or {}))
         return scraper
+
+    @staticmethod
+    def _renamed_hint(key: str, known: dict[str, Scraper]) -> str:
+        """The URL-method names that extend ``key``: where a name goes once Bright Data adds a scraper sharing it."""
+        close = sorted(name for name, s in known.items() if name.startswith(f"{key}_") and not s.discovers)
+        return MSG_BRIGHTDATA_RENAMED_HINT.format(names=", ".join(close[:5])) if close else ""
 
     # -- run ----------------------------------------------------------------
 

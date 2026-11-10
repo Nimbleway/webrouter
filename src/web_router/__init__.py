@@ -41,6 +41,7 @@ holding it ends:
     ...     tree = browser.snapshot().tree
 """
 
+from web_router import live_data_compat as _live_data_compat
 from web_router._version import __version__
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.client_scope import AsyncBudgetScope, BudgetScope
@@ -296,6 +297,9 @@ __all__ = [
     "unregister_provider",
     "unregister_research_provider",
 ]
+
+
+_live_data_compat.install()
 
 
 def __getattr__(name: str) -> object:

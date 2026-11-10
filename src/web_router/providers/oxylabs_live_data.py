@@ -34,6 +34,7 @@ from web_router.constants import (
     PROVIDER_OXYLABS,
 )
 from web_router.constants_live_data_vendors import (
+    MSG_OXYLABS_NO_RESULTS,
     MSG_OXYLABS_NOT_FETCHED,
     MSG_OXYLABS_NOT_PARSED,
     OXYLABS_DOCS_URL,
@@ -96,11 +97,14 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
     def _to_response(self, request: LiveDataRequest, payload: dict[str, Any]) -> LiveDataResponse:
         records: list[dict[str, Any]] = []
         extras: list[dict[str, Any]] = []
-        for result in (payload or {}).get("results") or []:
+        results = (payload or {}).get("results") or []
+        if not results:
+            raise ProviderError(self.name, MSG_OXYLABS_NO_RESULTS.format(source=request.source))
+        for result in results:
             self._check(request, result)
             records.append(result["content"])
             extras.append({key: value for key, value in result.items() if key not in _RESULT_MAPPED})
-        first = ((payload or {}).get("results") or [{}])[0]
+        first = results[0]
         return LiveDataResponse(
             provider=self.name,
             source=request.source,
@@ -113,14 +117,14 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
         )
 
     def _check(self, request: LiveDataRequest, result: dict[str, Any]) -> None:
-        """Raise for a result whose page was not fetched or not parsed; partial parses pass."""
+        """Raise for a result whose page was not fetched or not parsed; partial parses pass, no parse status fails."""
         status, url, content = result.get("status_code"), result.get("url"), result.get("content")
         if isinstance(status, int) and status >= OXYLABS_FAILED_FETCH_FLOOR:
             raise ProviderError(
                 self.name, MSG_OXYLABS_NOT_FETCHED.format(source=request.source, status=status, url=url)
             )
         code = content.get("parse_status_code") if isinstance(content, dict) else None
-        if not isinstance(content, dict) or (code is not None and code not in OXYLABS_PARSE_OK):
+        if code not in OXYLABS_PARSE_OK:
             raise ProviderError(self.name, MSG_OXYLABS_NOT_PARSED.format(source=request.source, code=code, url=url))
 
     # -- catalogue ----------------------------------------------------------
