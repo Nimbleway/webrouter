@@ -61,6 +61,9 @@ VENDOR_FIND_STOP_WORDS: Final = frozenset(
 """Query words :meth:`~web_router.WebRouter.find_vendor_endpoints` ignores: they say nothing about what an
 endpoint does, and counted as matches they let a summary's grammar outrank its meaning."""
 
+VENDOR_TOKEN_LOCK_POLL: Final = 0.01
+"""Seconds an async token call sleeps between tries at the lock a sync call may hold."""
+
 VENDOR_TOKEN_REFRESH_MARGIN: Final = 60.0
 """Seconds before an OAuth access token's stated expiry at which it is refreshed instead of reused."""
 

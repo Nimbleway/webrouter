@@ -29,6 +29,7 @@ from web_router.constants_vendors import (
     VENDOR_MASK,
     VENDOR_MASK_INSIDE_MIN,
     VENDOR_TOKEN_DEFAULT_LIFETIME,
+    VENDOR_TOKEN_LOCK_POLL,
     VENDOR_TOKEN_REFRESH_MARGIN,
 )
 from web_router.exceptions import ProviderError
@@ -178,7 +179,6 @@ class TokenCache:
         self._tokens: dict[str, _Token] = {}
         self._locks: dict[str, threading.Lock] = {}
         self._locks_guard = threading.Lock()
-        self._alocks: dict[str, asyncio.Lock] = {}
 
     def _fresh(self, key: str) -> str | None:
         token = self._tokens.get(key)
@@ -206,8 +206,13 @@ class TokenCache:
     async def aget(self, request: TokenRequest, client: httpx.AsyncClient) -> str:
         import httpx
 
-        lock = self._alocks.setdefault(request.key, asyncio.Lock())
-        async with lock:
+        # The sync path's lock, so a sync and an async call racing on a cold cache still make one
+        # token exchange between them. Polled rather than waited for in a thread: a cancelled
+        # caller then never leaves the lock taken behind it.
+        lock = self._lock(request.key)
+        while not lock.acquire(blocking=False):
+            await asyncio.sleep(VENDOR_TOKEN_LOCK_POLL)
+        try:
             cached = self._fresh(request.key)
             if cached is not None:
                 return cached
@@ -216,6 +221,8 @@ class TokenCache:
             except httpx.HTTPError as exc:
                 raise self._unreachable(request, exc) from None
             return self._store(request, response)
+        finally:
+            lock.release()
 
     @staticmethod
     def _secrets(request: TokenRequest) -> list[str]:
