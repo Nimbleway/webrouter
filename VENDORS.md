@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-261 vendors, 2181 endpoints.
+265 vendors, 2214 endpoints.
 
 ### advertising
 
@@ -337,6 +337,15 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Shotstack](https://shotstack.io/docs/api/) `shotstack` | Render videos, images and audio from a JSON timeline or saved template, generate AI assets, and inspect media. | 9 read | key in header | `SHOTSTACK_API_KEY` | docs 2026-11-09 |
 | [Stability AI](https://docs.stability.ai/api-reference) `stabilityai` | Stable Diffusion image generation, async generation results, engines and credit balance. | 6 read | key in header | `STABILITY_API_KEY` | docs 2026-11-09 |
 | [Suzanne](https://console.suzanne3d.com/documentation/) `suzanne` | Text-to-3D and photo-to-3D: textured 3D meshes (GLB, OBJ, STL, FBX) from a prompt or 1-4 photos. | 4 read, 1 write | key in header | `SUZANNE_API_KEY` | docs 2026-11-09 |
+
+### messaging
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [AgentMail](https://docs.agentmail.to/) `agentmail` | Email inboxes for AI agents: create inboxes, read messages and threads, send and reply. | 5 read, 3 write | key in header | `AGENTMAIL_API_KEY` | docs 2026-11-09 |
+| [Slack](https://docs.slack.dev/reference/methods/) `slack` | Your Slack workspace: read channels, history, threads and users, search messages, and post messages and reactions. | 7 read, 2 write | key in header | `SLACK_BOT_TOKEN` | docs 2026-11-08 |
+| [Telnyx](https://developers.telnyx.com/api-reference) `telnyx` | Telnyx communications: send SMS/MMS, read messages, phone numbers, number lookup, available-number search, usage detail records and balance. | 6 read, 1 write | key in header | `TELNYX_API_KEY` | docs 2026-11-09 |
+| [Twilio](https://www.twilio.com/docs/usage/api) `twilio` | Twilio SMS and voice: send and read messages, list and place calls, phone numbers, usage records, balance and phone number lookup. | 7 read, 2 write | HTTP Basic | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | docs 2026-11-09 |
 
 ### developer
 
