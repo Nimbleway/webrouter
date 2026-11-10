@@ -141,6 +141,8 @@ src/web_router/
 ├── constants_candidates.py the candidate builder's getters and drop reasons,
 │                       kept apart so constants_routing.py stays small
 ├── constants_invoke.py a router's default timeout, its name attribute, and messages
+├── constants_fallback.py the fallback router's name, member naming and messages
+├── constants_mcp_router.py the MCP server's built-in router config variable, notes, messages
 ├── constants_remote.py the remote router's and the wire format's names, env vars,
 │                       limits and messages
 ├── constants_decider.py the built-in deciders' presets, key homes, limits and messages
@@ -191,6 +193,11 @@ src/web_router/
 │   ├── decider_llm.py  router="llm": any OpenAI-compatible chat API, by preset or base_url
 │   ├── decider_llm_prompt.py what it sends a model: the options as text, the strict schema, scores
 │   ├── decider_systemone.py router="systemone": a System One API, typesafe or fireworks
+│   ├── fallback.py     FallbackRouter, router="fallback": routers asked in order until one
+│   │                   decides something, within their own limits and the time left
+│   ├── fallback_members.py its members: built by name or taken as given, named, closed
+│   ├── composite.py    CompositeDecision: a decision with the members a router asked, for
+│   │                   the record's `members`
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
@@ -259,6 +266,8 @@ src/web_router/
 │   ├── urls.py         public_only on the URLs extract, browse and run_template
 │   │                   are given, refused before anything is sent
 │   ├── routing_config.py the operator's router and ceiling, read once at startup
+│   ├── routing_named.py a built-in router by name: its JSON config, keys captured at
+│   │                   startup, its name and its services' hosts
 │   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
 │   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
 │   │                   the charge for run_template and browser_open

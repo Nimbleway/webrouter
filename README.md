@@ -2091,7 +2091,11 @@ web_router import DecisionRecord`) on every routed or budgeted call, and
   candidate moved past and why;
 - `params`, `params_source` and `params_reason`, the options set and who set
   them;
-- `estimated_cost_usd`, `cost_is_estimate`, `unmeasured`, `prompt_sha256`.
+- `estimated_cost_usd`, `cost_is_estimate`, `unmeasured`, `prompt_sha256`;
+- `members`, with a composite router such as `fallback`: each router it
+  asked, as `name`, `outcome` (`ok`, `router_timeout`, `router_error`,
+  `router_invalid` or `router_empty`), `ms`, and `counted`, whether its
+  decision is the one used.
 
 It holds no prompt text and no key values. `prompt_sha256` is an unsalted
 SHA-256 of what the router reads: the query or task, for an extract its whole
@@ -2351,6 +2355,47 @@ raises carries the error class or HTTP status and the scheme and host on its
 httpx, which the `remote` extra installs. Each call bills on that server: the
 router's own call is billed by its vendor and is not counted in a `Budget`'s
 cost or the record's `estimated_cost_usd`.
+
+### Chaining routers: `router="fallback"`
+
+The built-in `fallback` router asks a list of routers in order, until one
+decides something:
+
+```python
+WebRouter(
+    router="fallback",
+    router_config={
+        "routers": [
+            {"name": "remote", "url": "https://router.example.com/route"},  # a registered name and its config
+            my_classifier,  # or any router function or object
+        ]
+    },
+)
+```
+
+A member is a registered name, a mapping of a `"name"` and that router's
+config, or a router function or object, sync or async. Each keeps its own
+`timeout_s` (50 ms when it declares none) and is given the smaller of that and
+the time left. A member that times out, raises, answers something other than a
+decision, or answers a decision that decides nothing is passed over, and the
+next is asked. When none decides anything, the call runs on the static order,
+recorded as `router_empty`; with `fail_on_router_error=True` it raises
+`RouterError` instead. Its own limit is the sum of its members' unless
+`router_config["timeout_s"]` sets it, and a member that declares `route_tools`
+is asked only on those tools.
+
+**It sends the prompt to every member it asks**, a member that times out after
+receiving it included: put a member you would rather not send prompts to
+last. The record names it `fallback(<member>, ...)` and lists each member
+asked in `members`. A member passed in is named by its `router_name`, else
+`custom`, never its import path; one built by name by its `router_name` (for
+`remote`, `remote(<scheme>://<host>)`), else its registered name. Members it
+built by name are closed when it is; those passed in stay yours.
+
+A router of your own that asks others can answer the same way: return a
+`CompositeDecision` (`from web_router import CompositeDecision`), a
+`RouteDecision` with `members`, a tuple of `DecisionMember`, which the record
+copies. The wire format does not carry it, so a router service cannot set it.
 
 ## Routing and extending
 
