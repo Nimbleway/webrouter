@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from tests.routing_helpers import MEMBERS, Ranker, Tool, order, wr
-from web_router import AsyncWebRouter, RouteDecision, RouteRequest, WebRouter
+from web_router import RouteDecision, RouteRequest, WebRouter
 from web_router.exceptions import ConfigurationError
 
 ARGS: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
@@ -75,13 +75,12 @@ def test_a_router_function_may_declare_route_tools(tool: Tool, called: list[str]
     assert seen == []
 
 
-@pytest.mark.parametrize("cls", [WebRouter, AsyncWebRouter])
 @pytest.mark.parametrize(
     "declared", ["search", ["search", "open_browser"], 3, [["search"]]], ids=["str", "unknown", "int", "unhashable"]
 )
-def test_a_router_s_route_tools_take_only_the_five_tools(cls: type, declared: Any) -> None:
+def test_a_router_s_route_tools_take_only_the_five_tools(declared: Any) -> None:
     with pytest.raises(ConfigurationError, match="router's route_tools"):
-        cls(router=Declaring(declared))
+        WebRouter(router=Declaring(declared))
 
 
 def test_a_router_built_by_name_declares_route_tools_from_its_config() -> None:
@@ -135,11 +134,10 @@ class _Shifting:
         return item in list(self)
 
 
-@pytest.mark.parametrize("cls", [WebRouter, AsyncWebRouter])
-def test_the_caller_s_route_tools_are_read_once(cls: type) -> None:
+def test_the_caller_s_route_tools_are_read_once() -> None:
     from collections.abc import Collection
 
     shifting = _Shifting()
     assert isinstance(shifting, Collection)
-    router = cls(router=Declaring(None), route_tools=shifting)
+    router = WebRouter(router=Declaring(None), route_tools=shifting)
     assert router._route_tools == frozenset({"research"}) and shifting.reads == 1
