@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-299 vendors, 2428 endpoints.
+303 vendors, 2460 endpoints.
 
 ### advertising
 
@@ -390,11 +390,15 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [US National Weather Service](https://www.weather.gov/documentation/services-web-api) `nws` | Official US forecasts (7-day and hourly), active weather alerts and station observations from the National Weather Service API (api.weather.gov). | 7 read | none | none | docs 2026-11-09 |
 | [OFAC-API (sanctions screening)](https://docs.ofac-api.com/) `ofacapi` | Fuzzy screening of people, companies, vessels and aircraft against OFAC SDN and 20+ other sanctions, PEP and watch lists, single, batch or as async bulk jobs. | 5 read | key in header | `OFAC_API_KEY` | docs 2026-11-09 |
 | [Open Food Facts](https://openfoodfacts.github.io/openfoodfacts-server/api/) `openfoodfacts` | Keyless open database of packaged food products: ingredients, nutrition facts, Nutri-Score, NOVA, allergens and labels by barcode, plus filtered product search. | 4 read | none | none | docs 2026-11-09 |
+| [Precip](https://api-docs.precip.ai/overview) `precip` | Hyper-local observed rainfall, snowfall, soil moisture and soil temperature for any point in the US and Canada from radar and gauges, plus minutely nowcasts and a 10-day hourly forecast. | 9 read | key in header | `PRECIP_API_KEY` | docs 2026-11-09 |
 | [Service Victoria Servo Saver](https://service.vic.gov.au/find-services/transport-and-driving/servo-saver/help-centre/servo-saver-public-api) `servosaver` | Victoria (Australia) government Fair Fuel open data: every registered service station's fuel prices in cents per litre, plus station, brand and fuel-type reference lists. | 4 read | key in header | `SERVOSAVER_API_KEY` | docs 2026-11-09 |
+| [Shippo](https://docs.goshippo.com/shippoapi/public-api/) `shippo` | Multi-carrier shipping: rate quotes across 40+ carriers, label purchase, package tracking, address validation and carrier accounts. | 7 read, 3 write | key in header | `SHIPPO_API_TOKEN` | docs 2026-11-09 |
+| [Socrata (Tyler Data & Insights)](https://dev.socrata.com/docs/other/discovery) `socrata` | Discovery API over the tens of thousands of government datasets, maps and charts published on Socrata open-data portals: search, autocomplete, and counts by portal, tag and category. | 7 read | key in header | `SOCRATA_APP_TOKEN` | docs 2026-11-09 |
 | [Unsplash](https://unsplash.com/documentation) `unsplash` | Search and fetch free high-resolution stock photos, collections and photographers' work. | 7 read | key in header | `UNSPLASH_ACCESS_KEY` | docs 2026-11-09 |
 | [U.S. Drought Monitor](https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx) `usdroughtmonitor` | Weekly U.S. Drought Monitor statistics (area, population and DSCI by drought level D0-D4) for the nation, states, counties, watersheds and other areas. | 3 read | none | none | docs 2026-11-09 |
 | [USGS Water Data](https://api.waterdata.usgs.gov/docs/) `usgswater` | US stream gauge readings (discharge, gage height, water temperature and more): latest and historical instantaneous values, daily statistics and monitoring-location metadata from the USGS Water Data OGC APIs. | 5 read | key in header | `USGS_API_KEY` | docs 2026-11-09 |
 | [Vaquill](https://www.vaquill.ai/docs/api-guide/overview) `vaquill` | US statutes, regulations, constitutions and court rules (federal and every state): search, citation resolution, section metadata, full text and cross-state comparison. | 6 read | key in header | `VAQUILL_API_KEY` | docs 2026-11-09 |
+| [VirusTotal](https://docs.virustotal.com/reference/overview) `virustotal` | Threat-intelligence reports on files, URLs, domains and IP addresses: multi-engine antivirus verdicts, reputation and relationships, plus URL scanning. | 5 read, 1 write | key in header | `VIRUSTOTAL_API_KEY` | docs 2026-11-09 |
 | [WA FuelWatch](https://www.fuelwatch.wa.gov.au/tools/rss) `wafuelwatch` | Western Australian retail fuel prices by suburb, region, brand and fuel type, today's and tomorrow's, from the WA Government's FuelWatch feed. | 1 read | none | none | docs 2026-11-09 |
 | [WeatherAPI.com](https://www.weatherapi.com/docs/) `weatherapi` | Worldwide current weather, forecasts up to 14 days, historical weather back to 2010, long-range future weather, alerts, marine and astronomy data, plus location search. | 9 read | key in query | `WEATHERAPI_API_KEY` | docs 2026-11-09 |
 <!-- /vendors -->

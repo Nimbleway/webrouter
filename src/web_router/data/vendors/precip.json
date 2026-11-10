@@ -1,0 +1,559 @@
+{
+  "vendor": "precip",
+  "name": "Precip",
+  "category": "other",
+  "summary": "Hyper-local observed rainfall, snowfall, soil moisture and soil temperature for any point in the US and Canada from radar and gauges, plus minutely nowcasts and a 10-day hourly forecast.",
+  "docs_url": "https://api-docs.precip.ai/overview",
+  "pricing_url": "https://precip.ai/developers",
+  "base_url": "https://api.precip.ai/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "PRECIP_API_KEY"
+        ],
+        "description": "A Precip API key (personal keys come with any Precip app plan; commercial keys by demo). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "A personal key allows 100 requests a day and one location per request; commercial keys get higher limits and comma-separated coordinate lists.",
+    "Observed rain and snow history runs from 2019; minutely radar history from 2026-01-01. One point per request: latitude and longitude, not addresses or ZIP codes.",
+    "Free and personal access is for non-commercial use."
+  ],
+  "sources": [
+    "https://api-docs.precip.ai/overview",
+    "https://api-docs.precip.ai/api",
+    "https://api-docs.precip.ai/api/precipitation-data",
+    "https://api-docs.precip.ai/api/soil-data",
+    "https://precip.ai/llms.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "precip.forecast",
+      "name": "Get a weather forecast with recent history",
+      "summary": "Hourly and daily forecast (up to 252 hours) plus observed past hours for one point.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/forecast",
+      "params": {
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude, -90 to 90.",
+          "required": true,
+          "example": 41.5868
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude, -180 to 180.",
+          "required": true,
+          "example": -93.625
+        },
+        "forecast_hours": {
+          "in": "query",
+          "type": "integer",
+          "description": "Hours ahead, 1 to 252, default 168."
+        },
+        "past_hours": {
+          "in": "query",
+          "type": "integer",
+          "description": "Observed hours before now, 0 to 744, default 24."
+        },
+        "temperature_unit": {
+          "in": "query",
+          "type": "string",
+          "description": "Default celsius.",
+          "enum": [
+            "celsius",
+            "fahrenheit"
+          ]
+        },
+        "precipitation_unit": {
+          "in": "query",
+          "type": "string",
+          "description": "Default mm (snowfall then in cm); inch puts all amounts in inches.",
+          "enum": [
+            "mm",
+            "inch"
+          ]
+        },
+        "timeZoneId": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA time zone; default the location's own."
+        }
+      },
+      "job": "weather.forecast",
+      "docs_url": "https://api-docs.precip.ai/api/forecast",
+      "verified": {
+        "docs": "https://api-docs.precip.ai/api/forecast"
+      }
+    },
+    {
+      "id": "precip.precip.daily",
+      "name": "Get daily precipitation",
+      "summary": "Observed daily precipitation, type and probability for a point and date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/daily",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.",
+          "required": true,
+          "example": "2026-10-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "End, same format.",
+          "required": true,
+          "example": "2026-10-31"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 latitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "41.5868"
+        },
+        "longitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 longitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "-93.625"
+        },
+        "timeZoneId": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA time zone for timestamps and day boundaries, default America/Chicago."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format, default json.",
+          "enum": [
+            "json",
+            "geojson",
+            "csv"
+          ]
+        }
+      },
+      "job": "weather.precipitation",
+      "docs_url": "https://api-docs.precip.ai/api/precipitation-data",
+      "verified": {
+        "docs": "https://api-docs.precip.ai/api/precipitation-data"
+      }
+    },
+    {
+      "id": "precip.precip.hourly",
+      "name": "Get hourly precipitation",
+      "summary": "Observed hourly precipitation for a point and date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/hourly",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.",
+          "required": true,
+          "example": "2026-10-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "End, same format.",
+          "required": true,
+          "example": "2026-10-31"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 latitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "41.5868"
+        },
+        "longitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 longitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "-93.625"
+        },
+        "timeZoneId": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA time zone for timestamps and day boundaries, default America/Chicago."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format, default json.",
+          "enum": [
+            "json",
+            "geojson",
+            "csv"
+          ]
+        }
+      },
+      "job": "weather.precipitation",
+      "docs_url": "https://api-docs.precip.ai/api/precipitation-data",
+      "verified": {
+        "docs": "https://api-docs.precip.ai/api/precipitation-data"
+      }
+    },
+    {
+      "id": "precip.precip.minutely",
+      "name": "Get minutely precipitation rate",
+      "summary": "Minute-by-minute precipitation rate, observed then nowcast for the next 60 minutes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/minutely",
+      "params": {
+        "latitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 latitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "41.5868"
+        },
+        "longitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 longitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "-93.625"
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "Date, datetime or relative (now-1h); default now-1h."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "Date, datetime or relative (now+1h); default now+1h; at most 7 days after start."
+        },
+        "units": {
+          "in": "query",
+          "type": "string",
+          "description": "metric gives mm/h, imperial in/h; default metric.",
+          "enum": [
+            "metric",
+            "imperial"
+          ]
+        },
+        "timeZoneId": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA time zone for timestamps and day boundaries, default America/Chicago."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format, default json.",
+          "enum": [
+            "json",
+            "geojson",
+            "csv"
+          ]
+        }
+      },
+      "notes": [
+        "source on each row says observation, nowcast or forecast."
+      ],
+      "job": "weather.precipitation",
+      "docs_url": "https://api-docs.precip.ai/api/precipitation-data",
+      "verified": {
+        "docs": "https://api-docs.precip.ai/api/precipitation-data"
+      }
+    },
+    {
+      "id": "precip.precip.last",
+      "name": "Get precipitation over the last N hours",
+      "summary": "Total precipitation over the last 12, 24, 48 or 168 hours.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/last-{hours}",
+      "params": {
+        "hours": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "12",
+            "24",
+            "48",
+            "168"
+          ],
+          "description": "Look-back window in hours."
+        },
+        "latitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 latitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "41.5868"
+        },
+        "longitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 longitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "-93.625"
+        },
+        "timeZoneId": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA time zone for timestamps and day boundaries, default America/Chicago."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format, default json.",
+          "enum": [
+            "json",
+            "geojson",
+            "csv"
+          ]
+        }
+      },
+      "job": "weather.precipitation",
+      "docs_url": "https://api-docs.precip.ai/api/precipitation-data",
+      "verified": {
+        "docs": "https://api-docs.precip.ai/api/precipitation-data"
+      }
+    },
+    {
+      "id": "precip.precip.recent_event",
+      "name": "Get the most recent rain event",
+      "summary": "Amount, rain/snow split, when it ended and how long ago, for the latest event at a point.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/recent-rain",
+      "params": {
+        "latitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 latitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "41.5868"
+        },
+        "longitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 longitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "-93.625"
+        },
+        "timeZoneId": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA time zone for timestamps and day boundaries, default America/Chicago."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format, default json.",
+          "enum": [
+            "json",
+            "geojson",
+            "csv"
+          ]
+        }
+      },
+      "job": "weather.precipitation",
+      "docs_url": "https://api-docs.precip.ai/api/precipitation-data",
+      "verified": {
+        "docs": "https://api-docs.precip.ai/api/precipitation-data"
+      }
+    },
+    {
+      "id": "precip.soil.moisture_daily",
+      "name": "Get daily soil moisture",
+      "summary": "0-10 cm soil moisture as percent of holding capacity, per day.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/soil-moisture-daily",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.",
+          "required": true,
+          "example": "2026-10-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "End, same format.",
+          "required": true,
+          "example": "2026-10-31"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 latitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "41.5868"
+        },
+        "longitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 longitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "-93.625"
+        },
+        "timeZoneId": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA time zone for timestamps and day boundaries, default America/Chicago."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format, default json.",
+          "enum": [
+            "json",
+            "geojson",
+            "csv"
+          ]
+        }
+      },
+      "job": "weather.soil",
+      "docs_url": "https://api-docs.precip.ai/api/soil-data",
+      "verified": {
+        "docs": "https://api-docs.precip.ai/api/soil-data"
+      }
+    },
+    {
+      "id": "precip.soil.temperature",
+      "name": "Get hourly soil temperature",
+      "summary": "0-10 cm soil temperature in degrees C, per hour.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/temp-0-10cm-hourly",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.",
+          "required": true,
+          "example": "2026-10-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "End, same format.",
+          "required": true,
+          "example": "2026-10-31"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 latitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "41.5868"
+        },
+        "longitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 longitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "-93.625"
+        },
+        "timeZoneId": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA time zone for timestamps and day boundaries, default America/Chicago."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format, default json.",
+          "enum": [
+            "json",
+            "geojson",
+            "csv"
+          ]
+        }
+      },
+      "job": "weather.soil",
+      "docs_url": "https://api-docs.precip.ai/api/soil-data",
+      "verified": {
+        "docs": "https://api-docs.precip.ai/api/soil-data"
+      }
+    },
+    {
+      "id": "precip.snow.depth",
+      "name": "Get daily snow depth",
+      "summary": "Snow depth on the ground in mm per day, from SNODAS.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/snow-depth-daily",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.",
+          "required": true,
+          "example": "2026-10-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "End, same format.",
+          "required": true,
+          "example": "2026-10-31"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 latitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "41.5868"
+        },
+        "longitude": {
+          "in": "query",
+          "type": "string",
+          "description": "WGS84 longitude; a comma-separated list only with a commercial key.",
+          "required": true,
+          "example": "-93.625"
+        },
+        "timeZoneId": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA time zone for timestamps and day boundaries, default America/Chicago."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format, default json.",
+          "enum": [
+            "json",
+            "geojson",
+            "csv"
+          ]
+        }
+      },
+      "job": "weather.snow",
+      "docs_url": "https://api-docs.precip.ai/api/soil-data",
+      "verified": {
+        "docs": "https://api-docs.precip.ai/api/soil-data"
+      }
+    }
+  ]
+}
