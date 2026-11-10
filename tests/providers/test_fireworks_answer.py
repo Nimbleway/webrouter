@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any
+from collections.abc import Iterator
+from typing import Any, ClassVar
 
 import pytest
 
+from tests.conftest import FakeProvider
 from tests.providers._answer_stub import stub_answer_api
+from web_router import register_provider, unregister_provider
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers.fireworks import FireworksAnswerProvider
 from web_router.types import SearchRequest, SearchResponse, SearchResult
@@ -28,23 +31,22 @@ PAGE = SearchResult(
 )
 
 
-class Sources:
-    """A search backend that answers every query with ``results`` and records each request."""
+class Pages(FakeProvider):
+    """The search under the answer: every query finds ``found``, set per test."""
 
-    def __init__(self, results: list[SearchResult]) -> None:
-        self.results = results
-        self.asked: list[SearchRequest] = []
+    name = "pages"
+    found: ClassVar[list[SearchResult]] = []
 
-    def search(self, request: SearchRequest) -> SearchResponse:
-        self.asked.append(request)
-        return SearchResponse(provider="stub", query=request.query, results=self.results)
+    def _respond(self, request: SearchRequest) -> SearchResponse:
+        self.requests.append(request)
+        return SearchResponse(provider=self.name, query=request.query, results=self.found)
 
-    async def asearch(self, request: SearchRequest) -> SearchResponse:
-        return self.search(request)
 
-    def close(self) -> None: ...
-
-    async def aclose(self) -> None: ...
+@pytest.fixture(autouse=True)
+def _pages() -> Iterator[None]:
+    register_provider(Pages.name, Pages)
+    yield
+    unregister_provider(Pages.name)
 
 
 def _reply(answer: str, citations: list[dict[str, str]]) -> dict[str, Any]:
@@ -53,9 +55,8 @@ def _reply(answer: str, citations: list[dict[str, str]]) -> dict[str, Any]:
 
 
 def _provider(results: list[SearchResult], *, model: str | None = MODEL) -> FireworksAnswerProvider:
-    provider = FireworksAnswerProvider(api_key="test-key", model=model)
-    provider.sources = Sources(results)  # type: ignore[assignment]
-    return provider
+    Pages.found = results
+    return FireworksAnswerProvider(api_key="test-key", model=model, sources=Pages.name)
 
 
 CITED = {"url": PAGE.url, "quote": "on the Champ de Mars   in Paris"}
@@ -63,7 +64,7 @@ CITED = {"url": PAGE.url, "quote": "on the Champ de Mars   in Paris"}
 
 def test_answers_from_the_pages_found_with_each_quote_checked() -> None:
     provider = _provider([PAGE])
-    api = stub_answer_api(provider, _reply("It is in Paris.", [CITED]))  # type: ignore[arg-type]
+    api = stub_answer_api(provider, _reply("It is in Paris.", [CITED]))
 
     response = provider.answer(AnswerRequest(query=QUESTION))
 
@@ -74,7 +75,6 @@ def test_answers_from_the_pages_found_with_each_quote_checked() -> None:
     sent = json.loads(body["messages"][1]["content"])
     assert sent["sources"][0]["url"] == PAGE.url
     assert api.headers[0]["Authorization"] == "Bearer test-key"
-    assert response.provider == "fireworks"
     assert response.answer == "It is in Paris."
     assert [(c.url, c.snippet) for c in response.citations] == [(PAGE.url, "on the Champ de Mars in Paris")]
 
@@ -85,7 +85,7 @@ def test_answers_from_the_pages_found_with_each_quote_checked() -> None:
 )
 def test_a_citation_not_in_the_pages_fails_the_call(citation: dict[str, str]) -> None:
     provider = _provider([PAGE])
-    stub_answer_api(provider, _reply("It is in Paris.", [citation]))  # type: ignore[arg-type]
+    stub_answer_api(provider, _reply("It is in Paris.", [citation]))
 
     with pytest.raises(ProviderError, match="not in the sources"):
         provider.answer(AnswerRequest(query=QUESTION))
@@ -93,7 +93,7 @@ def test_a_citation_not_in_the_pages_fails_the_call(citation: dict[str, str]) ->
 
 def test_with_no_pages_the_answer_is_empty_and_fireworks_is_not_called() -> None:
     provider = _provider([])
-    api = stub_answer_api(provider, _reply("unused", []))  # type: ignore[arg-type]
+    api = stub_answer_api(provider, _reply("unused", []))
 
     response = provider.answer(AnswerRequest(query=QUESTION))
 
@@ -107,12 +107,13 @@ def test_with_no_model_it_fails_before_searching(monkeypatch: pytest.MonkeyPatch
 
     with pytest.raises(ConfigurationError, match="FIREWORKS_ANSWER_MODEL"):
         provider.answer(AnswerRequest(query=QUESTION))
-    assert provider.sources.asked == []  # type: ignore[attr-defined]
+    assert isinstance(provider.sources, Pages)
+    assert provider.sources.requests == []
 
 
 async def test_answers_async_too() -> None:
     provider = _provider([PAGE])
-    stub_answer_api(provider, _reply("It is in Paris.", [CITED]))  # type: ignore[arg-type]
+    stub_answer_api(provider, _reply("It is in Paris.", [CITED]))
 
     response = await provider.aanswer(AnswerRequest(query=QUESTION))
 

@@ -38,10 +38,9 @@ Linkup, You.com, and `auto`. It has no keyless tier, because every backend bills
 **`answer`** — one question, answered in one call: the backend searches and
 writes the answer itself, and the response carries it with the sources it rests
 on. Between `search`, which returns pages, and `research`, a job of minutes.
-Nothing here edits the answer. One backend composes: `fireworks`, a model host
-that does not search, runs one search on another backend and has a Fireworks
-chat model answer from those pages, every citation checked against them. No
-keyless tier, since every backend bills the call, and no `auto` until its order is chosen: with no `provider`,
+Nothing here edits the answer; one backend, `fireworks`, composes (see
+[Adding an answer provider](#adding-an-answer-provider)). No keyless tier,
+since every backend bills the call, and no `auto` until its order is chosen: with no `provider`,
 the router's default serves it when that is an answer backend, else the one
 configured answer backend -- a key in `provider_config` counts -- and
 otherwise the call raises `ProviderNotFoundError`, naming the configured

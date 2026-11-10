@@ -6,7 +6,8 @@ model named by ``model`` or ``FIREWORKS_ANSWER_MODEL``, and asks for JSON with
 the answer and a verbatim quote per citation. Every citation must name a page
 the search returned and quote it exactly, or the call fails rather than return
 a source the model made up. With no results, the answer is ``""`` and Fireworks
-is not called.
+is not called. No model is pinned: Fireworks serves many, and the natural one is
+whichever the Specialized Intelligence Index ranks best on web context.
 
 Configure it as any backend::
 
@@ -16,7 +17,6 @@ Configure it as any backend::
 from __future__ import annotations
 
 import json
-import os
 from typing import Any, ClassVar
 
 from web_router.constants_fireworks import (
@@ -32,8 +32,8 @@ from web_router.constants_fireworks import (
     MSG_FIREWORKS_UNCITED,
     PROVIDER_FIREWORKS,
 )
-from web_router.exceptions import ConfigurationError
 from web_router.providers._http import _HttpProvider
+from web_router.providers._utils import resolve_setting
 from web_router.providers.answer import AnswerProvider
 from web_router.registry import create_provider
 from web_router.types import Citation, SearchRequest, SearchResponse, SearchResult
@@ -57,7 +57,7 @@ class FireworksAnswerProvider(_HttpProvider, AnswerProvider):
             **kwargs: As for any HTTP backend: ``api_key``, ``timeout``, ``base_url``.
         """
         super().__init__(**kwargs)
-        self.model = model or os.environ.get(ENV_FIREWORKS_ANSWER_MODEL)
+        self.model = model
         self.sources = create_provider(sources)
 
     def _answer(self, request: AnswerRequest) -> AnswerResponse:
@@ -80,9 +80,7 @@ class FireworksAnswerProvider(_HttpProvider, AnswerProvider):
 
     def _required_model(self) -> str:
         """The chat model, checked before the search so a call that cannot answer bills nothing."""
-        if not self.model:
-            raise ConfigurationError.missing_setting(self.name, env_var=ENV_FIREWORKS_ANSWER_MODEL, setting="model")
-        return self.model
+        return resolve_setting(self.model, env_var=ENV_FIREWORKS_ANSWER_MODEL, provider=self.name, setting="model")
 
     @staticmethod
     def _search_request(request: AnswerRequest) -> SearchRequest:
@@ -107,19 +105,19 @@ class FireworksAnswerProvider(_HttpProvider, AnswerProvider):
             answer, cited = str(reply["answer"]), list(reply["citations"])
         except (KeyError, IndexError, TypeError, ValueError) as exc:
             raise ValueError(MSG_FIREWORKS_BAD_REPLY) from exc
-        by_url = {r.url: r for r in found.results}
-        citations = [_checked(c, by_url) for c in cited]
+        sent = {r.url: (r, " ".join(_text(r).split())) for r in found.results}
+        citations = [_checked(c, sent) for c in cited]
         return AnswerResponse(
             provider=self.name,
             query=request.query,
             answer=answer,
             citations=citations,
             request_id=payload.get("id"),
-            raw=[found.model_dump(mode="json"), payload],
+            raw=[*_search_raw(found), payload],
         )
 
     def _unanswered(self, request: AnswerRequest, found: SearchResponse) -> AnswerResponse:
-        return AnswerResponse(provider=self.name, query=request.query, answer="", raw=[found.model_dump(mode="json")])
+        return AnswerResponse(provider=self.name, query=request.query, answer="", raw=_search_raw(found) or None)
 
     def close(self) -> None:
         self.sources.close()
@@ -130,14 +128,22 @@ class FireworksAnswerProvider(_HttpProvider, AnswerProvider):
         await super().aclose()
 
 
+def _search_raw(found: SearchResponse) -> list[dict[str, Any]]:
+    """The search backend's own payload, kept beside the chat model's in ``raw``."""
+    return [found.raw] if found.raw else []
+
+
 def _text(result: SearchResult) -> str:
     return (result.content or result.description)[:FIREWORKS_MAX_SOURCE_CHARS]
 
 
-def _checked(cited: Any, by_url: dict[str, SearchResult]) -> Citation:
-    """The citation, once its page is one the search returned and its quote is in that page's text as sent."""
+def _checked(cited: Any, sent: dict[str, tuple[SearchResult, str]]) -> Citation:
+    """The citation, once its page is one the search returned and its quote is in that page's text as sent.
+
+    ``sent`` maps each page's URL to the page and its text as the model read it, whitespace collapsed.
+    """
     url, quote = str(cited.get("url", "")), " ".join(str(cited.get("quote", "")).split())
-    page = by_url.get(url)
-    if page is None or not quote or quote not in " ".join(_text(page).split()):
+    page, text = sent.get(url, (None, ""))
+    if page is None or not quote or quote not in text:
         raise ValueError(MSG_FIREWORKS_UNCITED.format(url=url))
     return Citation(url=url, title=page.title, snippet=quote)
