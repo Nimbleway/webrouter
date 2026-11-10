@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-198 vendors, 1763 endpoints.
+203 vendors, 1800 endpoints.
 
 ### advertising
 
@@ -265,9 +265,14 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
 | [Bright Data](https://docs.brightdata.com/) `brightdata` | Pre-built site scrapers, Web Unlocker, SERP API and Marketplace datasets from Bright Data. | 9 read | key in header | `BRIGHTDATA_API_TOKEN` | docs 2026-11-08 |
+| [Browserbase](https://docs.browserbase.com/reference/api/overview.md) `browserbase` | Fetch pages, search the web and run hosted browser agents on Browserbase, and inspect its browser sessions. | 7 read, 2 write | key in header | `BROWSERBASE_API_KEY` | docs 2026-11-09 |
 | [Massive (Web Render)](https://docs.joinmassive.com/web-render/overview.md) `joinmassive` | Massive's Web Render API: unblock and render web pages, Google results pages, and ChatGPT, Gemini, Perplexity or AI Overview answers, from chosen locations. | 4 read | key in header | `MASSIVE_TOKEN` | docs 2026-11-09 |
 | [Olostep](https://docs.olostep.com/) `olostep` | Scrape, crawl, map, search and answer over the web with Olostep's API. | 12 read | key in header | `OLOSTEP_API_KEY` | docs 2026-11-08 |
+| [Riveter](https://docs.riveterhq.com/) `riveter` | Riveter's AI web data API: scrape a page, quick web search, one-off research answers, and enrichment runs that fill new columns for rows of companies, people or URLs. | 6 read, 2 write | key in header | `RIVETER_API_KEY` | docs 2026-11-09 |
+| [ScreenshotOne](https://screenshotone.com/docs/getting-started/) `screenshotone` | Render a web page, HTML or Markdown to an image or PDF in a real browser, with ad and cookie-banner blocking, element capture and page metadata. | 3 read | key in query | `SCREENSHOTONE_API_KEY` | docs 2026-11-09 |
 | [Spider Cloud](https://spider.cloud/docs/api) `spidercloud` | Spider's crawl, scrape, links, search and screenshot API for AI agents and RAG. | 6 read | key in header | `SPIDER_API_KEY` | docs 2026-11-08 |
+| [Supadata](https://docs.supadata.ai/api-reference/introduction) `supadata` | Transcripts and metadata of YouTube, TikTok, Instagram, X and Facebook videos, YouTube search, AI extraction from video, and web page scraping to Markdown. | 10 read | key in header | `SUPADATA_API_KEY` | docs 2026-11-09 |
+| [TinyFish](https://docs.tinyfish.ai/) `tinyfish` | Hosted browser-agent automation and deep research from TinyFish. | 4 read, 3 write | key in header | `TINYFISH_API_KEY` | docs 2026-11-08 |
 
 ### developer
 

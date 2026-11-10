@@ -1,0 +1,356 @@
+{
+  "vendor": "browserbase",
+  "name": "Browserbase",
+  "category": "scraping",
+  "summary": "Fetch pages, search the web and run hosted browser agents on Browserbase, and inspect its browser sessions.",
+  "docs_url": "https://docs.browserbase.com/reference/api/overview.md",
+  "pricing_url": "https://www.browserbase.com/pricing",
+  "base_url": "https://api.browserbase.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BROWSERBASE_API_KEY"
+        ],
+        "description": "A Browserbase API key (browserbase.com/settings). The project is inferred from the key. Sent in the X-BB-API-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-BB-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Fetch reads a page over plain HTTP: no JavaScript, 5 MB maximum (502 above it). Use a browser session for rendered or larger pages.",
+    "Agent runs are asynchronous: start one, poll agents.runs.get until COMPLETED, FAILED, STOPPED or TIMED_OUT, and page the transcript with agents.runs.messages.",
+    "Creating browser sessions (driven over CDP), contexts, functions, secrets and saved agents are not in this entry."
+  ],
+  "sources": [
+    "https://docs.browserbase.com/llms.txt",
+    "https://docs.browserbase.com/platform/fetch/overview.md",
+    "https://docs.browserbase.com/platform/search/overview.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "browserbase.fetch",
+      "name": "Fetch a page",
+      "summary": "A page's body, headers and status without a browser, as raw content, markdown, or JSON shaped by a schema.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/fetch",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The URL to fetch.",
+          "example": "https://example.com"
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "raw (default) returns the body unchanged; markdown converts the page; json extracts to schema.",
+          "enum": [
+            "raw",
+            "markdown",
+            "json"
+          ]
+        },
+        "schema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema of the wanted structure; only used with format json."
+        },
+        "allowRedirects": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Follow HTTP redirects. Default false."
+        },
+        "allowInsecureSsl": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip TLS certificate verification. Default false."
+        },
+        "proxies": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Send the request through Browserbase proxies. Default false."
+        },
+        "contextId": {
+          "in": "body",
+          "type": "string",
+          "description": "A Context whose persisted cookies are sent with the request (a logged-in profile)."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Redirects are not followed unless allowRedirects is true. PDFs cannot be converted to markdown or json (400).",
+        "402 means the free plan's quota for that format is used up; 429 means too many concurrent fetches."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.browserbase.com/reference/api/fetch-a-page.md",
+      "verified": {
+        "docs": "https://docs.browserbase.com/reference/api/fetch-a-page.md"
+      }
+    },
+    {
+      "id": "browserbase.search",
+      "name": "Search the web",
+      "summary": "Structured web search results, served by Parallel (default) or Exa.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query, 1-200 characters.",
+          "example": "browser automation frameworks"
+        },
+        "numResults": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return, 1-25. Default 10."
+        },
+        "provider": {
+          "in": "body",
+          "type": "string",
+          "description": "Which search engine serves the request. Default parallel.",
+          "enum": [
+            "parallel",
+            "exa"
+          ]
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "parallel takes fast or advanced (default advanced); exa takes fast, deep-lite or deep (default fast). Set provider when you set mode.",
+          "enum": [
+            "fast",
+            "advanced",
+            "deep-lite",
+            "deep"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Limited to 120 requests a minute per project; the price per search depends on provider and mode."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.browserbase.com/reference/api/web-search.md",
+      "verified": {
+        "docs": "https://docs.browserbase.com/reference/api/web-search.md"
+      }
+    },
+    {
+      "id": "browserbase.agents.runs.create",
+      "name": "Run a browser agent",
+      "summary": "Start a hosted agent that completes a natural-language task with web search and a browser.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v1/agents/runs",
+      "params": {
+        "task": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What the agent should accomplish."
+        },
+        "agentId": {
+          "in": "body",
+          "type": "string",
+          "description": "Run a saved custom agent, using its systemPrompt and resultSchema unless overridden."
+        },
+        "resultSchema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema the run's result should follow."
+        },
+        "browserSettings": {
+          "in": "body",
+          "type": "object",
+          "description": "Session settings: context {id, persist}, proxies (true or a list), verified."
+        },
+        "variables": {
+          "in": "body",
+          "type": "object",
+          "description": "Named values the agent can use as %name% placeholders: {name: {value, description}}. Not persisted."
+        },
+        "pauseWhen": {
+          "in": "body",
+          "type": "string",
+          "description": "When the agent should pause and wait for your input (e.g. a verification code); the run then goes to PAUSED."
+        }
+      },
+      "notes": [
+        "A write: the agent acts on live websites and its browser time is billed.",
+        "Returns the run id at once; poll agents.runs.get."
+      ],
+      "job": "web.browse",
+      "docs_url": "https://docs.browserbase.com/reference/api/run-an-agent.md",
+      "verified": {
+        "docs": "https://docs.browserbase.com/reference/api/run-an-agent.md"
+      }
+    },
+    {
+      "id": "browserbase.agents.runs.get",
+      "name": "Get an agent run",
+      "summary": "A run's status, result and session.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/agents/runs/{runId}",
+      "params": {
+        "runId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The run id."
+        }
+      },
+      "notes": [
+        "Status is PENDING, RUNNING, PAUSED, COMPLETED, FAILED, STOPPED or TIMED_OUT."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.browserbase.com/reference/api/get-a-run.md",
+      "verified": {
+        "docs": "https://docs.browserbase.com/reference/api/get-a-run.md"
+      }
+    },
+    {
+      "id": "browserbase.agents.runs.messages",
+      "name": "List an agent run's messages",
+      "summary": "The run's messages, oldest first, in the AI SDK UIMessage format.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/agents/runs/{runId}/messages",
+      "params": {
+        "runId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The run id."
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "Id of the last message already received; pass the previous response's nextSince to page or poll."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Messages to return, 1-100. Default 20."
+        },
+        "all": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return every message after since, ignoring limit."
+        }
+      },
+      "job": "jobs.results",
+      "docs_url": "https://docs.browserbase.com/reference/api/list-run-messages.md",
+      "verified": {
+        "docs": "https://docs.browserbase.com/reference/api/list-run-messages.md"
+      }
+    },
+    {
+      "id": "browserbase.agents.runs.stop",
+      "name": "Stop an agent run",
+      "summary": "Ask an in-progress run to wind down to STOPPED.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v1/agents/runs/{runId}/stop",
+      "params": {
+        "runId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The run id."
+        }
+      },
+      "notes": [
+        "Stopping a run that has already finished returns a conflict."
+      ],
+      "job": "jobs.cancel",
+      "docs_url": "https://docs.browserbase.com/reference/api/stop-a-run.md",
+      "verified": {
+        "docs": "https://docs.browserbase.com/reference/api/stop-a-run.md"
+      }
+    },
+    {
+      "id": "browserbase.sessions.list",
+      "name": "List browser sessions",
+      "summary": "The project's browser sessions, optionally by status or user metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/sessions",
+      "params": {
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Only sessions in this state.",
+          "enum": [
+            "PENDING",
+            "RUNNING",
+            "ERROR",
+            "TIMED_OUT",
+            "COMPLETED"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "A query over the sessions' user metadata."
+        }
+      },
+      "docs_url": "https://docs.browserbase.com/reference/api/list-sessions.md",
+      "verified": {
+        "docs": "https://docs.browserbase.com/reference/api/list-sessions.md"
+      }
+    },
+    {
+      "id": "browserbase.sessions.get",
+      "name": "Get a browser session",
+      "summary": "One session's status, timing, region, context and proxy bytes used.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/sessions/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The session id."
+        }
+      },
+      "docs_url": "https://docs.browserbase.com/reference/api/get-a-session.md",
+      "verified": {
+        "docs": "https://docs.browserbase.com/reference/api/get-a-session.md"
+      }
+    },
+    {
+      "id": "browserbase.sessions.logs",
+      "name": "Get a session's logs",
+      "summary": "The CDP request and response log of a browser session.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/sessions/{id}/logs",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The session id."
+        }
+      },
+      "docs_url": "https://docs.browserbase.com/reference/api/session-logs.md",
+      "verified": {
+        "docs": "https://docs.browserbase.com/reference/api/session-logs.md"
+      }
+    }
+  ]
+}
