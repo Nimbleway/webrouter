@@ -13,6 +13,7 @@ import asyncio
 import hashlib
 import math
 import os
+import re
 import threading
 import time
 from collections.abc import Mapping, Sequence
@@ -290,16 +291,25 @@ def mask_answer(value: Any, secrets: Sequence[str]) -> Any:
     """A copy of a successful answer with every secret the vendor echoed back masked.
 
     A string equal to a secret is masked whatever its length; a secret of
-    ``VENDOR_MASK_INSIDE_MIN`` characters or more is masked inside longer
-    strings too, which a shorter one is not, so that a login like ``user``
-    does not turn every ``username`` into ``***name``. Keys are left alone.
+    ``VENDOR_MASK_INSIDE_MIN`` characters or more is masked anywhere inside
+    longer strings too. A shorter one is masked inside a string only as a
+    whole word (``Bearer abc123``), so that a login like ``user`` does not
+    turn every ``username`` into ``***name``. Keys are left alone.
     """
     exact = {form for secret in secrets if secret for form in _spellings(secret)}
     inside = [secret for secret in secrets if secret and len(secret) >= VENDOR_MASK_INSIDE_MIN]
+    short = sorted({secret for secret in secrets if secret and len(secret) < VENDOR_MASK_INSIDE_MIN}, key=len)
+    words = [re.compile(rf"(?<![A-Za-z0-9]){re.escape(secret)}(?![A-Za-z0-9])") for secret in reversed(short)]
+
+    def masked(text: str) -> str:
+        text = mask(text, inside)
+        for word in words:
+            text = word.sub(VENDOR_MASK, text)
+        return text
 
     def walk(item: Any) -> Any:
         if isinstance(item, str):
-            return VENDOR_MASK if item in exact else mask(item, inside)
+            return VENDOR_MASK if item in exact else masked(item)
         if isinstance(item, dict):
             return {key: walk(inner) for key, inner in item.items()}
         if isinstance(item, list):
