@@ -96,3 +96,12 @@ def test_an_explicit_api_key_wins_over_api_key_env_and_reads_nothing() -> None:
     members = routing.router_config["routers"]  # type: ignore[index]
     assert [m["api_key"] for m in members] == ["explicit", "explicit"], "no DEEPSEEK_API_KEY needed or read"
     assert all("api_key_env" not in m for m in members)
+
+
+def test_a_null_api_key_still_captures_the_preset_key_at_startup(monkeypatch: pytest.MonkeyPatch) -> None:
+    config = {"preset": "deepseek", "model": "m", "api_key": None}
+    routing = McpRouting.from_environ(named("llm", config, DEEPSEEK_API_KEY=SECRET))
+    monkeypatch.setenv("DEEPSEEK_API_KEY", FROM_FILE)
+    assert sent_key(routing) == f"Bearer {SECRET}"
+    with pytest.raises(ConfigurationError, match="DEEPSEEK_API_KEY"):
+        McpRouting.from_environ(named("llm", config))

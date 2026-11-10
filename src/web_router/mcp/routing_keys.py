@@ -66,8 +66,9 @@ def _variable(name: str | None, config: Mapping[str, Any]) -> str | None:
     """The variable router ``name`` would read its key from: ``api_key_env``, else its preset's.
 
     ``None`` when ``config`` gives ``api_key`` itself: an explicit key wins, as the deciders' transport reads it.
+    An ``api_key`` of ``null`` gives none, so the variable is still read here, never later.
     """
-    if MCP_CONFIG_KEY in config:
+    if config.get(MCP_CONFIG_KEY) is not None:
         return None
     if MCP_CONFIG_KEY_ENV in config:
         variable = config[MCP_CONFIG_KEY_ENV]
