@@ -113,7 +113,7 @@
     {
       "id": "google-ads.query_stream",
       "name": "Run a GAQL report and get every row at once",
-      "summary": "The same query as google-ads.query, streamed whole with no paging. Better for large pulls.",
+      "summary": "The same query as google-ads.query, returned whole with no paging. Suits results that fit in memory: bound it with LIMIT or a date range.",
       "kind": "read",
       "method": "POST",
       "path": "/customers/{customer_id}/googleAds:searchStream",
