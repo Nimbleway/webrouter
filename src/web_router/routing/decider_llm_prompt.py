@@ -19,7 +19,11 @@ def menu(question: DeciderQuestion) -> str:
 
 def schema(question: DeciderQuestion) -> dict[str, Any]:
     """Strict structured output: a ranking of offered ids, a score per id as a list (strict mode takes no map
-    with free keys), and a confidence."""
+    with free keys), and a confidence.
+
+    No ``uniqueItems``, ``minimum`` or ``maximum``: OpenAI's strict mode refuses the first and Anthropic's all
+    three, with a 400 on every call. A repeated id or a number outside 0 to 1 is the reply check's to refuse.
+    """
     option = {"type": "string", "enum": list(question.options)}
     score = {
         "type": "object",
