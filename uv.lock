@@ -744,8 +744,8 @@ name = "httpcore2"
 version = "2.13.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "h11" },
-    { name = "truststore" },
+    { name = "h11", marker = "python_full_version < '3.12' or python_full_version >= '3.14' or sys_platform != 'emscripten'" },
+    { name = "truststore", marker = "python_full_version < '3.12' or python_full_version >= '3.14' or sys_platform != 'emscripten'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cb/f3/1db7aa2bc2524062192bb0e0323969492d1883152a232fe36eea65f4e35c/httpcore2-2.13.1.tar.gz", hash = "sha256:e0aa977abe17e69a3b820a24542a6fa88702676d83880b8d194dcd18408e5103", size = 68071, upload-time = "2026-09-23T07:47:22.372Z" }
 wheels = [
@@ -2553,8 +2553,8 @@ name = "uvicorn"
 version = "0.53.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "h11" },
+    { name = "click", marker = "python_full_version < '3.12' or python_full_version >= '3.14' or sys_platform != 'emscripten'" },
+    { name = "h11", marker = "python_full_version < '3.12' or python_full_version >= '3.14' or sys_platform != 'emscripten'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5d/ad/04bbb797c84fc1f26cb171f7394716f4865ffb8d8c5e1eef42565c2dfa6b/uvicorn-0.53.0.tar.gz", hash = "sha256:a9356f0cb89b3b8621529c5d5eebd69bfe154f4c3f68b4cf2de47e45fa855c2e", size = 110881, upload-time = "2026-09-14T07:44:23.815Z" }
 wheels = [
@@ -2642,6 +2642,9 @@ search = [
     { name = "nimble-python" },
     { name = "tavily-python" },
 ]
+vendors = [
+    { name = "httpx" },
+]
 
 [package.dev-dependencies]
 agent-bench = [
@@ -2672,6 +2675,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'mcp'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'research'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'search'", specifier = ">=0.27" },
+    { name = "httpx", marker = "extra == 'vendors'", specifier = ">=0.27" },
     { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=1.0,<2" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2,<3" },
     { name = "nimble-python", marker = "extra == 'all'", specifier = ">=1.5.0,<2" },
@@ -2699,7 +2703,7 @@ requires-dist = [
     { name = "tavily-python", marker = "extra == 'search'", specifier = ">=0.5.0" },
     { name = "typing-extensions", specifier = ">=4.10" },
 ]
-provides-extras = ["all", "answer", "aws", "browser", "evals", "extract", "langchain", "mcp", "research", "search"]
+provides-extras = ["all", "answer", "aws", "browser", "evals", "extract", "langchain", "mcp", "research", "search", "vendors"]
 
 [package.metadata.requires-dev]
 agent-bench = [

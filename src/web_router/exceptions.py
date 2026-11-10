@@ -17,6 +17,8 @@ handle failures uniformly regardless of which backend served the request:
     ├── DeadlineExceededError       a call outlasted its per-call deadline
     ├── RouterError                 an attached router failed, under fail_on_router_error=True
     ├── ProviderError               the backend itself failed
+    ├── VendorNotFoundError         no vendor, or no endpoint, under that name in the vendor catalog
+    ├── VendorWriteRefusedError     a vendor call would change data and allow_writes was not given
     └── BrowserActionError          a page action on an open browser session failed
         ├── StaleElementError           a snapshot ref no longer names an element
         ├── ElementNotFoundError        a selector matched nothing in time
