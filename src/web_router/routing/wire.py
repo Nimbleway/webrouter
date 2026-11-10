@@ -139,7 +139,7 @@ def _bounded(decision: RouteDecision) -> RouteDecision:
     """
     options = list((decision.params or {}).values())
     held = [value for option in options for value in option.values() if isinstance(value, list | Mapping)]
-    sized = [decision.tools or (), decision.exclude, *(decision.providers or {}).values(), *options, *held]
+    sized = [decision.tools or (), decision.exclude or {}, *(decision.providers or {}).values(), *options, *held]
     if any(len(entry) > WIRE_MAX_NAMES for entry in sized):
         raise WireError(REMOTE_WHY_TOO_MANY.format(limit=WIRE_MAX_NAMES))
     if decision.confidence is not None and not 0 <= decision.confidence <= 1:
@@ -147,7 +147,7 @@ def _bounded(decision: RouteDecision) -> RouteDecision:
     return replace(
         decision,
         reason=None if decision.reason is None else decision.reason[:WIRE_MAX_TEXT],
-        exclude={key: why[:WIRE_MAX_TEXT] for key, why in decision.exclude.items() if _fits(key)},
+        exclude={key: why[:WIRE_MAX_TEXT] for key, why in (decision.exclude or {}).items() if _fits(key)},
         providers=_per_tool(decision.providers, lambda names: [name for name in names if _fits(name)]),
         params=_per_tool(decision.params, lambda option: {name: v for name, v in option.items() if _fits(name)}),
     )

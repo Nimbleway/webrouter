@@ -94,6 +94,7 @@ def test_a_service_cannot_write_a_decision_the_client_refuses() -> None:
     with pytest.raises(WireError, match=f"more than {WIRE_MAX_NAMES} entries"):
         decision_to_wire(RouteDecision(tools=["search"] * (WIRE_MAX_NAMES + 1)))
     assert decision_to_wire(RouteDecision(reason="x" * 10_000))["reason"] == "x" * WIRE_MAX_TEXT
+    assert decision_to_wire(RouteDecision(exclude=None))["exclude"] == {}  # type: ignore[arg-type]  # null, as the schema allows
 
 
 def test_the_request_schema_holds_the_budget_caps_to_zero_or_more() -> None:
