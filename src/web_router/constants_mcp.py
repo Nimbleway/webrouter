@@ -196,7 +196,15 @@ MCP_MSG_ENV_HINT_EXPLICIT_UNUSED = (
     "names {path} ({status}): have the user put their keys there, then call load_env with its path. Only the "
     "file's path is ever needed -- never paste a key into the conversation."
 )
-"""Said instead of ``MCP_MSG_ENV_HINT`` when the user set ``WEB_ROUTER_ENV_FILE`` and its file was not used."""
+"""Said instead of ``MCP_MSG_ENV_HINT`` when a file the user named was read but gave the server no key."""
+
+MCP_MSG_ENV_HINT_EXPLICIT_UNREADABLE = (
+    "No API keys were found, so only the keyless backends are configured; they work meanwhile. {env_var} "
+    "names {path}, which the server cannot read as a .env file ({reason}): have the user fix that or point "
+    "{env_var} at a readable .env file with their keys, then call load_env with its path. Only the file's path "
+    "is ever needed -- never paste a key into the conversation."
+)
+"""Said instead of ``MCP_MSG_ENV_HINT`` when a file the user named is a directory or a file the server cannot read."""
 
 MCP_MSG_ROUTER_SPEC = "{env_var}={value!r} names no router: expected <module>:<attribute>, or 'off'."
 MCP_MSG_ROUTER_IMPORT = "{env_var}={value!r}: {error}"

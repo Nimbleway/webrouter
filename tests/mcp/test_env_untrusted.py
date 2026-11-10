@@ -19,11 +19,13 @@ from web_router.constants import (
     AUTO_CHAIN_SEARCH,
     ENV_AGENTCORE_GATEWAY_URL,
     ENV_BRAVE_API_KEY,
+    ENV_JINA_API_KEY,
     ENV_MCP_ENV_FILE,
     ENV_NIMBLE_API_KEY,
     ENV_PERPLEXITY_API_KEY,
     ENV_TAVILY_API_KEY,
     MCP_ENV_FILE,
+    MCP_ENV_FILE_MAX_BYTES,
     MCP_ENV_POINTER_FILE,
     MCP_ENV_SOURCE_EXPLICIT,
     MCP_ENV_SOURCE_REMEMBERED,
@@ -33,7 +35,6 @@ from web_router.constants import (
     MCP_ENV_STATUS_NOTHING_NEW,
     MCP_ENV_STATUS_UNREADABLE,
     MCP_ENV_STATUS_USED,
-    MCP_MSG_ENV_HINT,
     MCP_TOOL_LOAD_ENV,
     PROVIDER_AGENTCORE,
     PROVIDER_TAVILY,
@@ -42,6 +43,7 @@ from web_router.constants_mcp import (
     ENV_MCP_PROJECT_ENV_FILE,
     MCP_ENV_SOURCE_PROJECT,
     MCP_MSG_ENV_HINT_EXPLICIT_MISSING,
+    MCP_MSG_ENV_HINT_EXPLICIT_UNREADABLE,
     MCP_MSG_ENV_HINT_EXPLICIT_UNUSED,
     MCP_MSG_ENV_ONLY,
 )
@@ -160,7 +162,41 @@ def test_a_missing_project_env_is_no_missing_explicit_file(
     assert report["explicit_file_missing"] is False
     assert statuses(sources)[-1] == (MCP_ENV_SOURCE_PROJECT, MCP_ENV_STATUS_MISSING)
     hint = WebRouterTools(env=sources).capabilities()["env"]["hint"]
-    assert hint == MCP_MSG_ENV_HINT.format(env_var=ENV_MCP_ENV_FILE, user_dir=user_config_dir())
+    path = sources.searched[-1].path
+    assert hint == MCP_MSG_ENV_HINT_EXPLICIT_MISSING.format(env_var=ENV_MCP_PROJECT_ENV_FILE, path=path)
+
+
+def test_a_project_env_with_blank_keys_gets_a_hint_naming_it(
+    isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A copied .env.example has the names but no values: the hint points at that file, not at another one."""
+    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_TAVILY_API_KEY}=\n")
+    monkeypatch.setenv(ENV_MCP_PROJECT_ENV_FILE, MCP_ENV_FILE)
+
+    sources = EnvSources.at_startup()
+    hint = WebRouterTools(env=sources).capabilities()["env"]["hint"]
+
+    lookup = sources.searched[-1]
+    assert (lookup.source, lookup.status) == (MCP_ENV_SOURCE_PROJECT, MCP_ENV_STATUS_NO_CREDENTIALS)
+    assert hint == MCP_MSG_ENV_HINT_EXPLICIT_UNUSED.format(
+        env_var=ENV_MCP_PROJECT_ENV_FILE, path=lookup.path, status=MCP_ENV_STATUS_NO_CREDENTIALS
+    )
+
+
+def test_a_used_explicit_file_that_left_the_server_keyless_gets_a_hint_naming_it(
+    isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A file with only a keyless backend's key was used, but the hint still points there, not at the variable."""
+    path = write(isolated_home / "jina-only.env", f"{ENV_JINA_API_KEY}=jina-test-value\n")
+    monkeypatch.setenv(ENV_MCP_ENV_FILE, str(path))
+
+    sources = EnvSources.at_startup()
+    hint = WebRouterTools(env=sources).capabilities()["env"]["hint"]
+
+    assert statuses(sources)[0] == (MCP_ENV_SOURCE_EXPLICIT, MCP_ENV_STATUS_USED)
+    assert hint == MCP_MSG_ENV_HINT_EXPLICIT_UNUSED.format(
+        env_var=ENV_MCP_ENV_FILE, path=path, status=MCP_ENV_STATUS_USED
+    )
 
 
 def test_a_missing_explicit_file_gets_a_hint_to_create_it(isolated_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -173,29 +209,42 @@ def test_a_missing_explicit_file_gets_a_hint_to_create_it(isolated_home: Path, m
     assert hint == MCP_MSG_ENV_HINT_EXPLICIT_MISSING.format(env_var=ENV_MCP_ENV_FILE, path=missing)
 
 
-@pytest.mark.parametrize(
-    ("name", "text", "status"),
-    [
-        pytest.param("keyless.env", "DATABASE_URL=x\n", MCP_ENV_STATUS_NO_CREDENTIALS, id="no-key"),
-        pytest.param("a-directory", None, MCP_ENV_STATUS_UNREADABLE, id="directory"),
-    ],
-)
-def test_an_explicit_file_that_was_not_used_gets_a_hint_naming_it(
-    isolated_home: Path, monkeypatch: pytest.MonkeyPatch, name: str, text: str | None, status: str
+def test_an_explicit_file_with_no_key_gets_a_hint_naming_it(
+    isolated_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The file is there, so the hint neither calls it missing nor asks for a variable that is set already."""
-    path = isolated_home / name
-    if text is None:
-        path.mkdir()
-    else:
-        write(path, text)
+    path = write(isolated_home / "keyless.env", "DATABASE_URL=x\n")
     monkeypatch.setenv(ENV_MCP_ENV_FILE, str(path))
 
     sources = EnvSources.at_startup()
     hint = WebRouterTools(env=sources).capabilities()["env"]["hint"]
 
-    assert statuses(sources)[0] == (MCP_ENV_SOURCE_EXPLICIT, status)
-    assert hint == MCP_MSG_ENV_HINT_EXPLICIT_UNUSED.format(env_var=ENV_MCP_ENV_FILE, path=path, status=status)
+    assert statuses(sources)[0] == (MCP_ENV_SOURCE_EXPLICIT, MCP_ENV_STATUS_NO_CREDENTIALS)
+    assert hint == MCP_MSG_ENV_HINT_EXPLICIT_UNUSED.format(
+        env_var=ENV_MCP_ENV_FILE, path=path, status=MCP_ENV_STATUS_NO_CREDENTIALS
+    )
+
+
+@pytest.mark.parametrize("kind", ["directory", "too-large"])
+def test_an_explicit_path_the_server_cannot_read_gets_a_hint_to_repoint_it(
+    isolated_home: Path, monkeypatch: pytest.MonkeyPatch, kind: str
+) -> None:
+    """Keys put there would never load, so the hint asks for a readable file instead."""
+    path = isolated_home / kind
+    if kind == "directory":
+        path.mkdir()
+    else:
+        write(path, "#" * (MCP_ENV_FILE_MAX_BYTES + 1))
+    monkeypatch.setenv(ENV_MCP_ENV_FILE, str(path))
+
+    sources = EnvSources.at_startup()
+    hint = WebRouterTools(env=sources).capabilities()["env"]["hint"]
+
+    assert statuses(sources)[0] == (MCP_ENV_SOURCE_EXPLICIT, MCP_ENV_STATUS_UNREADABLE)
+    reason = sources.searched[0].reason
+    assert reason
+    assert hint == MCP_MSG_ENV_HINT_EXPLICIT_UNREADABLE.format(env_var=ENV_MCP_ENV_FILE, path=path, reason=reason)
+    assert "put their keys there" not in hint
 
 
 def test_the_repos_mcp_json_opts_the_clone_in_through_the_project_variable() -> None:

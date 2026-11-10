@@ -196,9 +196,9 @@ place had set everything it holds), with a `note` when the file sets
 file it came from; whether `WEB_ROUTER_ENV_FILE` named a file that is not
 there; the variables the client already exported, by name; and each `load_env`
 since. With no provider key at
-all it also carries a `hint` saying how to add one (or, when `WEB_ROUTER_ENV_FILE`
-names no file, to create that file, and when it names one the server could not use, to put the keys
-there), the server's instructions
+all it also carries a `hint` saying how to add one (or, when `WEB_ROUTER_ENV_FILE` or
+`WEB_ROUTER_PROJECT_ENV_FILE` names a file, to create that file, fill it in or point the variable at a
+readable one), the server's instructions
 say no keys were found and that the model can ask for a `.env` path and call
 `load_env` — or carry on keyless — and every other
 place the server reports keys says the same thing: names and paths, never

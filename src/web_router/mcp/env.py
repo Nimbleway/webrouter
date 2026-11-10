@@ -70,6 +70,7 @@ from web_router.constants_mcp import (
     ENV_MCP_PROJECT_ENV_FILE,
     MCP_ENV_SOURCE_PROJECT,
     MCP_MSG_ENV_HINT_EXPLICIT_MISSING,
+    MCP_MSG_ENV_HINT_EXPLICIT_UNREADABLE,
     MCP_MSG_ENV_HINT_EXPLICIT_UNUSED,
     MCP_MSG_ENV_ONLY_FILE,
 )
@@ -186,14 +187,20 @@ class EnvSources:
     def hint(self) -> str:
         """How to add a key, for a capabilities resource that lists only the keyless backends."""
         for lookup in self.searched:
-            if lookup.source != MCP_ENV_SOURCE_EXPLICIT or lookup.status == MCP_ENV_STATUS_USED:
+            # A file named by WEB_ROUTER_ENV_FILE or the project's variable is where keys belong: point there.
+            if lookup.source == MCP_ENV_SOURCE_EXPLICIT:
+                env_var = ENV_MCP_ENV_FILE
+            elif lookup.source == MCP_ENV_SOURCE_PROJECT and lookup.status != MCP_ENV_STATUS_NOTHING_NEW:
+                env_var = ENV_MCP_PROJECT_ENV_FILE
+            else:
                 continue
-            # The variable is set already: what needs fixing is the file it names.
             if lookup.status == MCP_ENV_STATUS_MISSING:
-                return MCP_MSG_ENV_HINT_EXPLICIT_MISSING.format(env_var=ENV_MCP_ENV_FILE, path=lookup.path)
-            return MCP_MSG_ENV_HINT_EXPLICIT_UNUSED.format(
-                env_var=ENV_MCP_ENV_FILE, path=lookup.path, status=lookup.status
-            )
+                return MCP_MSG_ENV_HINT_EXPLICIT_MISSING.format(env_var=env_var, path=lookup.path)
+            if lookup.status == MCP_ENV_STATUS_UNREADABLE:
+                return MCP_MSG_ENV_HINT_EXPLICIT_UNREADABLE.format(
+                    env_var=env_var, path=lookup.path, reason=lookup.reason
+                )
+            return MCP_MSG_ENV_HINT_EXPLICIT_UNUSED.format(env_var=env_var, path=lookup.path, status=lookup.status)
         return MCP_MSG_ENV_HINT.format(env_var=ENV_MCP_ENV_FILE, user_dir=user_config_dir())
 
 
