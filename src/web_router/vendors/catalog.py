@@ -166,6 +166,12 @@ def _extra(directory: str) -> dict[str, Vendor]:
     return {vendor.vendor: vendor for vendor in (load_vendor_file(path) for path in sorted(root.glob("*.json")))}
 
 
+def builtin_catalog() -> VendorCatalog:
+    """Only the vendors that ship with the package, whatever ``WEB_ROUTER_VENDOR_CATALOG`` adds: what the committed
+    ``VENDORS.md`` and ``.env.example`` are generated from."""
+    return _load(None)
+
+
 @functools.lru_cache(maxsize=4)
 def _load(extra_dir: str | None) -> VendorCatalog:
     vendors = _builtin()
