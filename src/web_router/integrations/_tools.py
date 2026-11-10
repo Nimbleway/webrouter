@@ -29,7 +29,8 @@ from web_router.constants import (
     MSG_INTEGRATION_UNKNOWN_METHOD,
     MSG_INTEGRATION_UNKNOWN_TOOL,
 )
-from web_router.exceptions import ProviderError
+from web_router.constants_invoke import MSG_TOOLS_SYNC_IN_LOOP
+from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.integrations._options import answer_provider_for, extract_provider_for, tool_provider
 from web_router.integrations._render import render_answer, render_extract, render_search
 from web_router.integrations._specs import KNOWN_METHODS, TOOLS, ToolSpec
@@ -169,6 +170,8 @@ class WebRouterTools(Generic[ResultT]):
     def _call(self, name: str, tool_input: dict[str, Any]) -> ResultT:
         router = self.router
         if isinstance(router, AsyncWebRouter):
+            if _loop_running():  # blocking here would stall that loop for the whole call
+                raise ConfigurationError(MSG_TOOLS_SYNC_IN_LOOP)
             result: ResultT = _on_private_loop(self._acall(name, tool_input)).result()  # one loop for every call
             return result
         method = self._method(name)
@@ -241,3 +244,12 @@ def _invalid(method: str, name: str, tool_input: dict[str, Any]) -> str | None:
             and all(isinstance(url, str) and url for url in urls)
         )
     return None if ok else MSG_INTEGRATION_BAD_INPUT[method].format(tool=name, max_urls=INTEGRATION_EXTRACT_MAX_URLS)
+
+
+def _loop_running() -> bool:
+    """Whether an event loop is running in this thread."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True

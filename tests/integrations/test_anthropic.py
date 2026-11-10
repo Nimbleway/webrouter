@@ -150,6 +150,13 @@ def test_sync_calls_on_an_async_router_share_one_loop_that_outlives_them() -> No
     assert loops[0] is loops[1] and not loops[0].is_closed(), "a pool bound to the loop stays usable"
 
 
+async def test_a_sync_call_on_an_async_router_from_a_running_loop_raises_and_names_acall() -> None:
+    tools = WebRouterTools(AsyncWebRouter(), provider="fake")
+
+    with pytest.raises(ConfigurationError, match="acall"):
+        tools.call("web_router_search", {"query": "q"})
+
+
 async def test_acall_on_a_sync_router_runs_it_on_a_worker_thread() -> None:
     router = WebRouter()
 
