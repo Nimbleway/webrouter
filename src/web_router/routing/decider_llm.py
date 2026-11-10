@@ -12,8 +12,8 @@ proxy -- takes ``api_key_env`` unless it is on this machine, and asks for JSON
 in the prompt only. ``response_format`` (``json_schema``, ``json_object`` or
 ``prompt``) overrides either. Either way the reply is checked strictly
 (:mod:`.decider_reply`), and the model's own words are never used. ``model``
-is required: the router names no default model. The strict-schema presets ask
-for no scores, so their reasons carry no ``p=``.
+is required: the router names no default model. Scores come as a list of
+``{"id", "p"}``, which a strict schema can hold, read as one score per id.
 
 Each call sends the model the prompt, the budget, and each option's id with its
 method, backend, estimated cost and p90 latency. It is posted with httpx
@@ -47,6 +47,7 @@ from web_router.constants_decider import (
 from web_router.exceptions import ConfigurationError
 from web_router.routing.decider import DeciderQuestion, DeciderReply
 from web_router.routing.decider_http import endpoint, post_json, text
+from web_router.routing.decider_llm_prompt import menu, schema, scores_of
 from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.remote_errors import RemoteRouterInvalid
 
@@ -74,24 +75,6 @@ def checked_mode(mode: object) -> str:
         known = ", ".join(LLM_MODES)
         raise ConfigurationError(MSG_DECIDER_MODE.format(name=LLM_ROUTER_NAME, known=known, mode=mode))
     return mode
-
-
-def menu(question: DeciderQuestion) -> str:
-    """The request as the model reads it: the prompt, the budget and each option."""
-    lines = [f"Request: {question.prompt}", f"Budget: {question.budget or 'none'}", "Options:"]
-    lines.extend(f"- {cid}: {about}" for cid, about in question.options.items())
-    return "\n".join(lines)
-
-
-def schema(question: DeciderQuestion) -> dict[str, Any]:
-    """Strict structured output: a ranking of offered ids, and a confidence."""
-    ranked = {"type": "array", "items": {"type": "string", "enum": list(question.options)}}
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "required": ["ranked", "confidence"],
-        "properties": {"ranked": ranked, "confidence": {"type": "number"}},
-    }
 
 
 class LLMDecider:
@@ -154,7 +137,8 @@ class LLMDecider:
         if not isinstance(answer, dict):
             raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY)
         ranked: Any = answer.get("ranked")  # held to the question by the reply check, whatever it is
-        scores, confidence = answer.get("scores"), answer.get("confidence")
+        scores: Any = scores_of(answer.get("scores"))
+        confidence = answer.get("confidence")
         return DeciderReply(ranked=ranked, scores=scores, confidence=confidence)
 
 

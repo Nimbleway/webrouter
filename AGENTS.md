@@ -189,6 +189,7 @@ src/web_router/
 │   ├── decider_reply.py the reply held to the question: offered str ids once, numbers in 0..1
 │   ├── decider_http.py the built-in deciders' endpoint, key and one JSON POST, on the remote rules
 │   ├── decider_llm.py  router="llm": any OpenAI-compatible chat API, by preset or base_url
+│   ├── decider_llm_prompt.py what it sends a model: the options as text, the strict schema, scores
 │   ├── decider_systemone.py router="systemone": a System One API, typesafe or fireworks
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and

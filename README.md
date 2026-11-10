@@ -2280,10 +2280,9 @@ keep the static order. A reply naming an id not offered, an id twice, or a
 number that is not a finite 0..1 is set aside whole (`router_invalid`). The
 ranking becomes `tools` and `providers`; a `DeciderRouter` never sets options,
 exclusions or URLs, and its reason holds the decider's `name`, the first id
-and its score when the decider gives one (the strict-schema `llm` presets give
-none), never the decider's own words. A decider has `decide(question)`
-or `async adecide(question)`, and may declare `name`, `timeout_s` and
-`route_tools`, which the router declares in turn:
+and its score when the decider gives one, never the decider's own words. A
+decider has `decide(question)` or `async adecide(question)`, and may declare
+`name`, `timeout_s` and `route_tools`, which the router declares in turn:
 
 ```python
 from web_router import DeciderQuestion, DeciderReply, DeciderRouter, WebRouter, register_router
@@ -2305,7 +2304,8 @@ each sends the prompt off your machine only when you name it.
 
 - **`router="llm"`**: a chat model on any OpenAI-compatible chat-completions
   API, posted with httpx (no SDK, so no `OPENAI_BASE_URL` or other variable is
-  read). `model` is required: the router names no default model, so pass the
+  read). The model is asked for a ranking, a score per ranked id (as a list of
+  `{"id", "p"}`, which a strict schema can hold) and a confidence. `model` is required: the router names no default model, so pass the
   model's name as its server spells it. `router_config` also takes either a
   `preset` or a `base_url`, and `api_key_env`, `api_key`, `timeout_s` (3 s) and `route_tools`
   (research and browse unless set). Presets: `openai` and `anthropic` (a strict

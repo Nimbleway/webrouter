@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from web_router.constants_decider import MSG_DECIDER_FORM
@@ -42,8 +42,10 @@ def _decider_name(decider: object) -> str:
 class DeciderRouter:
     """A router that asks a decider one choice question per call and routes by its checked ranking."""
 
-    route: Callable[[RouteRequest], RouteDecision]
-    """Set when the decider answers synchronously, so sync callers need no event loop."""
+    route: Callable[[RouteRequest], RouteDecision | Awaitable[RouteDecision]]
+    """Set when the decider answers synchronously, so sync callers need no event loop. A ``decide()`` that
+    answers with an awaitable makes it answer with one too, which the router call awaits as it awaits any
+    router's, within the deadline, closed if it never runs."""
 
     def __init__(self, decider: Decider, *, owns_decider: bool = True) -> None:
         """
@@ -70,12 +72,18 @@ class DeciderRouter:
     def __repr__(self) -> str:
         return f"DeciderRouter({self.router_name!r}, timeout_s={self.timeout_s})"
 
-    def _route(self, req: RouteRequest) -> RouteDecision:
+    def _route(self, req: RouteRequest) -> RouteDecision | Awaitable[RouteDecision]:
         question = question_for(req)
         if not question.options:
             return RouteDecision()
         assert callable(self._decide)  # set only for a sync decider
-        return self._decision(req, question, self._decide(question))
+        reply = self._decide(question)
+        if inspect.isawaitable(reply):  # an async decide() behind a plain decorator
+            return self._awaited(req, question, reply)
+        return self._decision(req, question, reply)
+
+    async def _awaited(self, req: RouteRequest, question: DeciderQuestion, reply: Awaitable[Any]) -> RouteDecision:
+        return self._decision(req, question, await reply)
 
     async def aroute(self, req: RouteRequest) -> RouteDecision:
         """Ask the decider: ``adecide`` when it has one, else ``decide`` on a worker thread."""

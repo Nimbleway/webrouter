@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from tests.decider_helpers import CANDIDATES, TOKEN, request, respond, serve, systemone
-from web_router import WebRouter
+from web_router import Budget, RouteRequest, WebRouter
 from web_router.exceptions import ConfigurationError
 from web_router.routing.decider_systemone import systemone_router
 from web_router.routing.invoke import AttachedRouter
@@ -56,10 +56,11 @@ def test_the_apis_own_choice_is_not_used(monkeypatch: pytest.MonkeyPatch) -> Non
         {"route": {"probabilities": {"search:nope": 0.5}, "confidence": 0.5}},
         {"route": {"probabilities": {"search:exa": "high"}, "confidence": 0.5}},
         {"route": {"probabilities": {"search:exa": 0.5}, "confidence": 2}},
+        {"route": {"probabilities": {"search:exa": 10**400, "search:tavily": 0.5}, "confidence": 0.5}},
         {"route": {"probabilities": ["search:exa"]}},
         {"other": {}},
     ],
-    ids=["over-1", "unknown-id", "text", "confidence", "list", "no-route"],
+    ids=["over-1", "unknown-id", "text", "confidence", "huge-int", "list", "no-route"],
 )
 def test_a_reply_out_of_shape_is_invalid(answers: object, monkeypatch: pytest.MonkeyPatch) -> None:
     serve(monkeypatch, lambda req: respond({"answers": answers}))
@@ -95,3 +96,10 @@ def test_by_name_it_orders_every_tool_but_search_unless_told(monkeypatch: pytest
     config = {"preset": "fireworks", "route_tools": ("search",)}
     with WebRouter(router="systemone", router_config=config) as client:
         assert client._route_tools == {"search"}
+
+
+async def test_the_budget_rides_in_the_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    server = serve(monkeypatch, systemone("search:exa"))
+    budgeted = RouteRequest(prompt="q", candidates=CANDIDATES, deadline_s=1.0, budget=Budget(max_cost_usd=0.05))
+    await systemone_router(base_url="http://localhost:9000", model="m").aroute(budgeted)
+    assert server.body()["state"] == {"query": "q", "budget": {"max_cost_usd": 0.05, "strict": False}}

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
+from typing import TypeGuard
 
 from web_router.constants_decider import (
     MSG_DECIDER_CONFIDENCE,
@@ -26,7 +27,7 @@ class DeciderReplyError(WebRouterError, InvalidAnswer):
     """A decider's reply does not answer its question: recorded as ``router_invalid``."""
 
 
-def _unit(value: object) -> bool:
+def unit_number(value: object) -> TypeGuard[int | float]:
     """A finite number from 0 to 1, not a bool."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         return False
@@ -56,9 +57,9 @@ def checked_reply(reply: object, options: Mapping[str, str], name: str) -> Decid
     scores = reply.scores
     if scores is not None and not (
         isinstance(scores, Mapping)
-        and all(type(cid) is str and cid in ranked and _unit(p) for cid, p in scores.items())
+        and all(type(cid) is str and cid in ranked and unit_number(p) for cid, p in scores.items())
     ):
         raise DeciderReplyError(MSG_DECIDER_SCORES.format(name=name))
-    if reply.confidence is not None and not _unit(reply.confidence):
+    if reply.confidence is not None and not unit_number(reply.confidence):
         raise DeciderReplyError(MSG_DECIDER_CONFIDENCE.format(name=name))
     return reply

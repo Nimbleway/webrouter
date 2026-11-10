@@ -96,8 +96,9 @@ SYSTEMONE_QUESTION = "route"
 
 LLM_REPLY_FORMAT = (
     "Reply with a json object only: "
-    '{"ranked": [option ids, best first], "scores": {"<option id>": <0..1>}, "confidence": <0..1>}. '
-    "scores is optional. Leave out any option that does not fit."
+    '{"ranked": [option ids, best first], "scores": [{"id": "<option id>", "p": <0..1>}], "confidence": <0..1>}. '
+    "Give one score for each ranked id, the probability it is the best choice. Leave out any option that does "
+    "not fit."
 )
 """What the model is told to answer. Its own words are never read: no reason field is asked for."""
 

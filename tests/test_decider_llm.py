@@ -16,7 +16,13 @@ from web_router.routing.decider_llm import LLMDecider, llm_router
 from web_router.routing.invoke import AttachedRouter
 
 OFFERED = [c.id for c in CANDIDATES]
-RANKED = {"ranked": ["answer:perplexity", "search:exa"], "scores": {"answer:perplexity": 0.8}, "confidence": 0.7}
+SCORES = [{"id": "answer:perplexity", "p": 0.8}, {"id": "search:exa", "p": 0.1}]
+RANKED = {"ranked": ["answer:perplexity", "search:exa"], "scores": SCORES, "confidence": 0.7}
+
+FAILURES = (
+    *("redirect", "status", "transport", "too-large", "not-json", "not-object"),
+    *("unknown-id", "score-twice", "score-extra-key", "no-choice"),
+)
 
 PRESETS = {
     "openai": ("https://api.openai.com/v1/chat/completions", "OPENAI_API_KEY", "json_schema"),
@@ -39,7 +45,10 @@ async def test_each_preset_posts_its_chat_completion_with_its_key(preset: str, m
     if mode == "json_schema":
         schema = body["response_format"]["json_schema"]
         assert schema["strict"] is True
-        assert schema["schema"]["properties"]["ranked"]["items"]["enum"] == OFFERED
+        properties = schema["schema"]["properties"]
+        assert properties["ranked"]["items"]["enum"] == OFFERED
+        assert properties["scores"]["items"]["properties"]["id"]["enum"] == OFFERED
+        assert schema["schema"]["required"] == ["ranked", "scores", "confidence"]
     system, user = body["messages"]
     assert "json" in system["content"] and "who won" in user["content"]
     assert "- search:tavily: search on tavily, $0.008, p90 1.2s" in user["content"]
@@ -138,9 +147,11 @@ def _failing(monkeypatch: pytest.MonkeyPatch, handler: Any) -> str:
         (chat("not json"), "router_invalid"),
         (chat(["search:exa"]), "router_invalid"),
         (chat({"ranked": ["search:nope"]}), "router_invalid"),
+        (chat({"ranked": ["search:exa"], "scores": [{"id": "search:exa", "p": 0.5}] * 2}), "router_invalid"),
+        (chat({"ranked": ["search:exa"], "scores": [{"id": "search:exa", "p": 0.5, "x": 1}]}), "router_invalid"),
         (lambda r: respond({"choices": []}), "router_invalid"),
     ],
-    ids=["redirect", "status", "transport", "too-large", "not-json", "not-object", "unknown-id", "no-choice"],
+    ids=FAILURES,
 )
 def test_every_failure_leaves_the_static_order_with_no_url_or_key_shown(
     handler: Any, code: str, monkeypatch: pytest.MonkeyPatch
@@ -172,3 +183,10 @@ def test_the_failures_class_and_host_ride_on_router_errors_cause() -> None:
     assert "router_error" in str(caught.value)
     cause = str(caught.value.__cause__)
     assert "http://127.0.0.1" in cause and "ConnectError" in cause and "private" not in cause
+
+
+async def test_a_json_mode_model_may_give_scores_as_a_mapping(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GROQ_API_KEY", TOKEN)
+    serve(monkeypatch, chat({"ranked": ["search:exa"], "scores": {"search:exa": 0.4}}))
+    decision = await llm_router(preset="groq", model="m").aroute(request())
+    assert decision.reason == "llm(api.groq.com): search:exa, p=0.40"

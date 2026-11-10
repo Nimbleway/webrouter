@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Collection
+from dataclasses import asdict
 from typing import Any
 
 from web_router.constants_decider import (
@@ -33,15 +34,14 @@ from web_router.constants_decider import (
 from web_router.routing.decider import DeciderQuestion, DeciderReply
 from web_router.routing.decider_http import endpoint, post_json, text
 from web_router.routing.decider_llm import preset_of
+from web_router.routing.decider_reply import unit_number
 from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.remote_errors import RemoteRouterInvalid
 
 
 def _order(value: object) -> float:
-    """A probability's sort key; anything that is not a finite number sorts last, for the reply check to refuse."""
-    if isinstance(value, bool) or not isinstance(value, int | float):
-        return -math.inf
-    return float(value) if math.isfinite(value) else -math.inf
+    """A probability's sort key; anything but a number from 0 to 1 sorts last, for the reply check to refuse."""
+    return float(value) if unit_number(value) else -math.inf
 
 
 class SystemOneDecider:
@@ -88,9 +88,12 @@ class SystemOneDecider:
         return f"SystemOneDecider({self._endpoint.host!r}, model={self.model!r}, timeout_s={self.timeout_s})"
 
     def body(self, question: DeciderQuestion) -> dict[str, Any]:
-        """The System One request: the prompt as the state, and one ``choice`` question over the options."""
+        """The System One request: the prompt and the budget as the state, and one ``choice`` question."""
         choice = {"type": "choice", "instructions": question.instructions, "criteria": dict(question.options)}
-        return {"state": {"query": question.prompt}, "model": self.model, "questions": {SYSTEMONE_QUESTION: choice}}
+        state: dict[str, Any] = {"query": question.prompt}
+        if question.budget is not None:
+            state["budget"] = {k: v for k, v in asdict(question.budget).items() if v is not None}
+        return {"state": state, "model": self.model, "questions": {SYSTEMONE_QUESTION: choice}}
 
     async def adecide(self, question: DeciderQuestion) -> DeciderReply:
         """Ask, and rank the options by the probability the API gives each."""

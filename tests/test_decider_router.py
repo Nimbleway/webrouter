@@ -135,3 +135,23 @@ async def test_aclose_reaches_an_async_decider_and_close_runs_it_from_sync_code(
     await DeciderRouter(owned).aclose()
     await asyncio.to_thread(DeciderRouter(owned).close)
     assert owned.aclosed == 2
+
+
+class _Decorated:
+    """A decider whose ``decide`` looks sync but answers with a coroutine, as an async one behind a decorator."""
+
+    name = "decorated"
+    timeout_s = 1.0
+
+    def decide(self, question: DeciderQuestion) -> Any:
+        async def answer() -> DeciderReply:
+            return reply("search:exa")
+
+        return answer()
+
+
+@pytest.mark.parametrize("from_async", [False, True], ids=["from-sync", "from-async"])
+def test_a_decide_that_answers_with_a_coroutine_is_awaited(from_async: bool) -> None:
+    attached = AttachedRouter(DeciderRouter(_Decorated()))
+    outcome = asyncio.run(attached.acall(request())) if from_async else attached.call(request())
+    assert outcome.decision is not None and outcome.decision.reason == "decorated: search:exa"

@@ -65,3 +65,9 @@ def test_a_simulated_link_keeps_the_call_within_its_deadline(latency: ModuleType
     assert seen and seen[0] == pytest.approx(0.97)
     with pytest.raises(TimeoutError):
         asyncio.run(remote.DelayedRouter(Inner(), 400.0).aroute(req()))
+
+
+def test_the_llm_estimate_counts_the_schema_only_for_a_preset_that_sends_it(latency: ModuleType) -> None:
+    routers = module("router_latency_routers")
+    strict, json_mode = routers.llm_tokens(req(), "openai"), routers.llm_tokens(req(), "deepseek")
+    assert strict[0] > json_mode[0] and strict[1] == json_mode[1]
