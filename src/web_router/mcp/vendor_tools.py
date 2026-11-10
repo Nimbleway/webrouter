@@ -15,14 +15,14 @@ from typing import TYPE_CHECKING, Any
 
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_MSG_MISSING_ARGUMENT
-from web_router.constants_vendors import (
+from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
+from web_router.constants_vendors_mcp import (
     MCP_MSG_VENDOR_ARG_TYPE,
     MCP_MSG_VENDOR_CALL_ARGS,
     MCP_TOOL_CALL_VENDOR,
     MCP_TOOL_VENDOR_ENDPOINT,
     MCP_TOOL_VENDORS,
     MSG_VENDOR_MCP_WRITE_REFUSED,
-    VENDOR_ENV_ALLOW_WRITES,
 )
 from web_router.exceptions_vendors import VendorWriteRefusedError
 from web_router.mcp.shaping import HandleStore, max_response_chars, redact

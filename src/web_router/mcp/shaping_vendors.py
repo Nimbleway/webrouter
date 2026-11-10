@@ -14,7 +14,7 @@ import json
 from typing import Any
 
 from web_router.constants import MCP_JSON_INDENT
-from web_router.constants_vendors import MCP_MSG_VENDOR_TRUNCATED
+from web_router.constants_vendors_mcp import MCP_MSG_VENDOR_TRUNCATED
 from web_router.mcp.shaping import redact, redaction_note, render, truncate
 from web_router.vendors.catalog import VendorCatalog
 from web_router.vendors.credentials import CredentialSource, missing_credentials

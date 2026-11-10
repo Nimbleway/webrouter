@@ -24,7 +24,7 @@ from web_router.constants_mcp import (
 )
 from web_router.constants_search import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
 from web_router.constants_search import described as _described
-from web_router.constants_vendors import VENDOR_MCP_DESCRIPTIONS, VENDOR_MCP_PROPERTIES, VENDOR_MCP_REQUIRED
+from web_router.constants_vendors_mcp import VENDOR_MCP_DESCRIPTIONS, VENDOR_MCP_PROPERTIES, VENDOR_MCP_REQUIRED
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
