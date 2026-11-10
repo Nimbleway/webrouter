@@ -45,7 +45,7 @@ import asyncio
 import statistics
 import sys
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -214,7 +214,7 @@ def setup_of(args: argparse.Namespace) -> dict[str, Any]:
         "providers": providers,
         "format": args.format,
         "timeout": args.timeout,
-        "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "started": datetime.now(UTC).isoformat(timespec="seconds"),
     }
 
 

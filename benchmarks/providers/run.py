@@ -45,7 +45,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -296,7 +296,7 @@ def setup_of(args: argparse.Namespace) -> dict[str, Any]:
     return {
         **base_setup(args, providers),
         "max_results": args.max_results,
-        "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "started": datetime.now(UTC).isoformat(timespec="seconds"),
     }
 
 

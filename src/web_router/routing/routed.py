@@ -67,7 +67,7 @@ class RouterSetup(RouterOwner):
         url_policy: UrlPolicy | None = None,
         router_config: Mapping[str, Any] | None = None,
     ) -> None:
-        """Attach the router; called last in a constructor, since a router built by name is the caller's to close.
+        """Attach the router, last in a constructor: a refusal after it must close a router built by name.
 
         Raises:
             ConfigurationError: for a ``router`` in neither form nor a registered name, ``router_config`` without a

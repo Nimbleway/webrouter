@@ -71,6 +71,26 @@ def test_timeout_s_must_be_a_positive_number(value: Any) -> None:
         RemoteRouter(url="https://router.example.com", timeout_s=value)
 
 
+@pytest.mark.parametrize(
+    ("key", "env"),
+    [
+        ("s3cr\u00e9t-key", None),
+        ("s3cret\r\nX-Injected: 1", None),
+        ("s3cret key", None),
+        (42, None),
+        (None, "s3cr\u00e9t"),
+    ],
+)
+def test_a_key_that_is_not_visible_ascii_is_refused_unechoed(
+    key: Any, env: str | None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    if env is not None:
+        monkeypatch.setenv("WEB_ROUTER_REMOTE_ROUTER_API_KEY", env)
+    with pytest.raises(ConfigurationError, match="api_key") as refused:
+        RemoteRouter(url="https://router.example.com", api_key=key)
+    assert "s3c" not in str(refused.value) and refused.value.__cause__ is None
+
+
 def test_the_record_and_repr_name_the_service_by_scheme_and_host_only() -> None:
     router = RemoteRouter(url="https://Router.Example.com:8443/v1/route", api_key=KEY)
     assert router.router_name == "remote(https://router.example.com)"

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from web_router.constants_remote import WIRE_MAX_NAMES
+from web_router.constants_remote import WIRE_MAX_NAME, WIRE_MAX_NAMES
 from web_router.routing.wire import WireError, decision_from_wire
 from web_router.routing.wire_schema import response_schema
 
@@ -31,3 +31,23 @@ def test_a_list_inside_a_methods_options_is_held_to_the_entry_limit() -> None:
 def test_the_response_schema_caps_a_list_or_mapping_inside_a_methods_options() -> None:
     option = response_schema()["properties"]["params"]["anyOf"][0]["additionalProperties"]["additionalProperties"]
     assert option == {"maxItems": WIRE_MAX_NAMES, "maxProperties": WIRE_MAX_NAMES}, "untyped: any JSON, capped"
+
+
+def test_every_overlong_name_a_decision_sets_is_dropped() -> None:
+    long = "search:" + "x" * 20_000
+    wire = {
+        "schema": 1,
+        "exclude": {long: "why"},
+        "providers": {"search": [long, "exa"]},
+        "params": {"search": {long: 1}},
+    }
+    decision = decision_from_wire(wire)
+    assert decision.exclude == {} and decision.providers == {"search": ["exa"]} and decision.params == {"search": {}}
+
+
+def test_an_overlong_name_never_spells_its_shortened_form() -> None:
+    prefix = "search:" + "y" * (WIRE_MAX_NAME - 7)
+    overlong = {"schema": 1, "exclude": {prefix + "zzz": "why"}, "providers": {"search": [prefix + "zzz"]}}
+    decision = decision_from_wire(overlong)
+    assert decision.exclude == {} and decision.providers == {"search": []}, "no prefix + '\u2026' to match"
+    assert decision_from_wire({"schema": 1, "exclude": {prefix: "why"}}).exclude == {prefix: "why"}, "at the limit"

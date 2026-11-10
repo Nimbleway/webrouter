@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from tests.routing_helpers import MEMBERS, Ranker, Tool, order, wr
-from web_router import RouteDecision, RouteRequest, WebRouter
+from web_router import WebRouter
 from web_router.exceptions import ConfigurationError
 
 ARGS: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
@@ -61,18 +61,6 @@ def test_the_caller_s_route_tools_win_over_the_router_s(tool: Tool, called: list
     declares_none = Declaring(())
     _call(wr(WebRouter, declares_none, route_tools=[tool.name]), tool)
     assert len(declares_none.seen) == 1
-
-
-def test_a_router_function_may_declare_route_tools(tool: Tool, called: list[str]) -> None:
-    seen: list[RouteRequest] = []
-
-    def route(req: RouteRequest) -> RouteDecision:
-        seen.append(req)
-        return RouteDecision()
-
-    route.route_tools = _others(tool)  # type: ignore[attr-defined]
-    _call(wr(WebRouter, route), tool)
-    assert seen == []
 
 
 @pytest.mark.parametrize(

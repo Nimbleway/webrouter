@@ -1,8 +1,7 @@
 """WebIQ provider, over Microsoft AI's Web Search (v3) and Browse APIs.
 
-Search and extract. Talks to the REST endpoints directly: Microsoft's ``webiq``
-SDK needs Python 3.11, and this package supports 3.10. Install with
-the ``search`` extra or ``extract``. Reads
+Search and extract. Talks to the REST endpoints directly, so it needs no SDK
+beyond the shared HTTP client. Install with the ``search`` extra or ``extract``. Reads
 ``WEBIQ_API_KEY`` unless a key is passed explicitly.
 
 Search maps ``max_results``, ``search_depth`` (as ``maxLength``, and whole-page

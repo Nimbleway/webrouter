@@ -4,38 +4,15 @@ Experimental. Opt in by name::
 
     WebRouter(router="remote", router_config={"url": "https://router.example.com/route", "timeout_s": 1.0})
 
-Each routed call posts its :class:`~web_router.RouteRequest` as JSON
-(:func:`~web_router.routing.wire.request_to_wire`) and reads a
-:class:`~web_router.RouteDecision` back. The service is shown what any router
-is shown: the prompt and the URLs in it, whole, the budget and the candidates,
-named ``tool:provider`` -- which say what backends are configured here. No key
-value is ever sent: the one credential on the request is the service's own
-bearer key, ``router_config["api_key"]`` or ``WEB_ROUTER_REMOTE_ROUTER_API_KEY``,
-read once when the router is built.
+Each routed call posts its :class:`~web_router.RouteRequest` as JSON and reads a
+:class:`~web_router.RouteDecision` back: one request, never retried. The README's
+"A router service" says what is sent and how each failure is recorded. The parts:
 
-It is async only (``aroute``), so a call that runs out of time is cancelled
-rather than left running: an async caller awaits it on its own loop, and a sync
-one on web-router's private loop, each cancelled at the deadline --
-``timeout_s`` (1 s unless set), or less when the call's budget or deadline has
-less left. Its one httpx connection pool belongs to the event loop that first
-used it, so warm calls reuse their connection; every call of a sync caller
-runs on the private loop. A call from any other loop gets a client of its own,
-closed when the call ends; :mod:`.remote_close` closes the pool. httpx is
-imported only when the router is built (:mod:`.remote_config`). One request per
-call, never retried; no redirect is followed, and no proxy or other setting is
-read from the environment. The URL must be ``https``, or ``http`` to
-``localhost`` or a loopback address (:mod:`.remote_url`).
-
-A failure is ``router_timeout``, ``router_error`` or ``router_invalid``
-(:mod:`.remote_errors`), and the call runs on the static order. A reply that is
-not a 200 of uncompressed JSON under 64 KiB is refused (:mod:`.remote_reply`). Fields the
-service adds that this version does not know are ignored; its reasons are cut
-short, and an echo of its bearer key in its answer is redacted
-(:mod:`.remote_redact`). Router-set URLs are held to
-``public_only`` when the caller sets no ``url_policy`` (``min_url_policy``).
-
-A decision record names it ``remote(<scheme>://<host>)``: never the URL's
-path, and never the key.
+- :mod:`.remote_url`: the URL, ``https`` or plain ``http`` to loopback.
+- :mod:`.remote_config`: httpx, the timeout and the bearer key, read once.
+- :mod:`.remote_close`: closing the pool, which belongs to the loop that first used it.
+- :mod:`.remote_reply` and :mod:`.remote_errors`: the reply read, and the failure codes.
+- :mod:`.remote_redact`: an echo of the bearer key, redacted.
 """
 
 from __future__ import annotations
@@ -53,13 +30,14 @@ from web_router.constants_remote import (
     REMOTE_DISPLAY_NAME,
     REMOTE_TIMEOUT_S,
     REMOTE_URL_POLICY,
+    REMOTE_WHY_CLOSE_LOOP,
     REMOTE_WHY_CLOSED,
     REMOTE_WHY_DECISION,
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_TRANSPORT,
 )
 from web_router.routing.contract import RouteDecision, RouteRequest
-from web_router.routing.remote_close import PoolCloser
+from web_router.routing.remote_close import PoolCloser, close_failed
 from web_router.routing.remote_config import bearer_key, checked_timeout, load_httpx, request_headers
 from web_router.routing.remote_errors import RemoteRouterError, RemoteRouterInvalid, RemoteRouterTimeout
 from web_router.routing.remote_redact import unechoed_decision
@@ -97,7 +75,7 @@ class RemoteRouter(PoolCloser):
 
         Raises:
             ConfigurationError: for httpx not installed, a URL :func:`~.remote_url.checked_url` refuses, a
-                ``timeout_s`` that is not a positive number, or an ``api_key`` that is not a string.
+                ``timeout_s`` that is not a positive number, or a key that is not visible ASCII.
         """
         self._httpx = load_httpx()
         self._url = checked_url(url, self._httpx)
@@ -111,7 +89,7 @@ class RemoteRouter(PoolCloser):
         self._lock = threading.Lock()
         self._closed = False
         self._pool: httpx.AsyncClient | None = None
-        # Weakly held: a loop that is gone takes its pool's connections with it, and the next loop makes a new one.
+        # Weakly held, so the router never keeps a loop alive. Its loop ending leaves the pool's sockets open.
         self._owner: weakref.ref[asyncio.AbstractEventLoop] | None = None
 
     def __repr__(self) -> str:
@@ -137,7 +115,8 @@ class RemoteRouter(PoolCloser):
     def _client(self) -> AbstractAsyncContextManager[httpx.AsyncClient]:
         """The pool, on the loop it belongs to; on another loop, a client for this call alone, closed after it.
 
-        A pool is bound to its loop, so one loop's calls never use or close another's under it.
+        A pool is bound to its loop, so one loop's calls never use or close another's under it. A pool whose loop
+        has ended is replaced with a ``ResourceWarning``: its sockets cannot be closed any more.
 
         Raises:
             RemoteRouterError: once the router is closed.
@@ -147,10 +126,14 @@ class RemoteRouter(PoolCloser):
             if self._closed:
                 raise RemoteRouterError(self.host, REMOTE_WHY_CLOSED)
             owner = None if self._owner is None else self._owner()
-            if self._pool is None or owner is None or owner.is_closed():
+            orphaned = self._pool is not None and (owner is None or owner.is_closed())
+            if self._pool is None or orphaned:
                 self._pool, self._owner, owner = self._new_client(), weakref.ref(loop), loop
             # Made under the lock, so a close that has returned is never followed by a new client.
-            return nullcontext(self._pool) if owner is loop else self._new_client()
+            client = nullcontext(self._pool) if owner is loop else self._new_client()
+        if orphaned:
+            close_failed(self.host, REMOTE_WHY_CLOSE_LOOP)
+        return client
 
     def _new_client(self) -> httpx.AsyncClient:
         # No redirect followed, so a 3xx is a router error and the key goes nowhere else; no proxy, netrc or

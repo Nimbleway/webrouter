@@ -81,7 +81,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -1585,7 +1585,7 @@ def run_setup(args: argparse.Namespace, arm_names: list[str]) -> dict[str, Any]:
         **({"outage": outage_record(args.outage)} if getattr(args, "outage", None) else {}),
     }
     per_platform = {platform: _platform_setup(args, platform) for platform in args.platforms}
-    started = {"started": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    started = {"started": datetime.now(UTC).isoformat(timespec="seconds")}
     if len(args.platforms) == 1:
         platform = args.platforms[0]
         return {
@@ -1615,7 +1615,7 @@ def main(argv: list[str] | None = None) -> None:
     if ENV_FILE.is_file():
         load_dotenv(ENV_FILE)
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     args.out = args.out or DEFAULT_OUT / stamp
     # Rows are appended as each run finishes, so a folder that already holds
     # some would mix two runs in every later `report.py` rebuild.

@@ -34,7 +34,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -180,7 +180,7 @@ def setup_of(args: argparse.Namespace) -> dict[str, Any]:
     setup = {
         **base_setup(args, providers),
         **({"baseline": str(args.baseline)} if args.baseline else {}),
-        "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "started": datetime.now(UTC).isoformat(timespec="seconds"),
     }
     if args.baseline:
         # Before anything is paid for; the judge is checked once it is built, still before the first answer.

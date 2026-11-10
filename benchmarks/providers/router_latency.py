@@ -29,7 +29,7 @@ import json
 import random
 import sys
 from collections.abc import Iterable, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -153,7 +153,7 @@ def run(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[Ro
         _close(built.values(), loop)
     costs = {row["name"]: row["cost_usd"] for row in _plan(args, specs, pool)}
     return {
-        "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "generated": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         "environment": environment(),
         "settings": settings(args),
         "definition": definition(args.chain, args.share),
@@ -185,7 +185,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         print(dry_run(_plan(args, specs, pool), planned, joined))
         return
     results = run(args, specs, pool)
-    out = args.out or OUT_DIR / (datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + ".json")
+    out = args.out or OUT_DIR / (datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + ".json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     text = markdown(results, tool_latencies(args.chain))

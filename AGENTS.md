@@ -396,7 +396,13 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         route_eval_paths.py, a decision merged by the
                         library's merge rule in route_eval_merge.py, one
                         question walked in route_eval_replay.py, its
-                        command line in route_eval_cli.py; router_latency.py: routers
+                        command line in route_eval_cli.py, each router
+                        scored in route_eval_score.py, its tool confusion
+                        matrix and the router comparison in
+                        route_eval_matrix.py and route_eval_compare.py,
+                        reported by route_eval_report_matrix.py with
+                        route_eval_fmt.py's formatting;
+                        router_latency.py: routers
                         timed against each tool's p50, outside CI, its yardstick,
                         routers, timing and report in router_latency_*.py;
                         chains.py (`make chains`): the
@@ -1320,7 +1326,7 @@ plumbing — never the network, and never `OPENAI_API_KEY` or
 
 [STYLE_GUIDE.md](STYLE_GUIDE.md) is the full version and takes precedence. In short:
 
-- Python 3.10+, `from __future__ import annotations`, full type annotations.
+- Python 3.11+, `from __future__ import annotations`, full type annotations.
   `mypy --strict` must pass on `src/`.
 - Line length 120, ruff-formatted.
 - Comments explain *why*, never *what*. Do not narrate the code, leave TODOs

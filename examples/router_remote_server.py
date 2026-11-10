@@ -10,29 +10,26 @@ answers. Swap `decide` for your own logic, or port it to any language: a
 service reads `"schema": 1` JSON, ignores request fields it does not know, and
 answers `{"schema": 1, ...}` with any of the decision's optional fields.
 
-What a service is shown: the prompt, the URLs in it, the budget and the
-candidates, named `tool:provider` -- which say what backends the caller has
-configured. Never a key value: the one credential on the request is the
-service's own bearer key.
+A service is shown the prompt, its URLs, the budget and the candidates, named `tool:provider` -- which
+say what backends the caller has configured -- and never a key but its own bearer key.
 
-Run it with::
+Run it, after `make setup` in your webrouter clone::
 
-    make setup   # in your webrouter clone: every extra
     uv run python examples/router_remote_server.py            # serve on http://127.0.0.1:8765/route
     uv run python examples/router_remote_server.py --demo     # serve, plan three prompts through it, stop
 
-Set `WEB_ROUTER_REMOTE_ROUTER_API_KEY` before starting it to require that key;
-the `remote` router reads the same variable. It binds 127.0.0.1 unless
-`--host` says otherwise, answers only a `Host` header naming that address or
-`localhost`, caps a request at 1 MB, serves at most 32 connections at once
-and drops one that sends nothing for 10 seconds. Plain `http` is accepted only to
-`localhost` or a loopback address: put a real service behind `https`.
+`WEB_ROUTER_REMOTE_ROUTER_API_KEY`, set, is the key it requires and the one the `remote` router sends.
+It binds 127.0.0.1 unless `--host` says otherwise (any other host needs the key), answers only a `Host`
+naming that address or `localhost`, caps a request at 1 MB, serves at most 32 connections at once and
+drops one that sends nothing for 10 s. Plain `http` reaches only a loopback host: put a real service
+behind `https`.
 """
 
 from __future__ import annotations
 
 import argparse
 import hmac
+import ipaddress
 import json
 import os
 import socket
@@ -43,7 +40,7 @@ from typing import Any
 
 from web_router import WebRouter
 from web_router.routing.rules import rules
-from web_router.routing.wire import WireError, decision_to_wire, request_from_wire
+from web_router.routing.wire import decision_to_wire, request_from_wire
 
 PATH = "/route"
 MAX_BODY_BYTES = 1_000_000
@@ -127,13 +124,11 @@ class _Handler(BaseHTTPRequestHandler):
             return self._answer(413, {"error": "a request needs a Content-Length of at most 1 MB"})
         try:
             body = json.loads(self.rfile.read(int(length)))
-            if not isinstance(body, dict):
-                raise WireError("not a JSON object")
+            request_from_wire(body)  # checked apart from decide(), whose own errors are the server's, never a 400
+        except (ValueError, RecursionError):  # bad JSON or a WireError, or JSON nested deeper than Python parses
+            return self._answer(400, {"error": "not a schema-1 request"})
+        try:
             return self._answer(200, self.server.decide(body))
-        except (ValueError, WireError) as exc:  # WireError is a ValueError; bad JSON is one too
-            return self._answer(400, {"error": str(exc)})
-        except RecursionError:  # JSON nested deeper than Python parses
-            return self._answer(400, {"error": "a request nested too deeply"})
         except Exception:  # a decide() that fails: an answer, not a dropped connection, and never its text
             return self._answer(500, {"error": "the router failed"})
 
@@ -155,8 +150,17 @@ class _Handler(BaseHTTPRequestHandler):
         """Quiet: a request line is enough noise in tests, and headers -- the key among them -- are never logged."""
 
 
+def _loopback(host: str) -> bool:
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return host == "localhost"
+
+
 def serve(host: str = "127.0.0.1", port: int = 8765, *, api_key: str | None = None) -> RouterServer:
     """A server bound to ``host:port`` (0 picks a free port), answering on a background thread."""
+    if not api_key and not _loopback(host):
+        raise ValueError("a host other than loopback needs WEB_ROUTER_REMOTE_ROUTER_API_KEY: the Host check is no auth")
     server = RouterServer((host, port), api_key=api_key)
     threading.Thread(target=server.serve_forever, kwargs={"poll_interval": POLL_S}, daemon=True).start()
     return server

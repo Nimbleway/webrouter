@@ -22,7 +22,7 @@ REMOTE_TIMEOUT_S = 1.0
 """Seconds the ``remote`` router waits for its service when ``router_config`` sets no ``timeout_s``."""
 
 REMOTE_MAX_RESPONSE_BYTES = 64 * 1024
-"""The largest answer read from a router service: a decision is a few hundred bytes. Past it, a router error."""
+"""The largest answer read from a router service: a decision is a few hundred bytes. Past it, ``router_invalid``."""
 
 REMOTE_CLOSE_WAIT_S = 2.0
 """Seconds a close from another loop waits for the pool to close on its own; past it, the pool is dropped."""
@@ -74,6 +74,10 @@ WIRE_CONFIDENCE_RANGE = {"minimum": 0, "maximum": 1}
 WIRE_MAX_TEXT = 300
 """Characters kept of a decision's ``reason`` and of each ``exclude`` reason; the rest is cut."""
 
+WIRE_MAX_NAME = 128
+"""The longest name a decision may set -- candidate id, provider, option -- since a record may show it; a longer
+one is dropped, not shortened, so it can never spell a real name."""
+
 WIRE_MAX_NAMES = 64
 """The most entries a decision may hold in one list or mapping: ``tools``, one method's ``providers``,
 ``exclude``, or one method's ``params``. Past it, the decision is refused."""
@@ -86,10 +90,12 @@ WIRE_RESPONSE_TITLE = "web-router RouteDecision, wire schema v1"
 
 MSG_REMOTE_NO_URL = "router='remote' needs router_config={{'url': ...}}, the router service's URL."
 MSG_REMOTE_URL = "router_config['url'] is not an absolute http(s) URL with a host that parses one way."
-MSG_REMOTE_URL_PARTS = "router_config['url'] may not carry credentials, a query or a fragment: pass the key as api_key."
+MSG_REMOTE_URL_PARTS = "router_config['url'] may not carry a query or a fragment: pass the key as api_key."
 MSG_REMOTE_HTTPS = "router_config['url'] must use https; plain http is allowed only to localhost, 127.0.0.0/8 or ::1."
 MSG_REMOTE_TIMEOUT = "router_config['timeout_s'] must be a positive number of seconds; got {value!r}."
-MSG_REMOTE_KEY = "router_config['api_key'] must be a string."
+MSG_REMOTE_KEY = (
+    "router_config['api_key'], or WEB_ROUTER_REMOTE_ROUTER_API_KEY, must be a string of visible ASCII characters."
+)
 MSG_REMOTE_NO_HTTPX = (
     "router='remote' needs httpx, which web-router's '{extra}' extra installs: pip install 'webrouter[{extra}]'."
 )

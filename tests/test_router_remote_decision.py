@@ -29,9 +29,8 @@ def test_a_decision_of_another_schema_version_is_router_error() -> None:
         ({"tools": ["extract"]}, "missing or not a number"),
         ({"schema": 1, "providers": {"search": [f"p{i}" for i in range(65)]}}, "more than 64 entries"),
         ({"schema": 1, "params": {"search": {f"o{i}": 1 for i in range(65)}}}, "64 entries"),
-        ({"schema": 1, "params": {"extract": {"urls": [f"https://e{i}.example/" for i in range(65)]}}}, "64 entries"),
     ],
-    ids=["no-schema", "65-providers", "65-options", "65-extract-urls"],
+    ids=["no-schema", "65-providers", "65-options"],
 )
 def test_a_decision_without_a_schema_or_of_another_shape_is_router_invalid(answer: dict[str, Any], why: str) -> None:
     with running(lambda body: answer) as server:

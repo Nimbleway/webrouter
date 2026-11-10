@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from contextlib import contextmanager
 from typing import Any
+
+import pytest
 
 from web_router import RouteDecision, RouteRequest, register_router, unregister_router
 
@@ -33,9 +34,9 @@ class CloseOnly(Closable):
     aclose = None  # type: ignore[assignment]
 
 
-@contextmanager
-def registered() -> Iterator[list[Closable]]:
-    """Register NAME while open; every router the factory builds is appended to the list it yields."""
+@pytest.fixture(name="built")
+def built_fixture() -> Iterator[list[Closable]]:
+    """NAME registered for the test; every router the factory builds is appended here."""
     made: list[Closable] = []
 
     def factory(**config: Any) -> Closable:

@@ -7,7 +7,18 @@ from typing import Any
 
 import pytest
 
-from tests.routing_remote_helpers import KEY, config, loop_thread, on_loop, running, sample_request, stuck
+from tests.routing_remote_helpers import (
+    KEY,
+    Canned,
+    ask,
+    canned,
+    config,
+    loop_thread,
+    on_loop,
+    running,
+    sample_request,
+    stuck,
+)
 from web_router.routing.remote import RemoteRouter, RemoteRouterError
 
 
@@ -38,14 +49,16 @@ def test_a_call_on_another_loop_gets_a_client_of_its_own_closed_after_it(monkeyp
         assert pool.is_closed
 
 
-def test_the_pool_moves_to_the_next_loop_when_its_own_is_gone() -> None:
-    with running() as server:
-        router = RemoteRouter(**config(server))
-        asyncio.run(router.aroute(sample_request()))
+def test_a_pool_whose_loop_ended_is_replaced_and_dropped_with_a_warning() -> None:
+    with canned(Canned(body=b'{"schema": 1, "tools": ["search"]}', protocol="HTTP/1.1")) as base:
+        router = RemoteRouter(url=base + "/route")
+        ask(router)
         first = router._pool
-        asyncio.run(router.aroute(sample_request()))
+        with pytest.warns(ResourceWarning, match="its event loop is not running"):
+            ask(router)  # the first loop ended with its keep-alive connection open
         assert router._pool is not None and router._pool is not first, "a closed loop's pool is not reused"
-        router.close()  # its loop is gone, and its connections with it: nothing to wait for
+        with pytest.warns(ResourceWarning, match="its event loop is not running"):
+            router.close()
         assert router._pool is None
 
 

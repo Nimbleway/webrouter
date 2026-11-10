@@ -9,7 +9,14 @@ from typing import Any
 
 import pytest
 
-from tests.benchmarks._route_eval_choices import ORACLE, RIGHT, ROUTER, _c
+from tests.benchmarks._route_eval_choices import (  # noqa: F401 -- the *_fixture names are fixtures
+    ORACLE,
+    RIGHT,
+    ROUTER,
+    _c,
+    matrix_fixture,
+    matrix_report_fixture,
+)
 from tests.benchmarks.conftest import write_mixed_set
 
 # The matrix, checked by hand

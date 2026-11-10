@@ -162,10 +162,8 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         # A threading lock on both routers: the async one is as easily shared across threads, each with its own
         # loop, and nothing awaits while it is held, so it can never stall an event loop.
         self._handles_lock = threading.Lock()
-        # One lock for the instance caches: evaluate() calls benchmark()
-        # from worker threads, so two rows can race the same check-then-create
-        # and the loser's client would never be closed. Nothing awaits while it
-        # is held.
+        # One lock for the instance caches: evaluate() calls benchmark() from worker threads, so two rows can race
+        # the same check-then-create and the loser's client would never be closed. Nothing awaits while it is held.
         self._providers_lock = threading.Lock()
         # Rows the sync benchmark() gave up on whose calls still run; close()
         # waits for them so it never shuts a provider under a live search.
@@ -596,7 +594,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         return self._track(self.get_browser_provider(provider).open(request))
 
     def close(self) -> None:
-        """Release every browser session still open, then close every provider this router built.
+        """Release every browser session still open, then close every provider, and the router, built here.
 
         A provider passed in already constructed is the caller's to close; this
         router never cached it and must not shut its client down. Sessions are
@@ -850,7 +848,7 @@ class AsyncWebRouter(
         return self._track(await self.get_browser_provider(provider).aopen(request))
 
     async def aclose(self) -> None:
-        """Release every browser session still open, then close every provider this router built.
+        """Release every browser session still open, then close every provider, and the router, built here.
 
         The same ownership rule and ordering as :meth:`WebRouter.close`.
         """

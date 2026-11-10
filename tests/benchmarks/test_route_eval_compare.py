@@ -6,7 +6,13 @@ from types import ModuleType
 
 import pytest
 
-from tests.benchmarks._route_eval_choices import ROUTER, _c
+from tests.benchmarks._route_eval_choices import (  # noqa: F401 -- the *_fixture names are fixtures
+    ROUTER,
+    _c,
+    compare_fixture,
+    matrix_fixture,
+    matrix_report_fixture,
+)
 
 
 def test_two_routers_disagree_where_their_served_paths_differ(compare: ModuleType) -> None:
