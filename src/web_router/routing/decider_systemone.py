@@ -33,7 +33,7 @@ from web_router.constants_decider import (
 from web_router.routing.decider import DeciderQuestion, DeciderReply
 from web_router.routing.decider_http import endpoint, post_json, preset_of, text
 from web_router.routing.decider_reply import unit_number
-from web_router.routing.decider_router import DeciderRouter
+from web_router.routing.decider_router import DeciderRouter, takes_config_of
 from web_router.routing.remote_errors import RemoteRouterInvalid
 
 
@@ -105,9 +105,10 @@ class SystemOneDecider:
         return DeciderReply(ranked=ranked, scores=probabilities, confidence=answer.get("confidence"))
 
 
+@takes_config_of(SystemOneDecider)
 def systemone_router(**config: Any) -> DeciderRouter:
     """What ``router="systemone"`` builds from ``router_config``: a :class:`DeciderRouter` on a System One API.
 
-    ``config`` is :class:`SystemOneDecider`'s keyword arguments, which check it.
+    ``config`` is :class:`SystemOneDecider`'s keyword arguments, checked against its signature when built by name.
     """
     return DeciderRouter(SystemOneDecider(**config))

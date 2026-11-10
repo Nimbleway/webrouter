@@ -45,7 +45,7 @@ from web_router.exceptions import ConfigurationError
 from web_router.routing.decider import DeciderQuestion, DeciderReply
 from web_router.routing.decider_http import endpoint, post_json, preset_of, text
 from web_router.routing.decider_llm_prompt import menu, schema, scores_of
-from web_router.routing.decider_router import DeciderRouter
+from web_router.routing.decider_router import DeciderRouter, takes_config_of
 from web_router.routing.remote_errors import RemoteRouterInvalid
 
 
@@ -122,9 +122,10 @@ class LLMDecider:
         return DeciderReply(ranked=ranked, scores=scores, confidence=confidence)
 
 
+@takes_config_of(LLMDecider)
 def llm_router(**config: Any) -> DeciderRouter:
     """What ``router="llm"`` builds from ``router_config``: a :class:`DeciderRouter` on an :class:`LLMDecider`.
 
-    ``config`` is :class:`LLMDecider`'s keyword arguments, which check it.
+    ``config`` is :class:`LLMDecider`'s keyword arguments, checked against its signature when built by name.
     """
     return DeciderRouter(LLMDecider(**config))

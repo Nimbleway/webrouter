@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from tests.decider_helpers import CANDIDATES, TOKEN, request, respond, serve, systemone
@@ -82,9 +84,15 @@ def test_a_bad_setup_is_refused_when_the_router_is_built(
     assert TOKEN not in str(caught.value)
 
 
-def test_a_key_the_decider_does_not_take_is_refused_by_the_decider() -> None:
-    with pytest.raises(TypeError, match="bogus"):
-        systemone_router(preset="typesafe", bogus=1)
+@pytest.mark.parametrize(
+    ("name", "config", "message"),
+    [("systemone", {"preset": "typesafe", "bogus": 1}, "'bogus'"), ("llm", {"preset": "openai"}, "'model'")],
+)
+def test_a_router_config_that_does_not_fit_the_decider_is_a_configuration_error(
+    name: str, config: dict[str, Any], message: str
+) -> None:
+    with pytest.raises(ConfigurationError, match=message):
+        WebRouter(router=name, router_config=config)
 
 
 def test_by_name_it_orders_every_tool_but_search_unless_told(monkeypatch: pytest.MonkeyPatch) -> None:
