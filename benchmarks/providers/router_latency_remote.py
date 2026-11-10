@@ -43,10 +43,10 @@ class DelayedRouter:
 
     async def aroute(self, req: RouteRequest) -> RouteDecision:
         slept = self.rtt_s * (HANDSHAKE_RTTS if self._first else 1)
-        self._first = False
-        if slept >= req.deadline_s:
+        if slept >= req.deadline_s:  # no connection made: the next call pays the handshake again
             await asyncio.sleep(req.deadline_s)
             raise TimeoutError(MSG_LINK_TIMEOUT)
+        self._first = False
         await asyncio.sleep(slept)
         return await self.inner.aroute(replace(req, deadline_s=req.deadline_s - slept))  # type: ignore[no-any-return]
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from types import ModuleType
 
 import pytest
@@ -65,6 +66,10 @@ def test_a_simulated_link_keeps_the_call_within_its_deadline(latency: ModuleType
     assert seen and seen[0] == pytest.approx(0.97)
     with pytest.raises(TimeoutError):
         asyncio.run(remote.DelayedRouter(Inner(), 400.0).aroute(req()))
+    link, short = remote.DelayedRouter(Inner(), 20.0), replace(req(), deadline_s=0.05)
+    for _ in range(2):  # a handshake that timed out opened no connection, so the next call pays it again
+        with pytest.raises(TimeoutError):
+            asyncio.run(link.aroute(short))
 
 
 def test_the_llm_estimate_counts_the_schema_only_for_a_preset_that_sends_it(latency: ModuleType) -> None:
