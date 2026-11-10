@@ -1,0 +1,1749 @@
+{
+  "vendor": "getleadsio",
+  "name": "GetLeads",
+  "category": "enrichment",
+  "summary": "B2B contact and company database with structured search, counts, async CSV exports, and person and company enrichment.",
+  "docs_url": "https://www.getleads.io/docs/",
+  "base_url": "https://app.getleads.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GETLEADS_API_KEY"
+        ],
+        "description": "a GetLeads API key like glb_live_<keyId>_<secret> (app.getleads.io/api-keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limit: 100 requests per minute per account, shared across keys; a 429 carries Retry-After.",
+    "One plan credit buys one returned record, not one email. Counts, column catalogues and enum values are free. A genuine enrichment no-match should not use a credit. HTTP 402 means the credit or fair-use budget is spent.",
+    "Search is POST with filters in the body, flat or inside a filters object. Different filters AND together; values in one list OR together. Check audience size with the free count endpoint first.",
+    "A stored work email is not necessarily verified: email_status VALID is verified, CATCH_ALL and UNKNOWN are not. Reverify before sending.",
+    "Async export flow: POST an export (up to 50,000 rows) to get export_id, poll the matching GET until job_status is completed or failed, then download export_url (temporary, about 7 days).",
+    "Enrichment endpoints take items, up to 100 people per request. CSV enrichment (multipart) and the company followers, profile monitoring and visitor identification products are not in this entry.",
+    "The reverse phone lookup routes answer 410 (pending)."
+  ],
+  "sources": [
+    "https://www.getleads.io/docs/",
+    "https://www.getleads.io/docs.txt"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "getleadsio.contacts.search",
+      "name": "Search contacts",
+      "summary": "Contacts matching person and company filters, with chosen columns, one page at a time.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/contacts/search",
+      "params": {
+        "industries": {
+          "in": "body",
+          "type": "array"
+        },
+        "countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_size": {
+          "in": "body",
+          "type": "array",
+          "description": "LinkedIn size-band labels (e.g. \"51 to 200\")."
+        },
+        "company_linkedin_urls": {
+          "in": "body",
+          "type": "array"
+        },
+        "revenue": {
+          "in": "body",
+          "type": "array"
+        },
+        "cities": {
+          "in": "body",
+          "type": "array"
+        },
+        "states": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_industries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_job_titles": {
+          "in": "body",
+          "type": "array"
+        },
+        "email_status": {
+          "in": "body",
+          "type": "array",
+          "description": "Email verification status. Use [\"VALID\"] for deliverable emails."
+        },
+        "technologies": {
+          "in": "body",
+          "type": "array",
+          "description": "Technologies/tools a company uses."
+        },
+        "funding_types": {
+          "in": "body",
+          "type": "array",
+          "description": "Last funding round type (e.g. \"Seed\", \"Series A\", \"IPO\")."
+        },
+        "headquarters_cities": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "email_address": {
+          "in": "body",
+          "type": "string"
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string"
+        },
+        "company_description": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over company LinkedIn About text."
+        },
+        "person_description": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over person LinkedIn bio."
+        },
+        "linkedin_headline": {
+          "in": "body",
+          "type": "string"
+        },
+        "education": {
+          "in": "body",
+          "type": "string"
+        },
+        "certifications": {
+          "in": "body",
+          "type": "string"
+        },
+        "languages": {
+          "in": "body",
+          "type": "string"
+        },
+        "job_start_date_min": {
+          "in": "body",
+          "type": "string",
+          "description": "Earliest current-role start date (YYYY-MM-DD)."
+        },
+        "job_start_date_max": {
+          "in": "body",
+          "type": "string",
+          "description": "Latest current-role start date (YYYY-MM-DD)."
+        },
+        "skills": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over contact skills."
+        },
+        "domain_list_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Saved domain list id."
+        },
+        "company_size_min": {
+          "in": "body",
+          "type": "integer"
+        },
+        "company_size_max": {
+          "in": "body",
+          "type": "integer"
+        },
+        "employees_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum company headcount (band-overlap matching)."
+        },
+        "employees_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum company headcount (band-overlap matching)."
+        },
+        "employee_profiles_on_linkedin_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "employee_profiles_on_linkedin_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "founded_year_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Earliest founding year."
+        },
+        "founded_year_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Latest founding year."
+        },
+        "total_funding_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum total funding raised (USD)."
+        },
+        "total_funding_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum total funding raised (USD)."
+        },
+        "require_email": {
+          "in": "body",
+          "type": "boolean"
+        },
+        "require_phone": {
+          "in": "body",
+          "type": "boolean"
+        },
+        "require_direct_dial": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts with a direct-dial phone number."
+        },
+        "require_company_phone": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts whose company has a phone number."
+        },
+        "genders": {
+          "in": "body",
+          "type": "array",
+          "description": "Contact gender. Offered only when the active dataset has the data."
+        },
+        "birth_year_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Earliest birth year."
+        },
+        "birth_year_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Latest birth year."
+        },
+        "pay_bands": {
+          "in": "body",
+          "type": "array",
+          "description": "Estimated annual pay band: <$25K, $25K-$50K, $50K-$75K, $75K-$100K, $100K-$150K, $150K-$200K, $200K+."
+        },
+        "ipo_status": {
+          "in": "body",
+          "type": "array",
+          "description": "Company stock-market status."
+        },
+        "require_company_profile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip contacts with no company name. Defaults on for domain-only searches that request company columns."
+        },
+        "require_domain_or_headline": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Rank contacts with a company domain or LinkedIn headline first; remaining matches still appear later in the same page and CSV. Defaults on for the new database. Set false for the raw sort key."
+        },
+        "open_to_work": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts with LinkedIn Open to Work signal."
+        },
+        "is_hiring": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts with LinkedIn Hiring badge."
+        },
+        "max_per_company": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap contacts per company."
+        },
+        "columns": {
+          "in": "body",
+          "type": "array",
+          "description": "Columns to include by display label or internal name. Discover names with GET /api/v1/contacts/columns. Unknown Classic-only names return invalid_columns and column_replacements."
+        },
+        "where_sql": {
+          "in": "body",
+          "type": "string",
+          "description": "Advanced WHERE predicate on catalog fields. AND-combined with curated filters."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page size; REST contact search serves up to 5,000 rows a page."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Pagination offset; advance with the returned next_offset while has_more is true."
+        }
+      },
+      "notes": [
+        "A read over POST. Read contacts, returned, has_more and next_offset. Discover column names with getleadsio.contacts.columns."
+      ],
+      "job": "people.search",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.contacts.count",
+      "name": "Count matching contacts",
+      "summary": "How many contacts match the same filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/contacts/search/count",
+      "params": {
+        "industries": {
+          "in": "body",
+          "type": "array"
+        },
+        "countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_size": {
+          "in": "body",
+          "type": "array",
+          "description": "LinkedIn size-band labels (e.g. \"51 to 200\")."
+        },
+        "company_linkedin_urls": {
+          "in": "body",
+          "type": "array"
+        },
+        "revenue": {
+          "in": "body",
+          "type": "array"
+        },
+        "cities": {
+          "in": "body",
+          "type": "array"
+        },
+        "states": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_industries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_job_titles": {
+          "in": "body",
+          "type": "array"
+        },
+        "email_status": {
+          "in": "body",
+          "type": "array",
+          "description": "Email verification status. Use [\"VALID\"] for deliverable emails."
+        },
+        "technologies": {
+          "in": "body",
+          "type": "array",
+          "description": "Technologies/tools a company uses."
+        },
+        "funding_types": {
+          "in": "body",
+          "type": "array",
+          "description": "Last funding round type (e.g. \"Seed\", \"Series A\", \"IPO\")."
+        },
+        "headquarters_cities": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "email_address": {
+          "in": "body",
+          "type": "string"
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string"
+        },
+        "company_description": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over company LinkedIn About text."
+        },
+        "person_description": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over person LinkedIn bio."
+        },
+        "linkedin_headline": {
+          "in": "body",
+          "type": "string"
+        },
+        "education": {
+          "in": "body",
+          "type": "string"
+        },
+        "certifications": {
+          "in": "body",
+          "type": "string"
+        },
+        "languages": {
+          "in": "body",
+          "type": "string"
+        },
+        "job_start_date_min": {
+          "in": "body",
+          "type": "string",
+          "description": "Earliest current-role start date (YYYY-MM-DD)."
+        },
+        "job_start_date_max": {
+          "in": "body",
+          "type": "string",
+          "description": "Latest current-role start date (YYYY-MM-DD)."
+        },
+        "skills": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over contact skills."
+        },
+        "domain_list_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Saved domain list id."
+        },
+        "company_size_min": {
+          "in": "body",
+          "type": "integer"
+        },
+        "company_size_max": {
+          "in": "body",
+          "type": "integer"
+        },
+        "employees_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum company headcount (band-overlap matching)."
+        },
+        "employees_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum company headcount (band-overlap matching)."
+        },
+        "employee_profiles_on_linkedin_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "employee_profiles_on_linkedin_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "founded_year_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Earliest founding year."
+        },
+        "founded_year_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Latest founding year."
+        },
+        "total_funding_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum total funding raised (USD)."
+        },
+        "total_funding_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum total funding raised (USD)."
+        },
+        "require_email": {
+          "in": "body",
+          "type": "boolean"
+        },
+        "require_phone": {
+          "in": "body",
+          "type": "boolean"
+        },
+        "require_direct_dial": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts with a direct-dial phone number."
+        },
+        "require_company_phone": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts whose company has a phone number."
+        },
+        "genders": {
+          "in": "body",
+          "type": "array",
+          "description": "Contact gender. Offered only when the active dataset has the data."
+        },
+        "birth_year_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Earliest birth year."
+        },
+        "birth_year_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Latest birth year."
+        },
+        "pay_bands": {
+          "in": "body",
+          "type": "array",
+          "description": "Estimated annual pay band: <$25K, $25K-$50K, $50K-$75K, $75K-$100K, $100K-$150K, $150K-$200K, $200K+."
+        },
+        "ipo_status": {
+          "in": "body",
+          "type": "array",
+          "description": "Company stock-market status."
+        },
+        "require_company_profile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip contacts with no company name. Defaults on for domain-only searches that request company columns."
+        },
+        "require_domain_or_headline": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Rank contacts with a company domain or LinkedIn headline first; remaining matches still appear later in the same page and CSV. Defaults on for the new database. Set false for the raw sort key."
+        },
+        "open_to_work": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts with LinkedIn Open to Work signal."
+        },
+        "is_hiring": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts with LinkedIn Hiring badge."
+        },
+        "max_per_company": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap contacts per company."
+        },
+        "columns": {
+          "in": "body",
+          "type": "array",
+          "description": "Columns to include by display label or internal name. Discover names with GET /api/v1/contacts/columns. Unknown Classic-only names return invalid_columns and column_replacements."
+        },
+        "where_sql": {
+          "in": "body",
+          "type": "string",
+          "description": "Advanced WHERE predicate on catalog fields. AND-combined with curated filters."
+        }
+      },
+      "notes": [
+        "A read over POST. Free. total_matching can be a lower bound when a minimum flag is true."
+      ],
+      "job": "people.search",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.contacts.export",
+      "name": "Start a contact CSV export",
+      "summary": "Starts an async CSV export of contacts matching the filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/contacts/search/export",
+      "params": {
+        "industries": {
+          "in": "body",
+          "type": "array"
+        },
+        "countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_size": {
+          "in": "body",
+          "type": "array",
+          "description": "LinkedIn size-band labels (e.g. \"51 to 200\")."
+        },
+        "company_linkedin_urls": {
+          "in": "body",
+          "type": "array"
+        },
+        "revenue": {
+          "in": "body",
+          "type": "array"
+        },
+        "cities": {
+          "in": "body",
+          "type": "array"
+        },
+        "states": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_industries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_job_titles": {
+          "in": "body",
+          "type": "array"
+        },
+        "email_status": {
+          "in": "body",
+          "type": "array",
+          "description": "Email verification status. Use [\"VALID\"] for deliverable emails."
+        },
+        "technologies": {
+          "in": "body",
+          "type": "array",
+          "description": "Technologies/tools a company uses."
+        },
+        "funding_types": {
+          "in": "body",
+          "type": "array",
+          "description": "Last funding round type (e.g. \"Seed\", \"Series A\", \"IPO\")."
+        },
+        "headquarters_cities": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "email_address": {
+          "in": "body",
+          "type": "string"
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string"
+        },
+        "company_description": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over company LinkedIn About text."
+        },
+        "person_description": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over person LinkedIn bio."
+        },
+        "linkedin_headline": {
+          "in": "body",
+          "type": "string"
+        },
+        "education": {
+          "in": "body",
+          "type": "string"
+        },
+        "certifications": {
+          "in": "body",
+          "type": "string"
+        },
+        "languages": {
+          "in": "body",
+          "type": "string"
+        },
+        "job_start_date_min": {
+          "in": "body",
+          "type": "string",
+          "description": "Earliest current-role start date (YYYY-MM-DD)."
+        },
+        "job_start_date_max": {
+          "in": "body",
+          "type": "string",
+          "description": "Latest current-role start date (YYYY-MM-DD)."
+        },
+        "skills": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over contact skills."
+        },
+        "domain_list_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Saved domain list id."
+        },
+        "company_size_min": {
+          "in": "body",
+          "type": "integer"
+        },
+        "company_size_max": {
+          "in": "body",
+          "type": "integer"
+        },
+        "employees_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum company headcount (band-overlap matching)."
+        },
+        "employees_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum company headcount (band-overlap matching)."
+        },
+        "employee_profiles_on_linkedin_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "employee_profiles_on_linkedin_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "founded_year_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Earliest founding year."
+        },
+        "founded_year_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Latest founding year."
+        },
+        "total_funding_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum total funding raised (USD)."
+        },
+        "total_funding_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum total funding raised (USD)."
+        },
+        "require_email": {
+          "in": "body",
+          "type": "boolean"
+        },
+        "require_phone": {
+          "in": "body",
+          "type": "boolean"
+        },
+        "require_direct_dial": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts with a direct-dial phone number."
+        },
+        "require_company_phone": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts whose company has a phone number."
+        },
+        "genders": {
+          "in": "body",
+          "type": "array",
+          "description": "Contact gender. Offered only when the active dataset has the data."
+        },
+        "birth_year_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Earliest birth year."
+        },
+        "birth_year_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Latest birth year."
+        },
+        "pay_bands": {
+          "in": "body",
+          "type": "array",
+          "description": "Estimated annual pay band: <$25K, $25K-$50K, $50K-$75K, $75K-$100K, $100K-$150K, $150K-$200K, $200K+."
+        },
+        "ipo_status": {
+          "in": "body",
+          "type": "array",
+          "description": "Company stock-market status."
+        },
+        "require_company_profile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip contacts with no company name. Defaults on for domain-only searches that request company columns."
+        },
+        "require_domain_or_headline": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Rank contacts with a company domain or LinkedIn headline first; remaining matches still appear later in the same page and CSV. Defaults on for the new database. Set false for the raw sort key."
+        },
+        "open_to_work": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts with LinkedIn Open to Work signal."
+        },
+        "is_hiring": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only contacts with LinkedIn Hiring badge."
+        },
+        "max_per_company": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap contacts per company."
+        },
+        "columns": {
+          "in": "body",
+          "type": "array",
+          "description": "Columns to include by display label or internal name. Discover names with GET /api/v1/contacts/columns. Unknown Classic-only names return invalid_columns and column_replacements."
+        },
+        "where_sql": {
+          "in": "body",
+          "type": "string",
+          "description": "Advanced WHERE predicate on catalog fields. AND-combined with curated filters."
+        },
+        "max_rows": {
+          "in": "body",
+          "type": "integer",
+          "description": "Rows to export, at most 50,000."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a job that only produces a file and uses credits per row. Poll getleadsio.contacts.export_status with export_id."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.contacts.export_status",
+      "name": "Get a contact export's status",
+      "summary": "job_status and, once completed, a temporary export_url for the CSV.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/contacts/search/export/{export_id}",
+      "params": {
+        "export_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The export id returned when the export was started."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.contacts.columns",
+      "name": "List selectable contact columns",
+      "summary": "Each field's public name, type, searchable and exportable flags and filter parameters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/contacts/columns",
+      "params": {
+        "group": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this group, e.g. Company or Contact Job."
+        },
+        "searchable_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only fields usable in where_sql."
+        },
+        "exportable_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only fields usable in columns and CSV export."
+        }
+      },
+      "notes": [
+        "Free. This catalogue is the current contract for column and filter names."
+      ],
+      "job": "people.search",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.contacts.filter_values",
+      "name": "Get valid values for a filter field",
+      "summary": "The allowed values for a filter such as seniority, industries or company_size.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/contacts/filter-values",
+      "params": {
+        "field": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Filter field name.",
+          "example": "seniority"
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "people.search",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.companies.search",
+      "name": "Search companies",
+      "summary": "One row per LinkedIn company page matching company filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/companies/search",
+      "params": {
+        "headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_size": {
+          "in": "body",
+          "type": "array",
+          "description": "LinkedIn size-band labels (e.g. \"51 to 200\")."
+        },
+        "company_linkedin_urls": {
+          "in": "body",
+          "type": "array"
+        },
+        "revenue": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_industries": {
+          "in": "body",
+          "type": "array"
+        },
+        "technologies": {
+          "in": "body",
+          "type": "array",
+          "description": "Technologies/tools a company uses."
+        },
+        "funding_types": {
+          "in": "body",
+          "type": "array",
+          "description": "Last funding round type (e.g. \"Seed\", \"Series A\", \"IPO\")."
+        },
+        "headquarters_cities": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "company_description": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over company LinkedIn About text."
+        },
+        "domain_list_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Saved domain list id."
+        },
+        "company_size_min": {
+          "in": "body",
+          "type": "integer"
+        },
+        "company_size_max": {
+          "in": "body",
+          "type": "integer"
+        },
+        "employees_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum company headcount (band-overlap matching)."
+        },
+        "employees_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum company headcount (band-overlap matching)."
+        },
+        "employee_profiles_on_linkedin_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "employee_profiles_on_linkedin_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "founded_year_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Earliest founding year."
+        },
+        "founded_year_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Latest founding year."
+        },
+        "total_funding_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum total funding raised (USD)."
+        },
+        "total_funding_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum total funding raised (USD)."
+        },
+        "ipo_status": {
+          "in": "body",
+          "type": "array",
+          "description": "Company stock-market status."
+        },
+        "require_company_profile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip contacts with no company name. Defaults on for domain-only searches that request company columns."
+        },
+        "require_domain_or_headline": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Rank contacts with a company domain or LinkedIn headline first; remaining matches still appear later. Defaults on for the new database."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page size; REST contact search serves up to 5,000 rows a page."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Pagination offset; advance with the returned next_offset while has_more is true."
+        },
+        "columns": {
+          "in": "body",
+          "type": "array",
+          "description": "Company columns only. Discover with GET /api/v1/companies/columns."
+        },
+        "where_sql": {
+          "in": "body",
+          "type": "string"
+        }
+      },
+      "notes": [
+        "A read over POST. 1 plan credit per company returned. Company filters only; use contact search for titles and seniority."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.companies.count",
+      "name": "Count matching companies",
+      "summary": "How many companies match the same filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/companies/search/count",
+      "params": {
+        "headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_size": {
+          "in": "body",
+          "type": "array",
+          "description": "LinkedIn size-band labels (e.g. \"51 to 200\")."
+        },
+        "company_linkedin_urls": {
+          "in": "body",
+          "type": "array"
+        },
+        "revenue": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_industries": {
+          "in": "body",
+          "type": "array"
+        },
+        "technologies": {
+          "in": "body",
+          "type": "array",
+          "description": "Technologies/tools a company uses."
+        },
+        "funding_types": {
+          "in": "body",
+          "type": "array",
+          "description": "Last funding round type (e.g. \"Seed\", \"Series A\", \"IPO\")."
+        },
+        "headquarters_cities": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "company_description": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over company LinkedIn About text."
+        },
+        "domain_list_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Saved domain list id."
+        },
+        "company_size_min": {
+          "in": "body",
+          "type": "integer"
+        },
+        "company_size_max": {
+          "in": "body",
+          "type": "integer"
+        },
+        "employees_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum company headcount (band-overlap matching)."
+        },
+        "employees_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum company headcount (band-overlap matching)."
+        },
+        "employee_profiles_on_linkedin_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "employee_profiles_on_linkedin_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "founded_year_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Earliest founding year."
+        },
+        "founded_year_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Latest founding year."
+        },
+        "total_funding_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum total funding raised (USD)."
+        },
+        "total_funding_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum total funding raised (USD)."
+        },
+        "ipo_status": {
+          "in": "body",
+          "type": "array",
+          "description": "Company stock-market status."
+        },
+        "require_company_profile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip contacts with no company name. Defaults on for domain-only searches that request company columns."
+        },
+        "require_domain_or_headline": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Rank contacts with a company domain or LinkedIn headline first; remaining matches still appear later. Defaults on for the new database."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer"
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer"
+        },
+        "columns": {
+          "in": "body",
+          "type": "array",
+          "description": "Company columns only. Discover with GET /api/v1/companies/columns."
+        },
+        "where_sql": {
+          "in": "body",
+          "type": "string"
+        }
+      },
+      "notes": [
+        "A read over POST. Free."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.companies.export",
+      "name": "Start a company CSV export",
+      "summary": "Starts an async CSV export of companies matching the filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/companies/search/export",
+      "params": {
+        "headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_size": {
+          "in": "body",
+          "type": "array",
+          "description": "LinkedIn size-band labels (e.g. \"51 to 200\")."
+        },
+        "company_linkedin_urls": {
+          "in": "body",
+          "type": "array"
+        },
+        "revenue": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_headquarters_countries": {
+          "in": "body",
+          "type": "array"
+        },
+        "exclude_industries": {
+          "in": "body",
+          "type": "array"
+        },
+        "technologies": {
+          "in": "body",
+          "type": "array",
+          "description": "Technologies/tools a company uses."
+        },
+        "funding_types": {
+          "in": "body",
+          "type": "array",
+          "description": "Last funding round type (e.g. \"Seed\", \"Series A\", \"IPO\")."
+        },
+        "headquarters_cities": {
+          "in": "body",
+          "type": "array"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string"
+        },
+        "company_description": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword search over company LinkedIn About text."
+        },
+        "domain_list_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Saved domain list id."
+        },
+        "company_size_min": {
+          "in": "body",
+          "type": "integer"
+        },
+        "company_size_max": {
+          "in": "body",
+          "type": "integer"
+        },
+        "employees_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum company headcount (band-overlap matching)."
+        },
+        "employees_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum company headcount (band-overlap matching)."
+        },
+        "employee_profiles_on_linkedin_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "employee_profiles_on_linkedin_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum exact LinkedIn employee-profile headcount (hard cutoff)."
+        },
+        "founded_year_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Earliest founding year."
+        },
+        "founded_year_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Latest founding year."
+        },
+        "total_funding_min": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum total funding raised (USD)."
+        },
+        "total_funding_max": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum total funding raised (USD)."
+        },
+        "ipo_status": {
+          "in": "body",
+          "type": "array",
+          "description": "Company stock-market status."
+        },
+        "require_company_profile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip contacts with no company name. Defaults on for domain-only searches that request company columns."
+        },
+        "require_domain_or_headline": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Rank contacts with a company domain or LinkedIn headline first; remaining matches still appear later. Defaults on for the new database."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer"
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer"
+        },
+        "columns": {
+          "in": "body",
+          "type": "array",
+          "description": "Company columns only. Discover with GET /api/v1/companies/columns."
+        },
+        "where_sql": {
+          "in": "body",
+          "type": "string"
+        },
+        "max_rows": {
+          "in": "body",
+          "type": "integer",
+          "description": "Rows to export, at most 50,000."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a job that only produces a file; 1 credit per company. Poll getleadsio.companies.export_status."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.companies.export_status",
+      "name": "Get a company export's status",
+      "summary": "job_status and, once completed, a temporary export_url for the CSV.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/companies/search/export/{export_id}",
+      "params": {
+        "export_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The export id returned when the export was started."
+        }
+      },
+      "notes": [
+        "Poll every few seconds while job_status is queued or running."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.company.lookup",
+      "name": "Look up one company",
+      "summary": "A firmographic profile for one company by domain or name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/companies/lookup",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain; send exactly one of domain or company_name.",
+          "example": "hubspot.com"
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name.",
+          "example": "HubSpot"
+        }
+      },
+      "notes": [
+        "1 credit on a match, 0 on a miss; a miss answers 200 with found false."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.person.enrich_linkedin",
+      "name": "Enrich people from LinkedIn URLs",
+      "summary": "Matched profiles with work email, phone fields and current-role status.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/enrich/from-linkedin",
+      "params": {
+        "items": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 objects like {linkedin_url}.",
+          "example": [
+            {
+              "linkedin_url": "https://www.linkedin.com/in/example/"
+            }
+          ]
+        },
+        "limit_per_item": {
+          "in": "body",
+          "type": "integer",
+          "description": "Matches to return per item."
+        }
+      },
+      "notes": [
+        "A read over POST. Check each item's success and current_role_status before treating an old employer as current."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.person.enrich_name",
+      "name": "Enrich people from name and company",
+      "summary": "Matched profiles for people given by name plus company name or email domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/enrich/from-person",
+      "params": {
+        "items": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 objects like {first_name, last_name, company_name} or with email_domain in place of company_name.",
+          "example": [
+            {
+              "first_name": "Jane",
+              "last_name": "Example",
+              "company_name": "Example Ltd"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.person.from_email",
+      "name": "Reverse email lookup",
+      "summary": "The person behind each work email.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/enrich/from-email",
+      "params": {
+        "items": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 objects like {email}.",
+          "example": [
+            {
+              "email": "person@example.com"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.contacts.decision_makers",
+      "name": "Find decision-makers at a company",
+      "summary": "Contacts with a valid email in decision-making roles at one company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/contacts/lookup/decision-makers",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain; give exactly one of domain, company_name or linkedin_company_url."
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name."
+        },
+        "linkedin_company_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn company URL."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page size."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Pagination offset."
+        },
+        "email_status": {
+          "in": "body",
+          "type": "array",
+          "description": "Email statuses to allow, e.g. VALID."
+        }
+      },
+      "notes": [
+        "A read over POST. Contacts without a valid email are excluded."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.contacts.colleagues",
+      "name": "Find colleagues at a company",
+      "summary": "Contacts at one company, optionally by job title.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/contacts/lookup/colleagues",
+      "params": {
+        "email_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Work email domain; exclusive with linkedin_company_url.",
+          "example": "acme.com"
+        },
+        "linkedin_company_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn company URL; exclusive with email_domain."
+        },
+        "job_titles": {
+          "in": "body",
+          "type": "array",
+          "description": "Optional title filter."
+        },
+        "limit_per_item": {
+          "in": "body",
+          "type": "integer",
+          "description": "Contacts to return."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Pagination offset."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.signals.funding",
+      "name": "List funding signals",
+      "summary": "Recent funding events, filterable by date, confidence and region.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/funding/signals",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return."
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest date, YYYY-MM-DD."
+        },
+        "min_confidence": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum confidence."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Region.",
+          "enum": [
+            "US",
+            "EU",
+            "GLOBAL"
+          ]
+        }
+      },
+      "notes": [
+        "Billed in plan credits."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    },
+    {
+      "id": "getleadsio.account.fair_use",
+      "name": "Get fair-use budgets",
+      "summary": "Your account's authoritative row budgets for the day and month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/usage/fair-use",
+      "job": "account.usage",
+      "docs_url": "https://www.getleads.io/docs/",
+      "verified": {
+        "docs": "https://www.getleads.io/docs/"
+      }
+    }
+  ]
+}
