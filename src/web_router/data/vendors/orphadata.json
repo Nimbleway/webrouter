@@ -1,0 +1,297 @@
+{
+  "vendor": "orphadata",
+  "name": "Orphadata (Orphanet)",
+  "category": "other",
+  "summary": "Rare diseases from Orphanet: ORPHAcodes with ICD-10/ICD-11/OMIM cross-references, epidemiology (prevalence), natural history, associated genes, HPO phenotypes and classifications.",
+  "docs_url": "https://api.orphadata.com/",
+  "base_url": "https://api.orphadata.com",
+  "notes": [
+    "Keyless; data under CC BY 4.0, updated twice a year (July and December).",
+    "Answers wrap results in data.results, with data.__count.",
+    "lang is lower-case (en, fr, de, ...); upper-case values are refused. Epidemiology, natural history and phenotype endpoints support fewer languages than cross-referencing.",
+    "Look up a disease's ORPHAcode by name with diseases.by_name, then use it on the other endpoints."
+  ],
+  "sources": [
+    "https://api.orphadata.com/",
+    "https://api.orphadata.com/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "orphadata.diseases.get",
+      "name": "Get a rare disease with cross-references",
+      "summary": "Preferred term, synonyms, definition and ICD-10/ICD-11/OMIM/UMLS/MeSH/MedDRA mappings for one ORPHAcode.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rd-cross-referencing/orphacodes/{orphacode}",
+      "params": {
+        "orphacode": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ORPHAcode.",
+          "example": 558
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "cs",
+            "de",
+            "en",
+            "es",
+            "fr",
+            "it",
+            "nl",
+            "pl",
+            "pt",
+            "tr",
+            "uk",
+            "zh"
+          ],
+          "description": "Default en."
+        }
+      },
+      "job": "health.diseases.get",
+      "docs_url": "https://api.orphadata.com/",
+      "verified": {
+        "docs": "https://api.orphadata.com/openapi.json"
+      }
+    },
+    {
+      "id": "orphadata.diseases.by_name",
+      "name": "Find a rare disease by name",
+      "summary": "Rare diseases and their cross-references whose preferred term contains the given text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rd-cross-referencing/orphacodes/names/{name}",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Preferred disease name, or part of it.",
+          "example": "Marfan syndrome"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "cs",
+            "de",
+            "en",
+            "es",
+            "fr",
+            "it",
+            "nl",
+            "pl",
+            "pt",
+            "tr",
+            "uk",
+            "zh"
+          ],
+          "description": "Default en."
+        }
+      },
+      "job": "health.diseases.search",
+      "docs_url": "https://api.orphadata.com/",
+      "verified": {
+        "docs": "https://api.orphadata.com/openapi.json"
+      }
+    },
+    {
+      "id": "orphadata.diseases.by_icd10",
+      "name": "Find rare diseases by ICD-10 code",
+      "summary": "Rare diseases mapped to an ICD-10 code.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rd-cross-referencing/icd-10s/{icd}",
+      "params": {
+        "icd": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "ICD-10 code.",
+          "example": "Q87.4"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Lower-case language code; default en."
+        }
+      },
+      "job": "health.diseases.search",
+      "docs_url": "https://api.orphadata.com/",
+      "verified": {
+        "docs": "https://api.orphadata.com/openapi.json"
+      }
+    },
+    {
+      "id": "orphadata.diseases.epidemiology",
+      "name": "Get a rare disease's epidemiology",
+      "summary": "Prevalence and incidence figures for one ORPHAcode, by type, geography and source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rd-epidemiology/orphacodes/{orphacode}",
+      "params": {
+        "orphacode": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ORPHAcode.",
+          "example": 558
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Lower-case language code; default en."
+        }
+      },
+      "job": "health.diseases.get",
+      "docs_url": "https://api.orphadata.com/",
+      "verified": {
+        "docs": "https://api.orphadata.com/openapi.json"
+      }
+    },
+    {
+      "id": "orphadata.diseases.natural_history",
+      "name": "Get a rare disease's natural history",
+      "summary": "Inheritance mode, average age of onset and age of death for one ORPHAcode.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rd-natural_history/orphacodes/{orphacode}",
+      "params": {
+        "orphacode": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ORPHAcode.",
+          "example": 558
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Lower-case language code; default en."
+        }
+      },
+      "job": "health.diseases.get",
+      "docs_url": "https://api.orphadata.com/",
+      "verified": {
+        "docs": "https://api.orphadata.com/openapi.json"
+      }
+    },
+    {
+      "id": "orphadata.diseases.genes",
+      "name": "Get genes of a rare disease",
+      "summary": "Genes associated with one ORPHAcode, with association type and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rd-associated-genes/orphacodes/{orphacode}",
+      "params": {
+        "orphacode": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ORPHAcode.",
+          "example": 93
+        }
+      },
+      "job": "health.diseases.get",
+      "docs_url": "https://api.orphadata.com/",
+      "verified": {
+        "docs": "https://api.orphadata.com/openapi.json"
+      },
+      "notes": [
+        "Only disorders with at least one gene association answer; others give 404. /rd-associated-genes/orphacodes lists them."
+      ]
+    },
+    {
+      "id": "orphadata.genes.diseases",
+      "name": "Find rare diseases by gene symbol",
+      "summary": "Rare diseases associated with a gene, by its symbol.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rd-associated-genes/genes/symbols/{symbol}",
+      "params": {
+        "symbol": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Gene symbol, in lower case.",
+          "example": "fbn1"
+        }
+      },
+      "job": "health.diseases.search",
+      "docs_url": "https://api.orphadata.com/",
+      "verified": {
+        "docs": "https://api.orphadata.com/openapi.json"
+      },
+      "notes": [
+        "In practice the lookup matched lower-case symbols (fbn1) and answered 404 for upper-case ones (FBN1)."
+      ]
+    },
+    {
+      "id": "orphadata.phenotypes.diseases",
+      "name": "Find rare diseases by HPO phenotypes",
+      "summary": "Rare diseases annotated with the given HPO phenotype terms.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rd-phenotypes/hpoids/{hpoids}",
+      "params": {
+        "hpoids": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated HPO ids.",
+          "example": "HP:0001166"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "de",
+            "en",
+            "es",
+            "fr",
+            "it",
+            "nl",
+            "pt"
+          ],
+          "description": "Default en."
+        }
+      },
+      "job": "health.diseases.search",
+      "docs_url": "https://api.orphadata.com/",
+      "verified": {
+        "docs": "https://api.orphadata.com/openapi.json"
+      }
+    },
+    {
+      "id": "orphadata.diseases.phenotypes",
+      "name": "Get a rare disease's phenotypes",
+      "summary": "HPO phenotypes annotated to one ORPHAcode, with frequency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rd-phenotypes/orphacodes/{orphacode}",
+      "params": {
+        "orphacode": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ORPHAcode.",
+          "example": 558
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Lower-case language code; default en."
+        }
+      },
+      "job": "health.diseases.get",
+      "docs_url": "https://api.orphadata.com/",
+      "verified": {
+        "docs": "https://api.orphadata.com/openapi.json"
+      }
+    }
+  ]
+}
