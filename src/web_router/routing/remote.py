@@ -53,13 +53,14 @@ from web_router.constants_remote import (
     REMOTE_DISPLAY_NAME,
     REMOTE_TIMEOUT_S,
     REMOTE_URL_POLICY,
+    REMOTE_WHY_CLOSE_LOOP,
     REMOTE_WHY_CLOSED,
     REMOTE_WHY_DECISION,
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_TRANSPORT,
 )
 from web_router.routing.contract import RouteDecision, RouteRequest
-from web_router.routing.remote_close import PoolCloser
+from web_router.routing.remote_close import PoolCloser, close_failed
 from web_router.routing.remote_config import bearer_key, checked_timeout, load_httpx, request_headers
 from web_router.routing.remote_errors import RemoteRouterError, RemoteRouterInvalid, RemoteRouterTimeout
 from web_router.routing.remote_redact import unechoed_decision
@@ -111,7 +112,7 @@ class RemoteRouter(PoolCloser):
         self._lock = threading.Lock()
         self._closed = False
         self._pool: httpx.AsyncClient | None = None
-        # Weakly held: a loop that is gone takes its pool's connections with it, and the next loop makes a new one.
+        # Weakly held, so the router never keeps a loop alive. Its loop ending leaves the pool's sockets open.
         self._owner: weakref.ref[asyncio.AbstractEventLoop] | None = None
 
     def __repr__(self) -> str:
@@ -137,7 +138,8 @@ class RemoteRouter(PoolCloser):
     def _client(self) -> AbstractAsyncContextManager[httpx.AsyncClient]:
         """The pool, on the loop it belongs to; on another loop, a client for this call alone, closed after it.
 
-        A pool is bound to its loop, so one loop's calls never use or close another's under it.
+        A pool is bound to its loop, so one loop's calls never use or close another's under it. A pool whose loop
+        has ended is replaced with a ``ResourceWarning``: its sockets cannot be closed any more.
 
         Raises:
             RemoteRouterError: once the router is closed.
@@ -147,10 +149,14 @@ class RemoteRouter(PoolCloser):
             if self._closed:
                 raise RemoteRouterError(self.host, REMOTE_WHY_CLOSED)
             owner = None if self._owner is None else self._owner()
-            if self._pool is None or owner is None or owner.is_closed():
+            orphaned = self._pool is not None and (owner is None or owner.is_closed())
+            if self._pool is None or orphaned:
                 self._pool, self._owner, owner = self._new_client(), weakref.ref(loop), loop
             # Made under the lock, so a close that has returned is never followed by a new client.
-            return nullcontext(self._pool) if owner is loop else self._new_client()
+            client = nullcontext(self._pool) if owner is loop else self._new_client()
+        if orphaned:
+            close_failed(self.host, REMOTE_WHY_CLOSE_LOOP)
+        return client
 
     def _new_client(self) -> httpx.AsyncClient:
         # No redirect followed, so a 3xx is a router error and the key goes nowhere else; no proxy, netrc or

@@ -58,12 +58,20 @@ def config(server: Any, **extra: Any) -> dict[str, Any]:
 
 
 class Canned:
-    """What a hand-written server answers, and every request it was sent: path, headers."""
+    """What a hand-written server answers, and every request it was sent: path, headers.
+
+    ``protocol`` ``HTTP/1.1`` keeps each connection open after its answer, as most services do.
+    """
 
     def __init__(
-        self, status: int = 200, body: bytes = b"{}", headers: dict[str, str] | None = None, drip_s: float = 0.0
+        self,
+        status: int = 200,
+        body: bytes = b"{}",
+        headers: dict[str, str] | None = None,
+        drip_s: float = 0.0,
+        protocol: str = "HTTP/1.0",
     ) -> None:
-        self.status, self.body, self.drip_s = status, body, drip_s
+        self.status, self.body, self.drip_s, self.protocol = status, body, drip_s, protocol
         self.headers = {"Content-Type": "application/json", **(headers or {})}
         self.seen: list[tuple[str, dict[str, str]]] = []
 
@@ -73,6 +81,8 @@ def canned(answer: Canned) -> Iterator[str]:
     """A server on a free loopback port that answers every request with ``answer``; yields its base URL."""
 
     class Handler(BaseHTTPRequestHandler):
+        protocol_version = answer.protocol
+
         def _any(self) -> None:
             answer.seen.append((self.path, dict(self.headers)))
             self.rfile.read(int(self.headers.get("Content-Length") or 0))

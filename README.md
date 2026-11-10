@@ -2226,8 +2226,9 @@ field may be left out or `null`):
   gets a client of its own, closed when the call ends. Closing the router
   closes the pool on its own loop, waiting at most 2 s without blocking an
   async caller's loop, and leaves the router closed: a later call is a
-  `router_error` and opens nothing. A pool that will not close is dropped
-  with a `ResourceWarning`. One request, never retried; no
+  `router_error` and opens nothing. A pool that will not close, or whose loop
+  ended first, is dropped with a `ResourceWarning`: `aclose()` an
+  `AsyncWebRouter` before its loop ends. One request, never retried; no
   redirect is followed, and no proxy or other setting is read from the
   environment. The URL must be `https`, or `http` to `localhost`, 127.0.0.0/8
   or `::1` (not `*.localhost`, not `0.0.0.0`); a URL with credentials, a query
