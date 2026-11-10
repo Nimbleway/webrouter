@@ -107,7 +107,6 @@ MSG_DECIDER_REPLY = "The decider {name!r} answered something other than a Decide
 MSG_DECIDER_RANKED = "The decider {name!r} answered a ranking that is not a list of the offered option ids, once each."
 MSG_DECIDER_SCORES = "The decider {name!r} answered scores that are not numbers from 0 to 1 for ranked ids."
 MSG_DECIDER_CONFIDENCE = "The decider {name!r} answered a confidence that is not a number from 0 to 1."
-MSG_DECIDER_NO_MODEL = "router={name!r} needs router_config['model'], the model's name as its server spells it."
 MSG_DECIDER_PRESET = "router={name!r} has no preset {preset!r}; known: {known}."
 MSG_DECIDER_BOTH = "router={name!r} takes a preset or a base_url, not both."
 MSG_DECIDER_NO_BASE = "router={name!r} needs router_config['preset'] or router_config['base_url']."
