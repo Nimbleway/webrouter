@@ -28,6 +28,7 @@ from web_router.constants_vendors import (
     MSG_VENDOR_UNKNOWN,
     VENDOR_CATALOG_DIR,
     VENDOR_ENV_CATALOG_DIR,
+    VENDOR_FIND_STOP_WORDS,
 )
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_vendors import VendorNotFoundError
@@ -96,13 +97,14 @@ class VendorCatalog:
         """Endpoints whose words match ``query``, best match first.
 
         A plain word-overlap score over the id, name, summary, job and the
-        vendor's own name and category -- enough to go from "google ads spend
+        vendor's own name and category, with filler words ("a", "for", "the")
+        left out of the query -- enough to go from "google ads spend
         by campaign" to the GAQL endpoint without a model in the loop, and
         deterministic, so the same query lists the same endpoints.
         """
         if vendor is not None:
             self.vendor(vendor)
-        words = _words(query)
+        words = _words(query) - VENDOR_FIND_STOP_WORDS
         scored: list[tuple[int, str, VendorEndpoint]] = []
         for endpoint in self._endpoints.values():
             owner = self._vendors[endpoint.vendor]
