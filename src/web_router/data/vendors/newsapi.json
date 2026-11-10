@@ -1,0 +1,243 @@
+{
+  "vendor": "newsapi",
+  "name": "NewsAPI.org",
+  "category": "search",
+  "summary": "Search news articles from worldwide sources and blogs, top headlines by country, category or source, and the list of sources.",
+  "docs_url": "https://newsapi.org/docs",
+  "pricing_url": "https://newsapi.org/pricing",
+  "base_url": "https://newsapi.org/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "NEWSAPI_API_KEY"
+        ],
+        "description": "a NewsAPI.org key (newsapi.org/account). Sent in the X-Api-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Developer (free) plan: 100 requests a day, articles delayed 24 hours, search back one month only, and for development and testing only (not staging or production).",
+    "Answers carry status, totalResults and articles; page with page and pageSize."
+  ],
+  "sources": [
+    "https://newsapi.org/docs",
+    "https://newsapi.org/docs/endpoints/everything",
+    "https://newsapi.org/docs/endpoints/top-headlines",
+    "https://newsapi.org/docs/endpoints/sources",
+    "https://newsapi.org/pricing"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "newsapi.everything",
+      "name": "Search all articles",
+      "summary": "Articles matching keywords, sources, domains, dates and language.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/everything",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords or phrases; quotes for exact, + required, - excluded, AND/OR/NOT with parentheses. Max 500 characters."
+        },
+        "searchIn": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: title, description, content. Default all."
+        },
+        "sources": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated source IDs (max 20) from newsapi.sources."
+        },
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains to restrict to."
+        },
+        "excludeDomains": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains to exclude."
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Oldest article, ISO 8601 date or datetime."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "Newest article, ISO 8601 date or datetime."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 639-1 code.",
+          "enum": [
+            "ar",
+            "de",
+            "en",
+            "es",
+            "fr",
+            "he",
+            "it",
+            "nl",
+            "no",
+            "pt",
+            "ru",
+            "sv",
+            "ud",
+            "zh"
+          ]
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Default publishedAt.",
+          "enum": [
+            "relevancy",
+            "popularity",
+            "publishedAt"
+          ]
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default and max 100."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        }
+      },
+      "notes": [
+        "How far back from and to can reach depends on the plan (one month on Developer)."
+      ],
+      "job": "news.search",
+      "docs_url": "https://newsapi.org/docs/endpoints/everything",
+      "verified": {
+        "docs": "https://newsapi.org/docs/endpoints/everything"
+      }
+    },
+    {
+      "id": "newsapi.top_headlines",
+      "name": "Get top headlines",
+      "summary": "Breaking headlines by country, category, sources or keyword.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/top-headlines",
+      "params": {
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 country; the docs list us. Not with sources."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Category; not with sources.",
+          "enum": [
+            "business",
+            "entertainment",
+            "general",
+            "health",
+            "science",
+            "sports",
+            "technology"
+          ]
+        },
+        "sources": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated source IDs; not with country or category."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords or a phrase."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default 20, max 100."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://newsapi.org/docs/endpoints/top-headlines",
+      "verified": {
+        "docs": "https://newsapi.org/docs/endpoints/top-headlines"
+      }
+    },
+    {
+      "id": "newsapi.sources",
+      "name": "List news sources",
+      "summary": "Sources available to the other endpoints, with ID, category, language and country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/top-headlines/sources",
+      "params": {
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by category.",
+          "enum": [
+            "business",
+            "entertainment",
+            "general",
+            "health",
+            "science",
+            "sports",
+            "technology"
+          ]
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by language.",
+          "enum": [
+            "ar",
+            "de",
+            "en",
+            "es",
+            "fr",
+            "he",
+            "it",
+            "nl",
+            "no",
+            "pt",
+            "ru",
+            "sv",
+            "ud",
+            "zh"
+          ]
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by country code, e.g. us, gb, de."
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://newsapi.org/docs/endpoints/sources",
+      "verified": {
+        "docs": "https://newsapi.org/docs/endpoints/sources"
+      }
+    }
+  ]
+}

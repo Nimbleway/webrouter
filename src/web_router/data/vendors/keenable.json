@@ -1,0 +1,161 @@
+{
+  "vendor": "keenable",
+  "name": "Keenable",
+  "category": "search",
+  "summary": "Web search and page fetch on Keenable's own index, built for AI agents.",
+  "docs_url": "https://docs.keenable.ai/api-reference",
+  "base_url": "https://api.keenable.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "KEENABLE_API_KEY"
+        ],
+        "description": "a Keenable API key, starting keen_ (Keenable console > API keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is the X-API-Key header. Without a key, Keenable serves keyless /public paths that also need an X-Keenable-Title header; they are rate limited per IP and not in this entry.",
+    "402 means the organization is out of credits; do not retry. 429 means wait for Retry-After seconds.",
+    "Keenable's docs also describe SELECT (structured web data over SQL) which is not covered here."
+  ],
+  "sources": [
+    "https://docs.keenable.ai/llms.txt",
+    "https://docs.keenable.ai/api-reference/search.md",
+    "https://docs.keenable.ai/api-reference/fetch.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "keenable.search.query",
+      "name": "Search the web",
+      "summary": "Semantic search over Keenable's own index; results carry extracted page snippets.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What to search for; describe the page wanted in plain language.",
+          "example": "blog post comparing React and Vue performance"
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "pro (default, deeper) or realtime (fastest); each is billed as its own SKU.",
+          "enum": [
+            "pro",
+            "realtime"
+          ]
+        },
+        "site": {
+          "in": "body",
+          "type": "string",
+          "description": "Only this site; subdomains included, a path narrows further.",
+          "example": "arxiv.org"
+        },
+        "published_after": {
+          "in": "body",
+          "type": "string",
+          "description": "Keep pages published at or after this point; pages with no known date are dropped. Takes a date, a timestamp or a relative delta such as 7d."
+        },
+        "published_before": {
+          "in": "body",
+          "type": "string",
+          "description": "Keep pages published at or before this point. Takes a date, a timestamp or a relative delta such as 7d."
+        },
+        "acquired_after": {
+          "in": "body",
+          "type": "string",
+          "description": "Keep pages indexed at or after this point. Takes a date, a timestamp or a relative delta such as 7d."
+        },
+        "acquired_before": {
+          "in": "body",
+          "type": "string",
+          "description": "Keep pages indexed at or before this point. Takes a date, a timestamp or a relative delta such as 7d."
+        },
+        "query_time": {
+          "in": "body",
+          "type": "string",
+          "description": "Search the index as it stood at this moment; sets no lower bound."
+        },
+        "max_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return, 1-50; default 10."
+        },
+        "snippet_max_length": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap on snippet characters per result, 180-10000."
+        },
+        "disable_cards": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Leave out Keenable-written cards; default false."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account.",
+        "published_at is an ISO 8601 string on search results.",
+        "Keenable also offers a keyless /v1/search/public path; this entry uses the keyed path."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.keenable.ai/api-reference/search.md",
+      "verified": {
+        "docs": "https://docs.keenable.ai/api-reference/search.md"
+      }
+    },
+    {
+      "id": "keenable.fetch.page",
+      "name": "Fetch a page as markdown",
+      "summary": "A page's main text as markdown, or only the part a prompt asks for.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/fetch",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Absolute http or https URL to read.",
+          "example": "https://example.com"
+        },
+        "max_chars": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cap on characters of content; default 50000."
+        },
+        "live": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Fetch from the source now instead of the indexed copy; billed as fetch.live."
+        },
+        "prompt": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 2000 characters of instruction; content then holds only the model's answer."
+        }
+      },
+      "notes": [
+        "On a fetch response, published_at is Unix seconds, unlike the ISO string on search results.",
+        "404 means no page exists at the URL."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.keenable.ai/api-reference/fetch.md",
+      "verified": {
+        "docs": "https://docs.keenable.ai/api-reference/fetch.md"
+      }
+    }
+  ]
+}
