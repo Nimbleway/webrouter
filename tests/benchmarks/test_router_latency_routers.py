@@ -49,6 +49,8 @@ def test_a_stated_rtt_adds_a_simulated_remote_beside_loopback(latency: ModuleTyp
     assert [s.name for s in specs] == ["remote:http://127.0.0.1", "remote:http://127.0.0.1 +40ms"]
     assert "simulated 40 ms" in specs[1].describe
     assert not any(secret in s.name + s.describe for s in specs for secret in ("pw", "token", "/r"))
+    same = module("router_latency_routers").router_specs("remote:http://127.0.0.1:1/r", rtts_ms=[0.0, 40.0, 40.0])
+    assert [s.name for s in same] == ["remote:http://127.0.0.1", "remote:http://127.0.0.1 +40ms"], "each RTT once"
 
 
 def test_a_simulated_link_keeps_the_call_within_its_deadline(latency: ModuleType) -> None:

@@ -173,7 +173,7 @@ def router_specs(
     if spec.startswith(REMOTE):
         from router_latency_remote import remote_spec  # here: that module imports RouterSpec from this one
 
-        return [remote_spec(spec, rtt) for rtt in (0.0, *rtts_ms)]
+        return [remote_spec(spec, rtt) for rtt in dict.fromkeys((0.0, *rtts_ms))]  # 0 is loopback, timed once
     return [router_spec(spec, llm_model=llm_model, llm_price=llm_price, jev_price=jev_price)]
 
 
