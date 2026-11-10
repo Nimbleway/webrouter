@@ -69,8 +69,10 @@ class _Asking:
         self.started = time.perf_counter()
         self.members: list[DecisionMember] = []
         self.timed_out = False
-        """Whether the walk ended for want of time: the last member asked timed out with no time left after it,
-        or no time was left to ask the next."""
+        """Whether the walk ended for want of time: the last member asked timed out with no time left after it
+        or with all that was left as its limit, or no time was left to ask the next."""
+        self.cut = False
+        """Whether the member being asked was given the time left, less than its own limit."""
 
     def left(self) -> float:
         """Seconds left to ask members: the deadline less the margin kept back, less the time spent."""
@@ -100,7 +102,9 @@ class _Asking:
 
     def request_for(self, member: Member) -> RouteRequest:
         """The request ``member`` is shown: its deadline the smaller of its own limit and the time left."""
-        return replace(self.req, deadline_s=min(member.attached.timeout_s, self.left()))
+        left = self.left()
+        self.cut = left < member.attached.timeout_s
+        return replace(self.req, deadline_s=min(member.attached.timeout_s, left))
 
     def settle(self, member: Member, outcome: RouterOutcome) -> RouteDecision | None:
         """``member``'s decision when it decides something, else ``None``; either way recorded."""
@@ -111,8 +115,10 @@ class _Asking:
         settled = ROUTER_TIMEOUT if nested else ROUTER_EMPTY if empty else ROUTER_OK
         code = cast("MemberOutcome", outcome.failure or settled)
         counted = code == ROUTER_OK
-        # Out of time only when none is actually left: a member that reports its own timeout early leaves the next.
-        self.timed_out = code == ROUTER_TIMEOUT and self.left() <= 0
+        # Out of time when none is left, or the member had all of it and timed out within two margins of the end:
+        # an inner fallback stops its own margin early. One that reports its own timeout early leaves the next.
+        near_end = self.left() <= 0 or (self.cut and self.left() < 2 * FALLBACK_MARGIN_S)
+        self.timed_out = code == ROUTER_TIMEOUT and near_end
         self.members.append(DecisionMember(name=member.name, outcome=code, ms=outcome.elapsed_ms, counted=counted))
         return decision if counted else None
 

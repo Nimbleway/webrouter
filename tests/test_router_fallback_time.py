@@ -111,3 +111,11 @@ def test_a_member_reporting_its_own_timeout_early_leaves_time_for_the_next() -> 
     decision = FallbackRouter(routers=[early, answers("next")]).route(request(deadline_s=1.0))
     assert outcomes(decision) == [("custom", "router_timeout", False), ("custom", "ok", True)]
     assert not decision.timed_out
+
+
+def test_a_last_member_given_the_time_left_that_times_out_is_the_walk_timing_out() -> None:
+    inner = {"name": "fallback", "routers": [slow(0.4, timeout_s=1.0)]}  # stops its own 20 ms margin early
+    with WebRouter(router="fallback", router_config={"routers": [inner], "timeout_s": 0.2}) as wr:
+        plan = wr.plan("who won the 2022 world cup")
+    assert plan.decision.reason == "router_timeout"
+    assert [m.outcome for m in plan.decision.members or []] == ["router_timeout"]
