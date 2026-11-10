@@ -5,11 +5,14 @@
 One Python interface over search, extraction, answer, research and browser APIs, with fallback across providers and a router that can choose the method and provider for you.
 
 > **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
+>
+> Questions and chat: [Discord](https://discord.gg/MGztFWSjZh). Bugs: [Issues](https://github.com/Nimbleway/webrouter/issues). Proposals: [Discussions](https://github.com/Nimbleway/webrouter/discussions).
 
 [![CI](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
 [![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
+[![Discord](https://img.shields.io/badge/chat-Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/MGztFWSjZh)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 Twelve search backends, seven extract backends, a template catalogue, five

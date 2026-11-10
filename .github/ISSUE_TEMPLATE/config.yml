@@ -4,5 +4,8 @@ contact_links:
     url: https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md
     about: Please do not open a public issue for security problems; follow SECURITY.md instead.
   - name: Ask a question
+    url: https://discord.gg/MGztFWSjZh
+    about: Questions and chat go to the WebRouter Discord, in #help.
+  - name: Propose an idea
     url: https://github.com/Nimbleway/webrouter/discussions
-    about: Questions and ideas that are not bug reports go to Discussions.
+    about: Proposals and design ideas that are not bug reports go to Discussions.
