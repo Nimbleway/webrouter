@@ -1,0 +1,364 @@
+{
+  "vendor": "readthedocs",
+  "name": "Read the Docs",
+  "category": "developer",
+  "summary": "Documentation projects hosted on Read the Docs: project details, versions, builds, full-text search across docs, and embeddable page sections.",
+  "docs_url": "https://docs.readthedocs.com/platform/stable/api/v3.html",
+  "base_url": "https://app.readthedocs.{domain}",
+  "settings": {
+    "domain": {
+      "env": [
+        "READTHEDOCS_DOMAIN"
+      ],
+      "default": "org",
+      "choices": [
+        "org",
+        "com"
+      ],
+      "description": "org for Read the Docs Community (app.readthedocs.org), com for Read the Docs Business (app.readthedocs.com)"
+    }
+  },
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "READTHEDOCS_TOKEN"
+        ],
+        "required": false,
+        "description": "a Read the Docs API token from your profile settings; needed for private data and your own project list, and it raises the rate limit"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Token {token}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Public information needs no token. Unauthenticated calls are limited to 5 per minute, authenticated ones to 60; a token also avoids network-level blocks (403s) from cloud and CI IPs.",
+    "Lists page with limit (default 10) and return count, next and previous; follow next.",
+    "Search and embed return page HTML that is not sanitized; escape it before showing it."
+  ],
+  "sources": [
+    "https://docs.readthedocs.com/platform/stable/api/v3.html",
+    "https://docs.readthedocs.com/platform/stable/server-side-search/api.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "readthedocs.projects.get",
+      "name": "Get a project",
+      "summary": "A project's language, repository, default version and branch, documentation URL, tags and privacy level.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/projects/{project_slug}/",
+      "params": {
+        "project_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project slug.",
+          "example": "pip"
+        },
+        "expand": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra fields: active_versions (Business also accepts organization); comma-separated.",
+          "example": "active_versions"
+        }
+      },
+      "job": "docs.project",
+      "docs_url": "https://docs.readthedocs.com/platform/stable/api/v3.html",
+      "verified": {
+        "docs": "https://docs.readthedocs.com/platform/stable/api/v3.html"
+      }
+    },
+    {
+      "id": "readthedocs.projects.list",
+      "name": "List your projects",
+      "summary": "The projects of the user the token belongs to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/projects/",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Projects with a matching name."
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Projects with a matching slug."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code, e.g. en, es, ru."
+        },
+        "programming_language": {
+          "in": "query",
+          "type": "string",
+          "description": "Programming language code, e.g. py, js."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; default 10.",
+          "example": 10
+        }
+      },
+      "job": "docs.project",
+      "credentials": [
+        "token"
+      ],
+      "docs_url": "https://docs.readthedocs.com/platform/stable/api/v3.html",
+      "verified": {
+        "docs": "https://docs.readthedocs.com/platform/stable/api/v3.html"
+      }
+    },
+    {
+      "id": "readthedocs.versions.list",
+      "name": "List a project's versions",
+      "summary": "Versions (branches and tags) with build status and docs URLs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/projects/{project_slug}/versions/",
+      "params": {
+        "project_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project slug.",
+          "example": "pip"
+        },
+        "active": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only active versions."
+        },
+        "built": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only built versions."
+        },
+        "privacy_level": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this privacy level.",
+          "enum": [
+            "public",
+            "private"
+          ]
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Versions with a matching slug."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Only branches or tags.",
+          "enum": [
+            "branch",
+            "tag"
+          ]
+        },
+        "verbose_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Versions with a matching name."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; default 10.",
+          "example": 10
+        }
+      },
+      "job": "docs.project",
+      "docs_url": "https://docs.readthedocs.com/platform/stable/api/v3.html",
+      "verified": {
+        "docs": "https://docs.readthedocs.com/platform/stable/api/v3.html"
+      }
+    },
+    {
+      "id": "readthedocs.versions.get",
+      "name": "Get a version",
+      "summary": "One version's ref, build state, download links (PDF, ePub, HTML zip) and docs URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/projects/{project_slug}/versions/{version_slug}/",
+      "params": {
+        "project_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project slug.",
+          "example": "pip"
+        },
+        "version_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Version slug.",
+          "example": "stable"
+        }
+      },
+      "job": "docs.project",
+      "docs_url": "https://docs.readthedocs.com/platform/stable/api/v3.html",
+      "verified": {
+        "docs": "https://docs.readthedocs.com/platform/stable/api/v3.html"
+      }
+    },
+    {
+      "id": "readthedocs.builds.list",
+      "name": "List a project's builds",
+      "summary": "Builds with state, success, commit and timing.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/projects/{project_slug}/builds/",
+      "params": {
+        "project_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project slug.",
+          "example": "pip"
+        },
+        "commit": {
+          "in": "query",
+          "type": "string",
+          "description": "Only builds of this commit hash."
+        },
+        "running": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only builds currently running."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; default 10.",
+          "example": 10
+        }
+      },
+      "job": "docs.builds",
+      "docs_url": "https://docs.readthedocs.com/platform/stable/api/v3.html",
+      "verified": {
+        "docs": "https://docs.readthedocs.com/platform/stable/api/v3.html"
+      }
+    },
+    {
+      "id": "readthedocs.builds.get",
+      "name": "Get a build",
+      "summary": "One build's state, duration, commit, error and (with expand=config) its configuration.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/projects/{project_slug}/builds/{build_id}/",
+      "params": {
+        "project_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project slug.",
+          "example": "pip"
+        },
+        "build_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Build ID.",
+          "example": 8592686
+        },
+        "expand": {
+          "in": "query",
+          "type": "string",
+          "description": "config to include the build configuration, as in the docs' example.",
+          "example": "config"
+        }
+      },
+      "job": "docs.builds",
+      "docs_url": "https://docs.readthedocs.com/platform/stable/api/v3.html",
+      "verified": {
+        "docs": "https://docs.readthedocs.com/platform/stable/api/v3.html"
+      }
+    },
+    {
+      "id": "readthedocs.search",
+      "name": "Search hosted documentation",
+      "summary": "Full-text search over the pages of public projects, with highlighted matching sections.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/search/",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search query; scope it with project:<slug>.",
+          "example": "project:docs server side search"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 50."
+        }
+      },
+      "job": "docs.search",
+      "docs_url": "https://docs.readthedocs.com/platform/stable/server-side-search/api.html",
+      "verified": {
+        "docs": "https://docs.readthedocs.com/platform/stable/server-side-search/api.html"
+      }
+    },
+    {
+      "id": "readthedocs.embed",
+      "name": "Get a section of a docs page",
+      "summary": "The HTML of a documentation page or one section (by URL fragment).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/embed/",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the page, with an optional #fragment for one section.",
+          "example": "https://docs.readthedocs.com/platform/stable/reference/features.html#feature-reference"
+        },
+        "doctool": {
+          "in": "query",
+          "type": "string",
+          "description": "Documentation tool that built the page; only sphinx is accepted.",
+          "enum": [
+            "sphinx"
+          ]
+        },
+        "doctoolversion": {
+          "in": "query",
+          "type": "string",
+          "description": "Version of that tool, e.g. 4.2.0."
+        },
+        "maincontent": {
+          "in": "query",
+          "type": "string",
+          "description": "CSS selector of the page's main content, e.g. div#main."
+        }
+      },
+      "job": "web.extract",
+      "docs_url": "https://docs.readthedocs.com/platform/stable/api/v3.html",
+      "verified": {
+        "docs": "https://docs.readthedocs.com/platform/stable/api/v3.html"
+      }
+    }
+  ]
+}

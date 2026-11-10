@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-320 vendors, 2570 endpoints.
+328 vendors, 2613 endpoints.
 
 ### advertising
 
@@ -362,9 +362,17 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [CISA Known Exploited Vulnerabilities (KEV) catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) `cisa-kev` | CISA's catalog of CVEs known to be exploited in the wild, with vendor, product, date added, required action, due date and ransomware use, as free JSON and CSV feeds. | 3 read | none | none | docs 2026-11-09 |
 | [Context7](https://context7.com/docs/api-guide) `context7` | Up-to-date, version-specific documentation and code snippets for software libraries, ranked for a question; plus reading one web page narrowed to a question. | 5 read | key in header | `CONTEXT7_API_KEY` | docs 2026-11-09 |
 | [CVE Program CVE Services](https://cveawg.mitre.org/api-docs/) `cve-services` | Official CVE Records (JSON 5 format: descriptions, affected products, references, CNA and ADP containers) and CVE ID status from the CVE Program's API. | 3 read | none | none | docs 2026-11-09 |
+| [Docker Hub](https://docs.docker.com/reference/api/hub/latest/) `docker-hub` | Docker Hub repositories and image tags: descriptions, pull and star counts, last update, tag digests, sizes and platforms. | 4 read | key in header | `DOCKER_HUB_TOKEN` | docs 2026-11-09 |
 | [GitHub](https://docs.github.com/en/rest) `github` | Repositories, issues, pull requests, commits and code search on GitHub through its REST API. | 9 read, 1 write | key in header | `GITHUB_TOKEN` | docs 2026-11-09 |
 | [Google Cloud Billing Catalog](https://docs.cloud.google.com/billing/v1/how-tos/catalog-api) `google-cloud-billing` | Public list prices of Google Cloud: every service and each service's SKUs with description, regions and pricing tiers, from the Cloud Billing Catalog API. | 2 read | key in query | `GOOGLE_CLOUD_BILLING_API_KEY` | docs 2026-11-09 |
+| [IBM Cloud Global Catalog](https://cloud.ibm.com/apidocs/resource-catalog/global-catalog) `ibm-global-catalog` | IBM Cloud's catalog of services, plans and deployments with their public pricing, from the Global Catalog API. | 5 read | none | none | docs 2026-11-09 |
+| [npm registry](https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md) `npm` | Public npm registry: package metadata, single versions, full-text package search, and daily download counts. | 5 read | none | none | docs 2026-11-09 |
+| [OSV.dev](https://google.github.io/osv.dev/api/) `osv` | Open source vulnerabilities by package and version, commit hash or ID (GHSA, PYSEC, RUSTSEC, Go, OSS-Fuzz and more) in the OSV format, from Google's free OSV.dev API. | 3 read | none | none | docs 2026-11-09 |
+| [PyPI](https://docs.pypi.org/api/) `pypi` | Python Package Index metadata: a project's latest info, every release and file with hashes, known vulnerabilities, the simple index, and PyPI-wide size stats. | 5 read | none | none | docs 2026-11-09 |
+| [Read the Docs](https://docs.readthedocs.com/platform/stable/api/v3.html) `readthedocs` | Documentation projects hosted on Read the Docs: project details, versions, builds, full-text search across docs, and embeddable page sections. | 8 read | key in header | `READTHEDOCS_TOKEN` | docs 2026-11-09 |
+| [Red Hat Security Data API](https://access.redhat.com/hydra/rest/securitydata/api-docs) `redhat-security` | Red Hat Product Security data on CVEs (severity, CWE, CVSS v3/v4 scores, advisories, affected packages and package states), CSAF advisories and OVAL streams. | 4 read | none | none | docs 2026-11-09 |
 | [Supabase](https://supabase.com/docs/reference/api/introduction) `supabase` | Supabase Management API: the user's projects and organisations, SQL against a project's Postgres, logs, health, advisors, edge functions and storage buckets. | 9 read, 1 write | key in header | `SUPABASE_ACCESS_TOKEN` | docs 2026-11-09 |
+| [Vercel](https://vercel.com/docs/rest-api) `vercel` | Read a Vercel account: deployments and their build events and runtime logs, projects, domains, teams and the current user. | 9 read | key in header | `VERCEL_ACCESS_TOKEN` | docs 2026-11-09 |
 
 ### other
 
