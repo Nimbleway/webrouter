@@ -46,8 +46,8 @@ make test              # unit tests, offline, no keys needed
 If they want the library in another project, install it from PyPI:
 
 ```bash
-uv add "web-router[all]"           # their project uses uv
-pip install "web-router[all]"      # any other virtualenv
+uv add "webrouter[all]"           # their project uses uv
+pip install "webrouter[all]"      # any other virtualenv
 ```
 
 To track `main` instead, install this clone in editable mode, so a `git pull`

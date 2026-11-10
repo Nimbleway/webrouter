@@ -189,8 +189,8 @@ async def _within(deadline: Deadline, awaitable: Awaitable[_ResultT]) -> _Result
     """
     try:
         return await asyncio.wait_for(awaitable, timeout=max(0.0, deadline.left()))
-    except asyncio.TimeoutError as exc:
-        # From 3.11 wait_for's own timeout and one the call raised itself are
+    except TimeoutError as exc:
+        # wait_for's own timeout and one the call raised itself are
         # the same class; only the clock tells them apart.
         if deadline.left() > 0:
             raise
