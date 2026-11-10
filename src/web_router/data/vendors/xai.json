@@ -1,0 +1,348 @@
+{
+  "vendor": "xai",
+  "name": "xAI (Grok)",
+  "category": "ai",
+  "summary": "Grok language models with server-side web and X search, image generation and model listings through the xAI API.",
+  "docs_url": "https://docs.x.ai/developers/rest-api-reference/inference.md",
+  "pricing_url": "https://docs.x.ai/developers/pricing",
+  "base_url": "https://api.x.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "XAI_API_KEY"
+        ],
+        "description": "an xAI API key (console.x.ai, API Keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Responses (/v1/responses) is the current API; Chat Completions is the OpenAI-compatible predecessor xAI keeps for existing integrations.",
+    "Web and X search are server-side tools passed in 'tools' on /v1/responses ({\"type\": \"web_search\"} or {\"type\": \"x_search\"}); the model decides how many searches to run, so cost scales with the question.",
+    "Tool calls are billed on top of tokens: web_search $5 per 1k calls; x_search $5 per 1k posts and $10 per 1k profiles fetched (per pricing page, 2026-11).",
+    "Sampling: temperature above 1 is sampled at 1 and top_p above the model default (0.95) is sampled at the default."
+  ],
+  "sources": [
+    "https://docs.x.ai/developers/rest-api-reference/inference/responses.md",
+    "https://docs.x.ai/developers/rest-api-reference/inference/chat-completions.md",
+    "https://docs.x.ai/developers/rest-api-reference/inference/models.md",
+    "https://docs.x.ai/developers/rest-api-reference/inference/images.md",
+    "https://docs.x.ai/developers/rest-api-reference/inference/other.md",
+    "https://docs.x.ai/developers/tools/web-search.md",
+    "https://docs.x.ai/developers/tools/x-search.md",
+    "https://docs.x.ai/developers/pricing.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "xai.api_key.get",
+      "name": "Check the API key",
+      "summary": "Name, status, ACLs and team of the API key making the call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/api-key",
+      "job": "account.validate",
+      "docs_url": "https://docs.x.ai/developers/rest-api-reference/inference/other.md",
+      "verified": {
+        "docs": "https://docs.x.ai/developers/rest-api-reference/inference/other.md"
+      }
+    },
+    {
+      "id": "xai.models.list",
+      "name": "List language models",
+      "summary": "Chat and image-understanding models this key can use, with modalities, aliases and per-token prices.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/language-models",
+      "job": "ai.models",
+      "docs_url": "https://docs.x.ai/developers/rest-api-reference/inference/models.md",
+      "verified": {
+        "docs": "https://docs.x.ai/developers/rest-api-reference/inference/models.md"
+      }
+    },
+    {
+      "id": "xai.responses.create",
+      "name": "Generate a response (with optional web and X search)",
+      "summary": "Run a Grok model on an input, optionally letting it search the web and X through server-side tools, and get the answer with citations.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/responses",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model name, from the models list.",
+          "example": "grok-4.7"
+        },
+        "input": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "A string, or a list of {role, content} messages.",
+          "example": [
+            {
+              "role": "user",
+              "content": "What are people saying about SpaceX on X this week?"
+            }
+          ]
+        },
+        "instructions": {
+          "in": "body",
+          "type": "string",
+          "description": "System prompt; cannot be combined with previous_response_id."
+        },
+        "tools": {
+          "in": "body",
+          "type": "array",
+          "description": "Tools the model may call: function tools, {\"type\": \"web_search\", \"filters\": {\"allowed_domains\"|\"excluded_domains\": [max 5]}, \"enable_image_understanding\"}, or {\"type\": \"x_search\", \"allowed_x_handles\"|\"excluded_x_handles\": [max 20, no @], \"from_date\", \"to_date\" (YYYY-MM-DD), \"enable_image_understanding\", \"enable_video_understanding\"}.",
+          "example": [
+            {
+              "type": "web_search"
+            },
+            {
+              "type": "x_search"
+            }
+          ]
+        },
+        "previous_response_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Continue from a stored response."
+        },
+        "max_output_tokens": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap on visible output tokens; default 128,000."
+        },
+        "temperature": {
+          "in": "body",
+          "type": "number",
+          "description": "0-2; values above 1 are sampled at 1."
+        },
+        "reasoning": {
+          "in": "body",
+          "type": "object",
+          "description": "{effort} for reasoning models."
+        },
+        "store": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Store the input and response for later retrieval."
+        },
+        "stream": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Stream server-sent events."
+        }
+      },
+      "notes": [
+        "A read over POST. Spends tokens, plus per-call search fees when the model uses web_search or x_search.",
+        "allowed_domains and excluded_domains cannot be set together; neither can allowed_x_handles and excluded_x_handles."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://docs.x.ai/developers/rest-api-reference/inference/responses.md",
+      "verified": {
+        "docs": "https://docs.x.ai/developers/rest-api-reference/inference/responses.md"
+      }
+    },
+    {
+      "id": "xai.responses.get",
+      "name": "Get a stored response",
+      "summary": "A response created with store enabled, by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/responses/{response_id}",
+      "params": {
+        "response_id": {
+          "in": "path",
+          "type": "string",
+          "required": true
+        }
+      },
+      "job": "ai.chat",
+      "docs_url": "https://docs.x.ai/developers/rest-api-reference/inference/responses.md",
+      "verified": {
+        "docs": "https://docs.x.ai/developers/rest-api-reference/inference/responses.md"
+      }
+    },
+    {
+      "id": "xai.chat.create",
+      "name": "Create a chat completion",
+      "summary": "OpenAI-compatible chat completion over a list of messages.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "example": "grok-4.7"
+        },
+        "messages": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "OpenAI-style messages.",
+          "example": [
+            {
+              "role": "user",
+              "content": "Hello"
+            }
+          ]
+        },
+        "max_completion_tokens": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap on visible output tokens; default 128,000. max_tokens is deprecated."
+        },
+        "temperature": {
+          "in": "body",
+          "type": "number",
+          "description": "0-2; values above 1 are sampled at 1."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "object",
+          "description": "Structured output format."
+        },
+        "tools": {
+          "in": "body",
+          "type": "array",
+          "description": "Function tools only (max 1000)."
+        },
+        "reasoning_effort": {
+          "in": "body",
+          "type": "string",
+          "description": "Reasoning effort; supported values depend on the model."
+        },
+        "deferred": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return a request_id now and fetch the result later from /v1/chat/deferred-completion/{request_id}."
+        },
+        "stream": {
+          "in": "body",
+          "type": "boolean"
+        }
+      },
+      "notes": [
+        "A read over POST; spends tokens. Prefer xai.responses.create for search tools."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://docs.x.ai/developers/rest-api-reference/inference/chat-completions.md",
+      "verified": {
+        "docs": "https://docs.x.ai/developers/rest-api-reference/inference/chat-completions.md"
+      }
+    },
+    {
+      "id": "xai.images.generate",
+      "name": "Generate images",
+      "summary": "Images from a text prompt with a Grok Imagine model.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/images/generations",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "example": "A red fox in fresh snow, photorealistic"
+        },
+        "model": {
+          "in": "body",
+          "type": "string",
+          "description": "Image model, from GET /v1/image-generation-models."
+        },
+        "n": {
+          "in": "body",
+          "type": "integer",
+          "description": "Number of images."
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "1:1",
+            "3:4",
+            "4:3",
+            "9:16",
+            "16:9",
+            "2:3",
+            "3:2",
+            "9:19.5",
+            "19.5:9",
+            "9:20",
+            "20:9",
+            "1:2",
+            "2:1",
+            "21:9",
+            "5:2",
+            "auto"
+          ]
+        },
+        "resolution": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "1k",
+            "1.5k",
+            "2k"
+          ]
+        },
+        "response_format": {
+          "in": "body",
+          "type": "string",
+          "description": "url or b64_json.",
+          "enum": [
+            "url",
+            "b64_json"
+          ]
+        },
+        "deferred": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return a request_id at once and poll xai.images.get; only response_format url."
+        }
+      },
+      "notes": [
+        "Spends credits at Imagine API rates per image.",
+        "With deferred, poll GET /v1/images/{request_id}: 202 while pending, 200 with data (or an error body) when done."
+      ],
+      "job": "ai.image.generate",
+      "docs_url": "https://docs.x.ai/developers/rest-api-reference/inference/images.md",
+      "verified": {
+        "docs": "https://docs.x.ai/developers/rest-api-reference/inference/images.md"
+      }
+    },
+    {
+      "id": "xai.images.get",
+      "name": "Get a deferred image result",
+      "summary": "Poll a deferred image generation or edit: 202 while pending, 200 with data or an error when finished.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/images/{request_id}",
+      "params": {
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The request_id from a deferred image request."
+        }
+      },
+      "job": "ai.image.generate",
+      "docs_url": "https://docs.x.ai/developers/rest-api-reference/inference/images.md",
+      "verified": {
+        "docs": "https://docs.x.ai/developers/rest-api-reference/inference/images.md"
+      }
+    }
+  ]
+}

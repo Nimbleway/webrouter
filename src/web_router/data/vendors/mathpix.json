@@ -1,0 +1,343 @@
+{
+  "vendor": "mathpix",
+  "name": "Mathpix",
+  "category": "ai",
+  "summary": "OCR for math, science and general documents: images to Mathpix Markdown/LaTeX, and PDFs or ebooks to Markdown, DOCX, LaTeX, HTML and more.",
+  "docs_url": "https://docs.mathpix.com/",
+  "pricing_url": "https://mathpix.com/pricing",
+  "base_url": "https://api.mathpix.com",
+  "auth": {
+    "credentials": {
+      "app_id": {
+        "env": [
+          "MATHPIX_APP_ID"
+        ],
+        "description": "Mathpix app_id (console.mathpix.com, API keys page)"
+      },
+      "app_key": {
+        "env": [
+          "MATHPIX_APP_KEY"
+        ],
+        "description": "Mathpix app_key (console.mathpix.com, API keys page)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "app_id",
+        "value": "{app_id}"
+      },
+      {
+        "in": "header",
+        "name": "app_key",
+        "value": "{app_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every request carries both app_id and app_key headers.",
+    "Monthly quotas per app (image_monthly_limit, page_monthly_limit; the page quota is shared with the Files API) and per-minute limits per app and IP; going over returns 429 http_max_requests.",
+    "Usage is counted per image and per PDF page; prices are on the pricing page."
+  ],
+  "sources": [
+    "https://docs.mathpix.com/guides/authentication",
+    "https://docs.mathpix.com/reference/post-v3-text",
+    "https://docs.mathpix.com/reference/post-v3-pdf",
+    "https://docs.mathpix.com/reference/pdf-results",
+    "https://docs.mathpix.com/reference/ocr-usage",
+    "https://docs.mathpix.com/reference/limits-and-quotas",
+    "https://docs.mathpix.com/reference/supported-formats"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "mathpix.image.ocr",
+      "name": "OCR an image",
+      "summary": "Recognize math, text, tables and chemistry in one image; returns Mathpix Markdown and other formats.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/text",
+      "params": {
+        "src": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Image URL or a base64 data URI (data:image/jpeg;base64,...).",
+          "example": "https://mathpix-ocr-examples.s3.amazonaws.com/cases_hw.jpg"
+        },
+        "formats": {
+          "in": "body",
+          "type": "array",
+          "description": "Output formats: text, data, html, latex_styled; empty returns text."
+        },
+        "data_options": {
+          "in": "body",
+          "type": "object",
+          "description": "Which outputs to include in the data and html fields."
+        },
+        "math_inline_delimiters": {
+          "in": "body",
+          "type": "array",
+          "description": "Inline math delimiters, e.g. [\"$\", \"$\"]."
+        },
+        "rm_spaces": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Remove extra white space from equations."
+        },
+        "include_line_data": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return results line by line."
+        },
+        "include_word_data": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return results word by word."
+        },
+        "confidence_threshold": {
+          "in": "body",
+          "type": "number",
+          "description": "0 to 1; below it the call returns a math_confidence error."
+        },
+        "tags": {
+          "in": "body",
+          "type": "array",
+          "description": "Strings to label the result for later queries."
+        }
+      },
+      "notes": [
+        "A read over POST; synchronous.",
+        "Limits: 5 MB JSON body, 2 MB base64 image, 10 MB image by URL (15 s download timeout).",
+        "Figures are not cropped out; use mathpix.pdf.submit for per-figure images."
+      ],
+      "job": "document.extract",
+      "docs_url": "https://docs.mathpix.com/reference/post-v3-text",
+      "verified": {
+        "docs": "https://docs.mathpix.com/reference/post-v3-text"
+      }
+    },
+    {
+      "id": "mathpix.pdf.submit",
+      "name": "Submit a document for OCR",
+      "summary": "Process a PDF, DOCX, PPTX or ebook by URL asynchronously; returns a pdf_id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/pdf",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "URL of the file to process (up to 1 GB).",
+          "example": "https://cdn.mathpix.com/examples/cs229-notes1.pdf"
+        },
+        "conversion_formats": {
+          "in": "body",
+          "type": "object",
+          "description": "Extra outputs to build on completion, e.g. {\"docx\": true, \"tex.zip\": true}; mmd is always produced and is not a valid key.",
+          "example": {
+            "docx": true
+          }
+        },
+        "rm_spaces": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Remove extra white space from equations; default true."
+        },
+        "include_page_breaks": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Append \\pagebreak after each page in the MMD."
+        },
+        "include_hyperlinks": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Keep the PDF's own links as Markdown links."
+        },
+        "callback_url": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL notified when the document finishes."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "object",
+          "description": "Key-value metadata; supports improve_mathpix for privacy."
+        }
+      },
+      "notes": [
+        "Starts a billed job. Poll mathpix.pdf.status until status is completed, then download with mathpix.pdf.download."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.mathpix.com/reference/post-v3-pdf",
+      "verified": {
+        "docs": "https://docs.mathpix.com/reference/post-v3-pdf"
+      }
+    },
+    {
+      "id": "mathpix.pdf.status",
+      "name": "Get document processing status",
+      "summary": "Status and page progress of a submitted document.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/pdf/{pdf_id}",
+      "params": {
+        "pdf_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Id from mathpix.pdf.submit."
+        }
+      },
+      "notes": [
+        "Wait for status completed (or error); percent_done reaches 100 before the outputs are ready, so downloading on it can 404."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.mathpix.com/reference/post-v3-pdf",
+      "verified": {
+        "docs": "https://docs.mathpix.com/reference/post-v3-pdf"
+      }
+    },
+    {
+      "id": "mathpix.pdf.download",
+      "name": "Download a processed document",
+      "summary": "The result in one format: mmd, md, html, docx, tex.zip and the other supported extensions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/pdf/{pdf_id}.{ext}",
+      "params": {
+        "pdf_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Id from mathpix.pdf.submit."
+        },
+        "ext": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Output extension, e.g. mmd, md, html, lines.json, docx, tex.zip.",
+          "example": "mmd"
+        }
+      },
+      "notes": [
+        "mmd, md, html and the JSON formats come back as text; docx, zip and pdf outputs are binary files.",
+        "A conversion format not requested at submission is built on demand."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://docs.mathpix.com/reference/post-v3-pdf",
+      "verified": {
+        "docs": "https://docs.mathpix.com/reference/post-v3-pdf"
+      }
+    },
+    {
+      "id": "mathpix.pdf.delete",
+      "name": "Delete a document's output",
+      "summary": "Permanently delete a processed document's output data.",
+      "kind": "write",
+      "method": "DELETE",
+      "path": "/v3/pdf/{pdf_id}",
+      "params": {
+        "pdf_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Document id."
+        }
+      },
+      "notes": [
+        "Permanent."
+      ],
+      "job": "jobs.delete",
+      "docs_url": "https://docs.mathpix.com/reference/post-v3-pdf",
+      "verified": {
+        "docs": "https://docs.mathpix.com/reference/post-v3-pdf"
+      }
+    },
+    {
+      "id": "mathpix.pdf.list",
+      "name": "List processed documents",
+      "summary": "Documents processed by the app, with status, page counts and request arguments.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/pdf-results",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 100."
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, inclusive, ISO datetime."
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End, exclusive, ISO datetime."
+        },
+        "app_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results for this app_id."
+        }
+      },
+      "job": "jobs.list",
+      "docs_url": "https://docs.mathpix.com/reference/pdf-results",
+      "verified": {
+        "docs": "https://docs.mathpix.com/reference/pdf-results"
+      }
+    },
+    {
+      "id": "mathpix.usage.get",
+      "name": "Get OCR usage",
+      "summary": "Request counts aggregated by usage type, request arguments or app over a time range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/ocr-usage",
+      "params": {
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, inclusive, ISO datetime.",
+          "example": "2026-10-01T00:00:00.000Z"
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End, exclusive, ISO datetime."
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Aggregate by this field.",
+          "enum": [
+            "usage_type",
+            "request_args_hash",
+            "app_id"
+          ]
+        },
+        "timespan": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Aggregation period, e.g. month.",
+          "example": "month"
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.mathpix.com/reference/ocr-usage",
+      "verified": {
+        "docs": "https://docs.mathpix.com/reference/ocr-usage"
+      }
+    }
+  ]
+}
