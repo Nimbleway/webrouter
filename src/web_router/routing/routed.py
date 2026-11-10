@@ -3,7 +3,8 @@
 Experimental. The routers take :class:`SyncRouted` or :class:`AsyncRouted` as
 a mixin, and every method that can be routed -- search, extract, answer,
 research and browse -- runs through ``_routed`` / ``_arouted``. The router is
-asked only when one is attached, the method is in ``route_tools``, and the
+asked only when one is attached, the method is in ``route_tools`` (the
+caller's; else the router's own ``route_tools`` attribute; else all five), and the
 call goes to ``auto``: a provider the caller names, or a default that is not
 ``auto``, is a pinned provider and leaves nothing to order. With no router
 attached a call runs exactly as it did before routers existed.
@@ -20,13 +21,12 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Collection, Iterator, Mapping
 from contextlib import contextmanager
-from typing import Any, TypeVar, get_args
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_invoke import MSG_ROUTE_TOOLS, ROUTER_URL_POLICY_ATTR
-from web_router.exceptions import ConfigurationError
+from web_router.constants_invoke import ROUTER_URL_POLICY_ATTR
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
@@ -37,6 +37,7 @@ from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
+from web_router.routing.route_tools import ALL_TOOLS, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import NormalizedRequest
@@ -49,24 +50,11 @@ _TOOL_OF: dict[type[NormalizedRequest], ToolName] = {cls: tool for tool, cls in 
 """The tool a request is for, read from its type."""
 
 
-_ALL_TOOLS: frozenset[ToolName] = frozenset(get_args(ToolName))
-
-
-def _route_tools(route_tools: Collection[ToolName] | None) -> frozenset[ToolName]:
-    """The tools that ask the router: ``route_tools``, checked, or all five when it is ``None``."""
-    if route_tools is None:
-        return _ALL_TOOLS
-    if isinstance(route_tools, str) or not set(route_tools) <= _ALL_TOOLS:
-        known = ", ".join(get_args(ToolName))
-        raise ConfigurationError(MSG_ROUTE_TOOLS.format(known=known, got=route_tools))
-    return frozenset(route_tools)
-
-
 class RouterSetup(RouterOwner):
     """The attached router and the tools it is consulted on, shared by both routers."""
 
     _router: AttachedRouter | None = None
-    _route_tools: frozenset[ToolName] = _ALL_TOOLS
+    _route_tools: frozenset[ToolName] = ALL_TOOLS
     _url_check: UrlCheck | None = None
     _router_url_check: UrlCheck | None = None
     """The check on the URLs a router sets: the caller's ``url_policy``, else the router's ``min_url_policy``."""
@@ -83,11 +71,14 @@ class RouterSetup(RouterOwner):
 
         Raises:
             ConfigurationError: for a ``router`` in neither form nor a registered name, ``router_config`` without a
-                name, a ``route_tools`` naming something else, or an unknown ``url_policy``.
+                name, a ``route_tools`` -- the caller's, or the one the router declares -- naming something else,
+                or an unknown ``url_policy``.
         """
         self._url_check = url_check(url_policy)
-        self._route_tools = _route_tools(route_tools)
+        # Checked once, before a router is built by name, and that result kept: the caller's value is not read again.
+        callers = None if route_tools is None else checked_route_tools(route_tools)
         with self._built(router, router_config) as attached:
+            self._route_tools = checked_route_tools(None, attached) if callers is None else callers
             self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
             floor = getattr(attached, ROUTER_URL_POLICY_ATTR, None) if url_policy is None else url_policy
             self._router_url_check = url_check(floor)

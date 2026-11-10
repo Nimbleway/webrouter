@@ -129,7 +129,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
                 ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is the only place
                 credentials are passed explicitly; everything else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
-                ask it (all five by default) and whether its failure raises (experimental) -- see
+                ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental) -- see
                 :mod:`web_router.routing.invoke`. A name such as ``"remote"`` builds a registered router from
                 ``router_config``, and closing this router closes it -- see :mod:`web_router.routing.registry`.
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).

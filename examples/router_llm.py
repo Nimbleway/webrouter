@@ -5,7 +5,9 @@ The router sends the model the prompt, the budget and the menu of candidates
 back `{"ranked": [...], "reason": ...}`. The answer is held to a JSON schema
 whose `items.enum` is the candidate ids, so the model can only name real ones.
 The ranked ids become the decision's `tools` and `providers`. It is async, and
-declares `timeout_s = 3.0`: past that, the call runs on the static order.
+declares `timeout_s = 3.0`: past that, the call runs on the static order. It also
+declares `route_tools = ("research", "browse")`: a plain search or answer runs
+in `auto`'s order without waiting on the model; `plan()` always asks it.
 
 **This router sends each prompt to the model's server.**
 
@@ -93,8 +95,14 @@ class LLMRouter:
     """Ranks the candidates with one structured-output chat completion."""
 
     timeout_s = 3.0
+    # The tools it orders when the caller passes no route_tools (benchmarks/providers/router_latency.py,
+    # 2026-11-09). Search and answer were measured: at a p50 of 1.2 s this router costs more than a quarter of
+    # either call, so both run in auto's order. Extract, research and browse are judgement: they take seconds
+    # to minutes. This one leaves extract out, since it never picks extract without a URL in the prompt.
+    route_tools = ("research", "browse")
 
     def __init__(self, client: Any = None, model: str | None = None) -> None:
+        self._owns_client = client is None
         if client is None:
             from openai import AsyncOpenAI
 
@@ -116,6 +124,15 @@ class LLMRouter:
         )
         answer = json.loads(response.choices[0].message.content)
         return decision(req, answer["ranked"], answer["reason"])
+
+    async def aclose(self) -> None:
+        """Close the client this router opened, on the loop that used it; one passed in is yours to close.
+
+        Its kept-alive connections belong to that loop: left open, they are collected after it closes, and Python
+        prints ``RuntimeError: Event loop is closed`` at exit.
+        """
+        if self._owns_client:
+            await self.client.close()
 
 
 def main() -> None:

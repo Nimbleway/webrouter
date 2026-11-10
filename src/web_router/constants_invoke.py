@@ -16,6 +16,11 @@ declares its own ``timeout_s`` -- the examples do.
 ROUTER_TIMEOUT_ATTR = "timeout_s"
 """The attribute, on a router function or object, that declares its time limit in seconds."""
 
+ROUTER_ROUTE_TOOLS_ATTR = "route_tools"
+"""The attribute, on a router function or object, that declares the tools it is consulted on when the caller
+passes ``route_tools=None``: a collection of tool names. A caller's ``route_tools`` always wins; a router that
+declares none is consulted on all five."""
+
 ROUTER_THREAD_NAME = "web-router-router"
 """The name of the worker thread a sync router runs on, and of the loop thread an async one runs on from sync code."""
 
@@ -26,6 +31,7 @@ MSG_ROUTER_FORM = (
 MSG_ROUTER_CLASS = "router= got the class {name!r}; pass an instance of it."
 MSG_ROUTER_TIMEOUT_S = "A router's timeout_s must be a positive number of seconds; got {value!r}."
 MSG_ROUTE_TOOLS = "route_tools takes a collection of tool names from {known}; got {got!r}."
+MSG_ROUTER_ROUTE_TOOLS = "A router's route_tools attribute takes a collection of tool names from {known}; got {got!r}."
 MSG_ROUTER_FAILED = (
     "Router {router!r} failed ({code}); fail_on_router_error=True raises rather than use the static order."
 )

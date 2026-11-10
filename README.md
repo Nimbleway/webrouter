@@ -1956,6 +1956,40 @@ changing the method. `route_tools=` limits that to some methods;
 wr = WebRouter(router=route, route_tools=("search", "research"))
 ```
 
+A router may declare its own default, as it declares `timeout_s`: a
+`route_tools` attribute on the function or object, read when the caller
+passes none. The caller's `route_tools` always wins, and a router that
+declares none is asked on all five. A slow router can leave out the tools it
+would slow down more than its order is worth:
+
+```python
+class SlowRouter:
+    timeout_s = 3.0
+    route_tools = ("research", "browse")  # minutes-long jobs; a search runs in auto's order
+
+    async def aroute(self, req): ...
+```
+
+Which tools a router of each kind should declare is measured by
+[`router_latency.py`](benchmarks/providers/README.md#router-latency-which-tools-a-router-should-order):
+a tool asks the router only when the router's p50 is below a quarter of the
+tool's p50, the p50 of the first backend in its `auto` chain. Measured on
+2026-11-09 (Apple M4 Pro, Python 3.12.13, async), against search's 316 ms and
+answer's 1874 ms:
+
+| Router | p50 ms | p90 ms | Search | Answer | Example declares |
+|---|--:|--:|---|---|---|
+| rules (built in) | 0.375 | 0.553 | consult | consult | nothing: all five |
+| scikit-learn classifier | 2.07 | 2.61 | consult | consult | nothing: all five |
+| LLM, `gpt-4.1-mini` | 1223 | 1714 | skip | skip | `("research", "browse")` |
+| Jev, `jev-1.14.0` | 242 | 271 | skip | consult | `("answer", "extract", "research", "browse")` |
+| `remote`, loopback | 3.17 | 4.1 | consult | consult | -- |
+| `remote`, 40 ms round trip (simulated) | 47 | 48 | consult | consult | -- |
+
+Extract, research and browse have no measured p50; they take seconds to
+minutes, so the examples keep them by judgement. Latency moves with the model,
+the network and the hour: rerun the script for your own router.
+
 ### `plan()` and `run()`
 
 `plan(prompt, budget=, tool=)` runs nothing. It returns a `Plan`: the method
@@ -2107,6 +2141,7 @@ wr = WebRouter(
     router_config={
         "url": "https://router.example.com/route",
         "timeout_s": 1.0,  # the default; cut to the call's budget and deadline
+        "route_tools": None,  # its own route_tools: the tools it orders when you pass none; all five if None
     },
 )  # api_key=, else WEB_ROUTER_REMOTE_ROUTER_API_KEY
 ```

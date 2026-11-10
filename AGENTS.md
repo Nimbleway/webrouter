@@ -179,10 +179,13 @@ src/web_router/
 │   ├── remote_config.py its other settings: httpx, timeout_s, the bearer key, headers
 │   ├── remote_errors.py its errors: RemoteRouterError, ...Timeout and ...Invalid
 │   ├── remote_redact.py the bearer key redacted from a decision that echoes it
+│   ├── remote_reply.py its reply checked before it is parsed: a 200 of JSON, identity, under 64 KiB
 │   ├── remote_close.py the pool's close on its own loop, bounded, warned when it fails
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
+│   ├── route_tools.py  the tools that ask the router: the caller's route_tools, else
+│   │                   the router's own, else all five; read once
 │   ├── router_owner.py a router built by name: kept to close with the routers, or closed if refused
 │   ├── submitted.py    submitted(): a job's start (submit_research, submit_browse)
 │   │                   held to the shared budget in force, at the effort it maps
@@ -393,7 +396,10 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         route_eval_paths.py, a decision merged by the
                         library's merge rule in route_eval_merge.py, one
                         question walked in route_eval_replay.py, its
-                        command line in route_eval_cli.py; chains.py (`make chains`): the
+                        command line in route_eval_cli.py; router_latency.py: routers
+                        timed against each tool's p50, outside CI, its yardstick,
+                        routers, timing and report in router_latency_*.py;
+                        chains.py (`make chains`): the
                         default auto orders ranked from them into
                         data/chains.json; efforts.py (`make efforts`): each
                         research effort's accuracy and p90 into

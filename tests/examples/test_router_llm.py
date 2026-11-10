@@ -87,6 +87,13 @@ class TestLLM:
         assert list(plan.providers["search"]) == offered[::-1]
         assert plan.decision.reason == "reversed"
 
+    def test_it_orders_research_and_browse_only_unless_the_caller_says_otherwise(self) -> None:
+        router, _ = _llm(lambda kwargs: {"ranked": [], "reason": ""})
+        with WebRouter(router=router) as client:
+            assert client._route_tools == {"research", "browse"}
+        with WebRouter(router=router, route_tools=("search",)) as client:
+            assert client._route_tools == {"search"}
+
     def test_without_a_key_it_says_what_to_set(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
@@ -121,3 +128,18 @@ class TestLLM:
         out = capsys.readouterr().out
         assert "(ok[2J done)" in out
         assert "\x1b" not in out and "\x07" not in out
+
+    async def test_aclose_closes_the_client_it_opened_and_never_yours(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        closed: list[str] = []
+
+        class _Client:
+            def __init__(self, name: str) -> None:
+                self.name = name
+
+            async def close(self) -> None:
+                closed.append(self.name)
+
+        monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(AsyncOpenAI=lambda **_: _Client("opened")))
+        await llm.LLMRouter(model="m").aclose()
+        await llm.LLMRouter(client=_Client("yours"), model="m").aclose()
+        assert closed == ["opened"]
