@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-163 vendors, 1519 endpoints.
+164 vendors, 1556 endpoints.
 
 ### advertising
 
@@ -223,6 +223,12 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Tiingo](https://www.tiingo.com/documentation/general/overview) `tiingo` | End-of-day and intraday stock prices, crypto prices and financial news from Tiingo. | 7 read | key in header | `TIINGO_API_KEY` | docs 2026-11-08 |
 | [Twelve Data](https://twelvedata.com/docs) `twelvedata` | Prices, quotes, time series, symbol search and fundamentals for stocks, forex, crypto and ETFs worldwide. | 9 read | key in header | `TWELVEDATA_API_KEY` | docs 2026-11-08 |
 | [World Bank Indicators API](https://datahelpdesk.worldbank.org/knowledgebase/topics/125589) `worldbank` | World Bank development indicators (GDP, population, poverty, health, education...) for every country and aggregate, by year. | 7 read | none | none | docs 2026-11-09 |
+
+### search
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Litescrape](https://litescrape.com/docs) `litescrape` | Low-cost SERP and web-data API: Google, Bing, DuckDuckGo, maps, app stores, review sites and page fetch. | 37 read | key in header | `LITESCRAPE_API_KEY` | docs 2026-11-08 |
 
 ### developer
 

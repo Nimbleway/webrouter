@@ -1,0 +1,2327 @@
+{
+  "vendor": "litescrape",
+  "name": "Litescrape",
+  "category": "search",
+  "summary": "Low-cost SERP and web-data API: Google, Bing, DuckDuckGo, maps, app stores, review sites and page fetch.",
+  "docs_url": "https://litescrape.com/docs",
+  "pricing_url": "https://litescrape.com/pricing",
+  "base_url": "https://api.litescrape.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "LITESCRAPE_API_KEY"
+        ],
+        "description": "a Litescrape API key (litescrape.com dashboard; new keys include 5 free calls)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is 'Authorization: Bearer <key>'. A flat per-request price applies and failed requests cost nothing.",
+    "Every endpoint has a GET form with scalar query parameters and a POST form taking JSON; this entry lists the GET form and the most useful parameters, not every one in Litescrape's schema.",
+    "Each endpoint has an /async variant for submit-then-poll jobs; see https://litescrape.com/docs/async.",
+    "Many more endpoints exist (Amazon, eBay, social, jobs, real estate and others); only the search, app-store, maps, review and web ones are included."
+  ],
+  "sources": [
+    "https://litescrape.com/llms.txt",
+    "https://litescrape.com/api/openapi.json",
+    "https://litescrape.com/docs"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "litescrape.google.search",
+      "name": "Google Search",
+      "summary": "Get Google search results, including the AI Overview and People also ask.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/search",
+      "params": {
+        "page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Opaque token from pagination.next_page_token."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Google Search query, up to 2,048 characters."
+        },
+        "fast_mode": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return organic results only, skipping AI Overview and all other result groups."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Human-readable city-level location encoded to UULE by Litescrape."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude from -90 through 90."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude from -180 through 180."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Lowercase two-letter country localization code."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Google interface and result language code."
+        },
+        "tbs": {
+          "in": "query",
+          "type": "string",
+          "description": "Google native date or search filter string."
+        },
+        "safe": {
+          "in": "query",
+          "type": "string",
+          "description": "Google adult-content filtering.",
+          "enum": [
+            "active",
+            "off"
+          ]
+        },
+        "tbm": {
+          "in": "query",
+          "type": "string",
+          "description": "Google vertical: lcl, vid, nws, shop, or pts.",
+          "enum": [
+            "lcl",
+            "vid",
+            "nws",
+            "shop",
+            "pts"
+          ]
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Non-negative Google result offset."
+        }
+      },
+      "notes": [
+        "Pass q, or page_token alone for the next page.",
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://litescrape.com/docs/google-search",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-search"
+      }
+    },
+    {
+      "id": "litescrape.google.ai_overview",
+      "name": "Google AI Overview",
+      "summary": "Get Google's AI Overview for a query, with cited sources.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/ai-overview",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Google Search query, up to 4,000 characters."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Human-readable city-level location encoded to UULE by Litescrape."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude from -90 through 90."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude from -180 through 180."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Lowercase two-letter country localization code."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Google interface and result language code."
+        },
+        "tbs": {
+          "in": "query",
+          "type": "string",
+          "description": "Google native date or search filter string."
+        },
+        "safe": {
+          "in": "query",
+          "type": "string",
+          "description": "Google adult-content filtering.",
+          "enum": [
+            "active",
+            "off"
+          ]
+        },
+        "tbm": {
+          "in": "query",
+          "type": "string",
+          "description": "Google vertical: lcl, vid, nws, shop, or pts.",
+          "enum": [
+            "lcl",
+            "vid",
+            "nws",
+            "shop",
+            "pts"
+          ]
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Non-negative Google result offset."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Best-effort first-page result count, 1 to 10."
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "Request device profile and radius bound.",
+          "enum": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.google.ai",
+      "docs_url": "https://litescrape.com/docs/google-ai-overview",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-ai-overview"
+      }
+    },
+    {
+      "id": "litescrape.google.ai_mode",
+      "name": "Google AI Mode",
+      "summary": "Get Google AI Mode answers with cited sources.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/ai-mode",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The question to ask Google AI Mode, up to 5,000 characters with no controls."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Named search origin, up to 512 characters and 63 UTF-8 bytes once Google-encoded."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country localization, normalized to lowercase."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code such as en, en-GB, or de."
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "Google returns its real layout for the selected device.",
+          "enum": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        },
+        "continuable": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return a subsequent_request_token so this answer can be followed up."
+        },
+        "subsequent_request_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Continue a conversation from a previous continuable response."
+        },
+        "image_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Public http or https image to include in the prompt, up to 2,048 characters and 20 MB."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.google.ai",
+      "docs_url": "https://litescrape.com/docs/google-ai-mode",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-ai-mode"
+      }
+    },
+    {
+      "id": "litescrape.google.ads",
+      "name": "Google Ads",
+      "summary": "Get the ads shown on a Google search results page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/ads",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Google Ads search query, up to 2,048 characters with no controls."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Human-readable location where the ad search originates, up to 63 UTF-8 bytes once Google-encoded."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Google interface and result language, such as en, en-GB, or de."
+        },
+        "safe": {
+          "in": "query",
+          "type": "string",
+          "description": "Google adult-content filtering.",
+          "enum": [
+            "active",
+            "off"
+          ]
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "Google returns its real layout for the selected device.",
+          "enum": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        }
+      },
+      "notes": [
+        "Returns the ads shown on a results page, not an ad-library lookup.",
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://litescrape.com/docs/google-ads",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-ads"
+      }
+    },
+    {
+      "id": "litescrape.google.autocomplete",
+      "name": "Google Autocomplete",
+      "summary": "Get search suggestions for a partial query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/autocomplete",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Partial Google search query to complete, up to 100 characters."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Suggestion language code, such as en or es."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code."
+        },
+        "search_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Suggestion category.",
+          "enum": [
+            "web",
+            "youtube",
+            "news",
+            "shopping",
+            "images"
+          ]
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.google.autocomplete",
+      "docs_url": "https://litescrape.com/docs/google-autocomplete",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-autocomplete"
+      }
+    },
+    {
+      "id": "litescrape.google.images",
+      "name": "Google Images",
+      "summary": "Search Google Images.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/images",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Image search query, up to 2,048 characters."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Language of the Google Images interface."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code used to localize results."
+        },
+        "safe": {
+          "in": "query",
+          "type": "string",
+          "description": "Set active to filter explicit images, or off to disable SafeSearch.",
+          "enum": [
+            "active",
+            "off"
+          ]
+        },
+        "tbs": {
+          "in": "query",
+          "type": "string",
+          "description": "Google image filters, such as isz:l for large images, itp:photo for photographs, or ic:trans for transparent images."
+        },
+        "license": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit results to images Google lists under these usage rights.",
+          "enum": [
+            "creative_commons",
+            "commercial_and_other",
+            "free_to_share",
+            "free_to_share_commercially",
+            "free_to_modify",
+            "free_to_modify_commercially"
+          ]
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Google's page offset."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum number of images returned from this page, from 1 to 100."
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "Device profile used for the image search.",
+          "enum": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.google.images",
+      "docs_url": "https://litescrape.com/docs/google-images",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-images"
+      }
+    },
+    {
+      "id": "litescrape.google.local",
+      "name": "Google Local",
+      "summary": "Get Google local results for a query and location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/local",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Google Local query, up to 2,048 characters with no controls."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Human-readable location, up to 512 characters."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Country localization normalized to lowercase."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Google interface and result language."
+        },
+        "tbs": {
+          "in": "query",
+          "type": "string",
+          "description": "Google compatibility token forwarded unchanged; the provider may leave ranking unchanged."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Local-result offset through 10,000; source-exhausted offsets above 1,000 return empty."
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "Compatibility value over device-invariant Maps data.",
+          "enum": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.search",
+      "docs_url": "https://litescrape.com/docs/google-local",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-local"
+      }
+    },
+    {
+      "id": "litescrape.google.maps",
+      "name": "Google Maps",
+      "summary": "Search Google Maps places, or get one place by ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/maps",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "The business, category, address, or natural-language query to search."
+        },
+        "ll": {
+          "in": "query",
+          "type": "string",
+          "description": "A complete viewport containing latitude, longitude, and either zoom or radius."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "A named geographic location resolved by the API."
+        },
+        "lat": {
+          "in": "query",
+          "type": "string",
+          "description": "Latitude for a coordinate-based viewport."
+        },
+        "lon": {
+          "in": "query",
+          "type": "string",
+          "description": "Longitude for a coordinate-based viewport."
+        },
+        "z": {
+          "in": "query",
+          "type": "string",
+          "description": "Google Maps zoom level for location or lat/lon geography."
+        },
+        "m": {
+          "in": "query",
+          "type": "string",
+          "description": "Search radius in meters for location or lat/lon geography."
+        },
+        "nearby": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Uses the supplied geography as a nearby-search scope."
+        },
+        "data": {
+          "in": "query",
+          "type": "string",
+          "description": "A Google Maps protobuf parameter sequence for search filters or an exact place."
+        },
+        "place_id": {
+          "in": "query",
+          "type": "string",
+          "description": "A Google place identifier used to resolve one exact place or request live foot traffic."
+        },
+        "data_cid": {
+          "in": "query",
+          "type": "string",
+          "description": "A decimal Google CID used to resolve one exact place."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Chooses a result search or an exact place response.",
+          "enum": [
+            "search",
+            "place"
+          ]
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.search",
+      "docs_url": "https://litescrape.com/docs/google-maps",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-maps"
+      }
+    },
+    {
+      "id": "litescrape.google.news",
+      "name": "Google News",
+      "summary": "Find recent news articles by topic, language, and country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/news",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Google News search query."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "News language, such as en-US or en-GB."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code in uppercase."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum articles to return, from 1 to 100."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "news.search",
+      "docs_url": "https://litescrape.com/docs/google-news",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-news"
+      }
+    },
+    {
+      "id": "litescrape.google.reviews",
+      "name": "Google Maps Reviews",
+      "summary": "Get reviews for a Google Maps place.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/reviews",
+      "params": {
+        "data_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Hexadecimal Google Maps feature identifier."
+        },
+        "place_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Google place identifier for the business whose reviews should be returned."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Language used for returned review labels and place context."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Lowercase two-letter country code used for regional localization."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Controls the order of returned reviews.",
+          "enum": [
+            "qualityScore",
+            "newestFirst",
+            "ratingHigh",
+            "ratingLow"
+          ]
+        },
+        "topic_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Returns reviews associated with a topic ID from the topics response group."
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Returns reviews matching a free-text query."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Requested number of unique reviews to return."
+        },
+        "next_page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Opaque continuation token from pagination.next_page_token."
+        },
+        "source_metadata": {
+          "in": "query",
+          "type": "string",
+          "description": "Includes additional review-provider icon and scale metadata when available."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.reviews",
+      "docs_url": "https://litescrape.com/docs/google-maps-reviews",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-maps-reviews"
+      }
+    },
+    {
+      "id": "litescrape.google.shopping",
+      "name": "Google Shopping",
+      "summary": "Search Google Shopping products.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/shopping",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Product query, up to 2,048 characters with no controls."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Named search origin, up to 512 characters and 63 UTF-8 bytes once encoded."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code, normalized to lowercase."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code such as en, en-GB, or de."
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "Google returns its real layout for the selected device.",
+          "enum": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        },
+        "shoprs": {
+          "in": "query",
+          "type": "string",
+          "description": "Google refinement token from a previous response, up to 4,096 characters."
+        },
+        "min_price": {
+          "in": "query",
+          "type": "number",
+          "description": "Lower price bound, 0 through 1,000,000,000."
+        },
+        "max_price": {
+          "in": "query",
+          "type": "number",
+          "description": "Upper price bound, at or above min_price."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Price low to high, price high to low, rating high to low, or Google’s default relevance.",
+          "enum": [
+            "",
+            "1",
+            "2",
+            "3",
+            "4"
+          ]
+        },
+        "free_shipping": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only products with free shipping."
+        },
+        "on_sale": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only products Google marks as on sale."
+        },
+        "small_business": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only products from small businesses."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.google.shopping",
+      "docs_url": "https://litescrape.com/docs/google-shopping",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-shopping"
+      }
+    },
+    {
+      "id": "litescrape.google.trends",
+      "name": "Google Trending Searches",
+      "summary": "Get currently trending searches and related news by country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/trends",
+      "params": {
+        "geo": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code in uppercase."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum currently trending searches to return."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "trends.query",
+      "docs_url": "https://litescrape.com/docs/google-trends",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-trends"
+      }
+    },
+    {
+      "id": "litescrape.google.scholar",
+      "name": "Google Scholar",
+      "summary": "Search scholarly articles with publication details, citation counts, and full-text links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/scholar",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Scholar search query, up to 256 characters."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language, such as en, de, or fr."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Order by relevance or newest additions.",
+          "enum": [
+            "relevance",
+            "date"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "One-based results page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum articles per page, from 1 to 20."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "scholar.search",
+      "docs_url": "https://litescrape.com/docs/google-scholar",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-scholar"
+      }
+    },
+    {
+      "id": "litescrape.google.jobs",
+      "name": "Google Jobs",
+      "summary": "Search Google Jobs listings by query and location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/jobs",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Job search query, for example software engineer jobs in New York."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "One-based results page."
+        },
+        "page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Copy next_page_token with next_page and the same query to fetch the next batch directly."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Google interface language, for example en, de, fr, es or pt-BR."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Canonical Google location, such as London,England,United Kingdom."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude of the search origin."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude of the search origin."
+        },
+        "tbs": {
+          "in": "query",
+          "type": "string",
+          "description": "Google search refinement string, for example qdr:w for the past week."
+        },
+        "include_filters": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return available Google Jobs filters with the q and uds parameters needed to apply each one."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://litescrape.com/docs/google-jobs",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-jobs"
+      }
+    },
+    {
+      "id": "litescrape.bing.search",
+      "name": "Bing Search",
+      "summary": "Get Bing web search results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/bing/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Bing search query after trimming."
+        },
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "description": "Selects the Bing web-search engine."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Named city-level origin used to localize the Bing request."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude from -90 through 90."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude from -180 through 180."
+        },
+        "mkt": {
+          "in": "query",
+          "type": "string",
+          "description": "Case-insensitive Bing language-country market token."
+        },
+        "cc": {
+          "in": "query",
+          "type": "string",
+          "description": "Case-insensitive two-letter country of origin."
+        },
+        "first": {
+          "in": "query",
+          "type": "integer",
+          "description": "One-based native offset for organic results."
+        },
+        "safeSearch": {
+          "in": "query",
+          "type": "string",
+          "description": "Bing adult-content policy; values are case-insensitive.",
+          "enum": [
+            "off",
+            "moderate",
+            "strict"
+          ]
+        },
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "Native Bing display or date filter expression."
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "Selects desktop, tablet, or mobile result behavior.",
+          "enum": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.bing",
+      "docs_url": "https://litescrape.com/docs/bing-search",
+      "verified": {
+        "docs": "https://litescrape.com/docs/bing-search"
+      }
+    },
+    {
+      "id": "litescrape.bing.images",
+      "name": "Bing Images",
+      "summary": "Search Bing Images with size, color, date and license filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/bing/images",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Image search query, from 1 through 2,048 characters after trimming."
+        },
+        "first": {
+          "in": "query",
+          "type": "integer",
+          "description": "One-based Bing result offset, from 1 through 10,000."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum images to return, from 1 through 100."
+        },
+        "mkt": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional language-country market, such as en-US."
+        },
+        "cc": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional two-letter country code."
+        },
+        "safeSearch": {
+          "in": "query",
+          "type": "string",
+          "description": "Bing content filter: off, moderate, or strict.",
+          "enum": [
+            "off",
+            "moderate",
+            "strict"
+          ]
+        },
+        "imagesize": {
+          "in": "query",
+          "type": "string",
+          "description": "Bing image size bucket: small, medium, large or wallpaper (extra large).",
+          "enum": [
+            "small",
+            "medium",
+            "large",
+            "wallpaper"
+          ]
+        },
+        "photo": {
+          "in": "query",
+          "type": "string",
+          "description": "Photographs, clipart, line drawings, animated GIFs or images with transparent backgrounds.",
+          "enum": [
+            "photo",
+            "clipart",
+            "linedrawing",
+            "animatedgif",
+            "transparent"
+          ]
+        },
+        "aspect": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter to square, wide or tall images.",
+          "enum": [
+            "square",
+            "wide",
+            "tall"
+          ]
+        },
+        "color2": {
+          "in": "query",
+          "type": "string",
+          "description": "Use color for any color, bw for black and white, or a dominant color: FGcls_RED, FGcls_ORANGE, FGcls_YELLOW, FGcls_GREEN, FGcls_TEAL, FGcls_BLUE, FGcl."
+        },
+        "face": {
+          "in": "query",
+          "type": "string",
+          "description": "Use face for just faces or portrait for head-and-shoulders images.",
+          "enum": [
+            "face",
+            "portrait"
+          ]
+        },
+        "age": {
+          "in": "query",
+          "type": "string",
+          "description": "Bing date filter: lt1440 (past 24 hours), lt10080 (past week), lt43200 (past month) or lt525600 (past year).",
+          "enum": [
+            "lt1440",
+            "lt10080",
+            "lt43200",
+            "lt525600"
+          ]
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.bing.images",
+      "docs_url": "https://litescrape.com/docs/bing-images",
+      "verified": {
+        "docs": "https://litescrape.com/docs/bing-images"
+      }
+    },
+    {
+      "id": "litescrape.bing.autocomplete",
+      "name": "Bing Autocomplete",
+      "summary": "Get Bing search suggestions for a partial query, with entity details when Bing shows them.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/bing/autocomplete",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Partial Bing search query to complete, up to 100 characters."
+        },
+        "mkt": {
+          "in": "query",
+          "type": "string",
+          "description": "Bing language-country market, such as en-US or de-DE."
+        },
+        "cc": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code, such as US or FR."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.bing.autocomplete",
+      "docs_url": "https://litescrape.com/docs/bing-autocomplete",
+      "verified": {
+        "docs": "https://litescrape.com/docs/bing-autocomplete"
+      }
+    },
+    {
+      "id": "litescrape.bing.shopping",
+      "name": "Bing Shopping",
+      "summary": "Search Bing Shopping products.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/bing/shopping",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Product search query, up to 2,048 characters with no control characters."
+        },
+        "mkt": {
+          "in": "query",
+          "type": "string",
+          "description": "Case-insensitive language-country market code, such as en-US."
+        },
+        "cc": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code, such as us or gb."
+        },
+        "efirst": {
+          "in": "query",
+          "type": "integer",
+          "description": "Nonnegative shopping result offset."
+        },
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "Bing Shopping filter expression, up to 6,000 characters."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.bing.shopping",
+      "docs_url": "https://litescrape.com/docs/bing-shopping",
+      "verified": {
+        "docs": "https://litescrape.com/docs/bing-shopping"
+      }
+    },
+    {
+      "id": "litescrape.duckduckgo.search",
+      "name": "DuckDuckGo Search",
+      "summary": "Get DuckDuckGo web search results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/duckduckgo/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Required search text, up to 500 characters."
+        },
+        "kl": {
+          "in": "query",
+          "type": "string",
+          "description": "DuckDuckGo region and language token, such as us-en."
+        },
+        "safe": {
+          "in": "query",
+          "type": "string",
+          "description": "DuckDuckGo safe-search level.",
+          "enum": [
+            "1",
+            "-1",
+            "-2"
+          ]
+        },
+        "df": {
+          "in": "query",
+          "type": "string",
+          "description": "Date window: d, w, m, y, or YYYY-MM-DD..YYYY-MM-DD."
+        },
+        "search_assist": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Enable DuckDuckGo query assistance; mutually exclusive with m."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Result offset from 0 through 10,000."
+        },
+        "m": {
+          "in": "query",
+          "type": "integer",
+          "description": "Requested result count from 1 through 50; mutually exclusive with search_assist."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "serp.duckduckgo",
+      "docs_url": "https://litescrape.com/docs/duckduckgo-search",
+      "verified": {
+        "docs": "https://litescrape.com/docs/duckduckgo-search"
+      }
+    },
+    {
+      "id": "litescrape.duckduckgo.maps",
+      "name": "DuckDuckGo Maps",
+      "summary": "Search DuckDuckGo Maps places within a map area.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/duckduckgo/maps",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Required place or category query, up to 500 characters."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "Viewport rectangle as top,left,bottom,right."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Viewport center latitude; requires lon."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "description": "Viewport center longitude; requires lat."
+        },
+        "strict_bbox": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Exclude results outside the requested bounds."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.search",
+      "docs_url": "https://litescrape.com/docs/duckduckgo-maps",
+      "verified": {
+        "docs": "https://litescrape.com/docs/duckduckgo-maps"
+      }
+    },
+    {
+      "id": "litescrape.appstore.search",
+      "name": "Apple App Store Search",
+      "summary": "Search the App Store for iPhone, iPad and Mac apps.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/apple/app-store/search",
+      "params": {
+        "term": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search term with 1 to 2,048 UTF-8 bytes of printable text, and at most 4,096 bytes after URL encoding."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter Apple storefront country."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language-region code, such as en-us or fr-fr."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results after filtering, from 1 through 200."
+        },
+        "disallow_explicit": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Exclude explicit results when true."
+        },
+        "property": {
+          "in": "query",
+          "type": "string",
+          "description": "Use developer to match developer names, ignoring case."
+        },
+        "category_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Filter results by a native genre identifier, from 1 through 2,147,483,647."
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "mobile for iPhone apps, tablet for iPad apps, or desktop for Mac apps.",
+          "enum": [
+            "mobile",
+            "tablet",
+            "desktop"
+          ]
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "apps.search",
+      "docs_url": "https://litescrape.com/docs/apple-app-store-search",
+      "verified": {
+        "docs": "https://litescrape.com/docs/apple-app-store-search"
+      }
+    },
+    {
+      "id": "litescrape.appstore.product",
+      "name": "Apple App Store Product",
+      "summary": "Get an App Store app's details, ratings and version history.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/apple/app-store/product",
+      "params": {
+        "product_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Positive decimal Apple app identifier, up to 20 digits."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter Apple storefront country."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "App product type."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "apps.product",
+      "docs_url": "https://litescrape.com/docs/apple-app-store-product",
+      "verified": {
+        "docs": "https://litescrape.com/docs/apple-app-store-product"
+      }
+    },
+    {
+      "id": "litescrape.appstore.reviews",
+      "name": "Apple App Store Reviews",
+      "summary": "Get reviews for an App Store app.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/apple/app-store/reviews",
+      "params": {
+        "product_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Positive decimal Apple app identifier, up to 20 digits."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter Apple storefront country."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "mostrecent or mosthelpful.",
+          "enum": [
+            "mostrecent",
+            "mosthelpful"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "One-based page number, from 1 through 2,147,483,647."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "apps.reviews",
+      "docs_url": "https://litescrape.com/docs/apple-app-store-reviews",
+      "verified": {
+        "docs": "https://litescrape.com/docs/apple-app-store-reviews"
+      }
+    },
+    {
+      "id": "litescrape.applemaps.places",
+      "name": "Apple Maps Places",
+      "summary": "Search Apple Maps places.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/apple/maps/places",
+      "params": {
+        "muid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One or more Apple Maps unique place identifiers."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Controls Apple Maps language and regional formatting."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.search",
+      "docs_url": "https://litescrape.com/docs/apple-maps-places",
+      "verified": {
+        "docs": "https://litescrape.com/docs/apple-maps-places"
+      }
+    },
+    {
+      "id": "litescrape.applemaps.reviews",
+      "name": "Apple Maps Reviews",
+      "summary": "Get Apple ratings and reviews for an Apple Maps place.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/apple/maps/reviews",
+      "params": {
+        "muid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Exactly one unsigned 64-bit decimal Apple Maps MUID."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Apple Maps language and regional formatting."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.reviews",
+      "docs_url": "https://litescrape.com/docs/apple-maps-reviews",
+      "verified": {
+        "docs": "https://litescrape.com/docs/apple-maps-reviews"
+      }
+    },
+    {
+      "id": "litescrape.googleplay.apps",
+      "name": "Google Play Apps",
+      "summary": "Search and browse Google Play apps.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/play/apps",
+      "params": {
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Storefront language, such as en, de, or zh-TW."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional query with 1 to 2,048 UTF-8 bytes of printable text."
+        },
+        "chart": {
+          "in": "query",
+          "type": "string",
+          "description": "Chart identifier such as topselling_free, topselling_paid, or topgrossing."
+        },
+        "next_page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Use the returned next_page_token with the same parameters."
+        },
+        "section_page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Continue one result group using its returned token and the same parameters."
+        },
+        "see_more_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Open a result collection using its returned token and the same parameters."
+        },
+        "apps_category": {
+          "in": "query",
+          "type": "string",
+          "description": "Native app category identifier, such as MEDICAL."
+        },
+        "store_device": {
+          "in": "query",
+          "type": "string",
+          "description": "Omit for the default phone storefront.",
+          "enum": [
+            "phone",
+            "tablet",
+            "tv",
+            "chromebook",
+            "watch",
+            "car"
+          ]
+        },
+        "age": {
+          "in": "query",
+          "type": "string",
+          "description": "Children's age range.",
+          "enum": [
+            "AGE_RANGE1",
+            "AGE_RANGE2",
+            "AGE_RANGE3"
+          ]
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "apps.search",
+      "docs_url": "https://litescrape.com/docs/google-play-apps",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-play-apps"
+      }
+    },
+    {
+      "id": "litescrape.googleplay.product",
+      "name": "Google Play Product",
+      "summary": "Get a Google Play app, book, movie or show by ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/play/product",
+      "params": {
+        "product_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Native Google Play product identifier, with 1 to 512 letters, digits, underscores, dots, or hyphens."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Storefront language, such as en, de, or zh-TW."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code."
+        },
+        "store": {
+          "in": "query",
+          "type": "string",
+          "description": "Product catalog containing this identifier.",
+          "enum": [
+            "apps",
+            "books",
+            "audiobooks",
+            "movies",
+            "tv"
+          ]
+        },
+        "season_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Native season identifier, such as tvseason-OVPad1njPzI.P."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "apps.product",
+      "docs_url": "https://litescrape.com/docs/google-play-product",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-play-product"
+      }
+    },
+    {
+      "id": "litescrape.googleplay.reviews",
+      "name": "Google Play Reviews",
+      "summary": "Get reviews for a Google Play app.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/google/play/reviews",
+      "params": {
+        "product_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Native Google Play product identifier, with 1 to 512 letters, digits, underscores, dots, or hyphens."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Storefront language, such as en, de, or zh-TW."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code."
+        },
+        "store": {
+          "in": "query",
+          "type": "string",
+          "description": "Product catalog containing this identifier.",
+          "enum": [
+            "apps",
+            "books",
+            "audiobooks",
+            "movies",
+            "tv"
+          ]
+        },
+        "platform": {
+          "in": "query",
+          "type": "string",
+          "description": "Platform associated with the reviews.",
+          "enum": [
+            "phone",
+            "tablet",
+            "watch",
+            "chromebook",
+            "tv"
+          ]
+        },
+        "rating": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only reviews with this rating, from 1 through 5."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 for relevant, 2 for newest, or 3 for rating."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of reviews, from 1 through 199."
+        },
+        "next_page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Returned review continuation."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "apps.reviews",
+      "docs_url": "https://litescrape.com/docs/google-play-reviews",
+      "verified": {
+        "docs": "https://litescrape.com/docs/google-play-reviews"
+      }
+    },
+    {
+      "id": "litescrape.tripadvisor.search",
+      "name": "Tripadvisor Search",
+      "summary": "Search Tripadvisor hotels, restaurants and attractions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/tripadvisor/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Required search text, up to 500 characters."
+        },
+        "tripadvisor_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Supported localized Tripadvisor hostname."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Language or language-COUNTRY code."
+        },
+        "geo_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Optional positive Tripadvisor geography identifier."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Optional search-center latitude; requires lon."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "description": "Optional search-center longitude; requires lat."
+        },
+        "place_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Result entity type.",
+          "enum": [
+            "all",
+            "accommodation",
+            "attraction",
+            "attraction_product",
+            "eatery",
+            "geo"
+          ]
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Result offset from 0 through 10,000."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Result count from 1 through 30."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.search",
+      "docs_url": "https://litescrape.com/docs/tripadvisor-search",
+      "verified": {
+        "docs": "https://litescrape.com/docs/tripadvisor-search"
+      }
+    },
+    {
+      "id": "litescrape.tripadvisor.place",
+      "name": "Tripadvisor Place",
+      "summary": "Get a Tripadvisor place by ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/tripadvisor/place",
+      "params": {
+        "place_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Required positive Tripadvisor place identifier."
+        },
+        "tripadvisor_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Supported localized Tripadvisor hostname."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Language or language-COUNTRY code."
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Three-letter ISO currency for price fields."
+        },
+        "geo_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Optional positive parent geography identifier."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.detail",
+      "docs_url": "https://litescrape.com/docs/tripadvisor-place",
+      "verified": {
+        "docs": "https://litescrape.com/docs/tripadvisor-place"
+      }
+    },
+    {
+      "id": "litescrape.tripadvisor.reviews",
+      "name": "Tripadvisor Reviews",
+      "summary": "Get reviews for a Tripadvisor place.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/tripadvisor/reviews",
+      "params": {
+        "place_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Required positive Tripadvisor place identifier."
+        },
+        "tripadvisor_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Supported localized Tripadvisor hostname."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Language or language-COUNTRY code."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Review offset from 0 through 10,000."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Review count from 1 through 50."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Chronological or machine-ranked ordering.",
+          "enum": [
+            "recent",
+            "relevance"
+          ]
+        },
+        "translate": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Request Tripadvisor machine translation."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.reviews",
+      "docs_url": "https://litescrape.com/docs/tripadvisor-reviews",
+      "verified": {
+        "docs": "https://litescrape.com/docs/tripadvisor-reviews"
+      }
+    },
+    {
+      "id": "litescrape.yelp.search",
+      "name": "Yelp Search",
+      "summary": "Search Yelp businesses by location and category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/yelp/search",
+      "params": {
+        "find_loc": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Required Yelp search location."
+        },
+        "find_desc": {
+          "in": "query",
+          "type": "string",
+          "description": "Business name, category, or search terms."
+        },
+        "yelp_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Supported Yelp hostname."
+        },
+        "l": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional Yelp-native map bounds token."
+        },
+        "cflt": {
+          "in": "query",
+          "type": "string",
+          "description": "Yelp category identifier containing letters, numbers, _ or -."
+        },
+        "sortby": {
+          "in": "query",
+          "type": "string",
+          "description": "Native Yelp ordering.",
+          "enum": [
+            "recommended",
+            "rating",
+            "review_count"
+          ]
+        },
+        "attrs": {
+          "in": "query",
+          "type": "string",
+          "description": "Yelp-native comma-separated attribute filters."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Result offset from 0 through 10,000."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.search",
+      "docs_url": "https://litescrape.com/docs/yelp-search",
+      "verified": {
+        "docs": "https://litescrape.com/docs/yelp-search"
+      }
+    },
+    {
+      "id": "litescrape.yelp.place",
+      "name": "Yelp Place",
+      "summary": "Get a Yelp business's details and menu.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/yelp/place",
+      "params": {
+        "place_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Required Yelp encoded business ID or business alias."
+        },
+        "yelp_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Supported localized Yelp hostname."
+        },
+        "business_alert": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include business alert information when available."
+        },
+        "full_menu": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Fetch the full menu when available; otherwise return place details with an explanation."
+        },
+        "menu_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Select a named menu when more than one is available."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.detail",
+      "docs_url": "https://litescrape.com/docs/yelp-place",
+      "verified": {
+        "docs": "https://litescrape.com/docs/yelp-place"
+      }
+    },
+    {
+      "id": "litescrape.yelp.reviews",
+      "name": "Yelp Reviews",
+      "summary": "Get reviews for a Yelp business.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/yelp/reviews",
+      "params": {
+        "place_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Required encoded Yelp business identifier."
+        },
+        "yelp_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Supported localized Yelp hostname."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Review language such as en or fr-FR."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search review text for these terms."
+        },
+        "sortby": {
+          "in": "query",
+          "type": "string",
+          "description": "Yelp review ordering.",
+          "enum": [
+            "relevance_desc",
+            "date_desc",
+            "date_asc",
+            "rating_desc",
+            "rating_asc",
+            "elites_desc"
+          ]
+        },
+        "rating": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ratings from 1 through 5."
+        },
+        "not_recommended": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Fetch reviews that Yelp does not recommend."
+        },
+        "not_recommended_start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset within not-recommended reviews."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Review offset from 0 through 10,000."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Review count from 1 through 49."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "places.reviews",
+      "docs_url": "https://litescrape.com/docs/yelp-reviews",
+      "verified": {
+        "docs": "https://litescrape.com/docs/yelp-reviews"
+      }
+    },
+    {
+      "id": "litescrape.web.fetch",
+      "name": "Fetch",
+      "summary": "Get a web page as Markdown, HTML or plain text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/web/fetch",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Public HTTP(S) URL to capture, 1-8,192 characters."
+        },
+        "remove_overlay": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Remove modal and cookie-banner overlays from the page."
+        },
+        "detach_invisibles": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Drop display:none elements from the page."
+        },
+        "wait_for_selector": {
+          "in": "query",
+          "type": "string",
+          "description": "CSS selector to wait for after navigation, 1-2,048 characters."
+        },
+        "user_agent": {
+          "in": "query",
+          "type": "string",
+          "description": "User-Agent for the page request, 1-1,024 characters without control characters."
+        },
+        "page_timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds from 1 through 180 for page loading and browser operations."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Browser locale as a language tag, 2-64 characters."
+        },
+        "referer": {
+          "in": "query",
+          "type": "string",
+          "description": "HTTP(S) URL sent as the Referer."
+        },
+        "assert_status_code": {
+          "in": "query",
+          "type": "integer",
+          "description": "Expected origin HTTP status, 100-599."
+        },
+        "robots_txt": {
+          "in": "query",
+          "type": "string",
+          "description": "User agent, 1-256 characters, to check against the site's robots.txt; disallowed URLs are rejected."
+        },
+        "respond_timing": {
+          "in": "query",
+          "type": "string",
+          "description": "Page readiness condition to reach before responding.",
+          "enum": [
+            "html",
+            "visible-content",
+            "mutation-idle",
+            "resource-idle",
+            "media-idle",
+            "network-idle"
+          ]
+        },
+        "respond_with": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format: content (default; main content as Markdown, or the whole page when extraction keeps too little), markdown (whole page as Markdown), htm."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://litescrape.com/docs/web-fetch",
+      "verified": {
+        "docs": "https://litescrape.com/docs/web-fetch"
+      }
+    },
+    {
+      "id": "litescrape.web.screenshot",
+      "name": "Screenshot",
+      "summary": "Take a screenshot of a web page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/web/screenshot",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Public HTTP(S) URL to capture, 1-8,192 characters."
+        },
+        "remove_overlay": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Remove modal and cookie-banner overlays from the page."
+        },
+        "detach_invisibles": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Drop display:none elements from the page."
+        },
+        "wait_for_selector": {
+          "in": "query",
+          "type": "string",
+          "description": "CSS selector to wait for after navigation, 1-2,048 characters."
+        },
+        "user_agent": {
+          "in": "query",
+          "type": "string",
+          "description": "User-Agent for the page request, 1-1,024 characters without control characters."
+        },
+        "page_timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds from 1 through 180 for page loading and browser operations."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Browser locale as a language tag, 2-64 characters."
+        },
+        "referer": {
+          "in": "query",
+          "type": "string",
+          "description": "HTTP(S) URL sent as the Referer."
+        },
+        "assert_status_code": {
+          "in": "query",
+          "type": "integer",
+          "description": "Expected origin HTTP status, 100-599."
+        },
+        "robots_txt": {
+          "in": "query",
+          "type": "string",
+          "description": "User agent, 1-256 characters, to check against the site's robots.txt; disallowed URLs are rejected."
+        },
+        "respond_timing": {
+          "in": "query",
+          "type": "string",
+          "description": "Page readiness condition to reach before responding.",
+          "enum": [
+            "html",
+            "visible-content",
+            "mutation-idle",
+            "resource-idle",
+            "media-idle",
+            "network-idle"
+          ]
+        },
+        "full_page": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Capture the full page when true."
+        }
+      },
+      "notes": [
+        "Billed per successful call; failed requests are not billed.",
+        "Every endpoint also has an /async variant (submit, then poll); this entry uses the synchronous GET."
+      ],
+      "job": "web.screenshot",
+      "docs_url": "https://litescrape.com/docs/web-screenshot",
+      "verified": {
+        "docs": "https://litescrape.com/docs/web-screenshot"
+      }
+    },
+    {
+      "id": "litescrape.account.key_status",
+      "name": "Get key status and remaining credits",
+      "summary": "Remaining calls, concurrency limit and retention setting for the key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/keys/status",
+      "job": "account.usage",
+      "docs_url": "https://litescrape.com/docs/key-status",
+      "verified": {
+        "docs": "https://litescrape.com/docs/key-status"
+      }
+    }
+  ]
+}
