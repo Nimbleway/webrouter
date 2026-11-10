@@ -1,16 +1,47 @@
-"""router-latency's report: the results file as markdown, one row per router class, and the dry run's plan.
+"""router-latency's report: the host it ran on, the results file as markdown, one row per router, the dry run's plan.
 
 Imported as a sibling, by name, as ``_common`` is. Experimental until 1.0.
 """
 
 from __future__ import annotations
 
+import importlib.metadata
+import os
+import platform
+import subprocess
+import sys
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 from router_latency_tools import TOOLS, ToolLatency, route_tools_for, verdict
 
+import web_router
+
 NONE = "n/a"
+ROUTER_PACKAGES = ("scikit-learn", "openai", "httpx")
+"""The packages a router's own time depends on, recorded with the results."""
+
+
+def environment() -> dict[str, Any]:
+    """The host, Python and package versions a run's numbers belong to."""
+    cpu = platform.processor()
+    if sys.platform == "darwin":  # platform.processor() says only "arm" or "i386" there
+        brand = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True)
+        cpu = brand.stdout.strip() or cpu
+    return {
+        "machine": f"{cpu}, {os.cpu_count()} CPUs",
+        "platform": platform.platform(),
+        "python": platform.python_version(),
+        "web_router": web_router.__version__,
+        "packages": {name: _version(name) for name in ROUTER_PACKAGES},
+    }
+
+
+def _version(name: str) -> str | None:
+    try:
+        return importlib.metadata.version(name)
+    except importlib.metadata.PackageNotFoundError:
+        return None
 
 
 def _ms(value: float | None) -> str:
@@ -25,7 +56,7 @@ def _rate(value: float | None) -> str:
     return NONE if value is None else f"{value:.1%}"
 
 
-def _usd(value: float | None) -> str:
+def _dollars(value: float | None) -> str:
     return "unknown" if value is None else f"${value:.4f}"
 
 
@@ -68,7 +99,7 @@ def routers_table(routers: Mapping[str, Mapping[str, Any]]) -> list[str]:
             f"| {name} | {_ms(warm['p50_ms'])} | {_ms(warm['p90_ms'])} | {_rate(warm['timeout_rate'])} "
             f"| {_rate(warm['fallback_rate'])} | {_ms(first['p50_ms'])} "
             f"| {_ms(cold.get('build_p50_ms'))} / {_ms(cold.get('p50_ms'))} "
-            f"| {added_cell} | {_usd(r.get('cost_usd'))} |"
+            f"| {added_cell} | {_dollars(r.get('cost_usd'))} |"
         )
     return lines
 
@@ -137,8 +168,8 @@ def dry_run(rows: Sequence[Mapping[str, Any]], settings: Mapping[str, Any], prom
             f"- {row['name']}: {row['describe']}",
             f"    calls to the router: {row['calls']}; needs: {', '.join(row['env']) or 'nothing'} "
             f"(missing: {missing}; optional: {optional})",
-            f"    cost: {_usd(row['cost_usd'])} -- {row['cost_note']}",
+            f"    cost: {_dollars(row['cost_usd'])} -- {row['cost_note']}",
         ]
         total = None if total is None or row["cost_usd"] is None else total + row["cost_usd"]
-    lines += ["", f"Estimated total: {_usd(total)}"]
+    lines += ["", f"Estimated total: {_dollars(total)}"]
     return "\n".join(lines)

@@ -29,6 +29,7 @@ SIBLINGS = (
     "route_eval_rank",
     "route_eval_merge",
     "router_latency_tools",
+    "router_latency_args",
     "router_latency_routers",
     "router_latency_run",
     "router_latency_report",

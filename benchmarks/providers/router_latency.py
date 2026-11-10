@@ -25,13 +25,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import importlib.metadata
 import json
-import math
-import os
-import platform
 import random
-import subprocess
 import sys
 from collections.abc import Iterable, Sequence
 from datetime import datetime, timezone
@@ -40,133 +35,30 @@ from typing import Any
 
 from _common import DEFAULT_OUT, ENV_FILE
 from dotenv import load_dotenv
-from frozen import JOINED_DIR
 from route_eval_merge import request_for
 from route_eval_sets import load_set
-from router_latency_report import dry_run, markdown
-from router_latency_routers import RouterSpec, aclose, close, plan_cost, router_specs
+from router_latency_args import DEFAULT_SETS, router_specs_for, settings
+from router_latency_args import parse_args as _parse_args
+from router_latency_report import dry_run, environment, markdown
+from router_latency_routers import RouterSpec, aclose, close, plan_cost
 from router_latency_run import added_wall_time, cold_builds, interleaved
-from router_latency_tools import CHAIN_ALL, CHAINS, SHARE, chain_orders, definition, tool_latencies
+from router_latency_tools import chain_orders, definition, tool_latencies
 
-import web_router
 from web_router.routing.contract import RouteRequest
 
-DEFAULT_SETS = ("tools-effort-60", "simpleqa-300-v2")
-"""route-eval's public prompts: the mixed tool set, and SimpleQA's search questions."""
-DEFAULT_ROUTERS = ("rules", "sklearn")
-"""The routers that run in this process and bill nothing."""
-DEFAULT_N = 200
-DEFAULT_WARMUP = 5
-DEFAULT_COLD = 20
-DEFAULT_E2E = 100
-DEFAULT_SEED = 0
 OUT_DIR = DEFAULT_OUT / "router-latency"
-ROUTER_PACKAGES = ("scikit-learn", "openai", "httpx")
-"""The packages a router's own time depends on, recorded with the results."""
 
 MSG_NOT_JOINED = (
     "{name}: no question text in {folder}; run `uv run --all-extras python benchmarks/providers/frozen.py join` "
     "first, or --dry-run to see the plan without it"
 )
-MSG_REPEATED = "each router is timed once per run; named more than once: {names}"
-MSG_COUNT = "a count of calls is 0 or more; got {value}"
-MSG_POSITIVE = "--e2e is 1 or more: the added wall time needs a timed call; got {value}"
-MSG_RTT = "--remote-rtt-ms is a finite number of milliseconds, 0 or more; got {value!r}"
-MSG_SECONDS = "--deadline-s is a finite number of seconds above 0; got {value!r}"
-MSG_SHARE = "--share is a fraction above 0 and at most 1; got {value!r}"
 MSG_NO_QUESTIONS = "the chosen sets give no questions to route: {sets}"
-MSG_USD = "a price is a finite number of USD, 0 or more; got {value!r}"
 MSG_MISSING_PROMPTS = "{name}: {count} questions have no text in {folder}; run frozen.py join again"
-MSG_PRICE = "--llm-price takes IN,OUT: USD per million input and output tokens, as 0.15,0.60"
-
-
-def _count(text: str) -> int:
-    value = int(text)
-    if value < 0:
-        raise argparse.ArgumentTypeError(MSG_COUNT.format(value=value))
-    return value
-
-
-def _positive(text: str) -> int:
-    value = _count(text)
-    if value < 1:
-        raise argparse.ArgumentTypeError(MSG_POSITIVE.format(value=value))
-    return value
-
-
-def _rtt(text: str) -> float:
-    """A simulated round trip: a finite number of milliseconds, 0 or more."""
-    try:
-        return _usd(text)
-    except argparse.ArgumentTypeError:
-        raise argparse.ArgumentTypeError(MSG_RTT.format(value=text)) from None
-
-
-def _seconds(text: str) -> float:
-    """A deadline: a finite number of seconds above 0."""
-    try:
-        value = float(text)
-    except ValueError:
-        value = math.nan
-    if not math.isfinite(value) or value <= 0:
-        raise argparse.ArgumentTypeError(MSG_SECONDS.format(value=text))
-    return value
-
-
-def _share(text: str) -> float:
-    """The rule's share of a tool's p50: above 0, at most 1."""
-    try:
-        value = float(text)
-    except ValueError:
-        value = math.nan
-    if not 0 < value <= 1:  # False for NaN too
-        raise argparse.ArgumentTypeError(MSG_SHARE.format(value=text))
-    return value
-
-
-def _price(text: str) -> tuple[float, float]:
-    parts = text.split(",")
-    if len(parts) != 2:
-        raise argparse.ArgumentTypeError(MSG_PRICE)
-    try:
-        return _usd(parts[0]), _usd(parts[1])
-    except argparse.ArgumentTypeError:
-        raise argparse.ArgumentTypeError(MSG_PRICE) from None
-
-
-def _usd(text: str) -> float:
-    """A price: a finite number of 0 or more."""
-    try:
-        value = float(text)
-    except ValueError:
-        value = math.nan
-    if not math.isfinite(value) or value < 0:
-        raise argparse.ArgumentTypeError(MSG_USD.format(value=text))
-    return value
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    p.add_argument("--router", dest="routers", action="append", help=f"rules, sklearn, llm, jev, remote:<url>, "
-                   f"module:attr or path/file.py:attr (default: {', '.join(DEFAULT_ROUTERS)})")  # fmt: skip
-    p.add_argument("--set", dest="sets", action="append", help=f"frozen set (default: {', '.join(DEFAULT_SETS)})")
-    p.add_argument("--joined", type=Path, default=JOINED_DIR, help="frozen.py join's output, the question text")
-    p.add_argument("-n", type=_count, default=DEFAULT_N, help="timed calls per router, after the warm-up")
-    p.add_argument("--warmup", type=_count, default=DEFAULT_WARMUP, help="calls dropped after the first")
-    p.add_argument("--cold", type=_count, default=DEFAULT_COLD, help="calls each on a freshly built router")
-    p.add_argument("--e2e", type=_positive, default=DEFAULT_E2E, help="stubbed searches, routed against unrouted")
-    p.add_argument("--deadline-s", type=_seconds, default=None, help="caps each router's deadline (not --e2e's)")
-    p.add_argument("--async", dest="use_async", action="store_true", help="call from an event loop, as acall")
-    p.add_argument("--seed", type=int, default=DEFAULT_SEED, help="the prompt sample's and call order's seed")
-    p.add_argument("--chain", choices=CHAINS, default=CHAIN_ALL, help="auto's order: every key, or the keys here")
-    p.add_argument("--share", type=_share, default=SHARE, help="the rule's share of the tool's p50")
-    p.add_argument("--llm-model", default=None, help="the llm router's model (default: $LLM_ROUTER_MODEL)")
-    p.add_argument("--llm-price", type=_price, default=None, help="IN,OUT USD per million tokens, for the estimate")
-    p.add_argument("--jev-price", type=_usd, default=None, help="USD per Jev call, for the estimate")
-    p.add_argument("--remote-rtt-ms", type=_rtt, action="append", default=[], help="also time remote over this RTT")
-    p.add_argument("--out", type=Path, default=None, help="results file (default: results/router-latency/<time>)")
-    p.add_argument("--dry-run", action="store_true", help="print what would run and its cost; call nothing")
-    return p.parse_args(argv)
+    """The command line, described by this file's first docstring paragraph; see ``router_latency_args``."""
+    return _parse_args(argv, description=__doc__.split("\n\n")[0])
 
 
 def requests(sets: Sequence[str], joined: Path, *, need_prompts: bool) -> tuple[list[RouteRequest], bool]:
@@ -191,43 +83,6 @@ def sample(pool: Sequence[RouteRequest], count: int, seed: int) -> list[RouteReq
     shuffled = list(pool)
     random.Random(seed).shuffle(shuffled)
     return [shuffled[i % len(shuffled)] for i in range(count)]
-
-
-def environment() -> dict[str, Any]:
-    cpu = platform.processor()
-    if sys.platform == "darwin":  # platform.processor() says only "arm" or "i386" there
-        brand = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True)
-        cpu = brand.stdout.strip() or cpu
-    return {
-        "machine": f"{cpu}, {os.cpu_count()} CPUs",
-        "platform": platform.platform(),
-        "python": platform.python_version(),
-        "web_router": web_router.__version__,
-        "packages": {name: _version(name) for name in ROUTER_PACKAGES},
-    }
-
-
-def _version(name: str) -> str | None:
-    try:
-        return importlib.metadata.version(name)
-    except importlib.metadata.PackageNotFoundError:
-        return None
-
-
-def _specs(args: argparse.Namespace) -> list[RouterSpec]:
-    specs: list[RouterSpec] = []
-    for spec in args.routers or DEFAULT_ROUTERS:
-        specs += router_specs(
-            spec,
-            llm_model=args.llm_model,
-            llm_price=args.llm_price,
-            jev_price=args.jev_price,
-            rtts_ms=args.remote_rtt_ms,
-        )
-    names = [s.name for s in specs]
-    if len(set(names)) != len(names):
-        raise SystemExit(MSG_REPEATED.format(names=", ".join(sorted({n for n in names if names.count(n) > 1}))))
-    return specs
 
 
 def _calls(args: argparse.Namespace) -> int:
@@ -298,7 +153,7 @@ def run(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[Ro
     return {
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "environment": environment(),
-        "settings": _settings(args),
+        "settings": settings(args),
         "definition": definition(args.chain, args.share),
         "tools": {name: t.summary() for name, t in tools.items()},
         "routers": {
@@ -315,32 +170,17 @@ def run(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[Ro
     }
 
 
-def _settings(args: argparse.Namespace) -> dict[str, Any]:
-    return {
-        "sets": list(args.sets or DEFAULT_SETS),
-        "n": args.n,
-        "warmup": args.warmup,
-        "cold": args.cold,
-        "e2e": args.e2e,
-        "deadline_s": args.deadline_s,
-        "async": args.use_async,
-        "seed": args.seed,
-        "chain": args.chain,
-        "share": args.share,
-    }
-
-
 def main(argv: Sequence[str] | None = None) -> None:
     # An entry point, like the scans: it may read the repo's .env, and a variable already exported wins.
     if ENV_FILE.is_file():
         load_dotenv(ENV_FILE)
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    specs = _specs(args)
+    specs = router_specs_for(args)
     sets = args.sets or DEFAULT_SETS
     pool, joined = requests(sets, args.joined, need_prompts=not args.dry_run)
     if args.dry_run:
-        settings = {**_settings(args), "requests": len(pool)}
-        print(dry_run(_plan(args, specs, pool), settings, joined))
+        planned = {**settings(args), "requests": len(pool)}
+        print(dry_run(_plan(args, specs, pool), planned, joined))
         return
     results = run(args, specs, pool)
     out = args.out or OUT_DIR / (datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + ".json")
