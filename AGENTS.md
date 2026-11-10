@@ -396,7 +396,13 @@ benchmarks/providers/   run.py: every search backend on the same SimpleQA
                         route_eval_paths.py, a decision merged by the
                         library's merge rule in route_eval_merge.py, one
                         question walked in route_eval_replay.py, its
-                        command line in route_eval_cli.py; router_latency.py: routers
+                        command line in route_eval_cli.py, each router
+                        scored in route_eval_score.py, its tool confusion
+                        matrix and the router comparison in
+                        route_eval_matrix.py and route_eval_compare.py,
+                        reported by route_eval_report_matrix.py with
+                        route_eval_fmt.py's formatting;
+                        router_latency.py: routers
                         timed against each tool's p50, outside CI, its yardstick,
                         routers, timing and report in router_latency_*.py;
                         chains.py (`make chains`): the
