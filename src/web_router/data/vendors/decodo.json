@@ -1,0 +1,554 @@
+{
+  "vendor": "decodo",
+  "name": "Decodo",
+  "category": "scraping",
+  "summary": "Decodo's Web Data API: scrape a page or a supported site's template, Google results, crawl a site up to 10,000 pages, or map its URLs.",
+  "docs_url": "https://help.decodo.com/docs/web-data-api-introduction.md",
+  "pricing_url": "https://help.decodo.com/docs/web-data-api-billing.md",
+  "base_url": "https://data.decodo.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DECODO_API_KEY"
+        ],
+        "description": "A Web Data API key from dashboard.decodo.com. Legacy Web Scraping API and Fast Search API tokens do not work here. Sent as Authorization: Bearer."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billed per 1,000 successful requests; failures on Decodo's side (500, 524, 613) are not charged.",
+    "/scrape defaults to the premium proxy pool and its higher rate: set proxy_pool standard for simple pages. Any headless value is billed at the + JS rate.",
+    "Every call here is a read sent as POST with a JSON body, except the status and result reads.",
+    "Decodo's proxy networks and the residential Public API (sub-users, whitelisted IPs) are not in this entry; nor are batch tasks or crawl cancellation."
+  ],
+  "sources": [
+    "https://help.decodo.com/docs/web-data-api-introduction.md",
+    "https://help.decodo.com/docs/web-data-api-billing.md",
+    "https://help.decodo.com/docs/web-data-api-scrape-parameters.md",
+    "https://help.decodo.com/docs/web-data-api-scrape-asynchronous-requests.md",
+    "https://help.decodo.com/docs/web-data-api-search-parameters.md",
+    "https://help.decodo.com/docs/web-data-api-map-parameters.md",
+    "https://help.decodo.com/docs/web-data-api-crawl-parameters.md",
+    "https://help.decodo.com/docs/web-data-api-crawl-status-results-cancellation.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "decodo.scrape",
+      "name": "Scrape a page",
+      "summary": "A page's HTML, Markdown, screenshot or parsed data, or a supported site through a target template, in the same response.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/scrape",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "The page to scrape. Required unless the target template takes query instead.",
+          "example": "https://ip.decodo.com"
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "The query, for target templates that take one (e.g. google_search) instead of url."
+        },
+        "target": {
+          "in": "body",
+          "type": "string",
+          "description": "A target template for a supported site, e.g. google_search; see the Templates Overview page."
+        },
+        "proxy_pool": {
+          "in": "body",
+          "type": "string",
+          "description": "standard for simple pages; premium (default) for anti-bot sites and target templates. Premium costs more.",
+          "enum": [
+            "standard",
+            "premium"
+          ]
+        },
+        "headless": {
+          "in": "body",
+          "type": "string",
+          "description": "html renders JavaScript; png returns a screenshot. Either is billed at the + JS rate.",
+          "enum": [
+            "html",
+            "png"
+          ]
+        },
+        "markdown": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the page as Markdown. Default false."
+        },
+        "parse": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return structured data, for target templates with a dedicated parser. Default false."
+        },
+        "geo": {
+          "in": "body",
+          "type": "string",
+          "description": "Location: a full country name in Capital Case (United States) or an uppercase 2-letter code (US)."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Top-level domain for templates, e.g. com, co.uk. Default com."
+        },
+        "locale": {
+          "in": "body",
+          "type": "string",
+          "description": "Interface language, e.g. en-US."
+        },
+        "device_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Device and browser. Default desktop."
+        },
+        "session_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Reuse the same IP across requests for up to 10 minutes."
+        },
+        "headers": {
+          "in": "body",
+          "type": "object",
+          "description": "Headers for the target request; forwarded only with force_headers true."
+        },
+        "force_headers": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Forward the headers you sent to the target. Default false."
+        },
+        "successful_status_codes": {
+          "in": "body",
+          "type": "array",
+          "description": "Target HTTP codes to treat as success and return content for, e.g. [404]."
+        }
+      },
+      "notes": [
+        "A read over POST. Give url, or query with a target template that takes one.",
+        "Supported parameters vary slightly by target template."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://help.decodo.com/docs/web-data-api-scrape-parameters.md",
+      "verified": {
+        "docs": "https://help.decodo.com/docs/web-data-api-scrape-parameters.md"
+      }
+    },
+    {
+      "id": "decodo.search",
+      "name": "Search Google",
+      "summary": "Parsed Google results for a query: organic, top stories, people also ask, related searches and the answer box.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query.",
+          "example": "laptop"
+        },
+        "geo": {
+          "in": "body",
+          "type": "string",
+          "description": "Country, as a full name or 2-letter code. An unrecognized value silently falls back to the US."
+        },
+        "uule": {
+          "in": "body",
+          "type": "string",
+          "description": "Google UULE location string; wins over geo."
+        },
+        "gl": {
+          "in": "body",
+          "type": "string",
+          "description": "2-letter country code; geo wins over it."
+        },
+        "locale": {
+          "in": "body",
+          "type": "string",
+          "description": "Google interface language."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results page. Default 1."
+        }
+      },
+      "notes": [
+        "A read over POST. Compare search_parameters.gl with your geo to confirm it was recognized.",
+        "status is done even when organic is empty."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://help.decodo.com/docs/web-data-api-search-parameters.md",
+      "verified": {
+        "docs": "https://help.decodo.com/docs/web-data-api-search-parameters.md"
+      }
+    },
+    {
+      "id": "decodo.map",
+      "name": "Map a site's URLs",
+      "summary": "The URLs on a page and in the site's top-level sitemap (up to 147K), without scraping content.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/map",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The page to discover URLs from.",
+          "example": "https://example.com"
+        },
+        "sitemap": {
+          "in": "body",
+          "type": "string",
+          "description": "include (default) both, only the sitemap, or skip it.",
+          "enum": [
+            "include",
+            "only",
+            "skip"
+          ]
+        },
+        "select_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regex patterns; only matching URL paths are returned."
+        },
+        "exclude_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regex patterns; matching URL paths are left out."
+        },
+        "domain_filter": {
+          "in": "body",
+          "type": "string",
+          "description": "domain (default), subdomain, or all including external sites.",
+          "enum": [
+            "domain",
+            "subdomain",
+            "all"
+          ]
+        },
+        "JS_rendering": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Render JavaScript before collecting links (premium + JS rate). Default false."
+        },
+        "geo": {
+          "in": "body",
+          "type": "string",
+          "description": "Country to send the request from."
+        },
+        "locale": {
+          "in": "body",
+          "type": "string",
+          "description": "Language and region, e.g. en-US."
+        }
+      },
+      "notes": [
+        "A read over POST. Billed one request for the page plus one for the sitemap when it is included.",
+        "Nested sitemaps are not followed; with a sitemap index, only returns 400."
+      ],
+      "job": "web.map",
+      "docs_url": "https://help.decodo.com/docs/web-data-api-map-parameters.md",
+      "verified": {
+        "docs": "https://help.decodo.com/docs/web-data-api-map-parameters.md"
+      }
+    },
+    {
+      "id": "decodo.crawl.start",
+      "name": "Start a crawl",
+      "summary": "Crawl a site from a URL, up to 10,000 pages, as Markdown or HTML, in the background.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/crawl",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The URL to start from."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum pages to scrape, 1-10000. Each page is billed as one request."
+        },
+        "max_depth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum link hops from the start URL."
+        },
+        "sitemap": {
+          "in": "body",
+          "type": "string",
+          "description": "include (default), only, or skip the sitemap.",
+          "enum": [
+            "include",
+            "only",
+            "skip"
+          ]
+        },
+        "select_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regex patterns; only matching paths are crawled."
+        },
+        "exclude_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regex patterns; matching paths are skipped."
+        },
+        "domain_filter": {
+          "in": "body",
+          "type": "string",
+          "description": "domain (default), subdomain or all.",
+          "enum": [
+            "domain",
+            "subdomain",
+            "all"
+          ]
+        },
+        "output": {
+          "in": "body",
+          "type": "string",
+          "description": "Page format. Default markdown.",
+          "enum": [
+            "markdown",
+            "html"
+          ]
+        },
+        "max_duration": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seconds before the crawl stops as truncated."
+        },
+        "follow_redirects": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Default true."
+        },
+        "JS_retry": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Retry a failed page once with JavaScript, at the + JS rate."
+        },
+        "geo": {
+          "in": "body",
+          "type": "string",
+          "description": "Country pages are requested from."
+        },
+        "locale": {
+          "in": "body",
+          "type": "string",
+          "description": "Accept-Language sent to sites, e.g. en-US."
+        }
+      },
+      "notes": [
+        "A read over POST that starts a billed job: returns 202 with crawl_id. Set limit to keep the cost predictable.",
+        "Poll crawl.status, then read crawl.results."
+      ],
+      "job": "web.crawl",
+      "docs_url": "https://help.decodo.com/docs/web-data-api-crawl-parameters.md",
+      "verified": {
+        "docs": "https://help.decodo.com/docs/web-data-api-crawl-parameters.md"
+      }
+    },
+    {
+      "id": "decodo.crawl.status",
+      "name": "Get crawl status",
+      "summary": "A crawl's state and counts of completed, failed and in-flight pages.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crawl/{crawl_id}/status",
+      "params": {
+        "crawl_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id crawl.start returned."
+        }
+      },
+      "notes": [
+        "status is pending, done, cancelled, truncated or faulted."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://help.decodo.com/docs/web-data-api-crawl-status-results-cancellation.md",
+      "verified": {
+        "docs": "https://help.decodo.com/docs/web-data-api-crawl-status-results-cancellation.md"
+      }
+    },
+    {
+      "id": "decodo.crawl.results",
+      "name": "Get crawl results",
+      "summary": "Every crawled URL with its status and task id, or with type=content the page content inline.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crawl/{crawl_id}",
+      "params": {
+        "crawl_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The crawl id."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "content returns the scraped content inline; omit for the URL list with task ids.",
+          "enum": [
+            "content"
+          ]
+        }
+      },
+      "notes": [
+        "Without type=content, fetch each page with task.results and its task id."
+      ],
+      "job": "jobs.results",
+      "docs_url": "https://help.decodo.com/docs/web-data-api-crawl-status-results-cancellation.md",
+      "verified": {
+        "docs": "https://help.decodo.com/docs/web-data-api-crawl-status-results-cancellation.md"
+      }
+    },
+    {
+      "id": "decodo.task.create",
+      "name": "Queue an async scrape",
+      "summary": "Submit a /scrape request to run in the background and get a task id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/task",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "The page to scrape. Required unless the target template takes query instead.",
+          "example": "https://ip.decodo.com"
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "The query, for target templates that take one (e.g. google_search) instead of url."
+        },
+        "target": {
+          "in": "body",
+          "type": "string",
+          "description": "A target template for a supported site, e.g. google_search; see the Templates Overview page."
+        },
+        "proxy_pool": {
+          "in": "body",
+          "type": "string",
+          "description": "standard for simple pages; premium (default) for anti-bot sites and target templates. Premium costs more.",
+          "enum": [
+            "standard",
+            "premium"
+          ]
+        },
+        "headless": {
+          "in": "body",
+          "type": "string",
+          "description": "html renders JavaScript; png returns a screenshot. Either is billed at the + JS rate.",
+          "enum": [
+            "html",
+            "png"
+          ]
+        },
+        "markdown": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the page as Markdown. Default false."
+        },
+        "parse": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return structured data, for target templates with a dedicated parser. Default false."
+        },
+        "geo": {
+          "in": "body",
+          "type": "string",
+          "description": "Location: a full country name in Capital Case (United States) or an uppercase 2-letter code (US)."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Top-level domain for templates, e.g. com, co.uk. Default com."
+        },
+        "locale": {
+          "in": "body",
+          "type": "string",
+          "description": "Interface language, e.g. en-US."
+        },
+        "device_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Device and browser. Default desktop."
+        },
+        "session_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Reuse the same IP across requests for up to 10 minutes."
+        },
+        "headers": {
+          "in": "body",
+          "type": "object",
+          "description": "Headers for the target request; forwarded only with force_headers true."
+        },
+        "force_headers": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Forward the headers you sent to the target. Default false."
+        },
+        "successful_status_codes": {
+          "in": "body",
+          "type": "array",
+          "description": "Target HTTP codes to treat as success and return content for, e.g. [404]."
+        },
+        "callback_url": {
+          "in": "body",
+          "type": "string",
+          "description": "URL Decodo POSTs the task id and status to when done (not the result)."
+        }
+      },
+      "notes": [
+        "A read over POST. For slow pages or large volumes; takes the same parameters as scrape.",
+        "Fetch the output with task.results."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://help.decodo.com/docs/web-data-api-scrape-asynchronous-requests.md",
+      "verified": {
+        "docs": "https://help.decodo.com/docs/web-data-api-scrape-asynchronous-requests.md"
+      }
+    },
+    {
+      "id": "decodo.task.results",
+      "name": "Get async scrape result",
+      "summary": "The result of a queued scrape task.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/task/{task_id}/results",
+      "params": {
+        "task_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The task id from task.create or a crawl's results."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://help.decodo.com/docs/web-data-api-scrape-asynchronous-requests.md",
+      "verified": {
+        "docs": "https://help.decodo.com/docs/web-data-api-scrape-asynchronous-requests.md"
+      }
+    }
+  ]
+}
