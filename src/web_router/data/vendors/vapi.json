@@ -1,0 +1,287 @@
+{
+  "vendor": "vapi",
+  "name": "Vapi",
+  "category": "messaging",
+  "summary": "Voice AI agents: list and read calls with transcripts and costs, assistants, phone numbers, call analytics, and start outbound calls.",
+  "docs_url": "https://docs.vapi.ai/api-reference",
+  "pricing_url": "https://vapi.ai/pricing",
+  "base_url": "https://api.vapi.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "VAPI_API_KEY"
+        ],
+        "description": "A Vapi private API key from dashboard.vapi.ai, sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Lists have no cursor: page by time with createdAtLt/createdAtGt and limit up to 1000 (default 100).",
+    "A call's transcript and recordings sit under artifact, its price in cost and costBreakdown; poll calls.get until status is ended before reading them."
+  ],
+  "sources": [
+    "https://api.vapi.ai/api-json",
+    "https://docs.vapi.ai/api-reference/calls/list",
+    "https://docs.vapi.ai/api-reference/calls/create",
+    "https://docs.vapi.ai/api-reference/analytics/get"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "vapi.calls.list",
+      "name": "List calls",
+      "summary": "Calls, filterable by assistant, number and time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/call",
+      "params": {
+        "assistantId": {
+          "in": "query",
+          "type": "string",
+          "description": "Only calls of this assistant."
+        },
+        "phoneNumberId": {
+          "in": "query",
+          "type": "string",
+          "description": "Only calls on this phone number."
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "One call id."
+        },
+        "limit": {
+          "in": "query",
+          "type": "number",
+          "description": "Max items, default 100, up to 1000."
+        },
+        "createdAtGt": {
+          "in": "query",
+          "type": "string",
+          "description": "Created after this date-time."
+        },
+        "createdAtLt": {
+          "in": "query",
+          "type": "string",
+          "description": "Created before this date-time."
+        },
+        "updatedAtGt": {
+          "in": "query",
+          "type": "string",
+          "description": "Updated after this date-time."
+        },
+        "updatedAtLt": {
+          "in": "query",
+          "type": "string",
+          "description": "Updated before this date-time."
+        }
+      },
+      "docs_url": "https://docs.vapi.ai/api-reference/calls/list",
+      "verified": {
+        "docs": "https://docs.vapi.ai/api-reference/calls/list"
+      }
+    },
+    {
+      "id": "vapi.calls.get",
+      "name": "Get a call",
+      "summary": "One call with status, endedReason, artifact (transcript, recordings), analysis and cost.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/call/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Call id (UUID)."
+        }
+      },
+      "docs_url": "https://docs.vapi.ai/api-reference/calls/get",
+      "verified": {
+        "docs": "https://docs.vapi.ai/api-reference/calls/get"
+      }
+    },
+    {
+      "id": "vapi.assistants.list",
+      "name": "List assistants",
+      "summary": "Configured voice assistants.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/assistant",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "number",
+          "description": "Max items, default 100, up to 1000."
+        },
+        "createdAtGt": {
+          "in": "query",
+          "type": "string",
+          "description": "Created after this date-time."
+        },
+        "createdAtLt": {
+          "in": "query",
+          "type": "string",
+          "description": "Created before this date-time."
+        },
+        "updatedAtGt": {
+          "in": "query",
+          "type": "string",
+          "description": "Updated after this date-time."
+        },
+        "updatedAtLt": {
+          "in": "query",
+          "type": "string",
+          "description": "Updated before this date-time."
+        }
+      },
+      "docs_url": "https://docs.vapi.ai/api-reference/assistants/list",
+      "verified": {
+        "docs": "https://docs.vapi.ai/api-reference/assistants/list"
+      }
+    },
+    {
+      "id": "vapi.phone_numbers.list",
+      "name": "List phone numbers",
+      "summary": "Numbers imported or bought in Vapi.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/phone-number",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "number",
+          "description": "Max items, default 100, up to 1000."
+        },
+        "createdAtGt": {
+          "in": "query",
+          "type": "string",
+          "description": "Created after this date-time."
+        },
+        "createdAtLt": {
+          "in": "query",
+          "type": "string",
+          "description": "Created before this date-time."
+        },
+        "updatedAtGt": {
+          "in": "query",
+          "type": "string",
+          "description": "Updated after this date-time."
+        },
+        "updatedAtLt": {
+          "in": "query",
+          "type": "string",
+          "description": "Updated before this date-time."
+        }
+      },
+      "docs_url": "https://docs.vapi.ai/api-reference/phone-numbers/list",
+      "verified": {
+        "docs": "https://docs.vapi.ai/api-reference/phone-numbers/list"
+      }
+    },
+    {
+      "id": "vapi.analytics.query",
+      "name": "Query call analytics",
+      "summary": "Sums, averages and counts of call cost, duration and minutes, optionally over time and grouped.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/analytics",
+      "params": {
+        "queries": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Queries: objects with table ('call' or 'subscription'), name, operations [{operation: sum|avg|count|min|max|history, column: cost|duration|minutesUsed|...}], optional groupBy (type, assistantId, endedReason, status) and timeRange {start, end, step, timezone}.",
+          "example": [
+            {
+              "table": "call",
+              "name": "cost_by_day",
+              "operations": [
+                {
+                  "operation": "sum",
+                  "column": "cost"
+                }
+              ],
+              "timeRange": {
+                "step": "day"
+              }
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. timeRange defaults to the last 7 days, in UTC."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://docs.vapi.ai/api-reference/analytics/get",
+      "verified": {
+        "docs": "https://docs.vapi.ai/api-reference/analytics/get"
+      }
+    },
+    {
+      "id": "vapi.calls.create",
+      "name": "Start a call",
+      "summary": "Place an outbound phone call (or a batch) with an assistant.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/call",
+      "params": {
+        "assistantId": {
+          "in": "body",
+          "type": "string",
+          "description": "Saved assistant to run; or send assistant inline."
+        },
+        "assistant": {
+          "in": "body",
+          "type": "object",
+          "description": "A transient assistant definition."
+        },
+        "assistantOverrides": {
+          "in": "body",
+          "type": "object",
+          "description": "Overrides and template variables for the assistant."
+        },
+        "phoneNumberId": {
+          "in": "body",
+          "type": "string",
+          "description": "Your Vapi number to call from."
+        },
+        "customer": {
+          "in": "body",
+          "type": "object",
+          "description": "Who to call, e.g. {\"number\": \"+14155550123\"}."
+        },
+        "customers": {
+          "in": "body",
+          "type": "array",
+          "description": "Several customers, for a batch of calls."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Your label for the call."
+        },
+        "schedulePlan": {
+          "in": "body",
+          "type": "object",
+          "description": "When to place the call."
+        }
+      },
+      "notes": [
+        "Places a real, billed call. Read the outcome with calls.get."
+      ],
+      "docs_url": "https://docs.vapi.ai/api-reference/calls/create",
+      "verified": {
+        "docs": "https://docs.vapi.ai/api-reference/calls/create"
+      }
+    }
+  ]
+}

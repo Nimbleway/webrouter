@@ -1,0 +1,97 @@
+{
+  "vendor": "textbelt",
+  "name": "Textbelt",
+  "category": "messaging",
+  "summary": "Send SMS with a prepaid key and check delivery status.",
+  "docs_url": "https://textbelt.com/",
+  "pricing_url": "https://textbelt.com/purchase/",
+  "base_url": "https://textbelt.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TEXTBELT_API_KEY"
+        ],
+        "description": "A Textbelt key bought on textbelt.com. The public key 'textbelt' sends one free text a day; appending _test to a key checks a send without spending credit."
+      }
+    },
+    "inject": [
+      {
+        "in": "body",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The answer is HTTP 200 even on failure: check success, and read error (\"Out of quota\", \"Incomplete request\").",
+    "Each send answers quotaRemaining, so the balance needs no separate call.",
+    "Replies are delivered only to a replyWebhookUrl you host, and only for US numbers."
+  ],
+  "sources": [
+    "https://textbelt.com/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "textbelt.sms.send",
+      "name": "Send an SMS",
+      "summary": "Text one phone number; answers success, textId and quotaRemaining.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/text",
+      "body_type": "form",
+      "params": {
+        "phone": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Recipient number.",
+          "example": "5555555555"
+        },
+        "message": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The text."
+        },
+        "replyWebhookUrl": {
+          "in": "body",
+          "type": "string",
+          "description": "URL that receives replies as JSON (fromNumber, text); US numbers only."
+        }
+      },
+      "notes": [
+        "Sends a real SMS and spends one credit. Keep the textId to check delivery."
+      ],
+      "job": "messaging.message.send",
+      "docs_url": "https://textbelt.com/",
+      "verified": {
+        "docs": "https://textbelt.com/"
+      }
+    },
+    {
+      "id": "textbelt.sms.status",
+      "name": "Check delivery status",
+      "summary": "DELIVERED, SENT, SENDING, FAILED or UNKNOWN for a sent text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/status/{textId}",
+      "params": {
+        "textId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The textId a send returned."
+        }
+      },
+      "notes": [
+        "Carriers do not standardise receipts: SENT means handed to the carrier without confirmation, not a failure."
+      ],
+      "docs_url": "https://textbelt.com/",
+      "verified": {
+        "docs": "https://textbelt.com/"
+      }
+    }
+  ]
+}

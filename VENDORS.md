@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-265 vendors, 2214 endpoints.
+271 vendors, 2258 endpoints.
 
 ### advertising
 
@@ -343,9 +343,15 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
 | [AgentMail](https://docs.agentmail.to/) `agentmail` | Email inboxes for AI agents: create inboxes, read messages and threads, send and reply. | 5 read, 3 write | key in header | `AGENTMAIL_API_KEY` | docs 2026-11-09 |
+| [AgentPhone](https://docs.agentphone.to/api-reference.md) `agentphone` | Phone numbers for AI agents: SMS/iMessage/WhatsApp messages, conversations, voice calls with transcripts, and usage. | 8 read, 2 write | key in header | `AGENTPHONE_API_KEY` | docs 2026-11-09 |
+| [Resend](https://resend.com/docs/api-reference/introduction.md) `resend` | Transactional email: send email, read sent and received emails, delivery metrics, domains, request logs and usage. | 8 read, 1 write | key in header | `RESEND_API_KEY` | docs 2026-11-09 |
+| [Saperly](https://saperly.com/docs) `saperly` | Phone carrier for AI agents: numbers, SMS, outbound voice calls with transcripts, consent records and usage. | 8 read, 2 write | key in header | `SAPERLY_API_KEY` | docs 2026-11-09 |
+| [SendGrid](https://www.twilio.com/docs/sendgrid/api-reference/how-to-use-the-sendgrid-v3-api) `sendgrid` | Twilio SendGrid email: send mail, delivery statistics, email activity, bounces and spam reports, and credit balance. | 6 read, 1 write | key in header | `SENDGRID_API_KEY` | docs 2026-11-09 |
 | [Slack](https://docs.slack.dev/reference/methods/) `slack` | Your Slack workspace: read channels, history, threads and users, search messages, and post messages and reactions. | 7 read, 2 write | key in header | `SLACK_BOT_TOKEN` | docs 2026-11-08 |
 | [Telnyx](https://developers.telnyx.com/api-reference) `telnyx` | Telnyx communications: send SMS/MMS, read messages, phone numbers, number lookup, available-number search, usage detail records and balance. | 6 read, 1 write | key in header | `TELNYX_API_KEY` | docs 2026-11-09 |
+| [Textbelt](https://textbelt.com/) `textbelt` | Send SMS with a prepaid key and check delivery status. | 1 read, 1 write | key in body | `TEXTBELT_API_KEY` | docs 2026-11-09 |
 | [Twilio](https://www.twilio.com/docs/usage/api) `twilio` | Twilio SMS and voice: send and read messages, list and place calls, phone numbers, usage records, balance and phone number lookup. | 7 read, 2 write | HTTP Basic | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | docs 2026-11-09 |
+| [Vapi](https://docs.vapi.ai/api-reference) `vapi` | Voice AI agents: list and read calls with transcripts and costs, assistants, phone numbers, call analytics, and start outbound calls. | 5 read, 1 write | key in header | `VAPI_API_KEY` | docs 2026-11-09 |
 
 ### developer
 
