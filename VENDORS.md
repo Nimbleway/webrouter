@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-210 vendors, 1870 endpoints.
+216 vendors, 1900 endpoints.
 
 ### advertising
 
@@ -267,6 +267,8 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Apify](https://docs.apify.com/api/v2) `apify` | Run Apify Actors (ready-made scrapers for Google, LinkedIn, Meta ads, TikTok, Lazada, Weibo and more), poll their runs and read the datasets they produce. | 11 read, 4 write | key in header | `APIFY_API_TOKEN` | docs 2026-11-08 |
 | [Bright Data](https://docs.brightdata.com/) `brightdata` | Pre-built site scrapers, Web Unlocker, SERP API and Marketplace datasets from Bright Data. | 9 read | key in header | `BRIGHTDATA_API_TOKEN` | docs 2026-11-08 |
 | [Browserbase](https://docs.browserbase.com/reference/api/overview.md) `browserbase` | Fetch pages, search the web and run hosted browser agents on Browserbase, and inspect its browser sessions. | 7 read, 2 write | key in header | `BROWSERBASE_API_KEY` | docs 2026-11-09 |
+| [Browser Use](https://docs.browser-use.com/cloud/api-reference.md) `browseruse` | Run Browser Use Cloud agents that carry out a task in a hosted stealth browser, and read their status, steps and results. | 5 read, 2 write | key in header | `BROWSER_USE_API_KEY` | docs 2026-11-09 |
+| [Crawl4AI Cloud](https://api.crawl4ai.com/docs) `crawl4ai` | Crawl4AI's hosted API: scrape pages to markdown, extract JSON, search the web, Google results as data, direct answers and ready-made site recipes. | 7 read | key in header | `CRAWL4AI_KEY` | docs 2026-11-09 |
 | [Decodo](https://help.decodo.com/docs/web-data-api-introduction.md) `decodo` | Decodo's Web Data API: scrape a page or a supported site's template, Google results, crawl a site up to 10,000 pages, or map its URLs. | 8 read | key in header | `DECODO_API_KEY` | docs 2026-11-09 |
 | [Firecrawl](https://docs.firecrawl.dev/introduction) `firecrawl` | Scrape, map, crawl, search and extract the web, returning clean markdown and structured data. | 12 read, 1 write | key in header | `FIRECRAWL_API_KEY` | docs 2026-11-08 |
 | [Massive (Web Render)](https://docs.joinmassive.com/web-render/overview.md) `joinmassive` | Massive's Web Render API: unblock and render web pages, Google results pages, and ChatGPT, Gemini, Perplexity or AI Overview answers, from chosen locations. | 4 read | key in header | `MASSIVE_TOKEN` | docs 2026-11-09 |
@@ -288,4 +290,13 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Context7](https://context7.com/docs/api-guide) `context7` | Up-to-date, version-specific documentation and code snippets for software libraries, ranked for a question; plus reading one web page narrowed to a question. | 5 read | key in header | `CONTEXT7_API_KEY` | docs 2026-11-09 |
 | [GitHub](https://docs.github.com/en/rest) `github` | Repositories, issues, pull requests, commits and code search on GitHub through its REST API. | 9 read, 1 write | key in header | `GITHUB_TOKEN` | docs 2026-11-09 |
 | [Supabase](https://supabase.com/docs/reference/api/introduction) `supabase` | Supabase Management API: the user's projects and organisations, SQL against a project's Postgres, logs, health, advisors, edge functions and storage buckets. | 9 read, 1 write | key in header | `SUPABASE_ACCESS_TOKEN` | docs 2026-11-09 |
+
+### other
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [IPinfo](https://ipinfo.io/developers/ipinfo-api) `ipinfo` | IP geolocation and ASN data: free country-level Lite lookups, and city-level geolocation with hosting, VPN/anonymous, mobile and anycast flags on paid plans. | 3 read | key in header | `IPINFO_TOKEN` | docs 2026-11-09 |
+| [NOAA National Hurricane Center](https://www.nhc.noaa.gov/productexamples/) `nhc` | Keyless feeds of active Atlantic and Pacific tropical cyclones: a JSON summary of every active storm with links to its advisories, plus basin and per-storm RSS and GIS feeds. | 4 read | none | none | docs 2026-11-09 |
+| [OFAC-API (sanctions screening)](https://docs.ofac-api.com/) `ofacapi` | Fuzzy screening of people, companies, vessels and aircraft against OFAC SDN and 20+ other sanctions, PEP and watch lists, single, batch or as async bulk jobs. | 5 read | key in header | `OFAC_API_KEY` | docs 2026-11-09 |
+| [Service Victoria Servo Saver](https://service.vic.gov.au/find-services/transport-and-driving/servo-saver/help-centre/servo-saver-public-api) `servosaver` | Victoria (Australia) government Fair Fuel open data: every registered service station's fuel prices in cents per litre, plus station, brand and fuel-type reference lists. | 4 read | key in header | `SERVOSAVER_API_KEY` | docs 2026-11-09 |
 <!-- /vendors -->

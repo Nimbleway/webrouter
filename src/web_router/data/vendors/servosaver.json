@@ -1,0 +1,133 @@
+{
+  "vendor": "servosaver",
+  "name": "Service Victoria Servo Saver",
+  "category": "other",
+  "summary": "Victoria (Australia) government Fair Fuel open data: every registered service station's fuel prices in cents per litre, plus station, brand and fuel-type reference lists.",
+  "docs_url": "https://service.vic.gov.au/find-services/transport-and-driving/servo-saver/help-centre/servo-saver-public-api",
+  "base_url": "https://api.fuel.service.vic.gov.au/open-data/v1",
+  "auth": {
+    "credentials": {
+      "consumer_id": {
+        "env": [
+          "SERVOSAVER_API_KEY"
+        ],
+        "description": "The Consumer ID Service Victoria issues after you apply for the Servo Saver Public API (help centre). Sent in the x-consumer-id header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-consumer-id",
+        "value": "{consumer_id}"
+      }
+    ]
+  },
+  "headers": {
+    "User-Agent": "web-router"
+  },
+  "notes": [
+    "Prices are delayed about 24 hours; this is not a real-time feed.",
+    "Rate limit: 10 requests per 60 seconds. A 429 means wait at least the full minute (the WAF window can be 1 to 10 minutes); do not retry in bursts.",
+    "Every call needs a User-Agent (sent by this entry) and a fresh x-transactionid UUID v4 (pass one per call). A 403 means the consumer id is missing, wrong or superseded by a newer key.",
+    "Each list endpoint returns the whole state at once; there is no paging or filtering."
+  ],
+  "sources": [
+    "https://service.vic.gov.au/find-services/transport-and-driving/servo-saver/help-centre/servo-saver-public-api",
+    "https://service.vic.gov.au/-/media/bb0b5dbe245f443db4a90263090b6d88.pdf"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "servosaver.prices",
+      "name": "Get all Victorian fuel prices",
+      "summary": "Every station with its location, brand id and per-fuel price (cents per litre), availability and update time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fuel/prices",
+      "params": {
+        "x_transactionid": {
+          "in": "header",
+          "type": "string",
+          "required": true,
+          "wire_name": "x-transactionid",
+          "description": "A fresh random UUID v4 per request, for tracing.",
+          "example": "3f2b8c1e-6a4d-4f7e-9b2a-1c5d7e9f0a12"
+        }
+      },
+      "job": "fuel.prices",
+      "docs_url": "https://service.vic.gov.au/-/media/bb0b5dbe245f443db4a90263090b6d88.pdf",
+      "verified": {
+        "docs": "https://service.vic.gov.au/-/media/bb0b5dbe245f443db4a90263090b6d88.pdf"
+      }
+    },
+    {
+      "id": "servosaver.stations",
+      "name": "List fuel stations",
+      "summary": "Reference data for all registered stations: id, name and address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fuel/reference-data/stations",
+      "params": {
+        "x_transactionid": {
+          "in": "header",
+          "type": "string",
+          "required": true,
+          "wire_name": "x-transactionid",
+          "description": "A fresh random UUID v4 per request, for tracing.",
+          "example": "3f2b8c1e-6a4d-4f7e-9b2a-1c5d7e9f0a12"
+        }
+      },
+      "job": "fuel.reference",
+      "docs_url": "https://service.vic.gov.au/-/media/bb0b5dbe245f443db4a90263090b6d88.pdf",
+      "verified": {
+        "docs": "https://service.vic.gov.au/-/media/bb0b5dbe245f443db4a90263090b6d88.pdf"
+      }
+    },
+    {
+      "id": "servosaver.brands",
+      "name": "List fuel brands",
+      "summary": "Brand ids, names and type, to resolve brandId in prices.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fuel/reference-data/brands",
+      "params": {
+        "x_transactionid": {
+          "in": "header",
+          "type": "string",
+          "required": true,
+          "wire_name": "x-transactionid",
+          "description": "A fresh random UUID v4 per request, for tracing.",
+          "example": "3f2b8c1e-6a4d-4f7e-9b2a-1c5d7e9f0a12"
+        }
+      },
+      "job": "fuel.reference",
+      "docs_url": "https://service.vic.gov.au/-/media/bb0b5dbe245f443db4a90263090b6d88.pdf",
+      "verified": {
+        "docs": "https://service.vic.gov.au/-/media/bb0b5dbe245f443db4a90263090b6d88.pdf"
+      }
+    },
+    {
+      "id": "servosaver.types",
+      "name": "List fuel types",
+      "summary": "Fuel type codes used in prices (P95 and so on).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fuel/reference-data/types",
+      "params": {
+        "x_transactionid": {
+          "in": "header",
+          "type": "string",
+          "required": true,
+          "wire_name": "x-transactionid",
+          "description": "A fresh random UUID v4 per request, for tracing.",
+          "example": "3f2b8c1e-6a4d-4f7e-9b2a-1c5d7e9f0a12"
+        }
+      },
+      "job": "fuel.reference",
+      "docs_url": "https://service.vic.gov.au/-/media/bb0b5dbe245f443db4a90263090b6d88.pdf",
+      "verified": {
+        "docs": "https://service.vic.gov.au/-/media/bb0b5dbe245f443db4a90263090b6d88.pdf"
+      }
+    }
+  ]
+}
