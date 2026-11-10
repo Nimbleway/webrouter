@@ -991,8 +991,8 @@ With `provider` unset, the router's default answers when it is an answer
 backend. On the usual default, `auto`, that is every answer backend you hold a
 key for (in the environment or in `provider_config`), in the order `make chains`
 ranks them on 300 benchmark questions -- accuracy first, and where accuracy is too close to tell
-apart, the cheaper at list price: Perplexity, You.com, Linkup, Parallel, Exa, then Brave, which
-the scan has not measured. A backend that does not
+apart, the cheaper at list price: Perplexity, You.com, Linkup, Parallel, Exa, then Brave, then
+Fireworks, which the scan has not measured. A backend that does not
 map an option you set is passed over without being called; one that fails, or
 answers with nothing, is passed over for the next, and each one tried bills.
 `provider_config={"auto": {"chain": {"answer": [...]}}}` sets the order. With no

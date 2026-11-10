@@ -19,6 +19,7 @@ README_NAMES = {
     "Linkup": "linkup",
     "Tavily": "tavily",
     "Brave": "brave",
+    "Fireworks": "fireworks",
     "WebIQ": "webiq",
     "Parallel": "parallel",
     "Exa": "exa",

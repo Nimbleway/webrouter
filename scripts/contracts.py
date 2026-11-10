@@ -336,11 +336,7 @@ def render(method: str, name: str) -> str:
 
 
 def providers() -> Iterator[tuple[str, str]]:
-    """Every built-in (method, provider) that talks to a vendor; ``auto`` and ``local`` build no payload.
-
-    Nor does answer's ``fireworks``, which composes a search with a chat call: its body needs the search's
-    results, so it has no ``_build_payload`` to probe, and maps no option to record.
-    """
+    """Every built-in (method, provider) that calls a vendor; `auto`, `local` and `fireworks` build no payload."""
     for method, spec in METHODS.items():
         for name in spec.names():
             if name in spec.env and hasattr(spec.get_class(name), "_build_payload"):
