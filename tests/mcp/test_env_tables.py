@@ -17,6 +17,7 @@ from web_router.constants import (
 from web_router.mcp.env import EnvSources
 from web_router.mcp.env_credentials import ALL_ENV_TABLES, credential_variables
 from web_router.mcp.methods import METHODS
+from web_router.vendors.catalog import get_catalog
 
 ENV_EXAMPLE = Path(__file__).resolve().parents[2] / ".env.example"
 
@@ -29,7 +30,11 @@ def _example_variables() -> set[str]:
 
 
 def test_every_credential_in_env_example_loads_and_nothing_else_does() -> None:
-    assert _example_variables() - NOT_CREDENTIALS == set(credential_variables())
+    # A vendor's aliases and settings load too, but its section lists only the first name and comments settings out.
+    vendors = {name for vendor in get_catalog().all() for name in vendor.credential_variables()}
+    listed = _example_variables() - NOT_CREDENTIALS
+    assert listed - vendors == set(credential_variables()) - vendors
+    assert listed & vendors <= set(credential_variables())
 
 
 def test_the_tools_read_the_same_tables_the_loader_does() -> None:

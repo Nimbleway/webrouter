@@ -21,6 +21,7 @@ from web_router.constants import (
     RESEARCH_ENV_BY_PROVIDER,
     TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.vendors.catalog import get_catalog
 
 ALL_ENV_TABLES: tuple[Mapping[str, str | tuple[str, ...] | None], ...] = (
     ENV_BY_PROVIDER,
@@ -51,9 +52,15 @@ def env_names(env: str | tuple[str, ...] | None) -> tuple[str, ...]:
 
 
 def credential_variables() -> frozenset[str]:
-    """Every provider credential variable: what :data:`ALL_ENV_TABLES` names, and the optional keys none does."""
+    """Every credential variable: what :data:`ALL_ENV_TABLES` names, the optional keys none does, and each vendor's.
+
+    A vendor's settings (its region, its API version) are taken too: they are
+    read from the same place, and a ``.env`` that sets ``DD_SITE`` beside
+    ``DD_API_KEY`` means both.
+    """
     named = {name for table in ALL_ENV_TABLES for env in table.values() for name in env_names(env)}
-    return frozenset(named | set(_OPTIONAL_KEYS))
+    vendors = {var for vendor in get_catalog().all() for var in vendor.credential_variables()}
+    return frozenset(named | set(_OPTIONAL_KEYS) | vendors)
 
 
 @dataclass(frozen=True)
