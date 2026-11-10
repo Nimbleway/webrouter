@@ -1,0 +1,270 @@
+{
+  "vendor": "enrow",
+  "name": "Enrow",
+  "category": "enrichment",
+  "summary": "Find and verify professional emails and find phone numbers, asynchronously, by name, company or LinkedIn URL.",
+  "docs_url": "https://docs.enrow.io/api-overview",
+  "pricing_url": "https://enrow.io/pricing",
+  "base_url": "https://api.enrow.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ENROW_API_KEY"
+        ],
+        "description": "An Enrow API key (app.enrow.io > API settings). Sent in the x-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every search is asynchronous: the POST returns an id at once, then poll the matching GET with ?id= or set settings.webhook.",
+    "Bulk endpoints (up to 5,000 searches for email and verification, 3,000 for phone) are not in this entry.",
+    "Credits are returned as credits_used on each POST response."
+  ],
+  "sources": [
+    "https://docs.enrow.io/api-overview",
+    "https://docs.enrow.io/llms.txt",
+    "https://docs.enrow.io/api-reference/email-finder/find-single.md",
+    "https://docs.enrow.io/api-reference/email-finder/get-single-result.md",
+    "https://docs.enrow.io/api-reference/email-verifier/verify-single.md",
+    "https://docs.enrow.io/api-reference/email-verifier/get-single-verification.md",
+    "https://docs.enrow.io/api-reference/phone/find-single.md",
+    "https://docs.enrow.io/api-reference/phone/get-single-result.md",
+    "https://docs.enrow.io/api-reference/account/info.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "enrow.account.info",
+      "name": "Get account info",
+      "summary": "Credit balance and registered webhook URLs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/info",
+      "job": "account.usage",
+      "docs_url": "https://docs.enrow.io/api-reference/account/info",
+      "verified": {
+        "docs": "https://docs.enrow.io/api-reference/account/info"
+      }
+    },
+    {
+      "id": "enrow.email.find",
+      "name": "Start an email search",
+      "summary": "Find a person's email from a name and company, or from a LinkedIn URL. Returns an id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/email/find/single",
+      "params": {
+        "fullname": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name; required for name plus company searches."
+        },
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain (this or company_name for name searches).",
+          "example": "dundermifflin.com"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name."
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL; used only when the request is not a complete name plus company search."
+        },
+        "custom": {
+          "in": "body",
+          "type": "object",
+          "description": "Your own key-value data, returned in the result and webhook."
+        },
+        "settings": {
+          "in": "body",
+          "type": "object",
+          "description": "{webhook, country_code, retrieve_gender}: webhook is a URL that receives a POST when the search ends; country_code (default US) helps disambiguate company names; retrieve_gender returns gender."
+        }
+      },
+      "notes": [
+        "A read over POST: starts an asynchronous search, changes nothing.",
+        "Poll enrow.email.find_result with the returned id, or set settings.webhook. Check qualification: found or not_found.",
+        "Name plus company search: 1 credit when an email is found, none otherwise (0.25 for accounts with an abnormally low success rate). LinkedIn URL search: 1 credit up front, settling to 1 if found, 0.25 if not found, 0 if Enrow fails."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.enrow.io/api-reference/email-finder/find-single",
+      "verified": {
+        "docs": "https://docs.enrow.io/api-reference/email-finder/find-single"
+      }
+    },
+    {
+      "id": "enrow.email.find_result",
+      "name": "Get an email search result",
+      "summary": "Result of a search started with email.find.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email/find/single",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search id."
+        }
+      },
+      "notes": [
+        "Reading a result never consumes credits."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.enrow.io/api-reference/email-finder/get-single-result",
+      "verified": {
+        "docs": "https://docs.enrow.io/api-reference/email-finder/get-single-result"
+      }
+    },
+    {
+      "id": "enrow.email.verify",
+      "name": "Start an email verification",
+      "summary": "Verify one address. Returns an id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/email/verify/single",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Email to verify."
+        },
+        "custom": {
+          "in": "body",
+          "type": "object",
+          "description": "Your own key-value data, returned in the result and webhook."
+        },
+        "settings": {
+          "in": "body",
+          "type": "object",
+          "description": "{webhook}: a URL that receives a POST when the search finishes."
+        }
+      },
+      "notes": [
+        "A read over POST: starts an asynchronous search, changes nothing.",
+        "Poll enrow.email.verify_result. 0.25 credit per verification. qualification is valid or invalid."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://docs.enrow.io/api-reference/email-verifier/verify-single",
+      "verified": {
+        "docs": "https://docs.enrow.io/api-reference/email-verifier/verify-single"
+      }
+    },
+    {
+      "id": "enrow.email.verify_result",
+      "name": "Get a verification result",
+      "summary": "Result of a verification started with email.verify.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email/verify/single",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Verification id."
+        }
+      },
+      "notes": [
+        "Reading a result never consumes credits."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.enrow.io/api-reference/email-verifier/get-single-verification",
+      "verified": {
+        "docs": "https://docs.enrow.io/api-reference/email-verifier/get-single-verification"
+      }
+    },
+    {
+      "id": "enrow.phone.find",
+      "name": "Start a phone search",
+      "summary": "Find a phone number from a LinkedIn URL, or a name plus company. Returns an id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/phone/single",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL (recommended; takes precedence)."
+        },
+        "firstname": {
+          "in": "body",
+          "type": "string",
+          "description": "First name, with lastname and a company."
+        },
+        "lastname": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name."
+        },
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain."
+        },
+        "custom": {
+          "in": "body",
+          "type": "object",
+          "description": "Your own key-value data, returned in the result and webhook."
+        },
+        "settings": {
+          "in": "body",
+          "type": "object",
+          "description": "{webhook}: a URL that receives a POST when the search finishes."
+        }
+      },
+      "notes": [
+        "A read over POST: starts an asynchronous search, changes nothing.",
+        "Poll enrow.phone.find_result. 40 credits per search by default (50 on legacy plans), refunded when no phone is found."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://docs.enrow.io/api-reference/phone/find-single",
+      "verified": {
+        "docs": "https://docs.enrow.io/api-reference/phone/find-single"
+      }
+    },
+    {
+      "id": "enrow.phone.find_result",
+      "name": "Get a phone search result",
+      "summary": "Result of a search started with phone.find.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/phone/single",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search id."
+        }
+      },
+      "notes": [
+        "Reading a result never consumes credits."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.enrow.io/api-reference/phone/get-single-result",
+      "verified": {
+        "docs": "https://docs.enrow.io/api-reference/phone/get-single-result"
+      }
+    }
+  ]
+}

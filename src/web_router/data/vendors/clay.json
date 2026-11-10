@@ -1,0 +1,260 @@
+{
+  "vendor": "clay",
+  "name": "Clay",
+  "category": "enrichment",
+  "summary": "Clay's Public API: people and company search, saved enrichment routines, and queries over your Clay tables.",
+  "docs_url": "https://developers.clay.com/public-api/quickstart",
+  "pricing_url": "https://www.clay.com/pricing",
+  "base_url": "https://api.clay.com/public/v0",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CLAY_PUBLIC_API_KEY"
+        ],
+        "description": "A personal Clay Public API key (API and CLI > API keys in the Clay app); the legacy workspace API key does not work. Sent in the clay-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "clay-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The key acts as its user, within that user's workspace access and monthly credit limit.",
+    "Per-workspace rate limit: a 429 carries Retry-After in seconds, and X-RateLimit-* headers when available.",
+    "Two paging styles: cursor (send back cursor until it is absent) and stateful iterators (call again while has_more is true).",
+    "Waterfall enrichment runs through routines built in the Clay app; the API has no generic enrich-a-person call.",
+    "Batch (JSONL) routine runs, filters-mode search (deprecated), workflow-run queries and Audiences privacy deletion are not in this entry."
+  ],
+  "sources": [
+    "https://developers.clay.com/llms.txt",
+    "https://developers.clay.com/openapi.json",
+    "https://developers.clay.com/public-api/authentication.md",
+    "https://developers.clay.com/public-api/rate-limits.md",
+    "https://developers.clay.com/public-api/pagination.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "clay.me.get",
+      "name": "Get the authenticated user",
+      "summary": "The Clay user and workspace the API key belongs to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/me",
+      "job": "account.validate",
+      "docs_url": "https://developers.clay.com/api-reference/me/get-the-authenticated-user",
+      "verified": {
+        "docs": "https://developers.clay.com/api-reference/me/get-the-authenticated-user.md"
+      }
+    },
+    {
+      "id": "clay.credits.balance",
+      "name": "Get workspace credit balances",
+      "summary": "Workspace credit balances and the key owner's monthly credit limit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/credits/balance",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://developers.clay.com/api-reference/credits/get-workspace-credit-balances",
+      "verified": {
+        "docs": "https://developers.clay.com/api-reference/credits/get-workspace-credit-balances.md"
+      }
+    },
+    {
+      "id": "clay.search.reference",
+      "name": "Get the search query reference",
+      "summary": "Markdown reference of Clay's advanced search query grammar and queryable people and company fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/query-mode/reference",
+      "notes": [
+        "Read it before writing a query for clay.search.create."
+      ],
+      "job": "reference.keywords",
+      "docs_url": "https://developers.clay.com/api-reference/search/get-the-clay-search-query-reference",
+      "verified": {
+        "docs": "https://developers.clay.com/api-reference/search/get-the-clay-search-query-reference.md"
+      }
+    },
+    {
+      "id": "clay.search.create",
+      "name": "Start a people or company search",
+      "summary": "Creates a search from a Clay advanced search query; answers with search_id and the detected source_type (people or companies).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search/query-mode",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A Clay advanced search query (grammar from clay.search.reference). Count-mode and jobs queries are not supported."
+        }
+      },
+      "notes": [
+        "A read over POST. Returns no rows: page them with clay.search.next. A 402 means not enough credits."
+      ],
+      "job": "people.search",
+      "docs_url": "https://developers.clay.com/api-reference/search/create-a-search-from-a-clay-search-query",
+      "verified": {
+        "docs": "https://developers.clay.com/api-reference/search/create-a-search-from-a-clay-search-query.md"
+      }
+    },
+    {
+      "id": "clay.search.next",
+      "name": "Get the next page of search results",
+      "summary": "The next page of people or company records for a search.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search/query-mode/{search_id}/run",
+      "params": {
+        "search_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The search_id from clay.search.create."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records per page, 1-500, default 20."
+        }
+      },
+      "notes": [
+        "A read over POST on a stateful iterator: each call consumes the page it returns. Call again while has_more is true."
+      ],
+      "job": "people.search",
+      "docs_url": "https://developers.clay.com/api-reference/search/run-the-query-mode-iterator-and-return-the-next-page-of-results",
+      "verified": {
+        "docs": "https://developers.clay.com/api-reference/search/run-the-query-mode-iterator-and-return-the-next-page-of-results.md"
+      }
+    },
+    {
+      "id": "clay.tables.query",
+      "name": "Query Clay tables",
+      "summary": "Records from one or more of the workspace's Clay tables, with filters, joins, grouping and aggregates.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/tables/query",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{tables: [{id, alias}], select, filter, join, group_by, order_by, field_mode: names|ids}; tables is required (1-5).",
+          "example": {
+            "tables": [
+              {
+                "id": "t_abc123"
+              }
+            ]
+          }
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records per page, 1-100, default 50."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "cursor from the previous answer."
+        }
+      },
+      "notes": [
+        "A read over POST. Pages run least-recently-updated first and pick up concurrent writes, so a record can repeat: deduplicate by id. A custom order_by disables cursor paging."
+      ],
+      "job": "datasets.list",
+      "docs_url": "https://developers.clay.com/api-reference/tables/run-a-structured-query-across-one-or-more-tables",
+      "verified": {
+        "docs": "https://developers.clay.com/api-reference/tables/run-a-structured-query-across-one-or-more-tables.md"
+      }
+    },
+    {
+      "id": "clay.routines.run",
+      "name": "Run a routine on up to 100 items",
+      "summary": "Starts an asynchronous run of a saved Clay routine (for example an enrichment waterfall) over 1-100 input items.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/routines/{routine_id}/run",
+      "params": {
+        "routine_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The routine to run."
+        },
+        "items": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "1-100 items {id, inputs}; id is your key (max 64 chars), inputs the routine's input fields.",
+          "example": [
+            {
+              "id": "1",
+              "inputs": {
+                "domain": "clay.com"
+              }
+            }
+          ]
+        },
+        "webhook_id": {
+          "in": "body",
+          "type": "string",
+          "description": "A registered Clay webhook to notify when the run finishes."
+        }
+      },
+      "notes": [
+        "Marked write: a routine runs whatever steps it was built with, which can spend credits and write to tables or other tools.",
+        "Poll clay.routines.results with the returned run id, or use a webhook."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://developers.clay.com/api-reference/routines/execute-a-routine-against-1-100-items",
+      "verified": {
+        "docs": "https://developers.clay.com/api-reference/routines/execute-a-routine-against-1-100-items.md"
+      }
+    },
+    {
+      "id": "clay.routines.results",
+      "name": "Get a routine run's progress and results",
+      "summary": "Status and paginated results of an asynchronous routine run.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/routines/run/{routine_run_id}/results",
+      "params": {
+        "routine_run_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The run id from clay.routines.run."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "cursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        }
+      },
+      "notes": [
+        "Poll at a modest interval."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://developers.clay.com/api-reference/routines/fetch-progress-and-results-for-a-routine-run",
+      "verified": {
+        "docs": "https://developers.clay.com/api-reference/routines/fetch-progress-and-results-for-a-routine-run.md"
+      }
+    }
+  ]
+}
