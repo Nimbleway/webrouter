@@ -2211,8 +2211,9 @@ field may be left out or `null`):
   refused URL is set aside in the record's `ignored`. Your own `url_policy`
   applies when you set one. `public_only` checks the hostname as written and
   does not resolve it, so a service could name a host whose DNS points at a
-  private address; that matters only for backends that fetch from your
-  machine, such as the `local` browser.
+  private address; that matters only for a backend that fetches from your
+  machine, such as a provider you register or host yourself. Every built-in
+  backend hands the URL to its vendor, which fetches it from its own network.
 - **What is shown.** The decision record names it `remote(<scheme>://<host>)`:
   never the URL's path, and never the key.
 
