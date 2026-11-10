@@ -9,7 +9,8 @@ from typing import Any
 import httpx
 import pytest
 
-from tests.vendors.conftest import CREDENTIALS, Recorder
+from tests.vendors.conftest import Recorder
+from tests.vendors.data import CREDENTIALS
 from web_router.exceptions import (
     ConfigurationError,
     MissingParameterError,
@@ -240,7 +241,7 @@ async def test_the_async_path(catalog: VendorCatalog, recorder: Recorder, make_c
 
 
 def _vendor(**changes: Any) -> Any:
-    from tests.vendors.conftest import QUERYKEY
+    from tests.vendors.data import QUERYKEY
     from web_router.vendors.schema import Vendor
 
     return Vendor.model_validate({**QUERYKEY, **changes})
@@ -272,7 +273,7 @@ def test_a_body_credential_is_merged_into_the_json_body(recorder: Recorder) -> N
 
 
 def test_a_renamed_client_id_field(catalog: VendorCatalog, recorder: Recorder) -> None:
-    from tests.vendors.conftest import OAUTH
+    from tests.vendors.data import OAUTH
     from web_router.vendors.schema import Vendor
 
     oauth = {**OAUTH["auth"]["oauth2"], "client_id_param": "client_key"}
@@ -287,7 +288,7 @@ def test_a_renamed_client_id_field(catalog: VendorCatalog, recorder: Recorder) -
 
 
 def test_named_hosts(recorder: Recorder) -> None:
-    from tests.vendors.conftest import _endpoint
+    from tests.vendors.data import _endpoint
 
     vendor = _vendor(
         hosts={"bulk": "https://bulk.querykey.test/v1"},
@@ -309,7 +310,7 @@ def test_named_hosts(recorder: Recorder) -> None:
 def test_a_named_host_follows_the_base_url_rules() -> None:
     from pydantic import ValidationError
 
-    from tests.vendors.conftest import _endpoint
+    from tests.vendors.data import _endpoint
 
     with pytest.raises(ValidationError, match="must be https"):
         _vendor(hosts={"bulk": "http://bulk.querykey.test"})
@@ -318,7 +319,7 @@ def test_a_named_host_follows_the_base_url_rules() -> None:
 
 
 def test_a_path_input_is_required_even_when_the_entry_forgets_to_say_so(catalog: VendorCatalog) -> None:
-    from tests.vendors.conftest import ACME, _endpoint
+    from tests.vendors.data import ACME, _endpoint
     from web_router.vendors.schema import Vendor
 
     vendor = Vendor.model_validate(

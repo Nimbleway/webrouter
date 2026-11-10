@@ -11,7 +11,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from tests.vendors.conftest import CREDENTIALS, OAUTH
+from tests.vendors.data import CREDENTIALS, OAUTH
 from web_router.exceptions import ProviderError
 from web_router.vendors.schema import VendorOAuth2
 from web_router.vendors.tokens import TokenCache, token_request

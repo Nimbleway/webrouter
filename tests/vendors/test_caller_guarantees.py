@@ -12,7 +12,8 @@ from typing import Any
 import httpx
 import pytest
 
-from tests.vendors.conftest import CREDENTIALS, Recorder
+from tests.vendors.conftest import Recorder
+from tests.vendors.data import CREDENTIALS
 from tests.vendors.test_caller import MakeCaller, _call
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.exceptions_vendors import VendorWriteRefusedError
@@ -131,7 +132,7 @@ def test_a_short_secret_is_masked_as_a_word_but_not_inside_other_words() -> None
 def test_an_endpoint_can_need_fewer_credentials_than_its_vendor(
     catalog: VendorCatalog, recorder: Recorder, make_caller: MakeCaller
 ) -> None:
-    from tests.vendors.conftest import ACME, _endpoint
+    from tests.vendors.data import ACME, _endpoint
     from web_router.vendors.schema import Vendor
 
     vendor = Vendor.model_validate(
@@ -198,7 +199,7 @@ def test_an_unreachable_token_endpoint_is_a_provider_error(catalog: VendorCatalo
 
 
 def test_a_token_being_minted_does_not_hold_up_another_account() -> None:
-    from tests.vendors.conftest import OAUTH
+    from tests.vendors.data import OAUTH
     from web_router.vendors.schema import VendorOAuth2
 
     oauth = VendorOAuth2.model_validate(OAUTH["auth"]["oauth2"])

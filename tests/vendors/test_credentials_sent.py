@@ -7,7 +7,8 @@ from typing import Any
 
 import httpx
 
-from tests.vendors.conftest import ACME, CREDENTIALS, OAUTH, Recorder, _endpoint
+from tests.vendors.conftest import Recorder
+from tests.vendors.data import ACME, CREDENTIALS, OAUTH, _endpoint
 from web_router.vendors.caller import VendorCaller
 from web_router.vendors.catalog import VendorCatalog
 from web_router.vendors.masking import mask_answer
