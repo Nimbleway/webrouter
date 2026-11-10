@@ -50,6 +50,20 @@ def test_the_reference_server_answers_a_too_deeply_nested_body_with_400() -> Non
         assert client.post(server.url, json=body, headers=headers).status_code == 200, "the server still answers"
 
 
+def test_the_reference_server_answers_a_failing_decide_with_500_without_its_text() -> None:
+    import httpx
+
+    def failing(body: dict[str, object]) -> dict[str, object]:
+        raise RuntimeError("internal detail")
+
+    body = {"schema": 1, "prompt": "x", "candidates": [], "deadline_s": 1.0}
+    with running(failing) as server, httpx.Client(trust_env=False) as client:
+        answer = client.post(server.url, json=body, headers={"Authorization": f"Bearer {KEY}"})
+        plan = WebRouter(router="remote", router_config={"url": server.url, "api_key": KEY}).plan("solar news")
+    assert answer.status_code == 500 and answer.json() == {"error": "the router failed"}
+    assert plan.decision.reason == "router_error"
+
+
 def test_the_example_server_closes_connections_past_its_worker_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(reference, "MAX_WORKERS", 2)
     with running() as server:

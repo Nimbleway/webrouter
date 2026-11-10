@@ -134,6 +134,8 @@ class _Handler(BaseHTTPRequestHandler):
             return self._answer(400, {"error": str(exc)})
         except RecursionError:  # JSON nested deeper than Python parses
             return self._answer(400, {"error": "a request nested too deeply"})
+        except Exception:  # a decide() that fails: an answer, not a dropped connection, and never its text
+            return self._answer(500, {"error": "the router failed"})
 
     def _authorized(self) -> bool:
         if not self.server.api_key:
