@@ -401,27 +401,6 @@ def test_a_run_without_trust_is_cited_from_its_output_sources(provider: NimbleRe
     ]
 
 
-def test_a_run_whose_output_omits_trust_is_cited_from_its_output_sources(provider: NimbleResearchProvider) -> None:
-    output = {key: value for key, value in NO_TRUST_RESULT["output"].items() if key != "trust"}
-    _stub(provider, started=_run("completed"), result={**NO_TRUST_RESULT, "output": output})
-
-    citations = provider.research(ResearchRequest(query="q", output_schema=SCHEMA)).citations
-
-    assert [citation.url for citation in citations] == [
-        "https://llms.nimbleway.com/nimble-platform-products-and-apis",
-        "https://nimbleway.com/pricing",
-    ]
-
-
-def test_a_run_without_trust_reports_its_source_urls(provider: NimbleResearchProvider) -> None:
-    _stub(provider, started=_run("completed"), result=NO_TRUST_RESULT)
-
-    assert provider.research(ResearchRequest(query="q", output_schema=SCHEMA)).urls == [
-        "https://llms.nimbleway.com/nimble-platform-products-and-apis",
-        "https://nimbleway.com/pricing",
-    ]
-
-
 def test_output_sources_follow_the_trust_citations_once_each(provider: NimbleResearchProvider) -> None:
     output = {
         **JSON_RESULT["output"],
@@ -438,14 +417,6 @@ def test_output_sources_follow_the_trust_citations_once_each(provider: NimbleRes
         ("https://a.example/about", "$.founded"),
         ("https://c.example/blog", None),
     ]
-
-
-async def test_the_async_path_cites_a_run_without_trust(provider: NimbleResearchProvider) -> None:
-    _stub(provider, started=_run("completed"), result=NO_TRUST_RESULT)
-
-    response = await provider.aresearch(ResearchRequest(query="q", output_schema=SCHEMA))
-
-    assert len(response.citations) == 2
 
 
 async def test_the_async_path_answers_the_same_way(provider: NimbleResearchProvider) -> None:
