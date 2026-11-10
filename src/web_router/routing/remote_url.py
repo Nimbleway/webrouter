@@ -40,8 +40,9 @@ def checked_url(url: object, httpx: Any) -> str:
     """``url`` when it is ``https``, or ``http`` to ``localhost`` or a loopback address, with nothing secret in it.
 
     Raises:
-        ConfigurationError: for no URL, one httpx cannot parse or a browser could read two ways, one with no host,
-            credentials, a query or a fragment, or a plain-``http`` one to any other host. Never echoing the URL.
+        ConfigurationError: for no URL, one httpx cannot parse or a browser could read two ways (credentials
+            included), one with no host, a query or a fragment, or a plain-``http`` one to any other host. Never
+            echoing the URL.
     """
     if not isinstance(url, str) or not url.strip():
         raise ConfigurationError(MSG_REMOTE_NO_URL)
@@ -54,7 +55,7 @@ def checked_url(url: object, httpx: Any) -> str:
     scheme, host = parsed.scheme.lower(), parsed.host
     if not host or scheme not in (REMOTE_SECURE_SCHEME, REMOTE_LOOPBACK_SCHEME):
         raise ConfigurationError(MSG_REMOTE_URL)
-    if parsed.userinfo or parsed.query or parsed.fragment or "?" in url or "#" in url:
+    if "?" in url or "#" in url:  # credentials are an @ in the authority, which _ambiguous refuses
         raise ConfigurationError(MSG_REMOTE_URL_PARTS)
     if scheme != REMOTE_SECURE_SCHEME and not (host == REMOTE_LOOPBACK_NAME or _loopback_literal(host)):
         raise ConfigurationError(MSG_REMOTE_HTTPS)
