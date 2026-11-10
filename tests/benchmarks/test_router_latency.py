@@ -32,6 +32,7 @@ SIBLINGS = (
     "router_latency_args",
     "router_latency_routers",
     "router_latency_run",
+    "router_latency_e2e",
     "router_latency_report",
 )
 
@@ -114,7 +115,7 @@ def test_each_round_is_in_its_own_random_order(latency: ModuleType) -> None:
 
 
 def test_the_added_wall_time_runs_on_stubs_and_puts_the_registry_back(latency: ModuleType) -> None:
-    run = _module("router_latency_run")
+    run = _module("router_latency_e2e")
     out = run.added_wall_time(
         {"none": lambda req: RouteDecision()}, ["q"] * 4, ("perplexity", "nimble"), warmup=1, seed=0, loop=None
     )
@@ -216,7 +217,7 @@ def test_a_router_named_twice_is_refused(latency: ModuleType) -> None:
 
 
 def test_stubbing_puts_a_backend_of_your_own_back(latency: ModuleType) -> None:
-    run = _module("router_latency_run")
+    run = _module("router_latency_e2e")
     mine = type("Mine", (run._Stub,), {"name": "mine"})
     registry.register_provider("perplexity", mine)
     try:
@@ -286,7 +287,7 @@ def test_sets_that_give_no_questions_are_refused(latency: ModuleType, monkeypatc
 def test_a_search_that_fails_mid_timing_still_closes_every_client(
     latency: ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    run = _module("router_latency_run")
+    run = _module("router_latency_e2e")
     closed: list[str] = []
 
     class Client:

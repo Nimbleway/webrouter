@@ -39,9 +39,10 @@ from route_eval_merge import request_for
 from route_eval_sets import load_set
 from router_latency_args import DEFAULT_SETS, router_specs_for, settings
 from router_latency_args import parse_args as _parse_args
+from router_latency_e2e import added_wall_time
 from router_latency_report import dry_run, environment, markdown
 from router_latency_routers import RouterSpec, aclose, close, plan_cost
-from router_latency_run import added_wall_time, cold_builds, interleaved
+from router_latency_run import cold_builds, interleaved
 from router_latency_tools import chain_orders, definition, tool_latencies
 
 from web_router.routing.contract import RouteRequest
