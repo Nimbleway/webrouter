@@ -1,0 +1,254 @@
+{
+  "vendor": "gladia",
+  "name": "Gladia",
+  "category": "ai",
+  "summary": "Multilingual speech-to-text for recorded audio, with diarization, translation, summaries, sentiment and subtitles as add-ons.",
+  "docs_url": "https://docs.gladia.io/api-reference/index",
+  "pricing_url": "https://www.gladia.io/pricing",
+  "base_url": "https://api.gladia.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GLADIA_API_KEY"
+        ],
+        "description": "a Gladia API key (app.gladia.io/apikeys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-gladia-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Transcription is asynchronous: gladia.transcription.start returns an id, then poll gladia.transcription.get until status is done or error.",
+    "Each add-on (diarization, translation, summarization, ...) is a boolean plus an optional <name>_config object.",
+    "Billed by audio duration; new accounts get a one-time credit grant."
+  ],
+  "sources": [
+    "https://docs.gladia.io/api-reference/authentication",
+    "https://docs.gladia.io/api-reference/v2/pre-recorded/init",
+    "https://docs.gladia.io/api-reference/v2/pre-recorded/get",
+    "https://docs.gladia.io/api-reference/v2/pre-recorded/list",
+    "https://docs.gladia.io/api-reference/v2/pre-recorded/delete"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "gladia.transcription.start",
+      "name": "Start a transcription",
+      "summary": "Submit a hosted audio or video file for transcription; returns a job id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/pre-recorded",
+      "params": {
+        "audio_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "URL of the audio or video file (an external URL or one from Gladia's upload).",
+          "example": "https://files.gladia.io/example/audio-transcription/split_infinity.wav"
+        },
+        "model": {
+          "in": "body",
+          "type": "string",
+          "description": "solaria-1 (default; 100+ languages, code switching) or solaria-3 (higher accuracy; English, French, German, Spanish, Italian; one language only) or solaria-fusion.",
+          "enum": [
+            "solaria-1",
+            "solaria-3",
+            "solaria-fusion"
+          ]
+        },
+        "language_config": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"languages\": [codes], \"code_switching\": bool}; one language fixes it, none or several lets the model detect."
+        },
+        "diarization": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Label speakers."
+        },
+        "diarization_config": {
+          "in": "body",
+          "type": "object",
+          "description": "Diarization options, when diarization is on."
+        },
+        "translation": {
+          "in": "body",
+          "type": "boolean",
+          "description": "[Beta] Translate the transcript."
+        },
+        "translation_config": {
+          "in": "body",
+          "type": "object",
+          "description": "Translation options (target languages), when translation is on."
+        },
+        "summarization": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Summarize the audio."
+        },
+        "sentiment_analysis": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Run sentiment analysis."
+        },
+        "named_entity_recognition": {
+          "in": "body",
+          "type": "boolean",
+          "description": "[Alpha] Extract named entities."
+        },
+        "subtitles": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Generate subtitles."
+        },
+        "subtitles_config": {
+          "in": "body",
+          "type": "object",
+          "description": "Subtitle options, when subtitles is on."
+        },
+        "sentences": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return sentence segmentation."
+        },
+        "pii_redaction": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Redact personal data."
+        },
+        "custom_vocabulary": {
+          "in": "body",
+          "type": "boolean",
+          "description": "[Beta] Use custom_vocabulary_config to bias recognition."
+        },
+        "custom_vocabulary_config": {
+          "in": "body",
+          "type": "object",
+          "description": "Custom vocabulary list and options."
+        },
+        "callback": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Send the result to callback_config.url when done."
+        },
+        "callback_config": {
+          "in": "body",
+          "type": "object",
+          "description": "Callback url and HTTP method."
+        },
+        "custom_metadata": {
+          "in": "body",
+          "type": "object",
+          "description": "Metadata to attach and filter on later."
+        }
+      },
+      "notes": [
+        "Starts a billed job; it changes nothing else on the account. Returns 201 with id and result_url."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.gladia.io/api-reference/v2/pre-recorded/init",
+      "verified": {
+        "docs": "https://docs.gladia.io/api-reference/v2/pre-recorded/init"
+      }
+    },
+    {
+      "id": "gladia.transcription.get",
+      "name": "Get a transcription",
+      "summary": "Status, parameters and, when done, the result of a pre-recorded job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/pre-recorded/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Job id from gladia.transcription.start."
+        }
+      },
+      "notes": [
+        "status is queued, processing, done or error; result is filled only when done."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.gladia.io/api-reference/v2/pre-recorded/get",
+      "verified": {
+        "docs": "https://docs.gladia.io/api-reference/v2/pre-recorded/get"
+      }
+    },
+    {
+      "id": "gladia.transcription.list",
+      "name": "List transcriptions",
+      "summary": "Pre-recorded jobs on the account, filtered by date, status or metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/pre-recorded",
+      "params": {
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip; default 0."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; default 20."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Only jobs on this date, YYYY-MM-DD."
+        },
+        "before_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Only jobs before this ISO datetime."
+        },
+        "after_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Only jobs after this ISO datetime."
+        },
+        "status": {
+          "in": "query",
+          "type": "array",
+          "description": "Only jobs in these statuses (queued, processing, done, error)."
+        }
+      },
+      "job": "jobs.list",
+      "docs_url": "https://docs.gladia.io/api-reference/v2/pre-recorded/list",
+      "verified": {
+        "docs": "https://docs.gladia.io/api-reference/v2/pre-recorded/list"
+      }
+    },
+    {
+      "id": "gladia.transcription.delete",
+      "name": "Delete a transcription",
+      "summary": "Delete a pre-recorded job and all its data (audio and transcript).",
+      "kind": "write",
+      "method": "DELETE",
+      "path": "/v2/pre-recorded/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Job id."
+        }
+      },
+      "notes": [
+        "Permanent."
+      ],
+      "job": "jobs.delete",
+      "docs_url": "https://docs.gladia.io/api-reference/v2/pre-recorded/delete",
+      "verified": {
+        "docs": "https://docs.gladia.io/api-reference/v2/pre-recorded/delete"
+      }
+    }
+  ]
+}

@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-232 vendors, 2004 endpoints.
+238 vendors, 2040 endpoints.
 
 ### advertising
 
@@ -289,16 +289,22 @@ The tables below are generated from `src/web_router/data/vendors/` by
 |---|---|---|---|---|---|
 | [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/APIReference/welcome.html) `amazon-bedrock` | Foundation models (Anthropic, Meta, Mistral, Amazon and others) served on AWS: Converse chat, token counting and the model catalog, with a Bedrock API key. | 5 read | key in header | `AWS_BEARER_TOKEN_BEDROCK` | docs 2026-11-09 |
 | [Anthropic (Claude API)](https://platform.claude.com/docs/en/api/overview) `anthropic` | Claude models through Anthropic's own API: messages, token counting, model list and batch jobs. | 7 read | key in header | `ANTHROPIC_API_KEY` | docs 2026-11-09 |
+| [Artificial Analysis](https://artificialanalysis.ai/data-api/docs) `artificial-analysis` | Independent benchmarks of AI models: intelligence indices, speed, latency and price for LLMs, and Elo arena rankings for image, video, speech and music models. | 8 read | key in header | `ARTIFICIAL_ANALYSIS_API_KEY` | docs 2026-11-09 |
 | [AssemblyAI](https://www.assemblyai.com/docs/api-reference/overview) `assemblyai` | Speech-to-text for audio and video files by URL, with speaker labels, PII redaction, subtitles and word search. | 7 read, 1 write | key in header | `ASSEMBLYAI_API_KEY` | docs 2026-11-09 |
 | [Baseten](https://docs.baseten.co/reference/inference-api/overview) `baseten` | Inference for open-source LLMs through Baseten Model APIs (OpenAI-compatible chat), plus your Baseten models and token usage. | 5 read | key in header | `BASETEN_API_KEY` | docs 2026-11-09 |
 | [Deepgram](https://developers.deepgram.com/reference/deepgram-api-overview) `deepgram` | Speech-to-text transcription of recorded audio, text-to-speech, and text analysis (summaries, topics, sentiment, intents). | 7 read | key in header | `DEEPGRAM_API_KEY` | docs 2026-11-09 |
 | [DeepL](https://developers.deepl.com/docs) `deepl` | Machine translation and text improvement (rephrasing in a style or tone), with glossaries, supported-language lookups and usage. | 6 read | key in header | `DEEPL_AUTH_KEY` | docs 2026-11-09 |
+| [DeepSeek](https://api-docs.deepseek.com/) `deepseek` | DeepSeek chat and reasoning models through an OpenAI-compatible API, plus web Search and Fetch tools. | 5 read | key in header | `DEEPSEEK_API_KEY` | docs 2026-11-09 |
+| [Gladia](https://docs.gladia.io/api-reference/index) `gladia` | Multilingual speech-to-text for recorded audio, with diarization, translation, summaries, sentiment and subtitles as add-ons. | 3 read, 1 write | key in header | `GLADIA_API_KEY` | docs 2026-11-09 |
 | [Google AI (Gemini API)](https://ai.google.dev/gemini-api/docs) `google-ai` | Gemini models for text, images (Nano Banana), video (Omni), speech (TTS) and music (Lyria) through the Gemini Interactions API. | 7 read | key in header | `GEMINI_API_KEY` | docs 2026-11-08 |
+| [Groq](https://console.groq.com/docs/api-reference) `groq` | Fast inference of open LLMs (and text-to-speech) on Groq LPUs, through an OpenAI-compatible API. | 6 read | key in header | `GROQ_API_KEY` | docs 2026-11-09 |
 | [Hugging Face Hub](https://huggingface.co/docs/hub/api) `huggingface` | Search the Hugging Face Hub's models, datasets, Spaces and papers, and read paper pages and daily papers. | 7 read | key in header | `HF_TOKEN` | docs 2026-11-09 |
+| [Klippa DocHorizon (Doxis AI.dp)](https://dochorizon.klippa.com/docs/api/getting-started) `klippa` | Document OCR and data capture: invoices and receipts, identity documents, and generic key-value and table extraction from any document. | 8 read | key in header | `KLIPPA_API_KEY` | docs 2026-11-09 |
 | [Mathpix](https://docs.mathpix.com/) `mathpix` | OCR for math, science and general documents: images to Mathpix Markdown/LaTeX, and PDFs or ebooks to Markdown, DOCX, LaTeX, HTML and more. | 6 read, 1 write | key in header | `MATHPIX_APP_ID`, `MATHPIX_APP_KEY` | docs 2026-11-09 |
 | [Mistral AI](https://docs.mistral.ai/api/) `mistral` | Mistral language models for chat, embeddings, document OCR, moderation and speech. | 7 read | key in header | `MISTRAL_API_KEY` | docs 2026-11-09 |
 | [OpenAI](https://developers.openai.com/api/docs) `openai` | GPT models through the Responses and Chat Completions APIs, plus embeddings, image generation, text-to-speech and moderation. | 8 read | key in header | `OPENAI_API_KEY` | docs 2026-11-09 |
 | [OpenRouter](https://openrouter.ai/docs/api-reference/overview) `openrouter` | One OpenAI-style API in front of hundreds of language, image, speech and video models from many providers. | 11 read | key in header | `OPENROUTER_API_KEY` | docs 2026-11-08 |
+| [Speechmatics](https://docs.speechmatics.com/api-ref/batch/create-a-new-job) `speechmatics` | Batch speech-to-text jobs on Speechmatics: list jobs, read their status and transcripts, and check usage. | 4 read, 1 write | key in header | `SPEECHMATICS_API_KEY` | docs 2026-11-09 |
 | [TypeSafe](https://docs.typesafe.ai/introduction) `typesafe` | Jev, a System One model that answers typed questions (choice, score, yes/no, image box) about text or images with calibrated probabilities instead of generated prose. | 2 read | key in header | `TYPESAFE_API_KEY` | docs 2026-11-09 |
 | [Wolfram|Alpha](https://products.wolframalpha.com/api) `wolframalpha` | Computational answers to natural-language questions (math, science, units, data on places, finance, dates and more): LLM-ready text, one-line answers, structured result pods or a rendered result image. | 4 read | key in query | `WOLFRAM_ALPHA_APPID` | docs 2026-11-09 |
 | [xAI (Grok)](https://docs.x.ai/developers/rest-api-reference/inference.md) `xai` | Grok language models with server-side web and X search, image generation and model listings through the xAI API. | 7 read | key in header | `XAI_API_KEY` | docs 2026-11-09 |
