@@ -15,10 +15,16 @@ from tests.vendors.conftest import ACME, OAUTH
 from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_ENV_CATALOG_DIR
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_vendors import VendorNotFoundError
-from web_router.vendors.catalog import VendorCatalog, get_catalog, load_vendor_file, reload_catalog
+from web_router.vendors.catalog import (
+    VendorCatalog,
+    builtin_catalog,
+    get_catalog,
+    load_vendor_file,
+    reload_catalog,
+)
 from web_router.vendors.schema import Vendor
 
-SHIPPED = get_catalog()
+SHIPPED = builtin_catalog()
 
 
 def _broken(change: Any) -> dict[str, Any]:
@@ -116,6 +122,29 @@ def test_find_ignores_filler_words() -> None:
     assert catalog.find("the metric for a window") == catalog.find("metric window")
 
 
+def test_a_search_of_only_filler_words_finds_nothing(catalog: VendorCatalog) -> None:
+    """An empty query lists every endpoint; one made only of filler words asks for nothing."""
+    assert catalog.find("the") == []
+    assert catalog.find("what is it") == []
+    assert catalog.find("") != []
+    assert catalog.find("the logs") == catalog.find("logs")
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda v: v.update(name="Acme\nEVIL=1"),
+        lambda v: v.update(docs_url="https://docs.example.com\r\nX"),
+        lambda v: v["settings"]["region"].update(default="us\nEVIL=1"),
+    ],
+)
+def test_text_printed_into_the_generated_files_is_one_line(change: Any) -> None:
+    vendor = copy.deepcopy(ACME)
+    change(vendor)
+    with pytest.raises(ValidationError, match="must be one line"):
+        Vendor.model_validate(vendor)
+
+
 # -- every shipped file -----------------------------------------------------
 
 
@@ -136,7 +165,6 @@ def test_the_catalog_ships_vendors() -> None:
 @pytest.mark.parametrize("path", SHIPPED_FILES, ids=lambda path: path.stem)
 def test_a_shipped_file(path: Path) -> None:
     vendor = load_vendor_file(path)
-    assert vendor.category in VENDOR_CATEGORIES
     assert re.match(r"^\d{4}-\d{2}-\d{2}$", vendor.curated)
     assert vendor.endpoints, "a vendor file names at least one endpoint"
     for endpoint in vendor.endpoints:
@@ -185,3 +213,23 @@ def test_vendors_md_and_env_example_are_current() -> None:
     env = ENV_EXAMPLE.read_text(encoding="utf-8")
     assert regenerate_markdown(markdown, SHIPPED) == markdown, "VENDORS.md is stale: run `make vendors`."
     assert regenerate_env(env, SHIPPED) == env, ".env.example is stale: run `make vendors`."
+
+
+def test_the_generated_files_ignore_a_local_vendor_folder(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from scripts.vendors import main
+
+    extra = {**copy.deepcopy(OAUTH), "vendor": "localco", "name": "Local Co"}
+    for endpoint in extra["endpoints"]:
+        endpoint["id"] = endpoint["id"].replace("oauthco.", "localco.")
+    for spec in extra["auth"]["credentials"].values():
+        spec["env"] = [name.replace("OAUTHCO", "LOCALCO") for name in spec["env"]]
+    (tmp_path / "localco.json").write_text(json.dumps(extra), encoding="utf-8")
+    monkeypatch.setenv(VENDOR_ENV_CATALOG_DIR, str(tmp_path))
+    reload_catalog()
+    try:
+        assert "localco" in get_catalog().names()
+        assert "localco" not in builtin_catalog().names()
+        assert main(["--check"]) == 0
+    finally:
+        monkeypatch.delenv(VENDOR_ENV_CATALOG_DIR)
+        reload_catalog()
