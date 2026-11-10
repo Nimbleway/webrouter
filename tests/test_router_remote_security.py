@@ -252,6 +252,18 @@ def test_the_reference_server_binds_loopback_and_turns_away_a_foreign_host_no_ke
         assert client.post(server.url, content=big, headers=large).status_code == 413
 
 
+@pytest.mark.parametrize("length", ["9" * 5000, "\u00b2", "-1"], ids=["5000-digits", "superscript", "negative"])
+def test_the_reference_server_answers_an_unreadable_content_length_with_413(length: str) -> None:
+    import socket
+
+    with running() as server:
+        host, port = server.server_address[:2]
+        head = f"POST /route HTTP/1.1\r\nHost: {server.authority}\r\nAuthorization: Bearer {KEY}\r\n"
+        with socket.create_connection((host, port), timeout=5) as sock:
+            sock.sendall(f"{head}Content-Length: {length}\r\n\r\n".encode())
+            assert sock.recv(64).startswith(b"HTTP/1.0 413")
+
+
 def test_the_reference_server_answers_a_too_deeply_nested_body_with_400() -> None:
     import httpx
 

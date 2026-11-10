@@ -123,7 +123,7 @@ class _Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             return self._answer(401, {"error": "a bearer key is required"})
         length = self.headers.get("Content-Length", "")
-        if not length.isdigit() or int(length) > MAX_BODY_BYTES:
+        if not (length.isascii() and length.isdigit()) or len(length) > 7 or int(length) > MAX_BODY_BYTES:
             return self._answer(413, {"error": "a request needs a Content-Length of at most 1 MB"})
         try:
             body = json.loads(self.rfile.read(int(length)))
