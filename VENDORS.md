@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-151 vendors, 1435 endpoints.
+158 vendors, 1474 endpoints.
 
 ### advertising
 
@@ -190,13 +190,19 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
 | [Alpha Vantage](https://www.alphavantage.co/documentation/) `alphavantage` | Stock, forex and crypto prices, company fundamentals, earnings, market news sentiment and technical indicators. | 10 read | key in query | `ALPHAVANTAGE_API_KEY` | docs 2026-11-09 |
+| [Bank of England](https://www.bankofengland.co.uk/boeapps/database/help.asp) `bankofengland` | Bank of England Statistical Interactive Database: Bank Rate, SONIA, yields, exchange rates and other series by code, as CSV or XML, keyless. | 2 read | none | none | docs 2026-11-09 |
 | [Benzinga](https://docs.benzinga.com/introduction/introduction) `benzinga` | Benzinga financial news, analyst ratings, consensus price targets, and earnings, guidance and dividend calendars. | 7 read | key in query | `BENZINGA_API_KEY` | docs 2026-11-09 |
 | [Binance](https://developers.binance.com/docs/binance-spot-api-docs/rest-api) `binance` | Binance spot exchange public market data: prices, 24h tickers, order books, trades, candles and symbol rules, keyless. | 8 read | none | none | docs 2026-11-09 |
 | [US Bureau of Labor Statistics](https://www.bls.gov/developers/api_signature_v2.htm) `bls` | US labor and price statistics (CPI, PPI, employment, unemployment, wages) as time series from the BLS Public Data API v2. | 5 read | key in query | `BLS_API_KEY` | docs 2026-11-09 |
+| [US CFTC Commitments of Traders](https://www.cftc.gov/MarketReports/CommitmentsofTraders/ExplanatoryNotes/index.htm) `cftc` | Weekly Commitments of Traders futures and options positioning (Legacy, Disaggregated, TFF, Supplemental) from the CFTC Public Reporting Environment. | 4 read | key in header | `CFTC_API_KEY` | docs 2026-11-09 |
 | [CoinGecko](https://docs.coingecko.com/reference/introduction) `coingecko` | Crypto prices, market data, history, OHLC candles and trending coins from CoinGecko. | 11 read | key in header | `COINGECKO_DEMO_API_KEY`, `COINGECKO_PRO_API_KEY` | docs 2026-11-08 |
 | [CoinMarketCap](https://coinmarketcap.com/api/documentation/) `coinmarketcap` | Crypto listings, latest and historical quotes, OHLCV, coin metadata, global market metrics and the Fear and Greed index from CoinMarketCap. | 10 read | key in header | `CMC_PRO_API_KEY` | docs 2026-11-09 |
+| [DefiLlama](https://api-docs.defillama.com/) `defillama` | DeFi protocol and chain TVL, token prices by contract, stablecoin supply, yield pools, DEX volumes and protocol fees, keyless. | 10 read | none | none | docs 2026-11-09 |
+| [European Central Bank](https://data.ecb.europa.eu/help/api/overview) `ecb` | ECB Data Portal SDMX API: euro reference exchange rates, ECB interest rates, inflation, money and banking statistics, keyless. | 4 read | none | none | docs 2026-11-09 |
 | [EDINET](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf) `edinet` | Japan FSA's EDINET disclosure system: daily lists of securities filings (annual and quarterly reports, large shareholding reports) and the filings themselves as XBRL, PDF or CSV. | 2 read | key in query | `EDINET_API_KEY` | docs 2026-11-09 |
 | [US Energy Information Administration](https://www.eia.gov/opendata/documentation.php) `eia` | US energy statistics (electricity, petroleum, natural gas, coal, prices, production, consumption) from the EIA Open Data API v2. | 8 read | key in query | `EIA_API_KEY` | docs 2026-11-09 |
+| [EODHD](https://eodhd.com/financial-apis/) `eodhd` | End-of-day and delayed prices, ticker search and fundamentals for stocks, ETFs, forex and crypto on global exchanges. | 4 read | key in query | `EODHD_API_TOKEN` | docs 2026-11-08 |
+| [Ethplorer](https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API) `ethplorer` | Ethereum token and wallet data from Ethplorer: token info and prices, wallet balances, token transfers, transactions and top holders. | 8 read | key in query | `ETHPLORER_API_KEY` | docs 2026-11-09 |
 | [Eurostat](https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access) `eurostat` | Eurostat EU statistics (prices and inflation, energy, labour, trade, GDP, population, regions) as JSON-stat or SDMX, keyless. | 4 read | none | none | docs 2026-11-09 |
 | [Financial Datasets](https://docs.financialdatasets.ai/introduction) `financialdatasets` | US public-company prices, financial statements, metrics, SEC filings, insider and institutional holdings, and macro series. | 29 read | key in header | `FINANCIAL_DATASETS_API_KEY` | docs 2026-11-08 |
 | [Fiscal.ai](https://docs.fiscal.ai/) `fiscal-ai` | Public company financials from Fiscal.ai: as-reported and standardized statements, ratios, segments and KPIs, stock prices, filings, news and earnings call transcripts for companies in the US, Canada, UK and EU. | 10 read | key in header | `FISCAL_API_KEY` | docs 2026-11-09 |
@@ -211,6 +217,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Stripe](https://docs.stripe.com/api) `stripe` | Payments data from a Stripe account: charges, customers, payment intents, invoices, subscriptions and the balance. | 10 read | key in header | `STRIPE_SECRET_KEY` | docs 2026-11-09 |
 | [Tiingo](https://www.tiingo.com/documentation/general/overview) `tiingo` | End-of-day and intraday stock prices, crypto prices and financial news from Tiingo. | 7 read | key in header | `TIINGO_API_KEY` | docs 2026-11-08 |
 | [Twelve Data](https://twelvedata.com/docs) `twelvedata` | Prices, quotes, time series, symbol search and fundamentals for stocks, forex, crypto and ETFs worldwide. | 9 read | key in header | `TWELVEDATA_API_KEY` | docs 2026-11-08 |
+| [World Bank Indicators API](https://datahelpdesk.worldbank.org/knowledgebase/topics/125589) `worldbank` | World Bank development indicators (GDP, population, poverty, health, education...) for every country and aggregate, by year. | 7 read | none | none | docs 2026-11-09 |
 
 ### developer
 
