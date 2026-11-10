@@ -162,15 +162,21 @@ def shape_vendor_response(response: VendorResponse, handle: str, *, budget: int)
         "data": data,
     }
     note = redaction_note(count).strip()
-    if len(render(payload)) > budget:
-        room = max(budget - len(render({**payload, "data": ""})) - 200, 200)
-        if isinstance(data, str):
-            text = data
-        else:
-            text = json.dumps(data, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str)
-        payload["data"] = truncate(text, room)
-        payload["truncated"] = True
-        note = f"{note} {MCP_MSG_VENDOR_TRUNCATED.format(handle=handle)}".strip()
     if note:
         payload["note"] = note
+    if len(render(payload)) <= budget:
+        return payload
+    text = data if isinstance(data, str) else json.dumps(data, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str)
+    payload["truncated"] = True
+    payload["note"] = f"{note} {MCP_MSG_VENDOR_TRUNCATED.format(handle=handle)}".strip()
+    # Measured on the rendered answer, note included: the cut text is escaped again when rendered, so a
+    # first guess at the room can still run over. Shrink by the overrun until it fits.
+    room = budget - len(render({**payload, "data": ""}))
+    while room > 0:
+        payload["data"] = truncate(text, room)
+        over = len(render(payload)) - budget
+        if over <= 0:
+            return payload
+        room -= over
+    payload["data"] = ""
     return payload

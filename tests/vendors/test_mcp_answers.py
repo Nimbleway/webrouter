@@ -80,3 +80,34 @@ async def test_a_wrong_argument_type_is_a_readable_tool_error(arguments: dict[st
         assert (await tools.call(MCP_TOOL_VENDORS, {"query": "google ads", "limit": 2}))["endpoints"]
     finally:
         await tools.aclose()
+
+
+def _answer(data: Any) -> Any:
+    from web_router.vendors.types import VendorResponse
+
+    return VendorResponse(vendor="datadog", method="GET", url="https://api.datadoghq.com/x", status_code=200, data=data)
+
+
+@pytest.mark.parametrize(
+    ("data", "budget"),
+    [
+        ({"rows": [{"id": i, "name": f"row {i}"} for i in range(2000)]}, 8000),
+        ({"rows": ['say "hi"\nand "bye"\n' * 5 for _ in range(500)]}, 8000),
+        ({"rows": list(range(500))}, 300),
+    ],
+)
+def test_a_cut_answer_fits_its_budget(data: Any, budget: int) -> None:
+    from web_router.mcp.shaping import render
+    from web_router.mcp.shaping_vendors import shape_vendor_response
+
+    shaped = shape_vendor_response(_answer(data), "h1", budget=budget)
+    assert shaped["truncated"] is True
+    assert len(render(shaped)) <= budget
+
+
+def test_a_small_answer_comes_back_whole() -> None:
+    from web_router.mcp.shaping_vendors import shape_vendor_response
+
+    shaped = shape_vendor_response(_answer({"a": 1}), "h1", budget=8000)
+    assert shaped["truncated"] is False
+    assert shaped["data"] == {"a": 1}
