@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import math
 import os
+import re
 import threading
 import time
 from collections.abc import Mapping, Sequence
@@ -28,10 +30,11 @@ from web_router.constants_vendors import (
     VENDOR_MASK,
     VENDOR_MASK_INSIDE_MIN,
     VENDOR_TOKEN_DEFAULT_LIFETIME,
+    VENDOR_TOKEN_LOCK_POLL,
     VENDOR_TOKEN_REFRESH_MARGIN,
 )
 from web_router.exceptions import ProviderError
-from web_router.vendors.schema import Vendor, VendorOAuth2
+from web_router.vendors.schema import Vendor, VendorEndpoint, VendorOAuth2
 from web_router.vendors.types import VendorSummary
 
 if TYPE_CHECKING:
@@ -97,12 +100,20 @@ def credential_source(
     return vendor_credentials
 
 
-def missing_credentials(vendor: Vendor, source: CredentialSource) -> list[str]:
-    """The first-choice variable of each credential ``vendor`` requires that ``source`` does not hold."""
+def missing_credentials(vendor: Vendor, source: CredentialSource, endpoint: VendorEndpoint | None = None) -> list[str]:
+    """The first-choice variable of each credential a call needs that ``source`` does not hold.
+
+    What a call needs is the caller's rule: the endpoint's own credential list when it has one, else every
+    credential ``vendor`` requires.
+    """
+    if endpoint is not None and endpoint.credentials is not None:
+        needed = set(endpoint.credentials)
+    else:
+        needed = {name for name, spec in vendor.auth.credentials.items() if spec.required}
     return [
         spec.env[0]
         for name, spec in vendor.auth.credentials.items()
-        if spec.required and not source.get(vendor.vendor, name, spec.env)
+        if name in needed and not source.get(vendor.vendor, name, spec.env)
     ]
 
 
@@ -177,7 +188,6 @@ class TokenCache:
         self._tokens: dict[str, _Token] = {}
         self._locks: dict[str, threading.Lock] = {}
         self._locks_guard = threading.Lock()
-        self._alocks: dict[str, asyncio.Lock] = {}
 
     def _fresh(self, key: str) -> str | None:
         token = self._tokens.get(key)
@@ -205,8 +215,13 @@ class TokenCache:
     async def aget(self, request: TokenRequest, client: httpx.AsyncClient) -> str:
         import httpx
 
-        lock = self._alocks.setdefault(request.key, asyncio.Lock())
-        async with lock:
+        # The sync path's lock, so a sync and an async call racing on a cold cache still make one
+        # token exchange between them. Polled rather than waited for in a thread: a cancelled
+        # caller then never leaves the lock taken behind it.
+        lock = self._lock(request.key)
+        while not lock.acquire(blocking=False):
+            await asyncio.sleep(VENDOR_TOKEN_LOCK_POLL)
+        try:
             cached = self._fresh(request.key)
             if cached is not None:
                 return cached
@@ -215,6 +230,8 @@ class TokenCache:
             except httpx.HTTPError as exc:
                 raise self._unreachable(request, exc) from None
             return self._store(request, response)
+        finally:
+            lock.release()
 
     @staticmethod
     def _secrets(request: TokenRequest) -> list[str]:
@@ -240,6 +257,8 @@ class TokenCache:
                 seconds = float(lifetime)
             elif lifetime not in (None, ""):
                 raise TypeError(f"expires_in is a {type(lifetime).__name__}")
+            if seconds is not None and not math.isfinite(seconds):
+                raise ValueError(f"expires_in is not finite: {seconds}")
         except (ValueError, TypeError) as exc:
             error = mask(f"{type(exc).__name__}: {exc}", secrets)
             raise ProviderError(
@@ -248,8 +267,12 @@ class TokenCache:
         access = payload.get("access_token")
         if not isinstance(access, str) or not access:
             raise ProviderError(request.vendor, MSG_VENDOR_TOKEN_NO_ACCESS.format(url=request.url))
-        expires = time.monotonic() + (seconds if seconds and seconds > 0 else VENDOR_TOKEN_DEFAULT_LIFETIME)
-        self._tokens[request.key] = _Token(access, expires)
+        # The default only when the vendor gave no lifetime: a stated one, however short, is believed.
+        lifetime_s = VENDOR_TOKEN_DEFAULT_LIFETIME if seconds is None else seconds
+        if lifetime_s > VENDOR_TOKEN_REFRESH_MARGIN:
+            self._tokens[request.key] = _Token(access, time.monotonic() + lifetime_s)
+        else:
+            self._tokens.pop(request.key, None)  # good for this call only; the next one mints afresh
         return access
 
 
@@ -276,16 +299,25 @@ def mask_answer(value: Any, secrets: Sequence[str]) -> Any:
     """A copy of a successful answer with every secret the vendor echoed back masked.
 
     A string equal to a secret is masked whatever its length; a secret of
-    ``VENDOR_MASK_INSIDE_MIN`` characters or more is masked inside longer
-    strings too, which a shorter one is not, so that a login like ``user``
-    does not turn every ``username`` into ``***name``. Keys are left alone.
+    ``VENDOR_MASK_INSIDE_MIN`` characters or more is masked anywhere inside
+    longer strings too. A shorter one is masked inside a string only as a
+    whole word (``Bearer abc123``), so that a login like ``user`` does not
+    turn every ``username`` into ``***name``. Keys are left alone.
     """
     exact = {form for secret in secrets if secret for form in _spellings(secret)}
     inside = [secret for secret in secrets if secret and len(secret) >= VENDOR_MASK_INSIDE_MIN]
+    short = sorted({secret for secret in secrets if secret and len(secret) < VENDOR_MASK_INSIDE_MIN}, key=len)
+    words = [re.compile(rf"(?<![A-Za-z0-9]){re.escape(secret)}(?![A-Za-z0-9])") for secret in reversed(short)]
+
+    def masked(text: str) -> str:
+        text = mask(text, inside)
+        for word in words:
+            text = word.sub(VENDOR_MASK, text)
+        return text
 
     def walk(item: Any) -> Any:
         if isinstance(item, str):
-            return VENDOR_MASK if item in exact else mask(item, inside)
+            return VENDOR_MASK if item in exact else masked(item)
         if isinstance(item, dict):
             return {key: walk(inner) for key, inner in item.items()}
         if isinstance(item, list):
