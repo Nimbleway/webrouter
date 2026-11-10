@@ -1,0 +1,229 @@
+{
+  "vendor": "reactome",
+  "name": "Reactome",
+  "category": "other",
+  "summary": "Curated biological pathways and reactions: search the knowledgebase, map genes, proteins or chemicals to pathways, and read pathway participants and hierarchy.",
+  "docs_url": "https://reactome.org/ContentService/",
+  "base_url": "https://reactome.org/ContentService",
+  "notes": [
+    "Keyless and read-only.",
+    "Objects are addressed by stable id (R-HSA-...) or database id (dbId); both work wherever an id is taken.",
+    "species takes a taxonomy id (9606) or a name (Homo sapiens).",
+    "Pathway enrichment over a gene list (the separate Analysis Service) takes a plain-text body and is not modelled here."
+  ],
+  "sources": [
+    "https://reactome.org/ContentService/",
+    "https://reactome.org/ContentService/v3/api-docs"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "reactome.search",
+      "name": "Search the knowledgebase",
+      "summary": "Pathways, reactions, proteins, complexes and chemicals matching a term, grouped by type and filterable by species and type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/query",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "example": "TP53"
+        },
+        "rows": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return; default 10.",
+          "example": 10
+        },
+        "species": {
+          "in": "query",
+          "type": "string",
+          "description": "Species name filter."
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "Type filter, e.g. Pathway, Reaction, Protein."
+        },
+        "compartments": {
+          "in": "query",
+          "type": "string",
+          "description": "Compartment filter."
+        },
+        "cluster": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Cluster results by type; default true."
+        },
+        "scope": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "REFERENCE_ENTITY",
+            "PHYSICAL_ENTITY",
+            "BOTH"
+          ],
+          "description": "Group physical entities under their reference entity, or not; default PHYSICAL_ENTITY."
+        }
+      },
+      "job": "science.pathways.search",
+      "docs_url": "https://reactome.org/ContentService/",
+      "verified": {
+        "docs": "https://reactome.org/ContentService/v3/api-docs"
+      },
+      "notes": [
+        "The paginated variant (/search/query/paginated) answered 404 for ordinary terms when checked, so the plain search is used here."
+      ]
+    },
+    {
+      "id": "reactome.entry.get",
+      "name": "Get a knowledgebase entry",
+      "summary": "Any Reactome object (pathway, reaction, entity) by id, with its attributes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/query/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Stable id or dbId.",
+          "example": "R-HSA-69620"
+        }
+      },
+      "job": "science.pathways.get",
+      "docs_url": "https://reactome.org/ContentService/",
+      "verified": {
+        "docs": "https://reactome.org/ContentService/v3/api-docs"
+      }
+    },
+    {
+      "id": "reactome.identifier.pathways",
+      "name": "Map an external identifier to pathways",
+      "summary": "Lowest-level pathways containing a gene, protein or chemical given by an external database id (UniProt, Ensembl, ChEBI, ...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/mapping/{resource}/{identifier}/pathways",
+      "params": {
+        "resource": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Reference database name.",
+          "example": "UniProt"
+        },
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "P04637"
+        },
+        "species": {
+          "in": "query",
+          "type": "string",
+          "description": "Taxonomy id, species name or dbId; for chemicals it defaults to Homo sapiens."
+        }
+      },
+      "job": "science.pathways.search",
+      "docs_url": "https://reactome.org/ContentService/",
+      "verified": {
+        "docs": "https://reactome.org/ContentService/v3/api-docs"
+      }
+    },
+    {
+      "id": "reactome.entity.pathways",
+      "name": "List pathways containing an entity",
+      "summary": "Lowest-level pathways that contain a given Reactome entity or event.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/pathways/low/entity/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Stable id or dbId of the entity.",
+          "example": "R-HSA-199420"
+        },
+        "species": {
+          "in": "query",
+          "type": "string",
+          "description": "Taxonomy id or species name."
+        }
+      },
+      "job": "science.pathways.search",
+      "docs_url": "https://reactome.org/ContentService/",
+      "verified": {
+        "docs": "https://reactome.org/ContentService/v3/api-docs"
+      }
+    },
+    {
+      "id": "reactome.event.participants",
+      "name": "List an event's participants",
+      "summary": "The physical entities and their reference entities that take part in a pathway or reaction.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/participants/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Stable id or dbId of a pathway or reaction.",
+          "example": "R-HSA-5205682"
+        }
+      },
+      "job": "science.pathways.get",
+      "docs_url": "https://reactome.org/ContentService/",
+      "verified": {
+        "docs": "https://reactome.org/ContentService/v3/api-docs"
+      }
+    },
+    {
+      "id": "reactome.event.ancestors",
+      "name": "Get an event's ancestors",
+      "summary": "The chains of parent pathways above a pathway or reaction, up to the top level.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/event/{id}/ancestors",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Stable id or dbId of a pathway or reaction.",
+          "example": "R-HSA-69620"
+        }
+      },
+      "job": "science.pathways.get",
+      "docs_url": "https://reactome.org/ContentService/",
+      "verified": {
+        "docs": "https://reactome.org/ContentService/v3/api-docs"
+      }
+    },
+    {
+      "id": "reactome.pathways.top",
+      "name": "List top-level pathways",
+      "summary": "The top-level pathway categories of a species.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/pathways/top/{species}",
+      "params": {
+        "species": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Taxonomy id or species name.",
+          "example": "9606"
+        }
+      },
+      "job": "science.pathways.search",
+      "docs_url": "https://reactome.org/ContentService/",
+      "verified": {
+        "docs": "https://reactome.org/ContentService/v3/api-docs"
+      }
+    }
+  ]
+}
