@@ -281,7 +281,22 @@ environment -- once, when the server starts:
 - unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
   with an `http(s)` URL is read with `extract`, anything else searched;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
-  installed -- any form `router=` takes on the library;
+  installed -- any form `router=` takes on the library. The built-in
+  [decision-API routers](../README.md#decision-apis-deciderrouter-routerllm-and-routersystemone),
+  `llm` and `systemone`, need a `router_config`, so build one there: a
+  `my_router.py` holding
+
+  ```python
+  from web_router.routing.decider_llm import llm_router
+
+  ROUTER = llm_router(preset="openai", model="<model>")  # or decider_systemone.systemone_router(preset="typesafe")
+  ```
+
+  and `WEB_ROUTER_MCP_ROUTER=my_router:ROUTER`. The preset's key
+  (`OPENAI_API_KEY`, `TYPESAFE_API_KEY`, ...) is read from the server's
+  environment when it starts. Each `web_run` then sends that vendor the
+  prompt, its URLs whole, the budget and the candidate ids with their
+  estimated cost and p90 latency, never a provider key;
 - `WEB_ROUTER_MCP_ROUTER=remote` asks your router service over HTTP, the
   library's built-in [`remote` router](../README.md#a-router-service-routerremote):
   `WEB_ROUTER_REMOTE_ROUTER_URL` is its URL (`https`, or `http` to
