@@ -10,6 +10,7 @@ from tests.routing_fallback_helpers import answers, aslow, outcomes, request, sl
 from web_router import AsyncWebRouter, Budget, RouteDecision, RouteRequest, RouterError, WebRouter
 from web_router.constants_fallback import FALLBACK_MARGIN_S
 from web_router.constants_invoke import ROUTER_TIMEOUT_S
+from web_router.exceptions import ConfigurationError
 from web_router.routing._runner import TimedOut
 from web_router.routing.fallback import FallbackRouter
 
@@ -18,6 +19,14 @@ def test_its_limit_is_the_sum_of_its_members_and_the_default_holds_for_one_that_
     router = FallbackRouter(routers=[answers("a", timeout_s=0.3), answers("b")])
     assert router.timeout_s == pytest.approx(0.3 + ROUTER_TIMEOUT_S + FALLBACK_MARGIN_S)
 
+
+
+@pytest.mark.parametrize("limit", [FALLBACK_MARGIN_S, 0.01])
+def test_a_time_limit_inside_its_margin_is_refused(limit: float) -> None:
+    config = {"routers": [answers("a")], "timeout_s": limit}
+    with pytest.raises(ConfigurationError, match="timeout_s must be more than its 0.02 s margin"):
+        WebRouter(router="fallback", router_config=config)
+    assert FallbackRouter(routers=[answers("a")], timeout_s=0.03).timeout_s == 0.03
 
 def test_a_member_given_more_than_the_default_gets_it() -> None:
     with WebRouter(router="fallback", router_config={"routers": [slow(0.15, timeout_s=0.5)]}) as wr:

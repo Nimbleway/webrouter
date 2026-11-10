@@ -39,3 +39,7 @@ MSG_FALLBACK_MEMBER = (
     "router='fallback': member {index} must be a registered router name, a mapping with a 'name', or a router "
     "function or object; got {kind}."
 )
+MSG_FALLBACK_TIMEOUT = (
+    "router='fallback': timeout_s must be more than its {margin} s margin, which it keeps back from every "
+    "member; got {got!r}."
+)

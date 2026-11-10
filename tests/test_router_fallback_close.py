@@ -34,7 +34,7 @@ def test_a_member_refused_at_build_closes_those_built_before_it(built: list[Clos
 
 def test_a_fallback_refused_when_attached_closes_its_members(built: list[Closable]) -> None:
     with pytest.raises(ConfigurationError, match="timeout_s"):
-        WebRouter(router="fallback", router_config={"routers": [NAME], "timeout_s": -1})
+        WebRouter(router="fallback", router_config={"routers": [NAME], "timeout_s": "soon"})
     assert built[0].closed == 1
 
 

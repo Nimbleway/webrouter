@@ -36,8 +36,14 @@ from collections.abc import Collection, Iterator, Sequence
 from dataclasses import replace
 from typing import Any, cast
 
-from web_router.constants_fallback import FALLBACK_DISPLAY_NAME, FALLBACK_MARGIN_S, ROUTER_OK
+from web_router.constants_fallback import (
+    FALLBACK_DISPLAY_NAME,
+    FALLBACK_MARGIN_S,
+    MSG_FALLBACK_TIMEOUT,
+    ROUTER_OK,
+)
 from web_router.constants_merge import ROUTER_EMPTY, ROUTER_TIMEOUT
+from web_router.exceptions import ConfigurationError
 from web_router.routing.composite import CompositeDecision, composed
 from web_router.routing.contract import RouteDecision, RouteRequest
 from web_router.routing.fallback_members import Member, aclose_members, built_members, close_members
@@ -132,9 +138,11 @@ class FallbackRouter:
                 member is asked on.
 
         Raises:
-            ConfigurationError: for ``routers`` empty or not a list, or a member that cannot be built or
-                attached; members built by then are closed.
+            ConfigurationError: for ``routers`` empty or not a list, a ``timeout_s`` not above the 20 ms margin,
+                or a member that cannot be built or attached; members built by then are closed.
         """
+        if isinstance(timeout_s, int | float) and not isinstance(timeout_s, bool) and timeout_s <= FALLBACK_MARGIN_S:
+            raise ConfigurationError(MSG_FALLBACK_TIMEOUT.format(margin=FALLBACK_MARGIN_S, got=timeout_s))
         self._members = built_members(routers)
         summed = sum(m.attached.timeout_s for m in self._members) + FALLBACK_MARGIN_S
         self.timeout_s = summed if timeout_s is None else timeout_s
