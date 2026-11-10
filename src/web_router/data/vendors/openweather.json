@@ -1,0 +1,470 @@
+{
+  "vendor": "openweather",
+  "name": "OpenWeather",
+  "category": "other",
+  "summary": "Current weather, 5-day/3-hour forecasts, One Call current/historical/daily summaries, air pollution and geocoding by coordinates.",
+  "docs_url": "https://openweathermap.org/api",
+  "pricing_url": "https://openweathermap.org/price",
+  "base_url": "https://api.openweathermap.org",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OPENWEATHER_API_KEY"
+        ],
+        "description": "An OpenWeather API key (home.openweathermap.org > API keys), sent as the appid query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "appid",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Temperatures are Kelvin unless units=metric or imperial is passed.",
+    "Every weather call takes lat/lon; resolve a place name or ZIP first with openweather.geocoding.direct or openweather.geocoding.zip (the q/id/zip lookups on the weather endpoints are deprecated).",
+    "One Call 3.0 endpoints need the separate One Call API subscription (1,000 calls/day free, then billed per call); the 2.5 endpoints work on the free plan.",
+    "Times (dt) are Unix seconds UTC; the response's timezone field is the offset in seconds."
+  ],
+  "sources": [
+    "https://openweathermap.org/api",
+    "https://openweathermap.org/current",
+    "https://openweathermap.org/forecast5",
+    "https://openweathermap.org/api/geocoding-api",
+    "https://openweathermap.org/api/air-pollution",
+    "https://openweathermap.org/api/one-call-3"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "openweather.geocoding.direct",
+      "name": "Geocode a place name",
+      "summary": "Coordinates, country and state for a city name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geo/1.0/direct",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City name, state code (US only) and ISO 3166 country code, comma-separated.",
+          "example": "London,GB"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, up to 5."
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://openweathermap.org/api/geocoding-api",
+      "verified": {
+        "docs": "https://openweathermap.org/api/geocoding-api"
+      }
+    },
+    {
+      "id": "openweather.geocoding.zip",
+      "name": "Geocode a ZIP or postal code",
+      "summary": "Coordinates and name for a postal code.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geo/1.0/zip",
+      "params": {
+        "zip": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Postal code and ISO 3166 country code, comma-separated.",
+          "example": "E14,GB"
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://openweathermap.org/api/geocoding-api",
+      "verified": {
+        "docs": "https://openweathermap.org/api/geocoding-api"
+      }
+    },
+    {
+      "id": "openweather.geocoding.reverse",
+      "name": "Reverse geocode coordinates",
+      "summary": "Place names near a latitude/longitude.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geo/1.0/reverse",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 51.5074
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -0.1278
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of names to return."
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://openweathermap.org/api/geocoding-api",
+      "verified": {
+        "docs": "https://openweathermap.org/api/geocoding-api"
+      }
+    },
+    {
+      "id": "openweather.weather.current",
+      "name": "Get current weather",
+      "summary": "Conditions, temperature, wind, clouds, visibility and sunrise/sunset now.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/2.5/weather",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 51.5074
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -0.1278
+        },
+        "units": {
+          "in": "query",
+          "type": "string",
+          "description": "standard (default: Kelvin, m/s), metric (Celsius, m/s) or imperial (Fahrenheit, mph).",
+          "enum": [
+            "standard",
+            "metric",
+            "imperial"
+          ]
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code for city names and weather descriptions."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON by default; xml or html.",
+          "enum": [
+            "xml",
+            "html"
+          ]
+        }
+      },
+      "job": "weather.current",
+      "docs_url": "https://openweathermap.org/current",
+      "verified": {
+        "docs": "https://openweathermap.org/current"
+      }
+    },
+    {
+      "id": "openweather.forecast.get",
+      "name": "Get a 5-day forecast",
+      "summary": "Forecast in 3-hour steps for 5 days, with precipitation probability.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/2.5/forecast",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 51.5074
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -0.1278
+        },
+        "units": {
+          "in": "query",
+          "type": "string",
+          "description": "standard (default: Kelvin, m/s), metric (Celsius, m/s) or imperial (Fahrenheit, mph).",
+          "enum": [
+            "standard",
+            "metric",
+            "imperial"
+          ]
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code for city names and weather descriptions."
+        },
+        "cnt": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of 3-hour timestamps to return."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON by default; xml.",
+          "enum": [
+            "xml"
+          ]
+        }
+      },
+      "job": "weather.forecast",
+      "docs_url": "https://openweathermap.org/forecast5",
+      "verified": {
+        "docs": "https://openweathermap.org/forecast5"
+      }
+    },
+    {
+      "id": "openweather.air_pollution.current",
+      "name": "Get current air pollution",
+      "summary": "AQI (1 good to 5 very poor) and pollutant concentrations in µg/m³.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/2.5/air_pollution",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 51.5074
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -0.1278
+        }
+      },
+      "job": "weather.air_quality",
+      "docs_url": "https://openweathermap.org/api/air-pollution",
+      "verified": {
+        "docs": "https://openweathermap.org/api/air-pollution"
+      }
+    },
+    {
+      "id": "openweather.air_pollution.history",
+      "name": "Get historical air pollution",
+      "summary": "Hourly AQI and pollutants between two Unix times.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/2.5/air_pollution/history",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 51.5074
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -0.1278
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Start, Unix seconds UTC."
+        },
+        "end": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "End, Unix seconds UTC."
+        }
+      },
+      "job": "weather.air_quality",
+      "docs_url": "https://openweathermap.org/api/air-pollution",
+      "verified": {
+        "docs": "https://openweathermap.org/api/air-pollution"
+      }
+    },
+    {
+      "id": "openweather.onecall.get",
+      "name": "Get current weather and forecasts (One Call)",
+      "summary": "Current, minutely (1 h), hourly (48 h) and daily (8 days) weather plus government alerts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/3.0/onecall",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 51.5074
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -0.1278
+        },
+        "exclude": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated parts to drop, no spaces: current, minutely, hourly, daily, alerts."
+        },
+        "units": {
+          "in": "query",
+          "type": "string",
+          "description": "standard (default: Kelvin, m/s), metric (Celsius, m/s) or imperial (Fahrenheit, mph).",
+          "enum": [
+            "standard",
+            "metric",
+            "imperial"
+          ]
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code for city names and weather descriptions."
+        }
+      },
+      "notes": [
+        "Needs the One Call API subscription."
+      ],
+      "job": "weather.forecast",
+      "docs_url": "https://openweathermap.org/api/one-call-3",
+      "verified": {
+        "docs": "https://openweathermap.org/api/one-call-3"
+      }
+    },
+    {
+      "id": "openweather.onecall.timemachine",
+      "name": "Get weather at a past or future time",
+      "summary": "Weather for one timestamp from 1979-01-01 up to 4 days ahead.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/3.0/onecall/timemachine",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 51.5074
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -0.1278
+        },
+        "dt": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Unix seconds UTC."
+        },
+        "units": {
+          "in": "query",
+          "type": "string",
+          "description": "standard (default: Kelvin, m/s), metric (Celsius, m/s) or imperial (Fahrenheit, mph).",
+          "enum": [
+            "standard",
+            "metric",
+            "imperial"
+          ]
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code for city names and weather descriptions."
+        }
+      },
+      "notes": [
+        "Needs the One Call API subscription."
+      ],
+      "job": "weather.history",
+      "docs_url": "https://openweathermap.org/api/one-call-3",
+      "verified": {
+        "docs": "https://openweathermap.org/api/one-call-3"
+      }
+    },
+    {
+      "id": "openweather.onecall.day_summary",
+      "name": "Get a daily weather summary",
+      "summary": "Aggregated weather for one date, 1979-01-02 to 1.5 years ahead.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/3.0/onecall/day_summary",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 51.5074
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -0.1278
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DD.",
+          "example": "2024-03-04"
+        },
+        "tz": {
+          "in": "query",
+          "type": "string",
+          "description": "Timezone as ±XX:XX, when the detected one is wrong."
+        },
+        "units": {
+          "in": "query",
+          "type": "string",
+          "description": "standard (default: Kelvin, m/s), metric (Celsius, m/s) or imperial (Fahrenheit, mph).",
+          "enum": [
+            "standard",
+            "metric",
+            "imperial"
+          ]
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code for city names and weather descriptions."
+        }
+      },
+      "notes": [
+        "Needs the One Call API subscription."
+      ],
+      "job": "weather.history",
+      "docs_url": "https://openweathermap.org/api/one-call-3",
+      "verified": {
+        "docs": "https://openweathermap.org/api/one-call-3"
+      }
+    }
+  ]
+}
