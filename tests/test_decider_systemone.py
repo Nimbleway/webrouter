@@ -12,11 +12,6 @@ from web_router.routing.invoke import AttachedRouter
 
 PRESETS = {
     "typesafe": ("https://api.typesafe.ai/v1/systemone", "jev-1.14.0", "TYPESAFE_API_KEY"),
-    "fireworks": (
-        "https://api.fireworks.ai/inference/v1/systemone",
-        "accounts/fireworks/models/rune",
-        "FIREWORKS_API_KEY",
-    ),
 }
 
 
@@ -82,7 +77,6 @@ def test_a_bad_setup_is_refused_when_the_router_is_built(
     config: dict[str, str], message: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
-    monkeypatch.setenv("FIREWORKS_API_KEY", TOKEN)
     with pytest.raises(ConfigurationError, match=message) as caught:
         systemone_router(**config)
     assert TOKEN not in str(caught.value)
@@ -90,14 +84,14 @@ def test_a_bad_setup_is_refused_when_the_router_is_built(
 
 def test_a_key_the_decider_does_not_take_is_refused_by_the_decider() -> None:
     with pytest.raises(TypeError, match="bogus"):
-        systemone_router(preset="fireworks", bogus=1)
+        systemone_router(preset="typesafe", bogus=1)
 
 
 def test_by_name_it_orders_every_tool_but_search_unless_told(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FIREWORKS_API_KEY", TOKEN)
-    with WebRouter(router="systemone", router_config={"preset": "fireworks"}) as client:
+    monkeypatch.setenv("TYPESAFE_API_KEY", TOKEN)
+    with WebRouter(router="systemone", router_config={"preset": "typesafe"}) as client:
         assert client._route_tools == {"answer", "extract", "research", "browse"}
-    config = {"preset": "fireworks", "route_tools": ("search",)}
+    config = {"preset": "typesafe", "route_tools": ("search",)}
     with WebRouter(router="systemone", router_config=config) as client:
         assert client._route_tools == {"search"}
 

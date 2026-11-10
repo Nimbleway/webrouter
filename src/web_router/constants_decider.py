@@ -71,12 +71,6 @@ preset asks in the prompt only, which any server reads."""
 SYSTEMONE_DEFAULT_PATH = "/v1/systemone"
 SYSTEMONE_PRESETS: dict[str, tuple[str, str, str, str]] = {
     "typesafe": ("https://api.typesafe.ai", SYSTEMONE_DEFAULT_PATH, "jev-1.14.0", "TYPESAFE_API_KEY"),
-    "fireworks": (
-        "https://api.fireworks.ai",
-        "/inference/v1/systemone",
-        "accounts/fireworks/models/rune",
-        "FIREWORKS_API_KEY",
-    ),
 }
 """``systemone`` preset -> (base URL, path, pinned model, key variable)."""
 
@@ -87,7 +81,6 @@ KEY_HOMES: dict[str, str] = {
     "OPENROUTER_API_KEY": "openrouter.ai",
     "GROQ_API_KEY": "api.groq.com",
     "TYPESAFE_API_KEY": "api.typesafe.ai",
-    "FIREWORKS_API_KEY": "api.fireworks.ai",
 }
 """A preset's key variable -> the one host it is sent to: a vendor's key never goes to another server."""
 

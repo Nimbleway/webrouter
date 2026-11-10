@@ -2,15 +2,14 @@
 
 Experimental. Opt in by name::
 
-    WebRouter(router="systemone", router_config={"preset": "fireworks"})
+    WebRouter(router="systemone", router_config={"preset": "typesafe"})
 
 System One answers typed questions about a state. Each routed call asks one
 ``choice`` question whose criteria are the options -- each id with its
 method, backend, estimated cost and p90 latency -- about the prompt, and reads
 back a probability per option and a confidence. The probabilities are the
 scores and rank the options, highest first; the API's own ``choice`` is not
-used. Presets: ``typesafe`` (TypeSafe's Jev, ``TYPESAFE_API_KEY``) and
-``fireworks`` (Fireworks' Rune, ``FIREWORKS_API_KEY``), each with its model
+used. Preset: ``typesafe`` (TypeSafe's Jev, ``TYPESAFE_API_KEY``), its model
 pinned, so a new release changes nothing until you change ``model``. Another
 server takes ``base_url``, ``path``, ``model`` and ``api_key_env``.
 """

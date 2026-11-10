@@ -2321,19 +2321,18 @@ each sends the prompt off your machine only when you name it.
 
 - **`router="systemone"`**: a System One decision API, asked one `choice`
   question per call; its probability per option is the score, and ranks them.
-  Presets: `typesafe` (TypeSafe's Jev, model `jev-1.14.0`,
-  `TYPESAFE_API_KEY`) and `fireworks` (Fireworks' Rune, model
-  `accounts/fireworks/models/rune`, `FIREWORKS_API_KEY`), each pinned so a new
+  Preset: `typesafe` (TypeSafe's Jev, model `jev-1.14.0`,
+  `TYPESAFE_API_KEY`), pinned so a new
   release changes nothing until you pass `model`; another server takes `base_url`, `path`, `model` and `api_key_env`. `timeout_s` is
   1 s, and `route_tools` every tool but search, unless set.
 
   ```python
-  WebRouter(router="systemone", router_config={"preset": "fireworks"})
+  WebRouter(router="systemone", router_config={"preset": "typesafe"})
   ```
 
 Each preset's key comes from that vendor's variable (`OPENAI_API_KEY`,
 `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`,
-`OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `FIREWORKS_API_KEY`), read once
+`OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`), read once
 when the router is built, and is sent only to that vendor's host: naming one
 for another `base_url` raises `ConfigurationError`, as does a key that is
 missing. Each call sends the server the prompt -- for an extract, its URLs

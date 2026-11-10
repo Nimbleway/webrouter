@@ -190,7 +190,7 @@ src/web_router/
 │   ├── decider_http.py the built-in deciders' endpoint, key and one JSON POST, on the remote rules
 │   ├── decider_llm.py  router="llm": any OpenAI-compatible chat API, by preset or base_url
 │   ├── decider_llm_prompt.py what it sends a model: the options as text, the strict schema, scores
-│   ├── decider_systemone.py router="systemone": a System One API, typesafe or fireworks
+│   ├── decider_systemone.py router="systemone": a System One API, typesafe preset
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
@@ -1392,7 +1392,7 @@ ever touches either. `benchmarks/agent/` reads both too, for its agents —
 OpenAI tools never read either key, because they are
 definitions the caller's own client sends. The built-in `llm` and `systemone` routers read a key only
 when a caller names them: a preset's variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`,
-`GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `FIREWORKS_API_KEY`), or the one `api_key_env`
+`GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`), or the one `api_key_env`
 names, once, when the router is built; `KEY_HOMES` in `constants_decider.py` sends each preset variable
 only to its vendor's host. `.env` is gitignored — keep it that way. `TEMPLATE_ENV_BY_PROVIDER` is the
 template method's table, and names Nimble's key again: one key, four classes.
