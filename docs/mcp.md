@@ -281,7 +281,9 @@ environment -- once, when the server starts:
 - unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
   with an `http(s)` URL is read with `extract`, anything else searched;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
-  installed -- any form `router=` takes on the library;
+  installed -- any form `router=` takes on the library. It is imported before
+  any `.env` file loads, so code that runs at import sees only the server's own
+  process environment;
 - `WEB_ROUTER_MCP_ROUTER=remote` asks your router service over HTTP, the
   library's built-in [`remote` router](../README.md#a-router-service-routerremote):
   `WEB_ROUTER_REMOTE_ROUTER_URL` is its URL (`https`, or `http` to
