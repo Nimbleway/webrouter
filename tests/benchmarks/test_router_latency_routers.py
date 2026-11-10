@@ -71,3 +71,11 @@ def test_the_llm_estimate_counts_the_schema_only_for_a_preset_that_sends_it(late
     routers = module("router_latency_routers")
     strict, json_mode = routers.llm_tokens(req(), "openai"), routers.llm_tokens(req(), "deepseek")
     assert strict[0] > json_mode[0] and strict[1] == json_mode[1]
+
+
+def test_a_mistyped_llm_preset_is_refused_before_the_dry_run_plans_it(
+    latency: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("LLM_ROUTER_PRESET", "opneai")
+    with pytest.raises(SystemExit, match="LLM_ROUTER_PRESET='opneai'"):
+        module("router_latency_routers").router_spec("llm", llm_model="m")
