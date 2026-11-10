@@ -2456,6 +2456,16 @@ make test-browser
   [skills/web-router/SKILL.md](skills/web-router/SKILL.md), the same contract
   packaged as an agent skill
 
+## Community
+
+- [Discord](https://discord.gg/MGztFWSjZh). Best for: questions in #help, chatting with other
+  builders and the maintainers, and showing what you built in #showcase.
+- [GitHub Issues](https://github.com/Nimbleway/webrouter/issues). Best for: bugs
+  and gaps in a provider's support.
+- [GitHub Discussions](https://github.com/Nimbleway/webrouter/discussions). Best
+  for: proposals and design ideas.
+- [SECURITY.md](SECURITY.md). Best for: vulnerabilities. Never in a public channel.
+
 ## License
 
 WebRouter is licensed under the [Apache License 2.0](LICENSE).

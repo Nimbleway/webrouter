@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Report a security vulnerability
+  - name: 🔒 Report a security vulnerability
     url: https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md
     about: Please do not open a public issue for security problems; follow SECURITY.md instead.
-  - name: Ask a question
+  - name: 💬 Ask on Discord
     url: https://discord.gg/MGztFWSjZh
-    about: Questions and chat go to the WebRouter Discord, in #help.
-  - name: Propose an idea
+    about: Get help, ask questions and chat with other WebRouter users and the maintainers, in #help.
+  - name: 💡 Propose an idea
     url: https://github.com/Nimbleway/webrouter/discussions
     about: Proposals and design ideas that are not bug reports go to Discussions.
