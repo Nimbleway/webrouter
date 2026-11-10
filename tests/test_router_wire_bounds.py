@@ -33,12 +33,21 @@ def test_the_response_schema_caps_a_list_or_mapping_inside_a_methods_options() -
     assert option == {"maxItems": WIRE_MAX_NAMES, "maxProperties": WIRE_MAX_NAMES}, "untyped: any JSON, capped"
 
 
-def test_every_name_a_decision_sets_is_cut_short() -> None:
+def test_every_overlong_name_a_decision_sets_is_dropped() -> None:
     long = "search:" + "x" * 20_000
-    wire = {"schema": 1, "exclude": {long: "why"}, "providers": {"search": [long]}, "params": {"search": {long: 1}}}
+    wire = {
+        "schema": 1,
+        "exclude": {long: "why"},
+        "providers": {"search": [long, "exa"]},
+        "params": {"search": {long: 1}},
+    }
     decision = decision_from_wire(wire)
-    assert decision.providers is not None and decision.params is not None
-    names = [*decision.exclude, *decision.providers["search"], *decision.params["search"]]
-    assert len(names) == 3 and all(name == long[:WIRE_MAX_NAME] + "\u2026" for name in names)
-    exact = "search:" + "y" * (WIRE_MAX_NAME - 7)
-    assert decision_from_wire({"schema": 1, "exclude": {exact + "z": "why"}}).exclude != {exact: "why"}, "no match"
+    assert decision.exclude == {} and decision.providers == {"search": ["exa"]} and decision.params == {"search": {}}
+
+
+def test_an_overlong_name_never_spells_its_shortened_form() -> None:
+    prefix = "search:" + "y" * (WIRE_MAX_NAME - 7)
+    overlong = {"schema": 1, "exclude": {prefix + "zzz": "why"}, "providers": {"search": [prefix + "zzz"]}}
+    decision = decision_from_wire(overlong)
+    assert decision.exclude == {} and decision.providers == {"search": []}, "no prefix + '\u2026' to match"
+    assert decision_from_wire({"schema": 1, "exclude": {prefix: "why"}}).exclude == {prefix: "why"}, "at the limit"

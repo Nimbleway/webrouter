@@ -75,9 +75,8 @@ WIRE_MAX_TEXT = 300
 """Characters kept of a decision's ``reason`` and of each ``exclude`` reason; the rest is cut."""
 
 WIRE_MAX_NAME = 128
-"""Characters kept of each name a decision sets -- candidate id, provider, option -- since a record may show it."""
-WIRE_CUT_MARK = "\u2026"
-"""What follows a name cut short, so the cut name matches no real name."""
+"""The longest name a decision may set -- candidate id, provider, option -- since a record may show it; a longer
+one is dropped, not shortened, so it can never spell a real name."""
 
 WIRE_MAX_NAMES = 64
 """The most entries a decision may hold in one list or mapping: ``tools``, one method's ``providers``,
