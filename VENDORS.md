@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-249 vendors, 2113 endpoints.
+253 vendors, 2144 endpoints.
 
 ### advertising
 
@@ -316,10 +316,14 @@ The tables below are generated from `src/web_router/data/vendors/` by
 |---|---|---|---|---|---|
 | [Black Forest Labs (FLUX)](https://docs.bfl.ml/quick_start/introduction) `blackforestlabs` | FLUX image generation and editing (FLUX.2 [pro]/[max], FLUX1.1 [pro]) from Black Forest Labs' own API. | 5 read | key in header | `BFL_API_KEY` | docs 2026-11-09 |
 | [Creatify](https://docs.creatify.ai/introduction) `creatify` | AI video ads from a product link: scrape a URL, generate avatar-led short videos, and list avatars and voices. | 6 read | key in header | `CREATIFY_API_ID`, `CREATIFY_API_KEY` | docs 2026-11-09 |
+| [DansUGC](https://dansugc.com/docs) `dansugc` | A marketplace of real-creator UGC videos: search and license the B-roll library, browse creator video formats, and track custom video orders. | 6 read, 1 write | key in header | `DANSUGC_API_KEY` | docs 2026-11-08 |
+| [ElevenLabs](https://elevenlabs.io/docs/api-reference/introduction) `elevenlabs` | Text to speech, sound effects and music generation, plus voice search, models and usage, from ElevenLabs. | 7 read | key in header | `ELEVENLABS_API_KEY` | docs 2026-11-09 |
 | [fal.ai](https://fal.ai/docs/api-reference/inference-api/index) `fal` | Hosted image, video, audio and 3D generation models run through fal's queue API, plus model search, pricing and usage. | 5 read | key in header | `FAL_KEY` | docs 2026-11-09 |
 | [Fish Audio](https://docs.fish.audio/api-reference/introduction) `fishaudio` | Text-to-speech, voice design and voice-model management from Fish Audio. | 6 read, 1 write | key in header | `FISH_API_KEY` | docs 2026-11-08 |
+| [HeyGen](https://developers.heygen.com/docs/quick-start) `heygen` | AI avatar videos: prompt-to-video with Video Agent, avatar videos from a script, and the avatars, voices and videos in an account. | 8 read | key in header | `HEYGEN_API_KEY` | docs 2026-11-09 |
 | [Higgsfield](https://docs.higgsfield.ai/docs) `higgsfield` | Image and video generation (SOUL, Kling, Seedance, Wan and more) through one asynchronous request API. | 4 read, 2 write | key in header | `HF_API_KEY_ID`, `HF_API_KEY_SECRET` | docs 2026-11-09 |
 | [Ideogram](https://developer.ideogram.ai/v2/ideogram-api/api-overview) `ideogram` | Text-to-image with strong typography (Ideogram 4.5), prompt enhancement, and hosted video models. | 5 read | key in header | `IDEOGRAM_API_KEY` | docs 2026-11-09 |
+| [MiniMax](https://platform.minimax.io/docs/api-reference/api-overview) `minimax` | MiniMax speech, video (H3), image, music and chat models through the MiniMax API Platform. | 9 read | key in header | `MINIMAX_API_KEY` | docs 2026-11-08 |
 | [Phota Labs](https://docs.photalabs.com/) `photalabs` | Identity-preserving photo generation, editing, enhancement and restyling from trained person profiles (Phota API). | 6 read, 1 write | key in header | `PHOTALABS_API_KEY` | docs 2026-11-09 |
 | [Recraft](https://www.recraft.ai/docs/api-reference/introduction) `recraft` | Raster and SVG vector image generation, editing, vectorizing, background removal and upscaling. | 7 read | key in header | `RECRAFT_API_TOKEN` | docs 2026-11-09 |
 | [Replicate](https://replicate.com/docs/reference/http) `replicate` | Run open-source and official image, video, audio and language models as asynchronous predictions. | 8 read, 1 write | key in header | `REPLICATE_API_TOKEN` | docs 2026-11-08 |

@@ -1,0 +1,394 @@
+{
+  "vendor": "dansugc",
+  "name": "DansUGC",
+  "category": "media-generation",
+  "summary": "A marketplace of real-creator UGC videos: search and license the B-roll library, browse creator video formats, and track custom video orders.",
+  "docs_url": "https://dansugc.com/docs",
+  "pricing_url": "https://dansugc.com/pricing",
+  "base_url": "https://dansugc.com/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DANSUGC_API_KEY"
+        ],
+        "description": "a DansUGC API key, prefixed dsk_ (dansugc.com/dashboard/api-keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limit is 60 requests a minute per key.",
+    "Every key can use the B-roll endpoints with the account's credits; orders, formats and creators need a Scale plan (other plans answer 403 subscription_required).",
+    "Each key carries scopes (broll:read, broll:purchase, orders:read, ...); a call outside the key's scopes is refused.",
+    "Filter values are case-sensitive: read them from broll.filters first."
+  ],
+  "sources": [
+    "https://dansugc.com/docs",
+    "https://dansugc.com/api/openapi.json",
+    "https://dansugc.com/llms.txt"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "dansugc.broll.list",
+      "name": "Search the B-roll library",
+      "summary": "B-roll clips by text or semantic search and attribute filters, with watermarked previews.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/broll",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Per page; default 24, at most 100."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text query. Not with semantic_search."
+        },
+        "semantic_search": {
+          "in": "query",
+          "type": "string",
+          "description": "Natural-language query, e.g. 'happy woman indoor'. Not with search."
+        },
+        "emotion": {
+          "in": "query",
+          "type": "string",
+          "description": "Lowercase emotion, e.g. happy, shocked."
+        },
+        "gender": {
+          "in": "query",
+          "type": "string",
+          "description": "Gender.",
+          "enum": [
+            "male",
+            "female",
+            "other"
+          ]
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Capitalised, e.g. Indoor, Car, Kitchen."
+        },
+        "age_range": {
+          "in": "query",
+          "type": "string",
+          "description": "Age range.",
+          "enum": [
+            "18-24",
+            "25-34",
+            "35-44",
+            "45-54"
+          ]
+        },
+        "hair_color": {
+          "in": "query",
+          "type": "string",
+          "description": "Capitalised, e.g. Brown, Blonde."
+        },
+        "outfit": {
+          "in": "query",
+          "type": "string",
+          "description": "Outfit type, e.g. casual."
+        },
+        "model_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Creator id."
+        },
+        "min_virality": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum virality score, 0 to 100."
+        },
+        "difficulty": {
+          "in": "query",
+          "type": "integer",
+          "description": "Exact difficulty level: 0 free, 1-4 video tiers, 11 images."
+        },
+        "min_difficulty": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum difficulty."
+        },
+        "max_difficulty": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum difficulty."
+        },
+        "featured": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only featured."
+        },
+        "is_daily_drop": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only daily drops."
+        },
+        "media_type": {
+          "in": "query",
+          "type": "string",
+          "description": "video or image.",
+          "enum": [
+            "video",
+            "image"
+          ]
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "created_at",
+            "virality_score",
+            "download_count",
+            "difficulty_level"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "asc or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://dansugc.com/api/openapi.json",
+      "verified": {
+        "docs": "https://dansugc.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "dansugc.broll.get",
+      "name": "Get one B-roll clip",
+      "summary": "Details, preview URLs and price of a clip.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/broll/{videoId}",
+      "params": {
+        "videoId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "B-roll video UUID."
+        }
+      },
+      "job": "media.stock.get",
+      "docs_url": "https://dansugc.com/api/openapi.json",
+      "verified": {
+        "docs": "https://dansugc.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "dansugc.broll.filters",
+      "name": "List B-roll filter values",
+      "summary": "Every value each B-roll filter accepts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/broll/filters",
+      "notes": [
+        "The authoritative vocabulary: matching is exact and case-sensitive."
+      ],
+      "job": "media.stock.filters",
+      "docs_url": "https://dansugc.com/api/openapi.json",
+      "verified": {
+        "docs": "https://dansugc.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "dansugc.formats.list",
+      "name": "List video formats",
+      "summary": "Curated viral formats usable in custom orders, with their price level.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/formats",
+      "params": {
+        "niche": {
+          "in": "query",
+          "type": "string",
+          "description": "e.g. beauty, fitness."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "e.g. viral, couples."
+        },
+        "difficulty": {
+          "in": "query",
+          "type": "integer",
+          "description": "Exact level."
+        },
+        "min_difficulty": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum level."
+        },
+        "max_difficulty": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum level."
+        },
+        "featured": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only featured."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default 100, at most 500."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pagination offset."
+        }
+      },
+      "notes": [
+        "Needs the orders:read scope and a Scale plan. Levels 1 to 6 set the price per video."
+      ],
+      "job": "media.formats.list",
+      "docs_url": "https://dansugc.com/api/openapi.json",
+      "verified": {
+        "docs": "https://dansugc.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "dansugc.orders.list",
+      "name": "List custom orders",
+      "summary": "Orders created with this API key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/orders",
+      "params": {
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Order status.",
+          "enum": [
+            "pending_payment",
+            "processing",
+            "in_progress",
+            "delivered",
+            "canceled"
+          ]
+        },
+        "created_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Only orders created after this time."
+        },
+        "created_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Only orders created before this time."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        }
+      },
+      "notes": [
+        "Needs the orders:read scope and a Scale plan."
+      ],
+      "job": "media.orders.list",
+      "docs_url": "https://dansugc.com/api/openapi.json",
+      "verified": {
+        "docs": "https://dansugc.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "dansugc.orders.get",
+      "name": "Get one order",
+      "summary": "Status and details of a custom order.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/orders/{orderId}",
+      "params": {
+        "orderId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Order UUID."
+        }
+      },
+      "notes": [
+        "Needs the orders:read scope and a Scale plan."
+      ],
+      "job": "media.orders.get",
+      "docs_url": "https://dansugc.com/api/openapi.json",
+      "verified": {
+        "docs": "https://dansugc.com/api/openapi.json"
+      }
+    },
+    {
+      "id": "dansugc.broll.purchase",
+      "name": "Buy B-roll clips",
+      "summary": "Licenses one or more clips with your account's credits and returns download URLs.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/broll/purchase",
+      "params": {
+        "video_ids": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Video ids to buy, at most 50."
+        },
+        "expected_total_cents": {
+          "in": "body",
+          "type": "integer",
+          "description": "The confirmed total in hundredths of a credit (1100 = one 11-credit clip). Leave out first: the 409 answer gives the exact total and charges nothing."
+        },
+        "customer_email": {
+          "in": "body",
+          "type": "string",
+          "description": "Optional customer email for purchase tracking."
+        },
+        "idempotency_key": {
+          "in": "body",
+          "type": "string",
+          "description": "Unique per intended purchase; reuse only to retry that same purchase."
+        },
+        "Idempotency-Key": {
+          "in": "header",
+          "type": "string",
+          "description": "Same as idempotency_key; wins when both are sent."
+        }
+      },
+      "notes": [
+        "Spends credits. Two steps: call without expected_total_cents, get a 409 with expectedTotalCents (nothing charged), then call again with that value. Clips already owned come back under already_purchased and are not charged.",
+        "Needs the broll:purchase scope."
+      ],
+      "job": "media.stock.purchase",
+      "docs_url": "https://dansugc.com/api/openapi.json",
+      "verified": {
+        "docs": "https://dansugc.com/api/openapi.json"
+      }
+    }
+  ]
+}
