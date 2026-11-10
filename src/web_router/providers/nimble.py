@@ -492,7 +492,7 @@ def _citations(trust: dict[str, Any], sources: list[dict[str, Any]]) -> list[Cit
     cited_urls = {citation.url for citation in citations}
     for source in [*(trust.get("sources") or []), *sources]:
         url = source.get("url") or ""
-        if url in cited_urls:
+        if not url or url in cited_urls:  # a source with no URL names nothing a reader could open
             continue
         cited_urls.add(url)
         citations.append(Citation(url=url, title=source.get("title") or "", extra=_unmapped(source)))
