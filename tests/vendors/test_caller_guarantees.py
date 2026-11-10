@@ -121,9 +121,9 @@ def test_a_secret_echoed_in_a_successful_answer_is_masked(catalog: VendorCatalog
     assert response.headers["x-echo"] == "***"
 
 
-def test_a_short_secret_is_masked_whole_but_not_inside_other_words() -> None:
+def test_a_short_secret_is_masked_as_a_word_but_not_inside_other_words() -> None:
     answer = {"login": "user", "field": "username", "list": ["user", "a user here"]}
-    assert mask_answer(answer, ["user"]) == {"login": "***", "field": "username", "list": ["***", "a user here"]}
+    assert mask_answer(answer, ["user"]) == {"login": "***", "field": "username", "list": ["***", "a *** here"]}
     assert mask("rejected key ab1 for this call", ["ab1"]) == "rejected key *** for this call"
 
 
