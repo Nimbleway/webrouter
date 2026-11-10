@@ -17,7 +17,7 @@
   <a href="https://discord.gg/MGztFWSjZh"><img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord"></a>
 </p>
 
-Every web tool your agent needs, behind one interface: search, extract, answer, research and browser sessions. Hand it a task in words and a [router](#smart-routing-experimental) picks the right tool for it. Call any tool directly and the same call works on every provider, with fallback and no lock-in.
+Every web tool your agent needs, behind one interface: search, extract, answer, research and browser sessions. Hand it a task in words and a [router](#smart-routing-experimental) can pick the tool for it. Call any tool directly and the same call works on every provider that serves it, with fallback and no lock-in.
 
 ```bash
 pip install "webrouter[all]"
