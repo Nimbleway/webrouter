@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-164 vendors, 1556 endpoints.
+168 vendors, 1587 endpoints.
 
 ### advertising
 
@@ -228,7 +228,11 @@ The tables below are generated from `src/web_router/data/vendors/` by
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [Exa](https://exa.ai/docs/reference/getting-started) `exa` | Neural web search, page contents, cited answers, Agent runs and Websets from Exa. | 9 read, 3 write | key in header | `EXA_API_KEY` | docs 2026-11-08 |
 | [Litescrape](https://litescrape.com/docs) `litescrape` | Low-cost SERP and web-data API: Google, Bing, DuckDuckGo, maps, app stores, review sites and page fetch. | 37 read | key in header | `LITESCRAPE_API_KEY` | docs 2026-11-08 |
+| [Querit](https://www.querit.ai/en/docs/overview/about) `querit` | Web search API for AI agents, with highlights, optional full page text and code and finance verticals. | 1 read | key in header | `QUERIT_API_KEY` | docs 2026-11-09 |
+| [Semantic Scholar](https://api.semanticscholar.org/api-docs/graph) `semanticscholar` | Academic Graph API from Ai2: paper and author search, paper details, citations, references and full-text snippet search. | 10 read | key in header | `SEMANTIC_SCHOLAR_API_KEY` | docs 2026-11-09 |
+| [SerpApi](https://serpapi.com/search-api) `serpapi` | Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches. | 8 read | key in query | `SERPAPI_API_KEY` | docs 2026-11-08 |
 
 ### developer
 
