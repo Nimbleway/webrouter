@@ -1,0 +1,490 @@
+{
+  "vendor": "majestic",
+  "name": "Majestic",
+  "category": "seo",
+  "summary": "Majestic link intelligence: Trust Flow, Citation Flow, backlinks, referring domains, anchors and top pages.",
+  "docs_url": "https://developer-support.majestic.com/api/",
+  "base_url": "https://api.majestic.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MAJESTIC_API_KEY"
+        ],
+        "description": "a Majestic API key (enable it from the API tab on majestic.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "app_api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every command is a GET to /api/json with cmd naming the command; /api/xml answers XML instead. Majestic itself advises POST over GET for production use.",
+    "Costs are in three allowances: Analysis units, Retrieval units (one per row returned) and Index Item units (GetIndexItemInfo only). Each endpoint note says what it spends.",
+    "Set datasource to fresh or historic. The developer sandbox host (developer.majestic.com) returns a reduced dataset at no charge, but this entry targets the live host.",
+    "Responses carry Code and ErrorMessage fields; check them as well as the HTTP status."
+  ],
+  "sources": [
+    "https://developer-support.majestic.com/api/",
+    "https://developer-support.majestic.com/api/commands/get-subscription-info.shtml",
+    "https://developer-support.majestic.com/api/commands/get-index-item-info.shtml",
+    "https://developer-support.majestic.com/api/commands/get-back-link-data.shtml",
+    "https://developer-support.majestic.com/api/commands/get-ref-domains.shtml",
+    "https://developer-support.majestic.com/api/commands/get-anchor-text.shtml",
+    "https://developer-support.majestic.com/api/commands/get-top-pages.shtml"
+  ],
+  "endpoints": [
+    {
+      "id": "majestic.account.subscription_info",
+      "name": "Get subscription info",
+      "summary": "Your subscriptions with remaining Analysis, Retrieval and Index Item units, plan names and index details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/json",
+      "params": {
+        "cmd": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The command name. Always GetSubscriptionInfo for this call.",
+          "example": "GetSubscriptionInfo",
+          "enum": [
+            "GetSubscriptionInfo"
+          ]
+        },
+        "datasource": {
+          "in": "query",
+          "type": "string",
+          "description": "Index to query: historic (default when your plan includes it) or fresh. Majestic advises always setting it.",
+          "enum": [
+            "fresh",
+            "historic"
+          ]
+        }
+      },
+      "notes": [
+        "Uses no units. Check this before large pulls."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://developer-support.majestic.com/api/commands/get-subscription-info.shtml",
+      "verified": {
+        "docs": "https://developer-support.majestic.com/api/commands/get-subscription-info.shtml"
+      }
+    },
+    {
+      "id": "majestic.index.item_info",
+      "name": "Index item info",
+      "summary": "Trust Flow, Citation Flow, backlink and referring-domain counts and topics for up to 100 domains, subdomains or URLs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/json",
+      "params": {
+        "cmd": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The command name. Always GetIndexItemInfo for this call.",
+          "example": "GetIndexItemInfo",
+          "enum": [
+            "GetIndexItemInfo"
+          ]
+        },
+        "datasource": {
+          "in": "query",
+          "type": "string",
+          "description": "Index to query: historic (default when your plan includes it) or fresh. Majestic advises always setting it.",
+          "enum": [
+            "fresh",
+            "historic"
+          ]
+        },
+        "items": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "How many item0..itemN parameters this call carries, 1 to 100. Items past item0 need a raw call.",
+          "example": 1
+        },
+        "item0": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A root domain, subdomain or exact URL.",
+          "example": "majestic.com"
+        },
+        "DesiredTopics": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of Trust Flow topics returned (default 3; at most 30 for domains, 20 for subdomains, 10 for URLs)."
+        },
+        "AddAllTopics": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 adds a TrustCategories column with the topic split.",
+          "example": 1
+        },
+        "EnableResourceUnitFailover": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 spends Analysis and Retrieval units once Index Item units run out (500 Analysis units per call plus 50 per item, and 1 Retrieval unit per item). Default 0."
+        }
+      },
+      "notes": [
+        "Spends one Index Item unit per item queried.",
+        "URLs with very few external backlinks may return estimates, flagged by Status MayExist."
+      ],
+      "job": "domain.overview",
+      "docs_url": "https://developer-support.majestic.com/api/commands/get-index-item-info.shtml",
+      "verified": {
+        "docs": "https://developer-support.majestic.com/api/commands/get-index-item-info.shtml"
+      }
+    },
+    {
+      "id": "majestic.backlinks.list",
+      "name": "Get backlink data",
+      "summary": "Backlinks to a domain, subdomain or URL with source, target, anchor, flags and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/json",
+      "params": {
+        "cmd": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The command name. Always GetBackLinkData for this call.",
+          "example": "GetBackLinkData",
+          "enum": [
+            "GetBackLinkData"
+          ]
+        },
+        "datasource": {
+          "in": "query",
+          "type": "string",
+          "description": "Index to query: historic (default when your plan includes it) or fresh. Majestic advises always setting it.",
+          "enum": [
+            "fresh",
+            "historic"
+          ]
+        },
+        "item": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The URL, domain or subdomain to return backlinks for.",
+          "example": "majestic.com"
+        },
+        "Count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of backlinks to return. Default 100, maximum 50000.",
+          "example": 100
+        },
+        "From": {
+          "in": "query",
+          "type": "integer",
+          "description": "Result position to start from (0 is the first); use it to page.",
+          "example": 0
+        },
+        "Mode": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 (default) returns top links including deleted ones; 1 removes deleted links.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "ShowDomainInfo": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 adds a data table about the referring domains. Default 0.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "MaxSourceURLsPerRefDomain": {
+          "in": "query",
+          "type": "integer",
+          "description": "-1 (default), 1, 3 or 10: cap on source URLs taken from any one referring domain.",
+          "enum": [
+            -1,
+            1,
+            3,
+            10
+          ]
+        }
+      },
+      "notes": [
+        "Costs 5000 Analysis units per call (more when sorting or filtering), plus one Retrieval unit per row returned.",
+        "Does not return links flagged as alt text."
+      ],
+      "job": "backlinks.list",
+      "docs_url": "https://developer-support.majestic.com/api/commands/get-back-link-data.shtml",
+      "verified": {
+        "docs": "https://developer-support.majestic.com/api/commands/get-back-link-data.shtml"
+      }
+    },
+    {
+      "id": "majestic.backlinks.refdomains",
+      "name": "Get referring domains",
+      "summary": "Referring domains for a domain, subdomain or URL with Trust Flow, Citation Flow, link counts and crawl dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/json",
+      "params": {
+        "cmd": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The command name. Always GetRefDomains for this call.",
+          "example": "GetRefDomains",
+          "enum": [
+            "GetRefDomains"
+          ]
+        },
+        "datasource": {
+          "in": "query",
+          "type": "string",
+          "description": "Index to query: historic (default when your plan includes it) or fresh. Majestic advises always setting it.",
+          "enum": [
+            "fresh",
+            "historic"
+          ]
+        },
+        "item0": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A URL, subdomain or root domain.",
+          "example": "majestic.com"
+        },
+        "Count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of results. Default 100.",
+          "example": 100
+        },
+        "AnalysisDepth": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most referring domains considered per root domain queried. Default 10000, maximum 100000."
+        },
+        "MinMatchesRequired": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum matches a domain needs when several items are queried. Default 1."
+        },
+        "OrderBy1": {
+          "in": "query",
+          "type": "integer",
+          "description": "Primary sort column, 0-18 (0 matches, 1 Alexa rank, 12 Citation Flow, 13 Trust Flow, and so on; see the docs page)."
+        },
+        "OrderDir1": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 descending, 0 ascending.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "OrderBy2": {
+          "in": "query",
+          "type": "integer",
+          "description": "Secondary sort column, same values as OrderBy1."
+        },
+        "OrderDir2": {
+          "in": "query",
+          "type": "integer",
+          "description": "Secondary sort direction.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "UsePrefixScan": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 enables prefix mode, like the Path (URL*) option in Site Explorer.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "Costs 1000 Analysis units per call plus one Retrieval unit per row.",
+        "Sorting needs no extra units."
+      ],
+      "job": "backlinks.refdomains",
+      "docs_url": "https://developer-support.majestic.com/api/commands/get-ref-domains.shtml",
+      "verified": {
+        "docs": "https://developer-support.majestic.com/api/commands/get-ref-domains.shtml"
+      }
+    },
+    {
+      "id": "majestic.backlinks.anchor_text",
+      "name": "Get anchor text",
+      "summary": "Anchor text statistics for a target, or the referring domains and backlinks behind one anchor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/json",
+      "params": {
+        "cmd": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The command name. Always GetAnchorText for this call.",
+          "example": "GetAnchorText",
+          "enum": [
+            "GetAnchorText"
+          ]
+        },
+        "datasource": {
+          "in": "query",
+          "type": "string",
+          "description": "Index to query: historic (default when your plan includes it) or fresh. Majestic advises always setting it.",
+          "enum": [
+            "fresh",
+            "historic"
+          ]
+        },
+        "item": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The URL, subdomain or domain to query.",
+          "example": "majestic.com"
+        },
+        "TextMode": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 (default) returns anchors lowercased as found; 1 strips punctuation and delimiters.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "Mode": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 (default) aggregated anchor stats; 1 referring domains for an exact anchor; 2 backlinks for an anchor (needs CanReturnURLs earlier).",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        "FilterAnchorText": {
+          "in": "query",
+          "type": "string",
+          "description": "Anchor text to filter by, used with FilterAnchorTextMode."
+        },
+        "FilterAnchorTextMode": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 (default) no filter, 1 exact match, 2 anchors containing the text.",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        "FilterRefDomain": {
+          "in": "query",
+          "type": "string",
+          "description": "With backlinks returned for one referring domain, that domain."
+        },
+        "Count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of results. Default 10, maximum 1000."
+        },
+        "from": {
+          "in": "query",
+          "type": "integer",
+          "description": "First result to return, for paging."
+        }
+      },
+      "notes": [
+        "Costs 1000 Analysis units per call plus one Retrieval unit per row."
+      ],
+      "job": "backlinks.anchors",
+      "docs_url": "https://developer-support.majestic.com/api/commands/get-anchor-text.shtml",
+      "verified": {
+        "docs": "https://developer-support.majestic.com/api/commands/get-anchor-text.shtml"
+      }
+    },
+    {
+      "id": "majestic.domain.top_pages",
+      "name": "Get top pages",
+      "summary": "The best pages on a root domain or subdomain by backlinks, or a check that one URL is in the index.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/json",
+      "params": {
+        "cmd": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The command name. Always GetTopPages for this call.",
+          "example": "GetTopPages",
+          "enum": [
+            "GetTopPages"
+          ]
+        },
+        "datasource": {
+          "in": "query",
+          "type": "string",
+          "description": "Index to query: historic (default when your plan includes it) or fresh. Majestic advises always setting it.",
+          "enum": [
+            "fresh",
+            "historic"
+          ]
+        },
+        "Query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A root domain, subdomain or one URL.",
+          "example": "majestic.com"
+        },
+        "Count": {
+          "in": "query",
+          "type": "integer",
+          "description": "URLs to return. Default 10, maximum 10000.",
+          "example": 10
+        },
+        "UsePrefixScan": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 enables prefix mode.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "StartDoc": {
+          "in": "query",
+          "type": "integer",
+          "description": "Item to start from; defaults to 0."
+        }
+      },
+      "notes": [
+        "Costs 5000 Analysis units per call plus one Retrieval unit per row.",
+        "The only guaranteed way to check whether a URL is in the index."
+      ],
+      "job": "domain.pages",
+      "docs_url": "https://developer-support.majestic.com/api/commands/get-top-pages.shtml",
+      "verified": {
+        "docs": "https://developer-support.majestic.com/api/commands/get-top-pages.shtml"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}
