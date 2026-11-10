@@ -1,0 +1,478 @@
+{
+  "vendor": "sumble",
+  "name": "Sumble",
+  "category": "company-data",
+  "summary": "Organization, people, job post and team data: what companies use, who works there and buying signals.",
+  "docs_url": "https://docs.sumble.com/api/api",
+  "pricing_url": "https://sumble.com/pricing",
+  "base_url": "https://api.sumble.com/v9",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SUMBLE_API_KEY"
+        ],
+        "description": "a Sumble API key (sumble.com/account/api-keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-priced: every call costs credits (base per row plus paid attributes and metrics); an unaffordable call answers 402 before any work.",
+    "The core endpoints are each one composable call: send a list to resolve or a filter to search, plus select to choose attributes. Page with limit and offset.",
+    "List management, events, intelligence briefs, conversations and support endpoints exist but are not listed."
+  ],
+  "sources": [
+    "https://docs.sumble.com/api/api.md",
+    "https://docs.sumble.com/llms.txt",
+    "https://api.sumble.com/openapi.json",
+    "https://docs.sumble.com/get-started/credits.md"
+  ],
+  "endpoints": [
+    {
+      "id": "sumble.organizations.query",
+      "name": "Resolve or search organizations",
+      "summary": "Resolve a list of companies, or search by technology, job function, industry and firmographic filters, choosing which attributes and per-entity metrics come back.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/organizations",
+      "params": {
+        "organizations": {
+          "in": "body",
+          "type": "array",
+          "description": "Organizations to resolve and enrich; mutually exclusive with filter."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Advanced query selecting organizations, e.g. {query: \"technology EQ 'python'\"}; mutually exclusive with organizations.",
+          "example": {
+            "query": "custom_technology_category EQ 'custom:cloud'"
+          }
+        },
+        "select": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "What to return: {attributes: [...], entities: [...] per-entity metric selections}.",
+          "example": {
+            "attributes": [
+              "id",
+              "name"
+            ]
+          }
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum organizations to return.",
+          "example": 10
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, for paging."
+        },
+        "include_closed": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Filter mode: include permanently closed organizations."
+        },
+        "match_source": {
+          "in": "body",
+          "type": "string",
+          "description": "Filter mode: which evidence may match; any (default) or job_post only.",
+          "enum": [
+            "any",
+            "job_post"
+          ]
+        },
+        "order_by_column": {
+          "in": "body",
+          "type": "string",
+          "description": "Column to order by, filter mode only."
+        },
+        "order_by_direction": {
+          "in": "body",
+          "type": "string",
+          "description": "Direction, filter mode only."
+        },
+        "file_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Return a downloadable file instead of inline results: a name ending .csv, .xlsx or .json."
+        }
+      },
+      "notes": [
+        "A read over POST: the query is in the body.",
+        "Costs 1 base credit per organization, plus 1 per paid attribute (id, name, slug, url, sumble_url, linkedin_url and account_status are free), plus per-entity metrics.",
+        "Look up valid technology, job function and location values with technologies.find, jobs.title_lookup and locations.find."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.sumble.com/api/core-data/organizations.md",
+      "verified": {
+        "docs": "https://docs.sumble.com/api/core-data/organizations.md"
+      }
+    },
+    {
+      "id": "sumble.people.query",
+      "name": "Resolve or search people",
+      "summary": "Resolve a list of people, or search by organization and role or a plain-language search; attributes can include contact details.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/people",
+      "params": {
+        "people": {
+          "in": "body",
+          "type": "array",
+          "description": "People to resolve and enrich, one row per entry; mutually exclusive with filter."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Organization scope plus an advanced query or a plain-language search; mutually exclusive with people."
+        },
+        "select": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "What to return: {attributes: [...] or 'all', related_people}. Email and phone and profile attributes must be requested explicitly."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum people to return.",
+          "example": 10
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, for paging."
+        },
+        "requested_total": {
+          "in": "body",
+          "type": "integer",
+          "description": "With filter.search: the maximum people for the whole search across pages; keep it fixed while paging."
+        },
+        "order_by_column": {
+          "in": "body",
+          "type": "string",
+          "description": "start_date, job_level or person_score; filter mode only."
+        },
+        "order_by_direction": {
+          "in": "body",
+          "type": "string",
+          "description": "Direction; DESC when omitted."
+        },
+        "file_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Return a downloadable file instead of inline results: a name ending .csv, .xlsx or .json."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Credit-priced per row and per attribute; contact reveals cost the most (10 credits per email, 80 per phone, first reveal only)."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.sumble.com/api/core-data/people.md",
+      "verified": {
+        "docs": "https://docs.sumble.com/api/core-data/people.md"
+      }
+    },
+    {
+      "id": "sumble.jobs.query",
+      "name": "Resolve or search job posts",
+      "summary": "Job posts by organization and filters, with descriptions, extracted technologies, teams and hiring-manager candidates optional.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/jobs",
+      "params": {
+        "jobs": {
+          "in": "body",
+          "type": "array",
+          "description": "Job ids to enrich; mutually exclusive with filter."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Query selecting the jobs; mutually exclusive with jobs."
+        },
+        "select": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "What to return: {attributes: [...] or 'all', related_people}."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum jobs to return.",
+          "example": 10
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, for paging."
+        },
+        "file_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Return a downloadable file instead of inline results: a name ending .csv, .xlsx or .json."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Credit-priced per row and attribute; 'all' attributes grows in cost as the endpoint gains attributes."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.sumble.com/api/core-data/jobs.md",
+      "verified": {
+        "docs": "https://docs.sumble.com/api/core-data/jobs.md"
+      }
+    },
+    {
+      "id": "sumble.teams.query",
+      "name": "Resolve or search teams",
+      "summary": "Teams extracted from job posts, with ICP fit score, related people and job posts optional.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/teams",
+      "params": {
+        "teams": {
+          "in": "body",
+          "type": "array",
+          "description": "Team ids to retrieve; mutually exclusive with filter."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Query selecting the teams; mutually exclusive with teams."
+        },
+        "select": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "What to return: {attributes, related_people, job_posts}."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum teams to return.",
+          "example": 10
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, for paging."
+        },
+        "order_by_column": {
+          "in": "body",
+          "type": "string",
+          "description": "jobs_count (default), first_activity or last_activity; filter mode only."
+        },
+        "order_by_direction": {
+          "in": "body",
+          "type": "string",
+          "description": "Direction; DESC when omitted."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Each related person or job post returned costs 1 credit."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.sumble.com/api/core-data/teams.md",
+      "verified": {
+        "docs": "https://docs.sumble.com/api/core-data/teams.md"
+      }
+    },
+    {
+      "id": "sumble.organizations.signals",
+      "name": "Get an organization's signals",
+      "summary": "Recent account signals for one organization.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id}/signals",
+      "params": {
+        "organization_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Sumble organization id.",
+          "example": "171"
+        },
+        "technology_slugs": {
+          "in": "query",
+          "type": "array",
+          "description": "Technology slugs to filter by; repeat the parameter."
+        }
+      },
+      "notes": [
+        "Resolve technology slugs with technologies.lookup or technologies.find."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.sumble.com/api/core-data/organizations/organization-signals.md",
+      "verified": {
+        "docs": "https://docs.sumble.com/api/core-data/organizations/organization-signals.md"
+      }
+    },
+    {
+      "id": "sumble.organizations.techs",
+      "name": "Get an organization's tech stack",
+      "summary": "Technologies an organization uses, by category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id}/techs",
+      "params": {
+        "organization_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Sumble organization id.",
+          "example": "171"
+        }
+      },
+      "job": "company.technologies",
+      "docs_url": "https://docs.sumble.com/api/core-data/organizations/organization-tech-stack.md",
+      "verified": {
+        "docs": "https://docs.sumble.com/api/core-data/organizations/organization-tech-stack.md"
+      }
+    },
+    {
+      "id": "sumble.technologies.find",
+      "name": "Find technologies by name",
+      "summary": "Search the technology catalog for names and slugs.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/technologies/find",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text to search for.",
+          "example": "kubernetes"
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://docs.sumble.com/api/lookups/technologies.md",
+      "verified": {
+        "docs": "https://docs.sumble.com/api/lookups/technologies.md"
+      }
+    },
+    {
+      "id": "sumble.locations.find",
+      "name": "Find location codes",
+      "summary": "Location codes for filters, by search text or by listing the children of a region, country or state.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/locations/find",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Search country, state and city names; leave parent out.",
+          "example": "austin"
+        },
+        "parent": {
+          "in": "body",
+          "type": "string",
+          "description": "Region, country or state code whose children to list, e.g. EMEA, US, US:Texas; codes are case-sensitive."
+        }
+      },
+      "notes": [
+        "A read over POST. Send query or parent, not both; both omitted lists top-level regions and countries."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.sumble.com/api/lookups/locations.md",
+      "verified": {
+        "docs": "https://docs.sumble.com/api/lookups/locations.md"
+      }
+    },
+    {
+      "id": "sumble.jobs.title_lookup",
+      "name": "Look up function and level for job titles",
+      "summary": "The canonical job function and level for each title.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/jobs/title-lookup",
+      "params": {
+        "titles": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Job titles to classify.",
+          "example": [
+            "VP of Engineering"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.sumble.com/api/lookups/job-title-lookup.md",
+      "verified": {
+        "docs": "https://docs.sumble.com/api/lookups/job-title-lookup.md"
+      }
+    },
+    {
+      "id": "sumble.signals.search",
+      "name": "Search signals",
+      "summary": "Recent account signals by organization, person, technology, job function, list or signal id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/signals",
+      "params": {
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "{organization_ids, person_ids, signal_ids, technology_slugs, job_functions, priorities, account_list_ids, signal_config_ids}, all optional lists.",
+          "example": {
+            "technology_slugs": [
+              "zoominfo"
+            ],
+            "priorities": [
+              "high"
+            ]
+          }
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum signals to return.",
+          "example": 10
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, for paging."
+        },
+        "file_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Return a downloadable file instead of inline results: a name ending .csv, .xlsx or .json."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.sumble.com/api/intelligence/signals.md",
+      "verified": {
+        "docs": "https://docs.sumble.com/api/intelligence/signals.md"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

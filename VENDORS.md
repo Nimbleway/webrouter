@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-95 vendors, 936 endpoints.
+99 vendors, 970 endpoints.
 
 ### advertising
 
@@ -150,6 +150,10 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
 | [Aviato](https://docs.data.aviato.co) `aviato` | Company, funding, investor and people data, contact info and search through the Aviato data engine. | 33 read | key in header | `AVIATO_API_KEY` | docs 2026-11-08 |
+| [CNPJá](https://api.cnpja.com/docs) `cnpja` | Brazilian company registry (CNPJ) data: establishments, companies with partners, Simples Nacional and Receita Federal records, and filtered searches. | 9 read | key in header | `CNPJA_API_KEY` | docs 2026-11-09 |
+| [Fantastic.jobs](https://developer.fantastic.jobs) `fantasticjobs` | A job-postings feed from 58 ATS platforms and LinkedIn, Wellfound and Y Combinator, with AI-derived salary, seniority and remote fields and company details. | 6 read | key in header | `FANTASTICJOBS_API_KEY` | docs 2026-11-09 |
+| [Sumble](https://docs.sumble.com/api/api) `sumble` | Organization, people, job post and team data: what companies use, who works there and buying signals. | 10 read | key in header | `SUMBLE_API_KEY` | docs 2026-11-08 |
+| [VOYGR](https://api.voygr.tech/docs) `voygr` | Check that a business exists at an address, enrich place records (hours, contacts, socials, custom fields), and place AI phone calls to US businesses. | 8 read, 1 write | key in header | `VOYGR_API_KEY` | docs 2026-11-09 |
 
 ### developer
 
