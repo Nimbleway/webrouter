@@ -2,7 +2,7 @@
 
 **WebRouter is an open source standard that connects your agent to the web.**
 
-One Python interface over search, extraction, answer, research and browser APIs, with a router that picks the right tool and provider for each task.
+One Python interface over search, extraction, answer, research and browser APIs, with fallback across providers and a router that can choose the method and provider for you.
 
 > **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
 
