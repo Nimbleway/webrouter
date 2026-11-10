@@ -99,3 +99,17 @@ async def test_a_refused_async_only_router_is_closed_before_the_error_with_a_loo
     finally:
         unregister_router(NAME)
     assert made == ["aclosed"], "awaited before the error, not left as a task"
+
+
+def test_a_refused_router_whose_close_fails_still_raises_the_configuration_error() -> None:
+    class BrokenClose:
+        def close(self) -> None:
+            raise RuntimeError("close failed")
+
+    register_router(NAME, BrokenClose)
+    try:
+        warned = pytest.warns(ResourceWarning, match=r"did not close \(RuntimeError\)")
+        with warned, pytest.raises(ConfigurationError, match="router="):
+            WebRouter(router=NAME)
+    finally:
+        unregister_router(NAME)

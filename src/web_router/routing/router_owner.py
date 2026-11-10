@@ -7,10 +7,12 @@ closes it, from sync or async code, or at once when attaching it fails.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from typing import Any
 
+from web_router.constants_invoke import MSG_ROUTER_DISCARD_FAILED
 from web_router.routing.invoke import RouterLike
 from web_router.routing.registry import aclose_router, discard_router, resolve_router
 
@@ -32,7 +34,10 @@ class RouterOwner:
         try:
             yield attached
         except BaseException:
-            discard_router(owned)  # built here and refused: nothing else would close it
+            try:
+                discard_router(owned)  # built here and refused: nothing else would close it
+            except Exception as exc:  # the refusal says why; a failed close only warns, by its class, not its text
+                warnings.warn(MSG_ROUTER_DISCARD_FAILED.format(kind=type(exc).__name__), ResourceWarning, stacklevel=3)
             raise
         self._owned_router = owned
 
