@@ -2315,7 +2315,9 @@ wr = WebRouter(router="search-first")
 ```
 
 Two deciders are built in, each a registered name. Nothing is on by default:
-each sends the prompt off your machine only when you name it.
+each sends the prompt off your machine only when you name it. Both post with
+httpx, so install the `remote` extra (`pip install "webrouter[remote]"`, or
+`all`) to use them.
 
 - **`router="llm"`**: a chat model on any OpenAI-compatible chat-completions
   API, posted with httpx (no SDK, so no `OPENAI_BASE_URL` or other variable is
