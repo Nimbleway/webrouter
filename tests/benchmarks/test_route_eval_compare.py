@@ -65,3 +65,11 @@ def test_each_pair_is_compared_once_and_the_oracle_never(matrix: ModuleType, com
 
     assert pairs == [("mine", "static"), ("rules", "static"), ("mine", "rules")]
     assert set(matrix.matrices(routers, "oracle")) == {"static", "mine", "rules"}
+
+
+def test_against_the_oracle_is_refused(route_eval: ModuleType, capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as raised:
+        route_eval.main(["--set", "tools-effort-60", "--against", "oracle"])
+
+    assert raised.value.code == 2
+    assert "--against oracle: the oracle is the yardstick" in capsys.readouterr().err
