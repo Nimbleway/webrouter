@@ -439,7 +439,7 @@ difference matters:
 | Provider | Verified how |
 | --- | --- |
 | `parallel` | **Live.** Real runs against the Task API, and every recorded payload in its tests is a real response. |
-| `nimble` | **Against the `nimble-python` SDK's generated types**, produced from its OpenAPI spec — stronger than prose docs, weaker than a live call. |
+| `nimble` | **Against the `nimble-python` SDK's generated types**, produced from its OpenAPI spec — stronger than prose docs, weaker than a live call. Its `max` sends `x-high`, which Nimble's docs put at 15 to 30 minutes, longer than `research()`'s default 600-second wait: pass a larger `timeout`, or use `submit_research()` and poll, rather than leave a paid run going after the wait gives up. |
 | `perplexity` | **Live.** On 2026-09-30 the chat endpoint's deep research model answered 403 ("Sonar is now the Agent API"), so research moved to `/v1/responses`: a background run was followed from `queued` through `in_progress` to `completed`, presets `low`, `medium` and `xhigh` were accepted, and a cancel left a run `cancelled`. Its payloads are the ones in the tests. |
 | `linkup` | **Live.** Runs at `effort="low"` (`reasoningDepth` S, $0.25 each) were followed from start to answer, one of them with an `output_schema`, whose result was the schema's object alone; their payloads are the ones in the tests. Efforts above `low` are documentation-derived. Linkup's docs put `max` (XL) at 10 to 20 minutes and `high` (L) at 5 to 10, longer than `research()`'s default 600-second wait: pass a larger `timeout`, or use `submit_research()` and poll, rather than leave a paid run going after the wait gives up. |
 | `you` | **Live.** On 2026-10-16 a background run at `effort="low"` (`lite`) was followed from `queued` through `running` to `completed` on `api.you.com` (the same path on the search host answers 403); an unknown `research_effort` was a 422 naming `lite`, `standard`, `deep`, `exhaustive` and `frontier`. Its payloads are the ones in the tests. You.com offers no cancel, so `cancel()` returns `False`. `max` maps to `exhaustive`: `frontier`, background-only and priced well above it, is reachable as `provider_options={"research_effort": "frontier"}`. Efforts above `low` are documentation-derived. |
@@ -1072,11 +1072,11 @@ the package:
 | `low` | `low` | `lite` | `low` | `S` | `lite` |
 | `medium` | `medium` | `core` | `medium` | `M` | `standard` |
 | `high` | `high` | `pro` | `high` | `L` | `deep` |
-| `max` | `max` | `ultra` | `xhigh` | `XL` | `exhaustive` |
+| `max` | `x-high` | `ultra` | `xhigh` | `XL` | `exhaustive` |
 
 A backend with fewer tiers maps more than one level onto the same setting rather
-than inventing a distinction it does not have. Nimble's `x-high` and `5x-high`, and Parallel's `base`,
-have no normalized level of their own and are reachable through
+than inventing a distinction it does not have. Nimble's own `max` is not open yet, so `max` sends its deepest tier,
+`x-high`. Parallel's `base` has no normalized level of its own and is reachable through
 `provider_options`, as is You.com's `frontier`.
 
 Parallel is the one backend that *requires* an effort, so leaving it unset sends
