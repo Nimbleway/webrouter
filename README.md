@@ -1,25 +1,27 @@
-# WebRouter
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Nimbleway/webrouter/main/docs/assets/webrouter-mascot.png" alt="WebRouter" width="360">
+</p>
 
-**WebRouter is an open source standard that connects your agent to the web.**
+<h1 align="center">WebRouter</h1>
 
-One Python interface over search, extraction, answer, research and browser APIs, with fallback across providers and a router that can choose the method and provider for you.
+<p align="center"><strong>An open source standard that connects your agent to the web.</strong></p>
 
-> **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
->
-> Questions and chat: [Discord](https://discord.gg/MGztFWSjZh). Bugs: [Issues](https://github.com/Nimbleway/webrouter/issues). Proposals: [Discussions](https://github.com/Nimbleway/webrouter/discussions).
+<p align="center">
+  <a href="https://pypi.org/project/webrouter/"><img src="https://img.shields.io/pypi/v/webrouter?color=202c26&label=pypi" alt="PyPI"></a>
+  <a href="https://github.com/Nimbleway/webrouter/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-202c26" alt="License: Apache 2.0"></a>
+  <a href="https://pypi.org/project/webrouter/"><img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-202c26" alt="Python 3.11 to 3.13"></a>
+  <a href="https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml"><img src="https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+</p>
 
-[![CI](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
-[![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
-[![Discord](https://img.shields.io/badge/chat-Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/MGztFWSjZh)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+<p align="center">
+  <a href="https://discord.gg/MGztFWSjZh"><img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord"></a>
+</p>
 
-Twelve search backends, seven extract backends, a template catalogue, five
-answer backends, three agentic research backends (plus Exa's, retired upstream), five
-browser-session backends and three browser agents. One call each. Switching
-between them is one argument.
-Maintained by [Nimble](https://nimbleway.com), one of the backends it routes to.
+Every web tool your agent needs, behind one interface: search, extract, answer, research and browser sessions. Hand it a task in words and a [router](#smart-routing-experimental) picks the right tool for it. Call any tool directly and the same call works on every provider, with fallback and no lock-in.
+
+```bash
+pip install "webrouter[all]"
+```
 
 ```python
 from web_router import Provider, WebRouter
@@ -41,6 +43,10 @@ with WebRouter("local").open_browser() as browser:  # a browser to drive, also k
 
 WebRouter(Provider.BROWSER_USE).browse("...")  # a hosted browser agent does the task
 ```
+
+<p align="center"><em>Useful? Star the repo so more agent developers can find it.</em> ⭐</p>
+
+> **Alpha:** the API may change before 1.0.
 
 Every provider has its own SDK, its own parameter names and its own response
 shape. "How many results" is `max_results` on Tavily, `count` on Brave and
@@ -212,6 +218,11 @@ uv run --env-file .env python examples/main.py
 ```
 
 ## Provider support
+
+Twelve search backends, seven extract backends, a template catalogue, five
+answer backends, three agentic research backends (plus Exa's, retired upstream), five
+browser-session backends and three browser agents. One call each. Switching
+between them is one argument.
 
 A provider name serves the methods it serves and no others: `brave` searches
 and cannot extract, `oxylabs` extracts and cannot search, `nimble` searches,
@@ -2464,7 +2475,7 @@ make test-browser
   and gaps in a provider's support.
 - [GitHub Discussions](https://github.com/Nimbleway/webrouter/discussions). Best
   for: proposals and design ideas.
-- [SECURITY.md](SECURITY.md). Best for: vulnerabilities. Never in a public channel.
+- [SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md). Best for: vulnerabilities. Never in a public channel.
 
 ## License
 
