@@ -56,7 +56,7 @@ from web_router.constants_live_data_vendors import (
 )
 from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
 from web_router.providers._http_live_data import HttpLiveDataProvider
-from web_router.providers.brightdata_names import Scraper, scrapers, slug
+from web_router.providers.brightdata_names import Scraper, plain_name, scrapers, slug
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
     LiveDataRequest,
@@ -151,8 +151,8 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
 
     @staticmethod
     def _renamed_hint(key: str, known: dict[str, Scraper]) -> str:
-        """The URL-method names that extend ``key``: where a name goes once Bright Data adds a scraper sharing it."""
-        close = sorted(name for name, s in known.items() if name.startswith(f"{key}_") and not s.discovers)
+        """The names of the sources that would be called ``key`` had another scraper not taken it too."""
+        close = sorted(name for name, s in known.items() if name != key and plain_name(s) == key)
         return MSG_BRIGHTDATA_RENAMED_HINT.format(names=", ".join(close[:5])) if close else ""
 
     # -- run ----------------------------------------------------------------

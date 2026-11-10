@@ -100,11 +100,20 @@ def _warn(old: str, new: str, *, stacklevel: int = 4) -> None:
     warnings.warn(MSG_LIVE_DATA_DEPRECATED_NAME.format(old=old, new=new), DeprecationWarning, stacklevel=stacklevel)
 
 
-def deprecated_keyword(owner: str, given: dict[str, Any], old: str, new: str) -> str:
-    """The value passed under a keyword's old name, with a warning; ``TypeError`` for any other keyword or none."""
+def deprecated_keyword(owner: str, given: dict[str, Any], old: str, new: str, value: str | None) -> str:
+    """``value``, or the one passed under the keyword's old name, with a warning.
+
+    ``TypeError`` for any other keyword, for both names at once, and for neither.
+    """
     unknown = sorted(set(given) - {old})
-    if unknown or old not in given:
-        raise TypeError(f"{owner}() needs {new}=, and takes no keyword {unknown[0] if unknown else old!r}")
+    if unknown:
+        raise TypeError(f"{owner}() got an unexpected keyword argument {unknown[0]!r}")
+    if old not in given:
+        if value is None:
+            raise TypeError(f"{owner}() needs {new}=")
+        return value
+    if value is not None:
+        raise TypeError(f"{owner}() takes {new}= or its old name {old}=, not both")
     _warn(f"{old}=", f"{new}=")
     return str(given[old])
 

@@ -83,6 +83,15 @@ def _base_names(items: list[dict[str, Any]]) -> list[str]:
     ]
 
 
+def _named(base: str, method: str) -> str:
+    return base if method == BRIGHTDATA_DEFAULT_METHOD else f"{base}_{method.removeprefix('discover_')}"
+
+
+def plain_name(scraper: Scraper) -> str:
+    """The name a source has while nothing else in the catalogue shares it: before any site or id is appended."""
+    return _named(slug(str(scraper.item.get("name") or scraper.dataset_id)), scraper.method)
+
+
 def scrapers(items: list[dict[str, Any]]) -> list[Scraper]:
     """Every runnable source in a catalogue, in catalogue order, each scraper's URL method first.
 
@@ -93,8 +102,7 @@ def scrapers(items: list[dict[str, Any]]) -> list[Scraper]:
     found: list[Scraper] = []
     for base, item in zip(_base_names(items), items, strict=True):
         for method in methods_of(item):
-            name = base if method == BRIGHTDATA_DEFAULT_METHOD else f"{base}_{method.removeprefix('discover_')}"
-            found.append(Scraper(name=name, dataset_id=dataset_id(item), method=method, item=item))
+            found.append(Scraper(name=_named(base, method), dataset_id=dataset_id(item), method=method, item=item))
     clashing = {name for name, count in Counter(scraper.name for scraper in found).items() if count > 1}
     return [
         replace(scraper, name=f"{scraper.name}_{scraper.dataset_id.lower()}") if scraper.name in clashing else scraper

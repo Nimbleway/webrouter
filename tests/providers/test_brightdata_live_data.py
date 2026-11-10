@@ -116,6 +116,17 @@ def test_a_name_split_by_a_new_scraper_names_its_replacements() -> None:
     assert "by_keyword" not in message and "gd_" in message
 
 
+def test_a_split_discovery_name_points_at_its_replacements_and_not_at_lookalikes() -> None:
+    twin = {**SCRAPER, "id": "gd_twin000000000000000", "domain": "amazon.de"}
+    lookalike = {**SCRAPER, "id": "gd_look000000000000000", "name": "Amazon products by keyword extra"}
+    provider, _ = _provider(_by_path([], catalogue=(SCRAPER, twin, lookalike)))
+    with pytest.raises(LiveDataSourceNotFoundError) as caught:
+        provider.run(LiveDataRequest(source="amazon_products_by_keyword", inputs={"keyword": "x"}))
+    message = str(caught.value)
+    assert "amazon_products_amazon_com_by_keyword, amazon_products_amazon_de_by_keyword" in message
+    assert "extra" not in message
+
+
 def test_options_cannot_change_the_method_a_name_picks() -> None:
     provider, api = _provider(_by_path([]))
     options = {"type": "discover_new", "discover_by": "category_url", "limit_per_input": 5}

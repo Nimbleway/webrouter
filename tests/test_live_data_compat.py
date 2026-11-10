@@ -72,3 +72,8 @@ def test_the_not_found_error_takes_its_old_keyword() -> None:
         LiveDataSourceNotFoundError("nimble")
     with pytest.raises(TypeError, match="sauce"):
         LiveDataSourceNotFoundError("nimble", sauce="x")
+    with pytest.raises(TypeError, match="orignal"):
+        LiveDataSourceNotFoundError("nimble", "books_pdp", orignal=None)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="not both"):
+        LiveDataSourceNotFoundError("nimble", "a", template="b")
+    assert LiveDataSourceNotFoundError("nimble", "").source == "", "an empty name is still a not-found"
