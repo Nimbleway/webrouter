@@ -53,8 +53,9 @@ class Series:
     def stats(self) -> dict[str, Any]:
         """p50 and p90 with every timeout and error ranked above every answer; ``None`` where that rank is one."""
         calls = len(self.samples_ms) + self.censored + sum(self.errors.values())
-        # A timeout or an error gave no answer: each ranks above every answer, so a router that mostly
-        # fails has no p50 to weigh, however fast its few answers were.
+        # A timeout or an error gave no answer: each ranks above every answer, so a router that fails on half
+        # its calls or more has no p50 to weigh, however fast its answers were -- exactly half included, which
+        # the nearest rank would give the slowest answer.
         ranked = sorted(self.samples_ms) + [math.inf] * (self.censored + sum(self.errors.values()))
         p50, p90 = (_pct(ranked, f) for f in (P50, P90))
         return {
@@ -64,7 +65,7 @@ class Series:
             "errors": dict(self.errors),
             "timeout_rate": self.censored / calls if calls else None,
             "fallback_rate": (calls - len(self.samples_ms)) / calls if calls else None,
-            "p50_ms": None if p50 is None or math.isinf(p50) else p50,
+            "p50_ms": None if p50 is None or math.isinf(p50) or 2 * len(self.samples_ms) <= calls else p50,
             "p90_ms": None if p90 is None or math.isinf(p90) else p90,
             "min_ms": min(self.samples_ms, default=None),
             "max_ms": max(self.samples_ms, default=None),

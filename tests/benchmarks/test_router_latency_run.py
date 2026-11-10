@@ -34,6 +34,8 @@ def test_a_timeout_is_censored_never_a_value(latency: ModuleType) -> None:
 def test_an_error_ranks_above_every_answer_like_a_timeout(latency: ModuleType) -> None:
     series = module("router_latency_run").Series(samples_ms=[1.0], errors={"router_error": 3})
     assert series.stats()["p50_ms"] is None, "one fast answer among failures is no p50"
+    half = module("router_latency_run").Series(samples_ms=[10.0], censored=1)
+    assert half.stats()["p50_ms"] is None, "half the calls failed: no p50, as verdict() says"
 
 
 def test_routers_are_timed_interleaved_first_call_and_warm_up_apart(latency: ModuleType) -> None:
