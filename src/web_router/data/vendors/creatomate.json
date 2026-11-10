@@ -1,0 +1,202 @@
+{
+  "vendor": "creatomate",
+  "name": "Creatomate",
+  "category": "media-generation",
+  "summary": "Template-based video and image rendering: fill a stored template's dynamic fields per render through the REST API.",
+  "docs_url": "https://creatomate.com/docs/api/reference/introduction",
+  "pricing_url": "https://creatomate.com/pricing",
+  "base_url": "https://api.creatomate.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CREATOMATE_API_KEY"
+        ],
+        "description": "a Creatomate project API key (Project Settings > API). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limit: 30 requests per 10 seconds per account, across all its projects; a 429 carries Retry-After in seconds.",
+    "Errors carry a hint field written to explain the fix; 402 means out of credits.",
+    "Free plan output is clamped to 480 px on both sides.",
+    "Template create/update/delete (writes) and the v1 batch render-by-tags call are not in this entry. Request bodies are capped at 2 MB."
+  ],
+  "sources": [
+    "https://creatomate.com/llms.txt",
+    "https://creatomate.com/llms/api.md",
+    "https://creatomate.com/llms/quick-start.md",
+    "https://creatomate.com/llms/credits.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "creatomate.renders.create",
+      "name": "Render a template",
+      "summary": "Renders a video or image from a stored template with modifications (or from raw RenderScript); dry_run validates for free.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/renders",
+      "params": {
+        "template_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Template id (editor: Use Template > Developer API)."
+        },
+        "modifications": {
+          "in": "body",
+          "type": "object",
+          "description": "Element name to new value, e.g. {\"Title-1\": \"Your headline\", \"Background-1\": \"https://...mp4\"}."
+        },
+        "dry_run": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true validates only: 200 with valid, errors, warnings and the effective RenderScript; no credits, nothing queued."
+        },
+        "render_scale": {
+          "in": "body",
+          "type": "number",
+          "description": "Scale factor for the output; 0.5 costs about a quarter."
+        },
+        "max_width": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap on output width."
+        },
+        "max_height": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap on output height."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "string",
+          "description": "Free text echoed back on the render."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "URL called when the render completes, instead of polling."
+        }
+      },
+      "notes": [
+        "Spends credits unless dry_run: an image is 1 credit; a video is width x height x fps x seconds / 100,000,000, rounded up.",
+        "202 with one render object; read its errors and warnings arrays (a modification that matched no element is a warning, not a failure).",
+        "Poll creatomate.renders.get until status is succeeded or failed."
+      ],
+      "job": "ai.video.generate",
+      "docs_url": "https://creatomate.com/llms/api.md",
+      "verified": {
+        "docs": "https://creatomate.com/llms/api.md"
+      }
+    },
+    {
+      "id": "creatomate.renders.get",
+      "name": "Get a render",
+      "summary": "Status and, when succeeded, the output file URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/renders/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Render id."
+        }
+      },
+      "notes": [
+        "status runs planned, waiting, transcribing, rendering, then succeeded (url is the file) or failed (read error_message).",
+        "Renders and their files are deleted 30 days after creation."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://creatomate.com/llms/quick-start.md",
+      "verified": {
+        "docs": "https://creatomate.com/llms/quick-start.md"
+      }
+    },
+    {
+      "id": "creatomate.templates.list",
+      "name": "List templates",
+      "summary": "The project's templates, compact (no RenderScript source).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/templates",
+      "params": {
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated tags to filter by.",
+          "example": "a,b"
+        }
+      },
+      "job": "templates.list",
+      "docs_url": "https://creatomate.com/llms/api.md",
+      "verified": {
+        "docs": "https://creatomate.com/llms/api.md"
+      }
+    },
+    {
+      "id": "creatomate.templates.get",
+      "name": "Get a template",
+      "summary": "One template with its full RenderScript source, to see element names for modifications.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/templates/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Template id."
+        }
+      },
+      "job": "templates.get",
+      "docs_url": "https://creatomate.com/llms/api.md",
+      "verified": {
+        "docs": "https://creatomate.com/llms/api.md"
+      }
+    },
+    {
+      "id": "creatomate.feeds.list",
+      "name": "List feeds",
+      "summary": "The project's bulk-render spreadsheet feeds.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/feeds",
+      "job": "datasets.list",
+      "docs_url": "https://creatomate.com/llms/api.md",
+      "verified": {
+        "docs": "https://creatomate.com/llms/api.md"
+      }
+    },
+    {
+      "id": "creatomate.feeds.sample",
+      "name": "Get a feed's last rows",
+      "summary": "A sample of a feed: its last rows.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/feeds/{id}/sample",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Feed id."
+        }
+      },
+      "job": "datasets.get",
+      "docs_url": "https://creatomate.com/llms/api.md",
+      "verified": {
+        "docs": "https://creatomate.com/llms/api.md"
+      }
+    }
+  ]
+}
