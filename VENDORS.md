@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-221 vendors, 1936 endpoints.
+227 vendors, 1971 endpoints.
 
 ### advertising
 
@@ -287,11 +287,17 @@ The tables below are generated from `src/web_router/data/vendors/` by
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/APIReference/welcome.html) `amazon-bedrock` | Foundation models (Anthropic, Meta, Mistral, Amazon and others) served on AWS: Converse chat, token counting and the model catalog, with a Bedrock API key. | 5 read | key in header | `AWS_BEARER_TOKEN_BEDROCK` | docs 2026-11-09 |
+| [Anthropic (Claude API)](https://platform.claude.com/docs/en/api/overview) `anthropic` | Claude models through Anthropic's own API: messages, token counting, model list and batch jobs. | 7 read | key in header | `ANTHROPIC_API_KEY` | docs 2026-11-09 |
 | [AssemblyAI](https://www.assemblyai.com/docs/api-reference/overview) `assemblyai` | Speech-to-text for audio and video files by URL, with speaker labels, PII redaction, subtitles and word search. | 7 read, 1 write | key in header | `ASSEMBLYAI_API_KEY` | docs 2026-11-09 |
+| [Baseten](https://docs.baseten.co/reference/inference-api/overview) `baseten` | Inference for open-source LLMs through Baseten Model APIs (OpenAI-compatible chat), plus your Baseten models and token usage. | 5 read | key in header | `BASETEN_API_KEY` | docs 2026-11-09 |
 | [Deepgram](https://developers.deepgram.com/reference/deepgram-api-overview) `deepgram` | Speech-to-text transcription of recorded audio, text-to-speech, and text analysis (summaries, topics, sentiment, intents). | 7 read | key in header | `DEEPGRAM_API_KEY` | docs 2026-11-09 |
+| [Google AI (Gemini API)](https://ai.google.dev/gemini-api/docs) `google-ai` | Gemini models for text, images (Nano Banana), video (Omni), speech (TTS) and music (Lyria) through the Gemini Interactions API. | 7 read | key in header | `GEMINI_API_KEY` | docs 2026-11-08 |
+| [Hugging Face Hub](https://huggingface.co/docs/hub/api) `huggingface` | Search the Hugging Face Hub's models, datasets, Spaces and papers, and read paper pages and daily papers. | 7 read | key in header | `HF_TOKEN` | docs 2026-11-09 |
 | [OpenAI](https://developers.openai.com/api/docs) `openai` | GPT models through the Responses and Chat Completions APIs, plus embeddings, image generation, text-to-speech and moderation. | 8 read | key in header | `OPENAI_API_KEY` | docs 2026-11-09 |
 | [OpenRouter](https://openrouter.ai/docs/api-reference/overview) `openrouter` | One OpenAI-style API in front of hundreds of language, image, speech and video models from many providers. | 11 read | key in header | `OPENROUTER_API_KEY` | docs 2026-11-08 |
 | [TypeSafe](https://docs.typesafe.ai/introduction) `typesafe` | Jev, a System One model that answers typed questions (choice, score, yes/no, image box) about text or images with calibrated probabilities instead of generated prose. | 2 read | key in header | `TYPESAFE_API_KEY` | docs 2026-11-09 |
+| [Wolfram|Alpha](https://products.wolframalpha.com/api) `wolframalpha` | Computational answers to natural-language questions (math, science, units, data on places, finance, dates and more): LLM-ready text, one-line answers, structured result pods or a rendered result image. | 4 read | key in query | `WOLFRAM_ALPHA_APPID` | docs 2026-11-09 |
 
 ### developer
 
