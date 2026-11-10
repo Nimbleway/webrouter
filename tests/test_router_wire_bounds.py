@@ -39,4 +39,6 @@ def test_every_name_a_decision_sets_is_cut_short() -> None:
     decision = decision_from_wire(wire)
     assert decision.providers is not None and decision.params is not None
     names = [*decision.exclude, *decision.providers["search"], *decision.params["search"]]
-    assert len(names) == 3 and all(len(name) == WIRE_MAX_NAME for name in names)
+    assert len(names) == 3 and all(name == long[:WIRE_MAX_NAME] + "\u2026" for name in names)
+    exact = "search:" + "y" * (WIRE_MAX_NAME - 7)
+    assert decision_from_wire({"schema": 1, "exclude": {exact + "z": "why"}}).exclude != {exact: "why"}, "no match"

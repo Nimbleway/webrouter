@@ -76,6 +76,8 @@ WIRE_MAX_TEXT = 300
 
 WIRE_MAX_NAME = 128
 """Characters kept of each name a decision sets -- candidate id, provider, option -- since a record may show it."""
+WIRE_CUT_MARK = "\u2026"
+"""What follows a name cut short, so the cut name matches no real name."""
 
 WIRE_MAX_NAMES = 64
 """The most entries a decision may hold in one list or mapping: ``tools``, one method's ``providers``,

@@ -31,6 +31,7 @@ from web_router.constants_remote import (
     REMOTE_WHY_SCHEMA,
     REMOTE_WHY_TOO_MANY,
     REMOTE_WHY_VERSION,
+    WIRE_CUT_MARK,
     WIRE_MAX_NAME,
     WIRE_MAX_NAMES,
     WIRE_MAX_TEXT,
@@ -123,7 +124,7 @@ def _bounded(decision: RouteDecision) -> RouteDecision:
     """``decision`` within the wire's limits: its text and names cut short, and refused when a field holds too much.
 
     A service's words reach the decision record and, through the MCP server, a model; neither needs an essay.
-    A name cut short names no candidate or option, so it is ignored, as any unknown one is.
+    A name cut short and marked names no candidate or option, so it is ignored, as any unknown one is.
 
     Raises:
         WireError: for a list or mapping of more than :data:`WIRE_MAX_NAMES` entries, a method's options and the
@@ -139,10 +140,15 @@ def _bounded(decision: RouteDecision) -> RouteDecision:
     return replace(
         decision,
         reason=None if decision.reason is None else decision.reason[:WIRE_MAX_TEXT],
-        exclude={key[:WIRE_MAX_NAME]: why[:WIRE_MAX_TEXT] for key, why in decision.exclude.items()},
-        providers=_per_tool(decision.providers, lambda names: [name[:WIRE_MAX_NAME] for name in names]),
-        params=_per_tool(decision.params, lambda option: {name[:WIRE_MAX_NAME]: v for name, v in option.items()}),
+        exclude={_cut(key): why[:WIRE_MAX_TEXT] for key, why in decision.exclude.items()},
+        providers=_per_tool(decision.providers, lambda names: [_cut(name) for name in names]),
+        params=_per_tool(decision.params, lambda option: {_cut(name): v for name, v in option.items()}),
     )
+
+
+def _cut(name: str) -> str:
+    """``name``, or its first characters marked cut, so it never matches a known name of exactly that length."""
+    return name if len(name) <= WIRE_MAX_NAME else name[:WIRE_MAX_NAME] + WIRE_CUT_MARK
 
 
 def _per_tool(field: Mapping[Any, Any] | None, cut: Callable[[Any], Any]) -> Any:
