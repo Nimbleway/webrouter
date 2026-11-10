@@ -1,0 +1,287 @@
+{
+  "vendor": "mapillary",
+  "name": "Mapillary",
+  "category": "other",
+  "summary": "Street-level imagery from Meta's Mapillary: find geotagged photos by area, point, sequence or creator, and map features (signs, objects) detected in them.",
+  "docs_url": "https://www.mapillary.com/developer/api-documentation",
+  "base_url": "https://graph.mapillary.com",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "MAPILLARY_ACCESS_TOKEN"
+        ],
+        "description": "A Mapillary client access token (mapillary.com > Developers > register an application), sent as Authorization: OAuth <token>."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "OAuth {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Name the fields you want: by default only id is returned (e.g. fields=id,captured_at,computed_geometry,thumb_1024_url).",
+    "bbox is minLon,minLat,maxLon,maxLat and must be smaller than 0.01 degrees square.",
+    "Thumbnail URLs expire; fetch them again rather than storing them.",
+    "Rate limits per app: 60,000 entity and 10,000 search requests per minute.",
+    "Detection geometry is a base64 vector-tile polygon in a 4096 extent: divide decoded coordinates by 4096."
+  ],
+  "sources": [
+    "https://www.mapillary.com/developer/api-documentation"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "mapillary.images.search",
+      "name": "Search images",
+      "summary": "Images in a small bounding box, near a point, in sequences or by a creator, with capture time and location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/images",
+      "params": {
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "minLon,minLat,maxLon,maxLat, under 0.01 degrees square.",
+          "example": "12.967,55.597,12.971,55.600"
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Point search latitude (with lng and radius; not with bbox)."
+        },
+        "lng": {
+          "in": "query",
+          "type": "number",
+          "description": "Point search longitude."
+        },
+        "radius": {
+          "in": "query",
+          "type": "number",
+          "description": "Meters around lat/lng, default and max 50."
+        },
+        "creator_username": {
+          "in": "query",
+          "type": "string",
+          "description": "Only images by this user; the only filter that pages."
+        },
+        "sequence_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated sequence ids."
+        },
+        "organization_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only images of this organization."
+        },
+        "is_pano": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Panoramas only; needs creator_username or bbox."
+        },
+        "make": {
+          "in": "query",
+          "type": "string",
+          "description": "Camera make; bbox only."
+        },
+        "model": {
+          "in": "query",
+          "type": "string",
+          "description": "Camera model; bbox only."
+        },
+        "start_captured_at": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 lower bound on capture time."
+        },
+        "end_captured_at": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 upper bound on capture time."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default and max 2000 (point search: default 1, max 100)."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; only id comes back unless fields are named.",
+          "example": "id,captured_at,compass_angle,computed_geometry,creator,is_pano,sequence,thumb_1024_url"
+        }
+      },
+      "job": "imagery.search",
+      "docs_url": "https://www.mapillary.com/developer/api-documentation",
+      "verified": {
+        "docs": "https://www.mapillary.com/developer/api-documentation"
+      }
+    },
+    {
+      "id": "mapillary.image.get",
+      "name": "Get an image",
+      "summary": "One image's capture time, camera, location, heading, sequence and thumbnail URLs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{image_id}",
+      "params": {
+        "image_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Image id."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; only id comes back unless fields are named.",
+          "example": "id,captured_at,compass_angle,computed_geometry,creator,is_pano,sequence,thumb_1024_url"
+        }
+      },
+      "job": "imagery.get",
+      "docs_url": "https://www.mapillary.com/developer/api-documentation",
+      "verified": {
+        "docs": "https://www.mapillary.com/developer/api-documentation"
+      }
+    },
+    {
+      "id": "mapillary.sequence.images",
+      "name": "List images in a sequence",
+      "summary": "The image ids of one capture sequence, in order.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/image_ids",
+      "params": {
+        "sequence_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Sequence id."
+        }
+      },
+      "notes": [
+        "Returns ids only; fields is ignored."
+      ],
+      "job": "imagery.list",
+      "docs_url": "https://www.mapillary.com/developer/api-documentation",
+      "verified": {
+        "docs": "https://www.mapillary.com/developer/api-documentation"
+      }
+    },
+    {
+      "id": "mapillary.image.detections",
+      "name": "Get detections in an image",
+      "summary": "Objects and signs detected in one image, with value and segmentation geometry.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{image_id}/detections",
+      "params": {
+        "image_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Image id."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; only id comes back unless fields are named.",
+          "example": "id,value,geometry,created_at"
+        }
+      },
+      "job": "imagery.detections",
+      "docs_url": "https://www.mapillary.com/developer/api-documentation",
+      "verified": {
+        "docs": "https://www.mapillary.com/developer/api-documentation"
+      }
+    },
+    {
+      "id": "mapillary.map_features.search",
+      "name": "Search map features",
+      "summary": "Map features (traffic signs, objects) located from imagery in a small bounding box.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/map_features",
+      "params": {
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "minLon,minLat,maxLon,maxLat, under 0.01 degrees square."
+        },
+        "object_values": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated feature values, wildcards allowed (e.g. regulatory--stop--*)."
+        },
+        "start_first_seen_at": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601."
+        },
+        "end_first_seen_at": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601."
+        },
+        "start_last_seen_at": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601."
+        },
+        "end_last_seen_at": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default and max 2000."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; only id comes back unless fields are named.",
+          "example": "id,object_value,object_type,geometry,first_seen_at,last_seen_at"
+        }
+      },
+      "job": "imagery.features",
+      "docs_url": "https://www.mapillary.com/developer/api-documentation",
+      "verified": {
+        "docs": "https://www.mapillary.com/developer/api-documentation"
+      }
+    },
+    {
+      "id": "mapillary.map_feature.get",
+      "name": "Get a map feature",
+      "summary": "One map feature's type, value, location and first/last seen dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{map_feature_id}",
+      "params": {
+        "map_feature_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Map feature id."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; only id comes back unless fields are named.",
+          "example": "id,object_value,object_type,geometry,images"
+        }
+      },
+      "job": "imagery.features",
+      "docs_url": "https://www.mapillary.com/developer/api-documentation",
+      "verified": {
+        "docs": "https://www.mapillary.com/developer/api-documentation"
+      }
+    }
+  ]
+}

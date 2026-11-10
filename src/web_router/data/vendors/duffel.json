@@ -1,0 +1,263 @@
+{
+  "vendor": "duffel",
+  "name": "Duffel",
+  "category": "other",
+  "summary": "Flight search across airlines: offer requests return priced offers for a journey, plus offer details and airport and place lookup.",
+  "docs_url": "https://duffel.com/docs/api/overview/welcome",
+  "pricing_url": "https://duffel.com/pricing",
+  "base_url": "https://api.duffel.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DUFFEL_API_KEY"
+        ],
+        "description": "A Duffel access token, created in the Duffel dashboard with read-only or read-write access (read-only is enough here); test-mode tokens use Duffel's test mode. Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "Duffel-Version": "v2"
+  },
+  "notes": [
+    "Every request must carry the Duffel-Version header; this entry pins v2.",
+    "Search = create an offer request (offer_requests.create); it answers with the airlines' offers. Offers expire, typically within 30 minutes (expires_at); fetch offers.get for current details before booking.",
+    "Lists page by cursor: limit (1-200, default 50) and after=meta.after from the previous answer until it is null.",
+    "Booking (creating orders, which pays the airline) is deliberately not in this entry."
+  ],
+  "sources": [
+    "https://duffel.com/docs/api/overview/making-requests",
+    "https://duffel.com/docs/api/overview/pagination",
+    "https://duffel.com/docs/api/v2/offer-requests",
+    "https://duffel.com/docs/api/v2/offer-requests/create-offer-request",
+    "https://duffel.com/docs/api/v2/offers",
+    "https://duffel.com/docs/api/v2/places",
+    "https://duffel.com/docs/api/v2/airports"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "duffel.offer_requests.create",
+      "name": "Search flights",
+      "summary": "Create an offer request for one or more slices and passengers; the answer carries the airlines' priced offers.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/air/offer_requests",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{slices, passengers, cabin_class, max_connections, ...}. slices: one per leg (one for one-way, two for a return), each {origin, destination (IATA codes), departure_date (YYYY-MM-DD)}, optional departure_time/arrival_time {from, to}. passengers: one object per traveller with either type (e.g. adult) or age, not both. cabin_class: first, business, premium_economy or economy. max_connections: per slice, default 1, 0 for direct only.",
+          "example": {
+            "slices": [
+              {
+                "origin": "LHR",
+                "destination": "JFK",
+                "departure_date": "2020-04-24"
+              }
+            ],
+            "passengers": [
+              {
+                "type": "adult"
+              }
+            ],
+            "cabin_class": "economy"
+          }
+        },
+        "return_offers": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Default true; false omits offers (then page them with the list offers call)."
+        },
+        "supplier_timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Milliseconds to wait for each airline, 2000 to 60000, default 20000; keep it under your own HTTP timeout."
+        },
+        "view": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "offers",
+            "itineraries"
+          ],
+          "description": "offers (default) a flat list; itineraries grouped by slice, itinerary and brand."
+        }
+      },
+      "notes": [
+        "A read over POST: it stores an offer request (orq_...) you can fetch again, but books and pays nothing.",
+        "Can take as long as the slowest airline, up to supplier_timeout."
+      ],
+      "job": "travel.flights.search",
+      "docs_url": "https://duffel.com/docs/api/v2/offer-requests/create-offer-request",
+      "verified": {
+        "docs": "https://duffel.com/docs/api/v2/offer-requests/create-offer-request"
+      }
+    },
+    {
+      "id": "duffel.offer_requests.get",
+      "name": "Get an offer request",
+      "summary": "An earlier search with its offers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/air/offer_requests/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Offer request id (orq_...)."
+        },
+        "view": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "offers",
+            "itineraries"
+          ]
+        }
+      },
+      "job": "travel.flights.search",
+      "docs_url": "https://duffel.com/docs/api/v2/offer-requests",
+      "verified": {
+        "docs": "https://duffel.com/docs/api/v2/offer-requests"
+      }
+    },
+    {
+      "id": "duffel.offer_requests.list",
+      "name": "List offer requests",
+      "summary": "Earlier searches, newest pages by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/air/offer_requests",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 200, default 50."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "meta.after from the previous page."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor for the previous page."
+        }
+      },
+      "job": "travel.flights.search",
+      "docs_url": "https://duffel.com/docs/api/v2/offer-requests",
+      "verified": {
+        "docs": "https://duffel.com/docs/api/v2/offer-requests"
+      }
+    },
+    {
+      "id": "duffel.offers.get",
+      "name": "Get an offer",
+      "summary": "Up-to-date price, slices, conditions and expiry of one offer.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/air/offers/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The offer id, from an offer request's offers."
+        },
+        "return_available_services": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the available_services the airline returns. Default false."
+        }
+      },
+      "notes": [
+        "Still not a guarantee of availability at booking time."
+      ],
+      "job": "travel.flights.offer",
+      "docs_url": "https://duffel.com/docs/api/v2/offers",
+      "verified": {
+        "docs": "https://duffel.com/docs/api/v2/offers"
+      }
+    },
+    {
+      "id": "duffel.places.suggestions",
+      "name": "Suggest airports and cities",
+      "summary": "Airports and cities matching a name or IATA code, or near a coordinate.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/places/suggestions",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Airport, city or country name, or IATA code."
+        },
+        "lat": {
+          "in": "query",
+          "type": "string",
+          "description": "Latitude, with lng and rad."
+        },
+        "lng": {
+          "in": "query",
+          "type": "string",
+          "description": "Longitude."
+        },
+        "rad": {
+          "in": "query",
+          "type": "string",
+          "description": "Radius in metres."
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://duffel.com/docs/api/v2/places",
+      "verified": {
+        "docs": "https://duffel.com/docs/api/v2/places"
+      }
+    },
+    {
+      "id": "duffel.airports.list",
+      "name": "List airports",
+      "summary": "Airports with IATA codes and locations, optionally for one country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/air/airports",
+      "params": {
+        "iata_country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code, e.g. GB."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 200, default 50."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "meta.after from the previous page."
+        },
+        "before": {
+          "in": "query",
+          "type": "string"
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://duffel.com/docs/api/v2/airports",
+      "verified": {
+        "docs": "https://duffel.com/docs/api/v2/airports"
+      }
+    }
+  ]
+}
