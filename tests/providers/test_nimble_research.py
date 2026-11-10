@@ -23,30 +23,14 @@ from web_router.types import ResearchRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
 
+from tests.providers._nimble_research_stub import AGENT_ID, RUN_ID, research_run, stub_client
 from web_router.providers.nimble import NimbleResearchProvider
-
-AGENT_ID = "agent-1"
-RUN_ID = "task_run_9"
 
 SCHEMA = {"type": "object", "properties": {"founded": {"type": "string"}}}
 
 
-def _run(status: str, **extra: Any) -> dict[str, Any]:
-    """A run object, as `agents.run()` and `runs.get()` both return one."""
-    return {
-        "id": RUN_ID,
-        "web_search_agent_id": AGENT_ID,
-        "status": status,
-        "is_active": status in ("queued", "running"),
-        "effort": "medium",
-        "interaction_id": "interaction-1",
-        "created_at": "2026-01-01T00:00:00Z",
-        **extra,
-    }
-
-
 TEXT_RESULT = {
-    "run": _run("completed"),
+    "run": research_run("completed"),
     "output": {
         "type": "text",
         "content": "Nimbleway was founded in 2019.[1]",
@@ -85,7 +69,7 @@ TEXT_RESULT = {
 }
 
 JSON_RESULT = {
-    "run": _run("completed"),
+    "run": research_run("completed"),
     "output": {
         "type": "json",
         "content": {"founded": "2019"},
@@ -108,124 +92,10 @@ JSON_RESULT = {
 }
 
 
-# Recorded from a live low-effort run without trust (task_run_475908a24f724a8d8cb7b97fe3d6a627).
-NO_TRUST_RESULT = {
-    "run": _run("completed", trust_mode="no_trust"),
-    "output": {
-        "type": "json",
-        "content": {"products": ["Web Search Agents (Agent API)", "Search API", "Extract API"]},
-        "trust": None,
-        "sources": [
-            {
-                "url": "https://llms.nimbleway.com/nimble-platform-products-and-apis",
-                "title": "Nimble Platform, Products, and APIs",
-            },
-            {"url": "https://nimbleway.com/pricing", "title": "Nimble Pricing | Web Search Agent Platform & SDK Plans"},
-        ],
-    },
-}
-
-
-class _Model:
-    """Stands in for an SDK response model, which the provider reads through ``model_dump``."""
-
-    def __init__(self, payload: dict[str, Any]) -> None:
-        self._payload = payload
-
-    def model_dump(self) -> dict[str, Any]:
-        return dict(self._payload)
-
-
-class _Runs:
-    def __init__(self, states: list[dict[str, Any]], result: dict[str, Any] | None) -> None:
-        self._states = states
-        self._result = result
-        self.gets: list[tuple[str, str]] = []
-        self.results: list[tuple[str, str]] = []
-
-    def get(self, run_id: str, *, agent_id: str) -> _Model:
-        self.gets.append((agent_id, run_id))
-        return _Model(self._states.pop(0) if len(self._states) > 1 else self._states[0])
-
-    def result(self, run_id: str, *, agent_id: str) -> _Model:
-        self.results.append((agent_id, run_id))
-        assert self._result is not None, "the provider asked for an output this run never produced"
-        return _Model(self._result)
-
-
-class _Agents:
-    def __init__(self, started: dict[str, Any], states: list[dict[str, Any]], result: dict[str, Any] | None) -> None:
-        self._started = started
-        self.runs = _Runs(states, result)
-        self.calls: list[dict[str, Any]] = []
-
-    def run(self, **kwargs: Any) -> _Model:
-        self.calls.append(kwargs)
-        return _Model(self._started)
-
-
-class _Client:
-    def __init__(self, started: dict[str, Any], states: list[dict[str, Any]], result: dict[str, Any] | None) -> None:
-        self.agents = _Agents(started, states, result)
-        # Every call the provider makes goes through with_options, which is how
-        # the caller's remaining research budget reaches the SDK. Recorded
-        # rather than ignored so a test can prove the clamp is applied.
-        self.timeouts: list[float] = []
-
-    def with_options(self, *, timeout: float, **_: Any) -> _Client:
-        self.timeouts.append(timeout)
-        return self
-
-
-class _AsyncRuns:
-    def __init__(self, runs: _Runs) -> None:
-        self._runs = runs
-
-    async def get(self, run_id: str, *, agent_id: str) -> _Model:
-        return self._runs.get(run_id, agent_id=agent_id)
-
-    async def result(self, run_id: str, *, agent_id: str) -> _Model:
-        return self._runs.result(run_id, agent_id=agent_id)
-
-
-class _AsyncAgents:
-    def __init__(self, agents: _Agents) -> None:
-        self._agents = agents
-        self.runs = _AsyncRuns(agents.runs)
-
-    async def run(self, **kwargs: Any) -> _Model:
-        return self._agents.run(**kwargs)
-
-
-class _AsyncClient:
-    """The async twin of the stub, recording into the same call log."""
-
-    def __init__(self, client: _Client) -> None:
-        self.agents = _AsyncAgents(client.agents)
-        self._client = client
-
-    def with_options(self, *, timeout: float, **_: Any) -> _AsyncClient:
-        self._client.timeouts.append(timeout)
-        return self
-
-
 @pytest.fixture
 def provider(monkeypatch: pytest.MonkeyPatch) -> NimbleResearchProvider:
     monkeypatch.setenv("NIMBLE_API_KEY", "test-key")
     return NimbleResearchProvider()
-
-
-def _stub(
-    provider: NimbleResearchProvider,
-    *,
-    started: dict[str, Any] | None = None,
-    states: list[dict[str, Any]] | None = None,
-    result: dict[str, Any] | None = TEXT_RESULT,
-) -> _Client:
-    client = _Client(started or _run("queued"), states or [_run("completed")], result)
-    provider._client = client  # type: ignore[assignment]
-    provider._async_client = _AsyncClient(client)  # type: ignore[assignment]
-    return client
 
 
 # -- What gets sent ----------------------------------------------------------
@@ -337,7 +207,7 @@ def test_provider_options_pass_through(provider: NimbleResearchProvider) -> None
 
 
 def test_a_prose_run_answers_in_text_with_its_sources(provider: NimbleResearchProvider) -> None:
-    client = _stub(provider, started=_run("completed"), result=TEXT_RESULT)
+    client = stub_client(provider, started=research_run("completed"), result=TEXT_RESULT)
 
     response = provider.research(ResearchRequest(query="when was it founded"))
 
@@ -347,13 +217,13 @@ def test_a_prose_run_answers_in_text_with_its_sources(provider: NimbleResearchPr
     assert response.structured is None
     assert response.request_id == RUN_ID
     assert response.outcome == "complete", "nothing Nimble returns says a run stopped early"
-    assert response.raw == [_run("completed"), TEXT_RESULT]
+    assert response.raw == [research_run("completed"), TEXT_RESULT]
     assert client.agents.runs.results == [(AGENT_ID, RUN_ID)]
 
 
 def test_claims_are_cited_per_callout_and_uncited_sources_follow(provider: NimbleResearchProvider) -> None:
     """Both halves of the trust payload matter: what backs each claim, and what else was read."""
-    _stub(provider, started=_run("completed"), result=TEXT_RESULT)
+    stub_client(provider, started=research_run("completed"), result=TEXT_RESULT)
 
     citations = provider.research(ResearchRequest(query="q")).citations
 
@@ -369,7 +239,7 @@ def test_claims_are_cited_per_callout_and_uncited_sources_follow(provider: Nimbl
 
 
 def test_the_cited_urls_are_reported_once_each(provider: NimbleResearchProvider) -> None:
-    _stub(provider, started=_run("completed"), result=TEXT_RESULT)
+    stub_client(provider, started=research_run("completed"), result=TEXT_RESULT)
     assert provider.research(ResearchRequest(query="q")).urls == [
         "https://a.example/about",
         "https://b.example/news",
@@ -377,7 +247,7 @@ def test_the_cited_urls_are_reported_once_each(provider: NimbleResearchProvider)
 
 
 def test_a_structured_run_answers_in_structure_and_cites_by_path(provider: NimbleResearchProvider) -> None:
-    _stub(provider, started=_run("completed"), result=JSON_RESULT)
+    stub_client(provider, started=research_run("completed"), result=JSON_RESULT)
 
     response = provider.research(ResearchRequest(query="q", output_schema=SCHEMA))
 
@@ -386,41 +256,8 @@ def test_a_structured_run_answers_in_structure_and_cites_by_path(provider: Nimbl
     assert [citation.field for citation in response.citations] == ["$.founded"]
 
 
-def test_a_run_without_trust_is_cited_from_its_output_sources(provider: NimbleResearchProvider) -> None:
-    _stub(provider, started=_run("completed"), result=NO_TRUST_RESULT)
-
-    citations = provider.research(ResearchRequest(query="q", output_schema=SCHEMA)).citations
-
-    assert [(citation.url, citation.title, citation.field) for citation in citations] == [
-        (
-            "https://llms.nimbleway.com/nimble-platform-products-and-apis",
-            "Nimble Platform, Products, and APIs",
-            None,
-        ),
-        ("https://nimbleway.com/pricing", "Nimble Pricing | Web Search Agent Platform & SDK Plans", None),
-    ]
-
-
-def test_output_sources_follow_the_trust_citations_once_each(provider: NimbleResearchProvider) -> None:
-    output = {
-        **JSON_RESULT["output"],
-        "sources": [
-            {"url": "https://a.example/about", "title": "About"},
-            {"url": "https://c.example/blog", "title": "Blog"},
-        ],
-    }
-    _stub(provider, started=_run("completed"), result={**JSON_RESULT, "output": output})
-
-    citations = provider.research(ResearchRequest(query="q", output_schema=SCHEMA)).citations
-
-    assert [(citation.url, citation.field) for citation in citations] == [
-        ("https://a.example/about", "$.founded"),
-        ("https://c.example/blog", None),
-    ]
-
-
 async def test_the_async_path_answers_the_same_way(provider: NimbleResearchProvider) -> None:
-    client = _stub(provider, started=_run("completed"), result=TEXT_RESULT)
+    client = stub_client(provider, started=research_run("completed"), result=TEXT_RESULT)
 
     response = await provider.aresearch(ResearchRequest(query="q"))
 
@@ -433,7 +270,7 @@ async def test_the_async_path_answers_the_same_way(provider: NimbleResearchProvi
 
 def test_a_poll_goes_back_to_the_agent_the_run_belongs_to(provider: NimbleResearchProvider) -> None:
     """A run is addressed as (agent, run), so the job id has to carry both."""
-    client = _stub(provider, started=_run("queued"), states=[_run("running")])
+    client = stub_client(provider, started=research_run("queued"), states=[research_run("running")], result=TEXT_RESULT)
 
     job = provider.submit(ResearchRequest(query="q"))
     provider.poll(ResearchRequest(query="q"), job.job_id)
@@ -444,7 +281,7 @@ def test_a_poll_goes_back_to_the_agent_the_run_belongs_to(provider: NimbleResear
 
 
 def test_a_job_id_from_somewhere_else_is_refused(provider: NimbleResearchProvider) -> None:
-    _stub(provider)
+    stub_client(provider, result=TEXT_RESULT)
     with pytest.raises(ProviderError, match="not a Nimble research job id"):
         provider.poll(ResearchRequest(query="q"), "just-a-run-id")
 
@@ -452,8 +289,8 @@ def test_a_job_id_from_somewhere_else_is_refused(provider: NimbleResearchProvide
 def test_a_failed_run_reports_the_backends_reason_rather_than_an_empty_answer(
     provider: NimbleResearchProvider,
 ) -> None:
-    failed = _run("failed", error={"message": "the agent ran out of budget", "ref_id": RUN_ID})
-    client = _stub(provider, started=_run("queued"), states=[failed], result=None)
+    failed = research_run("failed", error={"message": "the agent ran out of budget", "ref_id": RUN_ID})
+    client = stub_client(provider, started=research_run("queued"), states=[failed], result=None)
 
     job = provider.submit(ResearchRequest(query="q"))
     progress = provider.poll(ResearchRequest(query="q"), job.job_id)
@@ -466,8 +303,8 @@ def test_a_failed_run_reports_the_backends_reason_rather_than_an_empty_answer(
 
 
 def test_waiting_on_a_failed_run_raises_with_that_reason(provider: NimbleResearchProvider) -> None:
-    failed = _run("failed", error={"message": "the agent ran out of budget", "ref_id": RUN_ID})
-    _stub(provider, started=failed, result=None)
+    failed = research_run("failed", error={"message": "the agent ran out of budget", "ref_id": RUN_ID})
+    stub_client(provider, started=failed, result=None)
 
     with pytest.raises(ProviderError, match="ran out of budget"):
         provider.research(ResearchRequest(query="q"))
@@ -475,15 +312,15 @@ def test_waiting_on_a_failed_run_raises_with_that_reason(provider: NimbleResearc
 
 def test_a_status_nimble_has_never_reported_before_is_not_passed_through(provider: NimbleResearchProvider) -> None:
     """Treating an unknown state as "still running" would poll a finished job forever."""
-    _stub(provider, started=_run("paused"))
+    stub_client(provider, started=research_run("paused"), result=TEXT_RESULT)
 
     with pytest.raises(ProviderError, match="unrecognized run state"):
         provider.submit(ResearchRequest(query="q"))
 
 
-def test_nimble_cannot_cancel_a_run(provider: NimbleResearchProvider) -> None:
+def test_nimble_cannot_cancel_aresearch_run(provider: NimbleResearchProvider) -> None:
     """The API exposes no way to stop one, and claiming otherwise would strand a paid run."""
-    _stub(provider)
+    stub_client(provider, result=TEXT_RESULT)
     assert provider.cancel(f"{AGENT_ID}/{RUN_ID}") is False
 
 

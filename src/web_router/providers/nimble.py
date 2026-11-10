@@ -463,11 +463,8 @@ def _citations(trust: dict[str, Any], sources: list[dict[str, Any]]) -> list[Cit
 
     A claim says what its citations back -- a path into the structured answer,
     or the callout marker that appears in the prose -- which is what
-    :attr:`Citation.field` carries. The sources list is the run's bibliography
-    and attributes nothing, so what it adds is cited without a field.
-
-    A run without trust (``trust_mode="no_trust"``) sends ``trust: null`` and
-    lists its bibliography in ``output.sources`` instead.
+    :attr:`Citation.field` carries. The run's bibliography -- ``trust.sources``, or ``output.sources`` for a run
+    without trust (``trust: null``) -- attributes nothing, so what it adds is cited without a field.
     """
     citations: list[Citation] = []
     seen: set[tuple[str, str | None]] = set()
