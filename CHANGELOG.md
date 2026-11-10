@@ -24,8 +24,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
-- The Claude and OpenAI tools' sync `call()` on an `AsyncWebRouter` runs every call on one long-lived event loop instead of a new one each time, so a pool bound to its loop, such as the `remote` router's, is reused rather than dropped with a `ResourceWarning` on every call after the first.
+- The Claude and OpenAI tools' sync `call()` on an `AsyncWebRouter` runs every call on one long-lived event loop instead of a new one each time, so a pool bound to its loop, such as the `remote` router's, is reused rather than dropped with a `ResourceWarning` on every call after the first; called from code with a running event loop, it raises `ConfigurationError` pointing to `acall()` rather than blocking that loop.
 - `research(provider="nimble")` no longer cites an `output.sources` entry that has no URL as a citation with an empty `url`.
+- Nimble `research` at `effort="max"` runs again. Nimble's API refuses its own `max` tier, which is not open yet, with a 422, so `max` now sends `x-high`, the deepest tier it runs today.
 
 ## [0.12.0] - 2026-11-10
 

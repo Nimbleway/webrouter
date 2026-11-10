@@ -2645,6 +2645,9 @@ search = [
     { name = "nimble-python" },
     { name = "tavily-python" },
 ]
+vendors = [
+    { name = "httpx" },
+]
 
 [package.dev-dependencies]
 agent-bench = [
@@ -2676,6 +2679,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'remote'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'research'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'search'", specifier = ">=0.27" },
+    { name = "httpx", marker = "extra == 'vendors'", specifier = ">=0.27" },
     { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=1.0,<2" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2,<3" },
     { name = "nimble-python", marker = "extra == 'all'", specifier = ">=1.5.0,<2" },
@@ -2703,7 +2707,7 @@ requires-dist = [
     { name = "tavily-python", marker = "extra == 'search'", specifier = ">=0.5.0" },
     { name = "typing-extensions", specifier = ">=4.10" },
 ]
-provides-extras = ["all", "answer", "aws", "browser", "evals", "extract", "langchain", "mcp", "remote", "research", "search"]
+provides-extras = ["all", "answer", "aws", "browser", "evals", "extract", "langchain", "mcp", "remote", "research", "search", "vendors"]
 
 [package.metadata.requires-dev]
 agent-bench = [
