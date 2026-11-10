@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-42 vendors, 359 endpoints.
+44 vendors, 403 endpoints.
 
 ### advertising
 
@@ -77,7 +77,9 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Facebook Pages (Graph API)](https://developers.facebook.com/docs/pages-api) `facebook` | Facebook Pages you manage through Meta's Graph API: Page details, the Page feed, and publishing posts and photos. | 3 read, 2 write | key in query | `FACEBOOK_ACCESS_TOKEN` | docs 2026-11-08 |
 | [FastMoss](https://developer.fastmoss.com/api/docs/guide/quickStart.html) `fastmoss` | TikTok Shop data: products, shops, creators, videos and rankings, with sales and revenue estimates by region. | 8 read | key in header | `FASTMOSS_API_KEY` | docs 2026-11-09 |
 | [Fetchin](https://docs.fetchin.io/) `fetchinio` | Professional-network profiles, posts, comments, reactions and company pages as a credit-billed API. | 10 read | key in header | `FETCHIN_API_KEY` | docs 2026-11-08 |
+| [HarvestAPI](https://docs.harvestapi.io) `harvestapi` | LinkedIn data without a LinkedIn login: profiles, companies, jobs, posts, comments and reactions, searchable by filters. | 18 read | key in header | `HARVESTAPI_API_KEY` | docs 2026-11-08 |
 | [Just One API](https://docs.justoneapi.com/en/usage) `justoneapi` | Social and e-commerce data from Chinese and global platforms: Xiaohongshu, Weibo, TikTok, Instagram and YouTube profiles, posts, comments and search. | 20 read | key in query | `JUSTONEAPI_TOKEN` | docs 2026-11-08 |
+| [Scrape Creators](https://docs.scrapecreators.com) `scrapecreators` | Public social media data over one API: TikTok, Instagram, YouTube, X, LinkedIn and Reddit profiles, posts, comments and search. | 26 read | key in header | `SCRAPECREATORS_API_KEY` | docs 2026-11-08 |
 | [YouTube Data API](https://developers.google.com/youtube/v3/docs) `youtube` | Public YouTube data: videos, channels, playlists, comments and search, read with a Google API key. | 6 read | key in query | `YOUTUBE_API_KEY` | docs 2026-11-08 |
 
 ### enrichment
