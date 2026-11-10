@@ -5,14 +5,16 @@ Experimental. Apart from :mod:`.merge` so each stays small.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping
 from typing import TypeGuard, get_args
 
 from web_router.routing.composite import CompositeDecision
 from web_router.routing.contract import RouteDecision, ToolName
-from web_router.types_decision import DecisionMember
+from web_router.types_decision import DecisionMember, MemberOutcome
 
 TOOLS: tuple[str, ...] = get_args(ToolName)
+OUTCOMES: tuple[str, ...] = get_args(MemberOutcome)
 
 
 def _names(value: object) -> bool:
@@ -59,8 +61,19 @@ def well_formed(decision: object) -> TypeGuard[RouteDecision]:
 
 
 def _member(member: object) -> bool:
-    """A :class:`DecisionMember` whose ``counted`` is still a bool: the model checks it when built, not when set."""
-    return isinstance(member, DecisionMember) and isinstance(member.counted, bool)
+    """A :class:`DecisionMember` whose fields still have their types: the model checks them when built, not when set."""
+    if not isinstance(member, DecisionMember):
+        return False
+    ms = member.ms
+    return (
+        isinstance(member.name, str)
+        and member.outcome in OUTCOMES
+        and isinstance(ms, int | float)
+        and not isinstance(ms, bool)
+        and math.isfinite(ms)
+        and ms >= 0
+        and isinstance(member.counted, bool)
+    )
 
 
 def _members_well_formed(decision: RouteDecision) -> bool:
