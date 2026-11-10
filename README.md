@@ -2224,8 +2224,9 @@ field may be left out or `null`):
 - **Failures.** A timeout is `router_timeout`; a transport error, a status
   other than 200 or a decision naming a `schema` other than 1 is
   `router_error`; an answer that is not an `application/json` decision of at
-  most 64 KiB, with at most 64 entries in any one list or mapping -- a
-  missing `schema` included -- is `router_invalid`. Either
+  most 64 KiB, with at most 64 entries in any one list or mapping of the
+  decision or of a method's `params` (one level down) -- a missing `schema`
+  included -- is `router_invalid`. Either
   way the static order runs, the record's `reason` says which, and
   `fail_on_router_error=True` raises `RouterError` instead. The service's
   `reason` and `exclude` reasons are cut to 300 characters, the names it sets
@@ -2256,8 +2257,8 @@ and `WebRouter(router=name, router_config={...})` builds one by calling
 `factory(**router_config)`; a key the factory does not take, or one it needs
 and is not given, raises `ConfigurationError` naming the key, never its
 value. A router that `WebRouter` builds by name is its to
-close: `close()` calls the router's `close()`, and `aclose()` its `aclose()`
-(else `close()`). A router passed in is yours to close, as a provider is. A
+close: `close()` calls the router's `close()` (else its `aclose()`), and
+`aclose()` its `aclose()` (else `close()`). A router passed in is yours to close, as a provider is. A
 router names itself in the record with a `router_name` attribute; without
 one, its qualified name is used, and with a `min_url_policy` attribute
 (`"public_only"`) holds the URLs it sets to that policy when you set none.

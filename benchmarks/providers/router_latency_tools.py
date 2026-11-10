@@ -126,7 +126,7 @@ def verdict(router_p50_s: float | None, tool: ToolLatency, share: float = SHARE)
 
 
 def route_tools_for(router_p50_s: float | None, tools: Mapping[str, ToolLatency], share: float = SHARE) -> list[str]:
-    """The measured tools the rule would have ask this router."""
+    """The measured tools on which the rule would have this router asked."""
     return [name for name in TOOLS if verdict(router_p50_s, tools[name], share)[0] == CONSULT]
 
 

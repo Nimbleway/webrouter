@@ -22,7 +22,7 @@ REMOTE_TIMEOUT_S = 1.0
 """Seconds the ``remote`` router waits for its service when ``router_config`` sets no ``timeout_s``."""
 
 REMOTE_MAX_RESPONSE_BYTES = 64 * 1024
-"""The largest answer read from a router service: a decision is a few hundred bytes. Past it, a router error."""
+"""The largest answer read from a router service: a decision is a few hundred bytes. Past it, ``router_invalid``."""
 
 REMOTE_CLOSE_WAIT_S = 2.0
 """Seconds a close from another loop waits for the pool to close on its own; past it, the pool is dropped."""

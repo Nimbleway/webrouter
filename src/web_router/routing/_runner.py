@@ -66,7 +66,7 @@ def _on_thread(fn: _Side, req: RouteRequest) -> Future[Any]:
 class InvalidAnswer(Exception):
     """Raised by a router whose answer arrived but cannot be read as a decision: recorded as ``router_invalid``.
 
-    The ``remote`` router raises it for a body that is not a well-formed decision; any router may.
+    The ``remote`` router raises it for a body that is not a well-formed decision.
     """
 
 
