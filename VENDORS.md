@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-392 vendors, 2935 endpoints.
+395 vendors, 2962 endpoints.
 
 ### advertising
 
@@ -413,8 +413,11 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [DOI.org](https://www.doi.org/the-identifier/resources/factsheets/doi-resolution-documentation) `doi` | Resolve a DOI to its handle record: the landing-page URL and other registered values, from the DOI Foundation's proxy server. | 1 read | none | none | docs 2026-11-09 |
 | [NIH Dietary Supplement Label Database (DSLD)](https://api.ods.od.nih.gov/dsld/docs) `dsld` | Full label contents of dietary supplements sold in the US: ingredients, amounts, claims, brands and market status, from the NIH Office of Dietary Supplements. | 5 read | none | none | docs 2026-11-09 |
 | [Duffel](https://duffel.com/docs/api/overview/welcome) `duffel` | Flight search across airlines: offer requests return priced offers for a journey, plus offer details and airport and place lookup. | 6 read | key in header | `DUFFEL_API_KEY` | docs 2026-11-09 |
+| [Environment and Climate Change Canada (GeoMet-OGC-API)](https://eccc-msc.github.io/open-data/msc-geomet/ogc_api_en/) `eccc-geomet` | Canadian weather, climate and water data from ECCC/MSC as OGC API Features: climate stations and daily/monthly observations, hydrometric levels and flows, weather alerts, AQHI and more. | 7 read | none | none | docs 2026-11-09 |
 | [Environment Agency (UK) flood monitoring](https://environment.data.gov.uk/flood-monitoring/doc/reference) `environmentagency` | Live flood warnings and alerts for England, flood areas, and river, sea, groundwater and rainfall readings from Environment Agency monitoring stations. | 7 read | none | none | docs 2026-11-09 |
 | [Fantasy Football Calculator](https://help.fantasyfootballcalculator.com/article/42-adp-rest-api) `fantasyfootballcalculator` | Fantasy football average draft position (ADP) from Fantasy Football Calculator's mock drafts, by scoring format, league size and year, from its free ADP REST API. | 1 read | none | none | docs 2026-11-09 |
+| [FEC (OpenFEC)](https://api.open.fec.gov/developers/) `fec` | US Federal Election Commission campaign finance data: candidates, committees, filings, financial totals, itemized contributions, disbursements and independent expenditures. | 10 read | key in header | `FEC_API_KEY` | docs 2026-11-09 |
+| [OpenFEMA](https://www.fema.gov/about/openfema/api) `fema` | FEMA open data: disaster declarations, assistance and mitigation funding, and National Flood Insurance Program claims and policies, queryable with OData-style filters. | 10 read | none | none | docs 2026-11-09 |
 | [Foursquare Places API](https://docs.foursquare.com/fsq-developers-places/reference/places-api-overview) `foursquare` | Search 100M+ points of interest by name, category or location, and read a place's details, tips and photos. | 6 read | key in header | `FOURSQUARE_API_KEY` | docs 2026-11-09 |
 | [GDACS](https://www.gdacs.org/gdacsapi/swagger/index.html) `gdacs` | Global Disaster Alert and Coordination System (EC, UN OCHA): alerts and impact data for earthquakes, tropical cyclones, floods, volcanoes, droughts and wildfires worldwide. | 7 read | none | none | docs 2026-11-09 |
 | [gnomAD (Genome Aggregation Database)](https://gnomad.broadinstitute.org/downloads#api) `gnomad` | Population allele frequencies of human genetic variants and per-gene constraint metrics from the Broad Institute's gnomAD, through the GraphQL API behind its browser. | 1 read | none | none | docs 2026-11-09 |

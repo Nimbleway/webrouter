@@ -1,0 +1,727 @@
+{
+  "vendor": "fec",
+  "name": "FEC (OpenFEC)",
+  "category": "other",
+  "summary": "US Federal Election Commission campaign finance data: candidates, committees, filings, financial totals, itemized contributions, disbursements and independent expenditures.",
+  "docs_url": "https://api.open.fec.gov/developers/",
+  "base_url": "https://api.open.fec.gov/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FEC_API_KEY"
+        ],
+        "description": "A free api.data.gov key (api.open.fec.gov/developers sign-up form). Sent in the X-Api-Key header; DEMO_KEY works for trying it out."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "A key allows 1,000 calls an hour; the FEC grants 7,200 an hour (120 a minute) on request by email. At most 100 results per page.",
+    "Find ids first: names.search or candidates.search for a candidate_id (H/S/P prefix), committees.search for a committee_id (starts with C), then use them on the other endpoints.",
+    "Cycles are two-year periods named for the even ending year (2026 covers 2025-2026).",
+    "Contributor information may not be used for commercial purposes or to solicit donations.",
+    "Data are updated nightly. Many filters take repeated values (e.g. state=CA&state=NY)."
+  ],
+  "sources": [
+    "https://api.open.fec.gov/developers/",
+    "https://api.open.fec.gov/swagger/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fec.names.search",
+      "name": "Look up candidates or committees by name",
+      "summary": "Typeahead matches with ids, to feed the other endpoints.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/names/candidates/",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Candidate or committee name.",
+          "required": true,
+          "example": "Smith"
+        }
+      },
+      "job": "people.search",
+      "docs_url": "https://api.open.fec.gov/developers/",
+      "verified": {
+        "docs": "https://api.open.fec.gov/developers/"
+      }
+    },
+    {
+      "id": "fec.candidates.search",
+      "name": "Search candidates",
+      "summary": "Candidates with their principal committees, by name, office, state, party, cycle and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/candidates/search/",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Candidate name."
+        },
+        "candidate_id": {
+          "in": "query",
+          "type": "string",
+          "description": "FEC candidate id."
+        },
+        "office": {
+          "in": "query",
+          "type": "string",
+          "description": "H House, S Senate, P President.",
+          "enum": [
+            "H",
+            "S",
+            "P"
+          ]
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state."
+        },
+        "district": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-digit House district."
+        },
+        "party": {
+          "in": "query",
+          "type": "string",
+          "description": "Three-letter party code, e.g. DEM, REP."
+        },
+        "cycle": {
+          "in": "query",
+          "type": "integer",
+          "description": "Two-year cycle (even year)."
+        },
+        "election_year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Election year."
+        },
+        "is_active_candidate": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only candidates actively seeking office."
+        },
+        "incumbent_challenge": {
+          "in": "query",
+          "type": "string",
+          "description": "I incumbent, C challenger, O open seat.",
+          "enum": [
+            "I",
+            "C",
+            "O"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, - for descending; default name."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 20, at most 100."
+        }
+      },
+      "job": "elections.candidates",
+      "docs_url": "https://api.open.fec.gov/developers/",
+      "verified": {
+        "docs": "https://api.open.fec.gov/developers/"
+      }
+    },
+    {
+      "id": "fec.candidates.totals",
+      "name": "Get a candidate's financial totals",
+      "summary": "Receipts, disbursements, cash on hand and debt per cycle from the candidate's reports.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/candidate/{candidate_id}/totals/",
+      "params": {
+        "candidate_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "FEC candidate id.",
+          "example": "P80001571"
+        },
+        "cycle": {
+          "in": "query",
+          "type": "integer",
+          "description": "Two-year cycle."
+        },
+        "election_full": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for the full election period, false for the two-year cycle."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 20, at most 100."
+        }
+      },
+      "job": "elections.finance",
+      "docs_url": "https://api.open.fec.gov/developers/",
+      "verified": {
+        "docs": "https://api.open.fec.gov/developers/"
+      }
+    },
+    {
+      "id": "fec.committees.search",
+      "name": "Search committees",
+      "summary": "Committees and filers by name, id, type, designation, party, state and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/committees/",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Committee name."
+        },
+        "committee_id": {
+          "in": "query",
+          "type": "string",
+          "description": "FEC committee id."
+        },
+        "candidate_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Candidate the committee is linked to."
+        },
+        "committee_type": {
+          "in": "query",
+          "type": "string",
+          "description": "One-letter committee type code (e.g. P presidential, H House, S Senate, N/Q PACs, O super PAC)."
+        },
+        "designation": {
+          "in": "query",
+          "type": "string",
+          "description": "A authorized, J joint fundraising, P principal campaign, U unauthorized, B lobbyist PAC, D leadership PAC.",
+          "enum": [
+            "A",
+            "J",
+            "P",
+            "U",
+            "B",
+            "D"
+          ]
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state."
+        },
+        "party": {
+          "in": "query",
+          "type": "string",
+          "description": "Three-letter party code."
+        },
+        "cycle": {
+          "in": "query",
+          "type": "integer",
+          "description": "Two-year cycle the committee was active."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, - for descending; default name."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 20, at most 100."
+        }
+      },
+      "job": "elections.committees",
+      "docs_url": "https://api.open.fec.gov/developers/",
+      "verified": {
+        "docs": "https://api.open.fec.gov/developers/"
+      }
+    },
+    {
+      "id": "fec.committees.get",
+      "name": "Get a committee",
+      "summary": "Most recent registration details of one committee.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/committee/{committee_id}/",
+      "params": {
+        "committee_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "FEC committee id.",
+          "example": "C00703975"
+        }
+      },
+      "job": "elections.committees",
+      "docs_url": "https://api.open.fec.gov/developers/",
+      "verified": {
+        "docs": "https://api.open.fec.gov/developers/"
+      }
+    },
+    {
+      "id": "fec.contributions.search",
+      "name": "Search itemized receipts (Schedule A)",
+      "summary": "Itemized contributions and other receipts: contributor, employer, occupation, amount, date and recipient committee.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/schedules/schedule_a/",
+      "params": {
+        "committee_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Recipient committee id."
+        },
+        "contributor_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Contributor name."
+        },
+        "contributor_city": {
+          "in": "query",
+          "type": "string",
+          "description": "Contributor city."
+        },
+        "contributor_state": {
+          "in": "query",
+          "type": "string",
+          "description": "Contributor state."
+        },
+        "contributor_zip": {
+          "in": "query",
+          "type": "string",
+          "description": "Contributor zip code."
+        },
+        "contributor_employer": {
+          "in": "query",
+          "type": "string",
+          "description": "Contributor employer."
+        },
+        "contributor_occupation": {
+          "in": "query",
+          "type": "string",
+          "description": "Contributor occupation."
+        },
+        "is_individual": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only non-earmarked individual contributions."
+        },
+        "two_year_transaction_period": {
+          "in": "query",
+          "type": "integer",
+          "description": "Two-year period of the transaction; defaults to the current cycle."
+        },
+        "min_amount": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum amount."
+        },
+        "max_amount": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum amount."
+        },
+        "min_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest date."
+        },
+        "max_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest date."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, - for descending; default -contribution_receipt_date."
+        },
+        "last_contribution_receipt_date": {
+          "in": "query",
+          "type": "string",
+          "description": "From pagination.last_indexes, with last_index, when sorting by date."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 20, at most 100."
+        },
+        "last_index": {
+          "in": "query",
+          "type": "string",
+          "description": "last_index from the previous page's pagination.last_indexes."
+        }
+      },
+      "job": "elections.contributions",
+      "docs_url": "https://api.open.fec.gov/developers/",
+      "verified": {
+        "docs": "https://api.open.fec.gov/developers/"
+      },
+      "notes": [
+        "Keyset pagination, not page numbers: append every value in pagination.last_indexes (last_index plus the sort field's last value, or sort_null_only) to the next request. Counts are approximate; page until no records come back.",
+        "Without two_year_transaction_period only the current cycle is searched."
+      ]
+    },
+    {
+      "id": "fec.disbursements.search",
+      "name": "Search itemized disbursements (Schedule B)",
+      "summary": "How committees spend: recipient, purpose, amount and date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/schedules/schedule_b/",
+      "params": {
+        "committee_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Spending committee id."
+        },
+        "recipient_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Recipient name."
+        },
+        "recipient_state": {
+          "in": "query",
+          "type": "string",
+          "description": "Recipient state."
+        },
+        "disbursement_description": {
+          "in": "query",
+          "type": "string",
+          "description": "Description of the disbursement."
+        },
+        "disbursement_purpose_category": {
+          "in": "query",
+          "type": "string",
+          "description": "Purpose category.",
+          "enum": [
+            "ADMINISTRATIVE",
+            "ADVERTISING",
+            "CONTRIBUTIONS",
+            "EVENTS",
+            "FUNDRAISING",
+            "LOAN-REPAYMENTS",
+            "MATERIALS",
+            "OTHER",
+            "POLLING",
+            "REFUNDS",
+            "TRANSFERS",
+            "TRAVEL"
+          ]
+        },
+        "two_year_transaction_period": {
+          "in": "query",
+          "type": "integer",
+          "description": "Two-year period of the transaction; defaults to the current cycle."
+        },
+        "min_amount": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum amount."
+        },
+        "max_amount": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum amount."
+        },
+        "min_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest date."
+        },
+        "max_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest date."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, - for descending; default -disbursement_date."
+        },
+        "last_disbursement_date": {
+          "in": "query",
+          "type": "string",
+          "description": "From pagination.last_indexes, with last_index, when sorting by date."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 20, at most 100."
+        },
+        "last_index": {
+          "in": "query",
+          "type": "string",
+          "description": "last_index from the previous page's pagination.last_indexes."
+        }
+      },
+      "job": "elections.spending",
+      "docs_url": "https://api.open.fec.gov/developers/",
+      "verified": {
+        "docs": "https://api.open.fec.gov/developers/"
+      },
+      "notes": [
+        "Keyset pagination like contributions.search: pass the last_indexes values back."
+      ]
+    },
+    {
+      "id": "fec.independent_expenditures.search",
+      "name": "Search independent expenditures (Schedule E)",
+      "summary": "Spending to support or oppose a candidate (e.g. super PAC ads), by candidate, spender, payee and date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/schedules/schedule_e/",
+      "params": {
+        "candidate_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Candidate supported or opposed."
+        },
+        "committee_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Spending committee id."
+        },
+        "support_oppose_indicator": {
+          "in": "query",
+          "type": "string",
+          "description": "S support, O oppose.",
+          "enum": [
+            "S",
+            "O"
+          ]
+        },
+        "cycle": {
+          "in": "query",
+          "type": "integer",
+          "description": "Two-year cycle."
+        },
+        "payee_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Payee name."
+        },
+        "q_spender": {
+          "in": "query",
+          "type": "string",
+          "description": "Keyword search on spender name or id."
+        },
+        "min_amount": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum amount."
+        },
+        "max_amount": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum amount."
+        },
+        "min_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest date."
+        },
+        "max_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest date."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, - for descending; default -expenditure_date."
+        },
+        "last_expenditure_date": {
+          "in": "query",
+          "type": "string",
+          "description": "From pagination.last_indexes, with last_index, when sorting by date."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 20, at most 100."
+        },
+        "last_index": {
+          "in": "query",
+          "type": "string",
+          "description": "last_index from the previous page's pagination.last_indexes."
+        }
+      },
+      "job": "elections.spending",
+      "docs_url": "https://api.open.fec.gov/developers/",
+      "verified": {
+        "docs": "https://api.open.fec.gov/developers/"
+      },
+      "notes": [
+        "Keyset pagination: pass the last_indexes values back."
+      ]
+    },
+    {
+      "id": "fec.filings.search",
+      "name": "Search filings",
+      "summary": "Reports and other documents filed with the FEC, with links to the originals.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/filings/",
+      "params": {
+        "committee_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Filer committee id."
+        },
+        "candidate_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Candidate id."
+        },
+        "q_filer": {
+          "in": "query",
+          "type": "string",
+          "description": "Keyword search on filer name or id."
+        },
+        "form_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Form code, e.g. F3, F3X, F1."
+        },
+        "report_year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Report year."
+        },
+        "cycle": {
+          "in": "query",
+          "type": "integer",
+          "description": "Two-year cycle."
+        },
+        "min_receipt_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Received on or after, YYYY-MM-DD."
+        },
+        "max_receipt_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Received on or before, YYYY-MM-DD."
+        },
+        "most_recent": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only new reports or the latest amendment."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, - for descending; default -receipt_date."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 20, at most 100."
+        }
+      },
+      "job": "company.documents",
+      "docs_url": "https://api.open.fec.gov/developers/",
+      "verified": {
+        "docs": "https://api.open.fec.gov/developers/"
+      },
+      "notes": [
+        "Counts for large result sets are approximate."
+      ]
+    },
+    {
+      "id": "fec.elections.get",
+      "name": "Get an election's candidates and totals",
+      "summary": "Financial totals of every candidate for one office and cycle.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/elections/",
+      "params": {
+        "office": {
+          "in": "query",
+          "type": "string",
+          "description": "house, senate or president.",
+          "required": true,
+          "enum": [
+            "house",
+            "senate",
+            "president"
+          ]
+        },
+        "cycle": {
+          "in": "query",
+          "type": "integer",
+          "description": "Two-year cycle.",
+          "required": true,
+          "example": 2024
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state (House and Senate)."
+        },
+        "district": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-digit district (House)."
+        },
+        "election_full": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Full election period (default true)."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 20, at most 100."
+        }
+      },
+      "job": "elections.finance",
+      "docs_url": "https://api.open.fec.gov/developers/",
+      "verified": {
+        "docs": "https://api.open.fec.gov/developers/"
+      }
+    }
+  ]
+}
