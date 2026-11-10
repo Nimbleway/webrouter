@@ -43,7 +43,10 @@ TRUST: dict[str, Any] = {
             "citations": [{"url": "https://a.example/about", "title": "About", "excerpts": ["Founded in 2019"]}],
         }
     ],
-    "sources": [{"url": "https://a.example/about", "title": "About", "type": "primary"}],
+    "sources": [
+        {"url": "https://a.example/about", "title": "About", "type": "primary"},
+        {"url": "https://b.example/news", "title": "News", "type": "secondary"},
+    ],
 }
 
 
@@ -75,6 +78,7 @@ def test_output_sources_follow_the_trust_citations_once_each(provider: NimbleRes
         "trust": TRUST,
         "sources": [
             {"url": "https://a.example/about", "title": "About"},
+            {"url": "https://b.example/news", "title": "News"},
             {"url": "https://c.example/blog", "title": "Blog"},
         ],
     }
@@ -86,5 +90,6 @@ def test_output_sources_follow_the_trust_citations_once_each(provider: NimbleRes
 
     assert [(citation.url, citation.field) for citation in citations] == [
         ("https://a.example/about", "$.founded"),
+        ("https://b.example/news", None),
         ("https://c.example/blog", None),
     ]
