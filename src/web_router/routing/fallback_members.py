@@ -25,6 +25,7 @@ from web_router.routing.invoke import AttachedRouter, RouterLike
 from web_router.routing.registry import aclose_router, discard_router, resolve_router
 from web_router.routing.route_tools import checked_route_tools
 from web_router.routing.router_owner import _discard_refused
+from web_router.routing.url_policy import url_check
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,7 @@ def _member(index: int, spec: object) -> Member:
         attached = AttachedRouter(built, fail_on_error=False)
         tools = checked_route_tools(None, built)
         policy = getattr(built, ROUTER_URL_POLICY_ATTR, None)  # a property may raise: the router is closed too
+        url_check(policy)  # refused as attaching it directly refuses it
     except BaseException:
         _discard_refused(owned)
         raise

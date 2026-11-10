@@ -84,3 +84,18 @@ def test_a_member_whose_url_policy_raises_is_closed_too(built: list[Closable]) -
     finally:
         unregister_router("test-policy-raises")
     assert built[0].closed == 1 and made[0].closed == 1
+
+
+class BadPolicy(Closable):
+    min_url_policy = 3
+
+
+def test_a_member_with_an_unknown_url_policy_is_refused_and_closed(built: list[Closable]) -> None:
+    made: list[BadPolicy] = []
+    register_router("test-bad-policy", lambda: made.append(BadPolicy()) or made[-1])
+    try:
+        with pytest.raises(ConfigurationError, match="url_policy"):
+            FallbackRouter(routers=[NAME, "test-bad-policy"])
+    finally:
+        unregister_router("test-bad-policy")
+    assert built[0].closed == 1 and made[0].closed == 1
