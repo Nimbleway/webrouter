@@ -8,7 +8,9 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import TypeGuard, get_args
 
+from web_router.routing.composite import CompositeDecision
 from web_router.routing.contract import RouteDecision, ToolName
+from web_router.types_decision import DecisionMember
 
 TOOLS: tuple[str, ...] = get_args(ToolName)
 
@@ -52,10 +54,22 @@ def well_formed(decision: object) -> TypeGuard[RouteDecision]:
         and all(isinstance(k, str) and isinstance(v, str) for k, v in exclude.items())
         and (decision.reason is None or isinstance(decision.reason, str))
         and (confidence is None or _probability(confidence))
+        and _members_well_formed(decision)
     )
 
 
-def decides_nothing(decision: RouteDecision) -> bool:
-    """A decision that decides nothing: no method, no backend, no exclusion and no option."""
-    providers, params = decision.providers or {}, decision.params or {}
-    return not (decision.tools or any(providers.values()) or decision.exclude or any(params.values()))
+def _member(member: object) -> bool:
+    """A :class:`DecisionMember` whose ``counted`` is still a bool: the model checks it when built, not when set."""
+    return isinstance(member, DecisionMember) and isinstance(member.counted, bool)
+
+
+def _members_well_formed(decision: RouteDecision) -> bool:
+    """A composite's ``members``: a tuple or list of :class:`DecisionMember`, at most one of them counted."""
+    if not isinstance(decision, CompositeDecision):
+        return True
+    members = decision.members
+    if not isinstance(members, tuple | list) or not all(_member(m) for m in members):
+        return False
+    if not isinstance(decision.timed_out, bool):
+        return False
+    return sum(m.counted for m in members) <= 1

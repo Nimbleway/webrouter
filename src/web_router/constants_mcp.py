@@ -38,7 +38,8 @@ ENV_MCP_TIME_LIMIT_S = "WEB_ROUTER_MCP_TIME_LIMIT_S"
 
 ENV_MCP_ROUTER = "WEB_ROUTER_MCP_ROUTER"
 """``<module>:<attribute>``, the router ``web_run`` plans with; ``remote`` for a router service at
-``WEB_ROUTER_REMOTE_ROUTER_URL``; ``off`` for none. The built-in rules router when unset.
+``WEB_ROUTER_REMOTE_ROUTER_URL``; another built-in router by name, configured by
+``WEB_ROUTER_MCP_ROUTER_CONFIG``; ``off`` for none. The built-in rules router when unset.
 
 The three are read once, when the server starts, from the process environment
 only: no ``.env`` file and no ``load_env`` call can set or change them.
@@ -178,7 +179,9 @@ MCP_MSG_UNKNOWN_ARGUMENTS = "{tool} does not take {names}, so nothing was run. I
 MCP_NO_ARGUMENTS = "no arguments"
 """An argument the tool does not declare -- a typo, a guessed option -- refused rather than dropped."""
 
-MCP_MSG_ROUTER_SPEC = "{env_var}={value!r} names no router: expected <module>:<attribute>, or 'off'."
+MCP_MSG_ROUTER_SPEC = (
+    "{env_var}={value!r} names no router: expected <module>:<attribute>, a built-in router's name, or 'off'."
+)
 MCP_MSG_ROUTER_IMPORT = "{env_var}={value!r}: {error}"
 MCP_MSG_REMOTE_URL = "{env_var}=remote needs {url_var}, the router service's https URL, set in the same environment."
 MCP_MSG_CEILING_VALUE = "{env_var}={value!r} is not a positive number."

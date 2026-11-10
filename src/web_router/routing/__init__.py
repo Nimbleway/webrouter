@@ -26,10 +26,13 @@ budget sets, :mod:`.effort_table` the research effort table they read,
 decision a call runs with, :mod:`.url_policy` the URLs a call may send,
 :mod:`.attempts` the seam in ``auto``'s fallback loops, :mod:`.registry`
 routers by name, :mod:`.wire` the JSON wire format, :mod:`.remote` the
-built-in router that speaks it over HTTP, and :mod:`.decider_router` a router
-made of a decider, which the built-in ``llm`` and ``systemone`` routers are.
+built-in router that speaks it over HTTP, :mod:`.decider_router` a router
+made of a decider, which the built-in ``llm`` and ``systemone`` routers are,
+and :mod:`.fallback` the built-in router that asks others in turn, answering a
+:class:`CompositeDecision`.
 """
 
+from web_router.routing.composite import CompositeDecision
 from web_router.routing.contract import Budget, Candidate, Plan, RouteDecision, RouteRequest, ToolName
 from web_router.routing.decider import AsyncDecider, Decider, DeciderQuestion, DeciderReply, SyncDecider
 from web_router.routing.decider_router import DeciderRouter
@@ -40,6 +43,7 @@ __all__ = [
     "AsyncDecider",
     "Budget",
     "Candidate",
+    "CompositeDecision",
     "Decider",
     "DeciderQuestion",
     "DeciderReply",
