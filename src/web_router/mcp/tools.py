@@ -418,7 +418,7 @@ class WebRouterTools:
         every job still being polled runs on its providers.
         """
         self._retired.append(self.router)
-        self.router = self._router_factory()
+        self.router = self._router_factory().keeping_vendor_credentials_of(self.router)
         self._tools_changed = True
 
     async def _browser_open(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
