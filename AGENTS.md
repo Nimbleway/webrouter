@@ -38,8 +38,10 @@ Linkup, You.com, and `auto`. It has no keyless tier, because every backend bills
 **`answer`** — one question, answered in one call: the backend searches and
 writes the answer itself, and the response carries it with the sources it rests
 on. Between `search`, which returns pages, and `research`, a job of minutes.
-Nothing here composes or edits the answer. No keyless tier, since every backend
-bills the call, and no `auto` until its order is chosen: with no `provider`,
+Nothing here edits the answer. One backend composes: `fireworks`, a model host
+that does not search, runs one search on another backend and has a Fireworks
+chat model answer from those pages, every citation checked against them. No
+keyless tier, since every backend bills the call, and no `auto` until its order is chosen: with no `provider`,
 the router's default serves it when that is an answer backend, else the one
 configured answer backend -- a key in `provider_config` counts -- and
 otherwise the call raises `ProviderNotFoundError`, naming the configured
@@ -1122,12 +1124,14 @@ Search's shape, against `HttpAnswerProvider` — one POST, one answer — or
    (or `_answer`/`_aanswer` on `AnswerProvider`). Set `name` and
    `supported_parameters`, declaring an option only after a live call showed
    the backend honouring it. The answer is the backend's own: never edit,
-   join or summarize it. An empty one is returned as `""`, not raised. Put an
-   inline citation marker (`[2]`, `[[1, 2]]`) in `Citation.field`, set
-   `outcome` to `partial` only when the backend says it stopped early, and
-   keep every payload in `raw`. A combination the vendor forbids — both
-   domain lists where it takes one — raises `UnsupportedParameterError`
-   before the call.
+   join or summarize it. A model host that does not search composes instead,
+   as `fireworks` does: one search on another backend, then its own model
+   answers from those pages, and a citation not in them fails the call. An
+   empty one is returned as `""`, not raised. Put an inline citation marker
+   (`[2]`, `[[1, 2]]`) in `Citation.field`, set `outcome` to `partial` only
+   when the backend says it stopped early, and keep every payload in `raw`. A
+   combination the vendor forbids — both domain lists where it takes one —
+   raises `UnsupportedParameterError` before the call.
 2. Put the endpoint and field names in `constants_<provider>.py`.
 3. Register the class in `_BUILTIN_ANSWER_PROVIDERS` in `registry_answer.py` and add
    the provider to `ANSWER_ENV_BY_PROVIDER` in `constants.py`. There is no

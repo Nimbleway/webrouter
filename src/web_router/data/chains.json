@@ -130,10 +130,12 @@
       "linkup",
       "parallel",
       "exa",
-      "brave"
+      "brave",
+      "fireworks"
     ],
     "unmeasured": [
-      "brave"
+      "brave",
+      "fireworks"
     ],
     "too_few_questions": [],
     "no_row_served": [],

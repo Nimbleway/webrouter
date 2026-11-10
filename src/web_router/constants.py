@@ -12,6 +12,7 @@ from typing import Any, Literal, get_args
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_fireworks import ENV_FIREWORKS_ANSWER_MODEL, ENV_FIREWORKS_API_KEY, PROVIDER_FIREWORKS
 from web_router.constants_mcp import (
     MCP_BUDGET_START_PROPERTIES,
     MCP_DESC_BUDGET_START,
@@ -252,6 +253,7 @@ ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_PARALLEL: (ENV_PARALLEL_API_KEY,),
     PROVIDER_EXA: (ENV_EXA_API_KEY,),
     PROVIDER_BRAVE: (ENV_BRAVE_ANSWER_API_KEY,),
+    PROVIDER_FIREWORKS: (ENV_FIREWORKS_API_KEY, ENV_FIREWORKS_ANSWER_MODEL),
 }
 """Which variables each answer provider needs, all of them.
 
@@ -2336,9 +2338,7 @@ PERPLEXITY_OUTPUT_MESSAGE = "message"
 PERPLEXITY_OUTPUT_SEARCH_RESULTS = "search_results"
 PERPLEXITY_OUTPUT_TEXT = "output_text"
 
-# Linkup research's endpoints, output types and states are in constants_linkup.py.
-
-# You.com research's endpoints, efforts and states are in constants_you.py.
+# Linkup's and You.com's research settings are in constants_linkup.py and constants_you.py.
 
 # --- auto research ----------------------------------------------------------
 

@@ -346,6 +346,7 @@ answer benchmark. See
 | `Provider.EXA` | `exa` | [Exa Answer API](https://docs.exa.ai/reference/answer) | `EXA_API_KEY` | none: no source filter, and `userLocation` showed no clear effect | yes: `[N]` markers, in `citation.field` |
 | `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | yes: `[N]` markers, in `citation.field` |
 | `Provider.BRAVE` | `brave` | [Brave Answers API](https://brave.com/search/api/) | `BRAVE_ANSWER_API_KEY` (the Answers plan; not the search key) | none: no source filter, and `language` showed no effect | yes: each citation's span in the answer, in `citation.extra` |
+| `"fireworks"` | `fireworks` | [Fireworks chat completions](https://docs.fireworks.ai/api-reference/post-chatcompletions) over one search on `sources` (`auto` by default) | `FIREWORKS_API_KEY` and `FIREWORKS_ANSWER_MODEL` (or `model=`) | none yet: not verified live | yes: each citation's verbatim quote, in `citation.snippet` |
 
 All verified live on 2026-11-01, every mapped option seen to apply. The
 medians and stated costs below are from the answer scan of 300 SimpleQA
@@ -379,6 +380,12 @@ questions on 2026-11-01, graded by `openai:gpt-4o`.
   with its `number` and its `start_index` / `end_index` into the answer in `extra`, and Brave writes no marker
   into the text, so `field` is unset. Its `<usage>` tag, in `raw`, states the call's cost: $0.054 for one
   question, almost all of it input tokens, about ten times the others. Every option is refused.
+- `fireworks` is experimental and not yet verified live. Fireworks hosts models and does not search, so this
+  backend searches on `sources` (any search backend, `auto` by default) for five pages, sends them to the chat
+  model you name, and asks for JSON with the answer and a verbatim quote per citation. A citation whose page the
+  search did not return, or whose quote is not in it, fails the call. With no pages the answer is `""` and
+  Fireworks is not called. Both bills apply: the search backend's and the model's tokens. It joins `auto` last,
+  unmeasured, and only when both variables are set.
 
 **Choosing one.** On 300 SimpleQA questions graded by one judge, all five land
 at 94-95% and their intervals overlap, so accuracy does not separate them --
