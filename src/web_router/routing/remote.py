@@ -4,38 +4,15 @@ Experimental. Opt in by name::
 
     WebRouter(router="remote", router_config={"url": "https://router.example.com/route", "timeout_s": 1.0})
 
-Each routed call posts its :class:`~web_router.RouteRequest` as JSON
-(:func:`~web_router.routing.wire.request_to_wire`) and reads a
-:class:`~web_router.RouteDecision` back. The service is shown what any router
-is shown: the prompt and the URLs in it, whole, the budget and the candidates,
-named ``tool:provider`` -- which say what backends are configured here. No key
-value is ever sent: the one credential on the request is the service's own
-bearer key, ``router_config["api_key"]`` or ``WEB_ROUTER_REMOTE_ROUTER_API_KEY``,
-read once when the router is built.
+Each routed call posts its :class:`~web_router.RouteRequest` as JSON and reads a
+:class:`~web_router.RouteDecision` back: one request, never retried. The README's
+"A router service" says what is sent and how each failure is recorded. The parts:
 
-It is async only (``aroute``), so a call that runs out of time is cancelled
-rather than left running: an async caller awaits it on its own loop, and a sync
-one on web-router's private loop, each cancelled at the deadline --
-``timeout_s`` (1 s unless set), or less when the call's budget or deadline has
-less left. Its one httpx connection pool belongs to the event loop that first
-used it, so warm calls reuse their connection; every call of a sync caller
-runs on the private loop. A call from any other loop gets a client of its own,
-closed when the call ends; :mod:`.remote_close` closes the pool. httpx is
-imported only when the router is built (:mod:`.remote_config`). One request per
-call, never retried; no redirect is followed, and no proxy or other setting is
-read from the environment. The URL must be ``https``, or ``http`` to
-``localhost`` or a loopback address (:mod:`.remote_url`).
-
-A failure is ``router_timeout``, ``router_error`` or ``router_invalid``
-(:mod:`.remote_errors`), and the call runs on the static order. A reply that is
-not a 200 of uncompressed JSON under 64 KiB is refused (:mod:`.remote_reply`). Fields the
-service adds that this version does not know are ignored; its reasons are cut
-short, and an echo of its bearer key in its answer is redacted
-(:mod:`.remote_redact`). Router-set URLs are held to
-``public_only`` when the caller sets no ``url_policy`` (``min_url_policy``).
-
-A decision record names it ``remote(<scheme>://<host>)``: never the URL's
-path, and never the key.
+- :mod:`.remote_url`: the URL, ``https`` or plain ``http`` to loopback.
+- :mod:`.remote_config`: httpx, the timeout and the bearer key, read once.
+- :mod:`.remote_close`: closing the pool, which belongs to the loop that first used it.
+- :mod:`.remote_reply` and :mod:`.remote_errors`: the reply read, and the failure codes.
+- :mod:`.remote_redact`: an echo of the bearer key, redacted.
 """
 
 from __future__ import annotations
