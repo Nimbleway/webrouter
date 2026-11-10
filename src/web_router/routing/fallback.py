@@ -32,7 +32,7 @@ members passed in are the caller's.
 from __future__ import annotations
 
 import time
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Iterator, Sequence
 from dataclasses import replace
 from typing import Any, cast
 
@@ -80,6 +80,18 @@ class _Asking:
     def skips(self, member: Member) -> bool:
         """Whether ``member`` declares ``route_tools`` that leave out the tool this call is for."""
         return self.req.pinned_tool is not None and self.req.pinned_tool not in member.tools
+
+    def to_ask(self, members: Sequence[Member]) -> Iterator[Member]:
+        """Each member to ask, in order: one whose ``route_tools`` leave this tool out skipped; none once out of time.
+
+        Time is checked as each is reached, after the one before it has answered.
+        """
+        for member in members:
+            if self.skips(member):
+                continue
+            if self.out_of_time():
+                return
+            yield member
 
     def request_for(self, member: Member) -> RouteRequest:
         """The request ``member`` is shown: its deadline the smaller of its own limit and the time left."""
@@ -137,11 +149,7 @@ class FallbackRouter:
     def route(self, req: RouteRequest) -> CompositeDecision:
         """Ask each member in turn from sync code; the first decision that decides something."""
         asking = _Asking(req)
-        for member in self._members:
-            if asking.skips(member):
-                continue
-            if asking.out_of_time():
-                break
+        for member in asking.to_ask(self._members):
             if (decision := asking.settle(member, member.attached.call(asking.request_for(member)))) is not None:
                 return composed(decision, asking.members)
         return composed(None, asking.members, timed_out=asking.timed_out)
@@ -149,11 +157,7 @@ class FallbackRouter:
     async def aroute(self, req: RouteRequest) -> CompositeDecision:
         """:meth:`route` from async code."""
         asking = _Asking(req)
-        for member in self._members:
-            if asking.skips(member):
-                continue
-            if asking.out_of_time():
-                break
+        for member in asking.to_ask(self._members):
             outcome = await member.attached.acall(asking.request_for(member))
             if (decision := asking.settle(member, outcome)) is not None:
                 return composed(decision, asking.members)
