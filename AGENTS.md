@@ -22,7 +22,7 @@ session logged into, whose cookies ride along; only Browserbase maps it.
 
 **`live_data`** — a vendor's ready-made scraper for one site (Nimble's
 Extract Templates, Apify's Store Actors, Bright Data's scrapers, Oxylabs'
-dedicated sources), run for this call and answering with structured
+Web API scrapers), run for this call and answering with structured
 `records` shaped by the source's own output schema rather than page text. Its
 inputs are the source's own -- a URL for some, an id, a slug or a search term
 for others -- which is why it is a method and not an option on `extract`.
@@ -285,7 +285,8 @@ src/web_router/
     ├── _http_live_data.py   HttpLiveDataProvider: the base of the three below
     ├── apify.py        live data: Apify Store Actors, run synchronously
     ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
-    ├── oxylabs_live_data.py     live data: Oxylabs' dedicated sources, parsed
+    ├── oxylabs_live_data.py     live data: the Oxylabs Web API's dedicated scrapers
+    ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
     ├── tavily.py       search, via the tavily-python SDK; re-exports tavily_extract.py
     ├── tavily_extract.py  extract, and the SDK clients, key and timeout both classes share
     ├── exa.py          search + extract, via httpx (its research API is retired);

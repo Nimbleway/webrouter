@@ -1,7 +1,8 @@
 """Bright Data's and Oxylabs' live data APIs: the paths, statuses and catalogue web-router uses.
 
-From https://docs.brightdata.com (Web Scraper API) and
-https://developers.oxylabs.io (Web Scraper API, Realtime), read on 2026-11-09.
+From https://docs.brightdata.com (Web Scraper API), read on 2026-11-09, and
+https://developers.oxylabs.io (Web API: endpoint discovery, dedicated scrapers,
+delivery modes, troubleshooting), read on 2026-11-10.
 """
 
 from __future__ import annotations
@@ -37,57 +38,49 @@ MSG_BRIGHTDATA_ALL_FAILED: Final = "every input failed on {source!r}: {errors}"
 
 # -- Oxylabs ----------------------------------------------------------------
 
-OXYLABS_DOCS_URL: Final = (
-    "https://developers.oxylabs.io/scraping-solutions/web-scraper-api/features/result-processing-and-storage/"
-    "dedicated-parsers"
-)
+ENV_OXYLABS_WEB_API_KEY: Final = "OXYLABS_WEB_API_KEY"
+"""A Web API key, made on a Web API instance in the dashboard: not the Realtime username and password extract uses."""
 
-OXYLABS_SOURCES: Final = (
-    "amazon",
-    "amazon_search",
-    "amazon_product",
-    "amazon_pricing",
-    "amazon_bestsellers",
-    "amazon_sellers",
-    "google",
-    "google_search",
-    "google_ai_mode",
-    "google_ads",
-    "google_lens",
-    "google_scholar",
-    "google_shopping_search",
-    "google_shopping_product",
-    "google_travel_hotels",
-    "youtube_metadata",
-    "youtube_channel",
-    "chatgpt",
-    "perplexity",
-    "gemini",
-    "bing",
-    "bing_search",
-    "walmart",
-    "walmart_search",
-    "walmart_product",
-    "bestbuy_product",
-    "etsy",
-    "etsy_product",
-    "target",
-    "target_search",
-    "target_product",
-)
-"""Every source Oxylabs documents a dedicated parser for, so ``parse: true`` answers with fields.
+OXYLABS_WEB_API_BASE_URL: Final = "https://webapi.oxylabs.io"
+OXYLABS_API_KEY_PREFIX: Final = "Bearer "
 
-Oxylabs' Realtime API has no endpoint that lists them; this is the list on
-:data:`OXYLABS_DOCS_URL`, read on 2026-11-09. A source not here can still be
-run by name -- Oxylabs refuses one it does not have.
-"""
+OXYLABS_SCRAPERS_PATH: Final = "/v1/scrapers"
+"""Every scrape endpoint the key can call, realtime and async, as paths; ``OPTIONS`` on one gives its parameters."""
 
-OXYLABS_PARSE_OK: Final = frozenset({12000, 12004, 12005})
-"""``parse_status_code`` values that are a record: a full parse, or a partial one (fields missing or defaulted)."""
+OXYLABS_SCRAPE_PREFIX: Final = "/v1/scrape"
+OXYLABS_ASYNC_PREFIX: Final = "/v1/async/scrape"
+OXYLABS_BATCH_PREFIX: Final = "/v1/async/scrape/batch"
+"""Realtime, async-job and batch paths. A source is the part after the prefix: ``amazon/product``."""
+
+OXYLABS_SYNC: Final = "sync"
+OXYLABS_ASYNC: Final = "async"
+OXYLABS_BATCH: Final = "batch"
+
+OXYLABS_OUTPUT: Final = ["json"]
+"""What a run asks for: a dedicated scraper's fields, under ``results[].json``."""
+
+OXYLABS_TRANSPORT_PARAMS: Final = frozenset({"output", "callback_url", "storage", "client_notes"})
+"""Parameters that choose how a result is delivered, not what is scraped: set here, so left out of a schema."""
+
+OXYLABS_JOB_POLL_SECONDS: Final = 5.0
+OXYLABS_JOB_WAIT_SECONDS: Final = 300.0
+"""How often, and how long, a run of an async-only scraper (``chatgpt``, ``gemini``...) waits for its job."""
+
+OXYLABS_JOB_DONE: Final = "done"
+OXYLABS_JOB_FAULTED: Final = "faulted"
 
 OXYLABS_FAILED_FETCH_FLOOR: Final = 400
-"""The first per-result ``status_code`` that means the page was not fetched."""
+"""The first per-result ``metadata.status_code`` that means the page was not fetched."""
 
-MSG_OXYLABS_NOT_PARSED: Final = "Oxylabs could not parse {source!r}: parse_status_code {code} ({url})"
+OXYLABS_DOCS_URL: Final = "https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers"
+
+MSG_OXYLABS_NO_FIELDS: Final = "Oxylabs returned no parsed fields for {source!r} ({url})"
 
 MSG_OXYLABS_NOT_FETCHED: Final = "Oxylabs could not fetch {source!r}: status {status} ({url})"
+
+MSG_OXYLABS_FAULTED: Final = "Oxylabs' job {job_id} for {source!r} faulted: status {status}"
+
+MSG_OXYLABS_STILL_RUNNING: Final = (
+    "Oxylabs is still running {source!r} after {seconds:.0f} s; nothing is lost. Fetch it later: "
+    "GET /v1/async/scrape/{job_id}"
+)

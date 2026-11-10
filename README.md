@@ -307,8 +307,8 @@ conversation.
 ### Live data
 
 A live data source is a vendor's ready-made scraper for one site -- Nimble's
-Extract Templates, Apify's Actors, Bright Data's scrapers, Oxylabs'
-dedicated sources. Given its own inputs it fetches the site **for this call**
+Extract Templates, Apify's Actors, Bright Data's scrapers, the Oxylabs Web
+API's dedicated scrapers. Given its own inputs it fetches the site **for this call**
 and answers with structured records. That is the rule a backend joins under:
 it fetches on request. Data a vendor collected earlier and serves from storage
 is that vendor's own API, reached through `call_vendor()`. There is no keyless
@@ -321,7 +321,7 @@ calls.
 | `Provider.NIMBLE` | `nimble` | [Nimble Extract Templates](https://docs.nimbleway.com/api-reference/extract/extract-templates) | `NIMBLE_API_KEY` | `markdown`, `html` |
 | `Provider.APIFY` | `apify` | [Apify Store Actors](https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post) | `APIFY_TOKEN` | — |
 | `Provider.BRIGHTDATA` | `brightdata` | [Bright Data scrapers](https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests) | `BRIGHTDATA_API_TOKEN` | — |
-| `Provider.OXYLABS` | `oxylabs` | [Oxylabs dedicated sources](https://developers.oxylabs.io/scraping-solutions/web-scraper-api/features/result-processing-and-storage/dedicated-parsers) | `OXYLABS_USERNAME`, `OXYLABS_PASSWORD` | — |
+| `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web API dedicated scrapers](https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers) | `OXYLABS_WEB_API_KEY` (a Web API key, not the Realtime username and password extract uses) | — |
 
 Nimble was verified live on 2026-10-22: a listing, a description and a run on
 a public test page. **Apify, Bright Data and Oxylabs are written from their
@@ -907,7 +907,7 @@ switching vendor changes only those two:
 ```python
 router.live_data("amazon_products", {"url": "https://www.amazon.com/dp/B0CHX1W1XY"}, provider="brightdata")
 router.live_data("amazon_products_by_keyword", {"keyword": "earbuds"}, provider="brightdata")
-router.live_data("amazon_product", {"query": "B0CHX1W1XY", "domain": "com"}, provider="oxylabs")
+router.live_data("amazon/product", {"query": "B0CHX1W1XY", "domain": "com"}, provider="oxylabs")
 ```
 
 | Backend | A source is named | Catalogue | Inputs | Notes |
@@ -915,7 +915,7 @@ router.live_data("amazon_product", {"query": "B0CHX1W1XY", "domain": "com"}, pro
 | `nimble` | the template's name, `walmart_pdp` | Nimble's templates, paged by Nimble | the template's own (`product_id`, `url`…) | one record per run; `format` returns the page beside it |
 | `apify` | `username~name` (or `username/name`) | the Apify Store, paged by Apify | the Actor's input, sent as the body untouched | every dataset item is a record; waits up to 300 s; `provider_options` go to the run's query (`memory`, `maxItems`, `maxTotalChargeUsd`) |
 | `brightdata` | the dataset id, `gd_l7q7dkf244hwjntr0`, or the scraper's name -- Bright Data's as written (`Amazon products`) or as listed (`amazon_products`); each discovery method is its own source, `amazon_products_by_keyword` | every scraper and method, paged here (Bright Data answers with all of them; read once per provider) | one input object, e.g. `{"url": ...}` or `{"keyword": ...}` | waits about a minute, then raises naming the snapshot to fetch later; failed inputs land in `extra["errors"]`; `extra["dataset_id"]` names the scraper behind a source |
-| `oxylabs` | the source's own name, `amazon_product` | the sources with a dedicated parser, from Oxylabs' docs | `query` or `url`, plus the source's parameters (`domain`, `geo_location`) | run with `parse: true`; a partial parse is still a record; `created_at` stays in `extra`, as its meaning is undocumented |
+| `oxylabs` | the scraper's path after `/v1/scrape/`, `amazon/product` (the full path works too) | the Web API's own list, `GET /v1/scrapers`, paged here (read once per provider) | the scraper's own, typed in its description from Oxylabs' `OPTIONS` (`query` or `url`, plus `domain`, `locale`…) | asks for `output: ["json"]`, the scraper's fields; a scraper Oxylabs runs only as a job (`chatgpt`, `gemini`…) is polled for up to five minutes, then raises naming the job; `metadata.timestamp` stays in `extra`, as it is not documented as the fetch time |
 
 **Searching a catalogue.** `query` finds sources by keyword -- a site, a
 brand, the kind of page -- searched the way each vendor allows:
@@ -925,7 +925,7 @@ brand, the kind of page -- searched the way each vendor allows:
 | `apify` | natively: the Store's own `search`, over an Actor's title, name, description, owner and readme | the Store's relevance |
 | `nimble` | locally: Nimble's template list takes no keywords, so the catalogue is read page by page and matched here | name and site matches first, then catalogue order |
 | `brightdata` | locally: Bright Data's dataset list takes no parameters | as above |
-| `oxylabs` | locally: there is no listing API, only the documented sources | as above |
+| `oxylabs` | locally: the Web API lists its scrapers but takes no keywords | as above |
 
 A local search matches every word, ignoring case, on a source's name, site,
 kind of page and description, reads at most 5,000 sources, and pages its
@@ -942,8 +942,9 @@ for others. That is why this is a method of its own rather than an option on
 runs the backend recorded -- before running a source you have not run
 before; the backend refuses inputs that do not match, and an unknown name
 raises `LiveDataSourceNotFoundError`. A schema is `None` where the backend
-publishes none (Oxylabs) and names fields without types where that is all it
-publishes (Bright Data): nothing is guessed.
+publishes none and names fields without types where that is all it publishes
+(Bright Data): nothing is guessed. Oxylabs' input schema is built from the
+scraper's own `OPTIONS` answer, its untouched lines kept in `source.raw`.
 
 **Freshness is reported, not assumed.** Every backend here fetches on request.
 `fetched_at` is set only from the vendor's own timestamp, and stays `None`
@@ -2423,6 +2424,7 @@ Keys are read from the environment, or passed explicitly through
 | AgentCore Web Search | `AGENTCORE_GATEWAY_URL`, plus an AWS credential from botocore's usual chain *(not a key: see [setup](docs/agentcore-setup.md))* | search |
 | Firecrawl | `FIRECRAWL_API_KEY` | extract |
 | Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
+| Oxylabs Web API | `OXYLABS_WEB_API_KEY` | live data |
 | Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |
 | Jina Reader | `JINA_API_KEY` *(optional — raises the rate limit)* | extract |
 | Steel | `STEEL_API_KEY` | open_browser |
