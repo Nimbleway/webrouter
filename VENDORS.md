@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-414 vendors, 3070 endpoints.
+419 vendors, 3105 endpoints.
 
 ### advertising
 
@@ -250,21 +250,25 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Brave Search](https://api-dashboard.search.brave.com/documentation) `bravesearch` | Web, news, video and image search plus LLM-ready page context from Brave's independent index. | 7 read | key in header | `BRAVE_SEARCH_API_KEY` | docs 2026-11-08 |
 | [BytePlus Searchinfinity](https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_available_APIs) `byteplus-search` | Web and image search and static page fetch from BytePlus (ByteDance) Searchinfinity: Flux and Omnira search engines plus a Fetch API. | 3 read | key in header | `BYTEPLUS_SEARCH_API_KEY` | docs 2026-11-09 |
 | [Dappier](https://docs.dappier.com/quickstart) `dappier` | Real-time answers from Dappier AI models (live web search, news, stocks) and semantic article recommendations from licensed publisher data models. | 2 read | key in header | `DAPPIER_API_KEY` | docs 2026-11-09 |
+| [Europe PMC](https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs) `europepmc` | Search and look up life-science literature (PubMed abstracts, PMC full text, preprints, patents) with citations, references, database cross-links and open-access full text from Europe PMC's free REST API. | 7 read | none | none | docs 2026-11-09 |
 | [Exa](https://exa.ai/docs/reference/getting-started) `exa` | Neural web search, page contents, cited answers, Agent runs and Websets from Exa. | 9 read, 3 write | key in header | `EXA_API_KEY` | docs 2026-11-08 |
 | [GDELT Project](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/) `gdelt` | Free search over worldwide online news monitored by GDELT: article lists and coverage-volume, tone, language and source-country timelines. | 3 read | none | none | docs 2026-11-09 |
 | [GOV.UK](https://content-api.publishing.service.gov.uk/) `gov-uk` | The UK government's GOV.UK site as data: the Content API returns any www.gov.uk page as JSON, and the Search API searches, filters and aggregates all GOV.UK content. | 2 read | none | none | docs 2026-11-09 |
 | [Hacker News Search (Algolia)](https://hn.algolia.com/api) `hn-algolia` | Full-text search over Hacker News stories, comments, polls and users, plus whole items with their comment trees, from the free HN Search API built on Algolia. | 4 read | none | none | docs 2026-11-09 |
+| [Internet Archive](https://archive.org/developers/) `internet-archive` | Search and item metadata for the Internet Archive's collections (texts, audio, video, software), plus Wayback Machine snapshot lookup and capture history, from its keyless public APIs. | 6 read | none | none | docs 2026-11-09 |
 | [Apple iTunes Search API](https://performance-partners.apple.com/search-api) `itunes-search` | Search and look up App Store apps, iTunes music, movies, podcasts, audiobooks, TV and Apple Books titles: names, IDs, prices, genres, artwork, previews and store links, keyless. | 2 read | none | none | docs 2026-11-09 |
 | [Jina AI](https://jina.ai/reader) `jina` | Jina Reader (any URL to LLM-ready markdown), Jina web search returning read pages, and Jina's embeddings and reranker models. | 5 read | key in header | `JINA_API_KEY` | docs 2026-11-09 |
 | [Keenable](https://docs.keenable.ai/api-reference) `keenable` | Web search and page fetch on Keenable's own index, built for AI agents. | 2 read | key in header | `KEENABLE_API_KEY` | docs 2026-11-08 |
 | [Linkup](https://docs.linkup.so/pages/documentation/get-started/introduction) `linkup` | Agentic web search, page fetch and asynchronous research with sourced answers from Linkup. | 6 read | key in header | `LINKUP_API_KEY` | docs 2026-11-08 |
 | [Listen Notes](https://www.listennotes.com/api/docs/) `listennotes` | Podcast search engine API: full-text search of podcasts and episodes, podcast and episode metadata with transcripts, best-of lists, recommendations and genres. | 8 read | key in header | `LISTENNOTES_API_KEY` | docs 2026-11-09 |
 | [Litescrape](https://litescrape.com/docs) `litescrape` | Low-cost SERP and web-data API: Google, Bing, DuckDuckGo, maps, app stores, review sites and page fetch. | 37 read | key in header | `LITESCRAPE_API_KEY` | docs 2026-11-08 |
+| [Library of Congress loc.gov API](https://www.loc.gov/apis/json-and-yaml/) `loc-gov` | Search and metadata for the Library of Congress's digitized collections (audio recordings, photos, maps, manuscripts, newspapers, books, films...) from the keyless loc.gov JSON API. | 6 read | none | none | docs 2026-11-09 |
 | [NASA Image and Video Library](https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf) `nasa-images` | Search NASA's public image, video and audio library and get each asset's files, metadata and captions from the free images-api.nasa.gov API. | 5 read | none | none | docs 2026-11-09 |
 | [NewsAPI.org](https://newsapi.org/docs) `newsapi` | Search news articles from worldwide sources and blogs, top headlines by country, category or source, and the list of sources. | 3 read | key in header | `NEWSAPI_API_KEY` | docs 2026-11-09 |
 | [NewsData.io](https://newsdata.io/documentation) `newsdata` | Worldwide news API: latest and archived articles with country, category, language, domain and sentiment filters, plus crypto and market news, sources and article counts. | 6 read | key in header | `NEWSDATA_API_KEY` | docs 2026-11-09 |
 | [Octen](https://docs.octen.ai/) `octen` | Real-time web, news and broad search plus URL content extraction from Octen. | 4 read | key in header | `OCTEN_API_KEY` | docs 2026-11-08 |
 | [OpenAlex](https://help.openalex.org/how-to-use-the-api/api-overview) `openalex` | Open catalog of scholarly works, authors, institutions, sources and topics, with citations, open-access status and grouping counts. | 8 read | key in query | `OPENALEX_API_KEY` | docs 2026-11-09 |
+| [Openverse](https://api.openverse.org/v1/) `openverse` | Search openly licensed and public-domain images and audio (Creative Commons and similar) with license, creator and attribution for each work. | 7 read | none | none | docs 2026-11-09 |
 | [Opoint](https://api-docs.opoint.com/guides/search) `opoint` | Global news monitoring: boolean search over Opoint's news archive, stored-search feeds and SafeFeed firehoses. | 6 read | key in header | `OPOINT_API_KEY` | docs 2026-11-09 |
 | [Parallel](https://docs.parallel.ai/getting-started/overview) `parallel` | Web search, URL extraction, deep-research Tasks and people/company discovery from Parallel Web Systems. | 8 read | key in header | `PARALLEL_API_KEY` | docs 2026-11-08 |
 | [Perplexity](https://docs.perplexity.ai/docs/getting-started/overview) `perplexity` | Perplexity's Search API, Agent API with web search, and embeddings. | 5 read, 1 write | key in header | `PERPLEXITY_API_KEY` | docs 2026-11-08 |
@@ -278,6 +282,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Tako](https://docs.tako.com/) `tako` | Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents. | 8 read | key in header | `TAKO_API_KEY` | docs 2026-11-09 |
 | [Tavily](https://docs.tavily.com/documentation/api-reference) `tavily` | Tavily's web search, extraction, crawl, map and research APIs for AI agents. | 7 read | key in header | `TAVILY_API_KEY` | docs 2026-11-08 |
 | [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 9 read, 1 write | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
+| [Wikipedia](https://www.mediawiki.org/wiki/API:Main_page) `wikipedia` | Keyless Wikipedia search, plain-text article extracts, page source and HTML, revision history, language links and file info through the MediaWiki APIs. | 9 read | none | none | docs 2026-11-09 |
 | [You.com](https://you.com/docs/welcome) `you` | You.com's cited Answer, Research and Finance Research APIs. | 5 read | key in header | `YOU_API_KEY` | docs 2026-11-08 |
 
 ### scraping

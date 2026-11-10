@@ -1,0 +1,329 @@
+{
+  "vendor": "internet-archive",
+  "name": "Internet Archive",
+  "category": "search",
+  "summary": "Search and item metadata for the Internet Archive's collections (texts, audio, video, software), plus Wayback Machine snapshot lookup and capture history, from its keyless public APIs.",
+  "docs_url": "https://archive.org/developers/",
+  "base_url": "https://archive.org",
+  "hosts": {
+    "wayback": "https://web.archive.org"
+  },
+  "notes": [
+    "Keyless for every read here. Rate limiting answers 429, possibly with Retry-After.",
+    "Queries use the Lucene-like Advanced Search syntax: field:term, AND by default, ranges with [a TO b], e.g. publicdate:[2008-02-01 TO 2008-03-01] AND contributor:smithsonian.",
+    "An item is addressed by its identifier; metadata.get lists its files.",
+    "Wayback timestamps are yyyyMMddhhmmss, 1 to 14 digits (20060101 is fine)."
+  ],
+  "sources": [
+    "https://archive.org/developers/",
+    "https://archive.org/developers/md-read.html",
+    "https://archive.org/developers/iarest.html",
+    "https://archive.org/help/aboutsearch.htm",
+    "https://archive.org/help/wayback_api.php",
+    "https://github.com/internetarchive/wayback/blob/master/wayback-cdx-server/README.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "internet-archive.search.advanced",
+      "name": "Search items",
+      "summary": "Items matching a query, with chosen metadata fields, paged by number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/advancedsearch.php",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Advanced Search query.",
+          "example": "subject:palm pilot software"
+        },
+        "fl": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "fl[]",
+          "description": "Metadata fields to return, e.g. identifier, title, downloads.",
+          "example": [
+            "identifier",
+            "title"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "sort[]",
+          "description": "Sort, field and direction, e.g. 'downloads desc'."
+        },
+        "rows": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page.",
+          "example": 100
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number.",
+          "example": 1
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json for a JSON answer (the page also offers XML, CSV and RSS).",
+          "example": "json"
+        }
+      },
+      "notes": [
+        "Sorted paged results stop at the 10,000th; for more use search.scrape.",
+        "Send output=json; the docs' example does."
+      ],
+      "job": "web.search",
+      "docs_url": "https://archive.org/help/aboutsearch.htm",
+      "verified": {
+        "docs": "https://archive.org/help/aboutsearch.htm"
+      }
+    },
+    {
+      "id": "internet-archive.search.scrape",
+      "name": "Scrape all matching items",
+      "summary": "Every item matching a query, paged by cursor, for result sets beyond 10,000.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/services/search/v1/scrape",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Advanced Search query.",
+          "example": "collection:nasa"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Metadata fields to return, comma-separated.",
+          "example": "identifier,title"
+        },
+        "sorts": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to sort on, comma-separated; identifier, if given, must be last."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per call, at least 100.",
+          "example": 100
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor of the previous answer; omit to start."
+        },
+        "total_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to return only the number of matches."
+        }
+      },
+      "notes": [
+        "Answers carry items, count, total and cursor; send cursor back until none is returned. With a cursor, total counts from the cursor on."
+      ],
+      "job": "web.search",
+      "docs_url": "https://archive.org/help/aboutsearch.htm",
+      "verified": {
+        "docs": "https://archive.org/help/aboutsearch.htm"
+      }
+    },
+    {
+      "id": "internet-archive.metadata.get",
+      "name": "Get an item's metadata and files",
+      "summary": "An item's full record: metadata (title, mediatype, collection...), its files with formats and sizes, and server locations.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/metadata/{identifier}",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Item identifier.",
+          "example": "00-042-154"
+        }
+      },
+      "notes": [
+        "A missing item answers an empty array [], not an error."
+      ],
+      "job": "index.metadata",
+      "docs_url": "https://archive.org/developers/md-read.html",
+      "verified": {
+        "docs": "https://archive.org/developers/md-read.html"
+      }
+    },
+    {
+      "id": "internet-archive.metadata.part",
+      "name": "Get part of an item's metadata",
+      "summary": "One element of an item's record, e.g. metadata/title or files, optionally a slice of an array.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/metadata/{identifier}/{field}",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Item identifier.",
+          "example": "00-042-154"
+        },
+        "field": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Path into the record, e.g. server, metadata or files/0.",
+          "example": "files"
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "For an array, the first index to return."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "For an array, how many elements to return."
+        }
+      },
+      "notes": [
+        "The value comes wrapped as {\"result\": ...}; a missing path answers an error field."
+      ],
+      "job": "index.metadata",
+      "docs_url": "https://archive.org/developers/md-read.html",
+      "verified": {
+        "docs": "https://archive.org/developers/md-read.html"
+      }
+    },
+    {
+      "id": "internet-archive.wayback.available",
+      "name": "Find the closest Wayback snapshot of a URL",
+      "summary": "The archived capture of a URL closest to a time (latest when no time), with its Wayback link and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wayback/available",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The address to look up.",
+          "example": "example.com"
+        },
+        "timestamp": {
+          "in": "query",
+          "type": "string",
+          "description": "yyyyMMddhhmmss, 1 to 14 digits; the most recent capture when unset.",
+          "example": "20060101"
+        }
+      },
+      "notes": [
+        "No capture answers {\"archived_snapshots\": {}}."
+      ],
+      "job": "web.archive",
+      "docs_url": "https://archive.org/help/wayback_api.php",
+      "verified": {
+        "docs": "https://archive.org/help/wayback_api.php"
+      }
+    },
+    {
+      "id": "internet-archive.wayback.cdx",
+      "name": "List Wayback captures of a URL",
+      "summary": "Every capture of a URL, prefix, host or domain in a time range, with timestamp, MIME type, status and digest.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/cdx/search/cdx",
+      "host": "wayback",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "URL to look up; a trailing /* means prefix, a leading *. means domain.",
+          "example": "archive.org"
+        },
+        "matchType": {
+          "in": "query",
+          "type": "string",
+          "description": "How url matches; exact by default.",
+          "enum": [
+            "exact",
+            "prefix",
+            "host",
+            "domain"
+          ]
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json for a JSON array whose first row is the header; plain space-separated text when unset.",
+          "enum": [
+            "json"
+          ],
+          "example": "json"
+        },
+        "fl": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields, comma-separated; default urlkey,timestamp,original,mimetype,statuscode,digest,length."
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, yyyyMMddhhmmss (1 to 14 digits), inclusive."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "End, yyyyMMddhhmmss (1 to 14 digits), inclusive."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "[!]field:regex, e.g. statuscode:200 or !mimetype:text/html."
+        },
+        "collapse": {
+          "in": "query",
+          "type": "string",
+          "description": "field or field:N; drops adjacent captures with the same value (first N characters)."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most captures; -N for the last N (slow)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Skip the first M captures."
+        },
+        "showResumeKey": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to print a resume key after the results when more exist."
+        },
+        "resumeKey": {
+          "in": "query",
+          "type": "string",
+          "description": "Resume key of the previous answer, with the same other parameters."
+        }
+      },
+      "notes": [
+        "Set limit: a popular URL has a very large number of captures. Page with showResumeKey/resumeKey; offset scales poorly."
+      ],
+      "job": "web.archive",
+      "docs_url": "https://github.com/internetarchive/wayback/blob/master/wayback-cdx-server/README.md",
+      "verified": {
+        "docs": "https://github.com/internetarchive/wayback/blob/master/wayback-cdx-server/README.md"
+      }
+    }
+  ]
+}
