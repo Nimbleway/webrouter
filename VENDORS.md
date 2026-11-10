@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-194 vendors, 1732 endpoints.
+198 vendors, 1763 endpoints.
 
 ### advertising
 
@@ -259,6 +259,15 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Tavily](https://docs.tavily.com/documentation/api-reference) `tavily` | Tavily's web search, extraction, crawl, map and research APIs for AI agents. | 7 read | key in header | `TAVILY_API_KEY` | docs 2026-11-08 |
 | [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 9 read, 1 write | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
 | [You.com](https://you.com/docs/welcome) `you` | You.com's cited Answer, Research and Finance Research APIs. | 5 read | key in header | `YOU_API_KEY` | docs 2026-11-08 |
+
+### scraping
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Bright Data](https://docs.brightdata.com/) `brightdata` | Pre-built site scrapers, Web Unlocker, SERP API and Marketplace datasets from Bright Data. | 9 read | key in header | `BRIGHTDATA_API_TOKEN` | docs 2026-11-08 |
+| [Massive (Web Render)](https://docs.joinmassive.com/web-render/overview.md) `joinmassive` | Massive's Web Render API: unblock and render web pages, Google results pages, and ChatGPT, Gemini, Perplexity or AI Overview answers, from chosen locations. | 4 read | key in header | `MASSIVE_TOKEN` | docs 2026-11-09 |
+| [Olostep](https://docs.olostep.com/) `olostep` | Scrape, crawl, map, search and answer over the web with Olostep's API. | 12 read | key in header | `OLOSTEP_API_KEY` | docs 2026-11-08 |
+| [Spider Cloud](https://spider.cloud/docs/api) `spidercloud` | Spider's crawl, scrape, links, search and screenshot API for AI agents and RAG. | 6 read | key in header | `SPIDER_API_KEY` | docs 2026-11-08 |
 
 ### developer
 
