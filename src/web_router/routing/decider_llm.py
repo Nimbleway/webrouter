@@ -120,7 +120,7 @@ class LLMDecider:
         try:
             content = data["choices"][0]["message"]["content"]
             answer = json.loads(_unfenced(content))
-        except (KeyError, IndexError, TypeError, ValueError, RecursionError):
+        except (KeyError, IndexError, TypeError, ValueError, RecursionError, AttributeError):  # null content too
             raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY) from None
         if not isinstance(answer, dict):
             raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY)
