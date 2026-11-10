@@ -124,3 +124,51 @@ async def test_vendor_keys_passed_in_code_survive_loading_a_dotenv(tmp_path: Any
     finally:
         await tools.aclose()
     assert {row["vendor"]: row for row in rows}["datadog"]["configured"] is True
+
+
+_GOOGLE_ADS = {"google-ads": {"developer_token": "d", "client_id": "c", "client_secret": "s", "refresh_token": "r"}}
+_MUTATE = {
+    "endpoint": "google-ads.campaign_budgets.mutate",
+    "params": {"customer_id": "123", "operations": [{"create": {"name": "b"}}]},
+}
+
+
+def _ads(request: httpx.Request) -> httpx.Response:
+    if request.url.host == "oauth2.googleapis.com":
+        return httpx.Response(200, json={"access_token": "minted", "expires_in": 3600})
+    return httpx.Response(200, json={"results": []})
+
+
+@pytest.mark.parametrize(("server_allows", "call_allows"), [(False, True), (True, False), (False, False)])
+async def test_a_catalog_write_needs_the_server_flag_and_the_calls(
+    monkeypatch: pytest.MonkeyPatch, server_allows: bool, call_allows: bool
+) -> None:
+    from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
+    from web_router.exceptions_vendors import VendorWriteRefusedError
+
+    if server_allows:
+        monkeypatch.setenv(VENDOR_ENV_ALLOW_WRITES, "1")
+    else:
+        monkeypatch.delenv(VENDOR_ENV_ALLOW_WRITES, raising=False)
+    recorder = Recorder(_ads)
+    tools = await _tools(recorder, _GOOGLE_ADS)
+    try:
+        with pytest.raises(VendorWriteRefusedError):
+            await tools.call(MCP_TOOL_CALL_VENDOR, {**_MUTATE, "allow_writes": call_allows})
+    finally:
+        await tools.aclose()
+    assert recorder.requests == []
+
+
+async def test_a_catalog_write_goes_through_with_both(monkeypatch: pytest.MonkeyPatch) -> None:
+    from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
+
+    monkeypatch.setenv(VENDOR_ENV_ALLOW_WRITES, "1")
+    recorder = Recorder(_ads)
+    tools = await _tools(recorder, _GOOGLE_ADS)
+    try:
+        result = await tools.call(MCP_TOOL_CALL_VENDOR, {**_MUTATE, "allow_writes": True})
+    finally:
+        await tools.aclose()
+    assert result["data"] == {"results": []}
+    assert recorder.last.url.path.endswith("/campaignBudgets:mutate")
