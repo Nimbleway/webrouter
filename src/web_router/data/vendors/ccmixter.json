@@ -1,0 +1,193 @@
+{
+  "vendor": "ccmixter",
+  "name": "ccMixter",
+  "category": "other",
+  "summary": "Creative Commons music, samples and a cappellas from the ccMixter community, through its Query API: search uploads by tags, user, license, remixes and dates.",
+  "docs_url": "https://ccmixter.org/query-api",
+  "base_url": "https://ccmixter.org",
+  "notes": [
+    "Free and keyless. Every call is a GET to /api/query; the parameters decide which records, how many and in what format.",
+    "Always pass f (format): the default is a full HTML page. Use f=json for data; xml, rss, atom, csv and count are also available.",
+    "limit cannot exceed the site's admin-set maximum for the format (typically 100-200 for json/csv); page through with offset.",
+    "Each upload carries its own Creative Commons license (lic): check it before reuse."
+  ],
+  "sources": [
+    "https://ccmixter.org/query-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ccmixter.uploads.search",
+      "name": "Search uploads",
+      "summary": "Uploads (tracks, samples, a cappellas) filtered by tags, uploader, license, text, remix counts, playlist or dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/query",
+      "params": {
+        "f": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "json",
+            "xml",
+            "rss",
+            "atom",
+            "csv",
+            "xspf",
+            "m3u",
+            "ids",
+            "count",
+            "html",
+            "page",
+            "js",
+            "docwrite",
+            "textfile"
+          ],
+          "description": "Output format; json for data.",
+          "example": "json"
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Tags separated by '+'; with several tags set type to all or any.",
+          "example": "hip_hop"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "For uploads: all or any, how multiple tags combine."
+        },
+        "reqtags": {
+          "in": "query",
+          "type": "string",
+          "description": "Tags an upload must have."
+        },
+        "u": {
+          "in": "query",
+          "type": "string",
+          "description": "Only uploads by this user (login name)."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Text words or phrase to search for."
+        },
+        "search_type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "match",
+            "any",
+            "all"
+          ],
+          "description": "match for an exact phrase, any or all of the terms."
+        },
+        "lic": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "by",
+            "nc",
+            "sa",
+            "nod",
+            "byncsa",
+            "byncnd",
+            "s",
+            "splus",
+            "ncsplus",
+            "pd"
+          ],
+          "description": "License: by Attribution, nc NonCommercial, sa Share-Alike, nod NoDerives, byncsa, byncnd, s Sampling, splus Sampling+, ncsplus, pd Public Domain."
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated numeric upload ids."
+        },
+        "remixes": {
+          "in": "query",
+          "type": "string",
+          "description": "Remixes of this upload id."
+        },
+        "remixesof": {
+          "in": "query",
+          "type": "string",
+          "description": "Remixes of this user's uploads (login name)."
+        },
+        "sources": {
+          "in": "query",
+          "type": "string",
+          "description": "Sources of this remix (upload id)."
+        },
+        "remixmin": {
+          "in": "query",
+          "type": "integer",
+          "description": "Uploads remixed at least this many times."
+        },
+        "remixmax": {
+          "in": "query",
+          "type": "integer",
+          "description": "Uploads remixed at most this many times."
+        },
+        "score": {
+          "in": "query",
+          "type": "integer",
+          "description": "Uploads with at least this many ratings."
+        },
+        "playlist": {
+          "in": "query",
+          "type": "string",
+          "description": "Records in this numeric playlist id."
+        },
+        "sinced": {
+          "in": "query",
+          "type": "string",
+          "description": "Since a date string, e.g. '3 weeks ago' or 'July 2006'."
+        },
+        "befored": {
+          "in": "query",
+          "type": "string",
+          "description": "Before a date string."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, e.g. name, fullname, last_edit, num_scores."
+        },
+        "ord": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ],
+          "description": "Sort direction."
+        },
+        "dataview": {
+          "in": "query",
+          "type": "string",
+          "description": "Columns to return for non-HTML formats, e.g. info for deep upload details, links, files, ids."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "At most this many records (capped by the site)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, with limit, for paging."
+        }
+      },
+      "notes": [
+        "f=count returns only the number of matching uploads."
+      ],
+      "job": "media.stock.search",
+      "docs_url": "https://ccmixter.org/query-api",
+      "verified": {
+        "docs": "https://ccmixter.org/query-api"
+      }
+    }
+  ]
+}

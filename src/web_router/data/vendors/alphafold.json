@@ -1,0 +1,160 @@
+{
+  "vendor": "alphafold",
+  "name": "AlphaFold Protein Structure Database",
+  "category": "other",
+  "summary": "Predicted protein structures from EMBL-EBI's AlphaFold DB: model file URLs (mmCIF, bCIF, PDB), confidence estimates and AlphaMissense annotations, keyed on UniProt accessions.",
+  "docs_url": "https://alphafold.ebi.ac.uk/api-docs",
+  "base_url": "https://alphafold.ebi.ac.uk/api",
+  "notes": [
+    "Free and keyless.",
+    "Every endpoint is keyed on a UniProt accession (e.g. Q5VSL9) or an AlphaFold model id; responses carry URLs to the model files, which are downloaded separately."
+  ],
+  "sources": [
+    "https://alphafold.ebi.ac.uk/api-docs",
+    "https://alphafold.ebi.ac.uk/api/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "alphafold.prediction.get",
+      "name": "Get predicted models for a protein",
+      "summary": "All AlphaFold models for a UniProt accession or model id, with model file URLs and quality estimates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/prediction/{qualifier}",
+      "params": {
+        "qualifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A UniProt accession or an AlphaFold model id.",
+          "example": "Q5VSL9"
+        },
+        "sequence_checksum": {
+          "in": "query",
+          "type": "string",
+          "description": "MD5 checksum of the UniProt sequence."
+        },
+        "include_complexes": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return complex models; false by default."
+        }
+      },
+      "job": "science.structures.get",
+      "docs_url": "https://alphafold.ebi.ac.uk/api-docs",
+      "verified": {
+        "docs": "https://alphafold.ebi.ac.uk/api/openapi.json"
+      }
+    },
+    {
+      "id": "alphafold.complex.get",
+      "name": "Get complex models for a protein",
+      "summary": "All complex models that include a UniProt accession or model id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/complex/{qualifier}",
+      "params": {
+        "qualifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A UniProt accession or an AlphaFold model id."
+        }
+      },
+      "job": "science.structures.get",
+      "docs_url": "https://alphafold.ebi.ac.uk/api-docs",
+      "verified": {
+        "docs": "https://alphafold.ebi.ac.uk/api/openapi.json"
+      }
+    },
+    {
+      "id": "alphafold.uniprot.summary",
+      "name": "Get the structure summary for a UniProt entry",
+      "summary": "AlphaFold models covering a UniProt accession's residue range, in summary form.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/uniprot/summary/{qualifier}.json",
+      "params": {
+        "qualifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A UniProtKB accession.",
+          "example": "Q5VSL9"
+        }
+      },
+      "job": "science.structures.get",
+      "docs_url": "https://alphafold.ebi.ac.uk/api-docs",
+      "verified": {
+        "docs": "https://alphafold.ebi.ac.uk/api/openapi.json"
+      }
+    },
+    {
+      "id": "alphafold.sequence.summary",
+      "name": "Find models by sequence",
+      "summary": "A summary of the AlphaFold models available for an amino-acid sequence or its MD5 checksum.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sequence/summary",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The sequence, or its MD5 checksum when type is md5."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "sequence",
+            "md5"
+          ],
+          "description": "What id is; sequence by default."
+        },
+        "rows": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of results to return (max 500)."
+        }
+      },
+      "job": "science.structures.get",
+      "docs_url": "https://alphafold.ebi.ac.uk/api-docs",
+      "verified": {
+        "docs": "https://alphafold.ebi.ac.uk/api/openapi.json"
+      }
+    },
+    {
+      "id": "alphafold.annotations.get",
+      "name": "Get AlphaMissense annotations",
+      "summary": "Annotations over a UniProt accession's residue range; MUTAGEN returns AlphaMissense variant-effect predictions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/annotations/{qualifier}.json",
+      "params": {
+        "qualifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A UniProt accession.",
+          "example": "Q5VSL9"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "MUTAGEN"
+          ],
+          "description": "Annotation type; MUTAGEN is the only one documented (AlphaMissense)."
+        }
+      },
+      "job": "science.proteins.annotations",
+      "docs_url": "https://alphafold.ebi.ac.uk/api-docs",
+      "verified": {
+        "docs": "https://alphafold.ebi.ac.uk/api/openapi.json"
+      }
+    }
+  ]
+}

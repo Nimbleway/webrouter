@@ -1,0 +1,53 @@
+{
+  "vendor": "opentargets",
+  "name": "Open Targets Platform",
+  "category": "other",
+  "summary": "Drug target evidence: target-disease associations, target tractability and genetic constraint, diseases, drugs and their mechanisms, through one GraphQL API.",
+  "docs_url": "https://platform-docs.opentargets.org/data-access/graphql-api",
+  "base_url": "https://api.platform.opentargets.org",
+  "notes": [
+    "Keyless. GraphQL only: one POST taking query and variables; ask only for the fields you need.",
+    "Root fields include target(ensemblId), disease(efoId), drug(chemblId), their plural forms, search(queryString, entityNames, page), mapIds(queryTerms, entityNames), variant(variantId) and study(studyId).",
+    "Find an id first with search (e.g. a gene symbol to its Ensembl id, a disease name to its EFO id), then query the entity.",
+    "For systematic work across many targets the project recommends its bulk downloads or BigQuery instead of many API calls."
+  ],
+  "sources": [
+    "https://platform-docs.opentargets.org/data-access/graphql-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "opentargets.graphql",
+      "name": "Run a GraphQL query",
+      "summary": "Any query over targets, diseases, drugs, variants, studies and their associations.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v4/graphql",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "GraphQL query.",
+          "example": "query target($ensemblId: String!) { target(ensemblId: $ensemblId) { id approvedSymbol } }"
+        },
+        "variables": {
+          "in": "body",
+          "type": "object",
+          "description": "Values for the query's variables.",
+          "example": {
+            "ensemblId": "ENSG00000169083"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "science.targets.query",
+      "docs_url": "https://platform-docs.opentargets.org/data-access/graphql-api",
+      "verified": {
+        "docs": "https://platform-docs.opentargets.org/data-access/graphql-api"
+      }
+    }
+  ]
+}
