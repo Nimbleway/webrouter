@@ -99,3 +99,20 @@ def test_a_member_with_an_unknown_url_policy_is_refused_and_closed(built: list[C
     finally:
         unregister_router("test-bad-policy")
     assert built[0].closed == 1 and made[0].closed == 1
+
+
+class NameRaises(Closable):
+    @property
+    def router_name(self) -> str:
+        raise RuntimeError("name unreadable")
+
+
+def test_a_member_whose_name_raises_is_closed_too(built: list[Closable]) -> None:
+    made: list[NameRaises] = []
+    register_router("test-name-raises", lambda: made.append(NameRaises()) or made[-1])
+    try:
+        with pytest.raises(RuntimeError, match="name unreadable"):
+            FallbackRouter(routers=[NAME, "test-name-raises"])
+    finally:
+        unregister_router("test-name-raises")
+    assert built[0].closed == 1 and made[0].closed == 1

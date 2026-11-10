@@ -73,11 +73,11 @@ def _member(index: int, spec: object) -> Member:
         tools = checked_route_tools(None, built)
         policy = getattr(built, ROUTER_URL_POLICY_ATTR, None)  # a property may raise: the router is closed too
         url_check(policy)  # refused as attaching it directly refuses it
+        name = _name(built, router.strip() if isinstance(router, str) else None)  # router_name may raise too
     except BaseException:
         _discard_refused(owned)
         raise
-    by_name = router.strip() if isinstance(router, str) else None
-    return Member(_name(built, by_name), attached, owned, tools, policy if isinstance(policy, str) else None)
+    return Member(name, attached, owned, tools, policy if isinstance(policy, str) else None)
 
 
 def built_members(routers: object) -> list[Member]:
