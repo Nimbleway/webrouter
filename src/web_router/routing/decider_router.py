@@ -21,12 +21,13 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Generator
 from typing import Any
 
 from web_router.constants_decider import MSG_DECIDER_FORM
 from web_router.exceptions import ConfigurationError
 from web_router.routing._forms import _declared_timeout
+from web_router.routing._runner import _close_late, _on_thread
 from web_router.routing.contract import RouteDecision, RouteRequest
 from web_router.routing.decider import Decider, DeciderQuestion
 from web_router.routing.decider_question import decision_for, question_for
@@ -37,6 +38,40 @@ from web_router.routing.registry import aclose_router, discard_router
 def _decider_name(decider: object) -> str:
     declared = getattr(decider, "name", None)
     return declared if isinstance(declared, str) and declared else type(decider).__qualname__
+
+
+async def _on_worker(
+    route: Callable[[RouteRequest], RouteDecision | Awaitable[RouteDecision]], req: RouteRequest
+) -> RouteDecision:
+    """Run a sync decider's route on a worker thread; a call cancelled meanwhile closes whatever it answers late."""
+    on_thread = _on_thread(route, req)
+    try:
+        answer: RouteDecision | Awaitable[RouteDecision] = await asyncio.wrap_future(on_thread)
+    except asyncio.CancelledError:
+        _close_late(on_thread)
+        raise
+    return await answer if inspect.isawaitable(answer) else answer
+
+
+class _Pending:
+    """The decision a ``decide()`` that answered with an awaitable makes once awaited.
+
+    Closing it closes that awaitable, so a call that gives up before awaiting it leaves no coroutine unawaited.
+    """
+
+    def __init__(self, reply: Awaitable[Any], finish: Callable[[Any], RouteDecision]) -> None:
+        self._reply, self._finish = reply, finish
+
+    def __await__(self) -> Generator[Any, None, RouteDecision]:
+        return self._finished().__await__()
+
+    async def _finished(self) -> RouteDecision:
+        return self._finish(await self._reply)
+
+    def close(self) -> None:
+        close = getattr(self._reply, "close", None)
+        if callable(close):
+            close()
 
 
 class DeciderRouter:
@@ -76,28 +111,20 @@ class DeciderRouter:
         question = question_for(req)
         if not question.options:
             return RouteDecision()
-        assert callable(self._decide)  # set only for a sync decider
+        assert callable(self._decide)  # called only when the decider has decide()
         reply = self._decide(question)
         if inspect.isawaitable(reply):  # an async decide() behind a plain decorator
-            return self._awaited(req, question, reply)
+            return _Pending(reply, lambda answer: self._decision(req, question, answer))
         return self._decision(req, question, reply)
-
-    async def _awaited(self, req: RouteRequest, question: DeciderQuestion, reply: Awaitable[Any]) -> RouteDecision:
-        return self._decision(req, question, await reply)
 
     async def aroute(self, req: RouteRequest) -> RouteDecision:
         """Ask the decider: ``adecide`` when it has one, else ``decide`` on a worker thread."""
+        if not callable(self._adecide):
+            return await _on_worker(self._route, req)
         question = question_for(req)
         if not question.options:
             return RouteDecision()
-        if callable(self._adecide):
-            reply = await self._adecide(question)
-        else:
-            assert callable(self._decide)
-            reply = await asyncio.to_thread(self._decide, question)
-            if inspect.isawaitable(reply):  # a decide() that answers with a coroutine
-                reply = await reply
-        return self._decision(req, question, reply)
+        return self._decision(req, question, await self._adecide(question))
 
     def _decision(self, req: RouteRequest, question: DeciderQuestion, reply: Any) -> RouteDecision:
         checked = checked_reply(reply, question.options, self.router_name)
