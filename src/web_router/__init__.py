@@ -1,7 +1,6 @@
 """web-router: one interface over many web search, extraction, answer, research and browser APIs.
 
-Point the router at a provider and call it; swapping backends is a one-word
-change rather than a rewrite.
+Point the router at a provider and call it; swapping backends is a one-word change rather than a rewrite.
 
     >>> from web_router import WebRouter
     >>> router = WebRouter("nimble")
@@ -115,7 +114,7 @@ from web_router.registry_answer import (
 )
 from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, RouterLike, ToolName
 from web_router.routing.pool_status import BudgetStatus
-from web_router.routing.registry import register_router, unregister_router
+from web_router.routing.registry import available_routers, register_router, unregister_router
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -269,6 +268,7 @@ __all__ = [
     "available_extract_providers",
     "available_providers",
     "available_research_providers",
+    "available_routers",
     "available_template_providers",
     "configured_answer_providers",
     "configured_browse_providers",

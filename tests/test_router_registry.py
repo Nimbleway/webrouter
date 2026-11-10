@@ -8,9 +8,16 @@ from typing import Any
 import pytest
 
 from tests.routing_registry_helpers import NAME, Closable, registered
-from web_router import AsyncWebRouter, RouteDecision, RouteRequest, WebRouter, register_router, unregister_router
+from web_router import (
+    AsyncWebRouter,
+    RouteDecision,
+    RouteRequest,
+    WebRouter,
+    available_routers,
+    register_router,
+    unregister_router,
+)
 from web_router.exceptions import ConfigurationError
-from web_router.routing.registry import available_routers
 
 
 @pytest.fixture

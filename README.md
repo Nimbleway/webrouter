@@ -2250,7 +2250,8 @@ answers only a `Host` naming it, checks the bearer key in constant time and
 caps a request at 1 MB.
 
 `remote` is a registered name. `register_router(name, factory)` adds your own
-(`unregister_router(name)` removes it, bringing back a built-in of that name),
+(`unregister_router(name)` removes it, bringing back a built-in of that name;
+`available_routers()` lists every name),
 and `WebRouter(router=name, router_config={...})` builds one by calling
 `factory(**router_config)`; a key the factory does not take, or one it needs
 and is not given, raises `ConfigurationError` naming the key, never its
