@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `web-router` are recorded here, newest first. Versions
+All notable changes to WebRouter are recorded here, newest first. Versions
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 `0.x`, a breaking change bumps the minor version.
 
@@ -9,6 +9,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Changed
 
 - **Breaking (Python version):** web-router now requires Python 3.11 or newer. Python 3.10 reached end of life in October 2026, and the fixed releases of some dependencies (Pillow, filelock) no longer support it. On Python 3.10, pip and uv keep installing 0.11.0, the last release that supports it.
+- The package description and the README tagline now read "WebRouter is an open source standard that connects your agent to the web", and the README title is WebRouter. The import (`web_router`) and the `web-router-mcp` command are unchanged.
 
 ### Added
 
