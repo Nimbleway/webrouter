@@ -11,6 +11,7 @@ Experimental until 1.0, like the router contract it measures.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from dataclasses import replace
 from typing import Any
 
@@ -57,10 +58,21 @@ class DelayedRouter:
         await aclose_router(self.inner)
 
 
+def shown_name(url: str) -> str:
+    """``remote:`` and the URL's scheme and host, never its port, path, query or credentials: they may carry a token.
+
+    A URL with more than a bare host gets 6 hex digits of its SHA-256, so two on one host stay apart.
+    """
+    host = host_of(url)
+    if url.rstrip("/") == host:
+        return REMOTE + host
+    return f"{REMOTE}{host}#{hashlib.sha256(url.encode()).hexdigest()[:6]}"
+
+
 def remote_spec(spec: str, rtt_ms: float) -> RouterSpec:
     """``remote:<url>`` as the library's ``remote`` router: on loopback when ``rtt_ms`` is 0, else behind the link."""
     url = spec.removeprefix(REMOTE)
-    shown = REMOTE + host_of(url)  # never the path, query or credentials: they may carry a token
+    shown = shown_name(url)
     if not rtt_ms:
         name, build = shown, lambda: RemoteRouter(url=url)
         link = "as the URL lies (loopback: no network)"

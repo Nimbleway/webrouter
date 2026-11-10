@@ -45,12 +45,21 @@ def test_remote_is_the_library_s_own_remote_router(latency: ModuleType) -> None:
 
 
 def test_a_stated_rtt_adds_a_simulated_remote_beside_loopback(latency: ModuleType) -> None:
-    specs = module("router_latency_routers").router_specs("remote:http://u:pw@127.0.0.1:1/r?token=s", rtts_ms=[40.0])
-    assert [s.name for s in specs] == ["remote:http://127.0.0.1", "remote:http://127.0.0.1 +40ms"]
+    specs = module("router_latency_routers").router_specs("remote:http://u:pw@127.0.0.1/r?token=s", rtts_ms=[40.0])
+    assert [s.name.split("#")[0] for s in specs] == ["remote:http://127.0.0.1"] * 2 and specs[1].name.endswith(" +40ms")
     assert "simulated 40 ms" in specs[1].describe
     assert not any(secret in s.name + s.describe for s in specs for secret in ("pw", "token", "/r"))
-    same = module("router_latency_routers").router_specs("remote:http://127.0.0.1:1/r", rtts_ms=[0.0, 40.0, 40.0])
+    same = module("router_latency_routers").router_specs("remote:http://127.0.0.1", rtts_ms=[0.0, 40.0, 40.0])
     assert [s.name for s in same] == ["remote:http://127.0.0.1", "remote:http://127.0.0.1 +40ms"], "each RTT once"
+
+
+def test_two_remotes_on_one_host_get_distinct_names_that_hide_the_path(latency: ModuleType) -> None:
+    routers = module("router_latency_routers")
+    a, b = (routers.router_specs(f"remote:http://127.0.0.1:1/{p}?token=s")[0].name for p in ("a", "b"))
+    assert a != b and a.startswith("remote:http://127.0.0.1#") and b.startswith("remote:http://127.0.0.1#")
+    assert not any(secret in a + b for secret in ("token", "/a", "/b", ":1"))
+    assert a == routers.router_specs("remote:http://127.0.0.1:1/a?token=s")[0].name, "the same URL, the same name"
+    assert routers.router_specs("remote:http://127.0.0.1/")[0].name == "remote:http://127.0.0.1", "a bare host as is"
 
 
 def test_a_simulated_link_keeps_the_call_within_its_deadline(latency: ModuleType) -> None:
