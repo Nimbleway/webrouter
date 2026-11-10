@@ -70,10 +70,18 @@ def _member(member: object) -> bool:
         and member.outcome in OUTCOMES
         and isinstance(ms, int | float)
         and not isinstance(ms, bool)
-        and math.isfinite(ms)
+        and _finite(ms)
         and ms >= 0
         and isinstance(member.counted, bool)
     )
+
+
+def _finite(value: float) -> bool:
+    """``value`` is finite; an int too large for a float is not."""
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
 
 
 def _members_well_formed(decision: RouteDecision) -> bool:
