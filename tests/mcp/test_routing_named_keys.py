@@ -105,3 +105,14 @@ def test_a_null_api_key_still_captures_the_preset_key_at_startup(monkeypatch: py
     assert sent_key(routing) == f"Bearer {SECRET}"
     with pytest.raises(ConfigurationError, match="DEEPSEEK_API_KEY"):
         McpRouting.from_environ(named("llm", config))
+
+
+def test_a_member_name_with_spaces_is_keyed_named_and_hosted_as_its_router() -> None:
+    member = {"name": "llm ", "preset": "deepseek", "model": "m"}
+    with pytest.raises(ConfigurationError, match="DEEPSEEK_API_KEY"):
+        McpRouting.from_environ(named("fallback", {"routers": [member]}))
+    routing = McpRouting.from_environ(named("fallback", {"routers": [member]}, DEEPSEEK_API_KEY=SECRET))
+    section = routing.capabilities(None)
+    assert section["router"] == "fallback(llm(api.deepseek.com))"
+    assert "https://api.deepseek.com" in section["router_note"]
+    assert routing.build()._router.name == section["router"]  # type: ignore[union-attr]

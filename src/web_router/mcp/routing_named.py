@@ -59,9 +59,12 @@ def read_config(env: Mapping[str, str], name: str | None) -> dict[str, Any] | No
 
 
 def _own_name(value: dict[str, Any], name: str | None) -> str | None:
-    """The router a mapping configures: the ``name`` it holds, as a ``fallback`` member does, else ``name``."""
+    """The router a mapping configures: the ``name`` it holds, as a ``fallback`` member does, else ``name``.
+
+    Stripped, as the registry strips a name it resolves, so ``"llm "`` finds the ``llm`` presets.
+    """
     own = value.get(FALLBACK_NAME_KEY)
-    return own if isinstance(own, str) else name
+    return own.strip() if isinstance(own, str) else name
 
 
 def _captured(value: Any, env: Mapping[str, str], name: str | None) -> Any:
@@ -105,7 +108,7 @@ def display_name(name: str, config: Mapping[str, Any] | None) -> str:
 
 def _member_name(member: object) -> str:
     if isinstance(member, str):
-        return display_name(member, None)
+        return display_name(member.strip(), None)
     if isinstance(member, dict) and isinstance(member.get(FALLBACK_NAME_KEY), str):
-        return display_name(member[FALLBACK_NAME_KEY], member)
+        return display_name(member[FALLBACK_NAME_KEY].strip(), member)
     return FALLBACK_CUSTOM_NAME
