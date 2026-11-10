@@ -562,6 +562,74 @@ fewer than 20 questions is listed as *too few questions*, not ranked: today
 `research:perplexity:medium` (19).
 A set that mixes methods other than these paths is refused by name.
 
+### Tool confusion and comparing routers
+
+Every set's report also has, held out, each router's **cost-weighted tool
+confusion matrix** and **where routers disagree**
+(`route_eval_matrix.py` and `route_eval_compare.py`, rendered by
+`route_eval_report_matrix.py`).
+
+- **The matrix** counts each held-out question by the tool the router's
+  choice ran (rows; `unserved` when nothing served it) against the best tool
+  (columns): the tool of the oracle's path, the one that got the question
+  right, cheapest then fastest, or *none right* when no path did. Each cell
+  reads *questions (right), overspend, time over*: what the router's choices
+  cost and took beyond the oracle's on those questions, as the replay charged
+  them. A cheaper or faster choice adds nothing there; it pays in accuracy,
+  which has its own column. A dear `research` moves a cell by dollars, a dear
+  `search` by cents, so the dear mistakes stand out. An extra with either side
+  unknown is left out of the sum and counted unknown, as cost is everywhere.
+- **Off the oracle, two counts.** A question's *right tools* are every tool
+  with a path that got it right; a choice is on target when its tool is one of
+  them. *Wrong tool, wrong answer* counts the questions some tool got right and
+  the router's tool did not: the accuracy lost to tool choice. *Right, not the
+  cheapest tool* counts the questions it got right on another tool than the
+  best: pure cost regret, charged against the cheapest right path. A wrong
+  answer from a right tool on another backend is neither; it is outside the
+  tool matrix. Above the matrices, one row per router gives both counts, the
+  cost regret, the overspend on every question and per question, the accuracy
+  lost to the oracle from every cause, and the time over per question. The
+  signed extras, which net a cheaper wrong choice against a dearer one, are in
+  `--json` only. On a one-method set every path is one tool, so the matrix is
+  one row: the router's overspend over the oracle.
+- **The oracle is an upper bound.** It is built from one frozen sample per
+  path, so a path that got a question right once by chance makes its tool a
+  right one, and the oracle's accuracy and the counts above lean optimistic.
+- **The comparison** sets each router beside `static` and beside every router
+  named with `--against` (scored too), each pair once, on the same held-out
+  questions: how often the served path differs (another backend of the same
+  tool counts) and how often the tool does, which of the two alone was right
+  there with the exact McNemar p-value of those two counts, each one's accuracy
+  with its Wilson 95% interval, and each one's mean cost over the questions
+  where both costs are known (the rest counted once, for the pair). On 30
+  held-out questions a gap of 15 points can still be noise; the p-value
+  and the intervals say so. Each pair's disagreements follow by tool pair.
+- **Every question, too.** A router with no `fit` method learns nothing from
+  the training split -- `static`, `always:` and a file router without one,
+  such as the rules router -- so it is also scored on every question
+  (`every_question` in `--json`) and each pair of them compared there, where
+  the held-out split would only cost questions. A router with `fit` is scored
+  held out only. `--json` keeps every router's held-out choices (`choices`),
+  an unfit router's choices on every question, and each pair's disagreeing
+  questions.
+
+One command reproduces the numbers. It reads only the committed frozen rows, so
+it calls nothing and costs $0; `frozen.py join` (once) puts the question text
+back from the public sets, for a router that reads the prompt, such as the
+rules router in `examples/router_rules.py`:
+
+```bash
+uv run --all-extras python benchmarks/providers/frozen.py join
+uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60 \
+    --router path/to/your_router.py:route --against examples/router_rules.py:route \
+    --joined benchmarks/providers/results/frozen-joined
+```
+
+That scores your router, the rules router, `static` and `oracle`, and compares
+your router with the rules router and with the static order, and the rules
+router with the static order. Your router loads as any route-eval router does:
+`module:attr` or `path/file.py:attr`.
+
 ## Router latency: which tools a router should order
 
 A router attached with `router=` is asked for the backend order of every call
