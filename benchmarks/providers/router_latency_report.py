@@ -1,4 +1,4 @@
-"""router-latency's report: the host it ran on, the results file as markdown, one row per router, the dry run's plan.
+"""router-latency's report: the host it ran on, the results as markdown, the dry run's plan and its cost.
 
 Imported as a sibling, by name, as ``_common`` is. Experimental until 1.0.
 """
@@ -13,9 +13,11 @@ import sys
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from router_latency_routers import RouterSpec
 from router_latency_tools import TOOLS, ToolLatency, route_tools_for, verdict
 
 import web_router
+from web_router.routing.contract import RouteRequest
 
 NONE = "n/a"
 ROUTER_PACKAGES = ("scikit-learn", "openai", "httpx")
@@ -173,3 +175,11 @@ def dry_run(rows: Sequence[Mapping[str, Any]], settings: Mapping[str, Any], prom
         total = None if total is None or row["cost_usd"] is None else total + row["cost_usd"]
     lines += ["", f"Estimated total: {_dollars(total)}"]
     return "\n".join(lines)
+
+
+def plan_cost(spec: RouterSpec, requests: Sequence[RouteRequest]) -> float | None:
+    """The estimated cost of calling ``spec`` once per request; ``0`` for a free router, ``None`` when unknown."""
+    if spec.cost_usd is None:
+        return 0.0
+    costs = [spec.cost_usd(req) for req in requests]
+    return None if any(c is None for c in costs) else sum(c for c in costs if c is not None)

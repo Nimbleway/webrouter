@@ -25,10 +25,10 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from _common import _pct
-from router_latency_routers import aclose, close
 
 from web_router.routing.contract import RouteRequest
 from web_router.routing.invoke import AttachedRouter, RouterOutcome
+from web_router.routing.registry import aclose_router, discard_router
 
 TIMEOUT = "router_timeout"
 P50, P90 = 0.5, 0.9
@@ -157,9 +157,9 @@ def cold_builds(
             calls[name].add(attached.call(req) if loop is None else await attached.acall(req))
         finally:
             if loop is None:
-                close(router)
+                discard_router(router)
             else:
-                await aclose(router)
+                await aclose_router(router)
 
     steps = (step(name, plan[i]) for i, name in _rounds(random.Random(seed), list(builders), len(plan)))
     if loop is not None:

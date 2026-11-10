@@ -3,8 +3,8 @@
 ``rules`` is the library's built-in router, the one the MCP server attaches.
 ``sklearn``, ``llm`` and ``jev`` are the example routers in ``examples/``,
 loaded from their files as route-eval loads a ``path/file.py:attr`` router.
-``remote:<url>`` is the library's own ``remote`` router, posting each request
-to a router service in the wire format, schema 1. Any other ``module:attr`` or ``path/file.py:attr``
+``remote:<url>`` is the library's own ``remote`` router, built in
+``router_latency_remote``. Any other ``module:attr`` or ``path/file.py:attr``
 names a router of your own. Imported as a sibling, by name, as ``_common`` is.
 
 Experimental until 1.0, like the router contract it measures.
@@ -12,7 +12,6 @@ Experimental until 1.0, like the router contract it measures.
 
 from __future__ import annotations
 
-import asyncio
 import importlib
 import importlib.util
 import json
@@ -21,17 +20,13 @@ import os
 import sys
 import tempfile
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from web_router._urls import host_of
-from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY
-from web_router.routing.contract import RouteDecision, RouteRequest
-from web_router.routing.registry import aclose_router, discard_router
-from web_router.routing.remote import RemoteRouter
+from web_router.routing.contract import RouteRequest
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 
@@ -40,9 +35,6 @@ KNOWN = (RULES, SKLEARN, LLM, JEV, REMOTE + "<url>")
 
 LLM_KEY_ENV, LLM_MODEL_ENV, LLM_BASE_URL_ENV = "OPENAI_API_KEY", "LLM_ROUTER_MODEL", "OPENAI_BASE_URL"
 JEV_KEY_ENV = "TYPESAFE_API_KEY"
-HANDSHAKE_RTTS = 3
-"""Round trips a new connection's first call pays on a simulated link: TCP, TLS 1.3, then the request."""
-
 CHARS_PER_TOKEN = 4
 """A rough English-text token size, for the dry run's estimate only."""
 REASON_TOKENS = 20
@@ -51,7 +43,6 @@ MTOK = 1_000_000
 
 MSG_BAD_ROUTER = "{spec!r}: a router is one of {known}, or module:attr / path/file.py:attr"
 MSG_NO_SKLEARN = "the sklearn router needs scikit-learn: uv run --all-extras --with scikit-learn python ..."
-MSG_LINK_TIMEOUT = "the simulated round trip took the whole deadline"
 
 
 @dataclass(frozen=True)
@@ -111,35 +102,6 @@ def _sklearn() -> Any:
         return classifier.ClassifierRouter(joblib.load(path))
 
 
-class DelayedRouter:
-    """A router behind a simulated link: ``rtt_ms`` slept before each call, :data:`HANDSHAKE_RTTS` times on the first.
-
-    It stands in for a router service on another host when none is at hand; the
-    results file says the delay was simulated.
-    """
-
-    def __init__(self, inner: Any, rtt_ms: float) -> None:
-        self.inner = inner
-        self.rtt_s = rtt_ms / 1000
-        self.timeout_s = inner.timeout_s
-        self._first = True
-
-    async def aroute(self, req: RouteRequest) -> RouteDecision:
-        slept = self.rtt_s * (HANDSHAKE_RTTS if self._first else 1)
-        self._first = False
-        if slept >= req.deadline_s:
-            await asyncio.sleep(req.deadline_s)
-            raise TimeoutError(MSG_LINK_TIMEOUT)
-        await asyncio.sleep(slept)
-        return await self.inner.aroute(replace(req, deadline_s=req.deadline_s - slept))  # type: ignore[no-any-return]
-
-    def close(self) -> None:
-        close(self.inner)
-
-    async def aclose(self) -> None:
-        await aclose(self.inner)
-
-
 def llm_tokens(req: RouteRequest) -> tuple[int, int]:
     """Estimated input and output tokens of one LLM router call: its instructions, menu and schema; a full ranking."""
     llm = example("router_llm.py")
@@ -196,24 +158,6 @@ def _custom(spec: str) -> RouterSpec:
     )
 
 
-def _remote(spec: str, rtt_ms: float) -> RouterSpec:
-    url = spec.removeprefix(REMOTE)
-    shown = REMOTE + host_of(url)  # never the path, query or credentials: they may carry a token
-    if not rtt_ms:
-        name, build = shown, lambda: RemoteRouter(url=url)
-        link = "as the URL lies (loopback: no network)"
-    else:
-        name, build = f"{shown} +{rtt_ms:g}ms", lambda: DelayedRouter(RemoteRouter(url=url), rtt_ms)
-        link = f"plus a simulated {rtt_ms:g} ms RTT ({HANDSHAKE_RTTS} RTTs on a new connection)"
-    return RouterSpec(
-        name,
-        f"web_router.routing.remote.RemoteRouter at {host_of(url)}, link {link}",
-        build,
-        optional_env=(ENV_REMOTE_ROUTER_API_KEY,),
-        cost_note="free to the caller: the service's own cost is not counted",
-    )
-
-
 def router_specs(
     spec: str,
     *,
@@ -224,7 +168,9 @@ def router_specs(
 ) -> list[RouterSpec]:
     """The routers a command-line name stands for: one, or for ``remote:<url>`` one per stated RTT and loopback."""
     if spec.startswith(REMOTE):
-        return [_remote(spec, rtt) for rtt in (0.0, *rtts_ms)]
+        from router_latency_remote import remote_spec  # here: that module imports RouterSpec from this one
+
+        return [remote_spec(spec, rtt) for rtt in (0.0, *rtts_ms)]
     return [router_spec(spec, llm_model=llm_model, llm_price=llm_price, jev_price=jev_price)]
 
 
@@ -245,23 +191,5 @@ def router_spec(
     if spec == JEV:
         return _jev(jev_price)
     if spec.startswith(REMOTE):
-        return _remote(spec, 0.0)
+        return router_specs(spec)[0]
     return _custom(spec)
-
-
-def close(router: Any) -> None:
-    """Close what a built router holds open: its ``close()``, else its ``aclose()``, as the library does."""
-    discard_router(router)
-
-
-async def aclose(router: Any) -> None:
-    """:func:`close` on the event loop that ran the router's calls: its ``aclose()``, else its ``close()``."""
-    await aclose_router(router)
-
-
-def plan_cost(spec: RouterSpec, requests: Sequence[RouteRequest]) -> float | None:
-    """The estimated cost of calling ``spec`` once per request; ``0`` for a free router, ``None`` when unknown."""
-    if spec.cost_usd is None:
-        return 0.0
-    costs = [spec.cost_usd(req) for req in requests]
-    return None if any(c is None for c in costs) else sum(c for c in costs if c is not None)

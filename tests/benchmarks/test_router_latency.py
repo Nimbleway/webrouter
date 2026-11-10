@@ -16,6 +16,7 @@ import pytest
 from scripts.benchmark_loader import load_script
 from web_router import RouteDecision, RouteRequest, registry
 from web_router.routing.contract import Candidate
+from web_router.routing.registry import discard_router
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "router_latency.py"
 SIBLINGS = (
@@ -31,6 +32,7 @@ SIBLINGS = (
     "router_latency_tools",
     "router_latency_args",
     "router_latency_routers",
+    "router_latency_remote",
     "router_latency_run",
     "router_latency_e2e",
     "router_latency_report",
@@ -171,12 +173,11 @@ def test_an_async_run_calls_and_closes_every_router_on_one_loop(latency: ModuleT
 def test_remote_is_the_library_s_own_remote_router(latency: ModuleType) -> None:
     from web_router.routing.remote import RemoteRouter
 
-    routers = _module("router_latency_routers")
-    router = routers.router_specs("remote:http://127.0.0.1:1/route")[0].build()
+    router = _module("router_latency_routers").router_specs("remote:http://127.0.0.1:1/route")[0].build()
     try:
         assert isinstance(router, RemoteRouter)
     finally:
-        routers.close(router)
+        discard_router(router)
 
 
 def test_a_stated_rtt_adds_a_simulated_remote_beside_loopback(latency: ModuleType) -> None:
@@ -195,7 +196,7 @@ def test_deadline_s_only_shortens_a_routers_own_deadline() -> None:
 
 
 def test_a_simulated_link_keeps_the_call_within_its_deadline(latency: ModuleType) -> None:
-    routers = _module("router_latency_routers")
+    remote = _module("router_latency_remote")
     seen: list[float] = []
 
     class Inner:
@@ -205,10 +206,10 @@ def test_a_simulated_link_keeps_the_call_within_its_deadline(latency: ModuleType
             seen.append(req.deadline_s)
             return RouteDecision()
 
-    asyncio.run(routers.DelayedRouter(Inner(), 10.0).aroute(_req()))  # first call: three round trips, 30 ms of 1 s
+    asyncio.run(remote.DelayedRouter(Inner(), 10.0).aroute(_req()))  # first call: three round trips, 30 ms of 1 s
     assert seen and seen[0] == pytest.approx(0.97)
     with pytest.raises(TimeoutError):
-        asyncio.run(routers.DelayedRouter(Inner(), 400.0).aroute(_req()))
+        asyncio.run(remote.DelayedRouter(Inner(), 400.0).aroute(_req()))
 
 
 def test_a_router_named_twice_is_refused(latency: ModuleType) -> None:

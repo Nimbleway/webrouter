@@ -40,12 +40,13 @@ from route_eval_sets import load_set
 from router_latency_args import DEFAULT_SETS, router_specs_for, settings
 from router_latency_args import parse_args as _parse_args
 from router_latency_e2e import added_wall_time
-from router_latency_report import dry_run, environment, markdown
-from router_latency_routers import RouterSpec, aclose, close, plan_cost
+from router_latency_report import dry_run, environment, markdown, plan_cost
+from router_latency_routers import RouterSpec
 from router_latency_run import cold_builds, interleaved
 from router_latency_tools import chain_orders, definition, tool_latencies
 
 from web_router.routing.contract import RouteRequest
+from web_router.routing.registry import aclose_router, discard_router
 
 OUT_DIR = DEFAULT_OUT / "router-latency"
 
@@ -113,9 +114,9 @@ def _close(routers: Iterable[Any], loop: asyncio.AbstractEventLoop | None) -> No
     for router in routers:  # one that fails to close still lets the rest close
         try:
             if loop is None:
-                close(router)
+                discard_router(router)
             else:
-                loop.run_until_complete(aclose(router))
+                loop.run_until_complete(aclose_router(router))
         except Exception as exc:
             failed.append(exc)
     if loop is not None:
