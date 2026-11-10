@@ -180,7 +180,17 @@ def ok(name: str, counted: bool) -> DecisionMember:
     return DecisionMember(name=name, outcome="ok", ms=1.0, counted=counted)
 
 
-@pytest.mark.parametrize("members", [("custom",), (ok("a", True), ok("b", True))], ids=["not-members", "two-counted"])
+def counted_as(value: Any) -> DecisionMember:
+    member = ok("a", True)
+    member.counted = value  # no validation on assignment
+    return member
+
+
+@pytest.mark.parametrize(
+    "members",
+    [("custom",), (ok("a", True), ok("b", True)), (counted_as("yes"),)],
+    ids=["not-members", "two-counted", "counted-not-bool"],
+)
 def test_a_composite_decision_with_malformed_members_is_invalid(members: Any) -> None:
     def composite(req: Any) -> CompositeDecision:
         return CompositeDecision(tools=["search"], members=members)

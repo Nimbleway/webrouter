@@ -58,12 +58,17 @@ def well_formed(decision: object) -> TypeGuard[RouteDecision]:
     )
 
 
+def _member(member: object) -> bool:
+    """A :class:`DecisionMember` whose ``counted`` is still a bool: the model checks it when built, not when set."""
+    return isinstance(member, DecisionMember) and isinstance(member.counted, bool)
+
+
 def _members_well_formed(decision: RouteDecision) -> bool:
     """A composite's ``members``: a tuple or list of :class:`DecisionMember`, at most one of them counted."""
     if not isinstance(decision, CompositeDecision):
         return True
     members = decision.members
-    if not isinstance(members, tuple | list) or not all(isinstance(m, DecisionMember) for m in members):
+    if not isinstance(members, tuple | list) or not all(_member(m) for m in members):
         return False
     if not isinstance(decision.timed_out, bool):
         return False
