@@ -253,16 +253,22 @@ def _plan(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[
 
 def _close(routers: Iterable[Any], loop: asyncio.AbstractEventLoop | None) -> None:
     """Close every router: on the async run's loop, which its calls ran on, and then that loop; else as sync code."""
-    if loop is None:
-        for router in routers:
-            close(router)
-        return
-    try:
-        for router in routers:
-            loop.run_until_complete(aclose(router))
-        loop.run_until_complete(loop.shutdown_asyncgens())
-    finally:
-        loop.close()
+    failed: list[Exception] = []
+    for router in routers:  # one that fails to close still lets the rest close
+        try:
+            if loop is None:
+                close(router)
+            else:
+                loop.run_until_complete(aclose(router))
+        except Exception as exc:
+            failed.append(exc)
+    if loop is not None:
+        try:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+        finally:
+            loop.close()
+    if failed:
+        raise failed[0]
 
 
 def run(args: argparse.Namespace, specs: Sequence[RouterSpec], pool: Sequence[RouteRequest]) -> dict[str, Any]:

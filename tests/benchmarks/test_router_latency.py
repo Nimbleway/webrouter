@@ -335,6 +335,29 @@ def test_a_failing_build_still_closes_the_routers_built_before_it(latency: Modul
     assert log == ["a"]
 
 
+@pytest.mark.parametrize("use_async", [False, True])
+def test_a_router_that_fails_to_close_still_lets_the_rest_close(latency: ModuleType, use_async: bool) -> None:
+    closed: list[str] = []
+
+    class Router:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def close(self) -> None:
+            closed.append(self.name)
+            if self.name == "a":
+                raise RuntimeError("close failed")
+
+        async def aclose(self) -> None:
+            self.close()
+
+    loop = asyncio.new_event_loop() if use_async else None
+    with pytest.raises(RuntimeError, match="close failed"):
+        latency._close([Router("a"), Router("b")], loop)
+    assert closed == ["a", "b"]
+    assert loop is None or loop.is_closed()
+
+
 def test_a_freshly_built_router_the_library_refuses_is_closed(latency: ModuleType) -> None:
     log: list[str] = []
 
