@@ -604,6 +604,8 @@ confusion matrix** and **where routers disagree**
   where both costs are known (the rest counted once, for the pair). On 30
   held-out questions a gap of 15 points can still be noise; the p-value
   and the intervals say so. Each pair's disagreements follow by tool pair.
+  `--against oracle` is refused: the matrix above already sets every router
+  against the oracle.
 - **Every question, too.** A router with no `fit` method learns nothing from
   the training split -- `static`, `always:` and a file router without one,
   such as the rules router -- so it is also scored on every question
