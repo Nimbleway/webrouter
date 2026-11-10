@@ -1,0 +1,237 @@
+{
+  "vendor": "happenstance",
+  "name": "Happenstance",
+  "category": "enrichment",
+  "summary": "Research a person from a description, and search for people across your network, groups and friends' connections.",
+  "docs_url": "https://developer.happenstance.ai/api-reference/introduction",
+  "base_url": "https://api.happenstance.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "HAPPENSTANCE_API_KEY"
+        ],
+        "description": "A Happenstance API key (happenstance.ai/integrations/keys). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits: search 2 per request, research 1 per completed research; 402 Payment Required when the balance is short.",
+    "Search and research are asynchronous: start, then poll the GET by id.",
+    "Search covers the user's own network (connections, groups, friends' connections), so results depend on whose key it is.",
+    "Errors use RFC 7807 problem details (type, title, status, detail). The Chat endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://developer.happenstance.ai/llms.txt",
+    "https://developer.happenstance.ai/openapi.json",
+    "https://developer.happenstance.ai/api-reference/introduction.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "happenstance.usage.get",
+      "name": "Get credit balance and usage",
+      "summary": "Credit balance, purchase and usage history, and Auto Reload settings.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/usage",
+      "job": "account.usage",
+      "docs_url": "https://developer.happenstance.ai/api-reference/get-usage",
+      "verified": {
+        "docs": "https://developer.happenstance.ai/api-reference/get-usage.md"
+      }
+    },
+    {
+      "id": "happenstance.research.start",
+      "name": "Start a person research",
+      "summary": "Detailed profile of one person from a free-text description; answers with an id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/research",
+      "params": {
+        "description": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Everything known about the person: full name, company, title, location, social handles.",
+          "example": "Jane Smith, VP Engineering at Acme, San Francisco"
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per successful, completed research; 402 when credits run out.",
+        "At most 10 research requests running at once (429 beyond).",
+        "Asynchronous: poll happenstance.research.get until status is COMPLETED, FAILED or FAILED_AMBIGUOUS."
+      ],
+      "job": "research.start",
+      "docs_url": "https://developer.happenstance.ai/api-reference/create-research",
+      "verified": {
+        "docs": "https://developer.happenstance.ai/api-reference/create-research.md"
+      }
+    },
+    {
+      "id": "happenstance.research.get",
+      "name": "Get a person research",
+      "summary": "Status and, when completed, the profile of a research request.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/research/{research_id}",
+      "params": {
+        "research_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id from happenstance.research.start."
+        }
+      },
+      "job": "research.result",
+      "docs_url": "https://developer.happenstance.ai/api-reference/get-research",
+      "verified": {
+        "docs": "https://developer.happenstance.ai/api-reference/get-research.md"
+      }
+    },
+    {
+      "id": "happenstance.search.start",
+      "name": "Search people in your network",
+      "summary": "People matching a query within your groups, your connections or your friends' connections.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/search",
+      "params": {
+        "text": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search query; @mentions narrow to one person's connections, e.g. 'engineers @Jane Smith knows'.",
+          "example": "founders in fintech"
+        },
+        "group_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Group ids to search within (happenstance.groups.list)."
+        },
+        "include_my_connections": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Search your own connections."
+        },
+        "include_friends_connections": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Search your friends' connections."
+        }
+      },
+      "notes": [
+        "A read over POST. 2 credits per search, charged when it completes; at most 10 searches running at once.",
+        "Asynchronous: poll happenstance.search.get with the returned id."
+      ],
+      "job": "people.search",
+      "docs_url": "https://developer.happenstance.ai/api-reference/create-search",
+      "verified": {
+        "docs": "https://developer.happenstance.ai/api-reference/create-search.md"
+      }
+    },
+    {
+      "id": "happenstance.search.get",
+      "name": "Get search results",
+      "summary": "Status and results of a search, one page at a time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/search/{search_id}",
+      "params": {
+        "search_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id from happenstance.search.start."
+        },
+        "page_id": {
+          "in": "query",
+          "type": "string",
+          "description": "A specific page of results."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://developer.happenstance.ai/api-reference/get-search",
+      "verified": {
+        "docs": "https://developer.happenstance.ai/api-reference/get-search.md"
+      }
+    },
+    {
+      "id": "happenstance.search.find_more",
+      "name": "Find more results for a search",
+      "summary": "A new search excluding everyone already returned in the chain, with the same query and settings.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/search/{search_id}/find-more",
+      "params": {
+        "search_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The parent search (one without a parent_search_id)."
+        }
+      },
+      "notes": [
+        "Costs credits like a new search."
+      ],
+      "job": "people.search",
+      "docs_url": "https://developer.happenstance.ai/api-reference/find-more-search",
+      "verified": {
+        "docs": "https://developer.happenstance.ai/api-reference/find-more-search.md"
+      }
+    },
+    {
+      "id": "happenstance.groups.list",
+      "name": "List your groups",
+      "summary": "Groups you can search within.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/groups",
+      "job": "lists.list",
+      "docs_url": "https://developer.happenstance.ai/api-reference/get-groups",
+      "verified": {
+        "docs": "https://developer.happenstance.ai/api-reference/get-groups.md"
+      }
+    },
+    {
+      "id": "happenstance.groups.get",
+      "name": "Get a group",
+      "summary": "A group's details and members; member names work as @mentions in searches.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/groups/{group_id}",
+      "params": {
+        "group_id": {
+          "in": "path",
+          "type": "string",
+          "required": true
+        }
+      },
+      "job": "lists.get",
+      "docs_url": "https://developer.happenstance.ai/api-reference/get-group",
+      "verified": {
+        "docs": "https://developer.happenstance.ai/api-reference/get-group.md"
+      }
+    },
+    {
+      "id": "happenstance.users.me",
+      "name": "Get your profile",
+      "summary": "The authenticated user's profile.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/users/me",
+      "job": "account.validate",
+      "docs_url": "https://developer.happenstance.ai/api-reference/get-current-user-profile",
+      "verified": {
+        "docs": "https://developer.happenstance.ai/api-reference/get-current-user-profile.md"
+      }
+    }
+  ]
+}
