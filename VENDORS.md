@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-37 vendors, 322 endpoints.
+42 vendors, 359 endpoints.
 
 ### advertising
 
@@ -73,7 +73,12 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
 | [AnyAPI](https://getanyapi.com/docs) `anyapi` | One pay-per-call wallet in front of many data sources: social profiles, posts, comments and search across Facebook, Instagram, LinkedIn, TikTok, X and Google. | 31 read | key in header | `ANYAPI_API_KEY` | docs 2026-11-08 |
+| [Edges](https://docs.edges.run/v1/api/introduction) `edges` | LinkedIn and Sales Navigator data over REST: extract people, companies and posts, run searches, and find profile or company URLs. | 8 read | key in header | `EDGES_API_KEY` | docs 2026-11-09 |
+| [Facebook Pages (Graph API)](https://developers.facebook.com/docs/pages-api) `facebook` | Facebook Pages you manage through Meta's Graph API: Page details, the Page feed, and publishing posts and photos. | 3 read, 2 write | key in query | `FACEBOOK_ACCESS_TOKEN` | docs 2026-11-08 |
+| [FastMoss](https://developer.fastmoss.com/api/docs/guide/quickStart.html) `fastmoss` | TikTok Shop data: products, shops, creators, videos and rankings, with sales and revenue estimates by region. | 8 read | key in header | `FASTMOSS_API_KEY` | docs 2026-11-09 |
+| [Fetchin](https://docs.fetchin.io/) `fetchinio` | Professional-network profiles, posts, comments, reactions and company pages as a credit-billed API. | 10 read | key in header | `FETCHIN_API_KEY` | docs 2026-11-08 |
 | [Just One API](https://docs.justoneapi.com/en/usage) `justoneapi` | Social and e-commerce data from Chinese and global platforms: Xiaohongshu, Weibo, TikTok, Instagram and YouTube profiles, posts, comments and search. | 20 read | key in query | `JUSTONEAPI_TOKEN` | docs 2026-11-08 |
+| [YouTube Data API](https://developers.google.com/youtube/v3/docs) `youtube` | Public YouTube data: videos, channels, playlists, comments and search, read with a Google API key. | 6 read | key in query | `YOUTUBE_API_KEY` | docs 2026-11-08 |
 
 ### enrichment
 
