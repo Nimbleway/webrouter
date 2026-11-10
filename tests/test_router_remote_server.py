@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import socket
+import threading
 import time
 
 import pytest
@@ -105,6 +106,22 @@ def test_the_example_server_bound_to_every_address_answers_the_host_its_clients_
         headers = {"Authorization": f"Bearer {KEY}", "Host": f"192.0.2.7:{port}"}  # the machine's LAN address, say
         with httpx.Client(trust_env=False) as client:
             assert client.post(f"http://127.0.0.1:{port}/route", json=body, headers=headers).status_code == 200
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_the_example_server_bound_to_every_address_without_a_key_keeps_the_host_check() -> None:
+    import httpx
+
+    server = reference.RouterServer(("0.0.0.0", 0))  # built directly, past serve()'s key check
+    threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
+    try:
+        port = server.server_address[1]
+        body = {"schema": 1, "prompt": "x", "candidates": [], "deadline_s": 1.0}
+        with httpx.Client(trust_env=False) as client:
+            answer = client.post(f"http://127.0.0.1:{port}/route", json=body, headers={"Host": f"192.0.2.7:{port}"})
+        assert answer.status_code == 421
     finally:
         server.shutdown()
         server.server_close()

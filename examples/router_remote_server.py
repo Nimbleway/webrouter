@@ -99,8 +99,8 @@ class RouterServer(ThreadingHTTPServer):
         return f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
 
     def answers(self, host: str | None) -> bool:
-        """Whether it answers this ``Host``: its address or ``localhost``, any when bound to 0.0.0.0 or :: (keyed)."""
-        unspecified = ipaddress.ip_address(self.server_address[0]).is_unspecified
+        """Whether it answers this ``Host``: its address or ``localhost``, any on 0.0.0.0 or :: with a key."""
+        unspecified = bool(self.api_key) and ipaddress.ip_address(self.server_address[0]).is_unspecified
         return unspecified or host in {self.authority, f"localhost:{self.server_address[1]}"}
 
     @property
