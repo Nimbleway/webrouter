@@ -1,0 +1,233 @@
+{
+  "vendor": "deepseek",
+  "name": "DeepSeek",
+  "category": "ai",
+  "summary": "DeepSeek chat and reasoning models through an OpenAI-compatible API, plus web Search and Fetch tools.",
+  "docs_url": "https://api-docs.deepseek.com/",
+  "pricing_url": "https://api-docs.deepseek.com/quick_start/pricing",
+  "base_url": "https://api.deepseek.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DEEPSEEK_API_KEY"
+        ],
+        "description": "a DeepSeek API key (platform.deepseek.com/api_keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Model names: deepseek-flash and deepseek-v4-pro; deepseek-v4-flash still works but is served by the Flash model.",
+    "Thinking (reasoning) is on by default; send thinking {\"type\":\"disabled\"} for a plain reply.",
+    "Search and Fetch cost $0.75 per 1,000 successful calls; empty results, failures and timeouts are free. Rate limits are per account: Search 100 QPS, Fetch 25 QPS plus a per-domain limit."
+  ],
+  "sources": [
+    "https://api-docs.deepseek.com/",
+    "https://api-docs.deepseek.com/api/create-chat-completion",
+    "https://api-docs.deepseek.com/api/list-models",
+    "https://api-docs.deepseek.com/api/get-user-balance",
+    "https://api-docs.deepseek.com/api/search",
+    "https://api-docs.deepseek.com/api/fetch",
+    "https://api-docs.deepseek.com/guides/search"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "deepseek.chat.complete",
+      "name": "Create a chat completion",
+      "summary": "Send a conversation to a DeepSeek model and get the reply.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/chat/completions",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "deepseek-flash or deepseek-v4-pro.",
+          "example": "deepseek-flash"
+        },
+        "messages": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Conversation as {role, content} messages; roles system, user, assistant, tool.",
+          "example": [
+            {
+              "role": "user",
+              "content": "Hello"
+            }
+          ]
+        },
+        "thinking": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"type\":\"enabled\"} or {\"type\":\"disabled\"}; enabled when omitted. Wins over reasoning_effort."
+        },
+        "reasoning_effort": {
+          "in": "body",
+          "type": "string",
+          "description": "Reasoning effort; default high.",
+          "enum": [
+            "none",
+            "low",
+            "high",
+            "max"
+          ]
+        },
+        "max_tokens": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum tokens in the reply, 1 to 393216."
+        },
+        "temperature": {
+          "in": "body",
+          "type": "number",
+          "description": "0 to 2, default 1; no effect in thinking mode."
+        },
+        "top_p": {
+          "in": "body",
+          "type": "number",
+          "description": "Nucleus sampling, above 0 and at most 1."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"type\":\"json_object\"} for JSON mode (the prompt must also ask for JSON)."
+        },
+        "stop": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 16 stop sequences."
+        },
+        "tools": {
+          "in": "body",
+          "type": "array",
+          "description": "Function tool definitions."
+        },
+        "tool_choice": {
+          "in": "body",
+          "type": "string",
+          "description": "none, auto, required or a named function; required and named choices fail in thinking mode."
+        }
+      },
+      "notes": [
+        "Do not set stream: true; this client returns one JSON body.",
+        "In thinking mode the reasoning is in choices[].message.reasoning_content, the answer in content.",
+        "Billed per token; see the pricing page."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://api-docs.deepseek.com/api/create-chat-completion",
+      "verified": {
+        "docs": "https://api-docs.deepseek.com/api/create-chat-completion"
+      }
+    },
+    {
+      "id": "deepseek.models.list",
+      "name": "List models",
+      "summary": "The models the key can call, with context window and output limit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/models",
+      "params": {},
+      "job": "ai.models",
+      "docs_url": "https://api-docs.deepseek.com/api/list-models",
+      "verified": {
+        "docs": "https://api-docs.deepseek.com/api/list-models"
+      }
+    },
+    {
+      "id": "deepseek.balance.get",
+      "name": "Get account balance",
+      "summary": "Whether the balance covers calls, and granted and topped-up balances by currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/user/balance",
+      "params": {},
+      "job": "account.usage",
+      "docs_url": "https://api-docs.deepseek.com/api/get-user-balance",
+      "verified": {
+        "docs": "https://api-docs.deepseek.com/api/get-user-balance"
+      }
+    },
+    {
+      "id": "deepseek.web.search",
+      "name": "Search the web",
+      "summary": "Ranked web results with snippets, model-ready summaries and optionally page content.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/tools/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search query, 1 to 128 characters; supports site:, -site: and quoted phrases.",
+          "example": "deepseek v4 release"
+        },
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return, 1 to 50; default 10. Does not change the price."
+        },
+        "ori_question": {
+          "in": "body",
+          "type": "string",
+          "description": "The user's original question, 1 to 128 characters, to improve query understanding."
+        },
+        "localization": {
+          "in": "body",
+          "type": "string",
+          "description": "An IP address to localize results to."
+        },
+        "need_content": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return page content in content; default false (content is then empty)."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "rerank_score runs 0 to 3 (1.5 and up is high quality); authority runs -1 (unknown) to 4."
+      ],
+      "job": "web.search",
+      "docs_url": "https://api-docs.deepseek.com/api/search",
+      "verified": {
+        "docs": "https://api-docs.deepseek.com/api/search"
+      }
+    },
+    {
+      "id": "deepseek.web.fetch",
+      "name": "Fetch a page as Markdown",
+      "summary": "Fetch one URL and return its title and content as Markdown.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/tools/fetch",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "http(s) URL, up to 8192 characters, without a username or password.",
+          "example": "https://api-docs.deepseek.com/"
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "403 means blocked by DeepSeek's security policy; 404 means no usable content could be retrieved (not billed)."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://api-docs.deepseek.com/api/fetch",
+      "verified": {
+        "docs": "https://api-docs.deepseek.com/api/fetch"
+      }
+    }
+  ]
+}

@@ -1,0 +1,266 @@
+{
+  "vendor": "groq",
+  "name": "Groq",
+  "category": "ai",
+  "summary": "Fast inference of open LLMs (and text-to-speech) on Groq LPUs, through an OpenAI-compatible API.",
+  "docs_url": "https://console.groq.com/docs/api-reference",
+  "pricing_url": "https://groq.com/pricing",
+  "base_url": "https://api.groq.com/openai/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GROQ_API_KEY"
+        ],
+        "description": "a Groq API key (console.groq.com/keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "OpenAI-compatible: the same paths and bodies as OpenAI's chat completions, under /openai/v1.",
+    "Rate limits are per model and per organization (requests and tokens per minute and day); a 429 carries retry-after.",
+    "Billed per token at each model's price; list current model ids with groq.models.list."
+  ],
+  "sources": [
+    "https://console.groq.com/docs/api-reference",
+    "https://console.groq.com/docs/rate-limits",
+    "https://console.groq.com/docs/openai"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "groq.chat.complete",
+      "name": "Create a chat completion",
+      "summary": "Send a conversation to a Groq-hosted model and get the reply.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/chat/completions",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model id, from groq.models.list.",
+          "example": "llama-3.3-70b-versatile"
+        },
+        "messages": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Conversation as {role, content} messages.",
+          "example": [
+            {
+              "role": "user",
+              "content": "Hello"
+            }
+          ]
+        },
+        "max_completion_tokens": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum tokens to generate."
+        },
+        "temperature": {
+          "in": "body",
+          "type": "number",
+          "description": "0 to 2, default 1."
+        },
+        "top_p": {
+          "in": "body",
+          "type": "number",
+          "description": "Nucleus sampling, 0 to 1."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"type\":\"json_object\"} for JSON mode, or a json_schema for Structured Outputs on supported models."
+        },
+        "tools": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 128 function tools."
+        },
+        "tool_choice": {
+          "in": "body",
+          "type": "string",
+          "description": "none, auto, required, or a named function."
+        },
+        "reasoning_effort": {
+          "in": "body",
+          "type": "string",
+          "description": "Reasoning level for reasoning models (e.g. none, default, low, medium, high); unsupported values return 400."
+        },
+        "reasoning_format": {
+          "in": "body",
+          "type": "string",
+          "description": "How reasoning is returned; not combinable with include_reasoning.",
+          "enum": [
+            "hidden",
+            "raw",
+            "parsed"
+          ]
+        },
+        "include_reasoning": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return a reasoning field; not combinable with reasoning_format."
+        },
+        "stop": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 4 stop sequences."
+        },
+        "seed": {
+          "in": "body",
+          "type": "integer",
+          "description": "Best-effort deterministic sampling."
+        },
+        "service_tier": {
+          "in": "body",
+          "type": "string",
+          "description": "Capacity tier; default on_demand.",
+          "enum": [
+            "auto",
+            "on_demand",
+            "flex",
+            "performance"
+          ]
+        }
+      },
+      "notes": [
+        "Do not set stream: true; this client returns one JSON body."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://console.groq.com/docs/api-reference",
+      "verified": {
+        "docs": "https://console.groq.com/docs/api-reference"
+      }
+    },
+    {
+      "id": "groq.models.list",
+      "name": "List models",
+      "summary": "The models available to the key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/models",
+      "params": {},
+      "job": "ai.models",
+      "docs_url": "https://console.groq.com/docs/api-reference",
+      "verified": {
+        "docs": "https://console.groq.com/docs/api-reference"
+      }
+    },
+    {
+      "id": "groq.models.get",
+      "name": "Get a model",
+      "summary": "Details of one model, including its context window.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/models/{model}",
+      "params": {
+        "model": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model id.",
+          "example": "llama-3.3-70b-versatile"
+        }
+      },
+      "job": "ai.models",
+      "docs_url": "https://console.groq.com/docs/api-reference",
+      "verified": {
+        "docs": "https://console.groq.com/docs/api-reference"
+      }
+    },
+    {
+      "id": "groq.speech.generate",
+      "name": "Generate speech from text",
+      "summary": "Text-to-speech with a Groq TTS model, returned as an audio file.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/audio/speech",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A text-to-speech model id, e.g. canopylabs/orpheus-v1-english."
+        },
+        "input": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text to speak."
+        },
+        "voice": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Voice name supported by the model."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Audio format; default mp3.",
+          "enum": [
+            "flac",
+            "mp3",
+            "mulaw",
+            "ogg",
+            "wav"
+          ]
+        }
+      },
+      "notes": [
+        "The response body is the audio bytes, not JSON."
+      ],
+      "job": "ai.speech.generate",
+      "docs_url": "https://console.groq.com/docs/api-reference",
+      "verified": {
+        "docs": "https://console.groq.com/docs/api-reference"
+      }
+    },
+    {
+      "id": "groq.batches.list",
+      "name": "List batches",
+      "summary": "Batch jobs on the account with their status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/batches",
+      "params": {},
+      "job": "jobs.list",
+      "docs_url": "https://console.groq.com/docs/api-reference",
+      "verified": {
+        "docs": "https://console.groq.com/docs/api-reference"
+      }
+    },
+    {
+      "id": "groq.batches.get",
+      "name": "Get a batch",
+      "summary": "Status and output file ids of one batch job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/batches/{batch_id}",
+      "params": {
+        "batch_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Batch id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://console.groq.com/docs/api-reference",
+      "verified": {
+        "docs": "https://console.groq.com/docs/api-reference"
+      }
+    }
+  ]
+}
