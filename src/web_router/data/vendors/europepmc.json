@@ -1,0 +1,437 @@
+{
+  "vendor": "europepmc",
+  "name": "Europe PMC",
+  "category": "search",
+  "summary": "Search and look up life-science literature (PubMed abstracts, PMC full text, preprints, patents) with citations, references, database cross-links and open-access full text from Europe PMC's free REST API.",
+  "docs_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs",
+  "base_url": "https://www.ebi.ac.uk/europepmc/webservices/rest",
+  "notes": [
+    "Keyless and free. An optional email parameter on search registers you with EBI for service news.",
+    "Responses default to XML on most calls; pass format=json for JSON.",
+    "Every publication is addressed by a source code plus id (MED/12345678, PMC/PMC1234567, PPR/...); take both from a search result."
+  ],
+  "sources": [
+    "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "europepmc.search",
+      "name": "Search publications",
+      "summary": "Publications matching a keyword, phrase or fielded query (e.g. auth:stoehr), with idlist, lite or core metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Keywords, a quoted phrase, or a fielded search such as auth:stoehr; combine with AND/OR.",
+          "example": "\"human malaria\""
+        },
+        "resultType": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields returned: idlist (ids and sources), lite (key metadata, default) or core (full metadata incl. abstract, MeSH, full-text links).",
+          "enum": [
+            "idlist",
+            "lite",
+            "core"
+          ]
+        },
+        "synonym": {
+          "in": "query",
+          "type": "string",
+          "description": "Expand the query with MeSH synonyms (default false).",
+          "enum": [
+            "TRUE",
+            "Y",
+            "YES",
+            "FALSE",
+            "N",
+            "NO"
+          ]
+        },
+        "cursorMark": {
+          "in": "query",
+          "type": "string",
+          "description": "Paging cursor: * (or omit) for the first page, then the nextCursorMark of the previous response."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 1000 (default 25)."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Field and order, e.g. 'CITED desc' or 'P_PDATE_D desc'; default relevance."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format: xml, json or dc (Dublin Core).",
+          "enum": [
+            "xml",
+            "json",
+            "dc"
+          ]
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional email to register with EBI."
+        }
+      },
+      "notes": [
+        "Page with cursorMark/nextCursorMark, not page numbers."
+      ],
+      "job": "scholar.search",
+      "docs_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs",
+      "verified": {
+        "docs": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs"
+      }
+    },
+    {
+      "id": "europepmc.article.get",
+      "name": "Get a publication",
+      "summary": "One publication by source and id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/article/{source}/{id}",
+      "params": {
+        "source": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Three-letter data source code, as returned in a search result's source (MED for PubMed, PMC, PPR for preprints...).",
+          "example": "MED",
+          "enum": [
+            "AGR",
+            "CBA",
+            "CTX",
+            "ETH",
+            "HIR",
+            "MED",
+            "PAT",
+            "PMC",
+            "PPR"
+          ]
+        },
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Publication id within the source, as returned in a search result's id.",
+          "example": "3426844"
+        },
+        "resultType": {
+          "in": "query",
+          "type": "string",
+          "description": "idlist, lite (default) or core.",
+          "enum": [
+            "idlist",
+            "lite",
+            "core"
+          ]
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format: xml, json or dc.",
+          "enum": [
+            "xml",
+            "json",
+            "dc"
+          ]
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional email to register with EBI."
+        }
+      },
+      "job": "scholar.paper",
+      "docs_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs",
+      "verified": {
+        "docs": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs"
+      }
+    },
+    {
+      "id": "europepmc.citations",
+      "name": "List citing publications",
+      "summary": "Count and list of publications that cite a given publication.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{source}/{id}/citations",
+      "params": {
+        "source": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Three-letter data source code, as returned in a search result's source (MED for PubMed, PMC, PPR for preprints...).",
+          "example": "MED",
+          "enum": [
+            "AGR",
+            "CBA",
+            "CTX",
+            "ETH",
+            "HIR",
+            "MED",
+            "PAT",
+            "PMC",
+            "PPR"
+          ]
+        },
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Publication id within the source, as returned in a search result's id.",
+          "example": "9843981"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1 (default 1)."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 1000 (default 25)."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format (default XML); pass json.",
+          "enum": [
+            "xml",
+            "json",
+            "dc"
+          ]
+        }
+      },
+      "job": "scholar.citations",
+      "docs_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs",
+      "verified": {
+        "docs": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs"
+      }
+    },
+    {
+      "id": "europepmc.references",
+      "name": "List references",
+      "summary": "Count and list of publications a given publication references.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{source}/{id}/references",
+      "params": {
+        "source": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Three-letter data source code, as returned in a search result's source (MED for PubMed, PMC, PPR for preprints...).",
+          "example": "MED",
+          "enum": [
+            "AGR",
+            "CBA",
+            "CTX",
+            "ETH",
+            "HIR",
+            "MED",
+            "PAT",
+            "PMC",
+            "PPR"
+          ]
+        },
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Publication id within the source, as returned in a search result's id.",
+          "example": "29867326"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1 (default 1)."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 1000 (default 25)."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format (default XML); pass json.",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        }
+      },
+      "job": "scholar.references",
+      "docs_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs",
+      "verified": {
+        "docs": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs"
+      }
+    },
+    {
+      "id": "europepmc.fulltext",
+      "name": "Get open-access full text",
+      "summary": "Full text of an open-access article as JATS XML.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{id}/fullTextXML",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "PMC id of the article (starts with PMC).",
+          "example": "PMC3257301"
+        }
+      },
+      "notes": [
+        "Only for the open-access subset; returns XML, not JSON."
+      ],
+      "docs_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs",
+      "verified": {
+        "docs": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs"
+      }
+    },
+    {
+      "id": "europepmc.database_links",
+      "name": "List database cross-references",
+      "summary": "Biological database records (UniProt, PDB, ChEBI...) that cite a publication.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{source}/{id}/databaseLinks",
+      "params": {
+        "source": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Three-letter data source code, as returned in a search result's source (MED for PubMed, PMC, PPR for preprints...).",
+          "example": "MED",
+          "enum": [
+            "AGR",
+            "CBA",
+            "CTX",
+            "ETH",
+            "HIR",
+            "MED",
+            "PAT",
+            "PMC",
+            "PPR"
+          ]
+        },
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Publication id within the source, as returned in a search result's id.",
+          "example": "30067176"
+        },
+        "database": {
+          "in": "query",
+          "type": "string",
+          "description": "Only links to this database (default all).",
+          "enum": [
+            "ARXPR",
+            "CHEBI",
+            "CHEMBL",
+            "EMBL",
+            "INTACT",
+            "INTERPRO",
+            "OMIM",
+            "PDB",
+            "PRIDE",
+            "UNIPROT"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1 (default 1)."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 1000 (default 25)."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format (default XML); pass json.",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        }
+      },
+      "docs_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs",
+      "verified": {
+        "docs": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs"
+      }
+    },
+    {
+      "id": "europepmc.profile",
+      "name": "Count hits by type and source",
+      "summary": "Hit counts for a query broken down by publication type and/or data source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/profile",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Same query syntax as search."
+        },
+        "profiletype": {
+          "in": "query",
+          "type": "string",
+          "description": "pub_type, source or all (default).",
+          "enum": [
+            "pub_type",
+            "source",
+            "all"
+          ]
+        },
+        "synonym": {
+          "in": "query",
+          "type": "string",
+          "description": "Expand the query with MeSH synonyms (default false).",
+          "enum": [
+            "TRUE",
+            "Y",
+            "YES",
+            "FALSE",
+            "N",
+            "NO"
+          ]
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format (default XML); pass json.",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional email to register with EBI."
+        }
+      },
+      "docs_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs",
+      "verified": {
+        "docs": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs"
+      }
+    }
+  ]
+}
