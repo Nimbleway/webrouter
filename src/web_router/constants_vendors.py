@@ -124,12 +124,16 @@ VENDOR_CATEGORY_DESCRIPTIONS: Final = {
     "security": "Vulnerabilities, advisories and threat intelligence.",
     "developer": "Package registries, code hosting, cloud platforms and their prices.",
     "observability": "Logs, metrics, errors and uptime.",
+    "custom": "Vendors from your own catalog directory (WEB_ROUTER_VENDOR_CATALOG) that fit no shipped shelf.",
 }
 """Each shelf a vendor is listed under, with what belongs on it; ``VENDORS.md`` prints the line under its heading."""
 
 VENDOR_CATEGORIES: Final = tuple(VENDOR_CATEGORY_DESCRIPTIONS)
-"""The shelves a vendor is listed under, one per vendor. There is no catch-all: a vendor that fits none
-needs a new shelf."""
+"""The shelves a vendor is listed under, one per vendor. There is no catch-all for shipped vendors: one that
+fits none needs a new shelf."""
+
+VENDOR_CUSTOM_CATEGORY: Final = "custom"
+"""The one shelf no shipped vendor uses: for a file in the user's own catalog directory that fits no other."""
 
 MSG_VENDOR_OAUTH_LITERAL: Final = (
     "oauth2.{field} is sent as written and cannot hold a placeholder: {value!r}. Use the literal value."

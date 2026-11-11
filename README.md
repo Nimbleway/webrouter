@@ -1519,8 +1519,9 @@ vendor's message, including URL-encoded copies of a key sent in the query.
 
 To pin a vendor's file or add one without forking, point
 `WEB_ROUTER_VENDOR_CATALOG` at a directory of JSON files: one named for a
-shipped vendor replaces it whole. [AGENTS.md](AGENTS.md#adding-a-vendor) has
-the format's rules.
+shipped vendor replaces it whole. A vendor of your own takes one of the
+shipped shelves as its `category`, or `custom` when none fits.
+[AGENTS.md](AGENTS.md#adding-a-vendor) has the format's rules.
 
 ## Browse
 

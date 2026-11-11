@@ -1256,7 +1256,8 @@ it is a format change to discuss first, not a branch in `caller.py`.
    anywhere.
 5. Category: the shelf in `VENDOR_CATEGORY_DESCRIPTIONS` (`constants_vendors.py`) whose
    line describes what the vendor holds. There is no catch-all: a vendor that fits no shelf
-   needs a new one, with its description, which `VENDORS.md` prints under its heading.
+   needs a new one, with its description, which `VENDORS.md` prints under its heading. The
+   `custom` shelf is for a user's own catalog directory and is never used by a shipped file.
 6. Credentials: the variable names the vendor's own docs use, or the one
    `.env.example` already uses for that vendor, else `<VENDOR>_API_KEY`. Two
    vendors never share a variable (a test checks).
