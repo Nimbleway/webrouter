@@ -1,7 +1,29 @@
 ---
 title: "How it works"
 description: "How WebRouter turns one call into a provider request, normalizes the response, and raises instead of dropping an option."
+icon: "diagram-project"
 ---
+
+Every provider has its own SDK, its own parameter names and its own response
+shape. "How many results" is `max_results` on Tavily, `count` on Brave and
+You.com, `numResults` on Exa. The page text is `content` on Tavily, `text` on
+Exa, `snippet` on Perplexity, and nested under `contents` on You.com. Swapping
+backends means rewriting the call, the options and the parsing.
+
+WebRouter normalizes all three:
+
+```python
+response = router.search(query, max_results=5, search_depth="fast")
+
+[result.content for result in response.results]  # same field, every backend
+```
+
+Nothing is hidden to get there. Unmapped provider fields stay in
+`SearchResult.extra` / `ExtractedDocument.extra`, the untouched payloads stay in
+`raw`, and an option a backend cannot honour **raises instead of being quietly
+dropped**, so a call never runs under weaker constraints than you asked for.
+
+## The pieces
 
 | Piece | Role |
 | --- | --- |

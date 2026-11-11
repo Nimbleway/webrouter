@@ -2,6 +2,7 @@
 title: "Search options"
 description: "Search the web through any provider with one call: result count, search depth, effort, recency and refused values."
 sidebarTitle: "Search"
+icon: "magnifying-glass"
 ---
 
 ```python
@@ -19,7 +20,7 @@ response = router.search(
 ```
 
 Every option except `query` is optional. Which ones a given provider maps is in
-the support table above; setting one it does not map raises rather than being
+the [Providers](/providers#search) table; setting one it does not map raises rather than being
 ignored, and so does a value it cannot serve — a depth level it lacks, a country
 off its list — before anything is sent, so `auto` passes that backend over.
 

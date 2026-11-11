@@ -14,16 +14,31 @@
       "dark": "#14251e"
     }
   },
+  "fonts": {
+    "heading": {
+      "family": "Courier Prime",
+      "weight": 700
+    },
+    "body": {
+      "family": "Inter"
+    }
+  },
+  "appearance": {
+    "default": "system"
+  },
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg",
-    "href": "https://github.com/Nimbleway/webrouter"
+    "dark": "/logo/dark.svg"
   },
-  "favicon": "/logo/favicon.svg",
+  "favicon": "/logo/favicon.png",
+  "banner": {
+    "content": "**Developer preview:** the API may change before 1.0. Share feedback on [Discord](https://discord.gg/MGztFWSjZh).",
+    "dismissible": true
+  },
   "navbar": {
     "links": [
       {
-        "label": "Discord",
+        "type": "discord",
         "href": "https://discord.gg/MGztFWSjZh"
       }
     ],
@@ -38,7 +53,6 @@
         "group": "Get started",
         "pages": [
           "index",
-          "install",
           "quickstart",
           "how-it-works",
           "providers"
@@ -58,16 +72,43 @@
         "group": "Reference",
         "pages": [
           "configuration",
-          "errors",
-          "community"
+          "errors"
         ]
       }
     ]
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "claude",
+      "chatgpt"
+    ]
+  },
+  "thumbnails": {
+    "preset": "classic",
+    "surface": "brand",
+    "fonts": {
+      "family": "Courier Prime"
+    }
+  },
+  "seo": {
+    "metatags": {
+      "og:site_name": "WebRouter",
+      "og:image": "/assets/og.png",
+      "twitter:card": "summary_large_image"
+    }
   },
   "footer": {
     "socials": {
       "github": "https://github.com/Nimbleway/webrouter",
       "discord": "https://discord.gg/MGztFWSjZh"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/install",
+      "destination": "/quickstart"
+    }
+  ]
 }

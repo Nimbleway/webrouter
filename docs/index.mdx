@@ -1,10 +1,10 @@
 ---
-title: "WebRouter: an open source standard to connect your agent to the internet"
-description: "WebRouter gives your agent one interface to search, extract, answer, research and browser sessions, across many providers."
-sidebarTitle: "Introduction"
+title: "Introduction"
+description: "An open source standard that connects your agent to the internet."
+icon: "house"
 ---
 
-<img src="/assets/webrouter-mascot.png" alt="The WebRouter router mascot, an orange cable plugged into its search port" width="360" />
+<p align="center"><img src="/assets/webrouter-mascot.png" alt="The WebRouter router mascot, an orange cable plugged into its search port" width="240" /></p>
 
 Connect your agent to every web tool through one interface: search, extract, answer, research and browser sessions, across many providers. A [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
 
@@ -12,59 +12,51 @@ Connect your agent to every web tool through one interface: search, extract, ans
 pip install "webrouter[all]"
 ```
 
-```python
+```python quickstart.py
 from web_router import Provider, WebRouter
 
 WebRouter().search("what is retrieval augmented generation")  # no key needed
-WebRouter(Provider.NIMBLE).search("...")  # or name one
 WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
-
 WebRouter().extract("https://example.com")  # page contents, also keyless
-
-WebRouter(Provider.LINKUP).answer("...")  # a written answer with its sources, in one call
-
-WebRouter(Provider.NIMBLE).research("...")  # an agentic run: minutes, not milliseconds
-
-with WebRouter("local").open_browser() as browser:  # a browser to drive, also keyless
-    browser.goto("https://example.com")
-
-WebRouter(Provider.BROWSER_USE).browse("...")  # a hosted browser agent does the task
 ```
 
-<Note>**Beta:** the API may change before 1.0.</Note>
+## Get started
 
-Every provider has its own SDK, its own parameter names and its own response
-shape. "How many results" is `max_results` on Tavily, `count` on Brave and
-You.com, `numResults` on Exa. The page text is `content` on Tavily, `text` on
-Exa, `snippet` on Perplexity, and nested under `contents` on You.com. Swapping
-backends means rewriting the call, the options and the parsing.
-
-WebRouter normalizes all three:
-
-```python
-response = router.search(query, max_results=5, search_depth="fast")
-
-[result.content for result in response.results]  # same field, every backend
-```
-
-Nothing is hidden to get there. Unmapped provider fields stay in
-`SearchResult.extra` / `ExtractedDocument.extra`, the untouched payloads stay in
-`raw`, and an option a backend cannot honour **raises instead of being quietly
-dropped**, so a call never runs under weaker constraints than you asked for.
-
-<Columns cols={2}>
-  <Card title="Install" icon="download" href="/install">
-    From PyPI or a clone, with the extras for the methods you call.
-  </Card>
+<Columns cols={3}>
   <Card title="Quickstart" icon="rocket" href="/quickstart">
-    Your first search and extract, with no key.
+    Install, then your first search and extract, with no key.
+  </Card>
+  <Card title="How it works" icon="diagram-project" href="/how-it-works">
+    One call shape, normalized results, nothing dropped.
   </Card>
   <Card title="Providers" icon="plug" href="/providers">
-    Which provider serves which method, and the key each needs.
-  </Card>
-  <Card title="Browser" icon="globe" href="/browser">
-    Drive a browser session yourself, or hand a task to a browser agent.
+    Which provider serves which method, and its key.
   </Card>
 </Columns>
 
-Questions? Ask in the [WebRouter Discord](https://discord.gg/MGztFWSjZh). See [Community](/community) for where everything else goes.
+## Methods
+
+<Columns cols={3}>
+  <Card title="Search" icon="magnifying-glass" href="/search">
+    Web results from any search provider.
+  </Card>
+  <Card title="Extract" icon="file-lines" href="/extract">
+    Page contents for URLs you already have.
+  </Card>
+  <Card title="Answer" icon="message" href="/answer">
+    A written answer with its sources.
+  </Card>
+  <Card title="Research" icon="flask" href="/research">
+    An agentic run that reasons over several turns.
+  </Card>
+  <Card title="Browser" icon="globe" href="/browser">
+    Drive a browser session, or hand a task to an agent.
+  </Card>
+</Columns>
+
+## Get help
+
+- [Discord](https://discord.gg/MGztFWSjZh): questions in #help, chatting with other builders and the maintainers, and showing what you built in #showcase.
+- [GitHub Issues](https://github.com/Nimbleway/webrouter/issues): bugs and gaps in a provider's support.
+- [GitHub Discussions](https://github.com/Nimbleway/webrouter/discussions): proposals and design ideas.
+- [SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md): vulnerabilities. Never in a public channel.

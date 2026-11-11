@@ -1,0 +1,18 @@
+/* WebRouter brand: dark-mode code blocks sit on the green page instead of neutral black. */
+html.dark .code-block-background {
+  background-color: #0f1d17 !important;
+  border-color: rgba(209, 221, 191, 0.12) !important;
+}
+
+/* The code block's scroll fade still uses the old near-black; match it to the branded block. */
+html.dark .code-block-fade-overlay {
+  background-image: linear-gradient(to right, rgba(15, 29, 23, 0) 0px, rgba(15, 29, 23, 0.5) 25px, rgb(15, 29, 23) 100%) !important;
+}
+
+/* A quiet divider between the sidebar and the page. */
+#sidebar {
+  border-right: 1px solid rgba(32, 44, 38, 0.12);
+}
+html.dark #sidebar {
+  border-right-color: rgba(209, 221, 191, 0.1);
+}

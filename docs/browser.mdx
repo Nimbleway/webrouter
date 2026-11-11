@@ -2,6 +2,7 @@
 title: "Browser sessions and browse"
 description: "Open a browser session to drive yourself, on a hosted vendor or a local Chromium, or hand a task to a hosted browser agent."
 sidebarTitle: "Browser"
+icon: "globe"
 ---
 
 `open_browser()` is the one method that returns neither an answer nor a job but
@@ -188,6 +189,8 @@ against `local`, sync and async, with no key.
 
 ## Session backend notes
 
+<AccordionGroup>
+<Accordion title="Steel">
 **Steel.** Its `cdp_url` carries your API key in its query string, which is
 Steel's own connection scheme. It keeps a session across a reconnect, as
 `local` does. Proxies, stealth, CAPTCHA solving, profiles, viewport and
@@ -196,7 +199,8 @@ mapping for them. `profile` and `persist_profile` map onto `profileId` and
 `persistProfile`. `live_view_url` is its `sessionViewerUrl`, a dashboard page
 that asks for a Steel login; its `debugUrl` needs none, so it is
 `control_url()`.
-
+</Accordion>
+<Accordion title="Browserbase">
 **Browserbase.** Its `cdp_url` is the `connectUrl` it returns, which is enough
 on its own to drive the session. It solves CAPTCHAs unless
 `browserSettings.solveCaptchas` is set to `false` through `provider_options`;
@@ -208,7 +212,8 @@ sent with `persist_profile` as `browserSettings.context`. Its live view lets
 whoever opens it drive the session and takes a second request, so
 `live_view_url` stays `None` and `control_url()` makes that request when first
 called; `expires_at` is the `expiresAt` it reports.
-
+</Accordion>
+<Accordion title="Hyperbrowser">
 **Hyperbrowser.** Its `cdp_url` is the `wsEndpoint` it reports, which carries a
 session token. It takes its lifetime in whole minutes, so `timeout` is rounded
 up, and it has no idle timeout, so `idle_timeout` raises. A session ends when
@@ -224,7 +229,8 @@ the session, so it is `control_url()`, never `live_view_url`. `profile` and
 `useProxy` on and sends `proxyCountry` upper-cased, refused outside the
 country list Hyperbrowser's API reference publishes. All three are mapped from
 documentation, unverified against a live call.
-
+</Accordion>
+<Accordion title="Anchor">
 **Anchor.** Both lifetimes are whole minutes, rounded up. Its `idle_timeout`
 starts counting only once the last connection closes, so a client that stays
 connected but idle keeps the session, and its bill, alive until `timeout`.
@@ -239,7 +245,8 @@ against every country its proxy guide lists. `profile` is a profile's name,
 sent with `persist_profile` under `browser.profile`. Its live view is
 interactive unless the session was opened read-only, so it is `control_url()`,
 never `live_view_url`.
-
+</Accordion>
+<Accordion title="Kernel">
 **Kernel.** Its `cdp_url` is the `cdp_ws_url` it returns, which carries a
 session token. Kernel has no lifetime limit, only an idle one: `idle_timeout`
 maps onto `timeout_seconds`, which counts down only while no CDP, WebDriver or
@@ -259,7 +266,8 @@ Its live view lets whoever opens it drive the session, so it is
 with `headless=False`. A deleted session, whether released or
 idled out, reads as `"released"`: Kernel answers 404 for both and does not say
 which. Every mapping was checked live on 2026-10-20.
-
+</Accordion>
+<Accordion title="local">
 **`local`** starts a fresh browser process per session, with a temporary
 profile and its DevTools port pinned to `127.0.0.1`, and stops it and deletes
 the profile on release, when its `timeout` runs out, or when your Python
@@ -276,6 +284,8 @@ an 800x513 page). A browser too old to have that command fails the open. Its
 `provider_options` are Chrome command-line switches, so
 `{"window-size": "800,600"}` sets the outer size if that is what you want --
 though not beside `viewport`, which refuses every switch that sizes the window.
+</Accordion>
+</AccordionGroup>
 
 ## Browse
 
@@ -284,7 +294,7 @@ vendor's own browsers through it and answers minutes later. It is research's
 shape on the same job core: `browse()` blocks until the answer is in, and
 `submit_browse()` hands back a `BrowseJob` to poll instead.
 
-```python
+```python wrap
 response = router.browse(
     "find the title of the top story and how many points it has",
     start_url="https://news.ycombinator.com",
@@ -339,6 +349,8 @@ the task.
 
 ### Browse backend notes
 
+<AccordionGroup>
+<Accordion title="Browser Use">
 **Browser Use** runs each task in a session it creates for it, and cancelling a
 task stops that session too. Its steps carry the page, the screenshot, the
 agent's note on the step (its `memory`) and, for a step that took one action,
@@ -351,7 +363,8 @@ the agent may still answer from what it already knows, so check
 `steps` when it matters where an answer came from. A finished task is
 `complete` even when Browser Use's self-reported `isSuccess` is `false`, which
 stays in `raw`.
-
+</Accordion>
+<Accordion title="Skyvern">
 **Skyvern** answers in an object whose keys its agent chose unless a
 `data_extraction_schema` is sent, and that is not mapped yet, so most Skyvern
 answers are only in `raw[0]["output"]`: `answer` is set only when the output is
@@ -362,7 +375,8 @@ carrying credentials, so it also stays in `raw`. `timed_out` covers both the
 the task rather than reading as `partial`. Its `data_extraction_schema`,
 `max_steps`, engine and browser session are reachable through
 `provider_options` until a live call confirms a mapping.
-
+</Accordion>
+<Accordion title="Browserbase">
 **Browserbase**'s Agents API has no start URL, so `start_url` raises
 `UnsupportedParameterError` rather than being folded into the task. A prose
 `result` is the `answer`; an object or list `result` is `structured`, because
@@ -371,3 +385,5 @@ Browserbase returns one only for a `resultSchema`, which reaches it through
 a live call confirms mapping `output_schema`. A run started with no `agentId`
 may create a new Agent in your Browserbase account each time. `steps` is empty:
 the transcript is a separate endpoint this provider does not read.
+</Accordion>
+</AccordionGroup>
