@@ -68,6 +68,11 @@ def test_a_non_finite_lifetime_is_an_unreadable_answer(expires_in: str) -> None:
         _twice(_TokenEndpoint(_body(expires_in)))
 
 
+def test_a_boolean_lifetime_is_an_unreadable_answer() -> None:
+    with pytest.raises(ProviderError, match="bool"):
+        _twice(_TokenEndpoint(_body("true")))
+
+
 def test_a_sync_call_on_the_loop_thread_does_not_hang_behind_an_async_one() -> None:
     """An async call holds the token across its await; a sync call made on the same thread must still finish."""
     cache, request = TokenCache(), token_request("oauthco", _OAUTH, CREDENTIALS["oauthco"])

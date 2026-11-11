@@ -149,6 +149,9 @@ class TokenCache:
                 raise ValueError(f"a JSON {type(payload).__name__}, not an object")
             lifetime = payload.get("expires_in")
             seconds: float | None = None
+            # bool first: True is an int, and would read as a one-second lifetime.
+            if isinstance(lifetime, bool):
+                raise TypeError("expires_in is a bool")
             if isinstance(lifetime, (int, float, str)) and lifetime != "":
                 seconds = float(lifetime)
             elif lifetime not in (None, ""):

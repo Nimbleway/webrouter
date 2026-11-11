@@ -92,3 +92,7 @@ def test_a_short_secret_is_masked_as_a_whole_word_inside_an_answer() -> None:
     answer = {"auth": "Bearer abc123", "field": "username", "note": "a user here"}
     masked = mask_answer(answer, ["abc123", "user"])
     assert masked == {"auth": "Bearer ***", "field": "username", "note": "a *** here"}
+
+
+def test_a_short_secret_is_masked_in_its_url_encoded_form_too() -> None:
+    assert mask_answer("https://x.test/?key=a%2Bb&n=1", ["a+b"]) == "https://x.test/?key=***&n=1"

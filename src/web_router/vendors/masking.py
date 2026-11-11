@@ -44,7 +44,11 @@ def mask_answer(value: Any, secrets: Sequence[str]) -> Any:
     """
     exact = {form for secret in secrets if secret for form in _spellings(secret)}
     inside = [secret for secret in secrets if secret and len(secret) >= VENDOR_MASK_INSIDE_MIN]
-    short = sorted({secret for secret in secrets if secret and len(secret) < VENDOR_MASK_INSIDE_MIN}, key=len)
+    # A short secret's URL-encoded spellings too, so a key like `a+b` is not left in a URL as `a%2Bb`.
+    short = sorted(
+        {form for secret in secrets if secret and len(secret) < VENDOR_MASK_INSIDE_MIN for form in _spellings(secret)},
+        key=len,
+    )
     words = [re.compile(rf"(?<![A-Za-z0-9]){re.escape(secret)}(?![A-Za-z0-9])") for secret in reversed(short)]
 
     def masked(text: str) -> str:
