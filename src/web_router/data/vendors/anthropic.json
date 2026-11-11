@@ -1,0 +1,326 @@
+{
+  "vendor": "anthropic",
+  "name": "Anthropic (Claude API)",
+  "category": "ai",
+  "summary": "Claude models through Anthropic's own API: messages, token counting, model list and batch jobs.",
+  "docs_url": "https://platform.claude.com/docs/en/api/overview",
+  "pricing_url": "https://www.anthropic.com/pricing",
+  "base_url": "https://api.anthropic.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ANTHROPIC_API_KEY"
+        ],
+        "description": "A Claude API key (platform.claude.com > API Keys)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "anthropic-version": "2026-10-21"
+  },
+  "notes": [
+    "Every request carries anthropic-version; this entry pins 2026-10-21, under which temperature, top_p and top_k are removed and any of them is a 400.",
+    "Billed per input and output token at the model's price; the response's usage block gives the counts.",
+    "A key that can act on several workspaces needs the anthropic-workspace-id header; a workspace-scoped key does not.",
+    "Request size limits: 128 MB for messages and token counting, 256 MB for a batch."
+  ],
+  "sources": [
+    "https://platform.claude.com/docs/en/api/overview",
+    "https://platform.claude.com/docs/en/api/versioning",
+    "https://platform.claude.com/docs/en/api/messages/create",
+    "https://platform.claude.com/docs/en/api/messages/count_tokens",
+    "https://platform.claude.com/docs/en/api/models/list",
+    "https://platform.claude.com/docs/en/api/models/retrieve",
+    "https://platform.claude.com/docs/en/api/messages/batches/create",
+    "https://platform.claude.com/docs/en/api/messages/batches/retrieve",
+    "https://platform.claude.com/docs/en/api/messages/batches/results"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "anthropic.messages.create",
+      "name": "Create a message",
+      "summary": "Send a conversation to a Claude model and get its reply.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/messages",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model id, e.g. claude-sonnet-5-5; list them with anthropic.models.list.",
+          "example": "claude-sonnet-5-5"
+        },
+        "max_tokens": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Most tokens to generate; the model may stop sooner. Maximum depends on the model.",
+          "example": 1024
+        },
+        "messages": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Conversation as alternating user/assistant messages, each {role, content}; content is a string or a list of content blocks.",
+          "example": [
+            {
+              "role": "user",
+              "content": "Hello"
+            }
+          ]
+        },
+        "system": {
+          "in": "body",
+          "type": "string",
+          "description": "System prompt: a string, or an array of text blocks."
+        },
+        "stop_sequences": {
+          "in": "body",
+          "type": "array",
+          "description": "Strings that stop generation."
+        },
+        "tools": {
+          "in": "body",
+          "type": "array",
+          "description": "Tool definitions the model may call."
+        },
+        "tool_choice": {
+          "in": "body",
+          "type": "object",
+          "description": "How the model should use the tools, e.g. {\"type\": \"auto\"}."
+        },
+        "thinking": {
+          "in": "body",
+          "type": "object",
+          "description": "Thinking configuration: {\"type\": \"adaptive\"}, or {\"type\": \"enabled\", \"budget_tokens\": N} with N >= 1024; accepted types depend on the model."
+        },
+        "output_config": {
+          "in": "body",
+          "type": "object",
+          "description": "Output options: effort (low, medium, high, xhigh, max) and format ({\"type\": \"json_schema\", \"schema\": {...}}) for structured output."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "object",
+          "description": "Request metadata, e.g. {\"user_id\": \"...\"}."
+        },
+        "service_tier": {
+          "in": "body",
+          "type": "string",
+          "description": "auto (priority capacity when available) or standard_only.",
+          "enum": [
+            "auto",
+            "standard_only"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it creates nothing on the account, but is billed per token.",
+        "Do not set stream: true; this client returns one JSON body.",
+        "Thinking tokens count toward max_tokens."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://platform.claude.com/docs/en/api/messages/create",
+      "verified": {
+        "docs": "https://platform.claude.com/docs/en/api/messages/create"
+      }
+    },
+    {
+      "id": "anthropic.messages.count_tokens",
+      "name": "Count tokens in a message",
+      "summary": "Input token count for a request, including tools, images and documents, without sending it.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/messages/count_tokens",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model id, e.g. claude-sonnet-5-5; list them with anthropic.models.list.",
+          "example": "claude-sonnet-5-5"
+        },
+        "messages": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Conversation as alternating user/assistant messages, each {role, content}; content is a string or a list of content blocks.",
+          "example": [
+            {
+              "role": "user",
+              "content": "Hello"
+            }
+          ]
+        },
+        "system": {
+          "in": "body",
+          "type": "string",
+          "description": "System prompt: a string, or an array of text blocks."
+        },
+        "tools": {
+          "in": "body",
+          "type": "array",
+          "description": "Tool definitions the model may call."
+        },
+        "tool_choice": {
+          "in": "body",
+          "type": "object",
+          "description": "How the model should use the tools, e.g. {\"type\": \"auto\"}."
+        },
+        "thinking": {
+          "in": "body",
+          "type": "object",
+          "description": "Thinking configuration: {\"type\": \"adaptive\"}, or {\"type\": \"enabled\", \"budget_tokens\": N} with N >= 1024; accepted types depend on the model."
+        }
+      },
+      "notes": [
+        "A read over POST; returns {input_tokens}."
+      ],
+      "job": "ai.tokens.count",
+      "docs_url": "https://platform.claude.com/docs/en/api/messages/count_tokens",
+      "verified": {
+        "docs": "https://platform.claude.com/docs/en/api/messages/count_tokens"
+      }
+    },
+    {
+      "id": "anthropic.models.list",
+      "name": "List models",
+      "summary": "Models available to the key, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/models",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 1000, default 20."
+        },
+        "after_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: return the page after this model id."
+        },
+        "before_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: return the page before this model id."
+        },
+        "lifecycle": {
+          "in": "query",
+          "type": "array",
+          "description": "Lifecycle stages to include: active, deprecated, retired. Default active and deprecated."
+        }
+      },
+      "notes": [
+        "Page with the last_id/first_id and has_more fields of the response."
+      ],
+      "job": "ai.models",
+      "docs_url": "https://platform.claude.com/docs/en/api/models/list",
+      "verified": {
+        "docs": "https://platform.claude.com/docs/en/api/models/list"
+      }
+    },
+    {
+      "id": "anthropic.models.get",
+      "name": "Get a model",
+      "summary": "One model's details by id or alias.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/models/{model_id}",
+      "params": {
+        "model_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model id or alias.",
+          "example": "claude-sonnet-5-5"
+        }
+      },
+      "docs_url": "https://platform.claude.com/docs/en/api/models/retrieve",
+      "verified": {
+        "docs": "https://platform.claude.com/docs/en/api/models/retrieve"
+      }
+    },
+    {
+      "id": "anthropic.batches.create",
+      "name": "Create a message batch",
+      "summary": "Submit up to 100,000 message requests to run asynchronously.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/messages/batches",
+      "params": {
+        "requests": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Items of {custom_id, params}: custom_id is 1-64 characters [a-zA-Z0-9_-], unique in the batch; params is a full messages.create body."
+        }
+      },
+      "notes": [
+        "Asynchronous: processing starts at once and can take up to 24 hours. Poll anthropic.batches.get until processing_status is ended, then read anthropic.batches.results.",
+        "Billed per token for each request in it."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://platform.claude.com/docs/en/api/messages/batches/create",
+      "verified": {
+        "docs": "https://platform.claude.com/docs/en/api/messages/batches/create"
+      }
+    },
+    {
+      "id": "anthropic.batches.get",
+      "name": "Get a message batch",
+      "summary": "A batch's processing_status (in_progress, canceling, ended), request counts and results_url.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/messages/batches/{message_batch_id}",
+      "params": {
+        "message_batch_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Batch id (msgbatch_...)."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://platform.claude.com/docs/en/api/messages/batches/retrieve",
+      "verified": {
+        "docs": "https://platform.claude.com/docs/en/api/messages/batches/retrieve"
+      }
+    },
+    {
+      "id": "anthropic.batches.results",
+      "name": "Get message batch results",
+      "summary": "The results of an ended batch, one JSON object per request.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/messages/batches/{message_batch_id}/results",
+      "params": {
+        "message_batch_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Batch id (msgbatch_...)."
+        }
+      },
+      "notes": [
+        "The body is a .jsonl file, one JSON object per line, not a single JSON document.",
+        "Results are not in request order: match them by custom_id."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://platform.claude.com/docs/en/api/messages/batches/results",
+      "verified": {
+        "docs": "https://platform.claude.com/docs/en/api/messages/batches/results"
+      }
+    }
+  ]
+}

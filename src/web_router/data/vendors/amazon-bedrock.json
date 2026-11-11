@@ -1,0 +1,287 @@
+{
+  "vendor": "amazon-bedrock",
+  "name": "Amazon Bedrock",
+  "category": "ai",
+  "summary": "Foundation models (Anthropic, Meta, Mistral, Amazon and others) served on AWS: Converse chat, token counting and the model catalog, with a Bedrock API key.",
+  "docs_url": "https://docs.aws.amazon.com/bedrock/latest/APIReference/welcome.html",
+  "pricing_url": "https://aws.amazon.com/bedrock/pricing/",
+  "base_url": "https://bedrock-runtime.{region}.amazonaws.com",
+  "hosts": {
+    "control": "https://bedrock.{region}.amazonaws.com"
+  },
+  "settings": {
+    "region": {
+      "env": [
+        "AWS_BEDROCK_REGION",
+        "AWS_REGION"
+      ],
+      "default": "us-east-1",
+      "choices": [
+        "ap-northeast-1",
+        "ap-northeast-2",
+        "ap-northeast-3",
+        "ap-south-1",
+        "ap-south-2",
+        "ap-southeast-1",
+        "ap-southeast-2",
+        "ca-central-1",
+        "eu-central-1",
+        "eu-central-2",
+        "eu-north-1",
+        "eu-south-1",
+        "eu-south-2",
+        "eu-west-1",
+        "eu-west-2",
+        "eu-west-3",
+        "sa-east-1",
+        "us-east-1",
+        "us-east-2",
+        "us-gov-east-1",
+        "us-gov-west-1",
+        "us-west-2"
+      ],
+      "description": "The AWS region to call; the regions with a Bedrock runtime endpoint. Models and inference profiles differ by region."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AWS_BEARER_TOKEN_BEDROCK"
+        ],
+        "description": "An Amazon Bedrock API key (Bedrock console > API keys). IAM SigV4 credentials are not supported by this entry."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Bedrock API keys work only for Bedrock and Bedrock Runtime actions; Agents, Data Automation and bidirectional streaming need SigV4 and are not here.",
+    "Inference calls (converse, count_tokens) go to bedrock-runtime; catalog calls (models, inference profiles) to the bedrock control host. Both use the region setting.",
+    "modelId takes a base model id, an inference profile id (cross-region profiles carry a prefix such as us.) or an ARN; list profiles with amazon-bedrock.inference_profiles.list.",
+    "Billed per token at each model's on-demand price in the chosen region."
+  ],
+  "sources": [
+    "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys-use.html",
+    "https://docs.aws.amazon.com/general/latest/gr/bedrock.html",
+    "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html",
+    "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_CountTokens.html",
+    "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_ListFoundationModels.html",
+    "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_GetFoundationModel.html",
+    "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_ListInferenceProfiles.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "amazon-bedrock.converse",
+      "name": "Converse with a model",
+      "summary": "Send messages to any Bedrock chat model through one request shape and get the reply.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/model/{modelId}/converse",
+      "params": {
+        "modelId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model id, inference profile id (e.g. us.anthropic.claude-sonnet-4-6) or ARN.",
+          "example": "us.anthropic.claude-sonnet-4-6"
+        },
+        "messages": {
+          "in": "body",
+          "type": "array",
+          "description": "Messages as {role, content}, where content is a list of blocks such as {\"text\": \"...\"}.",
+          "example": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "text": "Hello"
+                }
+              ]
+            }
+          ]
+        },
+        "system": {
+          "in": "body",
+          "type": "array",
+          "description": "System prompt blocks, e.g. [{\"text\": \"...\"}]."
+        },
+        "inferenceConfig": {
+          "in": "body",
+          "type": "object",
+          "description": "Base inference parameters: maxTokens, stopSequences, temperature, topP."
+        },
+        "toolConfig": {
+          "in": "body",
+          "type": "object",
+          "description": "Tools the model may call and the tool choice."
+        },
+        "additionalModelRequestFields": {
+          "in": "body",
+          "type": "object",
+          "description": "Model-specific parameters beyond inferenceConfig."
+        },
+        "guardrailConfig": {
+          "in": "body",
+          "type": "object",
+          "description": "Guardrail to apply: guardrailIdentifier, guardrailVersion, trace."
+        },
+        "requestMetadata": {
+          "in": "body",
+          "type": "object",
+          "description": "Up to 16 string key-value pairs for filtering invocation logs."
+        }
+      },
+      "notes": [
+        "A read over POST, billed per token. Bedrock does not store the prompt or reply."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html",
+      "verified": {
+        "docs": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html"
+      }
+    },
+    {
+      "id": "amazon-bedrock.count_tokens",
+      "name": "Count tokens",
+      "summary": "The input tokens a Converse or InvokeModel request would be charged for.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/model/{modelId}/count-tokens",
+      "params": {
+        "modelId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Foundation model id or ARN."
+        },
+        "input": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Exactly one of {\"converse\": {messages, system}} or {\"invokeModel\": {body}}."
+        }
+      },
+      "notes": [
+        "A read over POST; returns {inputTokens}."
+      ],
+      "job": "ai.tokens.count",
+      "docs_url": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_CountTokens.html",
+      "verified": {
+        "docs": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_CountTokens.html"
+      }
+    },
+    {
+      "id": "amazon-bedrock.models.list",
+      "name": "List foundation models",
+      "summary": "Foundation models available in the region, with modalities, inference types and lifecycle.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/foundation-models",
+      "params": {
+        "byProvider": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this provider's models, e.g. Anthropic."
+        },
+        "byOutputModality": {
+          "in": "query",
+          "type": "string",
+          "description": "Only models with this output.",
+          "enum": [
+            "TEXT",
+            "IMAGE",
+            "EMBEDDING"
+          ]
+        },
+        "byInferenceType": {
+          "in": "query",
+          "type": "string",
+          "description": "Only models with this inference type.",
+          "enum": [
+            "ON_DEMAND",
+            "PROVISIONED"
+          ]
+        },
+        "byCustomizationType": {
+          "in": "query",
+          "type": "string",
+          "description": "Only models supporting this customization.",
+          "enum": [
+            "FINE_TUNING",
+            "CONTINUED_PRE_TRAINING",
+            "DISTILLATION"
+          ]
+        }
+      },
+      "job": "ai.models",
+      "host": "control",
+      "docs_url": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_ListFoundationModels.html",
+      "verified": {
+        "docs": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_ListFoundationModels.html"
+      }
+    },
+    {
+      "id": "amazon-bedrock.models.get",
+      "name": "Get a foundation model",
+      "summary": "One foundation model's details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/foundation-models/{modelIdentifier}",
+      "params": {
+        "modelIdentifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Foundation model id or ARN, from amazon-bedrock.models.list."
+        }
+      },
+      "host": "control",
+      "docs_url": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_GetFoundationModel.html",
+      "verified": {
+        "docs": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_GetFoundationModel.html"
+      }
+    },
+    {
+      "id": "amazon-bedrock.inference_profiles.list",
+      "name": "List inference profiles",
+      "summary": "Cross-region (SYSTEM_DEFINED) and your APPLICATION inference profiles, with the models each routes to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/inference-profiles",
+      "params": {
+        "maxResults": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 1000."
+        },
+        "nextToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextToken from the previous page."
+        },
+        "typeEquals": {
+          "in": "query",
+          "type": "string",
+          "description": "Profile type.",
+          "enum": [
+            "SYSTEM_DEFINED",
+            "APPLICATION"
+          ],
+          "wire_name": "type"
+        }
+      },
+      "host": "control",
+      "docs_url": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_ListInferenceProfiles.html",
+      "verified": {
+        "docs": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_ListInferenceProfiles.html"
+      }
+    }
+  ]
+}
