@@ -1,0 +1,56 @@
+{
+  "vendor": "doi",
+  "name": "DOI.org",
+  "category": "other",
+  "summary": "Resolve a DOI to its handle record: the landing-page URL and other registered values, from the DOI Foundation's proxy server.",
+  "docs_url": "https://www.doi.org/the-identifier/resources/factsheets/doi-resolution-documentation",
+  "base_url": "https://doi.org",
+  "notes": [
+    "Keyless. The answer is the raw handle record, not bibliographic metadata; pass type=URL for just the landing page.",
+    "responseCode in the body: 1 success, 100 handle not found (HTTP 404), 200 handle exists but no matching values (HTTP 200), 2 error (HTTP 500)."
+  ],
+  "sources": [
+    "https://www.doi.org/the-identifier/resources/factsheets/doi-resolution-documentation"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "doi.handles.get",
+      "name": "Resolve a DOI",
+      "summary": "The values registered for a DOI (URL, admin and others), each with index, type, data, ttl and timestamp.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/handles/{doi}",
+      "params": {
+        "doi": {
+          "in": "path",
+          "type": "string",
+          "description": "The DOI, e.g. 10.1000/1 (prefix/suffix).",
+          "required": true,
+          "example": "10.1000/1"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Only values of this type, e.g. URL; repeatable.",
+          "example": "URL"
+        },
+        "index": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only the value at this index; repeatable."
+        },
+        "auth": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Bypass the proxy cache and ask a primary handle server for the newest data."
+        }
+      },
+      "job": "identifier.resolve",
+      "docs_url": "https://www.doi.org/the-identifier/resources/factsheets/doi-resolution-documentation",
+      "verified": {
+        "docs": "https://www.doi.org/the-identifier/resources/factsheets/doi-resolution-documentation"
+      }
+    }
+  ]
+}
