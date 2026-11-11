@@ -1,12 +1,20 @@
 """TypeSafe's Jev as a router: one typed choice question, answered with a probability per candidate.
 
+This is the standalone "write your own router" example, self-contained so it
+copies alone. The library ships the same in one line,
+``WebRouter(router="systemone", router_config={"preset": "typesafe"})``, and
+``DeciderRouter`` holds its glue -- the question, the reply check, the
+decision -- for any decision API: see ``examples/router_decider.py``.
+
 The router posts the prompt to Jev's System One API with one `choice` question
 whose criteria are the candidates, each `tool:provider` described by its
 method, estimated cost and p90 latency. Jev answers with a probability for
 every candidate; the router ranks them by it, and the ranking becomes the
 decision's `tools` and `providers`, its reason naming the first and its
 probability. It is async, and declares `timeout_s = 1.0`: past that, the call
-runs on the static order.
+runs on the static order. It also declares `route_tools`, every tool but
+search: a plain search runs in `auto`'s order without waiting on Jev; `plan()`
+always asks it.
 
 **This router sends each prompt to TypeSafe.**
 
@@ -74,7 +82,6 @@ def probabilities(answer: Any, choices: dict[str, str]) -> dict[str, float]:
     return numbers
 
 
-# printable, decision and main's print loop repeat router_llm.py's on purpose: each example copies alone.
 def printable(text: str | None) -> str:
     """A server's words with control characters taken out, safe to print to a terminal."""
     return "".join(ch for ch in text or "" if ch.isprintable())
@@ -94,6 +101,10 @@ class JevRouter:
     """Ranks the candidates by Jev's probability for each."""
 
     timeout_s = 1.0
+    # The tools it orders when the caller passes no route_tools (benchmarks/providers/router_latency.py,
+    # 2026-11-09). Search and answer were measured: at a p50 of 0.24 s it fits answer (13% of its p50) and not
+    # search (76%). Extract, research and browse are judgement: they take seconds to minutes.
+    route_tools = ("answer", "extract", "research", "browse")
 
     def __init__(self, client: httpx.AsyncClient | None = None, api_key: str | None = None) -> None:
         """``client``: one you open and close yourself; without it, each call opens its own and closes it."""
