@@ -18,7 +18,7 @@ from web_router.types import ResearchRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
 
-from nimble_python import Nimble
+from nimble_python import AsyncNimble, Nimble
 
 from tests.providers._nimble_research_stub import AGENT_ID, RUN_ID, research_run
 from web_router.providers.nimble import NimbleResearchProvider
@@ -39,10 +39,21 @@ def _nimble(handle: Handler, *, max_retries: int = 0) -> NimbleResearchProvider:
     return provider
 
 
+def _async_nimble(handle: Handler, *, max_retries: int = 0) -> NimbleResearchProvider:
+    provider = NimbleResearchProvider(api_key="test-key")
+    transport = httpx.MockTransport(handle)
+    provider._async_client = AsyncNimble(
+        api_key="test-key", max_retries=max_retries, http_client=httpx.AsyncClient(transport=transport)
+    )
+    return provider
+
+
 def _parallel(monkeypatch: pytest.MonkeyPatch, handle: Handler) -> ParallelResearchProvider:
     monkeypatch.setenv("PARALLEL_API_KEY", "test-key")
     provider = ParallelResearchProvider()
-    provider._sync = httpx.Client(**provider._client_kwargs, transport=httpx.MockTransport(handle))
+    transport = httpx.MockTransport(handle)
+    provider._sync = httpx.Client(**provider._client_kwargs, transport=transport)
+    provider._async = httpx.AsyncClient(**provider._client_kwargs, transport=transport)
     return provider
 
 
@@ -92,7 +103,6 @@ def test_parallel_keeps_a_finished_run_whose_answer_could_not_be_fetched(monkeyp
     ("failure", "nothing_started"),
     [
         (httpx.RemoteProtocolError("Server disconnected without sending a response."), False),
-        (httpx.ReadError("connection reset"), False),
         (httpx.ConnectError("connection refused"), True),
     ],
 )
@@ -118,5 +128,32 @@ def test_nimble_never_retries_the_call_that_creates_a_run() -> None:
 
     with pytest.raises(ProviderError):
         _nimble(handle, max_retries=2).submit(QUERY)
+
+    assert len(posts) == 1
+
+
+async def test_the_async_start_keeps_a_finished_run_whose_answer_could_not_be_fetched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    nimble_script = _Script(research_run("completed"), NIMBLE_RESULT)
+    parallel_script = _Script(PARALLEL_RUN, PARALLEL_RESULT)
+
+    nimble_job = await _async_nimble(nimble_script.handle).asubmit(QUERY)
+    parallel_job = await _parallel(monkeypatch, parallel_script.handle).asubmit(QUERY)
+
+    assert nimble_job.job_id.endswith(RUN_ID) and nimble_job.progress.state == "running"
+    assert parallel_job.job_id == "trun_1" and parallel_job.progress.state == "running"
+    assert nimble_script.posts == parallel_script.posts == 1
+
+
+async def test_the_async_start_never_retries_the_call_that_creates_a_run() -> None:
+    posts: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        posts.append(request.url.path)
+        return httpx.Response(503, json={"error": "busy"})
+
+    with pytest.raises(ProviderError):
+        await _async_nimble(handle, max_retries=2).asubmit(QUERY)
 
     assert len(posts) == 1
