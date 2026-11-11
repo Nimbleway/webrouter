@@ -288,7 +288,7 @@ def test_provider_repr_never_leaks_a_credential(name: str, monkeypatch: pytest.M
 
 
 def test_every_public_model_is_importable_from_the_package_root() -> None:
-    """A model that types a public field, such as ``Template.samples``, is one a caller has to name."""
+    """A model that types a public field, such as ``LiveDataSource.samples``, is one a caller has to name."""
     models = {
         name
         for name, value in vars(web_router.types).items()
