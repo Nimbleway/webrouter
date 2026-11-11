@@ -6,7 +6,9 @@ for. Unlike `search` or `extract`, nothing here is interchangeable or
 normalized: each vendor answers in its own shape, and the router adds the
 credentials, finds the endpoint, and keeps three guarantees (credentials go
 only to the vendor's host, no input is dropped or invented, writes are
-opt-in). See the README's "Vendor data" section for the API.
+opt-in). Every endpoint listed here reads: none sends, publishes, writes or
+generates media, and none is a raw model call, though some return what an AI
+engine answered as data. See the README's "Vendor data" section for the API.
 
 Every entry is written from the vendor's own documentation. **Checked** says
 how: `docs <date>` means the entry was transcribed from the vendor's reference

@@ -1247,7 +1247,11 @@ it is a format change to discuss first, not a branch in `caller.py`.
    user's own catalog directory carry writes. A read over POST says so in
    its notes. A write is what `allow_writes` gates, so a write marked
    `read` is a safety bug. A callback or webhook URL input is left out
-   too: it sends the answer to an address the caller picks. A parameter
+   too: it sends the answer to an address the caller picks, and the planner
+   refuses a webhook or callback key inside an object input. A call that
+   returns what an AI engine answered is a read when what comes back is data
+   with its sources; the test is what the call returns, not whether it takes a
+   prompt. A raw model call is not shipped. A parameter
    whose `enum` has one value is a constant (Majestic's `cmd`): any other
    value is refused, so a read cannot be pointed at a write command.
 4. `base_url` is https. A part of the host that varies (region, data
