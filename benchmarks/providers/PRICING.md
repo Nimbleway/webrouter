@@ -262,12 +262,15 @@ You.com's keyless MCP is priced in its own section above.
 ## Templates (Extract Templates)
 
 Not benchmarked; listed because a run bills on the vendor's account, and
-because the `run_template` MCP tool and the README point here for the figure.
+because the `live_data` MCP tool and the README point here for the figure.
 
-<!-- prices: method=run_template -->
-| What web-router sends | Estimated price | Source | Checked |
-|---|---|---|---|
-| `extract.templates.run`, one template and its inputs, one page | $3 per 1k; per run, one flat rate for every template; successes only; listing and describing templates are free | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-28 |
+<!-- prices: method=live_data -->
+| Backend | What web-router sends | Estimated price | Source | Checked |
+|---|---|---|---|---|
+| nimble | `extract.templates.run`, one template and its inputs, one page | $3 per 1k; per run, one flat rate for every template; successes only; listing and describing templates are free | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-28 |
+| apify | `run-sync-get-dataset-items`, one Actor and its input | set per Actor: free, per dataset item, or per event, plus platform compute units; see each Actor's Store page | [apify.com](https://apify.com/pricing) | 2026-11-09 |
+| brightdata | `/datasets/v3/scrape`, one scraper and one input | $1.50 per 1k records pay as you go ($1.30 on Scale), so a run costs per record returned, which is not known before it runs; unknown here so a cost cap never under-reserves | [brightdata.com](https://brightdata.com/pricing/web-scraper) | 2026-11-09 |
+| oxylabs | Web API dedicated scrapers, `POST /v1/scrape/{scraper}` (or its async job), `output: ["json"]` | per result, and a run returns one result per page it asks for (`pages`), so it costs per result returned, which is not known before the run. Rates are set by scraper and monthly volume: Amazon $0.25-0.50, Google $0.50-1.35, ChatGPT, Perplexity and Gemini $1.30-1.50 per 1k results. Credits come from a monthly plan, from $15 | [oxylabs.io](https://oxylabs.io/products/scraper-api/web/pricing) | 2026-11-11 |
 <!-- /prices -->
 
 **One rate, not per template (checked 2026-10-28).** The template API
@@ -307,7 +310,7 @@ request. Each row is the vendor tier web-router's normalized `effort` maps to
 | nimble | `low` | Web Search Agent `effort=low`, 10 to 30 s | $0.025 per run | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
 | nimble | `medium` | `medium`, 1 to 3 minutes | $0.10 per run | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
 | nimble | `high` | `high`, 5 to 15 minutes | $0.50 per run | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
-| nimble | `max` | `max` | not published ("custom, coming soon") | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
+| nimble | `max` | `x-high` | sends x-high, Nimble's deepest open tier; its $2.00 per run is not recorded yet | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/web-search-agents/efforts.md) | 2026-10-07 |
 | parallel | `low` | processor `lite` | $0.005 per run | [docs.parallel.ai](https://docs.parallel.ai/getting-started/pricing) | 2026-10-07 |
 | parallel | `medium` (default) | `core` | $0.025 per run | [docs.parallel.ai](https://docs.parallel.ai/getting-started/pricing) | 2026-10-07 |
 | parallel | `high` | `pro` | $0.10 per run | [docs.parallel.ai](https://docs.parallel.ai/getting-started/pricing) | 2026-10-07 |
@@ -333,9 +336,8 @@ billed values". Past 272K input tokens the OpenAI models' input price doubles an
 the output price rises by half: `gpt-6-luna` $0.20 / $0.75, `gpt-6-sol` $4 / $15
 per 1M tokens.
 
-Tiers web-router does not map, reachable only through `provider_options`: Nimble
-`x-high` ($2.00 per run), Parallel `base` ($0.01) and `ultra2x` / `4x` / `8x`
-($0.60 / $1.20 / $2.40). Parallel bills only completed runs. The one live Linkup
+Tiers web-router does not map, reachable only through `provider_options`:
+Parallel `base` ($0.01) and `ultra2x` / `4x` / `8x` ($0.60 / $1.20 / $2.40). Parallel bills only completed runs. The one live Linkup
 run, at `effort=low`, took about 105 seconds.
 
 ## Browser sessions
