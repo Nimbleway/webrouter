@@ -15,18 +15,16 @@ aliases in :mod:`web_router.live_data_compat`.
 
 from __future__ import annotations
 
-import warnings
 from datetime import datetime
-from typing import Annotated, Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from web_router.constants_live_data import MSG_LIVE_DATA_DEPRECATED_FIELD
+from web_router.live_data_compat import warn_renamed
 from web_router.types import ExtractedDocument, ExtractFormat, NormalizedRequest
-
-
-def _deprecated(old: str, new: str) -> None:
-    warnings.warn(MSG_LIVE_DATA_DEPRECATED_FIELD.format(old=old, new=new), DeprecationWarning, stacklevel=3)
+from web_router.types_live_data_source import LiveDataSample as LiveDataSample
+from web_router.types_live_data_source import LiveDataSource as LiveDataSource
+from web_router.types_live_data_source import LiveDataSourcePage as LiveDataSourcePage
 
 
 class LiveDataRequest(NormalizedRequest):
@@ -59,7 +57,7 @@ class LiveDataRequest(NormalizedRequest):
     def _template_is_source(cls, values: Any) -> Any:
         # `template=` is what a run was called before the rename; it still works, with a warning.
         if isinstance(values, dict) and "template" in values and "source" not in values:
-            _deprecated("template", "source")
+            warn_renamed("template", "source", stacklevel=3, field=True)
             values = {**values, "source": values["template"]}
             del values["template"]
         return values
@@ -67,7 +65,7 @@ class LiveDataRequest(NormalizedRequest):
     @property
     def template(self) -> str:
         """Deprecated: :attr:`source`."""
-        _deprecated("template", "source")
+        warn_renamed("template", "source", stacklevel=3, field=True)
         return self.source
 
 
@@ -76,116 +74,6 @@ LIVE_DATA_ALWAYS_SENT = LiveDataRequest.always_sent
 
 LIVE_DATA_PARAMETERS: frozenset[str] = LiveDataRequest.normalized_parameters()
 """Every optional parameter a live data provider may declare support for."""
-
-
-class LiveDataSample(BaseModel):
-    """One run the backend recorded for a source: inputs it accepted, and the output they produced.
-
-    The shortest route to running a source you have not run before: copy
-    :attr:`input` and change the values. Published by the backend, never made
-    up here; a source with none has an empty :attr:`LiveDataSource.samples`.
-    """
-
-    # Unknown keys are a provider bug: a sample is exactly an input and an output.
-    model_config = ConfigDict(extra="forbid")
-
-    input: dict[str, Any] = Field(default_factory=dict, description="Inputs a run accepted, shaped by input_schema.")
-    output: Any = Field(default=None, description="What that run returned, shaped by output_schema.")
-
-
-class LiveDataSource(BaseModel):
-    """One live data source a backend holds, as the backend describes it.
-
-    What a caller needs to run it is :attr:`input_schema`, and what comes back
-    is shaped by :attr:`output_schema`. Both are ``None`` for a source that
-    has no published version yet, which cannot be run, or whose backend
-    publishes no schema. :attr:`samples` are runs the backend recorded, an
-    input and what it produced, when it publishes any.
-    """
-
-    # Unknown keys are a provider bug: anything unmapped belongs in `extra`.
-    model_config = ConfigDict(extra="forbid")
-
-    provider: str
-    name: str = Field(description="The stable name a run names the source by.")
-    description: str = Field(default="", description="What the source extracts, when the backend says.")
-    domain: str | None = Field(default=None, description="The site the source reads, when the backend says.")
-    entity_type: str | None = Field(default=None, description="The kind of page it reads, in the backend's words.")
-    input_schema: dict[str, Any] | None = Field(
-        default=None,
-        description="JSON Schema of the inputs a run passes as `inputs`. None when the backend publishes none.",
-    )
-    output_schema: dict[str, Any] | None = Field(
-        default=None,
-        description="JSON Schema of each record a run returns. None when the backend publishes none.",
-    )
-    samples: list[LiveDataSample] = Field(
-        default_factory=list,
-        description="Runs the backend recorded, each an input and what it returned; empty when it has none.",
-    )
-    version: int | str | None = Field(
-        default=None,
-        description="The published version, as the backend numbers it (Apify's build numbers are strings).",
-    )
-    published: bool = Field(default=False, description="Whether a version is published, so the source can be run.")
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
-    )
-    raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched description of it.")
-
-
-class LiveDataSourcePage(BaseModel):
-    """One page of a vendor's live data sources, tagged with the provider that served it.
-
-    Backends page their catalogues, so this carries where in the catalogue the
-    page sits beside the sources on it; :attr:`total` is the backend's count
-    of the whole catalogue, when it reports one.
-    """
-
-    # Unknown keys are a provider bug: the untouched payload belongs in `raw`.
-    model_config = ConfigDict(extra="forbid")
-
-    provider: str
-    sources: list[LiveDataSource] = Field(default_factory=list)
-    total: int | None = Field(default=None, description="How many sources the backend holds, when it says.")
-    offset: int | None = Field(default=None, description="How many sources precede this page, when it says.")
-    limit: int | None = Field(default=None, description="The page size the backend applied, when it says.")
-    query: str | None = Field(default=None, description="The keywords the page was searched with; None for a listing.")
-    search: Literal["native", "local"] | None = Field(
-        default=None,
-        description=(
-            "How `query` was matched: by the vendor's own search ('native', in its relevance order), or here "
-            "over the whole catalogue on name, site and description ('local'). None for a listing."
-        ),
-    )
-    raw: Any = Field(default=None, description="The provider's untouched response payload, object or array.")
-
-    @model_validator(mode="before")
-    @classmethod
-    def _templates_is_sources(cls, values: Any) -> Any:
-        # A custom provider written against the old names still builds TemplatePage(templates=[...]).
-        if isinstance(values, dict) and "templates" in values and "sources" not in values:
-            _deprecated("templates", "sources")
-            values = {**values, "sources": values["templates"]}
-            del values["templates"]
-        return values
-
-    def __len__(self) -> int:
-        return len(self.sources)
-
-    @property
-    def names(self) -> list[str]:
-        """Every source name on the page, in the backend's order."""
-        return [source.name for source in self.sources]
-
-    @property
-    def templates(self) -> list[LiveDataSource]:
-        """Deprecated: :attr:`sources`."""
-        _deprecated("templates", "sources")
-        return self.sources
 
 
 class LiveDataResponse(BaseModel):
@@ -236,8 +124,8 @@ class LiveDataResponse(BaseModel):
         if not isinstance(values, dict):
             return values
         if "template" in values and "source" not in values:
-            _deprecated("template", "source")
-            values = {**values, "source": values.pop("template")}
+            warn_renamed("template", "source", stacklevel=3, field=True)
+            values = {**{k: v for k, v in values.items() if k != "template"}, "source": values["template"]}
         records, data = values.get("records"), values.get("data")
         if not records and data:
             values = {**values, "records": [data]}
@@ -248,5 +136,5 @@ class LiveDataResponse(BaseModel):
     @property
     def template(self) -> str:
         """Deprecated: :attr:`source`."""
-        _deprecated("template", "source")
+        warn_renamed("template", "source", stacklevel=3, field=True)
         return self.source

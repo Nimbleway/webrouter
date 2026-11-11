@@ -47,56 +47,24 @@ from web_router.constants_live_data_vendors import (
     BRIGHTDATA_DEFAULT_METHOD,
     BRIGHTDATA_DISCOVER_TYPE,
     BRIGHTDATA_ID_PREFIX,
-    BRIGHTDATA_PENDING_STATUS,
     BRIGHTDATA_SCRAPE_PATH,
     BRIGHTDATA_SCRAPERS_PATH,
-    MSG_BRIGHTDATA_ALL_FAILED,
-    MSG_BRIGHTDATA_PENDING,
     MSG_BRIGHTDATA_RENAMED_HINT,
 )
-from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers.brightdata_names import Scraper, plain_name, scrapers, slug
+from web_router.providers.brightdata_shapes import described, listed, to_response
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
     LiveDataRequest,
     LiveDataResponse,
-    LiveDataSample,
     LiveDataSource,
     LiveDataSourcePage,
 )
 
 _METHOD_PARAMS = frozenset({"type", "discover_by"})
 """Query parameters a source sets from its own collection method, never from ``provider_options``."""
-
-_LISTED_MAPPED = frozenset({"id", "name", "description", "domain", "category"})
-
-
-def _fields_schema(fields: Any) -> dict[str, Any] | None:
-    """A JSON Schema naming the fields Bright Data lists, with no types: the API states none."""
-    if isinstance(fields, dict):
-        names = list(fields)
-    elif isinstance(fields, list):
-        names = [field if isinstance(field, str) else (field or {}).get("name") for field in fields]
-    else:
-        return None
-    names = [name for name in names if isinstance(name, str)]
-    return {"type": "object", "properties": {name: {} for name in names}} if names else None
-
-
-def _samples(inputs: Any, outputs: Any) -> list[LiveDataSample]:
-    """Bright Data's samples: an input object or, as its management API shows them, a list of them.
-
-    A list of outputs pairs with the inputs by position when the lengths match;
-    otherwise each sample carries its input alone rather than a guessed output.
-    """
-    if isinstance(inputs, dict):
-        return [LiveDataSample(input=inputs, output=outputs)]
-    if not isinstance(inputs, list):
-        return []
-    rows = [row for row in inputs if isinstance(row, dict)]
-    paired = isinstance(outputs, list) and len(outputs) == len(rows)
-    return [LiveDataSample(input=row, output=outputs[n] if paired else None) for n, row in enumerate(rows)]
 
 
 class BrightDataLiveDataProvider(HttpLiveDataProvider):
@@ -188,26 +156,7 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
         return {"input": [dict(request.inputs)]}
 
     def _to_response(self, request: LiveDataRequest, response: Any) -> LiveDataResponse:
-        payload = self._decoded(response)
-        if response.status_code == BRIGHTDATA_PENDING_STATUS:
-            snapshot_id = (payload or {}).get("snapshot_id")
-            raise ProviderError(
-                self.name, MSG_BRIGHTDATA_PENDING.format(source=request.source, snapshot_id=snapshot_id)
-            )
-        rows = [row for row in payload if isinstance(row, dict)] if isinstance(payload, list) else []
-        errors = [row for row in rows if row.get("error") or row.get("error_code")]
-        records = [row for row in rows if row not in errors]
-        if errors and not records:
-            detail = "; ".join(str(row.get("error_code") or row.get("error")) for row in errors)
-            raise ProviderError(self.name, MSG_BRIGHTDATA_ALL_FAILED.format(source=request.source, errors=detail))
-        return LiveDataResponse(
-            provider=self.name,
-            source=request.source,
-            inputs=dict(request.inputs),
-            records=records,
-            extra={"errors": errors} if errors else {},
-            raw=payload,
-        )
+        return to_response(self.name, request, response.status_code, self._decoded(response))
 
     # -- catalogue ----------------------------------------------------------
 
@@ -223,7 +172,7 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
         page, start = self._local_page(every, limit=limit, offset=offset)
         return LiveDataSourcePage(
             provider=self.name,
-            sources=[self._listed(scraper) for scraper in page],
+            sources=[listed(self.name, scraper) for scraper in page],
             total=len(every),
             offset=start,
             limit=limit,
@@ -231,53 +180,14 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
             raw=list({scraper.dataset_id: scraper.item for scraper in page}.values()),
         )
 
-    def _listed(self, scraper: Scraper) -> LiveDataSource:
-        item = scraper.item
-        how = "by URL" if not scraper.discovers else "discovered by " + scraper.discover_by.replace("_", " ")
-        title = str(item.get("name") or scraper.dataset_id)
-        return LiveDataSource(
-            provider=self.name,
-            name=scraper.name,
-            description=" -- ".join(part for part in (f"{title}, {how}", item.get("description")) if part),
-            domain=item.get("domain"),
-            entity_type=item.get("category"),
-            published=True,
-            extra={
-                "dataset_id": scraper.dataset_id,
-                "collection_method": scraper.method,
-                **{key: value for key, value in item.items() if key not in _LISTED_MAPPED},
-            },
-        )
-
     def _get(self, name: str) -> LiveDataSource:
         scraper = self._resolve(name, None if name.startswith(BRIGHTDATA_ID_PREFIX) else self._known())
         with self._named(name):
             payload = self._send("GET", BRIGHTDATA_SCRAPERS_PATH, params={"dataset_id": scraper.dataset_id})
-        return self._described(scraper, payload)
+        return described(self.name, scraper, payload)
 
     async def _aget(self, name: str) -> LiveDataSource:
         scraper = self._resolve(name, None if name.startswith(BRIGHTDATA_ID_PREFIX) else await self._aknown())
         with self._named(name):
             payload = await self._asend("GET", BRIGHTDATA_SCRAPERS_PATH, params={"dataset_id": scraper.dataset_id})
-        return self._described(scraper, payload)
-
-    def _described(self, scraper: Scraper, payload: Any) -> LiveDataSource:
-        items = [item for item in payload if isinstance(item, dict)] if isinstance(payload, list) else []
-        item = next((entry for entry in items if entry.get("id") == scraper.dataset_id), None)
-        if item is None:
-            raise LiveDataSourceNotFoundError(self.name, scraper.name)
-        found = item.get("scrapers")
-        methods: dict[str, Any] = found if isinstance(found, dict) else {}
-        method: dict[str, Any] = methods.get(scraper.method) or {}
-        listed = self._listed(
-            Scraper(name=scraper.name, dataset_id=scraper.dataset_id, method=scraper.method, item=item)
-        )
-        return listed.model_copy(
-            update={
-                "input_schema": _fields_schema(method.get("input_schema")),
-                "output_schema": _fields_schema(method.get("output_fields")),
-                "samples": _samples(method.get("sample_input"), method.get("sample_output")),
-                "extra": {**listed.extra, "collection_methods": sorted(methods)},
-                "raw": item,
-            }
-        )
+        return described(self.name, scraper, payload)

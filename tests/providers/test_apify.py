@@ -16,7 +16,8 @@ import pytest
 
 from tests.providers._live_data_http import Api, wire
 from web_router import WebRouter
-from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
+from web_router.exceptions import ProviderError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers.apify import ApifyLiveDataProvider, actor_id
 from web_router.types_live_data import LiveDataRequest
 
@@ -153,8 +154,18 @@ async def test_the_async_path() -> None:
     assert response.records == ITEMS
 
 
-def test_actor_ids_accept_either_spelling() -> None:
+@pytest.mark.parametrize("source", ["me~x?", "#", "a~b#c", "a b~c", "a~b~c"])
+def test_a_name_that_is_not_an_actor_is_refused_before_any_request(source: str) -> None:
+    provider, api = _provider(lambda request: httpx.Response(201, json=ITEMS))
+    with pytest.raises(LiveDataSourceNotFoundError) as raised:
+        provider.run(LiveDataRequest(source=source, inputs={"a": 1}))
+    with pytest.raises(LiveDataSourceNotFoundError):
+        provider.live_data_source(source)
+    assert raised.value.source == source
+    assert api.requests == [], "nothing was sent"
+    # Either spelling of a real Actor still runs.
     assert actor_id("apify/google-maps-scraper") == actor_id("apify~google-maps-scraper") == ACTOR
+    assert actor_id("Mt5RqBNaZsoDF7Jvs") == "Mt5RqBNaZsoDF7Jvs"
 
 
 @pytest.mark.integration

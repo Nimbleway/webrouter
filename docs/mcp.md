@@ -281,7 +281,69 @@ environment -- once, when the server starts:
 - unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
   with an `http(s)` URL is read with `extract`, anything else searched;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
-  installed -- any form `router=` takes on the library;
+  installed -- any form `router=` takes on the library. It is imported before
+  any `.env` file loads, so code that runs at import sees only the server's own
+  process environment. The built-in
+  [decision-API routers](../README.md#decision-apis-deciderrouter-routerllm-and-routersystemone),
+  `llm` and `systemone`, need a `router_config`: name them with
+  `WEB_ROUTER_MCP_ROUTER_CONFIG`, below, or build one here: a
+  `my_router.py` holding
+
+  ```python
+  from web_router.routing.decider_llm import llm_router
+
+  ROUTER = llm_router(preset="openai", model="<model>")  # or decider_systemone.systemone_router(preset="typesafe")
+  ```
+
+  and `WEB_ROUTER_MCP_ROUTER=my_router:ROUTER`. The preset's key
+  (`OPENAI_API_KEY`, `TYPESAFE_API_KEY`, ...) is read from the server's
+  environment when it starts. Each `web_run` then sends that vendor the
+  prompt, its URLs whole, the budget and the candidate ids with their
+  estimated cost and p90 latency, never a provider key;
+- `WEB_ROUTER_MCP_ROUTER=remote` asks your router service over HTTP, the
+  library's built-in [`remote` router](../README.md#a-router-service-routerremote):
+  `WEB_ROUTER_REMOTE_ROUTER_URL` is its URL (`https`, or `http` to
+  `localhost` or a loopback address; no credentials or query) and
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY` its optional bearer key, both read once
+  from the same process environment at startup;
+- `WEB_ROUTER_MCP_ROUTER=<name>` names any other built-in router, such as
+  [`fallback`](../README.md#chaining-routers-routerfallback), with its
+  `router_config` as a JSON object in `WEB_ROUTER_MCP_ROUTER_CONFIG`, the
+  same keys the library takes, flat for one router:
+  `WEB_ROUTER_MCP_ROUTER=llm WEB_ROUTER_MCP_ROUTER_CONFIG='{"preset": "openai", "model": "gpt-4.1-mini"}'`.
+  Only `web_run` asks the router here, so `route_tools` in the config changes
+  nothing. A
+  config entry `api_key_env` names the variable holding a key: its value is
+  read once at startup and put in its place as `api_key`, so the router never
+  reads the environment again. When the variable is unset, `remote` starts
+  with no key (`""`), while `llm` and `systemone` stop the server from
+  starting. For example, a router
+  service with a local classifier service behind it:
+
+  ```bash
+  WEB_ROUTER_MCP_ROUTER=fallback
+  WEB_ROUTER_MCP_ROUTER_CONFIG='{"routers": [
+    {"name": "remote", "url": "https://router.example.com/route", "api_key_env": "ROUTER_KEY"},
+    {"name": "remote", "url": "http://127.0.0.1:8080/route", "timeout_s": 0.2}]}'
+  ```
+
+  Set, `WEB_ROUTER_MCP_ROUTER_CONFIG` is the whole config: `remote` then takes
+  its URL from it, not from `WEB_ROUTER_REMOTE_ROUTER_URL`. A `remote` router
+  or member whose config sets no `api_key` (nor `api_key_env`) still sends
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY`, read when it is built at startup.
+
+  **A router's key comes from the server's own process environment only.**
+  An `llm` or `systemone` preset given no key reads its vendor's variable
+  (`OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `TYPESAFE_API_KEY` ...), which is
+  often a provider credential too. The server captures it, and every
+  `api_key_env`, as `api_key` at startup, before it reads any `.env` file, so
+  neither a project's `.env` nor `load_env` can supply or replace a router's
+  key: export it where the server starts. A preset's variable that is unset
+  there stops the server, and a vendor's variable named for a router that
+  posts to any other host is refused. The capabilities resource names a
+  preset's host too, as the record does: `llm(api.openai.com)`,
+  `systemone(api.typesafe.ai)`. A value that is not
+  a JSON object, or one set beside no built-in router, stops the server;
 - `WEB_ROUTER_MCP_ROUTER=off` attaches none: `web_run` then plans the static
   order, which is `search`.
 
@@ -305,7 +367,12 @@ admitted there. A refused URL stays in the prompt text, though, and the prompt
 itself goes to the backend that serves it, as its search query or browse task, as it
 would through `search`. The built-in router runs in the server's process and
 sends nothing out; an operator's router runs there too, but it is your code,
-and may send the prompt on, to a model's server for instance.
+and may send the prompt on, to a model's server for instance. The `remote`
+router sends each `web_run` prompt, the URLs in it whole, the budget and the
+candidate ids (`tool:provider`, which name the backends configured here) to
+your service, and never a key value; a service that fails or runs past its
+time leaves `web_run` on the static order. A `fallback` router sends the
+same to every service it asks, in order, one that times out included.
 
 **The budget.** Every billed tool -- `search`, `extract`, `answer`, `research`,
 `browse`, `live_data`, `browser_open` and `web_run` -- spends from one budget
@@ -324,7 +391,9 @@ server charges itself run on the budget's clock, and `research` and `browse`
 wait no longer than it has left.
 
 - **The operator's ceiling**: `WEB_ROUTER_MCP_MAX_COST_USD` and
-  `WEB_ROUTER_MCP_TIME_LIMIT_S`. With no `budget_start`, the whole connection
+  `WEB_ROUTER_MCP_TIME_LIMIT_S`. It counts what the backends charge; a router
+  that bills for itself, such as `llm` or `systemone`, is billed by its vendor
+  and is not counted. With no `budget_start`, the whole connection
   is one task under it, its clock running from the connection's start. The
   agent cannot reset or raise it.
 - **`budget_start(max_cost_usd, time_limit_s)`** opens a new task inside the
@@ -355,14 +424,19 @@ wait no longer than it has left.
 With no ceiling and no `budget_start`, nothing is held, and every tool runs as
 it would with no budget.
 
-The three variables are read from the server's own process environment, once,
+These variables are read from the server's own process environment, once,
 at startup. No `.env` file and no `load_env` call can set or change them, and a
 value the server cannot read -- an empty one included -- stops it from
 starting rather than leaving the connection without the ceiling you meant. The capabilities resource reports
 all of it under `routing`: the router (`rules`, `operator` for yours -- never
-its `<module>:<attribute>` -- or `off`), where it runs (`router_runs`: `in_process` for the built-in router or
-none, `operator` with a `router_note` for yours), a `prompt_note` saying the
-prompt goes to the backend, the `url_policy` with a `url_policy_note` saying
+its `<module>:<attribute>` -- `remote(<scheme>://<host>)` for a service, never its path, query or key,
+`fallback(<member>, ...)` for a fallback, or
+`off`), where it runs (`router_runs`: `in_process` for the built-in router or
+none, `operator` with a `router_note` for yours, `remote` with a `router_note` naming each host prompts go to --
+a service, or a built-in `llm` or `systemone` router's vendor host --
+`built_in` for a built-in router whose config names no URL),
+a `prompt_note` saying the
+prompt goes to the backend, and to each router service's host, the `url_policy` with a `url_policy_note` saying
 where it holds, the ceiling, and the budget in
 force (`null` with none).
 
@@ -650,7 +724,10 @@ the server is restarted.
 | `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
-| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
+| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
+| `WEB_ROUTER_MCP_ROUTER_CONFIG` | unset | With `WEB_ROUTER_MCP_ROUTER` naming a built-in router (or any name registered with `register_router` in the server's process, an override of a built-in name included), its `router_config` as a JSON object; each `api_key_env` in it is read once at startup and handed to the router as `api_key`, so a router's factory gets `api_key`, never `api_key_env`. Anything but a JSON object, or a value set beside no built-in router, stops the server from starting. Read from the real environment only. |
+| `WEB_ROUTER_REMOTE_ROUTER_URL` | unset | With `WEB_ROUTER_MCP_ROUTER=remote`, your router service's URL: `https`, or `http` to a loopback host. Missing, or any other URL, stops the server from starting. Read from the real environment only. |
+| `WEB_ROUTER_REMOTE_ROUTER_API_KEY` | unset | The bearer key sent to that service, never logged or shown. Read from the real environment only -- no `.env` file and no `load_env` call sets it. |
 | `WEB_ROUTER_MCP_MAX_COST_USD` | unset | The ceiling on what one connection may spend, in US dollars at estimated list prices. An empty value stops the server from starting. |
 | `WEB_ROUTER_MCP_TIME_LIMIT_S` | unset | The ceiling on how long one connection may run billed calls, in seconds from its start. An empty value stops the server from starting. |
 

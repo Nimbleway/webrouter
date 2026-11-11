@@ -96,8 +96,14 @@ answer = [
 # browser is the session's, reached over CDP. Pillow converts a screenshot a
 # vendor's browser returns as JPEG although PNG was asked for (Anchor does).
 browser = [
-    "playwright>=1.63,<1.64",
+    "playwright>=1.63,<1.66",
     "pillow>=10",
+]
+# Not a method of one backend but a catalog of many: a vendor's own API
+# (Google Ads, Datadog, ...) called with your credentials, its answer returned
+# untouched. The catalog is JSON inside the package; sending a call is httpx.
+vendors = [
+    "httpx>=0.27",
 ]
 # The one extra not named after a method -- see EXTRA_MCP in constants.py. It
 # installs the stdio MCP server, which exposes the methods above to an agent
@@ -106,7 +112,7 @@ browser = [
 # server lists its browser_* tools only when it is present, so
 # `webrouter[mcp,browser]` is what turns them on.
 mcp = [
-    "webrouter[search,extract,research,answer]",
+    "webrouter[search,extract,research,answer,vendors]",
     "mcp>=2.2,<3",
     # The server's entry point loads the project .env, so keys reach it
     # without being exported; the library itself never reads dotfiles.
@@ -120,7 +126,7 @@ mcp = [
 evals = [
     "webrouter[search]",
     "openai>=1.0,<4",
-    "anthropic>=1.8,<2",
+    "anthropic>=1.8,<3",
     # SealQA is published as Parquet; read only inside Dataset.sealqa().
     "pyarrow>=15",
 ]
@@ -139,7 +145,13 @@ aws = [
     "webrouter[search]",
     "botocore>=1.35",
 ]
-all = ["webrouter[search,extract,research,answer,browser,aws]"]
+# The third exception: the built-in `remote` router, which asks a router
+# service over HTTP (`router="remote"`). httpx alone, which the method extras
+# already carry; this names it for a caller who installs no method extra.
+remote = [
+    "httpx>=0.27",
+]
+all = ["webrouter[search,extract,research,answer,browser,aws,remote,vendors]"]
 
 [project.scripts]
 web-router-mcp = "web_router.mcp.server:main"
@@ -165,7 +177,7 @@ dev = [
 # plain `make install` never pull the Anthropic SDK; run it with
 # `uv run --all-extras --group agent-bench`.
 agent-bench = [
-    "anthropic>=1.8,<2",
+    "anthropic>=1.8,<3",
     "python-dotenv>=1.0",
 ]
 
@@ -183,7 +195,7 @@ path = "src/web_router/_version.py"
 packages = ["src/web_router"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/web_router", "tests", "scripts", "contracts", "README.md", "CHANGELOG.md"]
+include = ["src/web_router", "tests", "scripts", "contracts", "README.md", "CHANGELOG.md", "VENDORS.md"]
 
 [tool.uv]
 managed = true

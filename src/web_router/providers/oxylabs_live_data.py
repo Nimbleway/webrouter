@@ -60,7 +60,8 @@ from web_router.constants_live_data_vendors import (
     OXYLABS_TRANSPORT_PARAMS,
     OXYLABS_WEB_API_BASE_URL,
 )
-from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
+from web_router.exceptions import ProviderError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers.oxylabs_options import input_schema
 from web_router.types_live_data import (

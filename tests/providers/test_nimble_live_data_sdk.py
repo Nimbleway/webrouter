@@ -23,7 +23,8 @@ from tests.providers._nimble_live_data_payloads import (
     _run_payload,
     _version,
 )
-from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
+from web_router.exceptions import ProviderError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.types_live_data import LiveDataRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
@@ -31,13 +32,6 @@ pytest.importorskip("nimble_python", reason="nimble extra not installed")
 from nimble_python import AsyncNimble, Nimble
 
 from web_router.providers.nimble_live_data import NimbleLiveDataProvider
-
-
-@pytest.fixture
-def provider(monkeypatch: pytest.MonkeyPatch) -> NimbleLiveDataProvider:
-    monkeypatch.setenv("NIMBLE_API_KEY", "test-key")
-    return NimbleLiveDataProvider()
-
 
 # -- Through the SDK client ---------------------------------------------------
 

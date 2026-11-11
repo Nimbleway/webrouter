@@ -17,6 +17,8 @@ handle failures uniformly regardless of which backend served the request:
     ├── DeadlineExceededError       a call outlasted its per-call deadline
     ├── RouterError                 an attached router failed, under fail_on_router_error=True
     ├── ProviderError               the backend itself failed
+    ├── VendorNotFoundError         no vendor, or no endpoint, under that name in the vendor catalog
+    ├── VendorWriteRefusedError     a vendor call would change data and allow_writes was not given
     └── BrowserActionError          a page action on an open browser session failed
         ├── StaleElementError           a snapshot ref no longer names an element
         ├── ElementNotFoundError        a selector matched nothing in time
@@ -54,10 +56,6 @@ from web_router.constants import (
 )
 from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
 from web_router.constants_invoke import MSG_ROUTER_FAILED
-from web_router.constants_live_data import (
-    MSG_LIVE_DATA_SOURCE_NOT_FOUND,
-)
-from web_router.live_data_compat import deprecated_keyword
 
 
 def describe(exc: BaseException) -> str:
@@ -316,32 +314,6 @@ class ProviderError(WebRouterError):
         super().__init__(f"[{provider}] {message}")
         self.provider = provider
         self.original = original
-
-
-class LiveDataSourceNotFoundError(ProviderError):
-    """A live data run or describe named a source the backend does not have.
-
-    A :class:`ProviderError`, because the backend answered and said so, with
-    its own class so a caller can tell a wrong name from a run that failed.
-    Source names are the vendor's own: the same site has a different name on
-    each. ``hint``, when a backend has one, is appended to the message: names
-    close to the one asked for. :attr:`template` is the deprecated name of
-    :attr:`source`, and so is the ``template=`` keyword.
-    """
-
-    def __init__(
-        self,
-        provider: str,
-        source: str | None = None,
-        *,
-        original: BaseException | None = None,
-        hint: str = "",
-        **old: str,
-    ) -> None:
-        source = deprecated_keyword(type(self).__name__, old, "template", "source", source)
-        self.source = source
-        self.template = source
-        super().__init__(provider, MSG_LIVE_DATA_SOURCE_NOT_FOUND.format(name=source) + hint, original=original)
 
 
 class BrowserActionError(WebRouterError):

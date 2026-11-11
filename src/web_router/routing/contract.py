@@ -8,7 +8,9 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
+
+from pydantic import ConfigDict
 
 from web_router._urls import shown
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_BUDGET_VALUE, MSG_CANDIDATE_ID, PROMPT_PARAMS
@@ -16,6 +18,10 @@ from web_router.types_decision import DecisionRecord
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
 """The methods a router may choose between. ``live_data`` and ``open_browser`` are never routed."""
+
+
+_WIRE_CONFIG = ConfigDict(use_attribute_docstrings=True)
+"""How pydantic reads these types for the wire format's JSON Schema: each field's docstring is its description."""
 
 
 def candidate_id(tool: str, provider: str) -> str:
@@ -39,6 +45,8 @@ class Budget:
 
     Every field is optional: a budget with nothing set caps nothing.
     """
+
+    __pydantic_config__: ClassVar[ConfigDict] = _WIRE_CONFIG
 
     max_cost_usd: float | None = None
     """The most the call may spend, in US dollars, at estimated list prices.
@@ -72,6 +80,8 @@ class Budget:
 class Candidate:
     """One (tool, provider) pair that could serve the call, with what it is estimated to cost and take."""
 
+    __pydantic_config__: ClassVar[ConfigDict] = _WIRE_CONFIG
+
     tool: ToolName
     """The method this candidate calls."""
 
@@ -85,7 +95,7 @@ class Candidate:
     """Its p90 latency in seconds, as measured by the provider scans. ``None`` when unmeasured."""
 
     id: str = ""
-    """``tool:provider``, the name every decision field uses. Filled in when left empty."""
+    """``tool:provider``, the name every decision field uses: filled in when left empty, refused when it differs."""
 
     def __post_init__(self) -> None:
         expected = candidate_id(self.tool, self.provider)
@@ -101,6 +111,8 @@ class RouteRequest:
 
     Later versions add fields: a router must ignore the ones it does not know.
     """
+
+    __pydantic_config__: ClassVar[ConfigDict] = _WIRE_CONFIG
 
     prompt: str
     """The query for search, answer and research; the URLs, one per line, for extract; the task for browse."""
@@ -128,6 +140,8 @@ class RouteDecision:
     A router that answers with fewer fields than a later version reads keeps
     working: what it leaves out is decided the way it would be with no router.
     """
+
+    __pydantic_config__: ClassVar[ConfigDict] = _WIRE_CONFIG
 
     tools: Sequence[ToolName] | None = None
     """The methods to use, best first."""
