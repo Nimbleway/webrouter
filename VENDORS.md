@@ -6,9 +6,7 @@ for. Unlike `search` or `extract`, nothing here is interchangeable or
 normalized: each vendor answers in its own shape, and the router adds the
 credentials, finds the endpoint, and keeps three guarantees (credentials go
 only to the vendor's host, no input is dropped or invented, writes are
-opt-in). Every endpoint listed here reads: nothing sends, publishes,
-generates or changes anything. See the README's "Vendor data" section for
-the API.
+opt-in). See the README's "Vendor data" section for the API.
 
 Every entry is written from the vendor's own documentation. **Checked** says
 how: `docs <date>` means the entry was transcribed from the vendor's reference
@@ -19,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-363 vendors, 2678 endpoints.
+363 vendors, 2675 endpoints.
 
 ### advertising
 
@@ -125,7 +123,7 @@ People and contact data: emails, phones, profiles.
 | [Icypeas](https://api-doc.icypeas.com/) `icypeas` | Find and verify professional emails, search a people and company database, and scrape profile and company data. | 16 read | key in header | `ICYPEAS_API_KEY` | docs 2026-11-08 |
 | [LeadMagic](https://leadmagic.io/docs/api-reference/email-validation) `leadmagic` | Find and validate work emails, personal emails and mobiles from names or profile URLs, and look up profiles and companies. | 8 read | key in header | `LEADMAGIC_API_KEY` | docs 2026-11-08 |
 | [LeadOcean](https://leadocean.io/docs) `leadocean` | B2B people and company search, person and company enrichment, work and personal email, phone and reverse lookups, and bulk CSV exports. | 14 read | key in header | `LEADOCEAN_API_KEY` | docs 2026-11-08 |
-| [Leadsforge](https://api.leadsforge.ai/public/swagger/index.html) `leadsforge` | B2B lead search with email, phone and LinkedIn enrichment, lookalike companies, company followers and Google Maps business discovery. | 19 read | key in header | `LEADSFORGE_API_KEY` | docs 2026-11-08 |
+| [Leadsforge](https://api.leadsforge.ai/public/swagger/index.html) `leadsforge` | B2B lead search with email, phone and LinkedIn enrichment, lookalike companies, company followers and Google Maps business discovery. | 16 read | key in header | `LEADSFORGE_API_KEY` | docs 2026-11-08 |
 | [Lusha](https://docs.lusha.com/) `lusha` | Search B2B contacts and companies, then reveal emails, phones and firmographics for the ones you pick. | 11 read | key in header | `LUSHA_API_KEY` | docs 2026-11-08 |
 | [MoltSets](https://developer.moltsets.com) `moltsets` | B2B people and company search, email and mobile lookup, email validation and reverse lookups. | 15 read | key in header | `MOLTSETS_API_KEY` | docs 2026-11-08 |
 | [Nyne.ai](https://api.nyne.ai/documentation) `nyne` | People and company intelligence: person enrichment and search with contacts and social profiles, company enrichment, search, employees and funding. | 9 read | key in header | `NYNE_API_KEY`, `NYNE_API_SECRET` | docs 2026-11-09 |

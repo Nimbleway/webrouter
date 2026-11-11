@@ -1,22 +1,27 @@
-# WebRouter
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Nimbleway/webrouter/main/docs/assets/webrouter-mascot.png" alt="WebRouter" width="360">
+</p>
 
-**WebRouter is an open source standard that connects your agent to the web.**
+<h1 align="center">WebRouter</h1>
 
-One Python interface over search, extraction, answer, research and browser APIs, with fallback across providers and a router that can choose the method and provider for you.
+<p align="center"><strong>An open source standard that connects your agent to the internet.</strong></p>
 
-> **Alpha:** the API may change before 1.0. Issues and pull requests are welcome.
+<p align="center">
+  <a href="https://pypi.org/project/webrouter/"><img src="https://img.shields.io/pypi/v/webrouter?color=202c26&label=pypi" alt="PyPI"></a>
+  <a href="https://github.com/Nimbleway/webrouter/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-202c26" alt="License: Apache 2.0"></a>
+  <a href="https://pypi.org/project/webrouter/"><img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-202c26" alt="Python 3.11 to 3.13"></a>
+  <a href="https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml"><img src="https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+</p>
 
-[![CI](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
-[![Typed](https://img.shields.io/badge/typing-strict-blue.svg)](https://mypy-lang.org/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+<p align="center">
+  <a href="https://discord.gg/MGztFWSjZh"><img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord"></a>
+</p>
 
-Twelve search backends, seven extract backends, a template catalogue, five
-answer backends, three agentic research backends (plus Exa's, retired upstream), five
-browser-session backends and three browser agents. One call each. Switching
-between them is one argument.
-Maintained by [Nimble](https://nimbleway.com), one of the backends it routes to.
+Connect your agent to every web tool through one interface: search, extract, live data, answer, research and browser sessions, across many providers. A [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
+
+```bash
+pip install "webrouter[all]"
+```
 
 ```python
 from web_router import Provider, WebRouter
@@ -27,7 +32,7 @@ WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
 
 WebRouter().extract("https://example.com")  # page contents, also keyless
 
-WebRouter().run_template("walmart_pdp", {"product_id": "..."}, provider="nimble")  # one page, one record
+WebRouter().live_data("walmart_pdp", {"product_id": "..."}, provider="nimble")  # a site's fields, fetched now
 
 WebRouter(Provider.LINKUP).answer("...")  # a written answer with its sources, in one call
 
@@ -40,6 +45,10 @@ with WebRouter("local").open_browser() as browser:  # a browser to drive, also k
 
 WebRouter(Provider.BROWSER_USE).browse("...")  # a hosted browser agent does the task
 ```
+
+<p align="center"><em>Useful? Star the repo so more agent developers can find it.</em> ⭐</p>
+
+> **Beta:** the API may change before 1.0.
 
 Every provider has its own SDK, its own parameter names and its own response
 shape. "How many results" is `max_results` on Tavily, `count` on Brave and
@@ -71,8 +80,8 @@ Nothing is hidden to get there. Unmapped provider fields stay in
 `raw`, and an option a backend cannot honour **raises instead of being quietly
 dropped** — so a call never runs under weaker constraints than you asked for.
 
-> **Status: early preview.** `search`, `extract`, `run_template` (with
-> `templates` and `template` beside it), `research`, `open_browser`
+> **Status: early preview.** `search`, `extract`, `live_data` (with
+> `live_data_sources` and `live_data_source` beside it), `research`, `open_browser`
 > and `browse` are implemented; `benchmark()` and `benchmark_extract()`
 > compare search and extract backends on your own queries and URLs, and
 > `evaluate()` scores search accuracy with an LLM judge —
@@ -129,7 +138,9 @@ and you do not need it. `langchain` installs `langchain-core` for the
 install. `browser` is named after what it lets a browser
 handle do — drive the page — rather than after `open_browser`, which needs no
 Playwright: a vendor session opens over httpx, which `[all]` installs, and
-`local` needs only the standard library and a Chrome or Chromium.
+`local` needs only the standard library and a Chrome or Chromium. `remote`
+installs httpx for the built-in [`remote` router](#a-router-service-routerremote),
+for an install that carries no method extra; `[all]` includes it.
 
 ## Quickstart
 
@@ -212,9 +223,14 @@ uv run --env-file .env python examples/main.py
 
 ## Provider support
 
+Twelve search backends, seven extract backends, a template catalogue, five
+answer backends, three agentic research backends (plus Exa's, retired upstream), five
+browser-session backends and three browser agents. One call each. Switching
+between them is one argument.
+
 A provider name serves the methods it serves and no others: `brave` searches
 and cannot extract, `oxylabs` extracts and cannot search, `nimble` searches,
-extracts, runs templates and researches, and `browserbase` opens
+extracts, runs live data and researches, and `browserbase` opens
 sessions, runs browse tasks and extracts.
 Ask a method for another's backend and it says so, naming the backends that
 method does serve.
@@ -308,29 +324,35 @@ fetching anonymously, and `auto` and `max` pass such members over. The MCP
 server never offers it: a logged-in identity is set in code, not from a
 conversation.
 
-### Templates
+### Live data
 
-A template is a vendor's saved, site-specific extraction: Nimble's Extract
-Templates, Oxylabs' dedicated sources, Bright Data's scrapers, Apify's
-actors. `[extract]` installs the Nimble adapter -- a template run is its
-Extract API's. There is no keyless tier and no `auto`: a run fetches and
-parses on the backend's account, and a template's name belongs to one
-vendor, so `provider` is required on all three calls.
+A live data source is a vendor's ready-made scraper for one site -- Nimble's
+Extract Templates, Apify's Actors, Bright Data's scrapers, the Oxylabs Web
+API's dedicated scrapers. Given its own inputs it fetches the site **for this call**
+and answers with structured records. That is the rule a backend joins under:
+it fetches on request. Data a vendor collected earlier and serves from storage
+is that vendor's own API, reached through `call_vendor()`. There is no keyless
+tier and no `auto`: a run fetches and parses on the backend's account, and a
+source's name belongs to one vendor, so `provider` is required on all three
+calls.
 
-| Pass | Name | Provider | Credentials | Page formats beside the record |
+| Pass | Name | Provider | Credentials | Page formats beside the records |
 | --- | --- | --- | --- | --- |
 | `Provider.NIMBLE` | `nimble` | [Nimble Extract Templates](https://docs.nimbleway.com/api-reference/extract/extract-templates) | `NIMBLE_API_KEY` | `markdown`, `html` |
+| `Provider.APIFY` | `apify` | [Apify Store Actors](https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post) | `APIFY_TOKEN` | — |
+| `Provider.BRIGHTDATA` | `brightdata` | [Bright Data scrapers](https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests) | `BRIGHTDATA_API_TOKEN` | — |
+| `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web API dedicated scrapers](https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers) | `OXYLABS_WEB_API_KEY` (a Web API key, not the Realtime username and password extract uses; in `provider_config["oxylabs"]` it is `web_api_key`, as `api_key` there is extract's password) | — |
 
-Nimble is the only backend with a template catalogue so far. Verified live on
-2026-10-22: a listing, a description and a run on a public test page, the
-response shapes of which the tests are modelled on. See
-[Running a template](#running-a-template). Listing and describing bill
-nothing; a run bills one template run on Nimble's account, at one flat rate
-for every template, whatever the site -- the rate is on
-[Nimble's pricing page](https://www.nimbleway.com/pricing), and
-[`benchmarks/providers/PRICING.md`](benchmarks/providers/PRICING.md) records
-it dated and sourced, from the price list `web_router.prices` reads (see
-[Estimated prices](#estimated-prices-experimental)).
+Nimble was verified live on 2026-10-22: a listing, a description and a run on
+a public test page. Apify and Bright Data were verified live on 2026-11-10:
+each one's catalogue, a search, a description and a run (Apify's Google Maps
+Actor, Bright Data's `amazon_products`). **The Oxylabs Web API is written from
+its documentation** and has not yet been called live. Their integration tests
+skip themselves until keys are available. Listing and describing bill nothing
+on any of them; what a run bills is each vendor's own rate, recorded dated and
+sourced in [`benchmarks/providers/PRICING.md`](benchmarks/providers/PRICING.md)
+from the price list `web_router.prices` reads (see
+[Estimated prices](#estimated-prices-experimental)). See [Live data](#live-data-1).
 
 ### Answer
 
@@ -343,7 +365,7 @@ answer benchmark. See
 | Pass | Name | Provider | Credentials | Options mapped | Citations tied to claims |
 | --- | --- | --- | --- | --- | --- |
 | `Provider.PERPLEXITY` | `perplexity` | [Perplexity Agent API, `fast` effort](https://docs.perplexity.ai/docs/agent-api/quickstart) | `PERPLEXITY_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[N]` markers, in `citation.field` |
-| `Provider.YOU` | `you` | [You.com Answer API](https://you.com/docs/guides/answer.md) | `YOU_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[[1, 2]]` markers, in `citation.field` |
+| `Provider.YOU` | `you` | [You.com Answer API](https://you.com/docs/guides/answer.md) | `YOU_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` (`week` or wider: for `day` it cited pages days old) | yes: `[[1, 2]]` markers, in `citation.field` |
 | `Provider.PARALLEL` | `parallel` | [Parallel Chat API (beta), `lite`](https://docs.parallel.ai/api-reference/chat-api-beta/chat-completions) | `PARALLEL_API_KEY` | none: the Chat API takes no source filter | no: its `basis` backs the answer as a whole |
 | `Provider.EXA` | `exa` | [Exa Answer API](https://docs.exa.ai/reference/answer) | `EXA_API_KEY` | none: no source filter, and `userLocation` showed no clear effect | yes: `[N]` markers, in `citation.field` |
 | `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | yes: `[N]` markers, in `citation.field` |
@@ -427,7 +449,7 @@ difference matters:
 | Provider | Verified how |
 | --- | --- |
 | `parallel` | **Live.** Real runs against the Task API, and every recorded payload in its tests is a real response. |
-| `nimble` | **Against the `nimble-python` SDK's generated types**, produced from its OpenAPI spec — stronger than prose docs, weaker than a live call. |
+| `nimble` | **Against the `nimble-python` SDK's generated types**, produced from its OpenAPI spec — stronger than prose docs, weaker than a live call. Its `max` sends `x-high`, which Nimble's docs put at 15 to 30 minutes, longer than `research()`'s default 600-second wait: pass a larger `timeout`, or use `submit_research()` and poll, rather than leave a paid run going after the wait gives up. |
 | `perplexity` | **Live.** On 2026-09-30 the chat endpoint's deep research model answered 403 ("Sonar is now the Agent API"), so research moved to `/v1/responses`: a background run was followed from `queued` through `in_progress` to `completed`, presets `low`, `medium` and `xhigh` were accepted, and a cancel left a run `cancelled`. Its payloads are the ones in the tests. |
 | `linkup` | **Live.** Runs at `effort="low"` (`reasoningDepth` S, $0.25 each) were followed from start to answer, one of them with an `output_schema`, whose result was the schema's object alone; their payloads are the ones in the tests. Efforts above `low` are documentation-derived. Linkup's docs put `max` (XL) at 10 to 20 minutes and `high` (L) at 5 to 10, longer than `research()`'s default 600-second wait: pass a larger `timeout`, or use `submit_research()` and poll, rather than leave a paid run going after the wait gives up. |
 | `you` | **Live.** On 2026-10-16 a background run at `effort="low"` (`lite`) was followed from `queued` through `running` to `completed` on `api.you.com` (the same path on the search host answers 403); an unknown `research_effort` was a 422 naming `lite`, `standard`, `deep`, `exhaustive` and `frontier`. Its payloads are the ones in the tests. You.com offers no cancel, so `cancel()` returns `False`. `max` maps to `exhaustive`: `frontier`, background-only and priced well above it, is reachable as `provider_options={"research_effort": "frontier"}`. Efforts above `low` are documentation-derived. |
@@ -449,7 +471,7 @@ you have a key for first — a credential in the environment says which one you
 want — and falls back to the anonymous tiers when there is none: Tavily keyless,
 then You.com's, Exa's and Parallel's open MCP servers, then Keenable's keyless tier for a search; Tavily keyless,
 Jina Reader, Firecrawl's keyless tier, then Keenable's for an extract; `local` for a browser
-session. Research, browse, `answer()` and templates have no
+session. Research, browse, `answer()` and live data have no
 anonymous tier, because every call bills; with no key they raise, naming the
 variables that would fix it. This is the one list of keyless backends; the MCP
 server and `.env.example` point here. `response.provider` names whichever one served it,
@@ -578,8 +600,8 @@ WebRouter(Provider.TAVILY).search("...")  # ConfigurationError if TAVILY_API_KEY
 | `SearchRequest` / `ExtractRequest` | A normalized call, before any provider sees it. |
 | `SearchResponse` / `SearchResult` | A normalized answer, plus the provider's untouched payload in `raw`. |
 | `ExtractResponse` / `ExtractedDocument` | The same for a page fetch, plus `failures` for the URLs that did not come back. |
-| `TemplateProvider` | The contract for an Extract Template backend: `_list` its catalogue, `_get` one template, `_run` it. |
-| `TemplateRequest` / `TemplateResponse` | A normalized run -- a template's name and its own inputs -- and the record it parsed, in `data`. `Template` describes one, `TemplatePage` a page of the catalogue. |
+| `LiveDataProvider` | The contract for a live data backend: `_list` its catalogue, `_get` one source, `_run` it. |
+| `LiveDataRequest` / `LiveDataResponse` | A normalized run -- a source's name and its own inputs -- and the `records` it extracted. `LiveDataSource` describes one, `LiveDataSourcePage` a page of the catalogue. |
 | `ResearchProvider` | The contract for an agentic backend: `_start` a run, `_fetch` where it got to. |
 | `ResearchRequest` / `ResearchResponse` | A normalized run, and its answer — prose, structure, and the `citations` behind either. |
 | `ResearchJob` | A run in progress. Polls with back-off, blocks with a timeout, and never fabricates an answer it does not have. |
@@ -870,65 +892,99 @@ the whole list.
 would repeat one of the others under a name that says nothing about who
 answered.
 
-## Running a template
+## Live data
 
-A template is a vendor's saved, site-specific extraction -- a retailer's
-product page, a job board's listing, a search results page -- that turns one
-page into a **record with fixed fields** rather than page text to read through.
-Three calls cover a vendor's catalogue of them: list it, describe one, run one.
-All three name the vendor, because a template's name, inputs and fields are
-the vendor's own; the same page has a different name on each.
-
-```python
-page = router.templates(provider="nimble", limit=20)  # one page of the catalogue
-for template in page.templates:
-    print(template.name, template.domain, template.entity_type)
-
-template = router.template("walmart_pdp", provider="nimble")
-template.input_schema  # JSON Schema of what a run passes as `inputs`
-template.output_schema  # JSON Schema of the record that comes back
-
-response = router.run_template("walmart_pdp", {"product_id": "123456789"}, provider="nimble")
-response.data  # {'title': ..., 'price': ..., ...}, shaped by output_schema
-```
-
-**A template's inputs are its own, not ours.** `inputs` is whatever its
-`input_schema` names: a URL for some templates, an id, a slug or a search term
-for others, and nothing at all for a template whose page is fixed. That is why
-this is a method of its own rather than an option on `extract`, which is keyed
-by URL. Read the schema -- or `template.samples`, the runs the backend
-recorded, each an input and the record it returned -- before running a
-template you have not run before; the backend refuses inputs that do not
-match, and an unknown name raises `TemplateNotFoundError`. A listing carries
-the same: Nimble's catalogue rows hold the published version whole, so
-`page.templates[i].input_schema` and `.samples` are filled without a second
-call.
-
-`format` asks for the page beside the record, as `markdown` or `html`:
+A live data source is a vendor's ready-made scraper for one site -- a
+retailer's product page, a maps search, a job board's listing -- that turns
+the site into **records with fixed fields**, fetched for this call, rather
+than page text to read through. Three calls cover a vendor's catalogue: list
+it, describe one, run one. All three name the vendor, because a source's name,
+inputs and fields are the vendor's own; the same site has a different name on
+each.
 
 ```python
-response = router.run_template("walmart_pdp", {"product_id": "123456789"}, provider="nimble", format="markdown")
-response.document.content  # the page the record was parsed from
+page = router.live_data_sources(provider="apify", limit=20)  # one page of the catalogue
+for source in page.sources:
+    print(source.name, source.domain, source.description)
+
+page = router.live_data_sources(provider="nimble", query="walmart product")  # find one by keyword
+page.search  # "native" where the vendor searched (Apify), "local" where it was matched here
+
+source = router.live_data_source("compass~crawler-google-places", provider="apify")
+source.input_schema  # JSON Schema of what a run passes as `inputs`
+
+result = router.live_data(
+    "compass~crawler-google-places",
+    {"searchStringsArray": ["coffee in Tel Aviv"], "maxCrawledPlacesPerSearch": 10},
+    provider="apify",
+)
+result.records  # one dict per place, shaped by the Actor's output
+result.data  # the first record, for sources that answer with one
+result.fetched_at  # when the vendor says it fetched the page; None when it does not say
 ```
 
-Unset, no page comes back -- the record is the answer and the page is an
-extra, so unlike `extract` there is no default format to pin. A run the
-backend could not complete, whether it could not fetch the page, the site
-answered with an error page, or the template failed to parse it, **raises**
-`ProviderError` with the backend's reason rather than coming back with an
-empty record.
+Every backend takes the same call -- a source's name and its inputs -- so
+switching vendor changes only those two:
 
-**One call is one page and one set of inputs**, answered in real time with
-one record: a listing template returns its items inside that record, with
-pagination beside it. A vendor whose templates run as jobs over many inputs
-and answer with a dataset -- Bright Data's scrapers, Apify's actors -- would
-join through its synchronous endpoint, under that endpoint's own time cap;
-batch inputs are out of scope here.
+```python
+router.live_data("amazon_products", {"url": "https://www.amazon.com/dp/B0CHX1W1XY"}, provider="brightdata")
+router.live_data("amazon_products_by_keyword", {"keyword": "earbuds"}, provider="brightdata")
+router.live_data("amazon/product", {"query": "B0CHX1W1XY", "domain": "com"}, provider="oxylabs")
+```
 
-`TemplatePage.total` and `offset` say where in the catalogue a page sits, when
-the backend reports them; `limit` and `offset` left unset leave the paging to
-the backend. Every call tags its answer with `provider` and keeps the untouched
-payload in `raw`.
+| Backend | A source is named | Catalogue | Inputs | Notes |
+| --- | --- | --- | --- | --- |
+| `nimble` | the template's name, `walmart_pdp` | Nimble's templates, paged by Nimble | the template's own (`product_id`, `url`…) | one record per run; `format` returns the page beside it |
+| `apify` | `username~name` (or `username/name`) | the Apify Store, paged by Apify | the Actor's input, sent as the body untouched | every dataset item is a record; waits up to 300 s; `provider_options` go to the run's query (`memory`, `maxItems`, `maxTotalChargeUsd`) |
+| `brightdata` | the dataset id, `gd_l7q7dkf244hwjntr0`, or the scraper's name -- Bright Data's as written (`Amazon products`) or as listed (`amazon_products`); each discovery method is its own source, `amazon_products_by_keyword`. Names follow Bright Data's catalogue and gain the site if another scraper takes the same name; the `gd_` id never changes | every scraper and method, paged here (Bright Data answers with all of them; read once per provider) | one input object, e.g. `{"url": ...}` or `{"keyword": ...}` | waits about a minute, then raises naming the snapshot to fetch later; a run's failed inputs land in its `extra["errors"]`; a listed or described source's `extra["dataset_id"]` names the scraper behind it |
+| `oxylabs` | the scraper's path after `/v1/scrape/`, `amazon/product` (the full path works too) | the Web API's own list, `GET /v1/scrapers`, paged here (read once per provider) | the scraper's own, typed in its description from Oxylabs' `OPTIONS` (`query` or `url`, plus `domain`, `locale`…) | asks for `output: ["json"]`, the scraper's fields; a scraper Oxylabs runs only as a job (`chatgpt`, `gemini`…) is polled for up to five minutes, or until just before the call's deadline; any error after the submit is a `LiveDataJobError` whose `job_id` names the job to read later; `metadata.timestamp` stays in `extra`, as it is not documented as the fetch time |
+
+**Searching a catalogue.** `query` finds sources by keyword -- a site, a
+brand, the kind of page -- searched the way each vendor allows:
+
+| Backend | How `query` is searched | Order |
+| --- | --- | --- |
+| `apify` | natively: the Store's own `search`, over an Actor's title, name, description, owner and readme | the Store's relevance |
+| `nimble` | locally: Nimble's template list takes no keywords, so the catalogue is read page by page and matched here | name and site matches first, then catalogue order |
+| `brightdata` | locally: Bright Data's dataset list takes no parameters | as above |
+| `oxylabs` | locally: the Web API lists its scrapers but takes no keywords | as above |
+
+A local search matches every word, ignoring case, on a source's name, site,
+kind of page and description, reads at most 5,000 sources, and pages its
+matches with `limit` and `offset`. `page.total` counts the matches, and is
+`None` if the catalogue was read only in part. `page.query` and `page.search`
+(`"native"` or `"local"`) say what was asked and how. A custom backend whose
+vendor searches its own catalogue derives from `NativeSourceSearch` as well
+and implements `_search`/`_asearch`.
+
+**A source's inputs are its own, not ours.** `inputs` is whatever its
+`input_schema` names: a URL for some sources, an id, a slug or a search term
+for others. That is why this is a method of its own rather than an option on
+`extract`, which is keyed by URL. Read the schema -- or `source.samples`, the
+runs the backend recorded -- before running a source you have not run
+before; the backend refuses inputs that do not match, and an unknown name
+raises `LiveDataSourceNotFoundError`. A schema is `None` where the backend
+publishes none and names fields without types where that is all it publishes
+(Bright Data): nothing is guessed. Oxylabs' input schema is built from the
+scraper's own `OPTIONS` answer, its untouched lines kept in `source.raw`.
+
+**Freshness is reported, not assumed.** Every backend here fetches on request.
+`fetched_at` is set only from the vendor's own timestamp, and stays `None`
+where the vendor documents none rather than being filled with the time the
+answer arrived.
+
+A run the backend could not complete -- a page it could not fetch, a site
+that answered with an error page, a parse that failed -- **raises**
+`ProviderError` with the backend's reason. `format` asks for the page beside
+the records, on the backends that return one (Nimble); unset, no page comes
+back. `LiveDataSourcePage.total` and `offset` say where in the catalogue a
+page sits, when known. Every call tags its answer with `provider` and keeps
+the untouched payload in `raw`.
+
+**Renamed from templates.** `templates()`, `template()` and `run_template()`,
+and the `Template*` types, are deprecated aliases of `live_data_sources()`,
+`live_data_source()`, `live_data()` and the `LiveData*` types: they still
+work, with a `DeprecationWarning`, until a later release removes them.
 
 ## Asking for an answer
 
@@ -1060,11 +1116,11 @@ the package:
 | `low` | `low` | `lite` | `low` | `S` | `lite` |
 | `medium` | `medium` | `core` | `medium` | `M` | `standard` |
 | `high` | `high` | `pro` | `high` | `L` | `deep` |
-| `max` | `max` | `ultra` | `xhigh` | `XL` | `exhaustive` |
+| `max` | `x-high` | `ultra` | `xhigh` | `XL` | `exhaustive` |
 
 A backend with fewer tiers maps more than one level onto the same setting rather
-than inventing a distinction it does not have. Nimble's `x-high` and `5x-high`, and Parallel's `base`,
-have no normalized level of their own and are reachable through
+than inventing a distinction it does not have. Nimble's own `max` is not open yet, so `max` sends its deepest tier,
+`x-high`. Parallel's `base` has no normalized level of its own and is reachable through
 `provider_options`, as is You.com's `frontier`.
 
 Parallel is the one backend that *requires* an effort, so leaving it unset sends
@@ -1564,7 +1620,7 @@ the transcript is a separate endpoint this provider does not read.
 ## The MCP server
 
 The package ships a **self-hosted stdio MCP server**, so an agent can call these
-methods as tools: `search`, `extract`, the templates, `answer`, `research`,
+methods as tools: `search`, `extract`, the live data tools, `answer`, `research`,
 `browse`, the `browser_*` tools for driving a browser itself, and `web_run`,
 `budget_start` and `budget_status` for [smart routing](#smart-routing-experimental).
 It runs in your own process and sends each key only to the backend it belongs to.
@@ -1994,6 +2050,8 @@ response = wr.run(plan, budget=Budget(max_cost_usd=0.05))
 A router takes a `RouteRequest` and returns a `RouteDecision`: a function,
 method, `functools.partial` or coroutine function, or an object with
 `route(req)` or `aroute(req)`; an object that is only callable is refused.
+A string names a registered router, such as the built-in `remote`: see
+[A router service](#a-router-service-routerremote).
 A router is shown a `RouteRequest` and nothing else: the `prompt`, the `urls`
 found in it, the `budget`, the method you pinned (`pinned_tool`), its own
 time to answer (`deadline_s`) and the `candidates`, each a `Candidate` named
@@ -2032,6 +2090,27 @@ changing the method. `route_tools=` limits that to some methods;
 ```python
 wr = WebRouter(router=route, route_tools=("search", "research"))
 ```
+
+A router may declare its own default, as it declares `timeout_s`: a
+`route_tools` attribute on the function or object, read when the caller
+passes none. The caller's `route_tools` always wins, and a router that
+declares none is asked on all five. A slow router can leave out the tools it
+would slow down more than its order is worth:
+
+```python
+class SlowRouter:
+    timeout_s = 3.0
+    route_tools = ("research", "browse")  # minutes-long jobs; a search runs in auto's order
+
+    async def aroute(self, req): ...
+```
+
+Which tools a router of each kind should declare is measured by
+[`router_latency.py`](benchmarks/providers/README.md#router-latency-which-tools-a-router-should-order),
+whose last run and the examples' declarations are there: a tool asks the
+router only when the router's p50 is below a quarter of the tool's p50, the
+p50 of the first backend in its `auto` chain. Latency moves with the model,
+the network and the hour: rerun the script for your own router.
 
 ### `plan()` and `run()`
 
@@ -2100,7 +2179,7 @@ with wr.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
 ```
 
 Every `search`, `extract`, `answer`, `research`, `browse`, `plan`, `run`,
-`submit_research` and `submit_browse` inside the block spends from it; `run_template` and `open_browser` do not,
+`submit_research` and `submit_browse` inside the block spends from it; `live_data` and `open_browser` do not,
 nor do the calls of another router. Each call is capped at what is left, in
 dollars and seconds, and that is what a router is shown. A call spends from
 every scope of its router in force when it starts, wherever the scope was
@@ -2145,7 +2224,11 @@ web_router import DecisionRecord`) on every routed or budgeted call, and
   candidate moved past and why;
 - `params`, `params_source` and `params_reason`, the options set and who set
   them;
-- `estimated_cost_usd`, `cost_is_estimate`, `unmeasured`, `prompt_sha256`.
+- `estimated_cost_usd`, `cost_is_estimate`, `unmeasured`, `prompt_sha256`;
+- `members`, with a composite router such as `fallback`: each router it
+  asked, as `name`, `outcome` (`ok`, `router_timeout`, `router_error`,
+  `router_invalid` or `router_empty`), `ms`, and `counted`, whether its
+  decision is the one used.
 
 It holds no prompt text and no key values. `prompt_sha256` is an unsalted
 SHA-256 of what the router reads: the query or task, for an extract its whole
@@ -2163,15 +2246,294 @@ from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](benchmarks/providers/README.md#route-eval-replaying-a-router).
 
 The library ships one keyless router, `web_router.routing.rules.rules`: a
-prompt with a URL is extracted, anything else searched. Four example routers,
-tested offline: [rules](examples/router_rules.py), a
-[scikit-learn classifier](examples/router_classifier.py), an
-[OpenAI-compatible model](examples/router_llm.py) and
-[Jev](examples/router_jev.py), TypeSafe's model. The last two are model
-routers: each sends the prompt to that model's server, which bills for it. The
+prompt with a URL is extracted, anything else searched, and two model routers,
+`router="llm"` and `router="systemone"`: see
+[Decision APIs](#decision-apis-deciderrouter-routerllm-and-routersystemone).
+Six example routers, tested offline: [rules](examples/router_rules.py), a
+[scikit-learn classifier](examples/router_classifier.py), a
+[decider of your own](examples/router_decider.py), the built-in
+[`llm` router on a preset](examples/router_llm.py),
+[Jev](examples/router_jev.py), TypeSafe's model, written out by hand, and
+[OpenAI's Decisions API](examples/router_openai_decisions.py) as a decider.
+The last three are model routers: each sends the prompt to that model's
+server, which bills for it. The
 MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
+
+### A router service: `router="remote"`
+
+A router can run as a service of its own, in any language, and be shared by
+every process that routes. The built-in `remote` router asks one over HTTP:
+
+```python
+wr = WebRouter(
+    router="remote",
+    router_config={
+        "url": "https://router.example.com/route",
+        "timeout_s": 1.0,  # the default; cut to the call's budget and deadline
+        "route_tools": None,  # its own route_tools: the tools it orders when you pass none; all five if None
+    },
+)  # api_key=, else WEB_ROUTER_REMOTE_ROUTER_API_KEY
+```
+
+Each routed call posts its `RouteRequest` as JSON and reads a `RouteDecision`
+back, both carrying `"schema": 1`, the wire format's major version, with the
+contract types' own field names. The JSON Schema files ship in the package,
+generated from those types: `web_router/data/schemas/router/v1/request.json`
+and `response.json`; `web_router.routing.wire` reads and writes both sides. A
+service ignores request fields it does not know, and the router ignores
+decision fields it does not know. A request, and a decision (every decision
+field may be left out or `null`):
+
+```json
+{
+  "schema": 1,
+  "prompt": "read https://example.com/pricing",
+  "candidates": [
+    {
+      "tool": "extract",
+      "provider": "jina",
+      "est_cost_usd": 0.0,
+      "est_latency_s": 2.1,
+      "id": "extract:jina"
+    },
+    {
+      "tool": "search",
+      "provider": "tavily",
+      "est_cost_usd": 0.008,
+      "est_latency_s": 1.2,
+      "id": "search:tavily"
+    }
+  ],
+  "deadline_s": 1.0,
+  "urls": [
+    "https://example.com/pricing"
+  ],
+  "budget": {
+    "max_cost_usd": 0.05,
+    "time_limit_s": 30.0,
+    "strict": false
+  },
+  "pinned_tool": null
+}
+```
+
+```json
+{
+  "schema": 1,
+  "tools": [
+    "extract"
+  ],
+  "providers": {
+    "extract": [
+      "jina"
+    ]
+  },
+  "exclude": {
+    "search:tavily": "the prompt names a URL"
+  },
+  "params": null,
+  "confidence": 0.9,
+  "reason": "the prompt names a URL"
+}
+```
+
+- **What the service is sent.** What any router is shown: the prompt and the
+  URLs in it, whole, query strings included, the budget and the candidates.
+  Candidate ids (`search:tavily`) name the backends you have configured; that
+  is by design. No key value is ever sent: the one credential is the service's
+  own bearer key, `api_key` in `router_config` or
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY` (read once, when the router is built,
+  and refused unless it is visible ASCII), never logged.
+- **Transport.** httpx (`pip install "webrouter[remote]"`, or any method
+  extra), imported only when the router is built. The router is async only,
+  so a call past its time is cancelled rather than left running, from sync and
+  async code alike. Its one connection pool belongs to the event loop that
+  first used it -- for `WebRouter`, web-router's private loop, where all its
+  calls run -- so warm calls reuse their connection; a call from another loop
+  gets a client of its own, closed when the call ends. Closing the router
+  closes the pool on its own loop, waiting at most 2 s without blocking an
+  async caller's loop, and leaves the router closed: a later call is a
+  `router_error` and opens nothing. A pool that will not close, or whose loop
+  ended first, is dropped with a `ResourceWarning`: `aclose()` an
+  `AsyncWebRouter` before its loop ends. One request, never retried; no
+  redirect is followed, and no proxy or other setting is read from the
+  environment. The URL must be `https`, or `http` to `localhost`, 127.0.0.0/8
+  or `::1` (not `*.localhost`, not `0.0.0.0`); a URL with credentials, a query
+  or a fragment, or one a browser could read two ways, is refused when the
+  router is built, and the error does not echo it.
+- **Failures.** A timeout is `router_timeout`; a transport error, a status
+  other than 200 or a decision naming a `schema` other than 1 is
+  `router_error`; an answer that is not an `application/json` decision of at
+  most 64 KiB, with at most 64 entries in any one list or mapping of the
+  decision or of a method's `params` (one level down) -- a missing `schema`
+  included -- is `router_invalid`. Either
+  way the static order runs, the record's `reason` says which, and
+  `fail_on_router_error=True` raises `RouterError` instead. The service's
+  `reason` and `exclude` reasons are cut to 300 characters, a name it sets
+  (candidate id, provider, option) longer than 128 characters is dropped, and
+  an echo of its own bearer key is redacted.
+- **The URLs it may set.** The URLs a service sets for extract or browse are
+  held to `url_policy="public_only"` even when you set no `url_policy`: a
+  service cannot name a loopback, private or metadata address by hostname. A
+  refused URL is set aside in the record's `ignored`. Your own `url_policy`
+  applies when you set one. `public_only` checks the hostname as written and
+  does not resolve it, so a service could name a host whose DNS points at a
+  private address; that matters only for a backend that fetches from your
+  machine, such as a provider you register or host yourself. Every built-in
+  backend hands the URL to its vendor, which fetches it from its own network.
+- **What is shown.** The decision record names it `remote(<scheme>://<host>)`:
+  never the URL's path, and never the key.
+
+[`examples/router_remote_server.py`](examples/router_remote_server.py) is a
+reference service in the standard library: the wire format around the
+built-in rules router, to run beside your code or port. It binds 127.0.0.1
+(any other host needs the key), answers only a `Host` naming it, checks the bearer key in constant time and
+caps a request at 1 MB.
+
+`remote` is a registered name. `register_router(name, factory)` adds your own
+(`unregister_router(name)` removes it, bringing back a built-in of that name;
+`available_routers()` lists every name),
+and `WebRouter(router=name, router_config={...})` builds one by calling
+`factory(**router_config)`; a key the factory does not take, or one it needs
+and is not given, raises `ConfigurationError` naming the key, never its
+value. A router that `WebRouter` builds by name is its to
+close: `close()` calls the router's `close()` (else its `aclose()`), and
+`aclose()` its `aclose()` (else `close()`). A router passed in is yours to close, as a provider is. A
+router names itself in the record with a `router_name` attribute; without
+one, its qualified name is used, and with a `min_url_policy` attribute
+(`"public_only"`) holds the URLs it sets to that policy when you set none.
+
+### Decision APIs: `DeciderRouter`, `router="llm"` and `router="systemone"`
+
+A classifier, a model or a decision API answers one question: which of these
+options fits this prompt. A *decider* answers just that, and `DeciderRouter`
+does the rest. It asks the decider a `DeciderQuestion` -- the `prompt`, the
+`instructions`, and `options`, each candidate id with its method, backend,
+estimated cost and p90 latency (extract only when the prompt names a URL) --
+and reads back a `DeciderReply`: `ranked`, option ids best first, with
+optional `scores` and `confidence`, each from 0 to 1. Options it leaves out
+keep the static order. A reply naming an id not offered, an id twice, or a
+number that is not a finite 0..1 is set aside whole (`router_invalid`). The
+ranking becomes `tools` and `providers`; a `DeciderRouter` never sets options,
+exclusions or URLs, and its reason holds the decider's `name`, the first id
+and its score when the decider gives one, never the decider's own words. A
+decider has `decide(question)` or `async adecide(question)`, and may declare
+`name`, `timeout_s` and `route_tools`, which the router declares in turn:
+
+```python
+from web_router import DeciderQuestion, DeciderReply, DeciderRouter, WebRouter, register_router
+
+
+class SearchFirst:
+    name, timeout_s = "search-first", 0.05
+
+    def decide(self, question: DeciderQuestion) -> DeciderReply:
+        return DeciderReply(ranked=[cid for cid in question.options if cid.startswith("search:")])
+
+
+register_router("search-first", lambda **config: DeciderRouter(SearchFirst(**config)))
+wr = WebRouter(router="search-first")
+```
+
+Two deciders are built in, each a registered name. Nothing is on by default:
+each sends the prompt off your machine only when you name it. Both post with
+httpx, so install the `remote` extra (`pip install "webrouter[remote]"`, or
+`all`) to use them.
+
+- **`router="llm"`**: a chat model on any OpenAI-compatible chat-completions
+  API, posted with httpx (no SDK, so no `OPENAI_BASE_URL` or other variable is
+  read). The model is asked for a ranking, a score per ranked id (as a list of
+  `{"id", "p"}`, which a strict schema can hold) and a confidence. `model` is required: the router names no default model, so pass the
+  model's name as its server spells it. `router_config` also takes either a
+  `preset` or a `base_url`, and `api_key_env`, `api_key`, `timeout_s` (3 s) and `route_tools`
+  (research and browse unless set). Presets: `openai` and `anthropic` (a strict
+  JSON schema whose enum is the offered ids), `openrouter` (the same, where the
+  model supports it), `deepseek` and `groq` (JSON mode). A `base_url` of your
+  own asks for JSON in the prompt only, and needs `api_key_env` unless it is
+  on this machine. `response_format` (`json_schema`, `json_object` or
+  `prompt`) overrides either choice. Either way the reply is checked as above.
+
+  ```python
+  WebRouter(router="llm", router_config={"preset": "openai", "model": "<model>"})
+  ```
+
+- **`router="systemone"`**: a System One decision API, asked one `choice`
+  question per call; its probability per option is the score, and ranks them.
+  Preset: `typesafe` (TypeSafe's Jev, model `jev-1.14.0`,
+  `TYPESAFE_API_KEY`), pinned so a new
+  release changes nothing until you pass `model`; another server takes `base_url`, `path`, `model` and `api_key_env`. `timeout_s` is
+  1 s, and `route_tools` every tool but search, unless set.
+
+  ```python
+  WebRouter(router="systemone", router_config={"preset": "typesafe"})
+  ```
+
+Each preset's key comes from that vendor's variable (`OPENAI_API_KEY`,
+`ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`,
+`OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`), read once
+when the router is built, and is sent only to that vendor's host: naming one
+for another `base_url` raises `ConfigurationError`, as does a key that is
+missing. Each call sends the server the prompt -- for an extract, its URLs
+whole, query strings included -- the budget, and the candidate ids, which name
+your configured backends, with their estimated cost and p90 latency; never a
+provider key. The transport is the `remote` router's: `https` only (plain
+`http` only to this machine), no credentials, query or fragment in the URL,
+one request, no retries, no redirects, no proxy read from the environment, and
+answers of `application/json` under 256 KiB. A failure leaves the static
+order, and the record says only `router_timeout`, `router_error` or
+`router_invalid`; with `fail_on_router_error=True`, the `RouterError` it
+raises carries the error class or HTTP status and the scheme and host on its
+`__cause__`, never the URL's path or the key. The record names each
+`llm(<host>)` or `systemone(<host>)`: the host, not the model. Both need
+httpx, which the `remote` extra installs. Each call bills on that server: the
+router's own call is billed by its vendor and is not counted in a `Budget`'s
+cost or the record's `estimated_cost_usd`.
+
+### Chaining routers: `router="fallback"`
+
+The built-in `fallback` router asks a list of routers in order, until one
+decides something:
+
+```python
+WebRouter(
+    router="fallback",
+    router_config={
+        "routers": [
+            {"name": "remote", "url": "https://router.example.com/route"},  # a registered name and its config
+            my_classifier,  # or any router function or object
+        ]
+    },
+)
+```
+
+A member is a registered name, a mapping of a `"name"` and that router's
+config, or a router function or object, sync or async. Each keeps its own
+`timeout_s` (50 ms when it declares none) and is given the smaller of that and
+the time left. A member that times out, raises, answers something other than a
+decision, or answers a decision that decides nothing is passed over, and the
+next is asked. When none decides anything, the call runs on the static order,
+recorded as `router_empty`, or `router_timeout` when the time ran out before
+one did (the members asked are recorded either way); with
+`fail_on_router_error=True` it raises `RouterError` with that code instead. It
+stops asking 20 ms before its deadline, so its answer is always read in time.
+Its own limit is the sum of its members' plus those 20 ms, unless
+`router_config["timeout_s"]` sets it to more than those 20 ms, and a member that declares `route_tools`
+is asked only on those tools.
+
+**It sends the prompt to every member it asks**, a member that times out after
+receiving it included: put a member you would rather not send prompts to
+last. The record names it `fallback(<member>, ...)` and lists each member
+asked in `members`. A member passed in is named by its `router_name`, else
+`custom`, never its import path; one built by name by its `router_name` (for
+`remote`, `remote(<scheme>://<host>)`), else its registered name. Members it
+built by name are closed when it is; those passed in stay yours.
+
+A router of your own that asks others can answer the same way: return a
+`CompositeDecision` (`from web_router import CompositeDecision`), a
+`RouteDecision` with `members`, a tuple of `DecisionMember`, which the record
+copies. The wire format does not carry it, so a router service cannot set it.
 
 ## Routing and extending
 
@@ -2431,8 +2793,8 @@ except WebRouterError as exc:
 | `ProviderNotInstalledError` | The extra carrying the provider's SDK is not installed | `make setup` in the clone installs every extra; the message names the one missing |
 | `ProviderNotFoundError` | Unknown provider name, or one that does not serve the method you called | The message lists every name that method does serve |
 | `UnsupportedParameterError` | The provider does not map an option you set | Use `provider_options`, or add the mapping |
-| `UnsupportedFormatError` | The extract or template backend cannot return the `format` you asked for | Ask for one it can — the message lists them — or name another backend |
-| `TemplateNotFoundError` | A template run or describe named a template the vendor does not have | A `ProviderError`; list the vendor's templates with `templates()` — names are the vendor's own |
+| `UnsupportedFormatError` | The extract or live data backend cannot return the `format` you asked for | Ask for one it can — the message lists them — or name another backend |
+| `LiveDataSourceNotFoundError` | A live data run or describe named a source the vendor does not have | A `ProviderError`; list the vendor's sources with `live_data_sources()` — names are the vendor's own |
 | `MissingParameterError` | The browse backend cannot start without an option you left unset — `start_url`, today | Set it, or name a backend that finds its own first page; nothing was billed |
 | `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost — the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
 | `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers` — the other rows are unaffected |
@@ -2441,7 +2803,7 @@ except WebRouterError as exc:
 | `VendorWriteRefusedError` | A vendor call would change data and `allow_writes=True` was not passed; nothing was sent | Pass it once you mean it, after the vendor's dry-run option where it has one |
 | `BrowserActionError` | A page action on a browser handle failed; subclasses say how — see [Driving the page](#driving-the-page) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
 | `BudgetExceededError` | Nothing the call could run fits its `Budget` (experimental, see [Budgets](#budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
-| `DeadlineExceededError` | A search, extract, template run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
+| `DeadlineExceededError` | A search, extract, live data run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
 | `RouterError` | With `fail_on_router_error=True`, the attached router raised, ran out of time or answered something other than a `RouteDecision` (experimental) | Fix the router, or raise its `timeout_s`; `code` says which, and what it raised is on `__cause__` |
 
 These are **siblings, not a hierarchy**: `ProviderNotInstalledError` is not a
@@ -2469,6 +2831,7 @@ Keys are read from the environment, or passed explicitly through
 | AgentCore Web Search | `AGENTCORE_GATEWAY_URL`, plus an AWS credential from botocore's usual chain *(not a key: see [setup](docs/agentcore-setup.md))* | search |
 | Firecrawl | `FIRECRAWL_API_KEY` | extract |
 | Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
+| Oxylabs Web API | `OXYLABS_WEB_API_KEY` | live data |
 | Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |
 | Jina Reader | `JINA_API_KEY` *(optional — raises the rate limit)* | extract |
 | Steel | `STEEL_API_KEY` | open_browser |
@@ -2485,6 +2848,7 @@ Keys are read from the environment, or passed explicitly through
 | `auto` | *none — keyless* | search, extract, open_browser |
 | OpenAI *(the default `evaluate()` judge, not a backend)* | `OPENAI_API_KEY` | evaluate |
 | Anthropic *(`AnthropicJudge` for `evaluate()`, not a backend)* | `ANTHROPIC_API_KEY` | evaluate |
+| Your router service *(`router="remote"`, not a backend)* | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` *(optional; `router_config["api_key"]` wins)* | routing |
 
 A key set once serves every method of a provider that has several. See
 [`.env.example`](.env.example). The library reads the environment only; the
@@ -2533,6 +2897,16 @@ make test-browser
   an agent whose tools are WebRouter's, and
   [skills/web-router/SKILL.md](skills/web-router/SKILL.md), the same contract
   packaged as an agent skill
+
+## Community
+
+- [Discord](https://discord.gg/MGztFWSjZh). Best for: questions in #help, chatting with other
+  builders and the maintainers, and showing what you built in #showcase.
+- [GitHub Issues](https://github.com/Nimbleway/webrouter/issues). Best for: bugs
+  and gaps in a provider's support.
+- [GitHub Discussions](https://github.com/Nimbleway/webrouter/discussions). Best
+  for: proposals and design ideas.
+- [SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md). Best for: vulnerabilities. Never in a public channel.
 
 ## License
 

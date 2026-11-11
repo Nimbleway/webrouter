@@ -2,6 +2,8 @@
 
 Thanks for helping out. This project is pre-1.0 and moving fast — open an issue
 before starting anything large so we can agree on the shape first.
+Questions, or want to talk a change through first? Ask in the [Discord](https://discord.gg/MGztFWSjZh),
+in #contributing.
 
 Contributions are accepted under the Apache License 2.0, the same license as the
 project ([LICENSE](LICENSE)).
