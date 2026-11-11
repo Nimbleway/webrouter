@@ -1,0 +1,51 @@
+{
+  "vendor": "fantasyfootballcalculator",
+  "name": "Fantasy Football Calculator",
+  "category": "other",
+  "summary": "Fantasy football average draft position (ADP) from Fantasy Football Calculator's mock drafts, by scoring format, league size and year, from its free ADP REST API.",
+  "docs_url": "https://help.fantasyfootballcalculator.com/article/42-adp-rest-api",
+  "base_url": "https://fantasyfootballcalculator.com",
+  "notes": [
+    "Keyless and free for personal and commercial use; attribution (a link or mention) is requested.",
+    "Data updates once a day, so do not call it often."
+  ],
+  "sources": [
+    "https://help.fantasyfootballcalculator.com/article/42-adp-rest-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fantasyfootballcalculator.adp",
+      "name": "Get ADP",
+      "summary": "Average draft position of players for a scoring format, number of teams and year.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/adp/{format}",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Scoring format.",
+          "example": "standard"
+        },
+        "teams": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of teams in the league.",
+          "example": 12
+        },
+        "year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Draft year.",
+          "example": 2018
+        }
+      },
+      "docs_url": "https://help.fantasyfootballcalculator.com/article/42-adp-rest-api",
+      "verified": {
+        "docs": "https://help.fantasyfootballcalculator.com/article/42-adp-rest-api"
+      }
+    }
+  ]
+}

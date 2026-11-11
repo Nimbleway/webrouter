@@ -1,0 +1,105 @@
+{
+  "vendor": "ted",
+  "name": "TED (Tenders Electronic Daily)",
+  "category": "other",
+  "summary": "EU public procurement notices published in the Official Journal supplement (OJ S): tenders, awards and other notices from across the EU and EEA, via the TED Search API.",
+  "docs_url": "https://docs.ted.europa.eu/api/latest/search.html",
+  "base_url": "https://api.ted.europa.eu",
+  "notes": [
+    "Keyless: the Search API needs no authentication (submitting notices does, and is not in this entry).",
+    "Queries use TED's expert search syntax; build and check one on ted.europa.eu's Expert Search page, or send checkQuerySyntax=true.",
+    "fields is required: name the notice fields to return (e.g. publication-number, notice-title, buyer-name, publication-date); links to XML/PDF/HTML come back too.",
+    "Limits: 250 notices per page, 10,000 fields per page (notices x fields), and 15,000 notices per query in PAGE_NUMBER mode; ITERATION mode has no total cap.",
+    "Text fields are keyed by language code (e.g. buyer-name.lav), since notices are multilingual."
+  ],
+  "sources": [
+    "https://docs.ted.europa.eu/api/latest/search.html",
+    "https://api.ted.europa.eu/swagger-ui/index.html#/Search/search",
+    "https://api.ted.europa.eu/api-v3.yaml"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ted.notices.search",
+      "name": "Search procurement notices",
+      "summary": "Notices matching an expert query, with the requested fields, total count and an iteration token.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/notices/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Expert search query (filters and sort).",
+          "required": true,
+          "example": "FT~\"software\" AND publication-date>=20261101"
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Notice fields to return for each notice.",
+          "required": true,
+          "example": [
+            "publication-number",
+            "notice-title",
+            "buyer-name",
+            "publication-date"
+          ]
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number; default 1 (PAGE_NUMBER mode)."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Notices per page; default 10, at most 250."
+        },
+        "scope": {
+          "in": "body",
+          "type": "string",
+          "description": "LATEST current OJ S issue, ACTIVE active notices, ALL (default).",
+          "enum": [
+            "LATEST",
+            "ACTIVE",
+            "ALL"
+          ]
+        },
+        "paginationMode": {
+          "in": "body",
+          "type": "string",
+          "description": "PAGE_NUMBER (default, up to 15,000 notices) or ITERATION (scroll, no cap).",
+          "enum": [
+            "PAGE_NUMBER",
+            "ITERATION"
+          ]
+        },
+        "iterationNextToken": {
+          "in": "body",
+          "type": "string",
+          "description": "Token from the previous response, for the next page in ITERATION mode; omit on the first call."
+        },
+        "onlyLatestVersions": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only the latest version of each notice; default false."
+        },
+        "checkQuerySyntax": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true checks the query syntax without running it."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "In ITERATION mode the snapshot holds until the next OJ S release plus 24 hours; an empty page means all notices are retrieved."
+      ],
+      "job": "contracts.search",
+      "docs_url": "https://api.ted.europa.eu/swagger-ui/index.html#/Search/search",
+      "verified": {
+        "docs": "https://api.ted.europa.eu/swagger-ui/index.html#/Search/search"
+      }
+    }
+  ]
+}
