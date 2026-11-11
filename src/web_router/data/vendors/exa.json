@@ -1,0 +1,603 @@
+{
+  "vendor": "exa",
+  "name": "Exa",
+  "category": "search",
+  "summary": "Neural web search, page contents, cited answers, Agent runs and Websets from Exa.",
+  "docs_url": "https://exa.ai/docs/reference/getting-started",
+  "pricing_url": "https://exa.ai/pricing",
+  "base_url": "https://api.exa.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "EXA_API_KEY"
+        ],
+        "description": "an Exa API key (dashboard.exa.ai > API Keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is the x-api-key header; 'Authorization: Bearer <key>' also works.",
+    "Websets endpoints live under /v0/ and are asynchronous: create, then poll the Webset until idle.",
+    "Cost per call varies with search type, number of results and contents requested.",
+    "The team-management API (credits, API keys) is on a different host (admin-api.exa.ai) and is not in this entry."
+  ],
+  "sources": [
+    "https://exa.ai/docs/llms.txt",
+    "https://exa.ai/docs/exa-spec.yaml",
+    "https://exa.ai/docs/reference/search.md",
+    "https://exa.ai/docs/reference/agent-api/create-a-run.md",
+    "https://exa.ai/docs/websets/api/websets/create-a-webset.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "exa.search.query",
+      "name": "Search the web",
+      "summary": "Exa neural/keyword search with optional page contents, deep research modes and structured output.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query, or a natural-language description of what to find.",
+          "example": "startups building web agents"
+        },
+        "type": {
+          "in": "body",
+          "type": "string",
+          "description": "Search mode; default auto. Others: lite, deep-lite, deep (legacy: instant, fast, deep-reasoning).",
+          "example": "auto"
+        },
+        "numResults": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return; the public maximum is 100.",
+          "example": 10
+        },
+        "includeDomains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains or domain paths to include.",
+          "example": [
+            "arxiv.org"
+          ]
+        },
+        "excludeDomains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains or domain paths to exclude."
+        },
+        "startPublishedDate": {
+          "in": "body",
+          "type": "string",
+          "description": "Only results published after this ISO 8601 date."
+        },
+        "endPublishedDate": {
+          "in": "body",
+          "type": "string",
+          "description": "Only results published before this ISO 8601 date."
+        },
+        "category": {
+          "in": "body",
+          "type": "string",
+          "description": "Data category to focus on; other strings are used as hints.",
+          "enum": [
+            "company",
+            "publication",
+            "news",
+            "personal site",
+            "financial report",
+            "people"
+          ]
+        },
+        "contents": {
+          "in": "body",
+          "type": "object",
+          "description": "Page-content options per result, e.g. {\"text\": true}, {\"highlights\": true} or {\"summary\": {...}}."
+        },
+        "userLocation": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter country code of the end user."
+        },
+        "systemPrompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Extra instructions for synthesized output."
+        },
+        "outputSchema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON schema for synthesized output, returned in the response's output field."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account.",
+        "Cost depends on the type and on the contents requested; deep types are slower and cost more.",
+        "lite accepts only a small set of parameters; others make the request fail."
+      ],
+      "job": "web.search",
+      "docs_url": "https://exa.ai/docs/reference/search.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/reference/search.md"
+      }
+    },
+    {
+      "id": "exa.search.contents",
+      "name": "Get page contents for URLs",
+      "summary": "Full text, highlights or summaries for a list of URLs or search-result ids.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/contents",
+      "params": {
+        "urls": {
+          "in": "body",
+          "type": "array",
+          "description": "URLs to fetch.",
+          "example": [
+            "https://exa.ai"
+          ]
+        },
+        "ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Document ids from earlier searches."
+        },
+        "text": {
+          "in": "body",
+          "type": "object",
+          "description": "Text options, or true for defaults, e.g. {\"maxCharacters\": 2000}."
+        },
+        "highlights": {
+          "in": "body",
+          "type": "object",
+          "description": "Highlight options, or true for defaults."
+        },
+        "summary": {
+          "in": "body",
+          "type": "object",
+          "description": "Summary options, e.g. {\"query\": \"...\"}."
+        },
+        "subpages": {
+          "in": "body",
+          "type": "integer",
+          "description": "Subpages to crawl per URL."
+        },
+        "subpageTarget": {
+          "in": "body",
+          "type": "string",
+          "description": "Term used to pick subpages."
+        },
+        "maxAgeHours": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cached content up to this many hours old is used (max 720); 0 always fetches fresh."
+        },
+        "livecrawlTimeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Live-crawl timeout in milliseconds."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches page contents and changes nothing in your account.",
+        "Send urls or ids; ids come from search results."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://exa.ai/docs/reference/get-contents.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/reference/get-contents.md"
+      }
+    },
+    {
+      "id": "exa.search.answer",
+      "name": "Get a cited answer to a question",
+      "summary": "Runs a search and writes an answer with citations.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/answer",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The question or instructions.",
+          "example": "What is the Model Context Protocol?"
+        },
+        "text": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include the full page text of sources."
+        },
+        "model": {
+          "in": "body",
+          "type": "string",
+          "description": "Answer model.",
+          "enum": [
+            "exa",
+            "exa-pro",
+            "exa-research",
+            "exa-fast"
+          ]
+        },
+        "systemPrompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Extra instructions for the answer."
+        },
+        "outputSchema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema Draft 7 for a structured answer."
+        }
+      },
+      "notes": [
+        "A read over POST: it answers a question and changes nothing in your account."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://exa.ai/docs/reference/answer.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/reference/answer.md"
+      }
+    },
+    {
+      "id": "exa.agent.run.create",
+      "name": "Start an Agent run",
+      "summary": "Start an asynchronous Exa Agent run for deep research, list building or enrichment.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/agent/runs",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What the agent should research or build.",
+          "example": "List YC W26 companies building developer tools"
+        },
+        "effort": {
+          "in": "body",
+          "type": "string",
+          "description": "Cost and reasoning level; auto lets Exa choose.",
+          "enum": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "auto",
+            "ultra"
+          ]
+        },
+        "systemPrompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Extra instructions."
+        },
+        "outputSchema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema for validated structured output in output.structured."
+        },
+        "previousRunId": {
+          "in": "body",
+          "type": "string",
+          "description": "Id of an earlier run to continue from."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "object",
+          "description": "Your own metadata stored with the run."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data (it bills for the run).",
+        "Async: returns the run object at once; poll agent.run.get until its status is terminal."
+      ],
+      "job": "research.start",
+      "docs_url": "https://exa.ai/docs/reference/agent-api/create-a-run.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/reference/agent-api/create-a-run.md"
+      }
+    },
+    {
+      "id": "exa.agent.run.get",
+      "name": "Get an Agent run",
+      "summary": "Status and output of one Agent run.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/agent/runs/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Agent run id (agent_run_...)."
+        }
+      },
+      "job": "research.status",
+      "docs_url": "https://exa.ai/docs/reference/agent-api/get-a-run.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/reference/agent-api/get-a-run.md"
+      }
+    },
+    {
+      "id": "exa.agent.run.list",
+      "name": "List Agent runs",
+      "summary": "Agent runs for your team, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/agent/runs",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Runs per page."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous page."
+        }
+      },
+      "job": "research.list",
+      "docs_url": "https://exa.ai/docs/reference/agent-api/list-runs.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/reference/agent-api/list-runs.md"
+      }
+    },
+    {
+      "id": "exa.websets.create",
+      "name": "Create a Webset",
+      "summary": "Create a Webset, a persistent searchable collection that starts building as soon as it is created.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v0/websets",
+      "params": {
+        "title": {
+          "in": "body",
+          "type": "string",
+          "description": "Name of the Webset."
+        },
+        "search": {
+          "in": "body",
+          "type": "object",
+          "description": "Initial search, e.g. {\"query\": \"...\", \"count\": 10}."
+        },
+        "enrichments": {
+          "in": "body",
+          "type": "array",
+          "description": "Enrichments run on each item, each with description and format."
+        },
+        "externalId": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own identifier for the Webset."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "object",
+          "description": "Key-value metadata."
+        }
+      },
+      "notes": [
+        "Creates a stored resource and consumes credits as it fills.",
+        "Async: poll websets.get until its status is idle."
+      ],
+      "job": "lists.create",
+      "docs_url": "https://exa.ai/docs/websets/api/websets/create-a-webset.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/websets/api/websets/create-a-webset.md"
+      }
+    },
+    {
+      "id": "exa.websets.get",
+      "name": "Get a Webset",
+      "summary": "A Webset by id or externalId, with its status, searches and enrichments.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/websets/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Webset id or externalId."
+        },
+        "expand": {
+          "in": "query",
+          "type": "array",
+          "description": "Pass items to include the first 100 items."
+        }
+      },
+      "job": "lists.get",
+      "docs_url": "https://exa.ai/docs/websets/api/websets/get-a-webset.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/websets/api/websets/get-a-webset.md"
+      }
+    },
+    {
+      "id": "exa.websets.list",
+      "name": "List Websets",
+      "summary": "Your Websets, with cursor pagination.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/websets",
+      "params": {
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Websets per page."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by id, external id or title."
+        }
+      },
+      "job": "lists.list",
+      "docs_url": "https://exa.ai/docs/websets/api/websets/list-all-websets.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/websets/api/websets/list-all-websets.md"
+      }
+    },
+    {
+      "id": "exa.websets.items.list",
+      "name": "List a Webset's items",
+      "summary": "The items a Webset has found, with cursor pagination.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/websets/{webset}/items",
+      "params": {
+        "webset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Webset id or externalId."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "sourceId": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items from this source id."
+        }
+      },
+      "job": "lists.items",
+      "docs_url": "https://exa.ai/docs/websets/api/websets/items/list-all-items-for-a-webset.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/websets/api/websets/items/list-all-items-for-a-webset.md"
+      }
+    },
+    {
+      "id": "exa.websets.searches.create",
+      "name": "Add a search to a Webset",
+      "summary": "Run a further search whose items are added to an existing Webset.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v0/websets/{webset}/searches",
+      "params": {
+        "webset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Webset id."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural-language description of what to find."
+        },
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Items the search tries to find.",
+          "example": 10
+        },
+        "behavior": {
+          "in": "body",
+          "type": "string",
+          "description": "override replaces earlier results, append adds to them.",
+          "enum": [
+            "override",
+            "append"
+          ]
+        },
+        "criteria": {
+          "in": "body",
+          "type": "array",
+          "description": "Criteria every item is checked against; generated from the query when omitted."
+        },
+        "entity": {
+          "in": "body",
+          "type": "object",
+          "description": "Entity type to look for, e.g. {\"type\": \"company\"}."
+        }
+      },
+      "notes": [
+        "Consumes credits and changes the Webset's contents."
+      ],
+      "job": "lists.search",
+      "docs_url": "https://exa.ai/docs/websets/api/websets/searches/create-a-search.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/websets/api/websets/searches/create-a-search.md"
+      }
+    },
+    {
+      "id": "exa.websets.enrichments.create",
+      "name": "Add an enrichment to a Webset",
+      "summary": "Extract an extra field from every item of a Webset.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v0/websets/{webset}/enrichments",
+      "params": {
+        "webset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Webset id or externalId."
+        },
+        "description": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What to extract for each item.",
+          "example": "Annual revenue"
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "Type of the extracted value.",
+          "enum": [
+            "text",
+            "date",
+            "number",
+            "options",
+            "email",
+            "phone",
+            "url"
+          ]
+        },
+        "options": {
+          "in": "body",
+          "type": "array",
+          "description": "Choices when format is options."
+        }
+      },
+      "notes": [
+        "Consumes credits and adds a column to every item."
+      ],
+      "job": "lists.enrich",
+      "docs_url": "https://exa.ai/docs/websets/api/websets/enrichments/create-an-enrichment.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/websets/api/websets/enrichments/create-an-enrichment.md"
+      }
+    }
+  ]
+}
