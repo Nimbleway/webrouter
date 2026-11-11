@@ -13,7 +13,7 @@ from web_router.prices import Price
 BUILTIN_BY_METHOD = {
     "search": registry._BUILTIN_PROVIDERS,
     "extract": registry._BUILTIN_EXTRACT_PROVIDERS,
-    "run_template": registry._BUILTIN_TEMPLATE_PROVIDERS,
+    "live_data": registry._BUILTIN_LIVE_DATA_PROVIDERS,
     "research": registry._BUILTIN_RESEARCH_PROVIDERS,
     "open_browser": registry._BUILTIN_BROWSER_PROVIDERS,
     "browse": registry._BUILTIN_BROWSE_PROVIDERS,

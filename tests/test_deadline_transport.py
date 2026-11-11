@@ -27,9 +27,10 @@ from web_router.exceptions import DeadlineExceededError, ProviderError
 from web_router.providers._clamp import clamp_timeout
 from web_router.providers._deadline import call_budget, call_deadline, job_budget
 from web_router.providers.nimble import NimbleProvider
-from web_router.providers.nimble_template import NimbleTemplateProvider
+from web_router.providers.nimble_live_data import NimbleLiveDataProvider
 from web_router.providers.tavily import TavilyProvider
-from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse, SearchRequest, TemplateRequest
+from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse, SearchRequest
+from web_router.types_live_data import LiveDataRequest
 
 # -- Every method stops at the deadline -----------------------------------------
 
@@ -141,14 +142,14 @@ class _FakeNimble:
 
 
 def test_a_nimble_template_run_stops_at_the_deadline(clock: _Clock, monkeypatch: pytest.MonkeyPatch) -> None:
-    """run_template is Nimble's alone, so its per-method check runs on the SDK."""
+    """live_data is Nimble's alone, so its per-method check runs on the SDK."""
     monkeypatch.setenv("NIMBLE_API_KEY", "test-key")
-    provider = NimbleTemplateProvider()
+    provider = NimbleLiveDataProvider()
     client = _FakeNimble(_Hanging(clock))
     provider._client = client  # type: ignore[assignment]
 
     with call_deadline(DEADLINE), pytest.raises(DeadlineExceededError, match="3s deadline"):
-        provider.run(TemplateRequest(template="books_pdp", inputs={"url": "https://example.com"}))
+        provider.run(LiveDataRequest(source="books_pdp", inputs={"url": "https://example.com"}))
 
     (options,) = client.options
     assert options["max_retries"] == 0, "a retry would start a second request past the deadline"
@@ -173,7 +174,7 @@ def test_a_nimble_search_is_clamped_and_untouched_without_a_deadline(
 
 async def test_an_async_nimble_template_run_is_cancelled_at_the_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("NIMBLE_API_KEY", "test-key")
-    provider = NimbleTemplateProvider()
+    provider = NimbleLiveDataProvider()
 
     async def never(**kwargs: Any) -> Any:
         await asyncio.sleep(30)
@@ -181,7 +182,7 @@ async def test_an_async_nimble_template_run_is_cancelled_at_the_deadline(monkeyp
     provider._async_client = _FakeNimble(never)  # type: ignore[assignment]
 
     with call_deadline(TINY), pytest.raises(DeadlineExceededError, match=r"0\.05s deadline"):
-        await provider.arun(TemplateRequest(template="books_pdp", inputs={"url": "https://example.com"}))
+        await provider.arun(LiveDataRequest(source="books_pdp", inputs={"url": "https://example.com"}))
 
 
 def test_tavily_takes_the_time_left_as_its_per_call_timeout(clock: _Clock) -> None:
