@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-76 vendors, 763 endpoints.
+76 vendors, 760 endpoints.
 
 ### advertising
 
@@ -110,7 +110,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Icypeas](https://api-doc.icypeas.com/) `icypeas` | Find and verify professional emails, search a people and company database, and scrape profile and company data. | 16 read | key in header | `ICYPEAS_API_KEY` | docs 2026-11-08 |
 | [LeadMagic](https://leadmagic.io/docs/api-reference/email-validation) `leadmagic` | Find and validate work emails, personal emails and mobiles from names or profile URLs, and look up profiles and companies. | 8 read | key in header | `LEADMAGIC_API_KEY` | docs 2026-11-08 |
 | [LeadOcean](https://leadocean.io/docs) `leadocean` | B2B people and company search, person and company enrichment, work and personal email, phone and reverse lookups, and bulk CSV exports. | 14 read, 1 write | key in header | `LEADOCEAN_API_KEY` | docs 2026-11-08 |
-| [Leadsforge](https://api.leadsforge.ai/public/swagger/index.html) `leadsforge` | B2B lead search with email, phone and LinkedIn enrichment, lookalike companies, company followers and Google Maps business discovery. | 19 read | key in header | `LEADSFORGE_API_KEY` | docs 2026-11-08 |
+| [Leadsforge](https://api.leadsforge.ai/public/swagger/index.html) `leadsforge` | B2B lead search with email, phone and LinkedIn enrichment, lookalike companies, company followers and Google Maps business discovery. | 16 read | key in header | `LEADSFORGE_API_KEY` | docs 2026-11-08 |
 | [Lusha](https://docs.lusha.com/) `lusha` | Search B2B contacts and companies, then reveal emails, phones and firmographics for the ones you pick. | 11 read | key in header | `LUSHA_API_KEY` | docs 2026-11-08 |
 | [MoltSets](https://developer.moltsets.com) `moltsets` | B2B people and company search, email and mobile lookup, email validation and reverse lookups. | 15 read | key in header | `MOLTSETS_API_KEY` | docs 2026-11-08 |
 | [People Data Labs](https://docs.peopledatalabs.com/docs/api-overview) `pdl` | Person and company enrichment, identify and dataset search over PDL's person and company data. | 5 read | key in header | `PDL_API_KEY` | docs 2026-11-08 |
