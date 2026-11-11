@@ -15,7 +15,9 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 from web_router._urls import shown
+from web_router.constants_merge import ROUTER_TIMEOUT
 from web_router.routing.candidates import CandidateSet
+from web_router.routing.composite import members_of, none_answered
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
@@ -63,6 +65,8 @@ def decided(
     """
     decision: object = RouteDecision() if outcome is None else outcome.decision
     failure = None if outcome is None else cast("FallbackReason | None", outcome.failure)
+    if failure is None and none_answered(decision) == ROUTER_TIMEOUT:
+        failure = ROUTER_TIMEOUT  # a composite out of time: a timeout, its members still recorded
     merged = merge(
         req,
         decision,
@@ -88,6 +92,7 @@ def decided(
         dropped={**(refused or {}), **found.dropped} or None,
         unmeasured=list(found.unmeasured) or None,
         router_ms=None if outcome is None else outcome.elapsed_ms,
+        members=members_of(decision),
         **stamp(req.prompt),
         **fields,
     )

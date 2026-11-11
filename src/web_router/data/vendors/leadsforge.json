@@ -25,9 +25,10 @@
   "notes": [
     "The Swagger file declares an apiKey in the Authorization header; this entry sends the bare key with no Bearer prefix.",
     "Credits: search gives 1,000 free requests a month (each cursor page counts), then 1 credit; email enrichment 1 credit per hit, phone 10 per hit, misses free; lookalike search 1 credit per company, preview 300 free a month. GET /balance lists the current prices.",
-    "Async flow for enrichment, company followers, maps discovery and Sales Navigator: start a job (returns a jobID), poll its status endpoint until status is completed, then page through the results endpoint with offset and limit. A webhookURL can be given instead of polling.",
+    "Async flow for enrichment, company followers and Sales Navigator: start a job (returns a jobID), poll its status endpoint until status is completed, then page through the results endpoint with offset and limit. A webhookURL can be given instead of polling.",
     "Send an Idempotency-Key header on job starts to retry safely: a repeat returns the existing job instead of charging again.",
-    "Controlled search filters (industries, seniorities, departments, company types, funding types, revenue ranges) need exact values from the /search/filters endpoints, which this entry leaves out."
+    "Controlled search filters (industries, seniorities, departments, company types, funding types, revenue ranges) need exact values from the /search/filters endpoints, which this entry leaves out.",
+    "Left out because they write to the user's account: Google Maps discovery, which creates a list in the app, and the batch calls' saveToList, which saves results to a lead list."
   ],
   "sources": [
     "https://api.leadsforge.ai/public/swagger/doc.json"
@@ -45,7 +46,8 @@
       "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
       "verified": {
         "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "leadsforge.people.search",
@@ -360,11 +362,6 @@
           "type": "string",
           "description": "Your own id for the request."
         },
-        "saveToList": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Save the results to a lead list."
-        },
         "webhookURL": {
           "in": "body",
           "type": "string",
@@ -378,7 +375,7 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a job that only produces data and reserves credits. Poll leadsforge.enrichment.job with the jobID, then read leadsforge.enrichment.results."
+        "A read over POST that starts a billed job; the job only produces data and reserves credits. Poll leadsforge.enrichment.job with the jobID, then read leadsforge.enrichment.results."
       ],
       "job": "people.email.find",
       "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
@@ -414,11 +411,6 @@
           "type": "string",
           "description": "Your own id for the request."
         },
-        "saveToList": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Save the results to a lead list."
-        },
         "webhookURL": {
           "in": "body",
           "type": "string",
@@ -432,7 +424,7 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a job that only produces data and reserves credits. Poll leadsforge.enrichment.job, then read leadsforge.enrichment.results."
+        "A read over POST that starts a billed job; the job only produces data and reserves credits. Poll leadsforge.enrichment.job, then read leadsforge.enrichment.results."
       ],
       "job": "people.phone.find",
       "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
@@ -468,11 +460,6 @@
           "type": "string",
           "description": "Your own id for the request."
         },
-        "saveToList": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Save the results to a lead list."
-        },
         "webhookURL": {
           "in": "body",
           "type": "string",
@@ -486,7 +473,7 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a job that only produces data. Poll leadsforge.enrichment.job, then read leadsforge.enrichment.results."
+        "A read over POST that starts a billed job; the job only produces data. Poll leadsforge.enrichment.job, then read leadsforge.enrichment.results."
       ],
       "job": "people.enrich",
       "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
@@ -577,7 +564,8 @@
       "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
       "verified": {
         "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "leadsforge.enrichment.results",
@@ -792,7 +780,7 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a job that only produces data. Poll leadsforge.followers.job, then read leadsforge.followers.results."
+        "A read over POST that starts a billed job; the job only produces data. Poll leadsforge.followers.job, then read leadsforge.followers.results."
       ],
       "job": "social.search",
       "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
@@ -819,7 +807,8 @@
       "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
       "verified": {
         "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "leadsforge.followers.results",
@@ -850,128 +839,8 @@
       "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
       "verified": {
         "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
-      }
-    },
-    {
-      "id": "leadsforge.maps.search",
-      "name": "Search local businesses on Google Maps (job)",
-      "summary": "Starts an async search for businesses of given categories within a radius of a point.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/maps-discovery/search",
-      "params": {
-        "categories": {
-          "in": "body",
-          "type": "array",
-          "description": "Business categories; free text works, GET /maps-discovery/filters/categories lists recommended ones.",
-          "example": [
-            "coffee shop"
-          ]
-        },
-        "lat": {
-          "in": "body",
-          "type": "number",
-          "description": "Latitude."
-        },
-        "lng": {
-          "in": "body",
-          "type": "number",
-          "description": "Longitude."
-        },
-        "radiusKm": {
-          "in": "body",
-          "type": "number",
-          "required": true,
-          "description": "Search radius in kilometres."
-        },
-        "limit": {
-          "in": "body",
-          "type": "integer",
-          "required": true,
-          "description": "Businesses to find."
-        },
-        "language": {
-          "in": "body",
-          "type": "string",
-          "description": "Result language."
-        },
-        "clientRequestID": {
-          "in": "body",
-          "type": "string",
-          "description": "Your own id."
-        },
-        "webhookURL": {
-          "in": "body",
-          "type": "string",
-          "description": "URL that gets a POST when the job ends."
-        },
-        "Idempotency-Key": {
-          "in": "header",
-          "type": "string",
-          "description": "Idempotency key: a repeat with the same key returns the existing job and never charges twice.",
-          "wire_name": "Idempotency-Key"
-        }
       },
-      "notes": [
-        "A read over POST: starts a job; the search also creates a list named Public API: Local Businesses in the app; credits are reserved for limit and settled on businesses found. Poll leadsforge.maps.job, then read leadsforge.maps.results."
-      ],
-      "job": "company.search",
-      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
-      "verified": {
-        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
-      }
-    },
-    {
-      "id": "leadsforge.maps.job",
-      "name": "Get a maps search job",
-      "summary": "Status of a Google Maps search job.",
-      "kind": "read",
-      "method": "GET",
-      "path": "/maps-discovery/jobs/{jobID}",
-      "params": {
-        "jobID": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The job id."
-        }
-      },
-      "job": "jobs.status",
-      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
-      "verified": {
-        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
-      }
-    },
-    {
-      "id": "leadsforge.maps.results",
-      "name": "List a maps search job's businesses",
-      "summary": "Businesses found so far; readable while the job runs.",
-      "kind": "read",
-      "method": "GET",
-      "path": "/maps-discovery/jobs/{jobID}/results",
-      "params": {
-        "jobID": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The job id."
-        },
-        "offset": {
-          "in": "query",
-          "type": "integer",
-          "description": "Offset; at most 5000."
-        },
-        "limit": {
-          "in": "query",
-          "type": "integer",
-          "description": "Page size, at most 200 (default 50)."
-        }
-      },
-      "job": "jobs.results",
-      "docs_url": "https://api.leadsforge.ai/public/swagger/doc.json",
-      "verified": {
-        "docs": "https://api.leadsforge.ai/public/swagger/doc.json"
-      }
+      "notes": []
     }
   ]
 }

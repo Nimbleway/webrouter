@@ -55,14 +55,18 @@ class OxylabsExtractProvider(HttpExtractProvider):
     extract_path: ClassVar[str] = OXYLABS_EXTRACT_PATH
     env_api_key: ClassVar[str] = ENV_OXYLABS_PASSWORD
 
-    def __init__(self, *, username: str | None = None, **kwargs: Any) -> None:
+    def __init__(self, *, username: str | None = None, web_api_key: str | None = None, **kwargs: Any) -> None:
         """
         Args:
             username: Oxylabs API username. Falls back to ``OXYLABS_USERNAME``.
+            web_api_key: Accepted and unused: it is the Web API key Oxylabs'
+                live data reads, from the same ``provider_config["oxylabs"]``
+                entry; extract runs on the Realtime credentials.
             **kwargs: As :class:`~web_router.providers.HttpExtractProvider`;
                 ``api_key`` is the password and falls back to
                 ``OXYLABS_PASSWORD``.
         """
+        del web_api_key
         # Resolved before super(), which needs it to build the auth header.
         self._username = resolve_setting(username, env_var=ENV_OXYLABS_USERNAME, provider=self.name, setting="username")
         super().__init__(**kwargs)
