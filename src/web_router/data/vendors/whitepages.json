@@ -1,0 +1,389 @@
+{
+  "vendor": "whitepages",
+  "name": "Whitepages Pro",
+  "category": "enrichment",
+  "summary": "US people search, reverse phone lookup and property records (owners, residents, tax and mortgage history).",
+  "docs_url": "https://api.whitepages.com/docs",
+  "pricing_url": "https://whitepages.com/pro-api",
+  "base_url": "https://api.whitepages.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "WHITEPAGES_API_KEY"
+        ],
+        "description": "A Whitepages Pro API key (trial or paid). Sent in the X-Api-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billing counts successful queries against a monthly allowance that resets on the 1st at 00:00 UTC. Person and phone 404s are billed; /v3/property misses are free. 400, 403, 409, 429 and 5xx are never billed.",
+    "Three kinds of 429: 'Too Many Requests' is a rate limit (back off and retry); 'Limit Exceeded' and error 'usage_cap_exceeded' mean the allowance is spent, and retrying will not help until reset_at.",
+    "Data covers the US; phone lookups take North American numbers only.",
+    "Deed events, webhooks, regions and the older v1/v2 property routes are not in this entry."
+  ],
+  "sources": [
+    "https://api.whitepages.com/docs/llms.txt",
+    "https://api.whitepages.com/docs/llms-full.txt",
+    "https://api.whitepages.com/openapi.json",
+    "https://api.whitepages.com/docs/references/billing",
+    "https://api.whitepages.com/docs/references/rate-limits"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "whitepages.account.usage",
+      "name": "Get API usage for a date range",
+      "summary": "Daily and total request counts between two dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/account/usage/",
+      "params": {
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD, UTC.",
+          "required": true,
+          "example": "2026-10-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD, UTC; at most 90 days after start_date.",
+          "required": true,
+          "example": "2026-10-31"
+        }
+      },
+      "notes": [
+        "Free. Counts every request (2xx, 4xx, 5xx), not billable requests; updated about every 30 minutes."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://api.whitepages.com/docs/references/account/get_account_usage_data",
+      "verified": {
+        "docs": "https://api.whitepages.com/openapi.json"
+      }
+    },
+    {
+      "id": "whitepages.person.search",
+      "name": "Search people",
+      "summary": "US people matching a name, phone, email and/or address, with match scores, phones, emails and addresses.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/person/",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Full or partial name.",
+          "example": "John Smith"
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name; not with name."
+        },
+        "middle_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Middle name; not with name."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name; not with name."
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "description": "Phone number."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Email address."
+        },
+        "street": {
+          "in": "query",
+          "type": "string",
+          "description": "Street address line."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City."
+        },
+        "state_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state code."
+        },
+        "zipcode": {
+          "in": "query",
+          "type": "string",
+          "description": "Five-digit ZIP code."
+        },
+        "include_historical_locations": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also match past addresses."
+        },
+        "min_age": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum age, 18-65."
+        },
+        "max_age": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum age, 18-65."
+        },
+        "radius": {
+          "in": "query",
+          "type": "number",
+          "description": "Search radius in miles around the location."
+        },
+        "include_fuzzy_matching": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Start with fuzzy name matching (nicknames, phonetic, typos); not with strict_match=true."
+        },
+        "strict_match": {
+          "in": "query",
+          "type": "boolean",
+          "description": "No fallback to fuzzy matching or radius expansion when the exact query finds nothing."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        }
+      },
+      "notes": [
+        "Billable on 2xx and on 404 (no match).",
+        "By default an exact name match runs first and falls back to fuzzy only when it finds nothing."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api.whitepages.com/docs/references/person-v2/search_person_by_name_phone_or_address_v2",
+      "verified": {
+        "docs": "https://api.whitepages.com/openapi.json"
+      }
+    },
+    {
+      "id": "whitepages.person.get",
+      "name": "Get a person by id",
+      "summary": "Full record of a person by Whitepages person id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/person/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "P followed by 10 alphanumeric characters."
+        }
+      },
+      "notes": [
+        "Billable, including a 404."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.whitepages.com/docs/references/person-v2/get_person_by_id_v2",
+      "verified": {
+        "docs": "https://api.whitepages.com/openapi.json"
+      }
+    },
+    {
+      "id": "whitepages.phone.get",
+      "name": "Look up a phone number",
+      "summary": "Facts about a North American phone number (line type, carrier and more) and the people or businesses tied to it.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/phone/{phone}",
+      "params": {
+        "phone": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "North American number in any common format.",
+          "example": "12065550142"
+        }
+      },
+      "notes": [
+        "Only NANP numbers; others are rejected before any lookup. The canonical number comes back in the Content-Location header. Billable."
+      ],
+      "job": "phone.verify",
+      "docs_url": "https://api.whitepages.com/docs/references/phone-v2/get_phone_by_number_v2",
+      "verified": {
+        "docs": "https://api.whitepages.com/openapi.json"
+      }
+    },
+    {
+      "id": "whitepages.property.search",
+      "name": "Search properties",
+      "summary": "Properties by address, parcel number (APN) or a radius around a point, each linking to its full record.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/property/",
+      "params": {
+        "street": {
+          "in": "query",
+          "type": "string",
+          "description": "Street address line."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City."
+        },
+        "state_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state code."
+        },
+        "zipcode": {
+          "in": "query",
+          "type": "string",
+          "description": "Five-digit ZIP code."
+        },
+        "apn": {
+          "in": "query",
+          "type": "string",
+          "description": "Assessor's Parcel Number; not with address fields."
+        },
+        "fips": {
+          "in": "query",
+          "type": "string",
+          "description": "Five-digit county FIPS code, to narrow to one county."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude of a point; with lng."
+        },
+        "lng": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude of a point; with lat."
+        },
+        "radius": {
+          "in": "query",
+          "type": "number",
+          "description": "Miles around lat/lng, default 1."
+        },
+        "strict_match": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only the address given or one in the same building; needs a street."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        }
+      },
+      "notes": [
+        "Billed only on a 200; no match is a free 404 with an empty results array."
+      ],
+      "job": "places.search",
+      "docs_url": "https://api.whitepages.com/docs/references/property-v3/search_properties_v3",
+      "verified": {
+        "docs": "https://api.whitepages.com/openapi.json"
+      }
+    },
+    {
+      "id": "whitepages.property.owners",
+      "name": "Get a property's owners",
+      "summary": "Person and business owners of one property, by property or address id, address, or APN.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/property/owners",
+      "params": {
+        "property_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Property id (R prefix) or address id (A prefix)."
+        },
+        "street": {
+          "in": "query",
+          "type": "string",
+          "description": "Street address line."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City."
+        },
+        "state_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state code."
+        },
+        "zipcode": {
+          "in": "query",
+          "type": "string",
+          "description": "Five-digit ZIP code."
+        },
+        "apn": {
+          "in": "query",
+          "type": "string",
+          "description": "Assessor's Parcel Number."
+        },
+        "fips": {
+          "in": "query",
+          "type": "string",
+          "description": "Five-digit county FIPS code, to disambiguate an APN."
+        }
+      },
+      "notes": [
+        "Billed only on a 200; 404 and 409 (an APN naming several properties, with candidates listed) are free.",
+        "Owner lists report completeness, not a count: check result_metadata.person_owners.complete."
+      ],
+      "job": "places.details",
+      "docs_url": "https://api.whitepages.com/docs/references/property-v3/get_property_owners_v3",
+      "verified": {
+        "docs": "https://api.whitepages.com/openapi.json"
+      }
+    },
+    {
+      "id": "whitepages.property.get",
+      "name": "Get property details",
+      "summary": "Full property record: characteristics, tax assessment, mortgage history and current residents.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/property/{property_id}",
+      "params": {
+        "property_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Property id (R prefix), address id (A prefix) or an APN; 11-character Whitepages ids, anything else is read as an APN."
+        }
+      },
+      "notes": [
+        "Billed only on a 200; an APN naming several properties answers a free 409 listing candidates."
+      ],
+      "job": "places.details",
+      "docs_url": "https://api.whitepages.com/docs/references/property-v3/get_property_by_id_v3",
+      "verified": {
+        "docs": "https://api.whitepages.com/openapi.json"
+      }
+    }
+  ]
+}
