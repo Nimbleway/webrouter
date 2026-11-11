@@ -1,0 +1,431 @@
+{
+  "vendor": "marketstack",
+  "name": "Marketstack",
+  "category": "finance",
+  "summary": "Worldwide end-of-day and intraday stock prices, tickers, exchanges, dividends and splits from Marketstack (APILayer).",
+  "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+  "pricing_url": "https://marketstack.com/pricing",
+  "base_url": "https://api.marketstack.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MARKETSTACK_API_KEY"
+        ],
+        "description": "a Marketstack access key (marketstack.com dashboard)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "access_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "This entry targets the v2 API (paths start with /v2); the older /v1 API is legacy.",
+    "Dates are YYYY-MM-DD. Lists page with limit (default 100) and offset (default 0).",
+    "History depth, intraday access and monthly request volume depend on the plan.",
+    "Errors return an error object with a code, such as missing_access_key."
+  ],
+  "sources": [
+    "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+    "https://api.swaggerhub.com/apis/apilayer-863/MarketstackAPIv2/2.0.0/swagger.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "marketstack.eod.list",
+      "name": "Get end-of-day prices",
+      "summary": "Daily open, high, low, close, volume and adjusted values for one or more tickers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/eod",
+      "params": {
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated stock tickers, e.g. AAPL,MSFT.",
+          "example": "AAPL"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by exchange MIC, e.g. XNAS."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order by date: ASC or DESC."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return; default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip; default 0."
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD."
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD."
+        }
+      },
+      "notes": [
+        "Paginate with limit and offset; the response carries a pagination block."
+      ],
+      "job": "market.history",
+      "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+      "verified": {
+        "docs": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0"
+      }
+    },
+    {
+      "id": "marketstack.eod.latest",
+      "name": "Get the latest end-of-day prices",
+      "summary": "The most recent daily bar for each ticker.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/eod/latest",
+      "params": {
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated stock tickers, e.g. AAPL,MSFT.",
+          "example": "AAPL"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by exchange MIC, e.g. XNAS."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order by date: ASC or DESC."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return; default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip; default 0."
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+      "verified": {
+        "docs": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0"
+      }
+    },
+    {
+      "id": "marketstack.eod.date",
+      "name": "Get end-of-day prices for one date",
+      "summary": "Daily bars for tickers on a given day.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/eod/{date}",
+      "params": {
+        "date": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Date, YYYY-MM-DD.",
+          "example": "2026-11-06"
+        },
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated stock tickers, e.g. AAPL,MSFT.",
+          "example": "AAPL"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by exchange MIC, e.g. XNAS."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order by date: ASC or DESC."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return; default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip; default 0."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+      "verified": {
+        "docs": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0"
+      }
+    },
+    {
+      "id": "marketstack.intraday.list",
+      "name": "Get intraday prices",
+      "summary": "Intraday bars for tickers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/intraday",
+      "params": {
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated stock tickers, e.g. AAPL,MSFT.",
+          "example": "AAPL"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by exchange MIC, e.g. XNAS."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order by date: ASC or DESC."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return; default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip; default 0."
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD."
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD."
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "description": "Bar size, e.g. 1min, 5min, 10min, 15min, 30min, 1hour, 3hour, 6hour, 12hour, 24hour; default 1hour."
+        },
+        "after_hours": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include after-hours data."
+        }
+      },
+      "notes": [
+        "Intraday depth and intervals depend on the plan.",
+        "Paginate with limit and offset; the response carries a pagination block."
+      ],
+      "job": "market.history",
+      "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+      "verified": {
+        "docs": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0"
+      }
+    },
+    {
+      "id": "marketstack.ticker.get",
+      "name": "Get a ticker's details",
+      "summary": "Name, exchange, country, currency and other facts for one ticker symbol.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/tickers/{symbol}",
+      "params": {
+        "symbol": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Stock ticker symbol.",
+          "example": "AAPL"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+      "verified": {
+        "docs": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0"
+      }
+    },
+    {
+      "id": "marketstack.tickers.list",
+      "name": "List tickers",
+      "summary": "Search the supported tickers, optionally by exchange.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/tickerslist",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Search term for autocomplete suggestions."
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by exchange MIC."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results; default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        }
+      },
+      "notes": [
+        "Paginate with limit and offset; the response carries a pagination block."
+      ],
+      "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+      "verified": {
+        "docs": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0"
+      }
+    },
+    {
+      "id": "marketstack.exchanges.list",
+      "name": "List stock exchanges",
+      "summary": "Supported exchanges with MIC and country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/exchanges",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Search term."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results; default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        }
+      },
+      "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+      "verified": {
+        "docs": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0"
+      }
+    },
+    {
+      "id": "marketstack.dividends.list",
+      "name": "List dividends",
+      "summary": "Dividend payments for tickers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/dividends",
+      "params": {
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated stock tickers, e.g. AAPL,MSFT.",
+          "example": "AAPL"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order by date."
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD."
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results; default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        }
+      },
+      "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+      "verified": {
+        "docs": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0"
+      }
+    },
+    {
+      "id": "marketstack.splits.list",
+      "name": "List stock splits",
+      "summary": "Split history for tickers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/splits",
+      "params": {
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated stock tickers, e.g. AAPL,MSFT.",
+          "example": "AAPL"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order by date."
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD."
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results; default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        }
+      },
+      "docs_url": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+      "verified": {
+        "docs": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0"
+      }
+    }
+  ]
+}
