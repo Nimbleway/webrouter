@@ -398,12 +398,16 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         their sample request and loop and close builders;
                         routing_registry_helpers.py the routers the registry tests build;
                         decider_helpers.py the decider tests' fixed deciders and
-                        httpx on a mock transport.
+                        httpx on a mock transport; _live_data_paged.py the paged
+                        catalogue the live data search tests read, and
+                        providers/_brightdata_live_data.py the scraper the
+                        Bright Data live data tests run.
                         test_contract.py, test_extract_contract.py, test_live_data_contract.py,
                         test_research_contract.py, test_answer_contract.py,
                         test_browse_contract.py and
                         test_browser_contract.py guard the seven shared
-                        contracts; test_job_core.py the job core under
+                        contracts; test_live_data_base.py what LiveDataProvider
+                        guarantees every live data backend; test_job_core.py the job core under
                         research and browse; test_deadline_*.py the
                         per-call deadline on every method, over the fakes
                         in deadline_helpers.py;

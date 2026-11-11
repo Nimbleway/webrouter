@@ -33,13 +33,6 @@ from nimble_python import AsyncNimble, Nimble
 
 from web_router.providers.nimble_live_data import NimbleLiveDataProvider
 
-
-@pytest.fixture
-def provider(monkeypatch: pytest.MonkeyPatch) -> NimbleLiveDataProvider:
-    monkeypatch.setenv("NIMBLE_API_KEY", "test-key")
-    return NimbleLiveDataProvider()
-
-
 # -- Through the SDK client ---------------------------------------------------
 
 

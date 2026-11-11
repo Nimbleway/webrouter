@@ -89,3 +89,24 @@ def test_a_response_built_the_old_way_still_validates_and_leaves_its_arguments_a
     assert "template" in given, "the caller's dict is not changed"
     with pytest.warns(DeprecationWarning, match="template"):
         assert LiveDataResponse(provider="custom", template="books_pdp").source == "books_pdp"  # type: ignore[call-arg]
+
+
+def test_the_old_template_names_still_work_and_warn() -> None:
+    import web_router
+    from web_router import LiveDataResponse, WebRouter
+    from web_router.types_live_data import LiveDataRequest
+
+    with pytest.warns(DeprecationWarning, match="TemplateResponse"):
+        assert web_router.TemplateResponse is LiveDataResponse
+    with pytest.warns(DeprecationWarning, match="template"):
+        request = LiveDataRequest(template="books_pdp")  # type: ignore[call-arg]
+    assert request.source == "books_pdp"
+    assert hasattr(WebRouter, "run_template") and hasattr(WebRouter, "templates")
+
+
+def test_a_page_built_the_old_way_still_validates() -> None:
+    from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
+
+    with pytest.warns(DeprecationWarning, match="templates"):
+        page = LiveDataSourcePage(provider="fake", templates=[LiveDataSource(provider="fake", name="a")])  # type: ignore[call-arg]
+    assert page.names == ["a"]
