@@ -1,20 +1,20 @@
-"""A chat model as a router, on any OpenAI-compatible server.
+"""A chat model as a router: the built-in ``router="llm"``, on a preset or any OpenAI-compatible server.
 
-The router sends the model the prompt, the budget and the menu of candidates
--- each `tool:provider` with its estimated cost and p90 latency -- and reads
-back `{"ranked": [...], "reason": ...}`. The answer is held to a JSON schema
-whose `items.enum` is the candidate ids, so the model can only name real ones.
-The ranked ids become the decision's `tools` and `providers`. It is async, and
-declares `timeout_s = 3.0`: past that, the call runs on the static order.
+The router sends the model the prompt, the budget and each candidate --
+``tool:provider`` with its estimated cost and p90 latency -- and reads back a
+ranking of candidate ids, held to the offered ids by a JSON schema where the
+server supports one and checked strictly either way. The model's own words are
+never used: the decision's reason names the router, the first id and its score.
+It waits 3 s unless ``timeout_s`` says otherwise, and orders research and
+browse only unless ``route_tools`` says otherwise; ``plan()`` always asks it.
 
 **This router sends each prompt to the model's server.**
 
-Any server that speaks OpenAI's chat completions with structured outputs
-works: OpenAI, Together, Fireworks, a LiteLLM proxy, or a local model. The
-`openai` SDK reads `OPENAI_API_KEY`, and `OPENAI_BASE_URL` for a server other
-than OpenAI's; `LLM_ROUTER_MODEL` names the model, as the server spells it.
-The SDK comes with the `evals` extra. With no key or model this prints what
-to set and exits. Each plan bills one model call on that server.
+``LLM_ROUTER_PRESET`` picks the server -- ``openai`` (the default),
+``anthropic``, ``deepseek``, ``groq`` or ``openrouter`` -- and its key is that
+vendor's variable, such as ``OPENAI_API_KEY``. ``LLM_ROUTER_MODEL`` names the
+model, as the server spells it. With no model or key this prints what to set
+and exits. Each plan bills one model call on that server.
 
 Run it with::
 
@@ -24,114 +24,36 @@ Run it with::
 
 from __future__ import annotations
 
-import json
 import os
-from typing import Any
 
-from web_router import Candidate, RouteDecision, RouteRequest, WebRouter
+from web_router import WebRouter
+from web_router.exceptions import ConfigurationError
 
+PRESET_ENV = "LLM_ROUTER_PRESET"
 MODEL_ENV = "LLM_ROUTER_MODEL"
-
-INSTRUCTIONS = """You route one web request to the methods and backends that should serve it.
-Methods: search returns ranked links and snippets in about a second; extract reads the URLs given;
-answer returns one written answer with its sources in a few seconds; research runs a multi-minute
-agentic job that bills per run; browse hands an interactive task to a hosted browser agent.
-Rank the candidates you would try, best first, within the budget; leave out any that do not fit.
-Give the reason in a few words."""
 
 PROMPTS = ("who won the 2022 world cup final", "compare the EU and US rules on AI training data")
 
 
-def usable(req: RouteRequest) -> list[Candidate]:
-    """The candidates this router may rank: extract only when the prompt names a URL.
-
-    Extract is offered with no URL in case a router supplies one; this one does not.
-    """
-    return [c for c in req.candidates if c.tool != "extract" or req.urls]
-
-
-# printable, decision and main's print loop repeat router_jev.py's on purpose: each example copies alone.
 def printable(text: str | None) -> str:
-    """A model's words with control characters taken out, safe to print to a terminal."""
+    """A server's words with control characters taken out, safe to print to a terminal."""
     return "".join(ch for ch in text or "" if ch.isprintable())
 
 
-def menu(req: RouteRequest) -> str:
-    """The request as the model reads it: the prompt, the budget, a pinned method, and each candidate."""
-    lines = [f"Request: {req.prompt}", f"Budget: {req.budget or 'none'}"]
-    if req.pinned_tool:
-        lines.append(f"The method is fixed to {req.pinned_tool}: rank its backends only.")
-    for c in usable(req):
-        cost = "unknown" if c.est_cost_usd is None else f"${c.est_cost_usd:g}"
-        p90 = "unknown" if c.est_latency_s is None else f"{c.est_latency_s:g}s"
-        lines.append(f"- {c.id}: cost {cost}, p90 {p90}")
-    return "\n".join(lines)
-
-
-def schema(req: RouteRequest) -> dict[str, Any]:
-    """Strict structured output: a ranking of real candidate ids, and a reason."""
-    ranked = {"type": "array", "items": {"type": "string", "enum": [c.id for c in usable(req)]}}
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "required": ["ranked", "reason"],
-        "properties": {"ranked": ranked, "reason": {"type": "string"}},
-    }
-
-
-def decision(req: RouteRequest, ranked: list[str], reason: str) -> RouteDecision:
-    """`tools` in the order the ranking first names them, and each tool's backends in ranked order."""
-    by_id = {c.id: c for c in usable(req)}
-    providers: dict[str, list[str]] = {}
-    for cid in ranked:
-        if cid in by_id:
-            providers.setdefault(by_id[cid].tool, []).append(by_id[cid].provider)
-    return RouteDecision(tools=list(providers), providers=providers, reason=reason)
-
-
-class LLMRouter:
-    """Ranks the candidates with one structured-output chat completion."""
-
-    timeout_s = 3.0
-
-    def __init__(self, client: Any = None, model: str | None = None) -> None:
-        if client is None:
-            from openai import AsyncOpenAI
-
-            # OPENAI_API_KEY, and OPENAI_BASE_URL for any compatible server. No retries: one model call per plan.
-            client = AsyncOpenAI(max_retries=0)
-        self.client = client
-        self.model = model or os.environ[MODEL_ENV]
-
-    async def aroute(self, req: RouteRequest) -> RouteDecision:
-        if not usable(req):
-            return RouteDecision()
-        response = await self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "system", "content": INSTRUCTIONS}, {"role": "user", "content": menu(req)}],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {"name": "route", "strict": True, "schema": schema(req)},
-            },
-        )
-        answer = json.loads(response.choices[0].message.content)
-        return decision(req, answer["ranked"], answer["reason"])
-
-
 def main() -> None:
-    missing = [name for name in ("OPENAI_API_KEY", MODEL_ENV) if not os.environ.get(name)]
-    if missing:
-        print(f"Set {' and '.join(missing)} (and OPENAI_BASE_URL for a server other than OpenAI's), then run again.")
+    model = os.environ.get(MODEL_ENV)
+    if not model:
+        print(f"Set {MODEL_ENV} (and {PRESET_ENV}, openai unless set), then run again.")
         return
+    config = {"preset": os.environ.get(PRESET_ENV) or "openai", "model": model}
     try:
-        router = LLMRouter()
-    except ImportError:
-        print("This example needs the openai SDK: make setup, or pip install 'webrouter[evals]'.")
+        client = WebRouter(router="llm", router_config=config)
+    except ConfigurationError as exc:  # names the variable to set, never its value
+        print(exc)
         return
-    with WebRouter(router=router) as client:
+    with client:
         for prompt in PROMPTS:
             plan = client.plan(prompt)
-            # Every word here can come from the server: the method, the backends and above all the reason.
             backends = printable(", ".join(plan.providers.get(plan.tool, ()))) or "none"
             print(f"{prompt!r}\n  -> {printable(plan.tool)} on {backends}\n  ({printable(plan.decision.reason)})")
 
