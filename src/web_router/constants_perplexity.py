@@ -1,15 +1,23 @@
 """Perplexity search and answer: the search options' fields, the answer's effort level, tool fields and recency table.
 
 Kept apart from :mod:`web_router.constants`, which every other provider's
-settings share, so that file stops growing. Perplexity's host, auth header,
-response path and output item types stay there, beside its search and research
-settings.
+settings share, so that file stops growing. Perplexity's host, auth header and
+response path stay there, beside its search and research settings.
 """
 
 from __future__ import annotations
 
 from web_router.types_answer import Recency
 from web_router.types_options import ResearchEffort, SearchDepth
+
+PERPLEXITY_OUTPUT_MESSAGE = "message"
+PERPLEXITY_OUTPUT_TEXT = "output_text"
+PERPLEXITY_OUTPUT_SEARCH_RESULTS = "search_results"
+PERPLEXITY_OUTPUT_FETCH_URL_RESULTS = "fetch_url_results"
+"""The output item listing the pages the agent opened: ``contents``, each a ``url``, ``title`` and ``snippet``."""
+
+PERPLEXITY_SOURCE_LISTS = {PERPLEXITY_OUTPUT_SEARCH_RESULTS: "results", PERPLEXITY_OUTPUT_FETCH_URL_RESULTS: "contents"}
+"""Each output item that lists sources, and the field the list is under."""
 
 # Verified live on 2026-11-01. An answer is POST /v1/responses with no
 # `background`, so the call returns the finished response: `status`
