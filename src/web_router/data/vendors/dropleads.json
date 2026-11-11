@@ -1,0 +1,467 @@
+{
+  "vendor": "dropleads",
+  "name": "DropLeads",
+  "category": "enrichment",
+  "summary": "Prime-DB people and company search, verified or simple person enrichment, company enrichment and credit balance.",
+  "docs_url": "https://dropleads.readme.io/",
+  "base_url": "https://prime.dropleads.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DROPLEADS_API_KEY"
+        ],
+        "description": "a DropLeads API key (Settings > API Keys in your DropLeads account; shown once)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits: searching people and counting are free and return masked data (no email or phone); verified enrich 0.2 credits per verified lead; simple enrich (no verification) 0.2 per lead; company search 0.1 per company returned; company enrich 0.1 per company found.",
+    "Typical flow: lead search or count with filters, check the cost with dropleads.leads.export_cost, then enrich chosen lead ids with dropleads.leads.enrich (verified) or dropleads.leads.simple_enrich.",
+    "Bodies are JSON with a filters object (combined with AND) and, for searches, a pagination object {page, limit}. Most array filters have a parallel *Exclude key.",
+    "The standalone email finder, email verifier and mobile finder (POST /email-finder, /email-verifier, /mobile-finder) live on a different host, api.dropleads.io, and are not in this entry.",
+    "This reference host also accepts 'Authorization: Bearer <token>' in place of X-API-Key."
+  ],
+  "sources": [
+    "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-search",
+    "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-enrich",
+    "https://dropleads.readme.io/reference/post_api-v1-companies-search",
+    "https://dropleads.readme.io/llms.txt"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "dropleads.leads.search",
+      "name": "Search people",
+      "summary": "Contacts matching filters; masked, with no email or phone revealed.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/prime-db/leads/search",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters combined with AND, all optional: jobTitles, jobTitlesExclude, jobTitlesSimilar, industries, keywords, technologies, departments, seniority, companyNames, companyDomains, linkedinUrls, employeeRanges, customEmployeeRange {min,max}, revenueRange {min,max}, fundingRange {min,max}, foundedYear {min,max}, countries, states, cities, locationScope (personal, company or both), personalCountries/organizationCountries {include,exclude} (and States, Cities, Regions), lists, companyLists, segments, buyingIntent, requireEmail; most have an *Exclude twin.",
+          "example": {
+            "jobTitles": [
+              "CTO"
+            ],
+            "companyDomains": [
+              "stripe.com"
+            ],
+            "requireEmail": true
+          }
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "{page, limit}.",
+          "example": {
+            "page": 1,
+            "limit": 25
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. Free. Use a returned lead id with the enrich calls to reveal contact details."
+      ],
+      "job": "people.search",
+      "docs_url": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-search",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-search"
+      }
+    },
+    {
+      "id": "dropleads.leads.count",
+      "name": "Count matching people",
+      "summary": "The number of contacts matching the filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/prime-db/leads/count",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters combined with AND, all optional: jobTitles, jobTitlesExclude, jobTitlesSimilar, industries, keywords, technologies, departments, seniority, companyNames, companyDomains, linkedinUrls, employeeRanges, customEmployeeRange {min,max}, revenueRange {min,max}, fundingRange {min,max}, foundedYear {min,max}, countries, states, cities, locationScope (personal, company or both), personalCountries/organizationCountries {include,exclude} (and States, Cities, Regions), lists, companyLists, segments, buyingIntent, requireEmail; most have an *Exclude twin.",
+          "example": {
+            "jobTitles": [
+              "CTO"
+            ],
+            "companyDomains": [
+              "stripe.com"
+            ],
+            "requireEmail": true
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. Free."
+      ],
+      "job": "people.search",
+      "docs_url": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-count",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-count"
+      }
+    },
+    {
+      "id": "dropleads.leads.export_cost",
+      "name": "Check the credit cost of saving leads",
+      "summary": "The credits needed to save or export leads, by count, explicit lead ids or filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/prime-db/leads/export/cost",
+      "params": {
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Number of leads intended to save or export."
+        },
+        "leadIds": {
+          "in": "body",
+          "type": "array",
+          "description": "Explicit lead ids, instead of count."
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters combined with AND, all optional: jobTitles, jobTitlesExclude, jobTitlesSimilar, industries, keywords, technologies, departments, seniority, companyNames, companyDomains, linkedinUrls, employeeRanges, customEmployeeRange {min,max}, revenueRange {min,max}, fundingRange {min,max}, foundedYear {min,max}, countries, states, cities, locationScope (personal, company or both), personalCountries/organizationCountries {include,exclude} (and States, Cities, Regions), lists, companyLists, segments, buyingIntent, requireEmail; most have an *Exclude twin.",
+          "example": {
+            "jobTitles": [
+              "CTO"
+            ],
+            "companyDomains": [
+              "stripe.com"
+            ],
+            "requireEmail": true
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. Free."
+      ],
+      "job": "people.search",
+      "docs_url": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-export-cost",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-export-cost"
+      }
+    },
+    {
+      "id": "dropleads.leads.enrich",
+      "name": "Enrich one person with verification",
+      "summary": "Runs email verification and returns the record only if the email is verified.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/prime-db/leads/enrich",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Lead id from search results; skips matching and looks the lead up directly."
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name, instead of first_name and last_name."
+        },
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email address."
+        },
+        "organization_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain."
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL."
+        },
+        "email_verification_type": {
+          "in": "body",
+          "type": "string",
+          "description": "valid_only, or valid_and_catchall to also accept catch-all addresses.",
+          "enum": [
+            "valid_only",
+            "valid_and_catchall"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. 0.2 credits per verified lead. Needs at least one identifier: id, linkedin_url alone, email + organization, or name + organization/domain."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-enrich",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-enrich"
+      }
+    },
+    {
+      "id": "dropleads.leads.enrich_bulk",
+      "name": "Enrich up to 10 people with verification",
+      "summary": "Each person is verified individually; only verified matches are returned.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/prime-db/leads/bulk-enrich",
+      "params": {
+        "details": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 10 person objects, each with id, or linkedin_url, or email + organization_name, or name + organization_name/domain.",
+          "example": [
+            {
+              "linkedin_url": "https://www.linkedin.com/in/example"
+            }
+          ]
+        },
+        "email_verification_type": {
+          "in": "body",
+          "type": "string",
+          "description": "valid_only, or valid_and_catchall to also accept catch-all addresses.",
+          "enum": [
+            "valid_only",
+            "valid_and_catchall"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. 0.2 credits per verified lead. Synchronous, not a background job."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-bulk-enrich",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-bulk-enrich"
+      }
+    },
+    {
+      "id": "dropleads.leads.simple_enrich",
+      "name": "Enrich one person without verification",
+      "summary": "Returns the match directly, with no email verification.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/prime-db/leads/simple-enrich",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Lead id from search results; skips matching and looks the lead up directly."
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name, instead of first_name and last_name."
+        },
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email address."
+        },
+        "organization_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain."
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL."
+        }
+      },
+      "notes": [
+        "A read over POST. 0.2 credits per lead. The email may be unverified."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-simple-enrich",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-simple-enrich"
+      }
+    },
+    {
+      "id": "dropleads.leads.simple_enrich_bulk",
+      "name": "Enrich up to 10 people without verification",
+      "summary": "Matches without email verification.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/prime-db/leads/simple-bulk-enrich",
+      "params": {
+        "details": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 10 person objects, each with id, or linkedin_url, or email + organization_name, or name + organization_name/domain.",
+          "example": [
+            {
+              "linkedin_url": "https://www.linkedin.com/in/example"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. 0.2 credits per lead. Synchronous, not a background job."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-simple-bulk-enrich",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/post_api-v2-prime-db-leads-simple-bulk-enrich"
+      }
+    },
+    {
+      "id": "dropleads.account.credits",
+      "name": "Get the credit balance",
+      "summary": "The current credit balance.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/prime-db/credits/balance",
+      "job": "account.usage",
+      "docs_url": "https://dropleads.readme.io/reference/get_api-v2-prime-db-credits-balance",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/get_api-v2-prime-db-credits-balance"
+      }
+    },
+    {
+      "id": "dropleads.companies.search",
+      "name": "Search companies",
+      "summary": "Companies matching filters, one page at a time.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/companies/search",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters combined with AND, all optional: companyNames, companyDomains, linkedinUrls, industries, industriesExclude, keywords, keywordsExclude, technologies, technologiesExclude, employeeRanges, customEmployeeRange {min,max}, revenueRange {min,max}, fundingRange {min,max}, foundedYear {min,max}, countries/states/cities/regions {include,exclude}, lists {type, listIds}.",
+          "example": {
+            "industries": [
+              "Computer Software"
+            ],
+            "countries": {
+              "include": [
+                "US"
+              ]
+            }
+          }
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "{page, limit}.",
+          "example": {
+            "page": 1,
+            "limit": 25
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. 0.1 credit per company returned on the page."
+      ],
+      "job": "company.search",
+      "docs_url": "https://dropleads.readme.io/reference/post_api-v1-companies-search",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/post_api-v1-companies-search"
+      }
+    },
+    {
+      "id": "dropleads.companies.count",
+      "name": "Count matching companies",
+      "summary": "The number of companies matching the filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/companies/count",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters combined with AND, all optional: companyNames, companyDomains, linkedinUrls, industries, industriesExclude, keywords, keywordsExclude, technologies, technologiesExclude, employeeRanges, customEmployeeRange {min,max}, revenueRange {min,max}, fundingRange {min,max}, foundedYear {min,max}, countries/states/cities/regions {include,exclude}, lists {type, listIds}.",
+          "example": {
+            "industries": [
+              "Computer Software"
+            ],
+            "countries": {
+              "include": [
+                "US"
+              ]
+            }
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. Free."
+      ],
+      "job": "company.search",
+      "docs_url": "https://dropleads.readme.io/reference/post_api-v1-companies-count",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/post_api-v1-companies-count"
+      }
+    },
+    {
+      "id": "dropleads.companies.enrich",
+      "name": "Enrich companies",
+      "summary": "The full company record for each domain or name found; misses are listed separately and not charged.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/companies/enrich",
+      "params": {
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains; at most 50 domains and names combined.",
+          "example": [
+            "stripe.com"
+          ]
+        },
+        "companyNames": {
+          "in": "body",
+          "type": "array",
+          "description": "Company names."
+        }
+      },
+      "notes": [
+        "A read over POST. 0.1 credit per company found."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://dropleads.readme.io/reference/post_api-v1-companies-enrich",
+      "verified": {
+        "docs": "https://dropleads.readme.io/reference/post_api-v1-companies-enrich"
+      }
+    }
+  ]
+}
