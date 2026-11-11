@@ -1,8 +1,4 @@
----
-title: "A baseline system prompt for agents using web-router"
-description: "A baseline system prompt for an agent whose tools are WebRouter's, and the contract it encodes."
-sidebarTitle: "Agent prompt"
----
+# A baseline system prompt for agents using web-router
 
 A starting block for an Anthropic agent — the Claude API's tool runner, the
 Agent SDK, or any framework that takes a system prompt — whose tools are

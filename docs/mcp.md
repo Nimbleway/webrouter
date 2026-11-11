@@ -1,8 +1,4 @@
----
-title: "The web-router MCP server"
-description: "WebRouter MCP server in depth: client setup for Claude Desktop, Cursor and others, tools, resources and routing tools."
-sidebarTitle: "MCP reference"
----
+# The web-router MCP server
 
 A self-hosted stdio MCP server that gives an agent — Claude Code, Claude
 Desktop, Cursor, anything that speaks MCP — the methods this package
@@ -31,7 +27,7 @@ uv run web-router-mcp    # a check that it starts: it waits silently for a clien
 
 That is a working `search` and a working `extract` with no account, no key and
 no signup — the keyless backends listed in the README's
-[Working with no credentials](https://github.com/Nimbleway/webrouter/blob/main/../README.md#working-with-no-credentials). Then
+[Working with no credentials](../README.md#working-with-no-credentials). Then
 register it with your client, using the absolute path of your clone:
 
 - **Inside the clone**, Claude Code needs nothing: the committed `.mcp.json`
@@ -84,7 +80,7 @@ cp .env.example "$HOME/Library/Application Support/web-router/.env"
 On Linux the directory is `~/.config/web-router` (or
 `$XDG_CONFIG_HOME/web-router`), on Windows `%APPDATA%\web-router`. Fill in the
 keys you hold, then restart the client: a server keeps the environment it
-started with, unless the model loads the file with [`load_env`](https://github.com/Nimbleway/webrouter/blob/main/README.md#loading-keys-mid-conversation-load_env).
+started with, unless the model loads the file with [`load_env`](#loading-keys-mid-conversation-load_env).
 Each person brings their own keys: there is no shared key store, and no key
 leaves the machine it was set on.
 
@@ -121,7 +117,7 @@ carry the keys themselves too — `"TAVILY_API_KEY": "tvly-..."` — and a varia
 the client exports always keeps its value over any file's.
 
 Whichever file it is, only the provider credentials listed in
-[`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/../.env.example) are taken from it. A switch such as
+[`.env.example`](../.env.example) are taken from it. A switch such as
 `WEB_ROUTER_MCP_ALLOW_FILE_URLS` or `CHROME_PATH` in a file is ignored, because
 a server registered at user scope starts in any workspace and that workspace's
 file is not whoever runs the server; `${...}` is not expanded, so a file cannot
@@ -215,8 +211,8 @@ the client's `env` block or a file the server already read takes a restart.
 | `browse` | Hand a task to a hosted browser agent that clicks, types and reads through pages. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the task** |
 | `browse_status` | Poll a handle from `browse`: its state, or the answer and the agent's steps once it has one. | about a second, and free |
 | `fetch_raw` | The backend's full, unshaped payload for a handle from any of the above. | instant — nothing is called again |
-| `load_env` | Load provider keys from a `.env` file the user names, by path; see [above](https://github.com/Nimbleway/webrouter/blob/main/README.md#loading-keys-mid-conversation-load_env). | instant |
-| `web_run` | Hand a request in words to web-router's router, which picks the method and backends and runs it; `dry_run` returns the plan only. See [Routing and budgets](https://github.com/Nimbleway/webrouter/blob/main/README.md#routing-and-budgets-web_run-budget_start-budget_status). | as the method it picks |
+| `load_env` | Load provider keys from a `.env` file the user names, by path; see [above](#loading-keys-mid-conversation-load_env). | instant |
+| `web_run` | Hand a request in words to web-router's router, which picks the method and backends and runs it; `dry_run` returns the plan only. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). | as the method it picks |
 | `budget_start` | Open a task budget, in dollars and seconds, that every billed tool then spends from. | instant |
 | `budget_status` | What the budget has spent, reserved and left. | instant, and free |
 | `vendors` | Find a vendor API to call with the user's own account: with `query` ("google ads spend by campaign"), matching endpoints best first; without, the vendors in the catalog. Each row says whether its credentials are set here, and which variables to set when not. | instant, and free |
@@ -254,7 +250,7 @@ takes longer, so it leaves `effort` unset unless needed.
 
 Over MCP the model chooses `max_results`, not you. Its description steers it
 away from a single result, but the choice stays the model's. A host that wants
-the number fixed should [wrap `search` itself](https://github.com/Nimbleway/webrouter/blob/main/../README.md#wrapping-search-for-your-own-agent).
+the number fixed should [wrap `search` itself](../README.md#wrapping-search-for-your-own-agent).
 
 ### `research` never blocks the session
 
@@ -291,7 +287,7 @@ environment -- once, when the server starts:
   installed -- any form `router=` takes on the library. It is imported before
   any `.env` file loads, so code that runs at import sees only the server's own
   process environment. The built-in
-  [decision-API routers](https://github.com/Nimbleway/webrouter/blob/main/../README.md#decision-apis-deciderrouter-routerllm-and-routersystemone),
+  [decision-API routers](../README.md#decision-apis-deciderrouter-routerllm-and-routersystemone),
   `llm` and `systemone`, need a `router_config`: name them with
   `WEB_ROUTER_MCP_ROUTER_CONFIG`, below, or build one here: a
   `my_router.py` holding
@@ -308,13 +304,13 @@ environment -- once, when the server starts:
   prompt, its URLs whole, the budget and the candidate ids with their
   estimated cost and p90 latency, never a provider key;
 - `WEB_ROUTER_MCP_ROUTER=remote` asks your router service over HTTP, the
-  library's built-in [`remote` router](https://github.com/Nimbleway/webrouter/blob/main/../README.md#a-router-service-routerremote):
+  library's built-in [`remote` router](../README.md#a-router-service-routerremote):
   `WEB_ROUTER_REMOTE_ROUTER_URL` is its URL (`https`, or `http` to
   `localhost` or a loopback address; no credentials or query) and
   `WEB_ROUTER_REMOTE_ROUTER_API_KEY` its optional bearer key, both read once
   from the same process environment at startup;
 - `WEB_ROUTER_MCP_ROUTER=<name>` names any other built-in router, such as
-  [`fallback`](https://github.com/Nimbleway/webrouter/blob/main/../README.md#chaining-routers-routerfallback), with its
+  [`fallback`](../README.md#chaining-routers-routerfallback), with its
   `router_config` as a JSON object in `WEB_ROUTER_MCP_ROUTER_CONFIG`, the
   same keys the library takes, flat for one router:
   `WEB_ROUTER_MCP_ROUTER=llm WEB_ROUTER_MCP_ROUTER_CONFIG='{"preset": "openai", "model": "gpt-4.1-mini"}'`.
@@ -367,7 +363,7 @@ redirect. The same check holds for the URLs an agent passes the direct tools:
 metadata -- refuses the call before anything is sent, naming the URL's scheme
 and host and why. So a page that steers the model cannot have your keyed
 account hand a vendor an intranet or metadata URL. The browser
-tools have their own guard ([Where the browser may go](https://github.com/Nimbleway/webrouter/blob/main/README.md#where-the-browser-may-go)),
+tools have their own guard ([Where the browser may go](#where-the-browser-may-go)),
 which checks DNS answers and redirects but refuses only cloud metadata hosts
 and the browser's debugging port: other loopback and private hosts are
 admitted there. A refused URL stays in the prompt text, though, and the prompt
@@ -671,7 +667,7 @@ holds keys for. Hold only a Tavily key and that is what the enum says; the
 model is never shown thirteen backends it cannot reach, and cannot pick one
 that is certain to throw. With no key at all, search and extract offer `auto`
 and the keyless backends the README lists in
-[Working with no credentials](https://github.com/Nimbleway/webrouter/blob/main/../README.md#working-with-no-credentials) (and
+[Working with no credentials](../README.md#working-with-no-credentials) (and
 extract also `max`, which races them); research and browse offer only `auto`,
 which has nothing to run on; and the live data tools and `answer` offer nothing,
 since every backend bills. Once a key is set, `answer` with no `provider` tries
@@ -682,7 +678,7 @@ work.
 The resource `web-router://capabilities` carries the same lists as JSON, plus `browse` and `browser`
 -- the three live data tools under one `live_data` key --
 so a client can learn what this install can do without a round trip through the
-model — and the `env` object [above](https://github.com/Nimbleway/webrouter/blob/main/README.md#what-the-server-found), saying where those
+model — and the `env` object [above](#what-the-server-found), saying where those
 keys came from.
 
 ## Result shaping: the one place this differs from the library
@@ -728,10 +724,10 @@ the server is restarted.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](https://github.com/Nimbleway/webrouter/blob/main/README.md#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
+| `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
-| `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](https://github.com/Nimbleway/webrouter/blob/main/README.md#where-the-browser-may-go). |
-| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](https://github.com/Nimbleway/webrouter/blob/main/README.md#routing-and-budgets-web_run-budget_start-budget_status). |
+| `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
+| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
 | `WEB_ROUTER_MCP_ROUTER_CONFIG` | unset | With `WEB_ROUTER_MCP_ROUTER` naming a built-in router (or any name registered with `register_router` in the server's process, an override of a built-in name included), its `router_config` as a JSON object; each `api_key_env` in it is read once at startup and handed to the router as `api_key`, so a router's factory gets `api_key`, never `api_key_env`. Anything but a JSON object, or a value set beside no built-in router, stops the server from starting. Read from the real environment only. |
 | `WEB_ROUTER_REMOTE_ROUTER_URL` | unset | With `WEB_ROUTER_MCP_ROUTER=remote`, your router service's URL: `https`, or `http` to a loopback host. Missing, or any other URL, stops the server from starting. Read from the real environment only. |
 | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` | unset | The bearer key sent to that service, never logged or shown. Read from the real environment only -- no `.env` file and no `load_env` call sets it. |

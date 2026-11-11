@@ -41,16 +41,16 @@ stays a runtime decision — `WebRouter(Provider.BRAVE)` — instead of somethin
 to get right at install time.
 
 Three extras are not methods. `mcp` names a transport — it installs the
-[MCP server](/mcp-server#the-mcp-server), which exposes the methods above rather than
+[MCP server](https://github.com/Nimbleway/webrouter/blob/main/README.md#the-mcp-server), which exposes the methods above rather than
 adding one of its own. It does not include `browser`: the server's `browser_*`
 tools need Playwright, so they appear only with `webrouter[mcp,browser]`.
 `evals` installs the OpenAI and Anthropic SDKs behind the built-in judges that
-[`evaluate()`](/evaluating#evaluating-accuracy) grades answers with; bring your own judge
+[`evaluate()`](https://github.com/Nimbleway/webrouter/blob/main/README.md#evaluating-accuracy) grades answers with; bring your own judge
 and you do not need it. `langchain` installs `langchain-core` for the
-[LangChain tools](/langchain#langchain) — the agent loop and the model stay your own
+[LangChain tools](https://github.com/Nimbleway/webrouter/blob/main/README.md#langchain) — the agent loop and the model stay your own
 install. `browser` is named after what it lets a browser
 handle do — drive the page — rather than after `open_browser`, which needs no
 Playwright: a vendor session opens over httpx, which `[all]` installs, and
 `local` needs only the standard library and a Chrome or Chromium. `remote`
-installs httpx for the built-in [`remote` router](/smart-routing#a-router-service-routerremote),
+installs httpx for the built-in [`remote` router](https://github.com/Nimbleway/webrouter/blob/main/README.md#a-router-service-routerremote),
 for an install that carries no method extra; `[all]` includes it.

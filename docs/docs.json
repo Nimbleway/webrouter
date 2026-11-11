@@ -22,7 +22,10 @@
   "favicon": "/logo/favicon.svg",
   "navbar": {
     "links": [
-      { "label": "Discord", "href": "https://discord.gg/MGztFWSjZh" }
+      {
+        "label": "Discord",
+        "href": "https://discord.gg/MGztFWSjZh"
+      }
     ],
     "primary": {
       "type": "github",
@@ -33,27 +36,31 @@
     "groups": [
       {
         "group": "Get started",
-        "pages": ["index", "install", "quickstart", "how-it-works", "providers"]
+        "pages": [
+          "index",
+          "install",
+          "quickstart",
+          "how-it-works",
+          "providers"
+        ]
       },
       {
         "group": "Methods",
-        "pages": ["search", "extract", "live-data", "answer", "research", "browser-sessions", "browse", "vendor-data"]
-      },
-      {
-        "group": "Agents and MCP",
-        "pages": ["mcp-server", "mcp", "frameworks", "langchain", "claude-agents", "openai-agents", "wrapping-search", "agent-prompt"]
-      },
-      {
-        "group": "Routing",
-        "pages": ["smart-routing", "routing-and-extending"]
-      },
-      {
-        "group": "Benchmarks",
-        "pages": ["agent-benchmark", "benchmarking", "evaluating"]
+        "pages": [
+          "search",
+          "extract",
+          "answer",
+          "research",
+          "browser"
+        ]
       },
       {
         "group": "Reference",
-        "pages": ["configuration", "errors", "agentcore-setup", "community"]
+        "pages": [
+          "configuration",
+          "errors",
+          "community"
+        ]
       }
     ]
   },

@@ -1,12 +1,12 @@
 ---
 title: "WebRouter: an open source standard to connect your agent to the internet"
-description: "WebRouter gives your agent one interface to search, extract, live data, answer, research and browser sessions, across many providers."
+description: "WebRouter gives your agent one interface to search, extract, answer, research and browser sessions, across many providers."
 sidebarTitle: "Introduction"
 ---
 
 <img src="/assets/webrouter-mascot.png" alt="The WebRouter router mascot, an orange cable plugged into its search port" width="360" />
 
-Connect your agent to every web tool through one interface: search, extract, live data, answer, research and browser sessions, across many providers. A [router](/smart-routing) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
+Connect your agent to every web tool through one interface: search, extract, answer, research and browser sessions, across many providers. A [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
 
 ```bash
 pip install "webrouter[all]"
@@ -21,11 +21,7 @@ WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
 
 WebRouter().extract("https://example.com")  # page contents, also keyless
 
-WebRouter().live_data("walmart_pdp", {"product_id": "..."}, provider="nimble")  # a site's fields, fetched now
-
 WebRouter(Provider.LINKUP).answer("...")  # a written answer with its sources, in one call
-
-WebRouter().call_vendor("datadog.logs.search", {"filter": {"query": "status:error"}})  # your own vendor accounts
 
 WebRouter(Provider.NIMBLE).research("...")  # an agentic run: minutes, not milliseconds
 
@@ -66,8 +62,8 @@ dropped**, so a call never runs under weaker constraints than you asked for.
   <Card title="Providers" icon="plug" href="/providers">
     Which provider serves which method, and the key each needs.
   </Card>
-  <Card title="MCP server" icon="server" href="/mcp-server">
-    Give any agent WebRouter's methods as tools.
+  <Card title="Browser" icon="globe" href="/browser">
+    Drive a browser session yourself, or hand a task to a browser agent.
   </Card>
 </Columns>
 
