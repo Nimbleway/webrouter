@@ -323,15 +323,7 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
 
     def _to_page(self, known: dict[str, Scraper], *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         """One page of the scrapers. Oxylabs answers with every path at once, so the paging is done here."""
-        every = list(known.values())
-        page, start = self._local_page(every, limit=limit, offset=offset)
-        return LiveDataSourcePage(
-            provider=self.name,
-            sources=[self._listed(scraper) for scraper in page],
-            total=len(every),
-            offset=start,
-            limit=limit,
-        )
+        return self._paged(list(known.values()), self._listed, limit=limit, offset=offset)
 
     def _listed(self, scraper: Scraper) -> LiveDataSource:
         parts = scraper.name.split("/")

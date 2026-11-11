@@ -168,16 +168,13 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
 
     def _to_page(self, known: dict[str, Scraper], *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         """One page of the sources. Bright Data answers with its whole catalogue, so the paging is done here."""
-        every = list(known.values())
-        page, start = self._local_page(every, limit=limit, offset=offset)
-        return LiveDataSourcePage(
-            provider=self.name,
-            sources=[listed(self.name, scraper) for scraper in page],
-            total=len(every),
-            offset=start,
+        return self._paged(
+            list(known.values()),
+            lambda scraper: listed(self.name, scraper),
             limit=limit,
+            offset=offset,
             # The vendor's own entries behind this page, once each: a scraper's methods share one.
-            raw=list({scraper.dataset_id: scraper.item for scraper in page}.values()),
+            raw=lambda page: list({scraper.dataset_id: scraper.item for scraper in page}.values()),
         )
 
     def _get(self, name: str) -> LiveDataSource:
