@@ -1,0 +1,330 @@
+{
+  "vendor": "replicate",
+  "name": "Replicate",
+  "category": "media-generation",
+  "summary": "Run open-source and official image, video, audio and language models as asynchronous predictions.",
+  "docs_url": "https://replicate.com/docs/reference/http",
+  "pricing_url": "https://replicate.com/pricing",
+  "base_url": "https://api.replicate.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "REPLICATE_API_TOKEN"
+        ],
+        "description": "a Replicate API token (replicate.com/account/api-tokens)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Generation is asynchronous: create a prediction, then poll replicate.prediction.get with its id (or use a webhook). Prefer: wait can return a finished result in one call for quick models.",
+    "The input object differs per model; get the schema from replicate.model.get (latest_version.openapi_schema).",
+    "Billing is per second of compute or per output depending on the model."
+  ],
+  "sources": [
+    "https://replicate.com/docs/reference/http",
+    "https://api.replicate.com/openapi.json",
+    "https://replicate.com/docs/topics/models/official-models"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "replicate.prediction.create",
+      "name": "Run a model version (create a prediction)",
+      "summary": "Starts a prediction for any public model version; this is how images, video and audio are generated.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/predictions",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The model's input as a JSON object; its fields depend on the model.",
+          "example": {
+            "prompt": "a lighthouse at dusk"
+          }
+        },
+        "webhook": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL called as the prediction progresses."
+        },
+        "webhook_events_filter": {
+          "in": "body",
+          "type": "array",
+          "description": "Which events call the webhook: start, output, logs, completed."
+        },
+        "Prefer": {
+          "in": "header",
+          "type": "string",
+          "description": "Set to wait or wait=n (seconds, 1 to 60) to hold the request open until the model finishes.",
+          "example": "wait",
+          "wire_name": "Prefer"
+        },
+        "Cancel_After": {
+          "in": "header",
+          "type": "string",
+          "description": "Longest the prediction may run before it is cancelled automatically.",
+          "wire_name": "Cancel-After"
+        },
+        "version": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model identifier: owner/name for an official model, owner/name:version_id, or a bare version id.",
+          "example": "black-forest-labs/flux-schnell"
+        }
+      },
+      "notes": [
+        "Asynchronous. The response is a prediction with an id and status starting; poll replicate.prediction.get with that id until succeeded, failed, canceled or aborted. The Prefer: wait header makes the call hold up to 60 seconds so fast models return a finished prediction directly.",
+        "A job that only produces data, so kind read. Billing depends on the model."
+      ],
+      "job": "ai.image.generate",
+      "docs_url": "https://replicate.com/docs/reference/http",
+      "verified": {
+        "docs": "https://replicate.com/docs/reference/http"
+      }
+    },
+    {
+      "id": "replicate.model.run",
+      "name": "Run an official model (create a prediction)",
+      "summary": "Starts a prediction on a model Replicate maintains, by owner and name, with no version needed.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/models/{model_owner}/{model_name}/predictions",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The model's input as a JSON object; its fields depend on the model.",
+          "example": {
+            "prompt": "a lighthouse at dusk"
+          }
+        },
+        "webhook": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL called as the prediction progresses."
+        },
+        "webhook_events_filter": {
+          "in": "body",
+          "type": "array",
+          "description": "Which events call the webhook: start, output, logs, completed."
+        },
+        "Prefer": {
+          "in": "header",
+          "type": "string",
+          "description": "Set to wait or wait=n (seconds, 1 to 60) to hold the request open until the model finishes.",
+          "example": "wait",
+          "wire_name": "Prefer"
+        },
+        "Cancel_After": {
+          "in": "header",
+          "type": "string",
+          "description": "Longest the prediction may run before it is cancelled automatically.",
+          "wire_name": "Cancel-After"
+        },
+        "model_owner": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model owner, e.g. black-forest-labs.",
+          "example": "black-forest-labs"
+        },
+        "model_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model name, e.g. flux-schnell.",
+          "example": "flux-schnell"
+        }
+      },
+      "notes": [
+        "Asynchronous: poll replicate.prediction.get with the returned id.",
+        "Official models only; for other models use replicate.prediction.create."
+      ],
+      "job": "ai.image.generate",
+      "docs_url": "https://replicate.com/docs/reference/http",
+      "verified": {
+        "docs": "https://replicate.com/docs/reference/http"
+      }
+    },
+    {
+      "id": "replicate.prediction.get",
+      "name": "Get a prediction",
+      "summary": "Status, output and logs of a prediction started by replicate.prediction.create or replicate.model.run.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/predictions/{prediction_id}",
+      "params": {
+        "prediction_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The prediction id."
+        }
+      },
+      "notes": [
+        "Polls the prediction started by replicate.prediction.create or replicate.model.run. status moves from starting to processing to succeeded, failed, canceled or aborted; output is set on success."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://replicate.com/docs/reference/http",
+      "verified": {
+        "docs": "https://replicate.com/docs/reference/http"
+      }
+    },
+    {
+      "id": "replicate.prediction.cancel",
+      "name": "Cancel a prediction",
+      "summary": "Stops a running prediction.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/predictions/{prediction_id}/cancel",
+      "params": {
+        "prediction_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The prediction id."
+        }
+      },
+      "docs_url": "https://replicate.com/docs/reference/http",
+      "verified": {
+        "docs": "https://replicate.com/docs/reference/http"
+      }
+    },
+    {
+      "id": "replicate.prediction.list",
+      "name": "List predictions",
+      "summary": "Your recent predictions, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/predictions",
+      "params": {
+        "created_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Only predictions created at or after this ISO 8601 time."
+        },
+        "created_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Only predictions created before this ISO 8601 time."
+        }
+      },
+      "notes": [
+        "Cursor-paginated: the response carries next and previous URLs."
+      ],
+      "docs_url": "https://replicate.com/docs/reference/http",
+      "verified": {
+        "docs": "https://replicate.com/docs/reference/http"
+      }
+    },
+    {
+      "id": "replicate.model.list",
+      "name": "List public models",
+      "summary": "Browse public models.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/models",
+      "params": {
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field; default latest_version_created_at."
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "description": "asc or desc; default desc."
+        }
+      },
+      "docs_url": "https://replicate.com/docs/reference/http",
+      "verified": {
+        "docs": "https://replicate.com/docs/reference/http"
+      }
+    },
+    {
+      "id": "replicate.model.get",
+      "name": "Get a model",
+      "summary": "Description, latest version and the input schema (in latest_version.openapi_schema) of a model.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/models/{model_owner}/{model_name}",
+      "params": {
+        "model_owner": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model owner.",
+          "example": "black-forest-labs"
+        },
+        "model_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model name.",
+          "example": "flux-schnell"
+        }
+      },
+      "notes": [
+        "Read the input fields a model accepts from latest_version.openapi_schema before running it."
+      ],
+      "docs_url": "https://replicate.com/docs/reference/http",
+      "verified": {
+        "docs": "https://replicate.com/docs/reference/http"
+      }
+    },
+    {
+      "id": "replicate.search",
+      "name": "Search models, collections and docs",
+      "summary": "Beta search across Replicate.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search text.",
+          "example": "text to video"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Model results, 1 to 50; default 20."
+        }
+      },
+      "notes": [
+        "Beta endpoint."
+      ],
+      "docs_url": "https://replicate.com/docs/reference/http",
+      "verified": {
+        "docs": "https://replicate.com/docs/reference/http"
+      }
+    },
+    {
+      "id": "replicate.account.get",
+      "name": "Get the authenticated account",
+      "summary": "Username and type of the account the token belongs to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account",
+      "job": "account.usage",
+      "docs_url": "https://replicate.com/docs/reference/http",
+      "verified": {
+        "docs": "https://replicate.com/docs/reference/http"
+      }
+    }
+  ]
+}
