@@ -94,7 +94,8 @@
       },
       "notes": [
         "A read over POST: it stores an offer request (orq_...) you can fetch again, but books and pays nothing.",
-        "Can take as long as the slowest airline, up to supplier_timeout."
+        "Can take as long as the slowest airline, up to supplier_timeout.",
+        "Duffel bills searches beyond a 1500:1 search-to-book ratio as excess searches."
       ],
       "job": "travel.flights.search",
       "docs_url": "https://duffel.com/docs/api/v2/offer-requests/create-offer-request",

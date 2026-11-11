@@ -134,11 +134,6 @@
           "in": "body",
           "type": "array",
           "description": "Fields the result must contain to count as a match."
-        },
-        "callback_url": {
-          "in": "body",
-          "type": "string",
-          "description": "http(s) URL that receives the finished result."
         }
       },
       "notes": [
@@ -248,11 +243,6 @@
           "in": "body",
           "type": "boolean",
           "description": "Add a 1-5 fit score (+1 credit per result)."
-        },
-        "callback_url": {
-          "in": "body",
-          "type": "string",
-          "description": "http(s) URL that receives the finished result."
         }
       },
       "notes": [
@@ -327,11 +317,6 @@
           "in": "body",
           "type": "string",
           "description": "Company social profile URL, e.g. LinkedIn."
-        },
-        "callback_url": {
-          "in": "body",
-          "type": "string",
-          "description": "http(s) URL that receives the finished result."
         }
       },
       "notes": [
@@ -398,11 +383,6 @@
           "in": "body",
           "type": "boolean",
           "description": "Add query-fit evidence."
-        },
-        "callback_url": {
-          "in": "body",
-          "type": "string",
-          "description": "http(s) URL that receives the finished result."
         }
       },
       "notes": [

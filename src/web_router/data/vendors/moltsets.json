@@ -618,7 +618,7 @@
           "type": "string",
           "required": true,
           "description": "LinkedIn profile URL.",
-          "example": "https://linkedin.com/in/retentionadam"
+          "example": "https://linkedin.com/in/jane-doe-example"
         },
         "include_experience": {
           "in": "body",

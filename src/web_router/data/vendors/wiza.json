@@ -24,7 +24,7 @@
     ]
   },
   "notes": [
-    "Reveals are asynchronous: start, then poll the get endpoint or use a webhook.",
+    "Reveals are asynchronous: start, then poll the get endpoint.",
     "Credits are prepaid and deducted only when data comes back.",
     "The legacy list endpoints (create list, get list contacts, prospect lists) and the location and technology autocomplete lookups are not in this entry."
   ],
@@ -89,11 +89,6 @@
           "type": "object",
           "description": "{accept_work, accept_personal} booleans; all emails returned when omitted."
         },
-        "callback_url": {
-          "in": "body",
-          "type": "string",
-          "description": "Webhook that overrides the account default."
-        },
         "reveal_options": {
           "in": "body",
           "type": "object",
@@ -101,6 +96,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Starts a job that only produces data (it does spend credits). Poll wiza.reveal.get with data.id until is_complete; status goes queued, resolving, finished or failed. A 429 means the queue is full.",
         "Credits are charged only for data returned: profile matched 1 API credit, valid email 2, phone 5 (full is phones plus emails, each when returned). The credit-behavior page names the levels none, email, phone and full while this reference lists none, partial, phone and full."
       ],

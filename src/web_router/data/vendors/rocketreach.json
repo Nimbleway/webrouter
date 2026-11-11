@@ -119,7 +119,7 @@
           "in": "query",
           "type": "string",
           "description": "LinkedIn profile URL.",
-          "example": "www.linkedin.com/in/jamesgullbrand"
+          "example": "www.linkedin.com/in/jane-doe-example"
         },
         "email": {
           "in": "query",
@@ -168,11 +168,6 @@
           "in": "query",
           "type": "boolean",
           "description": "Whether cached emails come back while status is progress; false keeps email fields null until the lookup completes."
-        },
-        "webhook_id": {
-          "in": "query",
-          "type": "integer",
-          "description": "Id of a webhook (API settings page) to receive the finished result."
         }
       },
       "notes": [
@@ -260,11 +255,6 @@
           "in": "query",
           "type": "string",
           "description": "Job title, to narrow the match."
-        },
-        "webhook_id": {
-          "in": "query",
-          "type": "integer",
-          "description": "Id of a webhook to receive the finished result."
         }
       },
       "notes": [

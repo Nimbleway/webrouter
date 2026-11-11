@@ -160,11 +160,6 @@
           "type": "string",
           "description": "Display name for the job."
         },
-        "webhookUrl": {
-          "in": "body",
-          "type": "string",
-          "description": "HTTPS URL called when the job finishes; an http URL is refused."
-        },
         "idempotency_key": {
           "in": "header",
           "type": "string",
@@ -173,6 +168,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Poll ofacapi.jobs.get with the returned id until COMPLETED."
       ],
       "job": "jobs.start",

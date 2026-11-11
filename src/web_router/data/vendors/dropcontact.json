@@ -24,7 +24,7 @@
     ]
   },
   "notes": [
-    "Enrichment is asynchronous: submit with enrich.batch, then poll enrich.results by request_id or use a webhook.",
+    "Enrichment is asynchronous: submit with enrich.batch, then poll enrich.results by request_id.",
     "Pay on success: one credit per verified email found; credits_left is in batch and result responses.",
     "The default-webhook endpoints (set, get, delete) are not in this entry."
   ],
@@ -91,11 +91,6 @@
             "en"
           ]
         },
-        "custom_callback_url": {
-          "in": "body",
-          "type": "string",
-          "description": "Webhook for this request only, replacing the default webhook."
-        },
         "hashedInputs": {
           "in": "query",
           "type": "boolean",
@@ -103,7 +98,8 @@
         }
       },
       "notes": [
-        "Starts a job that only produces data: it returns request_id, and the enriched records come from dropcontact.enrich.results (or the webhook).",
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Starts a job that only produces data: it returns request_id, and the enriched records come from dropcontact.enrich.results.",
         "One credit per record only when a verified email is returned, deducted at submit and refunded if none is found. A record that carries an \"email\" field (verification only) costs one credit and is not refunded.",
         "If credits do not cover every record, the whole request is refused with 403."
       ],

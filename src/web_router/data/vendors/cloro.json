@@ -500,11 +500,6 @@
           "in": "body",
           "type": "string",
           "description": "Unique string that stops duplicate tasks."
-        },
-        "webhook": {
-          "in": "body",
-          "type": "object",
-          "description": "Completion notice settings, {url}."
         }
       },
       "notes": [

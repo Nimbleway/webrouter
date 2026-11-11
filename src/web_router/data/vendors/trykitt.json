@@ -25,7 +25,7 @@
   "notes": [
     "Real-time mode (realtime true) answers in the response; it is throttled by your concurrent request limit and over it answers with an error to retry.",
     "HTTP 402 means a rate limit or insufficient funds; the body says which. 401 means a missing or wrong key.",
-    "With realtime false, a job is queued and its result is sent to callbackURL or fetched with trykitt.job.get; the docs mark this webhook path deprecated."
+    "With realtime false, a job is queued and its result is fetched with trykitt.job.get."
   ],
   "sources": [
     "https://documenter.getpostman.com/view/479833/2s93m62NHf"
@@ -98,11 +98,6 @@
           "description": "Your own id, returned with the result.",
           "example": "myInternalId"
         },
-        "callbackURL": {
-          "in": "body",
-          "type": "string",
-          "description": "Where to send the result; only used when realtime is false."
-        },
         "strictNameMatches": {
           "in": "body",
           "type": "boolean",
@@ -144,11 +139,6 @@
           "type": "string",
           "description": "Your own id, returned with the result.",
           "example": "myInternalId"
-        },
-        "callbackURL": {
-          "in": "body",
-          "type": "string",
-          "description": "Where to send the result; only used when realtime is false."
         },
         "treatAliasesAsValid": {
           "in": "body",

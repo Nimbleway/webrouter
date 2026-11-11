@@ -61,11 +61,6 @@
             "deepverify"
           ]
         },
-        "url": {
-          "in": "query",
-          "type": "string",
-          "description": "Webhook URL that receives the result by POST."
-        },
         "disable_catchall_verify": {
           "in": "query",
           "type": "string",
@@ -175,16 +170,6 @@
           "in": "body",
           "type": "string",
           "description": "Task name; generated if omitted."
-        },
-        "url": {
-          "in": "body",
-          "type": "string",
-          "description": "Webhook URL, one POST per verified email."
-        },
-        "url_finished": {
-          "in": "body",
-          "type": "string",
-          "description": "Webhook URL called once when the task finishes."
         },
         "mode": {
           "in": "body",

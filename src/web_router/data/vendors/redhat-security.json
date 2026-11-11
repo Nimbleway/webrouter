@@ -64,7 +64,7 @@
       "summary": "The collection for one resource type: CVEs, CSAF advisories or OVAL data.",
       "kind": "read",
       "method": "GET",
-      "path": "/{resource}/",
+      "path": "/{resource}.json",
       "params": {
         "resource": {
           "in": "path",
@@ -74,8 +74,7 @@
           "example": "cve",
           "enum": [
             "cve",
-            "csaf",
-            "oval"
+            "csaf"
           ]
         }
       },
@@ -83,7 +82,10 @@
       "docs_url": "https://access.redhat.com/hydra/rest/securitydata/api-docs",
       "verified": {
         "docs": "https://access.redhat.com/hydra/rest/securitydata/api-docs"
-      }
+      },
+      "notes": [
+        "The OpenAPI document lists /{resource}/, which answers 404; the live collection is /cve.json or /csaf.json, 1000 rows by default."
+      ]
     },
     {
       "id": "redhat-security.oval.streams",

@@ -38,7 +38,7 @@
     "Both the key and the secret are needed on every call.",
     "Credits are separate pools (search, verification, email count, sources); you are charged only on HTTP 200 with a qualifying result, and an identical repeat inside the usage window is free.",
     "Not found is usually HTTP 200 with a null email or an errors object; check errors before reading data.",
-    "Set client timeouts of at least 180 seconds; lookups run live. Many calls accept webhook_url.",
+    "Set client timeouts of at least 180 seconds; lookups run live.",
     "Bulk jobs, scrape campaigns, leads, lead lists, API key management and flag endpoints are not in this entry."
   ],
   "sources": [
@@ -121,11 +121,6 @@
           "in": "query",
           "type": "boolean",
           "description": "Add phone numbers in phone_data at extra credit cost (5 per number)."
-        },
-        "webhook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "A URL that also receives a POST with the result."
         }
       },
       "notes": [
@@ -177,11 +172,6 @@
           "in": "query",
           "type": "boolean",
           "description": "Add phone numbers in phone_data at extra credit cost (5 per number)."
-        },
-        "webhook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "A URL that also receives a POST with the result."
         }
       },
       "notes": [
@@ -218,11 +208,6 @@
           "in": "query",
           "type": "boolean",
           "description": "Return up to two stored addresses as an array; no phone_data."
-        },
-        "webhook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "A URL that also receives a POST with the result."
         }
       },
       "notes": [
@@ -247,11 +232,6 @@
           "type": "string",
           "required": true,
           "description": "Article URL."
-        },
-        "webhook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "A URL that also receives a POST with the result."
         }
       },
       "notes": [
@@ -281,11 +261,6 @@
           "in": "query",
           "type": "boolean",
           "description": "Add phone numbers in phone_data at extra credit cost (5 per number)."
-        },
-        "webhook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "A URL that also receives a POST with the result."
         }
       },
       "notes": [
@@ -349,11 +324,6 @@
           "in": "query",
           "type": "boolean",
           "description": "Add phone numbers in phone_data at extra credit cost (5 per number)."
-        },
-        "webhook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "A URL that also receives a POST with the result."
         }
       },
       "notes": [
@@ -392,11 +362,6 @@
           "in": "query",
           "type": "boolean",
           "description": "Return every number found as an array."
-        },
-        "webhook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "A URL that also receives a POST with the result."
         }
       },
       "notes": [
@@ -475,11 +440,6 @@
           "type": "string",
           "required": true,
           "description": "Email address."
-        },
-        "webhook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "A URL that also receives a POST with the result."
         }
       },
       "notes": [

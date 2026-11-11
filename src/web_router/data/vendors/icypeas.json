@@ -25,7 +25,7 @@
   },
   "notes": [
     "Every call but the two scrape GETs is a POST.",
-    "Single email and domain searches are asynchronous: they return an _id; read the result with results.read or a webhook.",
+    "Single email and domain searches are asynchronous: they return an _id; read the result with results.read.",
     "Credits: email search 1 and domain search 1 when found, verification 0.1, lead database about 0.02 per result, profile or company scrape from 0.5.",
     "The multi-row url-search, scrape and reverse-lookup batch endpoints are not in this entry."
   ],
@@ -89,12 +89,12 @@
         "custom": {
           "in": "body",
           "type": "object",
-          "description": "Optional {webhookUrl, externalId}: a webhook for this search and your own id."
+          "description": "Optional {externalId}: your own id for this search."
         }
       },
       "notes": [
         "A read over POST: starts a search, changes nothing.",
-        "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single), or set custom.webhookUrl.",
+        "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single).",
         "1 credit when an email is found."
       ],
       "job": "people.email.find",
@@ -120,12 +120,12 @@
         "custom": {
           "in": "body",
           "type": "object",
-          "description": "Optional {webhookUrl, externalId}: a webhook for this search and your own id."
+          "description": "Optional {externalId}: your own id for this search."
         }
       },
       "notes": [
         "A read over POST: starts a search, changes nothing.",
-        "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single), or set custom.webhookUrl.",
+        "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single).",
         "0.1 credit per verification (per the docs overview)."
       ],
       "job": "email.verify",
@@ -151,12 +151,12 @@
         "custom": {
           "in": "body",
           "type": "object",
-          "description": "Optional {webhookUrl, externalId}: a webhook for this search and your own id."
+          "description": "Optional {externalId}: your own id for this search."
         }
       },
       "notes": [
         "A read over POST: starts a search, changes nothing.",
-        "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single), or set custom.webhookUrl.",
+        "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single).",
         "1 credit when emails are found."
       ],
       "job": "company.employees",
@@ -199,10 +199,11 @@
         "custom": {
           "in": "body",
           "type": "object",
-          "description": "Optional {webhookUrlItem, webhookUrlBulkDone, externalIds, includeResultsInWebhook}."
+          "description": "Optional {externalIds}: your own ids for the rows."
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Starts a job that only produces data. Track it with icypeas.bulk.progress and read rows with icypeas.results.read (mode bulk, file id).",
         "Charged per row at the single-search rate."
       ],

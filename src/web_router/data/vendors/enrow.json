@@ -24,7 +24,7 @@
     ]
   },
   "notes": [
-    "Every search is asynchronous: the POST returns an id at once, then poll the matching GET with ?id= or set settings.webhook.",
+    "Every search is asynchronous: the POST returns an id at once, then poll the matching GET with ?id=.",
     "Bulk endpoints (up to 5,000 searches for email and verification, 3,000 for phone) are not in this entry.",
     "Credits are returned as credits_used on each POST response."
   ],
@@ -86,17 +86,17 @@
         "custom": {
           "in": "body",
           "type": "object",
-          "description": "Your own key-value data, returned in the result and webhook."
+          "description": "Your own key-value data, returned in the result."
         },
         "settings": {
           "in": "body",
           "type": "object",
-          "description": "{webhook, country_code, retrieve_gender}: webhook is a URL that receives a POST when the search ends; country_code (default US) helps disambiguate company names; retrieve_gender returns gender."
+          "description": "{country_code, retrieve_gender}: country_code (default US) helps disambiguate company names; retrieve_gender returns gender."
         }
       },
       "notes": [
         "A read over POST: starts an asynchronous search, changes nothing.",
-        "Poll enrow.email.find_result with the returned id, or set settings.webhook. Check qualification: found or not_found.",
+        "Poll enrow.email.find_result with the returned id. Check qualification: found or not_found.",
         "Name plus company search: 1 credit when an email is found, none otherwise (0.25 for accounts with an abnormally low success rate). LinkedIn URL search: 1 credit up front, settling to 1 if found, 0.25 if not found, 0 if Enrow fails."
       ],
       "job": "people.email.find",
@@ -146,12 +146,7 @@
         "custom": {
           "in": "body",
           "type": "object",
-          "description": "Your own key-value data, returned in the result and webhook."
-        },
-        "settings": {
-          "in": "body",
-          "type": "object",
-          "description": "{webhook}: a URL that receives a POST when the search finishes."
+          "description": "Your own key-value data, returned in the result."
         }
       },
       "notes": [
@@ -224,12 +219,7 @@
         "custom": {
           "in": "body",
           "type": "object",
-          "description": "Your own key-value data, returned in the result and webhook."
-        },
-        "settings": {
-          "in": "body",
-          "type": "object",
-          "description": "{webhook}: a URL that receives a POST when the search finishes."
+          "description": "Your own key-value data, returned in the result."
         }
       },
       "notes": [

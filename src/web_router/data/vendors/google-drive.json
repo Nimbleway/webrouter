@@ -212,7 +212,7 @@
         "mimeType": {
           "in": "query",
           "required": true,
-          "description": "Target format. Docs: text/plain, text/markdown, text/html, application/pdf, docx. Sheets: text/csv (first sheet only), xlsx, application/pdf. Slides: text/plain, application/pdf, pptx.",
+          "description": "Target format, as a full MIME type. Docs: text/plain, text/markdown, text/html, application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document. Sheets: text/csv (first sheet only), application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/pdf. Slides: text/plain, application/pdf, application/vnd.openxmlformats-officedocument.presentationml.presentation.",
           "example": "text/markdown"
         }
       },

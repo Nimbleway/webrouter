@@ -10,7 +10,8 @@
       "env": [
         "POLYHAVEN_USER_AGENT"
       ],
-      "description": "A unique User-Agent naming your software, which Poly Haven's terms require on every call so it can group your app's requests."
+      "default": "WebRouter (+https://github.com/Nimbleway/webrouter)",
+      "description": "A unique User-Agent naming your software, which Poly Haven's terms require on every call so it can group your app's requests; the default names WebRouter, so set your own with contact details for heavy use."
     }
   },
   "headers": {

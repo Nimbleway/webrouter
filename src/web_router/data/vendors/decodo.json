@@ -512,11 +512,6 @@
           "in": "body",
           "type": "array",
           "description": "Target HTTP codes to treat as success and return content for, e.g. [404]."
-        },
-        "callback_url": {
-          "in": "body",
-          "type": "string",
-          "description": "URL Decodo POSTs the task id and status to when done (not the result)."
         }
       },
       "notes": [

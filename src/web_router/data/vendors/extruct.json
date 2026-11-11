@@ -178,6 +178,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Returns a task id immediately; spends credits as it runs."
       ],
       "job": "jobs.start",
@@ -275,6 +276,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Pro plan only. 2 credits per research agent that runs; the depth's full budget (10/30/50) must be available. Failed tasks are refunded."
       ],
       "job": "research.start",

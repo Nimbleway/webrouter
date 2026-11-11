@@ -23,7 +23,7 @@
         "env": [
           "GOOGLE_CALENDAR_REFRESH_TOKEN"
         ],
-        "description": "a refresh token minted with that OAuth app for a Calendar scope: https://www.googleapis.com/auth/calendar.readonly to read, https://www.googleapis.com/auth/calendar.events to also create events"
+        "description": "a refresh token minted with that OAuth app for the https://www.googleapis.com/auth/calendar.readonly scope"
       }
     },
     "oauth2": {

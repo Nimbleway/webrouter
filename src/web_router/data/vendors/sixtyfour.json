@@ -96,11 +96,6 @@
           "in": "body",
           "type": "boolean",
           "description": "Return a confidence score, justification and sources for every field."
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "HTTPS URL that receives the result by POST when the job finishes."
         }
       },
       "notes": [
@@ -161,11 +156,6 @@
           "in": "body",
           "type": "boolean",
           "description": "Return a confidence score, justification and sources for every field."
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "HTTPS URL that receives the result by POST when the job finishes."
         },
         "dispatch_id": {
           "in": "body",
@@ -251,11 +241,6 @@
           "in": "body",
           "type": "boolean",
           "description": "Return a confidence score, justification and sources for every field."
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "HTTPS URL that receives the result by POST when the job finishes."
         }
       },
       "notes": [
@@ -337,11 +322,6 @@
           "in": "body",
           "type": "boolean",
           "description": "Return a confidence score, justification and sources for every field."
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "HTTPS URL that receives the result by POST when the job finishes."
         }
       },
       "notes": [

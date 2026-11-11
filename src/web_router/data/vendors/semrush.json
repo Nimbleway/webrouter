@@ -72,7 +72,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {
@@ -196,7 +197,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {
@@ -299,7 +301,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {
@@ -380,7 +383,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {
@@ -454,7 +458,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {
@@ -508,7 +513,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {
@@ -573,7 +579,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {
@@ -643,7 +650,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {
@@ -828,7 +836,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {
@@ -902,7 +911,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {
@@ -976,7 +986,8 @@
         "display_limit": {
           "in": "query",
           "type": "integer",
-          "description": "Maximum lines returned. 0 or unset means 10,000 lines; the cap per call is 100,000 (use display_offset past that).",
+          "required": true,
+          "description": "Maximum lines returned; required because 0 or unset means 10,000 billable lines. The cap per call is 100,000 (use display_offset past that).",
           "example": 10
         },
         "display_offset": {

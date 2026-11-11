@@ -284,11 +284,6 @@
           "required": true,
           "description": "LinkedIn URLs, max 1000."
         },
-        "callback_url": {
-          "in": "body",
-          "type": "string",
-          "description": "Receives a POST with the results when the job finishes."
-        },
         "include_phone": {
           "in": "body",
           "type": "boolean",
@@ -301,7 +296,7 @@
         }
       },
       "notes": [
-        "Starts a job that only produces data. Returns a status (QUEUED) and a job_id; poll contactout.people.contact_batch_v2_result or use callback_url.",
+        "Starts a job that only produces data. Returns a status (QUEUED) and a job_id; poll contactout.people.contact_batch_v2_result.",
         "1 email credit per profile with an email found, 1 phone credit per profile with a phone found when include_phone is true."
       ],
       "job": "people.email.find",
@@ -801,11 +796,6 @@
           "type": "array",
           "required": true,
           "description": "Emails, max 100."
-        },
-        "callback_url": {
-          "in": "body",
-          "type": "string",
-          "description": "Receives results when done."
         }
       },
       "notes": [

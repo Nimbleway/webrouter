@@ -134,7 +134,7 @@
           "in": "query",
           "type": "string",
           "description": "A social profile URL.",
-          "example": "https://linkedin.com/in/seanthorne"
+          "example": "https://linkedin.com/in/jane-doe-example"
         },
         "lid": {
           "in": "query",
@@ -283,7 +283,7 @@
           "in": "query",
           "type": "string",
           "description": "A social profile URL.",
-          "example": "https://linkedin.com/in/seanthorne"
+          "example": "https://linkedin.com/in/jane-doe-example"
         },
         "lid": {
           "in": "query",
