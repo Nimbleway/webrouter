@@ -262,12 +262,15 @@ You.com's keyless MCP is priced in its own section above.
 ## Templates (Extract Templates)
 
 Not benchmarked; listed because a run bills on the vendor's account, and
-because the `run_template` MCP tool and the README point here for the figure.
+because the `live_data` MCP tool and the README point here for the figure.
 
-<!-- prices: method=run_template -->
-| What web-router sends | Estimated price | Source | Checked |
-|---|---|---|---|
-| `extract.templates.run`, one template and its inputs, one page | $3 per 1k; per run, one flat rate for every template; successes only; listing and describing templates are free | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-28 |
+<!-- prices: method=live_data -->
+| Backend | What web-router sends | Estimated price | Source | Checked |
+|---|---|---|---|---|
+| nimble | `extract.templates.run`, one template and its inputs, one page | $3 per 1k; per run, one flat rate for every template; successes only; listing and describing templates are free | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-28 |
+| apify | `run-sync-get-dataset-items`, one Actor and its input | set per Actor: free, per dataset item, or per event, plus platform compute units; see each Actor's Store page | [apify.com](https://apify.com/pricing) | 2026-11-09 |
+| brightdata | `/datasets/v3/scrape`, one scraper and one input | $1.50 per 1k records pay as you go ($1.30 on Scale), so a run costs per record returned, which is not known before it runs; unknown here so a cost cap never under-reserves | [brightdata.com](https://brightdata.com/pricing/web-scraper) | 2026-11-09 |
+| oxylabs | Realtime `/v1/queries`, one source with `parse: true` | by subscription plan, from $15 a month; a per-result rate is published only for the newer Web API | [oxylabs.io](https://oxylabs.io/products/scraper-api/web/pricing) | 2026-11-09 |
 <!-- /prices -->
 
 **One rate, not per template (checked 2026-10-28).** The template API
