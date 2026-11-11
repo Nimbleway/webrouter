@@ -125,7 +125,7 @@ def test_a_negative_page_is_refused_before_anything_is_read() -> None:
 def test_a_catalogue_past_the_cap_is_searched_in_part_and_says_so(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    monkeypatch.setattr("web_router.live_data_search.LIVE_DATA_SEARCH_MAX_SOURCES", LIVE_DATA_SEARCH_PAGE)
+    monkeypatch.setattr("web_router.live_data_catalogue.LIVE_DATA_SEARCH_MAX_SOURCES", LIVE_DATA_SEARCH_PAGE)
     with caplog.at_level(logging.WARNING, logger="web_router.live_data_search"):
         page = search_live_data_sources(PagedProvider(), "amazon")
 
@@ -221,7 +221,7 @@ def test_a_catalogue_read_older_than_the_cache_is_read_again(monkeypatch: pytest
     provider = PagedProvider()
     search_live_data_sources(provider, "amazon")
     read = len(provider.listed)
-    monkeypatch.setattr("web_router.live_data_search.LIVE_DATA_SEARCH_CACHE_SECONDS", -1.0)
+    monkeypatch.setattr("web_router.live_data_catalogue.LIVE_DATA_SEARCH_CACHE_SECONDS", -1.0)
     search_live_data_sources(provider, "amazon")
 
     assert len(provider.listed) == 2 * read

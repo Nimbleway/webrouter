@@ -59,7 +59,7 @@ def resolve(name: str) -> Any:
     if name not in RENAMED:
         raise AttributeError(f"module 'web_router' has no attribute {name!r}")
     module, new = RENAMED[name]
-    _warn(name, new)
+    warn_renamed(name, new)
     return getattr(importlib.import_module(module), new)
 
 
@@ -93,11 +93,16 @@ def install() -> None:
         vars(target)["__getattr__"] = module_getattr(module, getattr(target, "__getattr__", None))
 
 
-def _warn(old: str, new: str, *, stacklevel: int = 4) -> None:
-    # Imported here: this module is imported by ``web_router.types``, which the constants import.
-    from web_router.constants_live_data import MSG_LIVE_DATA_DEPRECATED_NAME
+def warn_renamed(old: str, new: str, *, stacklevel: int = 4, field: bool = False) -> None:
+    """The one :class:`DeprecationWarning` for an old name, pointed at the caller ``stacklevel`` frames up.
 
-    warnings.warn(MSG_LIVE_DATA_DEPRECATED_NAME.format(old=old, new=new), DeprecationWarning, stacklevel=stacklevel)
+    ``field`` words it for a model's field or keyword rather than a method, class or function.
+    """
+    # Imported here: this module is imported by ``web_router.types``, which the constants import.
+    from web_router.constants_live_data import MSG_LIVE_DATA_DEPRECATED_FIELD, MSG_LIVE_DATA_DEPRECATED_NAME
+
+    message = MSG_LIVE_DATA_DEPRECATED_FIELD if field else MSG_LIVE_DATA_DEPRECATED_NAME
+    warnings.warn(message.format(old=old, new=new), DeprecationWarning, stacklevel=stacklevel)
 
 
 def deprecated_keyword(owner: str, given: dict[str, Any], old: str, new: str, value: str | None) -> str:
@@ -114,7 +119,7 @@ def deprecated_keyword(owner: str, given: dict[str, Any], old: str, new: str, va
         return value
     if value is not None:
         raise TypeError(f"{owner}() takes {new}= or its old name {old}=, not both")
-    _warn(f"{old}=", f"{new}=")
+    warn_renamed(f"{old}=", f"{new}=")
     return str(given[old])
 
 
@@ -127,20 +132,20 @@ class TemplateMethods:
 
     def templates(self, *, limit: int | None = None, offset: int | None = None) -> LiveDataSourcePage:
         """Deprecated: :meth:`~web_router.providers.base.LiveDataProvider.live_data_sources`."""
-        _warn("templates", "live_data_sources", stacklevel=3)
+        warn_renamed("templates", "live_data_sources", stacklevel=3)
         return _provider(self).live_data_sources(limit=limit, offset=offset)
 
     async def atemplates(self, *, limit: int | None = None, offset: int | None = None) -> LiveDataSourcePage:
         """Deprecated: :meth:`~web_router.providers.base.LiveDataProvider.alive_data_sources`."""
-        _warn("atemplates", "alive_data_sources", stacklevel=3)
+        warn_renamed("atemplates", "alive_data_sources", stacklevel=3)
         return await _provider(self).alive_data_sources(limit=limit, offset=offset)
 
     def template(self, name: str) -> LiveDataSource:
         """Deprecated: :meth:`~web_router.providers.base.LiveDataProvider.live_data_source`."""
-        _warn("template", "live_data_source", stacklevel=3)
+        warn_renamed("template", "live_data_source", stacklevel=3)
         return _provider(self).live_data_source(name)
 
     async def atemplate(self, name: str) -> LiveDataSource:
         """Deprecated: :meth:`~web_router.providers.base.LiveDataProvider.alive_data_source`."""
-        _warn("atemplate", "alive_data_source", stacklevel=3)
+        warn_renamed("atemplate", "alive_data_source", stacklevel=3)
         return await _provider(self).alive_data_source(name)

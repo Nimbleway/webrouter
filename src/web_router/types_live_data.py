@@ -15,18 +15,13 @@ aliases in :mod:`web_router.live_data_compat`.
 
 from __future__ import annotations
 
-import warnings
 from datetime import datetime
 from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from web_router.constants_live_data import MSG_LIVE_DATA_DEPRECATED_FIELD
+from web_router.live_data_compat import warn_renamed
 from web_router.types import ExtractedDocument, ExtractFormat, NormalizedRequest
-
-
-def _deprecated(old: str, new: str) -> None:
-    warnings.warn(MSG_LIVE_DATA_DEPRECATED_FIELD.format(old=old, new=new), DeprecationWarning, stacklevel=3)
 
 
 class LiveDataRequest(NormalizedRequest):
@@ -59,7 +54,7 @@ class LiveDataRequest(NormalizedRequest):
     def _template_is_source(cls, values: Any) -> Any:
         # `template=` is what a run was called before the rename; it still works, with a warning.
         if isinstance(values, dict) and "template" in values and "source" not in values:
-            _deprecated("template", "source")
+            warn_renamed("template", "source", stacklevel=3, field=True)
             values = {**values, "source": values["template"]}
             del values["template"]
         return values
@@ -67,7 +62,7 @@ class LiveDataRequest(NormalizedRequest):
     @property
     def template(self) -> str:
         """Deprecated: :attr:`source`."""
-        _deprecated("template", "source")
+        warn_renamed("template", "source", stacklevel=3, field=True)
         return self.source
 
 
@@ -168,7 +163,7 @@ class LiveDataSourcePage(BaseModel):
     def _templates_is_sources(cls, values: Any) -> Any:
         # A custom provider written against the old names still builds TemplatePage(templates=[...]).
         if isinstance(values, dict) and "templates" in values and "sources" not in values:
-            _deprecated("templates", "sources")
+            warn_renamed("templates", "sources", stacklevel=3, field=True)
             values = {**values, "sources": values["templates"]}
             del values["templates"]
         return values
@@ -184,7 +179,7 @@ class LiveDataSourcePage(BaseModel):
     @property
     def templates(self) -> list[LiveDataSource]:
         """Deprecated: :attr:`sources`."""
-        _deprecated("templates", "sources")
+        warn_renamed("templates", "sources", stacklevel=3, field=True)
         return self.sources
 
 
@@ -236,7 +231,7 @@ class LiveDataResponse(BaseModel):
         if not isinstance(values, dict):
             return values
         if "template" in values and "source" not in values:
-            _deprecated("template", "source")
+            warn_renamed("template", "source", stacklevel=3, field=True)
             values = {**{k: v for k, v in values.items() if k != "template"}, "source": values["template"]}
         records, data = values.get("records"), values.get("data")
         if not records and data:
@@ -248,5 +243,5 @@ class LiveDataResponse(BaseModel):
     @property
     def template(self) -> str:
         """Deprecated: :attr:`source`."""
-        _deprecated("template", "source")
+        warn_renamed("template", "source", stacklevel=3, field=True)
         return self.source

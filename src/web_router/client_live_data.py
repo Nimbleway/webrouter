@@ -18,20 +18,15 @@ as mixins, so the methods sit beside ``search`` and ``extract``.
 from __future__ import annotations
 
 import threading
-import warnings
 from collections.abc import Mapping
 from typing import Any
 
-from web_router.constants_live_data import MSG_LIVE_DATA_DEPRECATED_NAME
+from web_router.live_data_compat import warn_renamed
 from web_router.live_data_search import asearch_live_data_sources, search_live_data_sources
 from web_router.providers.base import LiveDataProvider
 from web_router.registry import create_live_data_provider
 from web_router.types import ExtractFormat, Provider, provider_name
 from web_router.types_live_data import LiveDataRequest, LiveDataResponse, LiveDataSource, LiveDataSourcePage
-
-
-def _renamed(old: str, new: str) -> None:
-    warnings.warn(MSG_LIVE_DATA_DEPRECATED_NAME.format(old=old, new=new), DeprecationWarning, stacklevel=3)
 
 
 class _LiveDataLookup:
@@ -61,7 +56,7 @@ class _LiveDataLookup:
 
     def get_template_provider(self, name: str | Provider | LiveDataProvider) -> LiveDataProvider:
         """Deprecated: :meth:`get_live_data_provider`."""
-        _renamed("get_template_provider", "get_live_data_provider")
+        warn_renamed("get_template_provider", "get_live_data_provider", stacklevel=3)
         return self.get_live_data_provider(name)
 
     @staticmethod
@@ -139,17 +134,17 @@ class SyncLiveData(_LiveDataLookup):
 
     def templates(self, **kwargs: Any) -> LiveDataSourcePage:
         """Deprecated: :meth:`live_data_sources`."""
-        _renamed("templates", "live_data_sources")
+        warn_renamed("templates", "live_data_sources", stacklevel=3)
         return self.live_data_sources(**kwargs)
 
     def template(self, name: str, **kwargs: Any) -> LiveDataSource:
         """Deprecated: :meth:`live_data_source`."""
-        _renamed("template", "live_data_source")
+        warn_renamed("template", "live_data_source", stacklevel=3)
         return self.live_data_source(name, **kwargs)
 
     def run_template(self, template: str, inputs: Mapping[str, Any] | None = None, **kwargs: Any) -> LiveDataResponse:
         """Deprecated: :meth:`live_data`."""
-        _renamed("run_template", "live_data")
+        warn_renamed("run_template", "live_data", stacklevel=3)
         return self.live_data(template, inputs, **kwargs)
 
 
@@ -187,17 +182,17 @@ class AsyncLiveData(_LiveDataLookup):
 
     async def templates(self, **kwargs: Any) -> LiveDataSourcePage:
         """Deprecated: :meth:`live_data_sources`."""
-        _renamed("templates", "live_data_sources")
+        warn_renamed("templates", "live_data_sources", stacklevel=3)
         return await self.live_data_sources(**kwargs)
 
     async def template(self, name: str, **kwargs: Any) -> LiveDataSource:
         """Deprecated: :meth:`live_data_source`."""
-        _renamed("template", "live_data_source")
+        warn_renamed("template", "live_data_source", stacklevel=3)
         return await self.live_data_source(name, **kwargs)
 
     async def run_template(
         self, template: str, inputs: Mapping[str, Any] | None = None, **kwargs: Any
     ) -> LiveDataResponse:
         """Deprecated: :meth:`live_data`."""
-        _renamed("run_template", "live_data")
+        warn_renamed("run_template", "live_data", stacklevel=3)
         return await self.live_data(template, inputs, **kwargs)

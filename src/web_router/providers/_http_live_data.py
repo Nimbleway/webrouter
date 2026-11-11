@@ -16,8 +16,9 @@ from typing import Any, ClassVar, TypeVar
 
 import httpx
 
-from web_router.constants_live_data import LIVE_DATA_HTTP_TIMEOUT, MSG_LIVE_DATA_BAD_PAGE
+from web_router.constants_live_data import LIVE_DATA_HTTP_TIMEOUT
 from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
+from web_router.live_data_catalogue import check_page
 from web_router.providers._http import _HttpProvider
 from web_router.providers._utils import compact
 from web_router.providers.base import LiveDataProvider
@@ -63,8 +64,7 @@ class HttpLiveDataProvider(_HttpProvider, LiveDataProvider):
         Python's slicing would read ``offset=-1`` as "the last one" and ``limit=-1``
         as "all but the last", neither of which is a page.
         """
-        if (limit is not None and limit < 0) or (offset is not None and offset < 0):
-            raise ValueError(MSG_LIVE_DATA_BAD_PAGE.format(limit=limit, offset=offset))
+        check_page(limit, offset)
         start = offset or 0
         return list(items[start:] if limit is None else items[start : start + limit]), start
 
