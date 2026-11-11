@@ -37,7 +37,9 @@ ENV_MCP_TIME_LIMIT_S = "WEB_ROUTER_MCP_TIME_LIMIT_S"
 """The operator's ceiling on how long one connection may run billed calls, in seconds from its start."""
 
 ENV_MCP_ROUTER = "WEB_ROUTER_MCP_ROUTER"
-"""``<module>:<attribute>``, the router ``web_run`` plans with; ``off`` for none. The built-in rules router when unset.
+"""``<module>:<attribute>``, the router ``web_run`` plans with; ``remote`` for a router service at
+``WEB_ROUTER_REMOTE_ROUTER_URL``; another built-in router by name, configured by
+``WEB_ROUTER_MCP_ROUTER_CONFIG``; ``off`` for none. The built-in rules router when unset.
 
 The three are read once, when the server starts, from the process environment
 only: no ``.env`` file and no ``load_env`` call can set or change them.
@@ -48,7 +50,7 @@ MCP_ROUTER_OFF = "off"
 
 MCP_URL_POLICY: Literal["public_only"] = "public_only"
 """The ``url_policy`` ``web_run``'s plans hold to, and the check every URL an agent passes ``extract``,
-``browse`` (``start_url``) and ``run_template`` (a URL-valued input) meets before anything is sent.
+``browse`` (``start_url``) and ``live_data`` (a URL-valued input) meets before anything is sent.
 
 A prompt or a page cannot steer the user's keyed account at loopback, private
 or metadata hosts, or hand a vendor a ``file:`` URL. The browser tools keep
@@ -58,7 +60,7 @@ port: other loopback and private hosts are admitted.
 """
 
 MCP_URL_POLICY_NOTE = (
-    "Holds for web_run's plans and for the URLs passed to extract, browse and run_template, which are refused "
+    "Holds for web_run's plans and for the URLs passed to extract, browse and live_data, which are refused "
     "before anything is sent. The browser tools have their own guard, which refuses cloud metadata hosts and "
     "the browser's debugging port but admits other loopback and private hosts."
 )
@@ -80,8 +82,21 @@ MCP_ROUTER_OPERATOR_NOTE = (
 )
 """Where an operator's router runs, and what that means for the prompt."""
 
+MCP_ROUTER_REMOTE = "remote"
+MCP_ROUTER_REMOTE_NOTE = (
+    "web_run sends each prompt, the URLs in it whole, the budget and the candidate ids (tool:provider, which name the "
+    "backends configured here) to the router service at {host}; never a key value."
+)
+"""Where the ``remote`` router runs, and what it is sent: the capabilities resource names the service's host."""
+
 MCP_PROMPT_NOTE = "web_run sends the prompt to the backend that serves it, as its query or task, as search does."
 """What the capabilities resource says of the prompt whatever the router: a backend always receives it."""
+
+MCP_REMOTE_PROMPT_NOTE = (
+    " With the remote router, web_run also sends each prompt to the router service, the URLs in it whole,"
+    " query strings included, before the plan is made."
+)
+"""What the ``prompt_note`` adds with the ``remote`` router: the prompt and its URLs leave the machine whole."""
 
 MCP_TOOL_WEB_RUN = "web_run"
 MCP_TOOL_BUDGET_START = "budget_start"
@@ -164,12 +179,15 @@ MCP_MSG_UNKNOWN_ARGUMENTS = "{tool} does not take {names}, so nothing was run. I
 MCP_NO_ARGUMENTS = "no arguments"
 """An argument the tool does not declare -- a typo, a guessed option -- refused rather than dropped."""
 
-MCP_MSG_ROUTER_SPEC = "{env_var}={value!r} names no router: expected <module>:<attribute>, or 'off'."
+MCP_MSG_ROUTER_SPEC = (
+    "{env_var}={value!r} names no router: expected <module>:<attribute>, a built-in router's name, or 'off'."
+)
 MCP_MSG_ROUTER_IMPORT = "{env_var}={value!r}: {error}"
+MCP_MSG_REMOTE_URL = "{env_var}=remote needs {url_var}, the router service's https URL, set in the same environment."
 MCP_MSG_CEILING_VALUE = "{env_var}={value!r} is not a positive number."
 MCP_MSG_BUDGET_LIMIT = "{tool}: `{name}` must be a positive number, got {value!r}."
 
-MCP_PRICE_RUN_TEMPLATE = "run_template"
+MCP_PRICE_LIVE_DATA = "live_data"
 MCP_PRICE_OPEN_BROWSER = "open_browser"
 """The price list's methods for the two billed tools no ``auto`` hooks, which the server charges itself."""
 
