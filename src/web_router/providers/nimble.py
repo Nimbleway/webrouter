@@ -3,7 +3,7 @@
 Search, extract and research are separate classes over one SDK client: the
 Search API ranks the web, the Extract API fetches a page you already have the
 URL of, and the Web Search Agent researches a question over several turns.
-The Extract Template class is next door in :mod:`web_router.providers.nimble_template`,
+The Extract Template class is next door in :mod:`web_router.providers.nimble_live_data`,
 on the same clients. Install with the ``search`` extra, ``[extract]`` or
 ``[research]``. All of them read ``NIMBLE_API_KEY`` unless a key is passed
 explicitly, or use a caller's own ``AsyncNimble`` passed as ``async_client``.

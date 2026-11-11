@@ -7,12 +7,13 @@ Point the router at a provider and call it; swapping backends is a one-word chan
     >>> response = router.search("what is retrieval augmented generation", max_results=5)
     >>> pages = router.extract(response.urls[:3], format="markdown")
 
-:meth:`~web_router.WebRouter.run_template` runs a backend's Extract Template --
-a saved, site-specific extraction that turns one page into a record -- with
-:meth:`~web_router.WebRouter.templates` and :meth:`~web_router.WebRouter.template`
-to find one and read the inputs it takes:
+:meth:`~web_router.WebRouter.live_data` runs a vendor's ready-made scraper for
+one site -- Nimble's Extract Templates, Apify's Actors, Bright Data's scrapers,
+Oxylabs' sources -- and returns structured records fetched for this call, with
+:meth:`~web_router.WebRouter.live_data_sources` and
+:meth:`~web_router.WebRouter.live_data_source` to find one and read its inputs:
 
-    >>> record = router.run_template("books_pdp", {"url": "https://books.example/..."}).data
+    >>> records = router.live_data("books_pdp", {"url": "https://books.example/..."}, provider="nimble").records
 
 :meth:`~web_router.WebRouter.answer` asks one question and returns the
 backend's written answer with the sources it rests on, in a single call:
@@ -39,6 +40,7 @@ holding it ends:
     ...     tree = browser.snapshot().tree
 """
 
+from web_router import live_data_compat as _live_data_compat
 from web_router._version import __version__
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.client_scope import AsyncBudgetScope, BudgetScope
@@ -61,12 +63,13 @@ from web_router.exceptions import (
     ResearchTimeoutError,
     RouterError,
     StaleElementError,
-    TemplateNotFoundError,
     UnsupportedFormatError,
     UnsupportedParameterError,
     WebRouterError,
 )
 from web_router.exceptions_budget import BudgetExceededError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
+from web_router.live_data_search import NativeSourceSearch
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -75,36 +78,36 @@ from web_router.providers.base import (
     BrowserHandle,
     BrowserProvider,
     ExtractProvider,
+    LiveDataProvider,
     ResearchJob,
     ResearchProvider,
     SearchProvider,
-    TemplateProvider,
 )
 from web_router.registry import (
     available_browse_providers,
     available_browser_providers,
     available_extract_providers,
+    available_live_data_providers,
     available_providers,
     available_research_providers,
-    available_template_providers,
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
+    configured_live_data_providers,
     configured_providers,
     configured_research_providers,
-    configured_template_providers,
     register_browse_provider,
     register_browser_provider,
     register_extract_provider,
+    register_live_data_provider,
     register_provider,
     register_research_provider,
-    register_template_provider,
     unregister_browse_provider,
     unregister_browser_provider,
     unregister_extract_provider,
+    unregister_live_data_provider,
     unregister_provider,
     unregister_research_provider,
-    unregister_template_provider,
 )
 from web_router.registry_answer import (
     available_answer_providers,
@@ -132,7 +135,6 @@ from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
-    TEMPLATE_PARAMETERS,
     BrowseOutcome,
     BrowseProgress,
     BrowseRequest,
@@ -159,16 +161,19 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
     StealthLevel,
-    Template,
-    TemplatePage,
-    TemplateRequest,
-    TemplateResponse,
-    TemplateSample,
     Viewport,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionMember, DecisionRecord
+from web_router.types_live_data import (
+    LIVE_DATA_PARAMETERS,
+    LiveDataRequest,
+    LiveDataResponse,
+    LiveDataSample,
+    LiveDataSource,
+    LiveDataSourcePage,
+)
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 __all__ = [
@@ -177,9 +182,9 @@ __all__ = [
     "BROWSE_PARAMETERS",
     "DEFAULT_PROVIDER",
     "EXTRACT_PARAMETERS",
+    "LIVE_DATA_PARAMETERS",
     "NORMALIZED_PARAMETERS",
     "RESEARCH_PARAMETERS",
-    "TEMPLATE_PARAMETERS",
     "AnswerProvider",
     "AnswerRequest",
     "AnswerResponse",
@@ -230,7 +235,15 @@ __all__ = [
     "ExtractRequest",
     "ExtractResponse",
     "ExtractedDocument",
+    "LiveDataProvider",
+    "LiveDataRequest",
+    "LiveDataResponse",
+    "LiveDataSample",
+    "LiveDataSource",
+    "LiveDataSourceNotFoundError",
+    "LiveDataSourcePage",
     "MissingParameterError",
+    "NativeSourceSearch",
     "NavigationError",
     "NoAnswerProviderError",
     "PageClosedError",
@@ -265,13 +278,6 @@ __all__ = [
     "SearchResult",
     "StaleElementError",
     "StealthLevel",
-    "Template",
-    "TemplateNotFoundError",
-    "TemplatePage",
-    "TemplateProvider",
-    "TemplateRequest",
-    "TemplateResponse",
-    "TemplateSample",
     "ToolName",
     "UnsupportedFormatError",
     "UnsupportedParameterError",
@@ -283,31 +289,41 @@ __all__ = [
     "available_browse_providers",
     "available_browser_providers",
     "available_extract_providers",
+    "available_live_data_providers",
     "available_providers",
     "available_research_providers",
     "available_routers",
-    "available_template_providers",
     "configured_answer_providers",
     "configured_browse_providers",
     "configured_browser_providers",
     "configured_extract_providers",
+    "configured_live_data_providers",
     "configured_providers",
     "configured_research_providers",
-    "configured_template_providers",
     "register_answer_provider",
     "register_browse_provider",
     "register_browser_provider",
     "register_extract_provider",
+    "register_live_data_provider",
     "register_provider",
     "register_research_provider",
     "register_router",
-    "register_template_provider",
     "unregister_answer_provider",
     "unregister_browse_provider",
     "unregister_browser_provider",
     "unregister_extract_provider",
+    "unregister_live_data_provider",
     "unregister_provider",
     "unregister_research_provider",
     "unregister_router",
-    "unregister_template_provider",
 ]
+
+
+_live_data_compat.install()
+
+
+def __getattr__(name: str) -> object:
+    """The names live data had as "templates" -- ``TemplateResponse`` and the rest -- with a warning."""
+    from web_router.live_data_compat import resolve
+
+    return resolve(name)

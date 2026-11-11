@@ -7,9 +7,9 @@ MCP_TOOL_HINTS: dict[str, tuple[str, bool, bool, bool, bool]] = {
     # Read-only means it changes nothing the user owns, not that it is free: a billed lookup is read-only.
     "search": ("Search the web", True, False, True, True),
     "extract": ("Read pages by URL", True, False, True, True),
-    "templates": ("List Extract Templates", True, False, True, True),
-    "template": ("Describe an Extract Template", True, False, True, True),
-    "run_template": ("Run an Extract Template", True, False, True, True),
+    "live_data_sources": ("List live data sources", True, False, True, True),
+    "live_data_source": ("Describe a live data source", True, False, True, True),
+    "live_data": ("Run a live data source", True, False, True, True),
     "answer": ("Answer a question", True, False, True, True),
     "research": ("Start a research run (billed)", False, False, False, True),
     "research_status": ("Poll a research run", True, False, True, False),

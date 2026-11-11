@@ -50,7 +50,7 @@ MCP_ROUTER_OFF = "off"
 
 MCP_URL_POLICY: Literal["public_only"] = "public_only"
 """The ``url_policy`` ``web_run``'s plans hold to, and the check every URL an agent passes ``extract``,
-``browse`` (``start_url``) and ``run_template`` (a URL-valued input) meets before anything is sent.
+``browse`` (``start_url``) and ``live_data`` (a URL-valued input) meets before anything is sent.
 
 A prompt or a page cannot steer the user's keyed account at loopback, private
 or metadata hosts, or hand a vendor a ``file:`` URL. The browser tools keep
@@ -60,7 +60,7 @@ port: other loopback and private hosts are admitted.
 """
 
 MCP_URL_POLICY_NOTE = (
-    "Holds for web_run's plans and for the URLs passed to extract, browse and run_template, which are refused "
+    "Holds for web_run's plans and for the URLs passed to extract, browse and live_data, which are refused "
     "before anything is sent. The browser tools have their own guard, which refuses cloud metadata hosts and "
     "the browser's debugging port but admits other loopback and private hosts."
 )
@@ -187,6 +187,6 @@ MCP_MSG_REMOTE_URL = "{env_var}=remote needs {url_var}, the router service's htt
 MCP_MSG_CEILING_VALUE = "{env_var}={value!r} is not a positive number."
 MCP_MSG_BUDGET_LIMIT = "{tool}: `{name}` must be a positive number, got {value!r}."
 
-MCP_PRICE_RUN_TEMPLATE = "run_template"
+MCP_PRICE_LIVE_DATA = "live_data"
 MCP_PRICE_OPEN_BROWSER = "open_browser"
 """The price list's methods for the two billed tools no ``auto`` hooks, which the server charges itself."""

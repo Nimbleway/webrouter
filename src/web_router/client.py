@@ -8,10 +8,10 @@ A name does not imply every method: most search backends do not extract, and som
 Each method resolves the name against its own registry, so asking one for a backend that only serves another
 reports it as unknown and lists the ones that method does serve.
 
-:meth:`WebRouter.run_template` runs one of a vendor's templates -- a saved, site-specific extraction that turns one
-page into a record -- and :meth:`WebRouter.templates` and :meth:`WebRouter.template` list and describe the
-catalogue it is picked from; the three share one registry, and all three need ``provider`` named, since a
-template's name belongs to one vendor.
+:meth:`WebRouter.live_data` runs one of a vendor's ready-made scrapers for one
+site and returns structured records fetched for this call;
+:meth:`WebRouter.live_data_sources` and :meth:`WebRouter.live_data_source`
+list and describe the catalogue (``client_live_data.py``).
 
 :meth:`WebRouter.research` behaves differently (:meth:`WebRouter.answer`, one cited answer, does not): an agentic
 run takes minutes rather than milliseconds, so it waits for the answer -- or hands back a
@@ -40,6 +40,7 @@ from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
 from web_router.client_budget import AsyncBudget, SyncBudget
 from web_router.client_config import config_for
+from web_router.client_live_data import AsyncLiveData, SyncLiveData
 from web_router.client_plan import AsyncPlan, SyncPlan
 from web_router.client_requests import JsonSchema as JsonSchema
 from web_router.client_requests import (
@@ -50,7 +51,6 @@ from web_router.client_requests import (
     build_research_request,
     build_search_request,
 )
-from web_router.client_template import AsyncTemplate, SyncTemplate
 from web_router.constants import (
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
@@ -66,10 +66,10 @@ from web_router.providers.base import (
     BrowserHandle,
     BrowserProvider,
     ExtractProvider,
+    LiveDataProvider,
     ResearchJob,
     ResearchProvider,
     SearchProvider,
-    TemplateProvider,
     _BaseProvider,
 )
 from web_router.registry import (
@@ -78,7 +78,6 @@ from web_router.registry import (
     create_extract_provider,
     create_provider,
     create_research_provider,
-    create_template_provider,
 )
 from web_router.registry_answer import every_provider_name
 from web_router.routing import Budget, RouterLike, ToolName
@@ -151,7 +150,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         # Keyed separately from the search instances: one name resolves to a different class per method, and a
         # vendor serving all three is three objects here.
         self._extract_instances: dict[str, ExtractProvider] = {}
-        self._template_instances: dict[str, TemplateProvider] = {}
+        self._live_data_instances: dict[str, LiveDataProvider] = {}
         self._research_instances: dict[str, ResearchProvider] = {}
         self._answer_instances: dict[str, AnswerProvider] = {}
         self._browser_instances: dict[str, BrowserProvider] = {}
@@ -204,22 +203,6 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
             if key not in self._extract_instances:
                 self._extract_instances[key] = create_extract_provider(key, **self._config_for(key))
             return self._extract_instances[key]
-
-    def get_template_provider(self, name: str | Provider | TemplateProvider) -> TemplateProvider:
-        """Return the named template provider, constructing and caching it on first use.
-
-        The template counterpart of :meth:`get_provider`, with the same
-        ownership rule -- but no default: a template's name belongs to one
-        vendor, so the caller always says which.
-        """
-        if isinstance(name, TemplateProvider):
-            return name
-
-        key = provider_name(name)
-        with self._providers_lock:
-            if key not in self._template_instances:
-                self._template_instances[key] = create_template_provider(key, **self._config_for(key))
-            return self._template_instances[key]
 
     def get_research_provider(self, name: str | Provider | ResearchProvider | None = None) -> ResearchProvider:
         """Return the named research provider, constructing and caching it on first use.
@@ -291,7 +274,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         return [
             *self._instances.values(),
             *self._extract_instances.values(),
-            *self._template_instances.values(),
+            *self._live_data_instances.values(),
             *self._research_instances.values(),
             *self._answer_instances.values(),
             *self._browser_instances.values(),
@@ -302,7 +285,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan, SyncBudget, SyncTemplate):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchmark, SyncPlan, SyncBudget):
     """Synchronous router.
 
     Example:
@@ -632,7 +615,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
 
 
 class AsyncWebRouter(
-    _BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncPlan, AsyncBudget, AsyncTemplate
+    _BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncLiveData, AsyncBenchmark, AsyncPlan, AsyncBudget
 ):
     """Asynchronous router.
 
