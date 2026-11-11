@@ -155,10 +155,12 @@ def shape_endpoint(
 
 def shape_vendor_response(response: VendorResponse, handle: str, *, budget: int) -> dict[str, Any]:
     """The vendor's answer, whole when it fits, else cut as text with the handle that holds the rest."""
-    data, count = redact(response.data if response.data is not None else response.text)
     if response.content is not None:
-        size, kind = len(response.content), response.content_type or "an unknown type"
-        data = MCP_MSG_VENDOR_BINARY.format(size=size, content_type=kind, handle=handle)
+        kind = response.content_type or "an unknown type"
+        data: Any = MCP_MSG_VENDOR_BINARY.format(size=len(response.content), content_type=kind, handle=handle)
+        count = 0
+    else:
+        data, count = redact(response.data if response.data is not None else response.text)
     payload: dict[str, Any] = {
         "vendor": response.vendor,
         "endpoint": response.endpoint,

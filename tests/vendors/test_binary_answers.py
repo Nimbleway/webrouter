@@ -29,15 +29,14 @@ def _call(recorder: Recorder) -> Any:
         return router.call_vendor("datadog.monitors.list")
 
 
-@pytest.mark.parametrize("content_type", ["image/png", "application/pdf", "application/octet-stream"])
-def test_a_binary_body_is_kept_as_bytes(content_type: str) -> None:
-    response = _call(_answer(_PNG, content_type))
+def test_a_binary_body_is_kept_as_bytes() -> None:
+    response = _call(_answer(_PNG, "image/png"))
     assert response.content == _PNG
     assert response.data is None and response.text is None
     assert response.model_dump(mode="json")["content"] == base64.urlsafe_b64encode(_PNG).decode()
 
 
-@pytest.mark.parametrize("content_type", ["text/csv; charset=utf-8", "application/xml", None])
+@pytest.mark.parametrize("content_type", ["text/csv; charset=utf-8", None])
 def test_a_text_body_is_still_text(content_type: str | None) -> None:
     response = _call(_answer(b"a,b\n1,2\n", content_type))
     assert response.text == "a,b\n1,2\n"

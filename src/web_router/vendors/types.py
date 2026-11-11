@@ -46,7 +46,10 @@ class VendorResponse(BaseModel):
     text: str | None = Field(default=None, description="The body as text, when it was not JSON.")
     content: bytes | None = Field(
         default=None,
-        description="The body's bytes when its content type is not text (an image, a PDF); URL-safe base64 in JSON.",
+        description=(
+            "The body's bytes when its content type is not text (an image, a PDF); URL-safe base64 in JSON."
+            " Not masked: a key the vendor echoed inside a file would stay there."
+        ),
     )
     content_type: str | None = None
     headers: dict[str, str] = Field(
