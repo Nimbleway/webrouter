@@ -1,0 +1,267 @@
+{
+  "vendor": "legislation-gov-uk",
+  "name": "legislation.gov.uk",
+  "category": "other",
+  "summary": "UK legislation (Acts, statutory instruments, devolved legislation) as revised and as enacted, in XML or Atom, from The National Archives' free Legislation API.",
+  "docs_url": "https://www.legislation.gov.uk/developer",
+  "base_url": "https://www.legislation.gov.uk",
+  "notes": [
+    "Keyless; reuse is under the Open Government Licence v3.0 with exceptions the site lists, and a fair use policy applies.",
+    "Items are addressed as /{type}/{year}/{number}: type is a code such as ukpga (UK Public General Acts), uksi (UK Statutory Instruments), asp, ssi, wsi, nia, nisr; all, primary and secondary work in listings.",
+    "The format is picked by a data.ext suffix (data.xml, data.rdf, data.feed) or by content negotiation on the Accept header; without either you get the HTML page.",
+    "With no version the current revised text is returned; a date (YYYY-MM-DD) gives the text in force then, enacted or made the original. Dates before 1991-02-01 redirect to the base-date version.",
+    "Lists are Atom feeds paged by first/previous/next/last links, with opensearch:totalResults and leg:morePages."
+  ],
+  "sources": [
+    "https://www.legislation.gov.uk/developer",
+    "https://www.legislation.gov.uk/developer/uris",
+    "https://www.legislation.gov.uk/developer/searching",
+    "https://www.legislation.gov.uk/developer/formats",
+    "https://www.legislation.gov.uk/developer/formats/atom"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "legislation-gov-uk.legislation.get",
+      "name": "Get a piece of legislation",
+      "summary": "Metadata and full text of one Act or instrument, current revised version, as Legislation Schema XML.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{type}/{year}/{number}/data.xml",
+      "params": {
+        "type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legislation type code, e.g. ukpga, uksi, asp, ssi, wsi, nia.",
+          "example": "ukpga"
+        },
+        "year": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Year (or regnal year for older Acts).",
+          "example": "1985"
+        },
+        "number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chapter or instrument number.",
+          "example": "67"
+        }
+      },
+      "notes": [
+        "A whole large Act can be big; use legislation.section for one provision."
+      ],
+      "job": "legislation.get",
+      "docs_url": "https://www.legislation.gov.uk/developer/uris",
+      "verified": {
+        "docs": "https://www.legislation.gov.uk/developer/uris"
+      }
+    },
+    {
+      "id": "legislation-gov-uk.legislation.version",
+      "name": "Get legislation as at a date",
+      "summary": "One Act or instrument as in force on a date, or as enacted/made, or with prospective changes, as XML.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{type}/{year}/{number}/{version}/data.xml",
+      "params": {
+        "type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legislation type code.",
+          "example": "ukpga"
+        },
+        "year": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Year.",
+          "example": "1985"
+        },
+        "number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chapter or instrument number.",
+          "example": "67"
+        },
+        "version": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A date YYYY-MM-DD, or enacted (Acts), made or created (instruments), or prospective.",
+          "example": "1997-06-01"
+        }
+      },
+      "job": "legislation.get",
+      "docs_url": "https://www.legislation.gov.uk/developer/uris",
+      "verified": {
+        "docs": "https://www.legislation.gov.uk/developer/uris"
+      }
+    },
+    {
+      "id": "legislation-gov-uk.legislation.section",
+      "name": "Get one provision",
+      "summary": "One section, article, regulation, rule or schedule of an Act or instrument, as XML.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{type}/{year}/{number}/{division}/{section}/data.xml",
+      "params": {
+        "type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legislation type code.",
+          "example": "ukpga"
+        },
+        "year": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Year.",
+          "example": "1984"
+        },
+        "number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chapter or instrument number.",
+          "example": "27"
+        },
+        "division": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Division name for the type: section (Acts), article (Orders), regulation (Regulations), rule (Rules), schedule.",
+          "enum": [
+            "section",
+            "article",
+            "regulation",
+            "rule",
+            "schedule"
+          ],
+          "example": "section"
+        },
+        "section": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Number (or schedule letter) of the provision.",
+          "example": "6"
+        }
+      },
+      "job": "legislation.get",
+      "docs_url": "https://www.legislation.gov.uk/developer/uris",
+      "verified": {
+        "docs": "https://www.legislation.gov.uk/developer/uris"
+      }
+    },
+    {
+      "id": "legislation-gov-uk.legislation.list",
+      "name": "List legislation by type and year",
+      "summary": "Atom feed of the legislation of one type (or all, primary, secondary) in a year or year range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{type}/{years}",
+      "params": {
+        "type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Legislation type code, or all, primary or secondary.",
+          "example": "ukpga"
+        },
+        "years": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A year, or a range start-end, with * for an open end (2000-*, *-1990).",
+          "example": "2020"
+        },
+        "accept": {
+          "in": "header",
+          "type": "string",
+          "wire_name": "Accept",
+          "required": true,
+          "description": "application/atom+xml for the Atom feed; without it the HTML page comes back.",
+          "example": "application/atom+xml"
+        }
+      },
+      "job": "legislation.search",
+      "docs_url": "https://www.legislation.gov.uk/developer/searching",
+      "verified": {
+        "docs": "https://www.legislation.gov.uk/developer/searching"
+      }
+    },
+    {
+      "id": "legislation-gov-uk.legislation.search",
+      "name": "Search legislation by title",
+      "summary": "Atom feed of legislation whose title matches, optionally by type, year range and number range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Title words; case-insensitive, supports + (and), - (not) and \"phrases\".",
+          "example": "Transport"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Legislation type code; join several with +, or * for all."
+        },
+        "start_year": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "start-year",
+          "description": "First year."
+        },
+        "end_year": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "end-year",
+          "description": "Last year."
+        },
+        "start_number": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "start-number",
+          "description": "First number."
+        },
+        "end_number": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "end-number",
+          "description": "Last number."
+        },
+        "version": {
+          "in": "query",
+          "type": "string",
+          "description": "Point-in-time version, e.g. a date YYYY-MM-DD."
+        },
+        "accept": {
+          "in": "header",
+          "type": "string",
+          "wire_name": "Accept",
+          "required": true,
+          "description": "application/atom+xml for the Atom feed.",
+          "example": "application/atom+xml"
+        }
+      },
+      "notes": [
+        "A search that matches a simple listing URI redirects to it (301)."
+      ],
+      "job": "legislation.search",
+      "docs_url": "https://www.legislation.gov.uk/developer/searching",
+      "verified": {
+        "docs": "https://www.legislation.gov.uk/developer/searching"
+      }
+    }
+  ]
+}
