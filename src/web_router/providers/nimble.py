@@ -15,7 +15,7 @@ import math
 from typing import Any, ClassVar, TypeVar
 
 import httpx
-from nimble_python import AsyncNimble, Nimble
+from nimble_python import APIError, AsyncNimble, Nimble
 
 from web_router.constants import (
     ENV_NIMBLE_API_KEY,
@@ -46,6 +46,7 @@ from web_router.constants import (
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._clamp import clamp_timeout
 from web_router.providers._deadline import current_deadline, research_budget
+from web_router.providers._research_start import aread_or_running, read_or_running
 from web_router.providers._utils import best_text, build_payload, compact, mapped, model_to_dict, resolve_api_key
 from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider, _BaseProvider
 from web_router.types import (
@@ -315,27 +316,27 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
             return read
         return httpx.Timeout(connect=configured.connect, read=read, write=configured.write, pool=configured.pool)
 
-    def _budgeted(self) -> Nimble:
-        """The client, with this request clamped to whatever the caller has left.
+    def _budgeted(self, retries: int | None = None) -> Nimble:
+        """The client, clamped to whatever the caller has left; ``retries=0`` for the call that creates a run.
 
-        The SDK's own timeout bounds one request; it knows nothing about the
-        research budget the caller asked for, so a slow run would otherwise
-        outlast a short timeout by however much the two disagree.
+        The SDK's own timeout knows nothing about the research budget the caller asked for, so a slow run would
+        outlast a short one. And a retried create, after a timeout or a 5xx the backend acted on, bills a second run.
         """
         client = self._sync_client
-        return client.with_options(timeout=self._request_timeout(client))
+        return client.with_options(timeout=self._request_timeout(client), **compact({"max_retries": retries}))
 
-    def _abudgeted(self) -> AsyncNimble:
+    def _abudgeted(self, retries: int | None = None) -> AsyncNimble:
         """Async counterpart of :meth:`_budgeted`."""
-        return self._async_client.with_options(timeout=self._request_timeout(self._async_client))
+        client = self._async_client
+        return client.with_options(timeout=self._request_timeout(client), **compact({"max_retries": retries}))
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
-        run = model_to_dict(self._budgeted().agents.run(**self._build_payload(request)))
-        return self._progress(request, run)
+        run = model_to_dict(self._budgeted(retries=0).agents.run(**self._build_payload(request)))
+        return read_or_running(lambda: self._progress(request, run), _job_id(run), (APIError,))
 
     async def _astart(self, request: ResearchRequest) -> ResearchProgress:
-        run = model_to_dict(await self._abudgeted().agents.run(**self._build_payload(request)))
-        return await self._aprogress(request, run)
+        run = model_to_dict(await self._abudgeted(retries=0).agents.run(**self._build_payload(request)))
+        return await aread_or_running(lambda: self._aprogress(request, run), _job_id(run), (APIError,))
 
     def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
         agent_id, run_id = _split_job_id(self.name, job_id)
@@ -347,8 +348,7 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
         run = model_to_dict(await self._abudgeted().agents.runs.get(run_id, agent_id=agent_id))
         return await self._aprogress(request, run)
 
-    # No `_cancel`: a run exposes get, result, list and stream_events and nothing
-    # that stops one -- `agents.delete` removes the agent, not the run under it.
+    # No `_cancel`: get, result, list and stream_events never stop a run, and `agents.delete` drops the agent.
 
     conditions: ClassVar[str | None] = MSG_NIMBLE_ENRICHMENT
 

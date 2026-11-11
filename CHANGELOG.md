@@ -14,10 +14,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Changed
 
 - **Templates are renamed live data.** `run_template()`, `templates()` and `template()` are now `live_data()`, `live_data_sources()` and `live_data_source()`; `TemplateRequest`, `TemplateResponse`, `Template`, `TemplatePage`, `TemplateSample`, `TemplateProvider` and `TemplateNotFoundError` are `LiveDataRequest`, `LiveDataResponse`, `LiveDataSource`, `LiveDataSourcePage`, `LiveDataSample`, `LiveDataProvider` and `LiveDataSourceNotFoundError`, and the run's `template` field is `source`. The old names still work, with a `DeprecationWarning`, until a later release removes them: imported from `web_router` or from the module they lived in (`web_router.types`, `web_router.registry`, `web_router.exceptions`, `web_router.providers.base`, `web_router.providers.nimble_template`), as a provider's `templates()`/`template()` and their async twins, and as `TemplateNotFoundError(provider, template=...)`. A live data source fetches the site for the call: a backend joins only if it fetches on request (stored datasets are `call_vendor`'s). `LiveDataResponse` gains `records`, every record the run extracted, with `data` kept as the first, and `fetched_at`, the vendor's own fetch time or `None`. **MCP: the tools are renamed with no alias** -- `live_data_sources`, `live_data_source` and `live_data` (its argument `template` is now `source`), and the capabilities resource keys them under `live_data`; a client re-reads the tool list on connect. Their results change keys too: a run returns `records` (every record), `record_count` and `fetched_at` in place of `data`; a listing returns `sources` and `source_count` in place of `templates` and `template_count`; a description returns `source` in place of `template`. The price-list method `run_template` is `live_data`.
+### Changed
+
+- The `evals` extra now accepts `anthropic` 2.x as well as 1.x, and the `browser` extra accepts Playwright 1.64 and 1.65 as well as 1.63; the browser actions were tested on 1.65 against a real Chromium.
+- `answer(provider="you", recency="day")` now raises `UnsupportedParameterError` before the call: live, You.com answered it citing pages several days old. `week`, `month` and `year` are unchanged, and the `auto` answer chain moves on to the next backend.
 
 ### Fixed
 
 - Nimble `research` at `effort="max"` runs again. Nimble's API refuses its own `max` tier, which is not open yet, with a 422, so `max` now sends `x-high`, the deepest tier it runs today.
+- `research(provider="auto")` no longer starts a second paid run after the first was created. A Nimble connection dropped after the request went out is no longer taken for one that never reached the backend, and a Nimble or Parallel run that finished in the start call but whose answer could not be fetched is returned as running, so the next poll reads it, instead of raised.
+- Nimble `research` no longer retries the call that starts a run. The SDK's two retries could create a second billed run after a timeout or a 5xx, and held the call for about three times its timeout.
+- `research(provider="perplexity")` and `answer(provider="perplexity")` now also cite the pages the agent opened (`fetch_url_results`), not only the ones its searches found. A page found and opened is cited once.
 
 ## [0.12.0] - 2026-11-10
 

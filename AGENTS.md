@@ -749,13 +749,18 @@ mapping keyed by method (`AUTO_CHAIN_METHODS`) sets only the ones it names.
 opened is paid for, and so is a task or research run that was accepted, so the
 browser, browse and research chains try the next member only on a failure
 `_nothing_started` in `auto.py` allows — a missing credential or extra, a 4xx, a connection that
-never reached the backend. A 5xx, a read timeout or an unreadable 200 may come
+never reached the backend (an SDK's catch-all connection error counts only when raised from a connect
+error). A 5xx, a read timeout or an unreadable 200 may come
 after the vendor created the session or task, so it raises rather than leaving
 the first billing while a second one starts; once a member has accepted,
 nothing else is started, and `auto` never opens two sessions in one call. The
 handle or job `auto` returns is the member's own, so its `provider` names that
 member and its release or poll goes to it. Only `auto` overrides
-`BrowserProvider._opened`, and a contract test enforces that.
+`BrowserProvider._opened`, and a contract test enforces that. The member's side
+of the same rule: once its create call has returned, its `_start` never raises
+for a later request, such as reading a run that finished at once —
+`read_or_running` in `providers/_research_start.py` reports it running instead —
+and an SDK client never retries the create call.
 
 **`local` comes last in the browser chain.** A key in the environment says
 which backend the caller wants, as it does for every other method, so the
