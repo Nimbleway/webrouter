@@ -7,7 +7,7 @@ Runnable scripts, roughly in the order worth reading them.
 | [`basic_search.py`](basic_search.py) | The whole API: search, read normalized results | Nimble |
 | [`extract.py`](extract.py) | `extract()`: page contents, formats, partial failure | no |
 | [`extract_max.py`](extract_max.py) | `max`: every extract backend at once, the first document wins, and a `hedge` that keeps most calls to one fetch | no |
-| [`extract_template.py`](extract_template.py) | `templates()`, `template()`, `run_template()`: the catalogue, a template's inputs, and one page turned into a record | Nimble |
+| [`live_data.py`](live_data.py) | `live_data_sources()`, `live_data_source()`, `live_data()`: the catalogue, a source's inputs, and the records it fetches | Nimble |
 | [`answer.py`](answer.py) | `answer()`: a backend's written answer and its sources in one call, the markers that tie them, a refused option, and what an unnamed call does | any answer key |
 | [`research.py`](research.py) | `research()`: prose, a schema, enrichment, and a job you can put down | any research key |
 | [`browser_session.py`](browser_session.py) | `open_browser()` on `local`: goto, snapshot, click, type, screenshot, read — sync and async | no |
@@ -17,8 +17,11 @@ Runnable scripts, roughly in the order worth reading them.
 | [`routing.py`](routing.py) | Defaults, per-call overrides, `provider_config`, `provider_options` | no |
 | [`router_rules.py`](router_rules.py) | Your own router in a few lines: a URL extracts, "compare", "report" or "analyze" researches, anything else has no opinion | no |
 | [`router_classifier.py`](router_classifier.py) | A scikit-learn pipeline, saved and loaded with joblib, ranking methods by `predict_proba`; `timeout_s = 0.05` | no, but scikit-learn |
-| [`router_llm.py`](router_llm.py) | An async router on any OpenAI-compatible server, its answer held to the candidate ids by a JSON schema; `timeout_s = 3.0` — sends the prompt to that server, bills | `OPENAI_API_KEY` + `LLM_ROUTER_MODEL` |
-| [`router_jev.py`](router_jev.py) | An async router on TypeSafe's Jev, ranking by its probability per candidate; `timeout_s = 1.0` — sends the prompt to TypeSafe, bills | `TYPESAFE_API_KEY` |
+| [`router_decider.py`](router_decider.py) | Your own decider in a few lines: `DeciderRouter` asks it one question and checks its ranking; registered by name with `register_router` | no |
+| [`router_llm.py`](router_llm.py) | The built-in `router="llm"` on a preset (`LLM_ROUTER_PRESET`, `openai` unless set): a chat model ranks the candidates, held to their ids; 3 s — sends the prompt to that server, bills | `LLM_ROUTER_MODEL` + the preset's key, such as `OPENAI_API_KEY` |
+| [`router_remote_server.py`](router_remote_server.py) | A router service in the standard library for `router="remote"`: the JSON wire format, schema 1, around the built-in rules router; `--demo` plans through it | no |
+| [`router_jev.py`](router_jev.py) | An async router on TypeSafe's Jev written out by hand, ranking by its probability per candidate; `timeout_s = 1.0` — sends the prompt to TypeSafe, bills. `router="systemone"` is the same built in | `TYPESAFE_API_KEY` |
+| [`router_openai_decisions.py`](router_openai_decisions.py) | OpenAI's Decisions API as a decider on `DeciderRouter`: one `choice` question over the candidates, ranked by its probability per option; 3 s — sends the prompt to OpenAI, bills | `OPENAI_API_KEY` |
 | [`error_handling.py`](error_handling.py) | Every exception and what to do about each | no |
 | [`search_depth.py`](search_depth.py) | `lite` / `fast` / `deep` measured across backends | no |
 | [`custom_provider.py`](custom_provider.py) | Adding your own backend, against Wikipedia's open API | no |
@@ -34,18 +37,19 @@ back to the anonymous tiers, and the examples that fan out use
 `configured_providers()` — or `configured_extract_providers()` — to route only
 to backends this environment can use.
 
-`answer.py`, `research.py`, `browse.py`, `browser_vendor.py` and `extract_template.py` are
+`answer.py`, `research.py`, `browse.py`, `browser_vendor.py` and `live_data.py` are
 the exceptions, and not by oversight: every agentic backend bills for the run,
-every cloud browser for the time it is open, and a template run fetches on the
+every cloud browser for the time it is open, and a live data run fetches on the
 backend's account, so there is no anonymous tier for them to fall back on.
 With no key each names the variables that would fix it and exits.
-`router_llm.py` and `router_jev.py` are exceptions too: each plan sends the
+`router_llm.py`, `router_jev.py` and `router_openai_decisions.py` are exceptions too: each plan sends the
 prompt to a model on another server, which bills for it unless it is your own. With no
 key each says what to set and exits. `router_classifier.py` needs no key but
 does need scikit-learn, which web-router does not depend on: run it with
 `uv run --with scikit-learn python examples/router_classifier.py`. The
-routers only `plan()`, which runs no search, so `router_rules.py` and
-`router_classifier.py` call nothing at all.
+routers only `plan()`, which runs no search, so `router_rules.py`,
+`router_decider.py` and `router_classifier.py` call nothing at all, and `router_remote_server.py
+--demo` calls only the server it starts on this machine.
 `browser_session.py` needs no key but does need the `browser` extra and a
 Chrome or Chromium on the machine — `local` launches it for the session and
 stops it on the way out. `evaluate_accuracy.py` needs the `evals` extra and
