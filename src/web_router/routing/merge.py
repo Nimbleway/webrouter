@@ -45,10 +45,11 @@ from web_router.constants_merge import (
     NOTE_EXCLUDE,
     ROUTER_INVALID,
 )
+from web_router.routing.composite import decides_nothing
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
 from web_router.routing.merge_extract import extract_or_search, lost_its_urls, prompt_request
 from web_router.routing.merge_params import checked_params
-from web_router.routing.merge_shape import TOOLS, decides_nothing, well_formed
+from web_router.routing.merge_shape import TOOLS, well_formed
 from web_router.routing.merge_types import FallbackReason, Merged, MergeNotes, settled
 from web_router.routing.merge_urls import UrlCheck, hide_urls
 from web_router.types import NormalizedRequest
