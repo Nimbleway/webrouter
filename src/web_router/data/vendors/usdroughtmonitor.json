@@ -1,0 +1,250 @@
+{
+  "vendor": "usdroughtmonitor",
+  "name": "U.S. Drought Monitor",
+  "category": "other",
+  "summary": "Weekly U.S. Drought Monitor statistics (area, population and DSCI by drought level D0-D4) for the nation, states, counties, watersheds and other areas.",
+  "docs_url": "https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx",
+  "base_url": "https://usdmdataservices.unl.edu/api",
+  "headers": {
+    "Accept": "application/json"
+  },
+  "notes": [
+    "Free and keyless. Answers CSV by default; this entry sends Accept: application/json (text/csv, application/xml, text/xml and text/json also work).",
+    "Dates are M/D/YYYY (e.g. 1/1/2012), not ISO. Maps are released weekly (valid Tuesday), so each row is one weekly map.",
+    "aoi depends on the area: us, conus or total for the nation; 2-digit FIPS for a state; 5-digit FIPS for a county, or a 2-letter state abbreviation for all its counties; 3-letter codes for weather forecast offices and USACE districts/divisions; 2-8 digit HUC codes; 1-10 for FEMA regions; 2-letter NWS region codes; RFC codes such as CBRFC; ID/GEOID numbers for the other area kinds.",
+    "statisticsType: 1 = traditional (cumulative: D1 includes D2-D4), 2 = categorical (each level on its own)."
+  ],
+  "sources": [
+    "https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "usdroughtmonitor.statistics.get",
+      "name": "Get drought statistics for an area",
+      "summary": "Per-week share or count of area or population in each drought level, or the Drought Severity and Coverage Index, for an area over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{area}/{statistic}",
+      "params": {
+        "area": {
+          "in": "path",
+          "required": true,
+          "description": "Kind of area aoi names.",
+          "enum": [
+            "USStatistics",
+            "StateStatistics",
+            "CountyStatistics",
+            "ClimateHubStatistics",
+            "RegionalDroughtEarlyWarningSystemStatistics",
+            "WeatherForecastOfficeStatistics",
+            "USACEDistrictStatistics",
+            "USACEDivisionStatistics",
+            "UrbanAreaStatistics",
+            "RiverForecastCenterStatistics",
+            "RegionalClimateCenterStatistics",
+            "NWSRegionStatistics",
+            "HUCStatistics",
+            "FEMARegionStatistics",
+            "ClimateDivisionStatistics",
+            "TribalStatistics"
+          ],
+          "example": "StateStatistics"
+        },
+        "statistic": {
+          "in": "path",
+          "required": true,
+          "description": "What to measure.",
+          "enum": [
+            "GetDroughtSeverityStatisticsByArea",
+            "GetDroughtSeverityStatisticsByAreaPercent",
+            "GetDroughtSeverityStatisticsByPopulation",
+            "GetDroughtSeverityStatisticsByPopulationPercent",
+            "GetDSCI"
+          ],
+          "example": "GetDroughtSeverityStatisticsByAreaPercent"
+        },
+        "aoi": {
+          "in": "query",
+          "required": true,
+          "description": "Area id; its form depends on area (see the vendor notes).",
+          "example": "06"
+        },
+        "startdate": {
+          "in": "query",
+          "required": true,
+          "description": "Start date, M/D/YYYY.",
+          "example": "1/1/2025"
+        },
+        "enddate": {
+          "in": "query",
+          "required": true,
+          "description": "End date, M/D/YYYY.",
+          "example": "12/31/2025"
+        },
+        "statisticsType": {
+          "in": "query",
+          "required": true,
+          "description": "1 traditional (cumulative), 2 categorical.",
+          "enum": [
+            "1",
+            "2"
+          ]
+        },
+        "hucLevel": {
+          "in": "query",
+          "description": "HUCStatistics only: 2, 4, 6 or 8, to return the smaller HUCs inside the aoi HUC."
+        }
+      },
+      "job": "weather.drought",
+      "docs_url": "https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx",
+      "verified": {
+        "docs": "https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx"
+      }
+    },
+    {
+      "id": "usdroughtmonitor.statistics.threshold",
+      "name": "Find weeks an area crossed a drought threshold",
+      "summary": "Weeks in which the percent of an area in a given drought level fell within a range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{area}/{statistic}",
+      "params": {
+        "area": {
+          "in": "path",
+          "required": true,
+          "description": "Kind of area aoi names (same list as statistics.get).",
+          "example": "CountyStatistics"
+        },
+        "statistic": {
+          "in": "path",
+          "required": true,
+          "description": "What to measure (DSCI is not offered here).",
+          "enum": [
+            "GetDroughtSeverityStatisticsByArea",
+            "GetDroughtSeverityStatisticsByAreaPercent",
+            "GetDroughtSeverityStatisticsByPopulation",
+            "GetDroughtSeverityStatisticsByPopulationPercent"
+          ]
+        },
+        "aoi": {
+          "in": "query",
+          "required": true,
+          "description": "Area id; its form depends on area."
+        },
+        "dx": {
+          "in": "query",
+          "required": true,
+          "description": "Drought level: 0=D0 ... 4=D4.",
+          "enum": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4"
+          ]
+        },
+        "DxLevelThresholdFrom": {
+          "in": "query",
+          "required": true,
+          "type": "number",
+          "description": "Minimum percent of the area in that level, 0-100."
+        },
+        "DxLevelThresholdTo": {
+          "in": "query",
+          "required": true,
+          "type": "number",
+          "description": "Maximum percent, 0-100."
+        },
+        "startdate": {
+          "in": "query",
+          "required": true,
+          "description": "Start date, M/D/YYYY."
+        },
+        "enddate": {
+          "in": "query",
+          "required": true,
+          "description": "End date, M/D/YYYY."
+        },
+        "statisticsType": {
+          "in": "query",
+          "required": true,
+          "description": "1 traditional, 2 categorical.",
+          "enum": [
+            "1",
+            "2"
+          ]
+        },
+        "hucLevel": {
+          "in": "query",
+          "description": "HUCStatistics only: 2, 4, 6 or 8."
+        }
+      },
+      "notes": [
+        "Same path as statistics.get; the dx and threshold parameters make it a threshold query. The docs list RegionStatistics rather than RegionalClimateCenterStatistics for this form."
+      ],
+      "job": "weather.drought",
+      "docs_url": "https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx",
+      "verified": {
+        "docs": "https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx"
+      }
+    },
+    {
+      "id": "usdroughtmonitor.weeks_in_drought",
+      "name": "Count weeks counties spent in drought",
+      "summary": "Per county, consecutive or total weeks at or above a drought level over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ConsecutiveNonConsecutiveStatistics/{type}",
+      "params": {
+        "type": {
+          "in": "path",
+          "required": true,
+          "description": "Consecutive or total (non-consecutive) weeks.",
+          "enum": [
+            "GetConsecutiveWeeksCounty",
+            "GetNonConsecutiveStatisticsCounty"
+          ]
+        },
+        "aoi": {
+          "in": "query",
+          "description": "State abbreviations, comma-separated; blank for all states.",
+          "example": "TX,OK"
+        },
+        "dx": {
+          "in": "query",
+          "required": true,
+          "description": "Drought level: 0=D0 ... 4=D4.",
+          "enum": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4"
+          ]
+        },
+        "minimumweeks": {
+          "in": "query",
+          "required": true,
+          "type": "integer",
+          "description": "Minimum number of weeks in that level."
+        },
+        "startdate": {
+          "in": "query",
+          "required": true,
+          "description": "Start date, M/D/YYYY."
+        },
+        "enddate": {
+          "in": "query",
+          "required": true,
+          "description": "End date, M/D/YYYY."
+        }
+      },
+      "job": "weather.drought",
+      "docs_url": "https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx",
+      "verified": {
+        "docs": "https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx"
+      }
+    }
+  ]
+}
