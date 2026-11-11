@@ -17,7 +17,7 @@ bills by tokens is ``token_billed``; neither has a pre-call estimate, and
     0.025
 
 A row is keyed by ``provider``, ``method`` and ``mode``. ``method`` is the
-router method's name (``search``, ``extract``, ``run_template``, ``answer``,
+router method's name (``search``, ``extract``, ``live_data``, ``answer``,
 ``research``, ``open_browser``, ``browse``). ``mode`` is ``None`` for the call
 that sets nothing, else web-router's own setting -- the ``search_depth``
 (``lite``, ``fast``, ``deep``) or research ``effort`` (``low`` ... ``max``) --
@@ -66,7 +66,7 @@ from web_router.types import Provider, provider_name
 PriceUnit = Literal["per_request", "per_1k", "per_page", "per_browser_minute", "per_run", "token_billed", "unknown"]
 """What ``price_usd`` is charged per. ``per_1k`` is per 1,000 of whatever the method bills: requests, pages, runs."""
 
-PriceMethod = Literal["search", "extract", "run_template", "answer", "research", "open_browser", "browse"]
+PriceMethod = Literal["search", "extract", "live_data", "answer", "research", "open_browser", "browse"]
 
 
 class Price(BaseModel):
