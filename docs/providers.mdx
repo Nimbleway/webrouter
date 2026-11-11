@@ -16,32 +16,32 @@ used here for identification only.
 
 | Provider | Search | Extract | Answer | Research | Browser session | Browse |
 | --- | --- | --- | --- | --- | --- | --- |
-| AWS AgentCore | ✓ |  |  |  |  |  |
-| Anchor |  |  |  |  | ✓ |  |
-| Brave | ✓ |  | ✓ |  |  |  |
-| Bright Data |  | ✓ |  |  |  |  |
-| Browser Use |  |  |  |  |  | ✓ |
-| Browserbase |  | ✓ |  |  | ✓ | ✓ |
-| DeepSeek | ✓ | ✓ |  |  |  |  |
-| Exa | ✓ keyless | ✓ | ✓ |  |  |  |
-| Firecrawl |  | ✓ keyless |  |  |  |  |
-| Hyperbrowser |  |  |  |  | ✓ |  |
-| Jina Reader |  | keyless |  |  |  |  |
-| Keenable | ✓ keyless | ✓ keyless |  |  |  |  |
-| Kernel |  |  |  |  | ✓ |  |
-| Linkup | ✓ | ✓ | ✓ | ✓ |  |  |
-| Local Chromium |  |  |  |  | keyless |  |
-| Nimble | ✓ | ✓ |  | ✓ |  |  |
-| Oxylabs |  | ✓ |  |  |  |  |
-| Parallel | ✓ keyless |  | ✓ | ✓ |  |  |
-| Perplexity | ✓ |  | ✓ | ✓ |  |  |
-| Skyvern |  |  |  |  |  | ✓ |
-| Steel |  |  |  |  | ✓ |  |
-| Tavily | ✓ keyless | ✓ keyless |  |  |  |  |
-| WebIQ | ✓ | ✓ |  |  |  |  |
-| You.com | ✓ keyless |  | ✓ | ✓ |  |  |
+| [AWS AgentCore](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html) | ✓ |  |  |  |  |  |
+| [Anchor](https://anchorbrowser.io) |  |  |  |  | ✓ |  |
+| [Brave](https://brave.com/search/api/) | ✓ |  | ✓ |  |  |  |
+| [Bright Data](https://brightdata.com) |  | ✓ |  |  |  |  |
+| [Browser Use](https://browser-use.com) |  |  |  |  |  | ✓ |
+| [Browserbase](https://www.browserbase.com) |  | ✓ |  |  | ✓ | ✓ |
+| [DeepSeek](https://api-docs.deepseek.com) | ✓ | ✓ |  |  |  |  |
+| [Exa](https://exa.ai) | ✓ keyless | ✓ | ✓ |  |  |  |
+| [Firecrawl](https://firecrawl.dev) |  | ✓ keyless |  |  |  |  |
+| [Hyperbrowser](https://hyperbrowser.ai) |  |  |  |  | ✓ |  |
+| [Jina Reader](https://jina.ai/reader) |  | ✓ keyless |  |  |  |  |
+| [Keenable](https://docs.keenable.ai) | ✓ keyless | ✓ keyless |  |  |  |  |
+| [Kernel](https://kernel.sh) |  |  |  |  | ✓ |  |
+| [Linkup](https://www.linkup.so) | ✓ | ✓ | ✓ | ✓ |  |  |
+| [Local Chromium](https://www.chromium.org) |  |  |  |  | ✓ keyless |  |
+| [Nimble](https://nimbleway.com) | ✓ | ✓ |  | ✓ |  |  |
+| [Oxylabs](https://oxylabs.io) |  | ✓ |  |  |  |  |
+| [Parallel](https://parallel.ai) | ✓ keyless |  | ✓ | ✓ |  |  |
+| [Perplexity](https://docs.perplexity.ai) | ✓ |  | ✓ | ✓ |  |  |
+| [Skyvern](https://skyvern.com) |  |  |  |  |  | ✓ |
+| [Steel](https://steel.dev) |  |  |  |  | ✓ |  |
+| [Tavily](https://tavily.com) | ✓ keyless | ✓ keyless |  |  |  |  |
+| [WebIQ](https://webiq.microsoft.ai) | ✓ | ✓ |  |  |  |  |
+| [You.com](https://you.com/platform) | ✓ keyless |  | ✓ | ✓ |  |  |
 
-**✓** needs the provider's key ([Configuration](/configuration) names each variable). **keyless** also works with no key, rate-limited. `auto` is the default for every method and picks among the providers you can use.
+**✓** the provider serves this method, with its key ([Configuration](/configuration) names each variable). **keyless** means it also works with no key, rate-limited. `auto` is the default for every method and picks among the providers you can use.
 
 ## Working with no credentials
 
