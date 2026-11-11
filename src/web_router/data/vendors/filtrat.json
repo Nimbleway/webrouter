@@ -331,27 +331,6 @@
       }
     },
     {
-      "id": "filtrat.bulk.delete",
-      "name": "Delete a bulk job",
-      "summary": "Deletes a verification job and its rows.",
-      "kind": "write",
-      "method": "DELETE",
-      "path": "/bulk/jobs/{job_id}",
-      "params": {
-        "job_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The verification job's ID."
-        }
-      },
-      "job": "jobs.delete",
-      "docs_url": "https://filtrat.io/v1/docs",
-      "verified": {
-        "docs": "https://filtrat.io/v1/docs"
-      }
-    },
-    {
       "id": "filtrat.account.credits",
       "name": "Get the credit balance",
       "summary": "Subscription and pay-as-you-go credits.",

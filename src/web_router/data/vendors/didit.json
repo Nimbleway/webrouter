@@ -2,7 +2,7 @@
   "vendor": "didit",
   "name": "Didit",
   "category": "verification",
-  "summary": "Identity verification and fraud: KYC/KYB verification sessions and their decisions, and standalone AML screening of people and companies.",
+  "summary": "Identity verification: KYC/KYB verification sessions and their decisions.",
   "docs_url": "https://docs.didit.me/getting-started/introduction",
   "pricing_url": "https://docs.didit.me/getting-started/pricing",
   "base_url": "https://verification.didit.me",
@@ -136,133 +136,6 @@
       "docs_url": "https://docs.didit.me/sessions-api/retrieve-session",
       "verified": {
         "docs": "https://docs.didit.me/sessions-api/retrieve-session"
-      }
-    },
-    {
-      "id": "didit.sessions.create",
-      "name": "Create a verification session",
-      "summary": "Start a hosted KYC or KYB flow for a user from one of your workflows; answers with the session id and the URL to send the user to.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v3/session/",
-      "params": {
-        "workflow_id": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "UUID of the console workflow that defines the checks (and whether it is KYC or KYB)."
-        },
-        "vendor_data": {
-          "in": "body",
-          "type": "string",
-          "description": "Your id for the user; groups sessions and scopes duplicate detection."
-        },
-        "callback": {
-          "in": "body",
-          "type": "string",
-          "description": "URL to redirect the user to when done; must be on the application's allowed domains when those are set."
-        },
-        "callback_method": {
-          "in": "body",
-          "type": "string",
-          "enum": [
-            "initiator",
-            "completer",
-            "both"
-          ],
-          "description": "Which device follows the callback; default initiator."
-        },
-        "metadata": {
-          "in": "body",
-          "type": "object",
-          "description": "Your JSON, stored and echoed back; not shown to the user."
-        },
-        "tags": {
-          "in": "body",
-          "type": "array",
-          "description": "Up to 10 tag names, each up to 50 characters."
-        }
-      },
-      "notes": [
-        "A write: creates a session and the completed checks are billed."
-      ],
-      "job": "identity.sessions.create",
-      "docs_url": "https://docs.didit.me/sessions-api/create-session",
-      "verified": {
-        "docs": "https://docs.didit.me/sessions-api/create-session"
-      }
-    },
-    {
-      "id": "didit.aml.screen",
-      "name": "Screen a person or company for AML",
-      "summary": "Sanctions, PEP and watchlist hits for a name, scored and settled as Approved, In Review or Declined; optional adverse media.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v3/aml/",
-      "params": {
-        "full_name": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Name to screen, at least 2 characters."
-        },
-        "entity_type": {
-          "in": "body",
-          "type": "string",
-          "enum": [
-            "person",
-            "company"
-          ],
-          "description": "Default person."
-        },
-        "date_of_birth": {
-          "in": "body",
-          "type": "string",
-          "description": "Birth or incorporation date YYYY-MM-DD."
-        },
-        "nationality": {
-          "in": "body",
-          "type": "string",
-          "description": "ISO 3166-1 alpha-2 code."
-        },
-        "document_number": {
-          "in": "body",
-          "type": "string",
-          "description": "ID document number; an exact match forces the hit score to 100."
-        },
-        "aml_match_score_threshold": {
-          "in": "body",
-          "type": "integer",
-          "description": "Per-hit cutoff 0-100, default 93; lower hits are false positives."
-        },
-        "include_adverse_media": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Also search negative news; adds up to ~30 s, so use a 60 s timeout."
-        },
-        "include_ongoing_monitoring": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Keep re-screening and report changes by webhook (billed yearly); needs save_api_request."
-        },
-        "save_api_request": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Default true: store the screening as a session. false for a stateless check."
-        },
-        "vendor_data": {
-          "in": "body",
-          "type": "string",
-          "description": "Your id for the screened party."
-        }
-      },
-      "notes": [
-        "Marked a write: it is billed ($0.20 list) and by default stores a session in your account. A name under 2 characters is refused before billing."
-      ],
-      "job": "sanctions.screen",
-      "docs_url": "https://docs.didit.me/standalone-apis/aml-screening",
-      "verified": {
-        "docs": "https://docs.didit.me/standalone-apis/aml-screening"
       }
     }
   ]

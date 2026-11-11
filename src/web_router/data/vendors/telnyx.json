@@ -2,7 +2,7 @@
   "vendor": "telnyx",
   "name": "Telnyx",
   "category": "messaging",
-  "summary": "Telnyx communications: send SMS/MMS, read messages, phone numbers, number lookup, available-number search, usage detail records and balance.",
+  "summary": "Telnyx communications: messages, phone numbers, number lookup, available-number search, usage detail records and balance.",
   "docs_url": "https://developers.telnyx.com/api-reference",
   "pricing_url": "https://telnyx.com/pricing",
   "base_url": "https://{host}/v2",
@@ -321,80 +321,6 @@
       "docs_url": "https://developers.telnyx.com/api-reference/detail-records/search-detail-records",
       "verified": {
         "docs": "https://developers.telnyx.com/api-reference/detail-records/search-detail-records"
-      }
-    },
-    {
-      "id": "telnyx.messages.send",
-      "name": "Send an SMS or MMS",
-      "summary": "Send from a number, short code, alphanumeric sender or number pool.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/messages",
-      "params": {
-        "to": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Recipient, +E.164 or short code."
-        },
-        "from": {
-          "in": "body",
-          "type": "string",
-          "description": "Sender: +E.164 number, short code or alphanumeric id; required unless sending through a number pool."
-        },
-        "text": {
-          "in": "body",
-          "type": "string",
-          "description": "Body; required for SMS."
-        },
-        "messaging_profile_id": {
-          "in": "body",
-          "type": "string",
-          "description": "Messaging profile; required for a number pool or alphanumeric sender."
-        },
-        "media_urls": {
-          "in": "body",
-          "type": "array",
-          "description": "Media URLs for MMS, under 1 MB in total."
-        },
-        "subject": {
-          "in": "body",
-          "type": "string",
-          "description": "MMS subject."
-        },
-        "type": {
-          "in": "body",
-          "type": "string",
-          "description": "Protocol.",
-          "enum": [
-            "SMS",
-            "MMS"
-          ]
-        },
-        "send_at": {
-          "in": "body",
-          "type": "string",
-          "description": "ISO 8601 time to send, minute precision."
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "URL for this message's status webhooks."
-        },
-        "idempotency_key": {
-          "in": "header",
-          "type": "string",
-          "description": "Retry-safe key, 1 to 255 letters, digits, - or _.",
-          "wire_name": "Idempotency-Key"
-        }
-      },
-      "notes": [
-        "Sends a real, billed message; read its status later with messages.get."
-      ],
-      "job": "messaging.message.send",
-      "docs_url": "https://developers.telnyx.com/api-reference/messages/send-a-message",
-      "verified": {
-        "docs": "https://developers.telnyx.com/api-reference/messages/send-a-message"
       }
     }
   ]

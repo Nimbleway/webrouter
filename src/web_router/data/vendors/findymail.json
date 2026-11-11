@@ -303,46 +303,6 @@
       }
     },
     {
-      "id": "findymail.lists.create",
-      "name": "Create a contact list",
-      "summary": "Creates a list in the user's Findymail account.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/api/lists",
-      "params": {
-        "name": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "List name."
-        }
-      },
-      "docs_url": "https://app.findymail.com/docs/",
-      "verified": {
-        "docs": "https://app.findymail.com/docs/"
-      }
-    },
-    {
-      "id": "findymail.lists.delete",
-      "name": "Delete a contact list",
-      "summary": "Deletes a list from the user's account.",
-      "kind": "write",
-      "method": "DELETE",
-      "path": "/api/lists/{id}",
-      "params": {
-        "id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "List id."
-        }
-      },
-      "docs_url": "https://app.findymail.com/docs/",
-      "verified": {
-        "docs": "https://app.findymail.com/docs/"
-      }
-    },
-    {
       "id": "findymail.contacts.get",
       "name": "Get saved contacts",
       "summary": "Contacts in a list; id 0 means all contacts.",

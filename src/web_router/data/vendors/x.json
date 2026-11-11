@@ -2,7 +2,7 @@
   "vendor": "x",
   "name": "X (Twitter) API",
   "category": "social",
-  "summary": "X API v2: search recent posts, look up users and posts, read timelines and followers, and publish posts.",
+  "summary": "X API v2: search recent posts, look up users and posts, and read timelines and followers.",
   "docs_url": "https://docs.x.com/x-api",
   "pricing_url": "https://docs.x.com/x-api/getting-started/pricing",
   "base_url": "https://api.x.com/2",
@@ -306,51 +306,6 @@
       "verified": {
         "docs": "https://docs.x.com/openapi.json"
       }
-    },
-    {
-      "id": "x.posts.create",
-      "name": "Publish a post",
-      "summary": "Posts to the authenticated user's account.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/tweets",
-      "params": {
-        "text": {
-          "in": "body",
-          "type": "string",
-          "description": "Post text. Needed unless media or a poll is attached.",
-          "example": "Hello from the API"
-        },
-        "reply": {
-          "in": "body",
-          "type": "object",
-          "description": "{in_reply_to_tweet_id, exclude_reply_user_ids} to post as a reply."
-        },
-        "quote_tweet_id": {
-          "in": "body",
-          "type": "string",
-          "description": "Id of a post to quote."
-        },
-        "reply_settings": {
-          "in": "body",
-          "type": "string",
-          "description": "Who may reply.",
-          "enum": [
-            "following",
-            "mentionedUsers",
-            "subscribers",
-            "verified"
-          ]
-        }
-      },
-      "job": "social.publish",
-      "docs_url": "https://docs.x.com/x-api/posts/manage-tweets/introduction",
-      "verified": {
-        "docs": "https://docs.x.com/openapi.json"
-      },
-      "notes": [
-        "Publishes publicly. Needs a user-context access token with tweet.write (an app-only bearer token is refused)."
-      ]
     }
   ]
 }

@@ -176,38 +176,6 @@
       "verified": {
         "docs": "https://developers.google.com/webmaster-tools/v1/sitemaps/list"
       }
-    },
-    {
-      "id": "google-search-console.sitemaps.submit",
-      "name": "Submit a sitemap",
-      "summary": "Tells Google about a sitemap for the property.",
-      "kind": "write",
-      "method": "PUT",
-      "path": "/sites/{siteUrl}/sitemaps/{feedpath}",
-      "params": {
-        "siteUrl": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The property exactly as Search Console shows it: 'https://www.example.com/' (trailing slash) or 'sc-domain:example.com'. URL-encode it in the path.",
-          "example": "sc-domain:example.com"
-        },
-        "feedpath": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Full URL of the sitemap, percent-encoded.",
-          "example": "https://www.example.com/sitemap.xml"
-        }
-      },
-      "notes": [
-        "Needs the full webmasters scope, not the readonly one. No request body."
-      ],
-      "job": "search_console.sitemaps.submit",
-      "docs_url": "https://developers.google.com/webmaster-tools/v1/sitemaps/submit",
-      "verified": {
-        "docs": "https://developers.google.com/webmaster-tools/v1/sitemaps/submit"
-      }
     }
   ]
 }

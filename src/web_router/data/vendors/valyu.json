@@ -330,29 +330,6 @@
       }
     },
     {
-      "id": "valyu.research.cancel",
-      "name": "Cancel a DeepResearch task",
-      "summary": "Stops a running or queued task.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v1/deepresearch/tasks/{id}/cancel",
-      "params": {
-        "id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Task id."
-        }
-      },
-      "notes": [
-        "Answers 409 if the task already finished."
-      ],
-      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/deepresearch-cancel",
-      "verified": {
-        "docs": "https://docs.valyu.ai/api-reference/endpoint/deepresearch-cancel"
-      }
-    },
-    {
       "id": "valyu.datasources.list",
       "name": "List data sources",
       "summary": "Every dataset Valyu can search, with id, category, description and price per 1,000 results.",

@@ -2,7 +2,7 @@
   "vendor": "origami",
   "name": "Origami",
   "category": "company-data",
-  "summary": "An AI agent that builds researched lead lists from a plain-English brief; read the lists and rows back.",
+  "summary": "Lead lists an AI agent researched from a plain-English brief: read the lists and their rows.",
   "docs_url": "https://docs.origami.chat/v3/overview",
   "pricing_url": "https://origami.chat/pricing",
   "base_url": "https://origami.chat/api/v3",
@@ -54,94 +54,6 @@
   ],
   "curated": "2026-11-09",
   "endpoints": [
-    {
-      "id": "origami.searches.create",
-      "name": "Search for leads from a brief",
-      "summary": "Creates a list, sources leads matching a plain-English brief and researches them.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/leads/searches",
-      "params": {
-        "brief": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Who you want, as you would tell a researcher.",
-          "example": "Heads of RevOps at 50-500 person US SaaS companies"
-        },
-        "count": {
-          "in": "body",
-          "type": "integer",
-          "description": "Leads to find, 1 to 1,000. Start around 10 and refine."
-        },
-        "quality": {
-          "in": "body",
-          "type": "string",
-          "description": "fast settles billing at once; accurate verifies more and settles after delivery.",
-          "enum": [
-            "fast",
-            "accurate"
-          ]
-        },
-        "exclude_list_ids": {
-          "in": "body",
-          "type": "array",
-          "description": "Up to 20 list ids whose people to skip."
-        },
-        "metadata": {
-          "in": "body",
-          "type": "object",
-          "description": "Your own string key/values, kept on the Job."
-        }
-      },
-      "notes": [
-        "Creates a list in the account and spends credits, hence write. Answers 202 with a Job; the finished Job's result carries list_id, search_id and row_ids."
-      ],
-      "job": "lists.search",
-      "docs_url": "https://docs.origami.chat/v3/reference/leads-searches-create",
-      "verified": {
-        "docs": "https://docs.origami.chat/v3/reference/leads-searches-create"
-      }
-    },
-    {
-      "id": "origami.searches.fetch_more",
-      "name": "Fetch more leads for a search",
-      "summary": "More leads with the same criteria, list and columns, no repeats.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/leads/searches/{search_id}/fetch-more",
-      "params": {
-        "search_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Search id."
-        },
-        "count": {
-          "in": "body",
-          "type": "integer",
-          "description": "Leads to add, up to 1,000."
-        },
-        "exclude_list_ids": {
-          "in": "body",
-          "type": "array",
-          "description": "Up to 20 list ids whose people to skip."
-        },
-        "metadata": {
-          "in": "body",
-          "type": "object",
-          "description": "Your own string key/values."
-        }
-      },
-      "notes": [
-        "Adds rows and spends credits. Check origami.searches.get (remaining_count, has_more) first."
-      ],
-      "job": "lists.search",
-      "docs_url": "https://docs.origami.chat/v3/reference/leads-searches-fetch-more",
-      "verified": {
-        "docs": "https://docs.origami.chat/v3/reference/leads-searches-fetch-more"
-      }
-    },
     {
       "id": "origami.searches.get",
       "name": "Get a search",

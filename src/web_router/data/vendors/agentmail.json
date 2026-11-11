@@ -2,7 +2,7 @@
   "vendor": "agentmail",
   "name": "AgentMail",
   "category": "messaging",
-  "summary": "Email inboxes for AI agents: create inboxes, read messages and threads, send and reply.",
+  "summary": "Email inboxes for AI agents: list inboxes and read their messages and threads.",
   "docs_url": "https://docs.agentmail.to/",
   "base_url": "https://{host}",
   "settings": {
@@ -81,48 +81,6 @@
       "docs_url": "https://docs.agentmail.to/api-reference/inboxes/list.md",
       "verified": {
         "docs": "https://docs.agentmail.to/api-reference/inboxes/list.md"
-      }
-    },
-    {
-      "id": "agentmail.inboxes.create",
-      "name": "Create an inbox",
-      "summary": "A new email address for an agent.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v0/inboxes",
-      "params": {
-        "username": {
-          "in": "body",
-          "type": "string",
-          "description": "Address username; random when omitted."
-        },
-        "domain": {
-          "in": "body",
-          "type": "string",
-          "description": "A verified domain of yours; defaults to agentmail.to."
-        },
-        "display_name": {
-          "in": "body",
-          "type": "string",
-          "description": "Name shown with the address."
-        },
-        "client_id": {
-          "in": "body",
-          "type": "string",
-          "description": "Your own id for the inbox."
-        },
-        "metadata": {
-          "in": "body",
-          "type": "object",
-          "description": "Custom key/value metadata."
-        }
-      },
-      "notes": [
-        "Counts against the plan's inbox limit (3 on the free plan)."
-      ],
-      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/create.md",
-      "verified": {
-        "docs": "https://docs.agentmail.to/api-reference/inboxes/create.md"
       }
     },
     {
@@ -364,150 +322,6 @@
       "docs_url": "https://docs.agentmail.to/api-reference/inboxes/threads/get.md",
       "verified": {
         "docs": "https://docs.agentmail.to/api-reference/inboxes/threads/get.md"
-      }
-    },
-    {
-      "id": "agentmail.messages.send",
-      "name": "Send an email",
-      "summary": "Send a new message from an inbox.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v0/inboxes/{inbox_id}/messages/send",
-      "params": {
-        "inbox_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The sending inbox id."
-        },
-        "to": {
-          "in": "body",
-          "type": "array",
-          "description": "Recipient address or list of addresses."
-        },
-        "cc": {
-          "in": "body",
-          "type": "array",
-          "description": "CC addresses."
-        },
-        "bcc": {
-          "in": "body",
-          "type": "array",
-          "description": "BCC addresses."
-        },
-        "reply_to": {
-          "in": "body",
-          "type": "array",
-          "description": "Reply-to addresses."
-        },
-        "subject": {
-          "in": "body",
-          "type": "string",
-          "description": "Subject."
-        },
-        "text": {
-          "in": "body",
-          "type": "string",
-          "description": "Plain-text body."
-        },
-        "html": {
-          "in": "body",
-          "type": "string",
-          "description": "HTML body."
-        },
-        "labels": {
-          "in": "body",
-          "type": "array",
-          "description": "Labels for the message."
-        },
-        "attachments": {
-          "in": "body",
-          "type": "array",
-          "description": "Objects with filename, content_type and either content (base64) or url."
-        },
-        "headers": {
-          "in": "body",
-          "type": "object",
-          "description": "Extra email headers."
-        }
-      },
-      "notes": [
-        "Sends real email. The whole request, with base64 attachments, is capped at 6 MB. Answers message_id and thread_id."
-      ],
-      "job": "messaging.message.send",
-      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/messages/send.md",
-      "verified": {
-        "docs": "https://docs.agentmail.to/api-reference/inboxes/messages/send.md"
-      }
-    },
-    {
-      "id": "agentmail.messages.reply",
-      "name": "Reply to a message",
-      "summary": "Reply in the message's thread.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v0/inboxes/{inbox_id}/messages/{message_id}/reply",
-      "params": {
-        "inbox_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The inbox id."
-        },
-        "message_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The message being replied to."
-        },
-        "reply_all": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Reply to every recipient of the original."
-        },
-        "to": {
-          "in": "body",
-          "type": "array",
-          "description": "Recipient addresses."
-        },
-        "cc": {
-          "in": "body",
-          "type": "array",
-          "description": "CC addresses."
-        },
-        "bcc": {
-          "in": "body",
-          "type": "array",
-          "description": "BCC addresses."
-        },
-        "text": {
-          "in": "body",
-          "type": "string",
-          "description": "Plain-text body."
-        },
-        "html": {
-          "in": "body",
-          "type": "string",
-          "description": "HTML body."
-        },
-        "labels": {
-          "in": "body",
-          "type": "array",
-          "description": "Labels for the message."
-        },
-        "attachments": {
-          "in": "body",
-          "type": "array",
-          "description": "Objects with filename, content_type and either content (base64) or url."
-        }
-      },
-      "notes": [
-        "Sends real email."
-      ],
-      "job": "messaging.message.send",
-      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/messages/reply.md",
-      "verified": {
-        "docs": "https://docs.agentmail.to/api-reference/inboxes/messages/reply.md"
       }
     }
   ]

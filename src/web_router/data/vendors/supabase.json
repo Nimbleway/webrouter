@@ -2,7 +2,7 @@
   "vendor": "supabase",
   "name": "Supabase",
   "category": "developer",
-  "summary": "Supabase Management API: the user's projects and organisations, SQL against a project's Postgres, logs, health, advisors, edge functions and storage buckets.",
+  "summary": "Supabase Management API: the user's projects and organisations, read-only SQL against a project's Postgres, logs, health, advisors and edge functions.",
   "docs_url": "https://supabase.com/docs/reference/api/introduction",
   "pricing_url": "https://supabase.com/pricing",
   "base_url": "https://api.supabase.com",
@@ -153,47 +153,6 @@
       "docs_url": "https://supabase.com/docs/reference/api/v1-read-only-query",
       "verified": {
         "docs": "https://supabase.com/docs/reference/api/v1-read-only-query"
-      }
-    },
-    {
-      "id": "supabase.database.query",
-      "name": "Run a SQL query",
-      "summary": "Run any SQL, including writes and DDL, against the project's database.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v1/projects/{ref}/database/query",
-      "params": {
-        "ref": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Project ref, 20 lowercase letters (from list projects or the project URL).",
-          "example": "abcdefghijklmnopqrst"
-        },
-        "query": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "SQL to run."
-        },
-        "parameters": {
-          "in": "body",
-          "type": "array",
-          "description": "Values for the query's parameters."
-        },
-        "read_only": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Run read-only."
-        }
-      },
-      "notes": [
-        "Experimental. Can change or delete data; prefer database.query.read_only for reads. Needs the database:write scope."
-      ],
-      "job": "database.query",
-      "docs_url": "https://supabase.com/docs/reference/api/v1-run-a-query",
-      "verified": {
-        "docs": "https://supabase.com/docs/reference/api/v1-run-a-query"
       }
     },
     {

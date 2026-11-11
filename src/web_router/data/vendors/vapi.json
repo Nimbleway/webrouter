@@ -2,7 +2,7 @@
   "vendor": "vapi",
   "name": "Vapi",
   "category": "messaging",
-  "summary": "Voice AI agents: list and read calls with transcripts and costs, assistants, phone numbers, call analytics, and start outbound calls.",
+  "summary": "Voice AI agents: calls with transcripts and costs, assistants, phone numbers and call analytics.",
   "docs_url": "https://docs.vapi.ai/api-reference",
   "pricing_url": "https://vapi.ai/pricing",
   "base_url": "https://api.vapi.ai",
@@ -224,63 +224,6 @@
       "docs_url": "https://docs.vapi.ai/api-reference/analytics/get",
       "verified": {
         "docs": "https://docs.vapi.ai/api-reference/analytics/get"
-      }
-    },
-    {
-      "id": "vapi.calls.create",
-      "name": "Start a call",
-      "summary": "Place an outbound phone call (or a batch) with an assistant.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/call",
-      "params": {
-        "assistantId": {
-          "in": "body",
-          "type": "string",
-          "description": "Saved assistant to run; or send assistant inline."
-        },
-        "assistant": {
-          "in": "body",
-          "type": "object",
-          "description": "A transient assistant definition."
-        },
-        "assistantOverrides": {
-          "in": "body",
-          "type": "object",
-          "description": "Overrides and template variables for the assistant."
-        },
-        "phoneNumberId": {
-          "in": "body",
-          "type": "string",
-          "description": "Your Vapi number to call from."
-        },
-        "customer": {
-          "in": "body",
-          "type": "object",
-          "description": "Who to call, e.g. {\"number\": \"+14155550123\"}."
-        },
-        "customers": {
-          "in": "body",
-          "type": "array",
-          "description": "Several customers, for a batch of calls."
-        },
-        "name": {
-          "in": "body",
-          "type": "string",
-          "description": "Your label for the call."
-        },
-        "schedulePlan": {
-          "in": "body",
-          "type": "object",
-          "description": "When to place the call."
-        }
-      },
-      "notes": [
-        "Places a real, billed call. Read the outcome with calls.get."
-      ],
-      "docs_url": "https://docs.vapi.ai/api-reference/calls/create",
-      "verified": {
-        "docs": "https://docs.vapi.ai/api-reference/calls/create"
       }
     }
   ]

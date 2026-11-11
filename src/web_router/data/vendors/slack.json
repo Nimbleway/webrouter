@@ -2,7 +2,7 @@
   "vendor": "slack",
   "name": "Slack",
   "category": "messaging",
-  "summary": "Your Slack workspace: read channels, history, threads and users, search messages, and post messages and reactions.",
+  "summary": "Your Slack workspace: channels, history, threads and users, and message search.",
   "docs_url": "https://docs.slack.dev/reference/methods/",
   "base_url": "https://slack.com/api",
   "auth": {
@@ -347,106 +347,6 @@
       "docs_url": "https://docs.slack.dev/reference/methods/search.messages",
       "verified": {
         "docs": "https://docs.slack.dev/reference/methods/search.messages"
-      }
-    },
-    {
-      "id": "slack.chat.post_message",
-      "name": "Post a message",
-      "summary": "Sends a message to a channel, DM or thread as the bot. Visible to everyone in it.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/chat.postMessage",
-      "params": {
-        "channel": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Channel id, or a name for public channels."
-        },
-        "text": {
-          "in": "body",
-          "type": "string",
-          "description": "Message text; with blocks it is the notification fallback."
-        },
-        "blocks": {
-          "in": "body",
-          "type": "array",
-          "description": "Block Kit blocks."
-        },
-        "thread_ts": {
-          "in": "body",
-          "type": "string",
-          "description": "ts of the parent message, to reply in a thread."
-        },
-        "reply_broadcast": {
-          "in": "body",
-          "type": "boolean",
-          "description": "With thread_ts, also show the reply in the channel."
-        },
-        "unfurl_links": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Unfurl text-based link previews."
-        },
-        "unfurl_media": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Set false to turn off media unfurling."
-        },
-        "mrkdwn": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Set false to turn off Slack markup parsing."
-        },
-        "markdown_text": {
-          "in": "body",
-          "type": "string",
-          "description": "Markdown message, up to 12,000 characters. Do not combine with text or blocks."
-        }
-      },
-      "notes": [
-        "Needs chat:write, and for a channel the bot must be a member (or hold chat:write.public). About one message a second per channel."
-      ],
-      "job": "messaging.message.send",
-      "docs_url": "https://docs.slack.dev/reference/methods/chat.postMessage",
-      "verified": {
-        "docs": "https://docs.slack.dev/reference/methods/chat.postMessage"
-      }
-    },
-    {
-      "id": "slack.reactions.add",
-      "name": "Add a reaction",
-      "summary": "Adds an emoji reaction to a message.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/reactions.add",
-      "params": {
-        "channel": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Channel the message is in."
-        },
-        "timestamp": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "ts of the message."
-        },
-        "name": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Emoji name without colons, e.g. thumbsup."
-        }
-      },
-      "notes": [
-        "Needs the reactions:write scope."
-      ],
-      "job": "messaging.reaction.add",
-      "docs_url": "https://docs.slack.dev/reference/methods/reactions.add",
-      "verified": {
-        "docs": "https://docs.slack.dev/reference/methods/reactions.add"
       }
     }
   ]

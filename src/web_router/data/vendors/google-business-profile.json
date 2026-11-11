@@ -2,7 +2,7 @@
   "vendor": "google-business-profile",
   "name": "Google Business Profile",
   "category": "maps",
-  "summary": "Your Google Business Profile locations and reviews: list locations, read customer reviews, and reply to them.",
+  "summary": "Your Google Business Profile locations and their customer reviews.",
   "docs_url": "https://developers.google.com/my-business",
   "base_url": "https://mybusiness.googleapis.com/v4",
   "auth": {
@@ -175,85 +175,6 @@
       },
       "job": "business.reviews.get",
       "docs_url": "https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/get",
-      "verified": {
-        "docs": "https://developers.google.com/my-business/reference/rest"
-      }
-    },
-    {
-      "id": "google-business-profile.reviews.reply",
-      "name": "Reply to a review",
-      "summary": "Posts, or replaces, the owner's public reply to a review.",
-      "kind": "write",
-      "method": "PUT",
-      "path": "/accounts/{account_id}/locations/{location_id}/reviews/{review_id}/reply",
-      "params": {
-        "account_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Business Profile account id, digits.",
-          "example": "1234567890"
-        },
-        "location_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Location id, digits.",
-          "example": "9876543210"
-        },
-        "review_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Review id, from a reviews list."
-        },
-        "comment": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "The reply text (the ReviewReply resource's comment field)."
-        }
-      },
-      "notes": [
-        "Public. The body is a ReviewReply; its comment field is the text. A second call replaces the first reply."
-      ],
-      "job": "business.reviews.reply",
-      "docs_url": "https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/updateReply",
-      "verified": {
-        "docs": "https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/updateReply"
-      }
-    },
-    {
-      "id": "google-business-profile.reviews.delete_reply",
-      "name": "Delete your reply to a review",
-      "summary": "Removes the owner's reply from a review.",
-      "kind": "write",
-      "method": "DELETE",
-      "path": "/accounts/{account_id}/locations/{location_id}/reviews/{review_id}/reply",
-      "params": {
-        "account_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Business Profile account id, digits.",
-          "example": "1234567890"
-        },
-        "location_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Location id, digits.",
-          "example": "9876543210"
-        },
-        "review_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Review id, from a reviews list."
-        }
-      },
-      "job": "business.reviews.delete_reply",
-      "docs_url": "https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/deleteReply",
       "verified": {
         "docs": "https://developers.google.com/my-business/reference/rest"
       }

@@ -2,7 +2,7 @@
   "vendor": "postiz",
   "name": "Postiz",
   "category": "social",
-  "summary": "Schedule and publish posts to connected social channels (X, LinkedIn, Instagram, TikTok, YouTube and more) and read their analytics.",
+  "summary": "Posts scheduled and published to connected social channels (X, LinkedIn, Instagram, TikTok, YouTube and more), and their analytics.",
   "docs_url": "https://docs.postiz.com/public-api/introduction",
   "pricing_url": "https://postiz.com/pricing",
   "base_url": "https://api.postiz.com/public/v1",
@@ -192,106 +192,6 @@
       "docs_url": "https://docs.postiz.com/public-api/notifications/list",
       "verified": {
         "docs": "https://docs.postiz.com/public-api/notifications/list"
-      }
-    },
-    {
-      "id": "postiz.posts.create",
-      "name": "Create or schedule posts",
-      "summary": "Publishes now, schedules, or drafts posts on one or more channels.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/posts",
-      "params": {
-        "type": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "draft, schedule or now.",
-          "enum": [
-            "draft",
-            "schedule",
-            "now"
-          ]
-        },
-        "date": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Publish date, UTC ISO date-time.",
-          "example": "2024-12-14T10:00:00.000Z"
-        },
-        "shortLink": {
-          "in": "body",
-          "type": "boolean",
-          "required": true,
-          "description": "Whether to shorten links."
-        },
-        "tags": {
-          "in": "body",
-          "type": "array",
-          "required": true,
-          "description": "Tags, each {value, label}; may be empty.",
-          "example": []
-        },
-        "posts": {
-          "in": "body",
-          "type": "array",
-          "description": "Required unless type is draft. Each item: {integration: {id}, value: [{content, image: [{id, path}]}], settings: {__type: <platform>, ...platform options}}.",
-          "example": [
-            {
-              "integration": {
-                "id": "your-integration-id"
-              },
-              "value": [
-                {
-                  "content": "Hello world!",
-                  "image": []
-                }
-              ],
-              "settings": {
-                "__type": "bluesky"
-              }
-            }
-          ]
-        }
-      },
-      "notes": [
-        "type now publishes to the real accounts immediately. Each platform has its own settings schema (docs.postiz.com/public-api/providers/<platform>).",
-        "Counts against the 100-per-hour limit; the body is capped at 50 MB, so upload media first and reference its path instead of inlining base64."
-      ],
-      "job": "social.publish",
-      "docs_url": "https://docs.postiz.com/public-api/posts/create",
-      "verified": {
-        "docs": "https://docs.postiz.com/public-api/posts/create"
-      }
-    },
-    {
-      "id": "postiz.media.upload_url",
-      "name": "Upload media from a URL",
-      "summary": "Fetches a public HTTPS URL and stores it as a Postiz media asset for use in posts.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/upload-from-url",
-      "params": {
-        "url": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Public HTTPS URL of the file.",
-          "example": "https://example.com/image.png"
-        },
-        "adjust": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Resize/re-encode to platform limits in the background (poll GET /media/{id}/status); default false."
-        }
-      },
-      "notes": [
-        "Private IPs, link-local addresses and localhost are refused; the MIME type must be on Postiz's upload allowlist."
-      ],
-      "docs_url": "https://docs.postiz.com/public-api/uploads/upload-from-url",
-      "verified": {
-        "docs": "https://docs.postiz.com/public-api/uploads/upload-from-url"
       }
     }
   ]

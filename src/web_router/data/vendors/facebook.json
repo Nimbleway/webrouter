@@ -2,7 +2,7 @@
   "vendor": "facebook",
   "name": "Facebook Pages (Graph API)",
   "category": "social",
-  "summary": "Facebook Pages you manage through Meta's Graph API: Page details, the Page feed, and publishing posts and photos.",
+  "summary": "Facebook Pages you manage through Meta's Graph API: Page details and the Page feed.",
   "docs_url": "https://developers.facebook.com/docs/pages-api",
   "base_url": "https://graph.facebook.com/{api_version}",
   "settings": {
@@ -121,90 +121,6 @@
       "notes": [
         "Needs a Page access token and pages_read_engagement plus pages_read_user_content.",
         "Returns roughly 600 published, ranked posts a year; expired posts are gone. Reels come from the VideoReels edge."
-      ]
-    },
-    {
-      "id": "facebook.page.publish_post",
-      "name": "Publish a post to a Page",
-      "summary": "A text and/or link post, published now or scheduled.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/{page_id}/feed",
-      "params": {
-        "page_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Page id."
-        },
-        "message": {
-          "in": "query",
-          "type": "string",
-          "description": "Post text. Send message or link."
-        },
-        "link": {
-          "in": "query",
-          "type": "string",
-          "description": "URL to attach."
-        },
-        "published": {
-          "in": "query",
-          "type": "boolean",
-          "description": "false creates an unpublished (draft or scheduled) post."
-        },
-        "scheduled_publish_time": {
-          "in": "query",
-          "type": "integer",
-          "description": "Unix time between 10 minutes and 75 days ahead; with published=false."
-        }
-      },
-      "job": "social.publish",
-      "docs_url": "https://developers.facebook.com/docs/graph-api/reference/page/feed",
-      "verified": {
-        "docs": "https://developers.facebook.com/docs/graph-api/reference/page/feed"
-      },
-      "notes": [
-        "Publishes publicly as the Page. Needs a Page access token from a user who can create content, with pages_manage_posts."
-      ]
-    },
-    {
-      "id": "facebook.page.publish_photo",
-      "name": "Publish a photo to a Page",
-      "summary": "Uploads a photo from a public URL.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/{page_id}/photos",
-      "params": {
-        "page_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Page id."
-        },
-        "url": {
-          "in": "query",
-          "type": "string",
-          "required": true,
-          "description": "Public URL of the image (max 4 MB)."
-        },
-        "caption": {
-          "in": "query",
-          "type": "string",
-          "description": "Photo description."
-        },
-        "published": {
-          "in": "query",
-          "type": "boolean",
-          "description": "Default true; false uploads without publishing."
-        }
-      },
-      "job": "social.publish",
-      "docs_url": "https://developers.facebook.com/docs/graph-api/reference/page/photos",
-      "verified": {
-        "docs": "https://developers.facebook.com/docs/graph-api/reference/page/photos"
-      },
-      "notes": [
-        "Publishes publicly unless published=false (unpublished photos are deleted after about 24 hours). Needs a Page access token and pages_manage_posts."
       ]
     },
     {

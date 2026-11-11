@@ -2,7 +2,7 @@
   "vendor": "twilio",
   "name": "Twilio",
   "category": "messaging",
-  "summary": "Twilio SMS and voice: send and read messages, list and place calls, phone numbers, usage records, balance and phone number lookup.",
+  "summary": "Twilio SMS and voice: messages, calls, phone numbers, usage records, balance and phone number lookup.",
   "docs_url": "https://www.twilio.com/docs/usage/api",
   "pricing_url": "https://www.twilio.com/en-us/pricing",
   "base_url": "https://api.twilio.com/2010-04-01",
@@ -32,7 +32,6 @@
   "notes": [
     "Account-scoped paths take the Account SID as AccountSid: pass the same AC... value the credentials use.",
     "Paths end in .json; leave it off and the API answers XML.",
-    "Writes are form-encoded with PascalCase fields (To, From, Body).",
     "Lists page by PageSize (max 1000) and PageToken; follow next_page_uri from the answer rather than building the token.",
     "Dates in list filters are GMT YYYY-MM-DD; DateSent< and DateSent> give a range."
   ],
@@ -366,123 +365,6 @@
       "docs_url": "https://www.twilio.com/docs/lookup/v2-api",
       "verified": {
         "docs": "https://www.twilio.com/docs/lookup/v2-api"
-      }
-    },
-    {
-      "id": "twilio.messages.send",
-      "name": "Send a message",
-      "summary": "Send an SMS, MMS or WhatsApp message.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/Accounts/{AccountSid}/Messages.json",
-      "params": {
-        "AccountSid": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Your Account SID (AC...), the same value as TWILIO_ACCOUNT_SID."
-        },
-        "To": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Recipient, E.164, or a channel address like whatsapp:+15552229999."
-        },
-        "From": {
-          "in": "body",
-          "type": "string",
-          "description": "Your Twilio number or sender id; or send MessagingServiceSid instead."
-        },
-        "MessagingServiceSid": {
-          "in": "body",
-          "type": "string",
-          "description": "Messaging Service to send from."
-        },
-        "Body": {
-          "in": "body",
-          "type": "string",
-          "description": "Text, up to 1600 characters."
-        },
-        "MediaUrl": {
-          "in": "body",
-          "type": "array",
-          "description": "Media URLs for MMS."
-        },
-        "StatusCallback": {
-          "in": "body",
-          "type": "string",
-          "description": "URL for delivery status callbacks."
-        }
-      },
-      "body_type": "form",
-      "notes": [
-        "Sends a real, billed message. Body or MediaUrl (or ContentSid) is needed."
-      ],
-      "job": "messaging.message.send",
-      "docs_url": "https://www.twilio.com/docs/messaging/api/message-resource",
-      "verified": {
-        "docs": "https://www.twilio.com/docs/messaging/api/message-resource"
-      }
-    },
-    {
-      "id": "twilio.calls.create",
-      "name": "Place a call",
-      "summary": "Dial a number and run TwiML when it answers.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/Accounts/{AccountSid}/Calls.json",
-      "params": {
-        "AccountSid": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Your Account SID (AC...), the same value as TWILIO_ACCOUNT_SID."
-        },
-        "To": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Number, SIP address or client to call."
-        },
-        "From": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Caller id: a Twilio number or verified caller id."
-        },
-        "Url": {
-          "in": "body",
-          "type": "string",
-          "description": "URL returning TwiML for the call."
-        },
-        "Twiml": {
-          "in": "body",
-          "type": "string",
-          "description": "TwiML instructions inline, max 4000 characters; wins over Url."
-        },
-        "Timeout": {
-          "in": "body",
-          "type": "integer",
-          "description": "Seconds to ring, default 60, max 600."
-        },
-        "Record": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Record the call."
-        },
-        "StatusCallback": {
-          "in": "body",
-          "type": "string",
-          "description": "URL for call status callbacks."
-        }
-      },
-      "body_type": "form",
-      "notes": [
-        "Places a real, billed call. One of Url, Twiml or ApplicationSid tells Twilio what to do."
-      ],
-      "docs_url": "https://www.twilio.com/docs/voice/api/call-resource",
-      "verified": {
-        "docs": "https://www.twilio.com/docs/voice/api/call-resource"
       }
     }
   ]
