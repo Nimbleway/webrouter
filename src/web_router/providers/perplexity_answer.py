@@ -17,9 +17,6 @@ from web_router.constants import (
     PERPLEXITY_API_KEY_PREFIX,
     PERPLEXITY_BASE_URL,
     PERPLEXITY_INCOMPLETE_STATUS,
-    PERPLEXITY_OUTPUT_MESSAGE,
-    PERPLEXITY_OUTPUT_SEARCH_RESULTS,
-    PERPLEXITY_OUTPUT_TEXT,
     PERPLEXITY_RESEARCH_PATH,
     PROVIDER_PERPLEXITY,
 )
@@ -36,6 +33,11 @@ from web_router.constants_perplexity import (
     PERPLEXITY_ANSWER_RECENCY_FIELD,
     PERPLEXITY_ANSWER_STOPPED,
     PERPLEXITY_ANSWER_TOOL,
+    PERPLEXITY_OUTPUT_FETCH_URL_RESULTS,
+    PERPLEXITY_OUTPUT_MESSAGE,
+    PERPLEXITY_OUTPUT_SEARCH_RESULTS,
+    PERPLEXITY_OUTPUT_TEXT,
+    PERPLEXITY_SOURCE_LISTS,
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider
@@ -138,23 +140,36 @@ def output_text(output: list[dict[str, Any]]) -> str:
 
 
 def output_citations(output: list[dict[str, Any]], *, cited_in: str | None = None) -> list[Citation]:
-    """The sources behind the answer, from the ``search_results`` output.
+    """The sources behind the answer: the pages its searches found, then the ones it opened that none found.
 
-    With ``cited_in``, a source whose ``[id]`` marker appears in that text
-    carries the marker in ``field``.
+    With ``cited_in``, a search result whose ``[id]`` marker appears in that
+    text carries the marker in ``field``. An opened page has no ``id``, so one
+    a search already found adds nothing and is left out.
     """
-    citations = []
+    found = [
+        result for item in output if item.get("type") == PERPLEXITY_OUTPUT_SEARCH_RESULTS for result in _pages(item)
+    ]
+    known = {result.get("url", "") for result in found}
+    opened: list[dict[str, Any]] = []
     for item in output:
-        if item.get("type") != PERPLEXITY_OUTPUT_SEARCH_RESULTS:
+        if item.get("type") != PERPLEXITY_OUTPUT_FETCH_URL_RESULTS:
             continue
-        for result in item.get("results") or []:
-            citations.append(
-                Citation(
-                    url=result.get("url", ""),
-                    title=result.get("title") or "",
-                    snippet=result.get("snippet") or "",
-                    field=cited_marker(cited_in, result.get("id")) if cited_in else None,
-                    extra={key: value for key, value in result.items() if key not in _MAPPED_SOURCE_FIELDS},
-                )
-            )
-    return citations
+        for page in _pages(item):
+            if (url := page.get("url", "")) not in known:
+                known.add(url)
+                opened.append(page)
+    return [
+        Citation(
+            url=result.get("url", ""),
+            title=result.get("title") or "",
+            snippet=result.get("snippet") or "",
+            field=cited_marker(cited_in, result.get("id")) if cited_in else None,
+            extra={key: value for key, value in result.items() if key not in _MAPPED_SOURCE_FIELDS},
+        )
+        for result in [*found, *opened]
+    ]
+
+
+def _pages(item: dict[str, Any]) -> list[dict[str, Any]]:
+    """The pages an output item lists, under the field its type keeps them in."""
+    return list(item.get(PERPLEXITY_SOURCE_LISTS[item["type"]]) or [])
