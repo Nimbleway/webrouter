@@ -71,6 +71,7 @@ from web_router.constants_mcp import MCP_RESOURCE_NOT_FOUND
 from web_router.exceptions import WebRouterError
 from web_router.mcp.env import EnvSources
 from web_router.mcp.messages import error_text
+from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.shaping import ToolOutput, render
 from web_router.mcp.tools import WebRouterTools
 
@@ -173,7 +174,9 @@ def build_server(tools: WebRouterTools) -> Server[object]:
     )
 
 
-async def serve(tools: WebRouterTools | None = None, *, env: EnvSources | None = None) -> None:
+async def serve(
+    tools: WebRouterTools | None = None, *, env: EnvSources | None = None, routing: McpRouting | None = None
+) -> None:
     """Serve one stdio session, then release every browser session and close every provider it built.
 
     The protocol loop ends when the client closes stdin, and the release then
@@ -182,10 +185,10 @@ async def serve(tools: WebRouterTools | None = None, *, env: EnvSources | None =
     :data:`~web_router.constants.MCP_SHUTDOWN_SIGNALS` runs the same release
     and then exits the process -- see :func:`_exit_on_signal`.
 
-    ``env`` is what the entry point's startup lookup found, for the tools this
-    builds when ``tools`` is not given.
+    ``env`` is what the entry point's startup lookup found, and ``routing`` the router it read before that
+    lookup, for the tools this builds when ``tools`` is not given.
     """
-    tools = tools if tools is not None else WebRouterTools(env=env)
+    tools = tools if tools is not None else WebRouterTools(env=env, routing=routing)
     try:
         async with anyio.create_task_group() as group:
             group.start_soon(tools.browsers.run_reaper)
@@ -236,4 +239,4 @@ def main() -> None:
     and finding no file is a no-op, so a server with no key anywhere starts on
     the keyless tier.
     """
-    anyio.run(partial(serve, env=EnvSources.at_startup()))
+    anyio.run(partial(serve, routing=McpRouting.from_environ(), env=EnvSources.at_startup()))  # router keys before .env

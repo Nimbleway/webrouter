@@ -65,12 +65,14 @@ from web_router.constants import (
     MSG_RESEARCH_FAILED,
     MSG_RESEARCH_NOT_RESUMABLE,
     MSG_SEARCH_FAILED,
-    MSG_TEMPLATE_FAILED,
-    MSG_TEMPLATE_GET_FAILED,
-    MSG_TEMPLATES_FAILED,
     MSG_UNSUPPORTED_PROXY_COUNTRY,
     MSG_UNSUPPORTED_STEALTH,
     RESEARCH_TIMEOUT,
+)
+from web_router.constants_live_data import (
+    MSG_LIVE_DATA_FAILED,
+    MSG_LIVE_DATA_SOURCE_GET_FAILED,
+    MSG_LIVE_DATA_SOURCES_FAILED,
 )
 from web_router.constants_search import MSG_UNSUPPORTED_DEPTH
 from web_router.exceptions import (
@@ -84,6 +86,7 @@ from web_router.exceptions import (
     WebRouterError,
     describe,
 )
+from web_router.live_data_compat import TemplateMethods
 from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_window, current_deadline
 from web_router.providers._error_pages import split_error_pages
 from web_router.providers._page import AsyncPage, SyncPage
@@ -108,11 +111,8 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
     StealthLevel,
-    Template,
-    TemplatePage,
-    TemplateRequest,
-    TemplateResponse,
 )
+from web_router.types_live_data import LiveDataRequest, LiveDataResponse, LiveDataSource, LiveDataSourcePage
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
 if TYPE_CHECKING:
@@ -479,92 +479,91 @@ class _Collected:
         return ProviderError(self.provider, MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail), original=original)
 
 
-class TemplateProvider(_BaseProvider):
-    """Base class for an Extract Template backend.
+class LiveDataProvider(TemplateMethods, _BaseProvider):
+    """Base class for a live data backend: a vendor's ready-made scrapers, run for this call.
 
-    A template is a saved, site-specific extraction the backend holds: run on
-    one page, it returns a record with fixed fields rather than the page's
-    text. The three things a caller does with a catalogue of them -- list it,
-    describe one, run one -- are the three methods here, each with its ``a``
-    twin. To add a backend, set :attr:`name`, :attr:`supported_parameters` and
-    :attr:`supported_formats`, then implement :meth:`_run`, :meth:`_list` and
-    :meth:`_get` with their async counterparts. See CONTRIBUTING.md for the
-    full checklist.
+    A source is a saved, site-specific scraper the backend holds: run with its
+    own inputs, it fetches the site now and returns records with fixed fields
+    rather than the page's text. The three things a caller does with a
+    catalogue of them -- list it, describe one, run one -- are the three
+    methods here, each with its ``a`` twin. To add a backend, set :attr:`name`,
+    :attr:`supported_parameters` and :attr:`supported_formats`, then implement
+    :meth:`_run`, :meth:`_list` and :meth:`_get` with their async counterparts.
+    A backend joins only if it fetches on request; see AGENTS.md.
 
-    A run is one page, one record: there is no fan-out to fold, and a run the
+    A run is one set of inputs: there is no fan-out to fold, and a run the
     backend could not complete raises rather than coming back empty, which is
-    the extract rule -- nothing came back, so say why -- with one URL.
+    the extract rule -- nothing came back, so say why.
     """
 
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset()
-    """Representations of the page this backend can return beside the record.
+    """Representations of the page this backend can return beside the records.
 
     A format outside this set raises :class:`UnsupportedFormatError` rather
     than coming back as a different representation under the requested name.
-    Unlike an extract there is no default to pin: with no format asked for,
-    no page comes back, on every backend alike.
+    Unlike an extract there is no default: with no format asked for, no page.
     """
 
     # -- What subclasses implement -------------------------------------------
 
     @abc.abstractmethod
-    def _run(self, request: TemplateRequest) -> TemplateResponse:
-        """Run the template. The request is already validated; errors are wrapped for you."""
+    def _run(self, request: LiveDataRequest) -> LiveDataResponse:
+        """Run the source. The request is already validated; errors are wrapped for you."""
 
     @abc.abstractmethod
-    async def _arun(self, request: TemplateRequest) -> TemplateResponse:
+    async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
         """Async counterpart of :meth:`_run`."""
 
     @abc.abstractmethod
-    def _list(self, *, limit: int | None, offset: int | None) -> TemplatePage:
+    def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         """List one page of the catalogue. ``None`` means the caller left it to the backend."""
 
     @abc.abstractmethod
-    async def _alist(self, *, limit: int | None, offset: int | None) -> TemplatePage:
+    async def _alist(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         """Async counterpart of :meth:`_list`."""
 
     @abc.abstractmethod
-    def _get(self, name: str) -> Template:
-        """Describe one template by name."""
+    def _get(self, name: str) -> LiveDataSource:
+        """Describe one source by name."""
 
     @abc.abstractmethod
-    async def _aget(self, name: str) -> Template:
+    async def _aget(self, name: str) -> LiveDataSource:
         """Async counterpart of :meth:`_get`."""
 
     # -- What callers use ----------------------------------------------------
 
-    def run(self, request: TemplateRequest) -> TemplateResponse:
-        """Validate the request, run the template, and wrap any backend failure."""
+    def run(self, request: LiveDataRequest) -> LiveDataResponse:
+        """Validate the request, run the source, and wrap any backend failure."""
         self.validate(request)
-        return self._bounded(lambda: self._run(request), MSG_TEMPLATE_FAILED)
+        return self._bounded(lambda: self._run(request), MSG_LIVE_DATA_FAILED)
 
-    async def arun(self, request: TemplateRequest) -> TemplateResponse:
+    async def arun(self, request: LiveDataRequest) -> LiveDataResponse:
         """Async counterpart of :meth:`run`."""
         self.validate(request)
-        return await self._abounded(lambda: self._arun(request), MSG_TEMPLATE_FAILED)
+        return await self._abounded(lambda: self._arun(request), MSG_LIVE_DATA_FAILED)
 
-    def templates(self, *, limit: int | None = None, offset: int | None = None) -> TemplatePage:
-        """List one page of this backend's templates, wrapping any backend failure.
+    def live_data_sources(self, *, limit: int | None = None, offset: int | None = None) -> LiveDataSourcePage:
+        """List one page of this backend's sources, wrapping any backend failure.
 
         ``limit`` and ``offset`` left unset are not sent, so the backend pages
         as it would for any client of its own.
         """
-        return self._wrapped(lambda: self._list(limit=limit, offset=offset), MSG_TEMPLATES_FAILED)
+        return self._wrapped(lambda: self._list(limit=limit, offset=offset), MSG_LIVE_DATA_SOURCES_FAILED)
 
-    async def atemplates(self, *, limit: int | None = None, offset: int | None = None) -> TemplatePage:
-        """Async counterpart of :meth:`templates`."""
-        return await self._awrapped(self._alist(limit=limit, offset=offset), MSG_TEMPLATES_FAILED)
+    async def alive_data_sources(self, *, limit: int | None = None, offset: int | None = None) -> LiveDataSourcePage:
+        """Async counterpart of :meth:`live_data_sources`."""
+        return await self._awrapped(self._alist(limit=limit, offset=offset), MSG_LIVE_DATA_SOURCES_FAILED)
 
-    def template(self, name: str) -> Template:
-        """Describe one template by name, wrapping any backend failure -- an unknown name included."""
-        return self._wrapped(lambda: self._get(name), MSG_TEMPLATE_GET_FAILED, name=name)
+    def live_data_source(self, name: str) -> LiveDataSource:
+        """Describe one source by name, wrapping any backend failure -- an unknown name included."""
+        return self._wrapped(lambda: self._get(name), MSG_LIVE_DATA_SOURCE_GET_FAILED, name=name)
 
-    async def atemplate(self, name: str) -> Template:
-        """Async counterpart of :meth:`template`."""
-        return await self._awrapped(self._aget(name), MSG_TEMPLATE_GET_FAILED, name=name)
+    async def alive_data_source(self, name: str) -> LiveDataSource:
+        """Async counterpart of :meth:`live_data_source`."""
+        return await self._awrapped(self._aget(name), MSG_LIVE_DATA_SOURCE_GET_FAILED, name=name)
 
-    def validate(self, request: TemplateRequest) -> None:
-        """Raise for any option this backend does not map, or format it cannot return beside the record."""
+    def validate(self, request: LiveDataRequest) -> None:
+        """Raise for any option this backend does not map, or format it cannot return beside the records."""
         self._reject_unmapped(request)
         if request.format is not None and request.format not in self.supported_formats:
             raise UnsupportedFormatError(self.name, request.format, self.supported_formats)
